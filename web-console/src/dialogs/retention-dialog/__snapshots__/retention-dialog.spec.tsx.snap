@@ -580,31 +580,325 @@ exports[`RetentionDialog matches snapshot 1`] = `
           <div
             class="bp4-form-group"
           >
+            <label
+              class="bp4-label"
+            >
+              Cluster defaults (
+              <a>
+                edit
+              </a>
+              )
+               
+              <span
+                class="bp4-text-muted"
+              />
+            </label>
             <div
               class="bp4-form-content"
             >
               <p>
-                Cluster defaults (
-                <a>
-                  edit
-                </a>
-                ):
+                The cluster default rules are evaluated if none of the above rules match.
               </p>
               <div
-                class="default-rule"
+                class="rule-editor"
               >
-                <button
-                  class="bp4-button bp4-disabled"
-                  disabled=""
-                  tabindex="-1"
-                  type="button"
+                <div
+                  class="title"
                 >
-                  <span
-                    class="bp4-button-text"
+                  <button
+                    class="bp4-button bp4-minimal left"
+                    type="button"
                   >
-                    loadForever(2x)
-                  </span>
-                </button>
+                    <span
+                      class="bp4-button-text"
+                    >
+                      loadForever(2x)
+                    </span>
+                    <span
+                      aria-hidden="true"
+                      class="bp4-icon bp4-icon-caret-down"
+                      icon="caret-down"
+                    >
+                      <svg
+                        data-icon="caret-down"
+                        height="16"
+                        role="img"
+                        viewBox="0 0 16 16"
+                        width="16"
+                      >
+                        <path
+                          d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
+                          fill-rule="evenodd"
+                        />
+                      </svg>
+                    </span>
+                  </button>
+                  <div
+                    class="spacer"
+                  />
+                </div>
+                <div
+                  class="bp4-collapse"
+                  style="height: auto; overflow-y: visible; transition: none;"
+                >
+                  <div
+                    aria-hidden="false"
+                    class="bp4-collapse-body"
+                    style="transform: translateY(0); transition: none;"
+                  >
+                    <div
+                      class="bp4-card bp4-elevation-2"
+                    >
+                      <div
+                        class="bp4-form-group"
+                      >
+                        <div
+                          class="bp4-form-content"
+                        >
+                          <div
+                            class="bp4-control-group"
+                          >
+                            <div
+                              class="bp4-html-select bp4-disabled"
+                            >
+                              <select
+                                disabled=""
+                              >
+                                <option
+                                  value="loadForever"
+                                >
+                                  loadForever
+                                </option>
+                                <option
+                                  value="loadByInterval"
+                                >
+                                  loadByInterval
+                                </option>
+                                <option
+                                  value="loadByPeriod"
+                                >
+                                  loadByPeriod
+                                </option>
+                                <option
+                                  value="dropForever"
+                                >
+                                  dropForever
+                                </option>
+                                <option
+                                  value="dropByInterval"
+                                >
+                                  dropByInterval
+                                </option>
+                                <option
+                                  value="dropByPeriod"
+                                >
+                                  dropByPeriod
+                                </option>
+                                <option
+                                  value="dropBeforeByPeriod"
+                                >
+                                  dropBeforeByPeriod
+                                </option>
+                                <option
+                                  value="broadcastForever"
+                                >
+                                  broadcastForever
+                                </option>
+                                <option
+                                  value="broadcastByInterval"
+                                >
+                                  broadcastByInterval
+                                </option>
+                                <option
+                                  value="broadcastByPeriod"
+                                >
+                                  broadcastByPeriod
+                                </option>
+                              </select>
+                              <span
+                                class="bp4-icon bp4-icon-double-caret-vertical"
+                                icon="double-caret-vertical"
+                              >
+                                <svg
+                                  aria-labelledby="iconTitle-12"
+                                  data-icon="double-caret-vertical"
+                                  height="16"
+                                  role="img"
+                                  viewBox="0 0 16 16"
+                                  width="16"
+                                >
+                                  <title
+                                    id="iconTitle-12"
+                                  >
+                                    Open dropdown
+                                  </title>
+                                  <path
+                                    d="M5 7h6a1.003 1.003 0 00.71-1.71l-3-3C8.53 2.11 8.28 2 8 2s-.53.11-.71.29l-3 3A1.003 1.003 0 005 7zm6 2H5a1.003 1.003 0 00-.71 1.71l3 3c.18.18.43.29.71.29s.53-.11.71-.29l3-3A1.003 1.003 0 0011 9z"
+                                    fill-rule="evenodd"
+                                  />
+                                </svg>
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div
+                        class="bp4-form-group"
+                      >
+                        <div
+                          class="bp4-form-content"
+                        >
+                          <div
+                            class="bp4-control-group"
+                          >
+                            <button
+                              class="bp4-button bp4-disabled bp4-minimal"
+                              disabled=""
+                              style="pointer-events: none;"
+                              tabindex="-1"
+                              type="button"
+                            >
+                              <span
+                                class="bp4-button-text"
+                              >
+                                Tier:
+                              </span>
+                            </button>
+                            <div
+                              class="bp4-html-select bp4-disabled bp4-fill"
+                            >
+                              <select
+                                disabled=""
+                              >
+                                <option
+                                  value="_default_tier"
+                                >
+                                  _default_tier
+                                </option>
+                              </select>
+                              <span
+                                class="bp4-icon bp4-icon-double-caret-vertical"
+                                icon="double-caret-vertical"
+                              >
+                                <svg
+                                  aria-labelledby="iconTitle-13"
+                                  data-icon="double-caret-vertical"
+                                  height="16"
+                                  role="img"
+                                  viewBox="0 0 16 16"
+                                  width="16"
+                                >
+                                  <title
+                                    id="iconTitle-13"
+                                  >
+                                    Open dropdown
+                                  </title>
+                                  <path
+                                    d="M5 7h6a1.003 1.003 0 00.71-1.71l-3-3C8.53 2.11 8.28 2 8 2s-.53.11-.71.29l-3 3A1.003 1.003 0 005 7zm6 2H5a1.003 1.003 0 00-.71 1.71l3 3c.18.18.43.29.71.29s.53-.11.71-.29l3-3A1.003 1.003 0 0011 9z"
+                                    fill-rule="evenodd"
+                                  />
+                                </svg>
+                              </span>
+                            </div>
+                            <button
+                              class="bp4-button bp4-disabled bp4-minimal"
+                              disabled=""
+                              style="pointer-events: none;"
+                              tabindex="-1"
+                              type="button"
+                            >
+                              <span
+                                class="bp4-button-text"
+                              >
+                                Replicants:
+                              </span>
+                            </button>
+                            <div
+                              class="bp4-control-group bp4-numeric-input"
+                            >
+                              <div
+                                class="bp4-input-group bp4-disabled"
+                              >
+                                <input
+                                  aria-valuemax="256"
+                                  aria-valuemin="0"
+                                  aria-valuenow="2"
+                                  autocomplete="off"
+                                  class="bp4-input"
+                                  disabled=""
+                                  id="numericInput-1"
+                                  max="256"
+                                  min="0"
+                                  role="spinbutton"
+                                  type="text"
+                                  value="2"
+                                />
+                              </div>
+                              <div
+                                class="bp4-button-group bp4-vertical bp4-fixed"
+                              >
+                                <button
+                                  aria-controls="numericInput-1"
+                                  aria-label="increment"
+                                  class="bp4-button bp4-disabled"
+                                  disabled=""
+                                  tabindex="-1"
+                                  type="button"
+                                >
+                                  <span
+                                    aria-hidden="true"
+                                    class="bp4-icon bp4-icon-chevron-up"
+                                    icon="chevron-up"
+                                  >
+                                    <svg
+                                      data-icon="chevron-up"
+                                      height="16"
+                                      role="img"
+                                      viewBox="0 0 16 16"
+                                      width="16"
+                                    >
+                                      <path
+                                        d="M12.71 9.29l-4-4C8.53 5.11 8.28 5 8 5s-.53.11-.71.29l-4 4a1.003 1.003 0 001.42 1.42L8 7.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71z"
+                                        fill-rule="evenodd"
+                                      />
+                                    </svg>
+                                  </span>
+                                </button>
+                                <button
+                                  aria-controls="numericInput-1"
+                                  aria-label="decrement"
+                                  class="bp4-button bp4-disabled"
+                                  disabled=""
+                                  tabindex="-1"
+                                  type="button"
+                                >
+                                  <span
+                                    aria-hidden="true"
+                                    class="bp4-icon bp4-icon-chevron-down"
+                                    icon="chevron-down"
+                                  >
+                                    <svg
+                                      data-icon="chevron-down"
+                                      height="16"
+                                      role="img"
+                                      viewBox="0 0 16 16"
+                                      width="16"
+                                    >
+                                      <path
+                                        d="M12 5c-.28 0-.53.11-.71.29L8 8.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l4-4A1.003 1.003 0 0012 5z"
+                                        fill-rule="evenodd"
+                                      />
+                                    </svg>
+                                  </span>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

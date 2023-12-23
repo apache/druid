@@ -66,6 +66,7 @@ import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.SegmentInsertAction;
+import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionToolbox;
 import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
@@ -79,6 +80,7 @@ import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.indexing.common.task.KillUnusedSegmentsTask;
+import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.common.task.RealtimeIndexTask;
 import org.apache.druid.indexing.common.task.Task;
@@ -98,6 +100,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -129,11 +132,10 @@ import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.JoinableFactoryWrapperTest;
 import org.apache.druid.segment.join.NoopJoinableFactory;
-import org.apache.druid.segment.loading.DataSegmentArchiver;
-import org.apache.druid.segment.loading.DataSegmentMover;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentKiller;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
+import org.apache.druid.segment.loading.NoopDataSegmentArchiver;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentTest;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
@@ -141,8 +143,8 @@ import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderator
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
-import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordination.TestDataSegmentAnnouncer;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
@@ -452,8 +454,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
       case HEAP_TASK_STORAGE: {
         taskStorage = new HeapMemoryTaskStorage(
             new TaskStorageConfig(null)
-            {
-            }
         );
         break;
       }
@@ -479,11 +479,13 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         break;
       }
 
-      default: {
+      default:
         throw new RE("Unknown task storage type [%s]", taskStorageType);
-      }
     }
-    tsqa = new TaskStorageQueryAdapter(taskStorage, taskLockbox);
+    TaskMaster taskMaster = EasyMock.createMock(TaskMaster.class);
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.absent()).anyTimes();
+    EasyMock.replay(taskMaster);
+    tsqa = new TaskStorageQueryAdapter(taskStorage, taskLockbox, taskMaster);
     return taskStorage;
   }
 
@@ -563,9 +565,9 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     return new TestIndexerMetadataStorageCoordinator()
     {
       @Override
-      public Set<DataSegment> announceHistoricalSegments(Set<DataSegment> segments)
+      public Set<DataSegment> commitSegments(Set<DataSegment> segments)
       {
-        Set<DataSegment> retVal = super.announceHistoricalSegments(segments);
+        Set<DataSegment> retVal = super.commitSegments(segments);
         if (publishCountDown != null) {
           publishCountDown.countDown();
         }
@@ -613,6 +615,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         .setDefaultRowFlushBoundary(50000)
         .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
         .setTmpStorageBytesPerTask(-1L)
+        .enableConcurrentAppendAndReplace()
         .build();
 
     return new TaskToolboxFactory(
@@ -622,29 +625,9 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         emitter,
         dataSegmentPusher,
         new LocalDataSegmentKiller(new LocalDataSegmentPusherConfig()),
-        new DataSegmentMover()
-        {
-          @Override
-          public DataSegment move(DataSegment dataSegment, Map<String, Object> targetLoadSpec)
-          {
-            return dataSegment;
-          }
-        },
-        new DataSegmentArchiver()
-        {
-          @Override
-          public DataSegment archive(DataSegment segment)
-          {
-            return segment;
-          }
-
-          @Override
-          public DataSegment restore(DataSegment segment)
-          {
-            return segment;
-          }
-        },
-        new NoopDataSegmentAnnouncer()
+        (dataSegment, targetLoadSpec) -> dataSegment,
+        new NoopDataSegmentArchiver(),
+        new TestDataSegmentAnnouncer()
         {
           @Override
           public void announceSegment(DataSegment segment)
@@ -722,7 +705,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testIndexTask() throws Exception
+  public void testIndexTask()
   {
     final Task indexTask = new IndexTask(
         null,
@@ -806,7 +789,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testIndexTaskFailure() throws Exception
+  public void testIndexTaskFailure()
   {
     final Task indexTask = new IndexTask(
         null,
@@ -1052,7 +1035,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testRealtimeishTask() throws Exception
+  public void testRealtimeishTask()
   {
     final Task rtishTask = new RealtimeishTask();
     final TaskStatus status = runTask(rtishTask);
@@ -1064,13 +1047,9 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testNoopTask() throws Exception
+  public void testNoopTask()
   {
-    final Task noopTask = new DefaultObjectMapper().readValue(
-        "{\"type\":\"noop\", \"runTime\":\"100\"}\"",
-        Task.class
-    );
-    final TaskStatus status = runTask(noopTask);
+    final TaskStatus status = runTask(NoopTask.create());
 
     Assert.assertEquals("statusCode", TaskState.SUCCESS, status.getStatusCode());
     Assert.assertEquals(taskLocation, status.getLocation());
@@ -1079,12 +1058,16 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testNeverReadyTask() throws Exception
+  public void testNeverReadyTask()
   {
-    final Task neverReadyTask = new DefaultObjectMapper().readValue(
-        "{\"type\":\"noop\", \"isReadyResult\":\"exception\"}\"",
-        Task.class
-    );
+    final Task neverReadyTask = new NoopTask(null, null, null, 0, 0, null)
+    {
+      @Override
+      public boolean isReady(TaskActionClient taskActionClient)
+      {
+        throw new ISE("Task will never be ready");
+      }
+    };
     final TaskStatus status = runTask(neverReadyTask);
 
     Assert.assertEquals("statusCode", TaskState.FAILED, status.getStatusCode());
@@ -1094,7 +1077,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testSimple() throws Exception
+  public void testSimple()
   {
     final Task task = new AbstractFixedIntervalTask(
         "id1",
@@ -1151,7 +1134,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testBadInterval() throws Exception
+  public void testBadInterval()
   {
     final Task task = new AbstractFixedIntervalTask("id1", "id1", "ds", Intervals.of("2012-01-01/P1D"), null)
     {
@@ -1193,7 +1176,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testBadVersion() throws Exception
+  public void testBadVersion()
   {
     final Task task = new AbstractFixedIntervalTask("id1", "id1", "ds", Intervals.of("2012-01-01/P1D"), null)
     {
@@ -1523,7 +1506,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testLockRevoked() throws Exception
+  public void testLockRevoked()
   {
     final Task task = new AbstractFixedIntervalTask(
         "id1",
@@ -1577,15 +1560,9 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     Assert.assertEquals("segments nuked", 0, mdc.getNuked().size());
   }
 
-  private TaskStatus runTask(final Task task) throws Exception
+  private TaskStatus runTask(final Task task)
   {
-    final Task dummyTask = new DefaultObjectMapper().readValue(
-        "{\"type\":\"noop\", \"isReadyResult\":\"exception\"}\"",
-        Task.class
-    );
-    final long startTime = System.currentTimeMillis();
-
-    Preconditions.checkArgument(!task.getId().equals(dummyTask.getId()));
+    final Stopwatch taskRunDuration = Stopwatch.createStarted();
 
     // Since multiple tasks can be run in a single unit test using runTask(), hence this check and synchronization
     synchronized (this) {
@@ -1593,28 +1570,25 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         taskQueue.start();
       }
     }
-    taskQueue.add(dummyTask);
     taskQueue.add(task);
 
+    final String taskId = task.getId();
     TaskStatus retVal = null;
-
-    for (final String taskId : ImmutableList.of(dummyTask.getId(), task.getId())) {
-      try {
-        TaskStatus status;
-        while ((status = tsqa.getStatus(taskId).get()).isRunnable()) {
-          if (System.currentTimeMillis() > startTime + 10 * 1000) {
-            throw new ISE("Where did the task go?!: %s", task.getId());
-          }
-
-          Thread.sleep(100);
+    try {
+      TaskStatus status;
+      while ((status = tsqa.getStatus(taskId).get()).isRunnable()) {
+        if (taskRunDuration.millisElapsed() > 10_000) {
+          throw new ISE("Where did the task go?!: %s", task.getId());
         }
-        if (taskId.equals(task.getId())) {
-          retVal = status;
-        }
+
+        Thread.sleep(100);
       }
-      catch (Exception e) {
-        throw new RuntimeException(e);
+      if (taskId.equals(task.getId())) {
+        retVal = status;
       }
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
     }
 
     return retVal;

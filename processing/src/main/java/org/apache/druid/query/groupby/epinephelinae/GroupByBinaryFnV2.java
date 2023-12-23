@@ -34,7 +34,7 @@ import java.util.function.BinaryOperator;
  * and dimensions. This code runs on Brokers as well as data servers, like Historicals.
  *
  * Used by
- * {@link org.apache.druid.query.groupby.strategy.GroupByStrategyV2#mergeResults}.
+ * {@link org.apache.druid.query.groupby.GroupingEngine#mergeResults}.
  */
 public class GroupByBinaryFnV2 implements BinaryOperator<ResultRow>
 {

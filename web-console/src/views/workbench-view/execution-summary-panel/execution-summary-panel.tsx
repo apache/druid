@@ -23,7 +23,13 @@ import type { JSX } from 'react';
 import React, { useState } from 'react';
 
 import type { Execution } from '../../../druid-models';
-import { downloadQueryResults, formatDurationHybrid, pluralIfNeeded } from '../../../utils';
+import {
+  copyQueryResultsToClipboard,
+  downloadQueryResults,
+  formatDurationHybrid,
+  formatInteger,
+  pluralIfNeeded,
+} from '../../../utils';
 import { DestinationPagesDialog } from '../destination-pages-dialog/destination-pages-dialog';
 
 import './execution-summary-panel.scss';
@@ -45,16 +51,26 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
 
   if (queryResult) {
     const wrapQueryLimit = queryResult.getSqlOuterLimit();
-    const hasMoreResults = queryResult.getNumResults() === wrapQueryLimit;
+    let resultCount: string;
+    const numTotalRows = execution?.destination?.numTotalRows;
+    if (typeof wrapQueryLimit === 'undefined' && typeof numTotalRows === 'number') {
+      resultCount = pluralIfNeeded(numTotalRows, 'result');
+    } else {
+      const hasMoreResults = queryResult.getNumResults() === wrapQueryLimit;
 
-    const resultCount = hasMoreResults
-      ? `${queryResult.getNumResults() - 1}+ results`
-      : pluralIfNeeded(queryResult.getNumResults(), 'result');
+      resultCount = hasMoreResults
+        ? `${formatInteger(queryResult.getNumResults() - 1)}+ results`
+        : pluralIfNeeded(queryResult.getNumResults(), 'result');
+    }
 
     const warningCount = execution?.stages?.getWarningCount();
 
     const handleDownload = (format: string) => {
       downloadQueryResults(queryResult, `results-${execution.id}.${format}`, format);
+    };
+
+    const handleCopy = (format: string) => {
+      copyQueryResultsToClipboard(queryResult, format);
     };
 
     buttons.push(
@@ -90,6 +106,10 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
               <MenuItem text="CSV" onClick={() => handleDownload('csv')} />
               <MenuItem text="TSV" onClick={() => handleDownload('tsv')} />
               <MenuItem text="JSON (new line delimited)" onClick={() => handleDownload('json')} />
+              <MenuDivider title="Copy to clipboard as..." />
+              <MenuItem text="CSV" onClick={() => handleCopy('csv')} />
+              <MenuItem text="TSV" onClick={() => handleCopy('tsv')} />
+              <MenuItem text="JSON (new line delimited)" onClick={() => handleCopy('json')} />
             </Menu>
           }
           position={Position.BOTTOM_RIGHT}

@@ -19,10 +19,20 @@
 
 package org.apache.druid.indexing.kafka;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.inject.Injector;
+import com.google.inject.name.Names;
+import org.apache.druid.data.input.kafka.KafkaTopicPartition;
+import org.apache.druid.guice.StartupInjectorBuilder;
+import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
+import org.apache.druid.initialization.CoreInjectorBuilder;
+import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.utils.CollectionUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -161,13 +171,77 @@ public class KafkaDataSourceMetadataTest
     );
   }
 
+  @Test
+  public void testKafkaDataSourceMetadataSerdeRoundTrip() throws JsonProcessingException
+  {
+    ObjectMapper jsonMapper = createObjectMapper();
+
+    KafkaDataSourceMetadata kdm1 = endMetadata(ImmutableMap.of());
+    String kdmStr1 = jsonMapper.writeValueAsString(kdm1);
+    DataSourceMetadata dsMeta1 = jsonMapper.readValue(kdmStr1, DataSourceMetadata.class);
+    Assert.assertEquals(kdm1, dsMeta1);
+
+    KafkaDataSourceMetadata kdm2 = endMetadata(ImmutableMap.of(1, 3L));
+    String kdmStr2 = jsonMapper.writeValueAsString(kdm2);
+    DataSourceMetadata dsMeta2 = jsonMapper.readValue(kdmStr2, DataSourceMetadata.class);
+    Assert.assertEquals(kdm2, dsMeta2);
+  }
+
+  @Test
+  public void testKafkaDataSourceMetadataSerde() throws JsonProcessingException
+  {
+    ObjectMapper jsonMapper = createObjectMapper();
+    KafkaDataSourceMetadata expectedKdm1 = endMetadata(ImmutableMap.of(1, 3L));
+    String kdmStr1 = "{\"type\":\"kafka\",\"partitions\":{\"type\":\"end\",\"stream\":\"foo\",\"topic\":\"foo\",\"partitionSequenceNumberMap\":{\"1\":3},\"partitionOffsetMap\":{\"1\":3},\"exclusivePartitions\":[]}}\n";
+    DataSourceMetadata dsMeta1 = jsonMapper.readValue(kdmStr1, DataSourceMetadata.class);
+    Assert.assertEquals(dsMeta1, expectedKdm1);
+
+    KafkaDataSourceMetadata expectedKdm2 = endMetadata(ImmutableMap.of(1, 3L, 2, 1900L));
+    String kdmStr2 = "{\"type\":\"kafka\",\"partitions\":{\"type\":\"end\",\"stream\":\"foo\",\"topic\":\"food\",\"partitionSequenceNumberMap\":{\"1\":3, \"2\":1900},\"partitionOffsetMap\":{\"1\":3, \"2\":1900},\"exclusivePartitions\":[]}}\n";
+    DataSourceMetadata dsMeta2 = jsonMapper.readValue(kdmStr2, DataSourceMetadata.class);
+    Assert.assertEquals(dsMeta2, expectedKdm2);
+  }
+
   private static KafkaDataSourceMetadata startMetadata(Map<Integer, Long> offsets)
   {
-    return new KafkaDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>("foo", offsets, ImmutableSet.of()));
+    Map<KafkaTopicPartition, Long> newOffsets = CollectionUtils.mapKeys(
+        offsets,
+        k -> new KafkaTopicPartition(
+            false,
+            "foo",
+            k
+        )
+    );
+    return new KafkaDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>("foo", newOffsets, ImmutableSet.of()));
   }
 
   private static KafkaDataSourceMetadata endMetadata(Map<Integer, Long> offsets)
   {
-    return new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>("foo", offsets));
+    Map<KafkaTopicPartition, Long> newOffsets = CollectionUtils.mapKeys(
+        offsets,
+        k -> new KafkaTopicPartition(
+            false,
+            "foo",
+            k
+        )
+    );
+    return new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>("foo", newOffsets));
+  }
+
+  private static ObjectMapper createObjectMapper()
+  {
+    DruidModule module = new KafkaIndexTaskModule();
+    final Injector injector = new CoreInjectorBuilder(new StartupInjectorBuilder().build())
+        .addModule(
+            binder -> {
+              binder.bindConstant().annotatedWith(Names.named("serviceName")).to("test");
+              binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8000);
+              binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(9000);
+            }
+        ).build();
+
+    ObjectMapper objectMapper = injector.getInstance(ObjectMapper.class);
+    module.getJacksonModules().forEach(objectMapper::registerModule);
+    return objectMapper;
   }
 }

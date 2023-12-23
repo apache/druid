@@ -34,10 +34,10 @@ Note that this document does not track the status of contrib extensions, all of 
 - [SQL-based ingestion concepts](../multi-stage-query/concepts.md)
 - [SQL-based ingestion and multi-stage query task API](../api-reference/sql-ingestion-api.md)
 
-## Indexer process
+## Indexer service
 
-- [Indexer process](../design/indexer.md)
-- [Processes and servers](../design/processes.md#indexer-process-optional)
+- [Indexer service](../design/indexer.md)
+- [Data server](../design/architecture.md#indexer-service-optional)
 
 ## Kubernetes
 
@@ -57,4 +57,3 @@ Note that this document does not track the status of contrib extensions, all of 
 
 - [Configuration reference](../configuration/index.md)
    - `CLOSED_SEGMENTS_SINKS` mode
-   - Expression processing configuration `druid.expressions.allowNestedArrays`

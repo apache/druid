@@ -21,7 +21,8 @@ package org.apache.druid.tasklogs;
 
 import org.apache.druid.guice.annotations.ExtensionPoint;
 
+
 @ExtensionPoint
-public interface TaskLogs extends TaskLogStreamer, TaskLogPusher, TaskLogKiller
+public interface TaskLogs extends TaskLogStreamer, TaskLogPusher, TaskLogKiller, TaskPayloadManager
 {
 }

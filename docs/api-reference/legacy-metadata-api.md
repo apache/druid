@@ -99,8 +99,10 @@ If no used segments are found for the given inputs, this API returns `204 No Con
 
 ## Metadata store information
 
-> Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
-> [`sys.segments`](../querying/sql-metadata-tables.md#segments-table) table.
+:::info
+ Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
+ [`sys.segments`](../querying/sql-metadata-tables.md#segments-table) table.
+:::
 
 `GET /druid/coordinator/v1/metadata/segments`
 
@@ -114,9 +116,17 @@ Returns a list of all segments for one or more specific datasources enabled in t
 
 Returns a list of all segments for each datasource with the full segment metadata and an extra field `overshadowed`.
 
+`GET /druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&includeRealtimeSegments`
+
+Returns a list of all published and realtime segments for each datasource with the full segment metadata and extra fields `overshadowed`,`realtime` & `numRows`. Realtime segments are returned only when `druid.centralizedDatasourceSchema.enabled` is set on the Coordinator. 
+
 `GET /druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&datasources={dataSourceName1}&datasources={dataSourceName2}`
 
 Returns a list of all segments for one or more specific datasources with the full segment metadata and an extra field `overshadowed`.
+
+`GET /druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&includeRealtimeSegments&datasources={dataSourceName1}&datasources={dataSourceName2}`
+
+Returns a list of all published and realtime segments for the specified datasources with the full segment metadata and extra fields `overshadwed`,`realtime` & `numRows`. Realtime segments are returned only when `druid.centralizedDatasourceSchema.enabled` is set on the Coordinator.
 
 `GET /druid/coordinator/v1/metadata/datasources`
 
@@ -151,6 +161,11 @@ Returns a list of all segments for a datasource with the full segment metadata a
 Returns full segment metadata for a specific segment as stored in the metadata store, if the segment is used. If the
 segment is unused, or is unknown, a 404 response is returned.
 
+`GET /druid/coordinator/v1/metadata/datasources/{dataSourceName}/segments/{segmentId}?includeUnused=true`
+
+Returns full segment metadata for a specific segment as stored in the metadata store. If it is unknown, a 404 response
+is returned.
+
 `GET /druid/coordinator/v1/metadata/datasources/{dataSourceName}/segments`
 
 Returns a list of all segments, overlapping with any of given intervals,  for a datasource as stored in the metadata store. Request body is array of string IS0 8601 intervals like `[interval1, interval2,...]`&mdash;for example, `["2012-01-01T00:00:00.000/2012-01-03T00:00:00.000", "2012-01-05T00:00:00.000/2012-01-07T00:00:00.000"]`.
@@ -158,6 +173,10 @@ Returns a list of all segments, overlapping with any of given intervals,  for a 
 `GET /druid/coordinator/v1/metadata/datasources/{dataSourceName}/segments?full`
 
 Returns a list of all segments, overlapping with any of given intervals, for a datasource with the full segment metadata as stored in the metadata store. Request body is array of string ISO 8601 intervals like `[interval1, interval2,...]`&mdash;for example, `["2012-01-01T00:00:00.000/2012-01-03T00:00:00.000", "2012-01-05T00:00:00.000/2012-01-07T00:00:00.000"]`.
+
+`POST /druid/coordinator/v1/metadata/dataSourceInformation`
+
+Returns information about the specified datasources, including the datasource schema.  
 
 <a name="coordinator-datasources"></a>
 
@@ -229,6 +248,16 @@ Returns full segment metadata for a specific segment in the cluster.
 
 Return the tiers that a datasource exists in.
 
+`GET /druid/coordinator/v1/datasources/{dataSourceName}/unusedSegments?interval={interval}&limit={limit}&lastSegmentId={lastSegmentId}&sortOrder={sortOrder}`
+
+Returns a list of unused segments for a datasource in the cluster contained within an optionally specified interval.
+Optional parameters for limit and lastSegmentId can be given as well, to limit results and enable paginated results.
+The results may be sorted in either ASC, or DESC order concerning their id, start, and end time, depending on
+specifying the sortOrder parameter. The default behavior in the absence of all optional parameters is to return all
+unused segments for the given datasource in no guaranteed order.
+
+Example usage: `GET /druid/coordinator/v1/datasources/inline_data/unusedSegments?interval=2023-12-01_2023-12-10&limit=10&lastSegmentId=inline_data_2023-12-03T00%3A00%3A00.000Z_2023-12-04T00%3A00%3A00.000Z_2023-12-09T14%3A16%3A53.738Z&sortOrder=ASC}`
+
 ## Intervals
 
 Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/` as in `2016-06-27_2016-06-28`.
@@ -270,7 +299,7 @@ Returns a list of server data objects in which each object has the following key
 
 ## Query server
 
-This section documents the API endpoints for the processes that reside on Query servers (Brokers) in the suggested [three-server configuration](../design/processes.md#server-types).
+This section documents the API endpoints for the services that reside on Query servers (Brokers) in the suggested [three-server configuration](../design/architecture.md#druid-servers).
 
 ### Broker
 
@@ -279,10 +308,12 @@ This section documents the API endpoints for the processes that reside on Query 
 Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/`
 as in `2016-06-27_2016-06-28`.
 
-> Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
-> [`INFORMATION_SCHEMA.TABLES`](../querying/sql-metadata-tables.md#tables-table),
-> [`INFORMATION_SCHEMA.COLUMNS`](../querying/sql-metadata-tables.md#columns-table), and
-> [`sys.segments`](../querying/sql-metadata-tables.md#segments-table) tables.
+:::info
+ Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
+ [`INFORMATION_SCHEMA.TABLES`](../querying/sql-metadata-tables.md#tables-table),
+ [`INFORMATION_SCHEMA.COLUMNS`](../querying/sql-metadata-tables.md#columns-table), and
+ [`sys.segments`](../querying/sql-metadata-tables.md#segments-table) tables.
+:::
 
 `GET /druid/v2/datasources`
 
@@ -296,17 +327,21 @@ If no interval is specified, a default interval spanning a configurable period b
 
 `GET /druid/v2/datasources/{dataSourceName}/dimensions`
 
-> This API is deprecated and will be removed in future releases. Please use [SegmentMetadataQuery](../querying/segmentmetadataquery.md) instead
-> which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use [INFORMATION_SCHEMA tables](../querying/sql-metadata-tables.md)
-> if you're using SQL.
-> 
+:::info
+ This API is deprecated and will be removed in future releases. Please use [SegmentMetadataQuery](../querying/segmentmetadataquery.md) instead
+ which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use [INFORMATION_SCHEMA tables](../querying/sql-metadata-tables.md)
+ if you're using SQL.
+:::
+
 Returns the dimensions of the datasource.
 
 `GET /druid/v2/datasources/{dataSourceName}/metrics`
 
-> This API is deprecated and will be removed in future releases. Please use [SegmentMetadataQuery](../querying/segmentmetadataquery.md) instead
-> which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use [INFORMATION_SCHEMA tables](../querying/sql-metadata-tables.md)
-> if you're using SQL.
+:::info
+ This API is deprecated and will be removed in future releases. Please use [SegmentMetadataQuery](../querying/segmentmetadataquery.md) instead
+ which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use [INFORMATION_SCHEMA tables](../querying/sql-metadata-tables.md)
+ if you're using SQL.
+:::
 
 Returns the metrics of the datasource.
 

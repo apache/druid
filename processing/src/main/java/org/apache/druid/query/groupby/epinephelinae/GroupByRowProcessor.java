@@ -33,9 +33,9 @@ import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByQueryResources;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBasedKey;
-import org.apache.druid.query.groupby.resource.GroupByQueryResource;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -47,9 +47,9 @@ import java.util.UUID;
 
 /**
  * Utility class that knows how to do higher-level groupBys: i.e. group a {@link Sequence} of {@link ResultRow}
- * originating from a subquery. It uses a buffer provided by a {@link GroupByQueryResource}. The output rows may not
+ * originating from a subquery. It uses a buffer provided by a {@link GroupByQueryResources}. The output rows may not
  * be perfectly grouped and will not have PostAggregators applied, so they should be fed into
- * {@link org.apache.druid.query.groupby.strategy.GroupByStrategy#mergeResults}.
+ * {@link org.apache.druid.query.groupby.GroupingEngine#mergeResults}.
  *
  * This class has two primary uses: processing nested groupBys, and processing subtotals.
  *
@@ -90,7 +90,7 @@ public class GroupByRowProcessor
       final Sequence<ResultRow> rows,
       final GroupByQueryConfig config,
       final DruidProcessingConfig processingConfig,
-      final GroupByQueryResource resource,
+      final GroupByQueryResources resource,
       final ObjectMapper spillMapper,
       final String processingTmpDir,
       final int mergeBufferSize

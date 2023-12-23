@@ -497,7 +497,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     final boolean isAlreadyLoadedOnTier = numLoadedReplicas >= 1;
 
     // Do not assign replicas if tier is already busy loading some
-    if (isAlreadyLoadedOnTier && replicationThrottler.isTierLoadingReplicas(tier)) {
+    if (isAlreadyLoadedOnTier && replicationThrottler.isReplicationThrottledForTier(tier)) {
       return 0;
     }
 
@@ -543,7 +543,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   private boolean replicateSegment(DataSegment segment, ServerHolder server)
   {
     final String tier = server.getServer().getTier();
-    if (!replicationThrottler.canAssignReplica(tier)) {
+    if (replicationThrottler.isReplicationThrottledForTier(tier)) {
       incrementSkipStat(Stats.Segments.ASSIGN_SKIPPED, "Throttled replication", segment, tier);
       return false;
     }
@@ -563,24 +563,17 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       SegmentLoadingConfig loadingConfig
   )
   {
-    final Set<String> tiersLoadingReplicas = new HashSet<>();
+    final Map<String, Integer> tierToLoadingReplicaCount = new HashMap<>();
 
     cluster.getHistoricals().forEach(
         (tier, historicals) -> {
           int numLoadingReplicas = historicals.stream().mapToInt(ServerHolder::getNumLoadingReplicas).sum();
-          if (numLoadingReplicas > 0) {
-            log.info(
-                "Tier [%s] will not be assigned replicas as it is already loading [%d] replicas.",
-                tier, numLoadingReplicas
-            );
-            tiersLoadingReplicas.add(tier);
-          }
+          tierToLoadingReplicaCount.put(tier, numLoadingReplicas);
         }
     );
     return new ReplicationThrottler(
-        tiersLoadingReplicas,
-        loadingConfig.getReplicationThrottleLimit(),
-        loadingConfig.getMaxReplicaAssignmentsInRun()
+        tierToLoadingReplicaCount,
+        loadingConfig.getReplicationThrottleLimit()
     );
   }
 

@@ -22,6 +22,8 @@ package org.apache.druid.query.aggregation.datasketches.kll;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.datasketches.kll.KllFloatsSketch;
+import org.apache.datasketches.kll.KllSketch;
+import org.apache.datasketches.kll.KllSketch.SketchType;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import org.apache.druid.query.aggregation.AggregatorUtil;
@@ -38,9 +40,7 @@ import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
-import java.util.Collections;
 import java.util.Comparator;
-import java.util.List;
 
 public class KllFloatsSketchAggregatorFactory extends KllSketchAggregatorFactory<KllFloatsSketch, Float>
 {
@@ -79,19 +79,6 @@ public class KllFloatsSketchAggregatorFactory extends KllSketchAggregatorFactory
   public Comparator<KllFloatsSketch> getComparator()
   {
     return COMPARATOR;
-  }
-
-  @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(
-        new KllFloatsSketchAggregatorFactory(
-            getFieldName(),
-            getFieldName(),
-            getK(),
-            getMaxStreamLength()
-        )
-    );
   }
 
   @Override
@@ -139,7 +126,7 @@ public class KllFloatsSketchAggregatorFactory extends KllSketchAggregatorFactory
   @Override
   int getMaxSerializedSizeBytes(final int k, final long n)
   {
-    return KllFloatsSketch.getMaxSerializedSizeBytes(k, n, true);
+    return KllSketch.getMaxSerializedSizeBytes(k, n, SketchType.FLOATS_SKETCH, true);
   }
 
   @Override

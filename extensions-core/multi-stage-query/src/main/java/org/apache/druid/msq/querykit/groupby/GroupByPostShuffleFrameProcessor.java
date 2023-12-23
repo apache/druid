@@ -32,16 +32,17 @@ import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
+import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper;
 import org.apache.druid.query.groupby.having.AlwaysHavingSpec;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
 import org.apache.druid.query.groupby.having.HavingSpec;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
@@ -59,7 +60,7 @@ import java.util.function.BinaryOperator;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Long>
+public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Object>
 {
   private final GroupByQuery query;
   private final ReadableFrameChannel inputChannel;
@@ -81,7 +82,7 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Long>
 
   public GroupByPostShuffleFrameProcessor(
       final GroupByQuery query,
-      final GroupByStrategySelector strategySelector,
+      final GroupingEngine groupingEngine,
       final ReadableFrameChannel inputChannel,
       final WritableFrameChannel outputChannel,
       final FrameWriterFactory frameWriterFactory,
@@ -94,8 +95,8 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Long>
     this.outputChannel = outputChannel;
     this.frameReader = frameReader;
     this.frameWriterFactory = frameWriterFactory;
-    this.compareFn = strategySelector.strategize(query).createResultComparator(query);
-    this.mergeFn = strategySelector.strategize(query).createMergeFn(query);
+    this.compareFn = groupingEngine.createResultComparator(query);
+    this.mergeFn = groupingEngine.createMergeFn(query);
     this.finalizeFn = makeFinalizeFn(query);
     this.havingSpec = cloneHavingSpec(query);
     this.columnSelectorFactoryForFrameWriter =
@@ -121,7 +122,7 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Long>
   }
 
   @Override
-  public ReturnOrAwait<Long> runIncrementally(final IntSet readableInputs) throws IOException
+  public ReturnOrAwait<Object> runIncrementally(final IntSet readableInputs) throws IOException
   {
     if (frameCursor == null || frameCursor.isDone()) {
       // Keep reading through the input channel.
@@ -133,7 +134,7 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Long>
         }
 
         writeCurrentFrameIfNeeded();
-        return ReturnOrAwait.returnObject(0L);
+        return ReturnOrAwait.returnObject(Unit.instance());
       } else {
         final Frame frame = inputChannel.read();
         frameCursor = FrameProcessors.makeCursor(frame, frameReader);

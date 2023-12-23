@@ -304,7 +304,9 @@ For example, a Kafka indexing task and a compaction task can always write segmen
 The reason for this is because a Kafka indexing task always appends new segments, while a compaction task always overwrites existing segments.
 The segments created with the segment locking have the _same_ major version and a _higher_ minor version.
 
-> The segment locking is still experimental. It could have unknown bugs which potentially lead to incorrect query results.
+:::info
+ The segment locking is still experimental. It could have unknown bugs which potentially lead to incorrect query results.
+:::
 
 To enable segment locking, you may need to set `forceTimeChunkLock` to `false` in the [task context](#context).
 Once `forceTimeChunkLock` is unset, the task will choose a proper lock type to use automatically.
@@ -415,11 +417,15 @@ If you don't see the log file in long-term storage, it means either:
 
 You can check the middleManager / indexer logs locally to see if there was a push failure. If there was not, check the Overlord's own process logs to see why the task failed before it started.
 
-> If you are running the indexing service in remote mode, the task logs must be stored in S3, Azure Blob Store, Google Cloud Storage or HDFS.
+:::info
+ If you are running the indexing service in remote mode, the task logs must be stored in S3, Azure Blob Store, Google Cloud Storage or HDFS.
+:::
 
 You can configure retention periods for logs in milliseconds by setting `druid.indexer.logs.kill` properties in [configuration](../configuration/index.md#task-logging).  The Overlord will then automatically manage task logs in log directories along with entries in task-related metadata storage tables.
 
-> Automatic log file deletion typically works based on the log file's 'modified' timestamp in the back-end store. Large clock skews between Druid processes and the long-term store might result in unintended behavior.
+:::info
+ Automatic log file deletion typically works based on the log file's 'modified' timestamp in the back-end store. Large clock skews between Druid processes and the long-term store might result in unintended behavior.
+:::
 
 ## Configuring task storage sizes
 

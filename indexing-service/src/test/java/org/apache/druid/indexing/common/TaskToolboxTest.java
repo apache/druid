@@ -67,6 +67,7 @@ import org.mockito.Mockito;
 
 import java.io.IOException;
 
+@SuppressWarnings("DoNotMock")
 public class TaskToolboxTest
 {
 

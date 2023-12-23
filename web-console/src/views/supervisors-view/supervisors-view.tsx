@@ -40,6 +40,7 @@ import {
   SpecDialog,
   SupervisorTableActionDialog,
 } from '../../dialogs';
+import { SupervisorResetOffsetsDialog } from '../../dialogs/supervisor-reset-offsets-dialog/supervisor-reset-offsets-dialog';
 import type { QueryWithContext } from '../../druid-models';
 import type { Capabilities } from '../../helpers';
 import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
@@ -108,6 +109,7 @@ export interface SupervisorsViewState {
 
   resumeSupervisorId?: string;
   suspendSupervisorId?: string;
+  resetOffsetsSupervisorInfo?: { id: string; type: string };
   resetSupervisorId?: string;
   terminateSupervisorId?: string;
 
@@ -341,6 +343,11 @@ GROUP BY 1, 2`;
       },
       {
         icon: IconNames.STEP_BACKWARD,
+        title: 'Set offsets',
+        onAction: () => this.setState({ resetOffsetsSupervisorInfo: { id, type } }),
+      },
+      {
+        icon: IconNames.STEP_BACKWARD,
         title: 'Hard reset',
         intent: Intent.DANGER,
         onAction: () => this.setState({ resetSupervisorId: id }),
@@ -417,6 +424,21 @@ GROUP BY 1, 2`;
     );
   }
 
+  renderResetOffsetsSupervisorAction() {
+    const { resetOffsetsSupervisorInfo } = this.state;
+    if (!resetOffsetsSupervisorInfo) return;
+
+    return (
+      <SupervisorResetOffsetsDialog
+        supervisorId={resetOffsetsSupervisorInfo.id}
+        supervisorType={resetOffsetsSupervisorInfo.type}
+        onClose={() => {
+          this.setState({ resetOffsetsSupervisorInfo: undefined });
+        }}
+      />
+    );
+  }
+
   renderResetSupervisorAction() {
     const { resetSupervisorId } = this.state;
     if (!resetSupervisorId) return;
@@ -426,7 +448,7 @@ GROUP BY 1, 2`;
         action={async () => {
           const resp = await Api.instance.post(
             `/druid/indexer/v1/supervisor/${Api.encodePath(resetSupervisorId)}/reset`,
-            {},
+            '',
           );
           return resp.data;
         }}
@@ -784,6 +806,7 @@ GROUP BY 1, 2`;
         {this.renderSupervisorTable()}
         {this.renderResumeSupervisorAction()}
         {this.renderSuspendSupervisorAction()}
+        {this.renderResetOffsetsSupervisorAction()}
         {this.renderResetSupervisorAction()}
         {this.renderTerminateSupervisorAction()}
         {supervisorSpecDialogOpen && (

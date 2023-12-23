@@ -23,8 +23,10 @@ sidebar_label: "SQL metadata tables"
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
-> This document describes the SQL language.
+:::info
+ Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
+ This document describes the SQL language.
+:::
 
 
 Druid Brokers infer table and column metadata for each datasource from segments loaded in the cluster, and use this to
@@ -47,8 +49,10 @@ FROM INFORMATION_SCHEMA.COLUMNS
 WHERE "TABLE_SCHEMA" = 'druid' AND "TABLE_NAME" = 'foo'
 ```
 
-> Note: INFORMATION_SCHEMA tables do not currently support Druid-specific functions like `TIME_PARSE` and
-> `APPROX_QUANTILE_DS`. Only standard SQL functions can be used.
+:::info
+ Note: INFORMATION_SCHEMA tables do not currently support Druid-specific functions like `TIME_PARSE` and
+ `APPROX_QUANTILE_DS`. Only standard SQL functions can be used.
+:::
 
 ### SCHEMATA table
 `INFORMATION_SCHEMA.SCHEMATA` provides a list of all known schemas, which include `druid` for standard [Druid Table datasources](datasource.md#table), `lookup` for [Lookups](datasource.md#lookup), `sys` for the virtual [System metadata tables](#system-schema), and `INFORMATION_SCHEMA` for these virtual tables. Tables are allowed to have the same name across different schemas, so the schema may be included in an SQL statement to distinguish them, e.g. `lookup.table` vs `druid.table`.
@@ -130,8 +134,10 @@ WHERE "IS_AGGREGATOR" = 'YES'
 
 The "sys" schema provides visibility into Druid segments, servers and tasks.
 
-> Note: "sys" tables do not currently support Druid-specific functions like `TIME_PARSE` and
-> `APPROX_QUANTILE_DS`. Only standard SQL functions can be used.
+:::info
+ Note: "sys" tables do not currently support Druid-specific functions like `TIME_PARSE` and
+ `APPROX_QUANTILE_DS`. Only standard SQL functions can be used.
+:::
 
 ### SEGMENTS table
 
@@ -228,7 +234,7 @@ Servers table lists all discovered servers in the cluster.
 |tier|VARCHAR|Distribution tier see [druid.server.tier](../configuration/index.md#historical-general-configuration). Only valid for HISTORICAL type, for other types it's null|
 |current_size|BIGINT|Current size of segments in bytes on this server. Only valid for HISTORICAL type, for other types it's 0|
 |max_size|BIGINT|Max size in bytes this server recommends to assign to segments see [druid.server.maxSize](../configuration/index.md#historical-general-configuration). Only valid for HISTORICAL type, for other types it's 0|
-|is_leader|BIGINT|1 if the server is currently the 'leader' (for services which have the concept of leadership), otherwise 0 if the server is not the leader, or the default long value (0 or null depending on `druid.generic.useDefaultValueForNull`) if the server type does not have the concept of leadership|
+|is_leader|BIGINT|1 if the server is currently the 'leader' (for services which have the concept of leadership), otherwise 0 if the server is not the leader, or the default long value (null or zero depending on `druid.generic.useDefaultValueForNull`) if the server type does not have the concept of leadership|
 |start_time|STRING|Timestamp in ISO8601 format when the server was announced in the cluster|
 To retrieve information about all servers, use the query:
 

@@ -155,7 +155,9 @@ public class ParametrizedUriEmitterTest
         "http://example.com/test1", StringUtils.format("[%s]\n", JSON_MAPPER.writeValueAsString(events.get(0))),
         "http://example.com/test2", StringUtils.format("[%s]\n", JSON_MAPPER.writeValueAsString(events.get(1)))
     );
-    Assert.assertEquals(expected, results);
+    for (Map.Entry<String, String> entry : expected.entrySet()) {
+      Assert.assertEquals(JSON_MAPPER.readTree(expected.get(entry.getKey())), JSON_MAPPER.readTree(results.get(entry.getKey())));
+    }
   }
 
   @Test

@@ -228,7 +228,7 @@ public class Grouping
     // Remove literal dimensions that did not appear in the projection. This is useful for queries
     // like "SELECT COUNT(*) FROM tbl GROUP BY 'dummy'" which some tools can generate, and for which we don't
     // actually want to include a dimension 'dummy'.
-    final ImmutableBitSet aggregateProjectBits = RelOptUtil.InputFinder.bits(project.getChildExps(), null);
+    final ImmutableBitSet aggregateProjectBits = RelOptUtil.InputFinder.bits(project.getProjects(), null);
     final int[] newDimIndexes = new int[dimensions.size()];
     boolean droppedDimensions = false;
 

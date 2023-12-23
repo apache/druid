@@ -20,7 +20,9 @@
 package org.apache.druid.k8s.overlord;
 
 import com.google.inject.Binder;
+import com.google.inject.Inject;
 import com.google.inject.Key;
+import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.multibindings.MapBinder;
 import io.fabric8.kubernetes.client.Config;
@@ -29,6 +31,7 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.guice.JsonConfigProvider;
+import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.annotations.LoadScope;
@@ -37,13 +40,17 @@ import org.apache.druid.indexing.common.tasklogs.FileTaskLogs;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
+import org.apache.druid.k8s.overlord.runnerstrategy.RunnerStrategy;
 import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.apache.druid.tasklogs.TaskLogKiller;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.tasklogs.TaskLogs;
+
+import java.util.Properties;
 
 
 @LoadScope(roles = NodeRole.OVERLORD_JSON_NAME)
@@ -51,12 +58,17 @@ public class KubernetesOverlordModule implements DruidModule
 {
 
   private static final Logger log = new Logger(KubernetesOverlordModule.class);
+  private static final String K8SANDWORKER_PROPERTIES_PREFIX = IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX
+                                                               + ".k8sAndWorker";
+  private static final String RUNNERSTRATEGY_PROPERTIES_FORMAT_STRING = K8SANDWORKER_PROPERTIES_PREFIX
+                                                                        + ".runnerStrategy.%s";
 
   @Override
   public void configure(Binder binder)
   {
     // druid.indexer.runner.type=k8s
     JsonConfigProvider.bind(binder, IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX, KubernetesTaskRunnerConfig.class);
+    JsonConfigProvider.bind(binder, K8SANDWORKER_PROPERTIES_PREFIX, KubernetesAndWorkerTaskRunnerConfig.class);
     JsonConfigProvider.bind(binder, "druid.indexer.queue", TaskQueueConfig.class);
     PolyBind.createChoice(
         binder,
@@ -72,7 +84,14 @@ public class KubernetesOverlordModule implements DruidModule
     biddy.addBinding(KubernetesTaskRunnerFactory.TYPE_NAME)
          .to(KubernetesTaskRunnerFactory.class)
          .in(LazySingleton.class);
+    biddy.addBinding(KubernetesAndWorkerTaskRunnerFactory.TYPE_NAME)
+        .to(KubernetesAndWorkerTaskRunnerFactory.class)
+        .in(LazySingleton.class);
     binder.bind(KubernetesTaskRunnerFactory.class).in(LazySingleton.class);
+    binder.bind(KubernetesAndWorkerTaskRunnerFactory.class).in(LazySingleton.class);
+    binder.bind(RunnerStrategy.class)
+          .toProvider(RunnerStrategyProvider.class)
+          .in(LazySingleton.class);
     configureTaskLogs(binder);
   }
 
@@ -109,6 +128,45 @@ public class KubernetesOverlordModule implements DruidModule
     );
 
     return client;
+  }
+
+  private static class RunnerStrategyProvider implements Provider<RunnerStrategy>
+  {
+    private KubernetesAndWorkerTaskRunnerConfig runnerConfig;
+    private Properties props;
+    private JsonConfigurator configurator;
+
+    @Inject
+    public void inject(
+        KubernetesAndWorkerTaskRunnerConfig runnerConfig,
+        Properties props,
+        JsonConfigurator configurator
+    )
+    {
+      this.runnerConfig = runnerConfig;
+      this.props = props;
+      this.configurator = configurator;
+    }
+
+    @Override
+    public RunnerStrategy get()
+    {
+      String runnerStrategy = runnerConfig.getRunnerStrategy();
+
+      final String runnerStrategyPropertyBase = StringUtils.format(
+          RUNNERSTRATEGY_PROPERTIES_FORMAT_STRING,
+          runnerStrategy
+      );
+      final JsonConfigProvider<RunnerStrategy> provider = JsonConfigProvider.of(
+          runnerStrategyPropertyBase,
+          RunnerStrategy.class
+      );
+
+      props.put(runnerStrategyPropertyBase + ".type", runnerStrategy);
+      provider.inject(props, configurator);
+
+      return provider.get();
+    }
   }
 
   private void configureTaskLogs(Binder binder)

@@ -25,8 +25,10 @@ title: "Globally Cached Lookups"
 To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `druid-lookups-cached-global` in the extensions load list.
 
 ## Configuration
-> Static configuration is no longer supported. Lookups can be configured through
-> [dynamic configuration](../../querying/lookups.md#configuration).
+:::info
+ Static configuration is no longer supported. Lookups can be configured through
+ [dynamic configuration](../../querying/lookups.md#configuration).
+:::
 
 Globally cached lookups are appropriate for lookups which are not possible to pass at query time due to their size,
 or are not desired to be passed at query time because the data is to reside in and be handled by the Druid servers,
@@ -350,6 +352,8 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
 |`filter`|The filter to use when selecting lookups, this is used to create a where clause on lookup population|No|No Filter|
 |`tsColumn`| The column in `table` which contains when the key was updated|No|Not used|
 |`pollPeriod`|How often to poll the DB|No|0 (only once)|
+|`jitterSeconds`| How much jitter to add (in seconds) up to maximum as a delay (actual value will be used as random from 0 to `jitterSeconds`), used to distribute db load more evenly|No|0|
+|`loadTimeoutSeconds`| How much time (in seconds) it can take to query and populate lookup values. It will be helpful in lookup updates. On lookup update, it will wait maximum of `loadTimeoutSeconds` for new lookup to come up and continue serving from old lookup until new lookup successfully loads. |No|0|
 |`maxHeapPercentage`|The maximum percentage of heap size that the lookup should consume. If the lookup grows beyond this size, warning messages will be logged in the respective service logs.|No|10% of JVM heap size|
 
 ```json
@@ -365,15 +369,18 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
   "valueColumn":"the_new_dim_value",
   "tsColumn":"timestamp_column",
   "pollPeriod":600000,
+  "jitterSeconds": 120,
   "maxHeapPercentage": 10
 }
 ```
 
-> If using JDBC, you will need to add your database's client JAR files to the extension's directory.
-> For Postgres, the connector JAR is already included.
-> See the MySQL extension documentation for instructions to obtain [MySQL](./mysql.md#installing-the-mysql-connector-library) or [MariaDB](./mysql.md#alternative-installing-the-mariadb-connector-library) connector libraries.
-> The connector JAR should reside in the classpath of Druid's main class loader.
-> To add the connector JAR to the classpath, you can copy the downloaded file to `lib/` under the distribution root directory. Alternatively, create a symbolic link to the connector in the `lib` directory.
+:::info
+ If using JDBC, you will need to add your database's client JAR files to the extension's directory.
+ For Postgres, the connector JAR is already included.
+ See the MySQL extension documentation for instructions to obtain [MySQL](./mysql.md#installing-the-mysql-connector-library) or [MariaDB](./mysql.md#alternative-installing-the-mariadb-connector-library) connector libraries.
+ The connector JAR should reside in the classpath of Druid's main class loader.
+ To add the connector JAR to the classpath, you can copy the downloaded file to `lib/` under the distribution root directory. Alternatively, create a symbolic link to the connector in the `lib` directory.
+:::
 
 ## Introspection
 

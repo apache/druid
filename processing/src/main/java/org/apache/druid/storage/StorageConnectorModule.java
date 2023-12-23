@@ -33,8 +33,10 @@ public class StorageConnectorModule implements DruidModule
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return ImmutableList.of(new SimpleModule(StorageConnector.class.getSimpleName()).registerSubtypes(
-        LocalFileStorageConnectorProvider.class));
+    return ImmutableList.of(
+        new SimpleModule(StorageConnector.class.getSimpleName())
+            .registerSubtypes(LocalFileStorageConnectorProvider.class)
+    );
   }
 
   @Override

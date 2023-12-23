@@ -179,7 +179,7 @@ public class TaskDataSegmentProviderTest
       final int expectedSegmentNumber = i % NUM_SEGMENTS;
       final DataSegment segment = segments.get(expectedSegmentNumber);
       final ListenableFuture<Supplier<ResourceHolder<Segment>>> f =
-          exec.submit(() -> provider.fetchSegment(segment.getId(), new ChannelCounters()));
+          exec.submit(() -> provider.fetchSegment(segment.getId(), new ChannelCounters(), false));
 
       testFutures.add(
           FutureUtils.transform(
@@ -231,7 +231,7 @@ public class TaskDataSegmentProviderTest
   private class TestCoordinatorClientImpl extends NoopCoordinatorClient
   {
     @Override
-    public ListenableFuture<DataSegment> fetchUsedSegment(String dataSource, String segmentId)
+    public ListenableFuture<DataSegment> fetchSegment(String dataSource, String segmentId, boolean includeUnused)
     {
       for (final DataSegment segment : segments) {
         if (segment.getDataSource().equals(dataSource) && segment.getId().toString().equals(segmentId)) {

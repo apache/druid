@@ -326,7 +326,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     // handoff would timeout, resulting in exception
     TaskStatus status = statusFuture.get();
     Assert.assertTrue(status.getErrorMsg()
-                            .contains("java.util.concurrent.TimeoutException: Timeout waiting for task."));
+                            .contains("java.util.concurrent.TimeoutException: Waited 100 milliseconds"));
   }
 
   @Test(timeout = 60_000L)
@@ -1507,9 +1507,9 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     )
     {
       @Override
-      public Set<DataSegment> announceHistoricalSegments(Set<DataSegment> segments) throws IOException
+      public Set<DataSegment> commitSegments(Set<DataSegment> segments) throws IOException
       {
-        Set<DataSegment> result = super.announceHistoricalSegments(segments);
+        Set<DataSegment> result = super.commitSegments(segments);
 
         Assert.assertFalse(
             "Segment latch not initialized, did you forget to call expectPublishSegments?",
@@ -1523,18 +1523,17 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
       }
 
       @Override
-      public SegmentPublishResult announceHistoricalSegments(
+      public SegmentPublishResult commitSegmentsAndMetadata(
           Set<DataSegment> segments,
-          Set<DataSegment> segmentsToDrop,
           DataSourceMetadata startMetadata,
           DataSourceMetadata endMetadata
       ) throws IOException
       {
-        SegmentPublishResult result = super.announceHistoricalSegments(segments, segmentsToDrop, startMetadata, endMetadata);
+        SegmentPublishResult result = super.commitSegmentsAndMetadata(segments, startMetadata, endMetadata);
 
-        Assert.assertFalse(
+        Assert.assertNotNull(
             "Segment latch not initialized, did you forget to call expectPublishSegments?",
-            segmentLatch == null
+            segmentLatch
         );
 
         publishedSegments.addAll(result.getSegments());

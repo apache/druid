@@ -20,7 +20,6 @@
 package org.apache.druid.segment;
 
 import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import org.apache.druid.collections.bitmap.BitmapFactory;
@@ -32,6 +31,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.query.filter.StringPredicateDruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -39,7 +40,6 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.ArrayBasedIndexedInts;
 import org.apache.druid.segment.data.IndexedInts;
-import org.apache.druid.segment.filter.BooleanValueMatcher;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexRow;
 import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
@@ -349,24 +349,28 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
       {
         if (extractionFn == null) {
           final int valueId = lookupId(value);
+          final int nullValueId = lookupId(null);
           if (valueId >= 0 || value == null) {
             return new ValueMatcher()
             {
               @Override
-              public boolean matches()
+              public boolean matches(boolean includeUnknown)
               {
                 Object[] dims = currEntry.get().getDims();
                 if (dimIndex >= dims.length) {
-                  return value == null;
+                  return includeUnknown || value == null;
                 }
 
                 int[] dimsInt = (int[]) dims[dimIndex];
                 if (dimsInt == null || dimsInt.length == 0) {
-                  return value == null;
+                  return includeUnknown || value == null;
                 }
 
                 for (int id : dimsInt) {
                   if (id == valueId) {
+                    return true;
+                  }
+                  if (includeUnknown && (id == nullValueId)) {
                     return true;
                   }
                 }
@@ -380,38 +384,70 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
               }
             };
           } else {
-            return BooleanValueMatcher.of(false);
+            return new ValueMatcher()
+            {
+              @Override
+              public boolean matches(boolean includeUnknown)
+              {
+                if (includeUnknown) {
+                  IndexedInts row = getRow();
+                  final int size = row.size();
+                  if (size == 0) {
+                    return true;
+                  }
+                  for (int i = 0; i < size; i++) {
+                    if (row.get(i) == nullValueId) {
+                      return true;
+                    }
+                  }
+                }
+                return false;
+              }
+
+              @Override
+              public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+              {
+                // nothing to inspect
+              }
+            };
           }
         } else {
           // Employ caching BitSet optimization
-          return makeValueMatcher(Predicates.equalTo(value));
+          return makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo(value));
         }
       }
 
       @Override
-      public ValueMatcher makeValueMatcher(final Predicate<String> predicate)
+      public ValueMatcher makeValueMatcher(final DruidPredicateFactory predicateFactory)
       {
         final BitSet checkedIds = new BitSet(maxId);
         final BitSet matchingIds = new BitSet(maxId);
-        final boolean matchNull = predicate.apply(null);
+        final Predicate<String> predicate = predicateFactory.makeStringPredicate();
+        final boolean predicateMatchesNull = predicate.apply(null);
+        final int nullValueId = lookupId(null);
 
         // Lazy matcher; only check an id if matches() is called.
         return new ValueMatcher()
         {
           @Override
-          public boolean matches()
+          public boolean matches(boolean includeUnknown)
           {
+            final boolean matchNull = includeUnknown && predicateFactory.isNullInputUnknown();
             Object[] dims = currEntry.get().getDims();
             if (dimIndex >= dims.length) {
-              return matchNull;
+              return matchNull || predicateMatchesNull;
             }
 
             int[] dimsInt = (int[]) dims[dimIndex];
             if (dimsInt == null || dimsInt.length == 0) {
-              return matchNull;
+              return matchNull || predicateMatchesNull;
             }
 
             for (int id : dimsInt) {
+              if (includeUnknown && id == nullValueId) {
+                checkedIds.set(id);
+                return true;
+              }
               if (checkedIds.get(id)) {
                 if (matchingIds.get(id)) {
                   return true;

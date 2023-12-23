@@ -33,7 +33,7 @@ import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 
 /**
- * Nested field writer for double type columns of {@link NestedDataColumnSerializerV4}. In addition to the normal
+ * Nested field writer for double type columns of {@link NestedDataColumnSerializer}. In addition to the normal
  * dictionary encoded column, this writer also writes an additional double value column with {@link #doublesSerializer},
  * which is written to during {@link #addValue}.
  */

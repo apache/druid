@@ -175,15 +175,24 @@ describe('general', () => {
 
   describe('offsetToRowColumn', () => {
     it('works', () => {
-      expect(offsetToRowColumn('Hello\nThis is a test\nstring.', -6)).toBeUndefined();
-      expect(offsetToRowColumn('Hello\nThis is a test\nstring.', 666)).toBeUndefined();
-      expect(offsetToRowColumn('Hello\nThis is a test\nstring.', 3)).toEqual({
-        column: 3,
+      const str = 'Hello\nThis is a test\nstring.';
+      expect(offsetToRowColumn(str, -6)).toBeUndefined();
+      expect(offsetToRowColumn(str, 666)).toBeUndefined();
+      expect(offsetToRowColumn(str, 3)).toEqual({
         row: 0,
-      });
-      expect(offsetToRowColumn('Hello\nThis is a test\nstring.', 24)).toEqual({
         column: 3,
+      });
+      expect(offsetToRowColumn(str, 5)).toEqual({
+        row: 0,
+        column: 5,
+      });
+      expect(offsetToRowColumn(str, 24)).toEqual({
         row: 2,
+        column: 3,
+      });
+      expect(offsetToRowColumn(str, str.length)).toEqual({
+        row: 2,
+        column: 7,
       });
     });
   });

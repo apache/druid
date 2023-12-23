@@ -3,6 +3,10 @@ id: nested-columns
 title: "Nested columns"
 sidebar_label: Nested columns
 ---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
 
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
@@ -23,17 +27,19 @@ sidebar_label: Nested columns
   ~ under the License.
   -->
 
-Apache Druid supports directly storing nested data structures in `COMPLEX<json>` columns. `COMPLEX<json>` columns store a copy of the structured data in JSON format and specialized internal columns and indexes for nested literal values&mdash;STRING, LONG, and DOUBLE types. An optimized [virtual column](./virtual-columns.md#nested-field-virtual-column) allows Druid to read and filter these values at speeds consistent with standard Druid LONG, DOUBLE, and STRING columns.
+Apache Druid supports directly storing nested data structures in `COMPLEX<json>` columns. `COMPLEX<json>` columns store a copy of the structured data in JSON format and specialized internal columns and indexes for nested literal values&mdash;STRING, LONG, and DOUBLE types, as well as ARRAY of STRING, LONG, and DOUBLE values. An optimized [virtual column](./virtual-columns.md#nested-field-virtual-column) allows Druid to read and filter these values at speeds consistent with standard Druid LONG, DOUBLE, and STRING columns.
 
 Druid [SQL JSON functions](./sql-json-functions.md) allow you to extract, transform, and create `COMPLEX<json>` values in SQL queries, using the specialized virtual columns where appropriate. You can use the [JSON nested columns functions](math-expr.md#json-functions) in [native queries](./querying.md) using [expression virtual columns](./virtual-columns.md#expression-virtual-column), and in native ingestion with a [`transformSpec`](../ingestion/ingestion-spec.md#transformspec).
 
 You can use the JSON functions in INSERT and REPLACE statements in SQL-based ingestion, or in a `transformSpec` in native ingestion as an alternative to using a [`flattenSpec`](../ingestion/data-formats.md#flattenspec) object to "flatten" nested data for ingestion.
 
+Columns ingested as `COMPLEX<json>` are automatically optimized to store the most appropriate physical column based on the data processed. For example, if only LONG values are processed, Druid stores a LONG column, ARRAY columns if the data consists of arrays, or `COMPLEX<json>` in the general case if the data is actually nested. This is the same functionality that powers ['type aware' schema discovery](../ingestion/schema-design.md#type-aware-schema-discovery).
+
 Druid supports directly ingesting nested data with the following formats: JSON, Parquet, Avro, ORC, Protobuf.
 
 ## Example nested data
 
-The examples in this topic use the JSON data in [`nested_example_data.json`](https://static.imply.io/data/nested_example_data.json). The file contains a simple facsimile of an order tracking and shipping table. 
+The examples in this topic use the JSON data in [`nested_example_data.json`](https://static.imply.io/data/nested_example_data.json). The file contains a simple facsimile of an order tracking and shipping table.
 
 When pretty-printed, a sample row in `nested_example_data` looks like this:
 
@@ -124,7 +130,7 @@ For example, the following ingestion spec instructs Druid to ingest `shipTo` and
 
 ### Transform data during batch ingestion
 
-You can use the [SQL JSON functions](./sql-json-functions.md) to transform nested data and reference the transformed data in your ingestion spec. 
+You can use the [SQL JSON functions](./sql-json-functions.md) to transform nested data and reference the transformed data in your ingestion spec.
 
 To do this, define the output name and expression in the `transforms` list in the `transformSpec` object of your ingestion spec.
 
@@ -341,8 +347,9 @@ For example, consider the following deserialized row of the sample data set:
 
 The following examples demonstrate how to ingest the `shipTo` and `details` columns both as string type and as `COMPLEX<json>` in the `shipTo_parsed` and `details_parsed` columns.
 
-<!--DOCUSAURUS_CODE_TABS-->
-<!--SQL-->
+<Tabs>
+<TabItem value="1" label="SQL">
+
 ```
 REPLACE INTO deserialized_example OVERWRITE ALL
 WITH source AS (SELECT * FROM TABLE(
@@ -358,12 +365,14 @@ SELECT
   "department",
   "shipTo",
   "details",
-  PARSE_JSON("shipTo") as "shipTo_parsed", 
+  PARSE_JSON("shipTo") as "shipTo_parsed",
   PARSE_JSON("details") as "details_parsed"
 FROM source
 PARTITIONED BY DAY
 ```
-<!--Native batch-->
+</TabItem>
+<TabItem value="2" label="Native batch">
+
 ```
 {
   "type": "index_parallel",
@@ -423,7 +432,8 @@ PARTITIONED BY DAY
   }
 }
 ```
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 ## Querying nested columns
 
@@ -475,13 +485,15 @@ Example query results:
 
 ### Extracting nested data elements
 
-The `JSON_VALUE` function is specially optimized to provide native Druid level performance when processing nested literal values, as if they were flattened, traditional, Druid column types. It does this by reading from the specialized nested columns and indexes that are built and stored in JSON objects when Druid creates segments. 
+The `JSON_VALUE` function is specially optimized to provide native Druid level performance when processing nested literal values, as if they were flattened, traditional, Druid column types. It does this by reading from the specialized nested columns and indexes that are built and stored in JSON objects when Druid creates segments.
 
 Some operations using `JSON_VALUE` run faster than those using native Druid columns. For example, filtering numeric types uses the indexes built for nested numeric columns, which are not available for Druid DOUBLE, FLOAT, or LONG columns.
 
 `JSON_VALUE` only returns literal types. Any paths that reference JSON objects or array types return null.
 
-> To achieve the best possible performance, use the `JSON_VALUE` function whenever you query JSON objects.
+:::info
+ To achieve the best possible performance, use the `JSON_VALUE` function whenever you query JSON objects.
+:::
 
 #### Example query: Extract nested data elements
 
@@ -561,7 +573,7 @@ Example query results:
 
 ### Transforming JSON object data
 
-In addition to `JSON_VALUE`, Druid offers a number of operators that focus on transforming JSON object data: 
+In addition to `JSON_VALUE`, Druid offers a number of operators that focus on transforming JSON object data:
 
 - `JSON_QUERY`
 - `JSON_OBJECT`

@@ -144,7 +144,7 @@ public class TaskQueueScaleTest
 
     // Add all tasks.
     for (int i = 0; i < numTasks; i++) {
-      final TestTask testTask = new TestTask(i, 2000L /* runtime millis */);
+      final NoopTask testTask = createTestTask(2000L);
       taskQueue.add(testTask);
     }
 
@@ -182,8 +182,7 @@ public class TaskQueueScaleTest
     // Add all tasks.
     final List<String> taskIds = new ArrayList<>();
     for (int i = 0; i < numTasks; i++) {
-      final TestTask testTask = new TestTask(
-          i,
+      final NoopTask testTask = createTestTask(
           Duration.standardHours(1).getMillis() /* very long runtime millis, so we can do a shutdown */
       );
       taskQueue.add(testTask);
@@ -215,27 +214,9 @@ public class TaskQueueScaleTest
     Assert.assertEquals("all tasks should have completed", numTasks, completed);
   }
 
-  private static class TestTask extends NoopTask
+  private NoopTask createTestTask(long runtimeMillis)
   {
-    private final int number;
-    private final long runtime;
-
-    public TestTask(int number, long runtime)
-    {
-      super(null, null, DATASOURCE, 0, 0, null, null, Collections.emptyMap());
-      this.number = number;
-      this.runtime = runtime;
-    }
-
-    public int getNumber()
-    {
-      return number;
-    }
-
-    public long getRuntimeMillis()
-    {
-      return runtime;
-    }
+    return new NoopTask(null, null, DATASOURCE, runtimeMillis, 0, Collections.emptyMap());
   }
 
   private static class TestTaskRunner implements TaskRunner
@@ -289,7 +270,7 @@ public class TaskQueueScaleTest
                         log.error(e, "Error in scheduled executor");
                       }
                     },
-                    ((TestTask) task).getRuntimeMillis(),
+                    ((NoopTask) task).getRunTime(),
                     TimeUnit.MILLISECONDS
                 );
               }

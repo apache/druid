@@ -41,6 +41,8 @@ import java.util.Map;
 @JsonTypeName("hadoop")
 public class HadoopTuningConfig implements TuningConfig
 {
+  public static final int DEFAULT_DETERMINE_PARTITIONS_SAMPLING_FACTOR = 1;
+
   private static final DimensionBasedPartitionsSpec DEFAULT_PARTITIONS_SPEC = HashedPartitionsSpec.defaultSpec();
   private static final Map<Long, List<HadoopyShardSpec>> DEFAULT_SHARD_SPECS = ImmutableMap.of();
   private static final IndexSpec DEFAULT_INDEX_SPEC = IndexSpec.DEFAULT;
@@ -74,7 +76,8 @@ public class HadoopTuningConfig implements TuningConfig
         null,
         null,
         null,
-        null
+        null,
+        DEFAULT_DETERMINE_PARTITIONS_SAMPLING_FACTOR
     );
   }
   @Nullable
@@ -102,6 +105,15 @@ public class HadoopTuningConfig implements TuningConfig
   private final int maxParseExceptions;
   private final boolean useYarnRMJobStatusFallback;
   private final long awaitSegmentAvailabilityTimeoutMillis;
+  // The sample parameter is only used for range partition spec now. When using range
+  // partition spec, we need launch many mapper and one reducer to do global sorting and
+  // find the upper and lower bound for every segment. This mr job may cost a lot of time
+  // if the input data is large. So we can sample the input data and make the mr job run
+  // faster. After all, we don't need a segment size which exactly equals targetRowsPerSegment.
+  // For example, if we ingest 10,000,000,000 rows and the targetRowsPerSegment is 5,000,000,
+  // we can sample by 500, so the mr job need only process 20,000,000 rows, this helps save
+  // a lot of time.
+  private final int determinePartitionsSamplingFactor;
 
   @JsonCreator
   public HadoopTuningConfig(
@@ -130,7 +142,8 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
       final @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
       final @JsonProperty("useYarnRMJobStatusFallback") @Nullable Boolean useYarnRMJobStatusFallback,
-      final @JsonProperty("awaitSegmentAvailabilityTimeoutMillis") @Nullable Long awaitSegmentAvailabilityTimeoutMillis
+      final @JsonProperty("awaitSegmentAvailabilityTimeoutMillis") @Nullable Long awaitSegmentAvailabilityTimeoutMillis,
+      final @JsonProperty("determinePartitionsSamplingFactor") @Nullable Integer determinePartitionsSamplingFactor
   )
   {
     this.workingPath = workingPath;
@@ -181,6 +194,11 @@ public class HadoopTuningConfig implements TuningConfig
       this.awaitSegmentAvailabilityTimeoutMillis = DEFAULT_AWAIT_SEGMENT_AVAILABILITY_TIMEOUT_MILLIS;
     } else {
       this.awaitSegmentAvailabilityTimeoutMillis = awaitSegmentAvailabilityTimeoutMillis;
+    }
+    if (determinePartitionsSamplingFactor == null || determinePartitionsSamplingFactor < 1) {
+      this.determinePartitionsSamplingFactor = 1;
+    } else {
+      this.determinePartitionsSamplingFactor = determinePartitionsSamplingFactor;
     }
   }
 
@@ -336,6 +354,12 @@ public class HadoopTuningConfig implements TuningConfig
     return awaitSegmentAvailabilityTimeoutMillis;
   }
 
+  @JsonProperty
+  public int getDeterminePartitionsSamplingFactor()
+  {
+    return determinePartitionsSamplingFactor;
+  }
+
   public HadoopTuningConfig withWorkingPath(String path)
   {
     return new HadoopTuningConfig(
@@ -363,7 +387,8 @@ public class HadoopTuningConfig implements TuningConfig
         logParseExceptions,
         maxParseExceptions,
         useYarnRMJobStatusFallback,
-        awaitSegmentAvailabilityTimeoutMillis
+        awaitSegmentAvailabilityTimeoutMillis,
+        determinePartitionsSamplingFactor
     );
   }
 
@@ -394,7 +419,8 @@ public class HadoopTuningConfig implements TuningConfig
         logParseExceptions,
         maxParseExceptions,
         useYarnRMJobStatusFallback,
-        awaitSegmentAvailabilityTimeoutMillis
+        awaitSegmentAvailabilityTimeoutMillis,
+        determinePartitionsSamplingFactor
     );
   }
 
@@ -425,7 +451,8 @@ public class HadoopTuningConfig implements TuningConfig
         logParseExceptions,
         maxParseExceptions,
         useYarnRMJobStatusFallback,
-        awaitSegmentAvailabilityTimeoutMillis
+        awaitSegmentAvailabilityTimeoutMillis,
+        determinePartitionsSamplingFactor
     );
   }
 }

@@ -33,9 +33,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
- * Dummy {@link ComplexMetricSerde} that exists so {@link BloomFilterAggregatorFactory} has something to register so
- * {@link org.apache.druid.query.groupby.GroupByQueryEngine} will work, but isn't actually used because bloom filter
- * aggregators are currently only implemented for use at query time
+ * Exists to provide an object-strategy. Bloom filters are query time only so does not fully implement this interface.
  */
 public class BloomFilterSerde extends ComplexMetricSerde
 {

@@ -34,10 +34,12 @@ import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+
 
 /**
  * A query that can compute window functions on top of a completely in-memory inline datasource or query results.
@@ -122,14 +124,17 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
                 )
             );
           }
+          if (ordering.isEmpty()) {
+            ordering = null;
+          }
 
           this.leafOperators.add(
               new ScanOperatorFactory(
                   null,
                   scan.getFilter(),
-                  (int) scan.getScanRowsLimit(),
+                  scan.getOffsetLimit(),
                   scan.getColumns(),
-                  scan.getVirtualColumns(),
+                  scan.getVirtualColumns().isEmpty() ? null : scan.getVirtualColumns(),
                   ordering
               )
           );
@@ -196,7 +201,7 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
   {
     return new WindowOperatorQuery(
         getDataSource(),
-        getQuerySegmentSpec(),
+        spec,
         getContext(),
         rowSignature,
         operators,
@@ -209,6 +214,18 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
   {
     return new WindowOperatorQuery(
         dataSource,
+        getQuerySegmentSpec(),
+        getContext(),
+        rowSignature,
+        operators,
+        leafOperators
+    );
+  }
+
+  public Query<RowsAndColumns> withOperators(List<OperatorFactory> operators)
+  {
+    return new WindowOperatorQuery(
+        getDataSource(),
         getQuerySegmentSpec(),
         getContext(),
         rowSignature,
@@ -230,16 +247,15 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
       return false;
     }
     WindowOperatorQuery that = (WindowOperatorQuery) o;
-    return Objects.equals(rowSignature, that.rowSignature) && Objects.equals(
-        operators,
-        that.operators
-    );
+    return Objects.equals(rowSignature, that.rowSignature)
+        && Objects.equals(operators, that.operators)
+        && Objects.equals(leafOperators, that.leafOperators);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), rowSignature, operators);
+    return Objects.hash(super.hashCode(), rowSignature, operators, leafOperators);
   }
 
   @Override
@@ -251,6 +267,7 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
            ", context=" + getContext() +
            ", rowSignature=" + rowSignature +
            ", operators=" + operators +
+           ", leafOperators=" + leafOperators +
            '}';
   }
 }

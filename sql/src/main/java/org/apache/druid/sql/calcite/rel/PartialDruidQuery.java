@@ -716,6 +716,7 @@ public class PartialDruidQuery
   public int hashCode()
   {
     return Objects.hash(
+        builderSupplier,
         scan,
         whereFilter,
         selectProject,

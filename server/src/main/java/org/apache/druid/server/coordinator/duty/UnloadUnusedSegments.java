@@ -97,7 +97,7 @@ public class UnloadUnusedSegments implements CoordinatorDuty
             && loadQueueManager.dropSegment(segment, serverHolder)) {
           totalUnneededCount++;
           log.debug(
-              "Dropping uneeded segment[%s] from server[%s] in tier[%s]",
+              "Dropping uneeded segment[%s] from server[%s] in tier[%s].",
               segment.getId(), server.getName(), server.getTier()
           );
         }

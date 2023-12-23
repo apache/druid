@@ -51,12 +51,14 @@ You may need to consider the followings to optimize your segments.
   doesn't match with the "number of rows per segment", please consider optimizing
   number of rows per segment rather than this value.
 
-> The above recommendation works in general, but the optimal setting can
-> vary based on your workload. For example, if most of your queries
-> are heavy and take a long time to process each row, you may want to make
-> segments smaller so that the query processing can be more parallelized.
-> If you still see some performance issue after optimizing segment size,
-> you may need to find the optimal settings for your workload.
+:::info
+ The above recommendation works in general, but the optimal setting can
+ vary based on your workload. For example, if most of your queries
+ are heavy and take a long time to process each row, you may want to make
+ segments smaller so that the query processing can be more parallelized.
+ If you still see some performance issue after optimizing segment size,
+ you may need to find the optimal settings for your workload.
+:::
 
 There might be several ways to check if the compaction is necessary. One way
 is using the [System Schema](../querying/sql-metadata-tables.md#system-schema). The

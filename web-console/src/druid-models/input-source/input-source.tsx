@@ -25,6 +25,8 @@ import { deepGet, deepSet, nonEmptyArray, typeIsKnown } from '../../utils';
 
 export const FILTER_SUGGESTIONS: string[] = [
   '*',
+  '*.jsonl',
+  '*.jsonl.gz',
   '*.json',
   '*.json.gz',
   '*.csv',
@@ -179,6 +181,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     required: true,
     placeholder: 'Paste your data here',
     multiline: true,
+    height: '400px',
     info: <p>Put you inline data here</p>,
   },
 

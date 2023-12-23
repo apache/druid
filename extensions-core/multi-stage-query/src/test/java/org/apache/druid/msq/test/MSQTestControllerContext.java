@@ -26,6 +26,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Injector;
+import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
@@ -36,6 +37,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.Worker;
@@ -48,12 +50,13 @@ import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -82,6 +85,7 @@ public class MSQTestControllerContext implements ControllerContext
   );
   private final Injector injector;
   private final ObjectMapper mapper;
+  private final ServiceEmitter emitter = new NoopServiceEmitter();
 
   private Controller controller;
   private Map<String, TaskReport> report = null;
@@ -91,26 +95,25 @@ public class MSQTestControllerContext implements ControllerContext
       ObjectMapper mapper,
       Injector injector,
       TaskActionClient taskActionClient,
-      WorkerMemoryParameters workerMemoryParameters
+      WorkerMemoryParameters workerMemoryParameters,
+      List<ImmutableSegmentLoadInfo> loadedSegments
   )
   {
     this.mapper = mapper;
     this.injector = injector;
     this.taskActionClient = taskActionClient;
     coordinatorClient = Mockito.mock(CoordinatorClient.class);
-    Mockito.when(coordinatorClient.fetchUsedSegments(
-                     ArgumentMatchers.anyString(),
-                     ArgumentMatchers.anyList()
+
+    Mockito.when(coordinatorClient.fetchServerViewSegments(
+                    ArgumentMatchers.anyString(),
+                    ArgumentMatchers.any()
                  )
-    ).thenAnswer(invocation ->
-                     Futures.immediateFuture(
-                         injector.getInstance(SpecificSegmentsQuerySegmentWalker.class)
-                                 .getSegments()
-                                 .stream()
-                                 .filter(dataSegment -> dataSegment.getDataSource()
-                                                                   .equals(invocation.getArguments()[0]))
-                                 .collect(Collectors.toList())
-                     )
+    ).thenAnswer(invocation -> loadedSegments.stream()
+                                             .filter(immutableSegmentLoadInfo ->
+                                                         immutableSegmentLoadInfo.getSegment()
+                                                                                 .getDataSource()
+                                                                                 .equals(invocation.getArguments()[0]))
+                                             .collect(Collectors.toList())
     );
     this.workerMemoryParameters = workerMemoryParameters;
   }
@@ -156,7 +159,7 @@ public class MSQTestControllerContext implements ControllerContext
           log.error(t, "error running worker task %s", task.getId());
           statusMap.put(task.getId(), TaskStatus.failure(task.getId(), t.getMessage()));
         }
-      });
+      }, MoreExecutors.directExecutor());
 
       return task.getId();
     }
@@ -214,6 +217,12 @@ public class MSQTestControllerContext implements ControllerContext
       //do nothing
     }
   };
+
+  @Override
+  public ServiceEmitter emitter()
+  {
+    return emitter;
+  }
 
   @Override
   public ObjectMapper jsonMapper()

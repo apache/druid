@@ -66,7 +66,7 @@ interface InternalValue {
 
 interface JsonInputProps {
   value: any;
-  onChange: (value: any) => void;
+  onChange?: (value: any) => void;
   setError?: (error: Error | undefined) => void;
   placeholder?: string;
   focus?: boolean;
@@ -123,7 +123,7 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
 
           setError?.(error);
           if (!error) {
-            onChange(value);
+            onChange?.(value);
           }
 
           if (showErrorIfNeeded) {
@@ -131,6 +131,7 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
           }
         }}
         onBlur={() => setShowErrorIfNeeded(true)}
+        readOnly={!onChange}
         focus={focus}
         fontSize={12}
         width={width || '100%'}

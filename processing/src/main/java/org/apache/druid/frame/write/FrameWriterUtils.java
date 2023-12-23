@@ -33,6 +33,8 @@ import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.data.ComparableIntArray;
+import org.apache.druid.segment.data.ComparableList;
 import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.segment.data.IndexedInts;
 
@@ -132,7 +134,7 @@ public class FrameWriterUtils
    * Retrieves UTF-8 byte buffers from a {@link ColumnValueSelector}, which is expected to be the kind of
    * selector you get for an {@code ARRAY<STRING>} column.
    *
-   * Null strings are returned as {@link #NULL_STRING_MARKER_ARRAY}.
+   * Null strings are returned as {@code null}.
    *
    * If the entire array returned by {@link BaseObjectColumnValueSelector#getObject()} is null, returns either
    * null or {@link #NULL_STRING_MARKER_ARRAY} depending on the value of "useNullArrays".
@@ -169,6 +171,48 @@ public class FrameWriterUtils
     } else {
       throw new ISE("Unexpected type %s found", row.getClass().getName());
     }
+    return retVal;
+  }
+
+  /**
+   * Retrieves a numeric list from a Java object, given that the object is an instance of something that can be returned
+   * from {@link ColumnValueSelector#getObject()} of valid numeric array selectors representations
+   *
+   * While {@link BaseObjectColumnValueSelector} specifies that only instances of {@code Object[]} can be returned from
+   * the numeric array selectors, this method also handles a few more cases which can be encountered if the selector is
+   * directly implemented on top of the group by stuff
+   */
+  @Nullable
+  public static List<? extends Number> getNumericArrayFromObject(Object row)
+  {
+    if (row == null) {
+      return null;
+    } else if (row instanceof Number) {
+      return Collections.singletonList((Number) row);
+    }
+
+    final List<Number> retVal = new ArrayList<>();
+
+    if (row instanceof List) {
+      for (int i = 0; i < ((List<?>) row).size(); i++) {
+        retVal.add((Number) ((List<?>) row).get(i));
+      }
+    } else if (row instanceof Object[]) {
+      for (Object value : (Object[]) row) {
+        retVal.add((Number) value);
+      }
+    } else if (row instanceof ComparableList) {
+      for (Object value : ((ComparableList) row).getDelegate()) {
+        retVal.add((Number) value);
+      }
+    } else if (row instanceof ComparableIntArray) {
+      for (int value : ((ComparableIntArray) row).getDelegate()) {
+        retVal.add(value);
+      }
+    } else {
+      throw new ISE("Unexpected type %s found", row.getClass().getName());
+    }
+
     return retVal;
   }
 

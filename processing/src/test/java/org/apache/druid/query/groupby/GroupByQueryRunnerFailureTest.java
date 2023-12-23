@@ -40,9 +40,6 @@ import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
-import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
-import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.apache.druid.segment.TestHelper;
 import org.junit.AfterClass;
 import org.junit.Rule;
@@ -98,26 +95,17 @@ public class GroupByQueryRunnerFailureTest
   )
   {
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-
-    final GroupByStrategySelector strategySelector = new GroupByStrategySelector(
+    final GroupingEngine groupingEngine = new GroupingEngine(
+        DEFAULT_PROCESSING_CONFIG,
         configSupplier,
-        new GroupByStrategyV1(
-            configSupplier,
-            new GroupByQueryEngine(configSupplier, BUFFER_POOL),
-            QueryRunnerTestHelper.NOOP_QUERYWATCHER
-        ),
-        new GroupByStrategyV2(
-            DEFAULT_PROCESSING_CONFIG,
-            configSupplier,
-            BUFFER_POOL,
-            MERGE_BUFFER_POOL,
-            TestHelper.makeJsonMapper(),
-            mapper,
-            QueryRunnerTestHelper.NOOP_QUERYWATCHER
-        )
+        BUFFER_POOL,
+        MERGE_BUFFER_POOL,
+        TestHelper.makeJsonMapper(),
+        mapper,
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
-    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(strategySelector);
-    return new GroupByQueryRunnerFactory(strategySelector, toolChest);
+    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(groupingEngine);
+    return new GroupByQueryRunnerFactory(groupingEngine, toolChest);
   }
 
   private static final CloseableStupidPool<ByteBuffer> BUFFER_POOL = new CloseableStupidPool<>(
@@ -133,11 +121,6 @@ public class GroupByQueryRunnerFailureTest
       GroupByQueryRunnerTest.DEFAULT_MAPPER,
       new GroupByQueryConfig()
       {
-        @Override
-        public String getDefaultStrategy()
-        {
-          return "v2";
-        }
       }
   );
 
@@ -286,11 +269,6 @@ public class GroupByQueryRunnerFailureTest
         GroupByQueryRunnerTest.DEFAULT_MAPPER,
         new GroupByQueryConfig()
         {
-          @Override
-          public String getDefaultStrategy()
-          {
-            return "v2";
-          }
 
           @Override
           public boolean isSingleThreaded()

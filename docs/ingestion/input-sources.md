@@ -29,7 +29,9 @@ For general information on native batch indexing and parallel task indexing, see
 
 ## S3 input source
 
-> You need to include the [`druid-s3-extensions`](../development/extensions-core/s3.md) as an extension to use the S3 input source.
+:::info
+ You need to include the [`druid-s3-extensions`](../development/extensions-core/s3.md) as an extension to use the S3 input source.
+:::
 
 The S3 input source reads objects directly from S3. You can specify either:
 - a list of S3 URI strings
@@ -183,6 +185,7 @@ Sample specs:
 |prefixes|JSON array of URI prefixes for the locations of S3 objects to be ingested. Empty objects starting with one of the given prefixes will be skipped.|None|`uris` or `prefixes` or `objects` must be set|
 |objects|JSON array of S3 Objects to be ingested.|None|`uris` or `prefixes` or `objects` must be set|
 |objectGlob|A glob for the object part of the S3 URI. In the URI `s3://foo/bar/file.json`, the glob is applied to `bar/file.json`.<br /><br />The glob must match the entire object part, not just the filename. For example, the glob `*.json` does not match `s3://foo/bar/file.json`, because the object part is `bar/file.json`, and the`*` does not match the slash. To match all objects ending in `.json`, use `**.json` instead.<br /><br />For more information, refer to the documentation for [`FileSystem#getPathMatcher`](https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem.html#getPathMatcher-java.lang.String-).|None|no|
+|systemFields|JSON array of system fields to return as part of input rows. Possible values: `__file_uri` (S3 URI starting with `s3://`), `__file_bucket` (S3 bucket), and `__file_path` (S3 object key).|None|no|
 | endpointConfig |Config for overriding the default S3 endpoint and signing region. This would allow ingesting data from a different S3 store. Please see [s3 config](../development/extensions-core/s3.md#connecting-to-s3-configuration) for more information.|None|No (defaults will be used if not given)
 | clientConfig |S3 client properties for the overridden s3 endpoint. This is used in conjunction with `endPointConfig`. Please see [s3 config](../development/extensions-core/s3.md#connecting-to-s3-configuration) for more information.|None|No (defaults will be used if not given)
 | proxyConfig |Properties for specifying proxy information for the overridden s3 endpoint. This is used in conjunction with `clientConfig`. Please see [s3 config](../development/extensions-core/s3.md#connecting-to-s3-configuration) for more information.|None|No (defaults will be used if not given)
@@ -206,11 +209,15 @@ Properties Object:
 |assumeRoleArn|AWS ARN of the role to assume [see](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html). **assumeRoleArn** can be used either with the ingestion spec AWS credentials or with the default S3 credentials|None|no|
 |assumeRoleExternalId|A unique identifier that might be required when you assume a role in another account [see](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html)|None|no|
 
-> **Note:** If `accessKeyId` and `secretAccessKey` are not given, the default [S3 credentials provider chain](../development/extensions-core/s3.md#s3-authentication-methods) is used.
+:::info
+ **Note:** If `accessKeyId` and `secretAccessKey` are not given, the default [S3 credentials provider chain](../development/extensions-core/s3.md#s3-authentication-methods) is used.
+:::
 
 ## Google Cloud Storage input source
 
-> You need to include the [`druid-google-extensions`](../development/extensions-core/google.md) as an extension to use the Google Cloud Storage input source.
+:::info
+ You need to include the [`druid-google-extensions`](../development/extensions-core/google.md) as an extension to use the Google Cloud Storage input source.
+:::
 
 The Google Cloud Storage input source is to support reading objects directly
 from Google Cloud Storage. Objects can be specified as list of Google
@@ -291,10 +298,13 @@ Google Cloud Storage object:
 |--------|-----------|-------|---------|
 |bucket|Name of the Google Cloud Storage bucket|None|yes|
 |path|The path where data is located.|None|yes|
+|systemFields|JSON array of system fields to return as part of input rows. Possible values: `__file_uri` (Google Cloud Storage URI starting with `gs://`), `__file_bucket` (GCS bucket), and `__file_path` (GCS key).|None|no|
 
 ## Azure input source
 
-> You need to include the [`druid-azure-extensions`](../development/extensions-core/azure.md) as an extension to use the Azure input source.
+:::info
+ You need to include the [`druid-azure-extensions`](../development/extensions-core/azure.md) as an extension to use the Azure input source.
+:::
 
 The Azure input source reads objects directly from Azure Blob store or Azure Data Lake sources. You can
 specify objects as a list of file URI strings or prefixes. You can split the Azure input source for use with [Parallel task](./native-batch.md) indexing and each worker task reads one chunk of the split data.
@@ -363,6 +373,7 @@ Sample specs:
 |prefixes|JSON array of URI prefixes for the locations of Azure objects to ingest, in the form `azure://<container>/<prefix>`. Empty objects starting with one of the given prefixes are skipped.|None|`uris` or `prefixes` or `objects` must be set|
 |objects|JSON array of Azure objects to ingest.|None|`uris` or `prefixes` or `objects` must be set|
 |objectGlob|A glob for the object part of the S3 URI. In the URI `s3://foo/bar/file.json`, the glob is applied to `bar/file.json`.<br /><br />The glob must match the entire object part, not just the filename. For example, the glob `*.json` does not match `s3://foo/bar/file.json`, because the object part is `bar/file.json`, and the`*` does not match the slash. To match all objects ending in `.json`, use `**.json` instead.<br /><br />For more information, refer to the documentation for [`FileSystem#getPathMatcher`](https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem.html#getPathMatcher-java.lang.String-).|None|no|
+|systemFields|JSON array of system fields to return as part of input rows. Possible values: `__file_uri` (Azure blob URI starting with `azure://`), `__file_bucket` (Azure bucket), and `__file_path` (Azure object path).|None|no|
 
 Note that the Azure input source skips all empty objects only when `prefixes` is specified.
 
@@ -375,7 +386,9 @@ The `objects` property is:
 
 ## HDFS input source
 
-> You need to include the [`druid-hdfs-storage`](../development/extensions-core/hdfs.md) as an extension to use the HDFS input source.
+:::info
+ You need to include the [`druid-hdfs-storage`](../development/extensions-core/hdfs.md) as an extension to use the HDFS input source.
+:::
 
 The HDFS input source is to support reading files directly
 from HDFS storage. File paths can be specified as an HDFS URI string or a list
@@ -452,6 +465,7 @@ Sample specs:
 |--------|-----------|-------|---------|
 |type|Set the value to `hdfs`.|None|yes|
 |paths|HDFS paths. Can be either a JSON array or comma-separated string of paths. Wildcards like `*` are supported in these paths. Empty files located under one of the given paths will be skipped.|None|yes|
+|systemFields|JSON array of system fields to return as part of input rows. Possible values: `__file_uri` (URI) and `__file_path` (path component of URI).|None|no|
 
 You can also ingest from other storage using the HDFS input source if the HDFS client supports that storage.
 However, if you want to ingest from cloud storage, consider using the service-specific input source for your data storage.
@@ -462,9 +476,11 @@ in `druid.ingestion.hdfs.allowedProtocols`. See [HDFS input source security conf
 
 The HTTP input source is to support reading files directly from remote sites via HTTP.
 
-> **Security notes:** Ingestion tasks run under the operating system account that runs the Druid processes, for example the Indexer, Middle Manager, and Peon. This means any user who can submit an ingestion task can specify an input source referring to any location that the Druid process can access. For example, using `http` input source, users may have access to internal network servers.
->
-> The `http` input source is not limited to the HTTP or HTTPS protocols. It uses the Java URI class that supports HTTP, HTTPS, FTP, file, and jar protocols by default.
+:::info
+ **Security notes:** Ingestion tasks run under the operating system account that runs the Druid processes, for example the Indexer, Middle Manager, and Peon. This means any user who can submit an ingestion task can specify an input source referring to any location that the Druid process can access. For example, using `http` input source, users may have access to internal network servers.
+
+ The `http` input source is not limited to the HTTP or HTTPS protocols. It uses the Java URI class that supports HTTP, HTTPS, FTP, file, and jar protocols by default.
+:::
 
 For more information about security best practices, see [Security overview](../operations/security-overview.md#best-practices).
 
@@ -539,6 +555,7 @@ You can also use the other existing Druid PasswordProviders. Here is an example 
 |uris|URIs of the input files. See below for the protocols allowed for URIs.|None|yes|
 |httpAuthenticationUsername|Username to use for authentication with specified URIs. Can be optionally used if the URIs specified in the spec require a Basic Authentication Header.|None|no|
 |httpAuthenticationPassword|PasswordProvider to use with specified URIs. Can be optionally used if the URIs specified in the spec require a Basic Authentication Header.|None|no|
+|systemFields|JSON array of system fields to return as part of input rows. Possible values: `__file_uri` (URI including scheme) and `__file_path` (path component of URI).|None|no|
 
 You can only use protocols listed in the `druid.ingestion.http.allowedProtocols` property as HTTP input sources.
 The `http` and `https` protocols are allowed by default. See [HTTP input source security configuration](../configuration/index.md#http-input-source) for more details.
@@ -604,6 +621,7 @@ Sample spec:
 |filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter) for more information. Files matching the filter criteria are considered for ingestion. Files not matching the filter criteria are ignored.|yes if `baseDir` is specified|
 |baseDir|Directory to search recursively for files to be ingested. Empty files under the `baseDir` will be skipped.|At least one of `baseDir` or `files` should be specified|
 |files|File paths to ingest. Some files can be ignored to avoid ingesting duplicate files if they are located under the specified `baseDir`. Empty files will be skipped.|At least one of `baseDir` or `files` should be specified|
+|systemFields|JSON array of system fields to return as part of input rows. Possible values: `__file_uri` (File URI starting with `file:`) and `__file_path` (file path).|None|no|
 
 ## Druid input source
 
@@ -690,10 +708,12 @@ rolled-up datasource `wikipedia_rollup` by grouping on hour, "countryName", and 
 }
 ```
 
-> Note: Older versions (0.19 and earlier) did not respect the timestampSpec when using the Druid input source. If you
-> have ingestion specs that rely on this and cannot rewrite them, set
-> [`druid.indexer.task.ignoreTimestampSpecForDruidInputSource`](../configuration/index.md#indexer-general-configuration)
-> to `true` to enable a compatibility mode where the timestampSpec is ignored.
+:::info
+ Note: Older versions (0.19 and earlier) did not respect the timestampSpec when using the Druid input source. If you
+ have ingestion specs that rely on this and cannot rewrite them, set
+ [`druid.indexer.task.ignoreTimestampSpecForDruidInputSource`](../configuration/index.md#indexer-general-configuration)
+ to `true` to enable a compatibility mode where the timestampSpec is ignored.
+:::
 
 ## SQL input source
 
@@ -796,7 +816,9 @@ The following is an example of a Combining input source spec:
 
 ## Iceberg input source
 
-> To use the Iceberg input source, add the `druid-iceberg-extensions` extension.
+:::info
+ To use the Iceberg input source, add the `druid-iceberg-extensions` extension.
+:::
 
 You use the Iceberg input source to read data stored in the Iceberg table format. For a given table, the input source scans up to the latest Iceberg snapshot from the configured Hive catalog. Druid ingests the underlying live data files using the existing input source formats.
 
@@ -836,7 +858,8 @@ The following is a sample spec for a HDFS warehouse source:
         },
         "warehouseSource": {
             "type": "hdfs"
-        }
+        },
+        "snapshotTime": "2023-06-01T00:00:00.000Z",
       },
       "inputFormat": {
         "type": "parquet"
@@ -915,10 +938,11 @@ The following is a sample spec for a S3 warehouse source:
 |--------|-----------|---------|
 |type|Set the value to `iceberg`.|yes|
 |tableName|The Iceberg table name configured in the catalog.|yes|
-|namespace|The Iceberg namespace associated with the table|yes|
-|icebergFilter|The JSON Object that filters data files within a snapshot|no|
-|icebergCatalog|The JSON Object used to define the catalog that manages the configured Iceberg table|yes|
-|warehouseSource|The JSON Object that defines the native input source for reading the data files from the warehouse|yes|
+|namespace|The Iceberg namespace associated with the table.|yes|
+|icebergFilter|The JSON Object that filters data files within a snapshot.|no|
+|icebergCatalog|The JSON Object used to define the catalog that manages the configured Iceberg table.|yes|
+|warehouseSource|The JSON Object that defines the native input source for reading the data files from the warehouse.|yes|
+|snapshotTime|Timestamp in ISO8601 DateTime format that will be used to fetch the most recent snapshot as of this time.|no|
 
 ###Catalog Object
 

@@ -60,7 +60,7 @@ public class AzureByteSource extends ByteSource
   public InputStream openStream(long offset) throws IOException
   {
     try {
-      return azureStorage.getBlobInputStream(offset, containerName, blobPath);
+      return azureStorage.getBlockBlobInputStream(offset, containerName, blobPath);
     }
     catch (StorageException | URISyntaxException e) {
       if (AzureUtils.AZURE_RETRY.apply(e)) {

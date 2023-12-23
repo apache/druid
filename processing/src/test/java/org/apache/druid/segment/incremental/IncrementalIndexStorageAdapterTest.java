@@ -22,21 +22,19 @@ package org.apache.druid.segment.incremental;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedInputRow;
-import org.apache.druid.data.input.MapBasedRow;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.js.JavaScriptConfig;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.JavaScriptAggregatorFactory;
@@ -52,12 +50,12 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByQueryEngine;
+import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.query.topn.TopNQueryEngine;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.CloserRule;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
@@ -139,21 +137,8 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
             () -> ByteBuffer.allocate(50000)
         )
     ) {
-      final GroupByQueryEngine engine = new GroupByQueryEngine(
-          Suppliers.ofInstance(
-              new GroupByQueryConfig()
-              {
-                @Override
-                public int getMaxIntermediateRows()
-                {
-                  return 5;
-                }
-              }
-          ),
-          pool
-      );
 
-      final Sequence<Row> rows = engine.process(
+      final Sequence<ResultRow> rows = GroupByQueryEngineV2.process(
           GroupByQuery.builder()
                       .setDataSource("test")
                       .setGranularity(Granularities.ALL)
@@ -161,20 +146,24 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                       .addDimension("billy")
                       .addDimension("sally")
                       .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
+                      .addOrderByColumn("billy")
                       .build(),
           new IncrementalIndexStorageAdapter(index),
+          pool,
+          new GroupByQueryConfig(),
+          new DruidProcessingConfig(),
           null
       );
 
-      final List<Row> results = rows.toList();
+      final List<ResultRow> results = rows.toList();
 
       Assert.assertEquals(2, results.size());
 
-      MapBasedRow row = (MapBasedRow) results.get(0);
-      Assert.assertEquals(ImmutableMap.of("sally", "bo", "cnt", 1L), row.getEvent());
+      ResultRow row = results.get(0);
+      Assert.assertArrayEquals(new Object[]{NullHandling.defaultStringValue(), "bo", 1L}, row.getArray());
 
-      row = (MapBasedRow) results.get(1);
-      Assert.assertEquals(ImmutableMap.of("billy", "hi", "cnt", 1L), row.getEvent());
+      row = results.get(1);
+      Assert.assertArrayEquals(new Object[]{"hi", NullHandling.defaultStringValue(), 1L}, row.getArray());
     }
   }
 
@@ -206,21 +195,8 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
             () -> ByteBuffer.allocate(50000)
         )
     ) {
-      final GroupByQueryEngine engine = new GroupByQueryEngine(
-          Suppliers.ofInstance(
-              new GroupByQueryConfig()
-              {
-                @Override
-                public int getMaxIntermediateRows()
-                {
-                  return 5;
-                }
-              }
-          ),
-          pool
-      );
 
-      final Sequence<Row> rows = engine.process(
+      final Sequence<ResultRow> rows = GroupByQueryEngineV2.process(
           GroupByQuery.builder()
                       .setDataSource("test")
                       .setGranularity(Granularities.ALL)
@@ -240,22 +216,26 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                               JavaScriptConfig.getEnabledInstance()
                           )
                       )
+                      .addOrderByColumn("billy")
                       .build(),
           new IncrementalIndexStorageAdapter(index),
+          pool,
+          new GroupByQueryConfig(),
+          new DruidProcessingConfig(),
           null
       );
 
-      final List<Row> results = rows.toList();
+      final List<ResultRow> results = rows.toList();
 
       Assert.assertEquals(2, results.size());
 
-      MapBasedRow row = (MapBasedRow) results.get(0);
-      Assert.assertEquals(ImmutableMap.of("billy", "hi", "cnt", 1L, "fieldLength", 2.0), row.getEvent());
+      ResultRow row = results.get(0);
+      Assert.assertArrayEquals(new Object[]{"hi", NullHandling.defaultStringValue(), 1L, 2.0}, row.getArray());
 
-      row = (MapBasedRow) results.get(1);
-      Assert.assertEquals(
-          ImmutableMap.of("billy", "hip", "sally", "hop", "cnt", 1L, "fieldLength", 6.0),
-          row.getEvent()
+      row = results.get(1);
+      Assert.assertArrayEquals(
+          new Object[]{"hip", "hop", 1L, 6.0},
+          row.getArray()
       );
     }
   }
@@ -388,21 +368,8 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
             () -> ByteBuffer.allocate(50000)
         )
     ) {
-      final GroupByQueryEngine engine = new GroupByQueryEngine(
-          Suppliers.ofInstance(
-              new GroupByQueryConfig()
-              {
-                @Override
-                public int getMaxIntermediateRows()
-                {
-                  return 5;
-                }
-              }
-          ),
-          pool
-      );
 
-      final Sequence<Row> rows = engine.process(
+      final Sequence<ResultRow> rows = GroupByQueryEngineV2.process(
           GroupByQuery.builder()
                       .setDataSource("test")
                       .setGranularity(Granularities.ALL)
@@ -413,15 +380,18 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                       .setDimFilter(DimFilters.dimEquals("sally", (String) null))
                       .build(),
           new IncrementalIndexStorageAdapter(index),
+          pool,
+          new GroupByQueryConfig(),
+          new DruidProcessingConfig(),
           null
       );
 
-      final List<Row> results = rows.toList();
+      final List<ResultRow> results = rows.toList();
 
       Assert.assertEquals(1, results.size());
 
-      MapBasedRow row = (MapBasedRow) results.get(0);
-      Assert.assertEquals(ImmutableMap.of("billy", "hi", "cnt", 1L), row.getEvent());
+      ResultRow row = results.get(0);
+      Assert.assertArrayEquals(new Object[]{"hi", NullHandling.defaultStringValue(), 1L}, row.getArray());
     }
   }
 
@@ -669,12 +639,6 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
     }
 
     @Override
-    public double estimateSelectivity(ColumnIndexSelector indexSelector)
-    {
-      return 1;
-    }
-
-    @Override
     public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
     {
       return Filters.makeValueMatcher(
@@ -682,12 +646,6 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
           "billy",
           new DictionaryRaceTestFilterDruidPredicateFactory()
       );
-    }
-
-    @Override
-    public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
-    {
-      return true;
     }
 
     @Override

@@ -30,6 +30,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.http.security.SupervisorResourceFilter;
 import org.apache.druid.java.util.common.StringUtils;
@@ -45,6 +46,7 @@ import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -494,9 +496,30 @@ public class SupervisorResource
   @ResourceFilters(SupervisorResourceFilter.class)
   public Response reset(@PathParam("id") final String id)
   {
+    return handleResetRequest(id, null);
+  }
+
+  @POST
+  @Path("/{id}/resetOffsets")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(SupervisorResourceFilter.class)
+  public Response resetOffsets(
+      @PathParam("id") final String id,
+      final DataSourceMetadata resetDataSourceMetadata
+  )
+  {
+    return handleResetRequest(id, resetDataSourceMetadata);
+  }
+
+  private Response handleResetRequest(
+      final String id,
+      @Nullable final DataSourceMetadata resetDataSourceMetadata
+  )
+  {
     return asLeaderWithSupervisorManager(
         manager -> {
-          if (manager.resetSupervisor(id, null)) {
+          if (manager.resetSupervisor(id, resetDataSourceMetadata)) {
             return Response.ok(ImmutableMap.of("id", id)).build();
           } else {
             return Response.status(Response.Status.NOT_FOUND)

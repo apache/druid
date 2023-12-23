@@ -3,6 +3,8 @@ id: supervisor-api
 title: Supervisor API
 sidebar_label: Supervisors
 ---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
@@ -50,40 +52,46 @@ Returns an array of strings representing the names of active supervisors. If the
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="1" label="200 SUCCESS">
 
-*Successfully retrieved array of active supervisor IDs* 
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+*Successfully retrieved array of active supervisor IDs*
+
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="2" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="3" label="HTTP">
+
 
 ```HTTP
 GET /druid/indexer/v1/supervisor HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
   <summary>Click to show sample response</summary>
-  
+
   ```json
   [
     "wikipedia_stream",
@@ -102,40 +110,46 @@ Retrieves an array of active supervisor objects. If there are no active supervis
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="4" label="200 SUCCESS">
 
-*Successfully retrieved supervisor objects* 
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+*Successfully retrieved supervisor objects*
+
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="5" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor?full=null"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="6" label="HTTP">
+
 
 ```HTTP
 GET /druid/indexer/v1/supervisor?full=null HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
   <summary>Click to show sample response</summary>
-  
+
   ```json
   [
     {
@@ -764,40 +778,46 @@ Retrieves an array of objects representing active supervisors and their current 
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="7" label="200 SUCCESS">
 
-*Successfully retrieved supervisor state objects*  
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+*Successfully retrieved supervisor state objects*
+
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="8" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor?state=true"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="9" label="HTTP">
+
 
 ```HTTP
 GET /druid/indexer/v1/supervisor?state=true HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
   <summary>Click to show sample response</summary>
-  
+
   ```json
   [
     {
@@ -829,17 +849,21 @@ Retrieves the specification for a single supervisor. The returned specification 
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="10" label="200 SUCCESS">
 
-*Successfully retrieved supervisor spec* 
 
-<!--404 NOT FOUND-->
+*Successfully retrieved supervisor spec*
 
-*Invalid supervisor ID* 
+</TabItem>
+<TabItem value="11" label="404 NOT FOUND">
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+*Invalid supervisor ID*
+
+</TabItem>
+</Tabs>
 
 ---
 
@@ -847,22 +871,26 @@ Retrieves the specification for a single supervisor. The returned specification 
 
 The following example shows how to retrieve the specification of a supervisor with the name `wikipedia_stream`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="12" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/wikipedia_stream"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="13" label="HTTP">
+
 
 ```HTTP
 GET /druid/indexer/v1/supervisor/wikipedia_stream HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 
 #### Sample response
@@ -1187,17 +1215,21 @@ For additional information about the status report, see the topic for each strea
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="14" label="200 SUCCESS">
 
-*Successfully retrieved supervisor status* 
 
-<!--404 NOT FOUND-->
+*Successfully retrieved supervisor status*
 
-*Invalid supervisor ID* 
+</TabItem>
+<TabItem value="15" label="404 NOT FOUND">
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+*Invalid supervisor ID*
+
+</TabItem>
+</Tabs>
 
 ---
 
@@ -1205,22 +1237,26 @@ For additional information about the status report, see the topic for each strea
 
 The following example shows how to retrieve the status of a supervisor with the name `social_media`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="16" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/social_media/status"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="17" label="HTTP">
+
 
 ```HTTP
 GET /druid/indexer/v1/supervisor/social_media/status HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
@@ -1287,34 +1323,40 @@ Retrieve an audit history of specs for all supervisors.
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="18" label="200 SUCCESS">
 
-*Successfully retrieved audit history* 
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+*Successfully retrieved audit history*
+
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="19" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/history"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="20" label="HTTP">
+
 
 ```HTTP
 GET /druid/indexer/v1/supervisor/history HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
@@ -1642,17 +1684,21 @@ Retrieves an audit history of specs for a single supervisor.
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="21" label="200 SUCCESS">
 
-*Successfully retrieved supervisor audit history* 
 
-<!--404 NOT FOUND-->
+*Successfully retrieved supervisor audit history*
 
-*Invalid supervisor ID* 
+</TabItem>
+<TabItem value="22" label="404 NOT FOUND">
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+*Invalid supervisor ID*
+
+</TabItem>
+</Tabs>
 
 ---
 
@@ -1660,22 +1706,26 @@ Retrieves an audit history of specs for a single supervisor.
 
 The following example shows how to retrieve the audit history of a supervisor with the name `wikipedia_stream`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="23" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/wikipedia_stream/history"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="24" label="HTTP">
+
 
 ```HTTP
 GET /druid/indexer/v1/supervisor/wikipedia_stream/history HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
@@ -1994,7 +2044,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ### Create or update a supervisor
 
-Creates a new supervisor or updates an existing one for the same datasource with a new schema and configuration. 
+Creates a new supervisor or updates an existing one for the same datasource with a new schema and configuration.
 
 You can define a supervisor spec for [Apache Kafka](../development/extensions-core/kafka-ingestion.md#define-a-supervisor-spec) or [Amazon Kinesis](../development/extensions-core/kinesis-ingestion.md#supervisor-spec) streaming ingestion methods. Once created, the supervisor persists in the metadata database.
 
@@ -2006,27 +2056,32 @@ When you call this endpoint on an existing supervisor for the same datasource, t
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="25" label="200 SUCCESS">
 
-*Successfully created a new supervisor or updated an existing supervisor* 
 
-<!--415 UNSUPPORTED MEDIA TYPE-->
+*Successfully created a new supervisor or updated an existing supervisor*
 
-*Request body content type is not in JSON format* 
+</TabItem>
+<TabItem value="26" label="415 UNSUPPORTED MEDIA TYPE">
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+*Request body content type is not in JSON format*
+
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-The following example uses JSON input format to create a supervisor spec for Kafka with a `social_media` datasource and `social_media` topic. 
+The following example uses JSON input format to create a supervisor spec for Kafka with a `social_media` datasource and `social_media` topic.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="27" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor" \
@@ -2083,7 +2138,9 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor" \
 }'
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="28" label="HTTP">
+
 
 ```HTTP
 POST /druid/indexer/v1/supervisor HTTP/1.1
@@ -2143,7 +2200,8 @@ Content-Length: 1359
 }
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
@@ -2166,21 +2224,27 @@ Suspends a single running supervisor. Returns the updated supervisor spec, where
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="29" label="200 SUCCESS">
 
-*Successfully shut down supervisor* 
 
-<!--400 BAD REQUEST-->
+*Successfully shut down supervisor*
 
-*Supervisor already suspended* 
+</TabItem>
+<TabItem value="30" label="400 BAD REQUEST">
 
-<!--404 NOT FOUND-->
 
-*Invalid supervisor ID* 
+*Supervisor already suspended*
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+<TabItem value="31" label="404 NOT FOUND">
+
+
+*Invalid supervisor ID*
+
+</TabItem>
+</Tabs>
 
 ---
 
@@ -2188,22 +2252,26 @@ Suspends a single running supervisor. Returns the updated supervisor spec, where
 
 The following example shows how to suspend a running supervisor with the name `social_media`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="32" label="cURL">
+
 
 ```shell
 curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/social_media/suspend"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="33" label="HTTP">
+
 
 ```HTTP
 POST /druid/indexer/v1/supervisor/social_media/suspend HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
@@ -2522,34 +2590,40 @@ Suspends all supervisors. Note that this endpoint returns an HTTP `200 Success` 
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="34" label="200 SUCCESS">
 
-*Successfully suspended all supervisors* 
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+*Successfully suspended all supervisors*
+
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="35" label="cURL">
+
 
 ```shell
 curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/suspendAll"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="36" label="HTTP">
+
 
 ```HTTP
 POST /druid/indexer/v1/supervisor/suspendAll HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
@@ -2573,21 +2647,27 @@ Resumes indexing tasks for a supervisor. Returns an updated supervisor spec with
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="37" label="200 SUCCESS">
 
-*Successfully resumed supervisor* 
 
-<!--400 BAD REQUEST-->
+*Successfully resumed supervisor*
 
-*Supervisor already running* 
+</TabItem>
+<TabItem value="38" label="400 BAD REQUEST">
 
-<!--404 NOT FOUND-->
 
-*Invalid supervisor ID* 
+*Supervisor already running*
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+<TabItem value="39" label="404 NOT FOUND">
+
+
+*Invalid supervisor ID*
+
+</TabItem>
+</Tabs>
 
 ---
 
@@ -2595,22 +2675,26 @@ Resumes indexing tasks for a supervisor. Returns an updated supervisor spec with
 
 The following example resumes a previously suspended supervisor with name `social_media`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="40" label="cURL">
+
 
 ```shell
 curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/social_media/resume"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="41" label="HTTP">
+
 
 ```HTTP
 POST /druid/indexer/v1/supervisor/social_media/resume HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
@@ -2930,34 +3014,40 @@ Resumes all supervisors. Note that this endpoint returns an HTTP `200 Success` c
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="42" label="200 SUCCESS">
 
-*Successfully resumed all supervisors* 
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+*Successfully resumed all supervisors*
+
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="43" label="cURL">
+
 
 ```shell
 curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/resumeAll"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="44" label="HTTP">
+
 
 ```HTTP
 POST /druid/indexer/v1/supervisor/resumeAll HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
@@ -2973,9 +3063,9 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ### Reset a supervisor
 
-Resets the specified supervisor. This endpoint clears stored offsets in Kafka or sequence numbers in Kinesis, prompting the supervisor to resume data reading. The supervisor will start from the earliest or latest available position, depending on the platform (offsets in Kafka or sequence numbers in Kinesis). It kills and recreates active tasks to read from valid positions.
+Resets the specified supervisor. This endpoint clears _all_ stored offsets in Kafka or sequence numbers in Kinesis, prompting the supervisor to resume data reading. The supervisor will start from the earliest or latest available position, depending on the platform (offsets in Kafka or sequence numbers in Kinesis). It kills and recreates active tasks to read from valid positions.
 
-Use this endpoint to recover from a stopped state due to missing offsets in Kafka or sequence numbers in Kinesis. Use this endpoint with caution as it may result in skipped messages and lead to data loss or duplicate data.  
+Use this endpoint to recover from a stopped state due to missing offsets in Kafka or sequence numbers in Kinesis. Use this endpoint with caution as it may result in skipped messages and lead to data loss or duplicate data.
 
 #### URL
 
@@ -2983,40 +3073,154 @@ Use this endpoint to recover from a stopped state due to missing offsets in Kafk
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="45" label="200 SUCCESS">
 
-*Successfully reset supervisor* 
 
-<!--404 NOT FOUND-->
+*Successfully reset supervisor*
 
-*Invalid supervisor ID* 
+</TabItem>
+<TabItem value="46" label="404 NOT FOUND">
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+*Invalid supervisor ID*
+
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-The following example shows how to reset a supervisor with the name `social_media`. 
+The following example shows how to reset a supervisor with the name `social_media`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="47" label="cURL">
+
 
 ```shell
 curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/social_media/reset"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="48" label="HTTP">
+
 
 ```HTTP
 POST /druid/indexer/v1/supervisor/social_media/reset HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
+
+#### Sample response
+
+<details>
+  <summary>Click to show sample response</summary>
+
+  ```json
+{
+    "id": "social_media"
+}
+  ```
+</details>
+
+### Reset Offsets for a supervisor
+
+Resets the specified offsets for a supervisor. This endpoint clears _only_ the specified offsets in Kafka or sequence numbers in Kinesis, prompting the supervisor to resume data reading.
+If there are no stored offsets, the specified offsets will be set in the metadata store. The supervisor will start from the reset offsets for the partitions specified and for the other partitions from the stored offset.
+It kills and recreates active tasks pertaining to the partitions specified to read from valid offsets.
+
+Use this endpoint to selectively reset offsets for partitions without resetting the entire set.
+
+#### URL
+
+<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/:supervisorId/resetOffsets</code>
+
+#### Responses
+
+<Tabs>
+
+<TabItem value="1" label="200 SUCCESS">
+
+
+*Successfully reset offsets*
+
+</TabItem>
+<TabItem value="2" label="404 NOT FOUND">
+
+
+*Invalid supervisor ID*
+
+</TabItem>
+</Tabs>
+
+---
+#### Reset Offsets Metadata
+
+This section presents the structure and details of the reset offsets metadata payload.
+
+| Field | Type | Description | Required |
+|---------|---------|---------|---------|
+| `type` | String | The type of reset offsets metadata payload. It must match the supervisor's `type`. Possible values: `kafka` or `kinesis`. | Yes |
+| `partitions` | Object | An object representing the reset metadata. See below for details. | Yes |
+
+#### Partitions
+
+The following table defines the fields within the `partitions` object in the reset offsets metadata payload.
+
+| Field | Type | Description | Required |
+|---------|---------|---------|---------|
+| `type` | String | Must be set as `end`.  Indicates the end sequence numbers for the reset offsets. | Yes |
+| `stream` | String | The stream to be reset. It must be a valid stream consumed by the supervisor. | Yes |
+| `partitionOffsetMap` | Object | A map of partitions to corresponding offsets for the stream to be reset.| Yes |
+
+#### Sample request
+
+The following example shows how to reset offsets for a kafka supervisor with the name `social_media`. Let's say the supervisor is reading
+from a kafka topic `ads_media_stream` and has the stored offsets: `{"0": 0, "1": 10, "2": 20, "3": 40}`.
+
+<Tabs>
+
+<TabItem value="3" label="cURL">
+
+
+```shell
+curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/social_media/resetOffsets"
+--header 'Content-Type: application/json'
+--data-raw '{"type":"kafka","partitions":{"type":"end","stream":"ads_media_stream","partitionOffsetMap":{"0":100, "2": 650}}}'
+```
+
+</TabItem>
+<TabItem value="4" label="HTTP">
+
+
+```HTTP
+POST /druid/indexer/v1/supervisor/social_media/resetOffsets HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+Content-Type: application/json
+
+{
+  "type": "kafka",
+  "partitions": {
+    "type": "end",
+    "stream": "ads_media_stream",
+    "partitionOffsetMap": {
+      "0": 100,
+      "2": 650
+    }
+  }
+}
+```
+
+The above operation will reset offsets only for partitions 0 and 2 to 100 and 650 respectively. After a successful reset,
+when the supervisor's tasks restart, they will resume reading from `{"0": 100, "1": 10, "2": 650, "3": 40}`.
+
+</TabItem>
+</Tabs>
 
 #### Sample response
 
@@ -3032,48 +3236,56 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ### Terminate a supervisor
 
-Terminates a supervisor and its associated indexing tasks, triggering the publishing of their segments. When terminated, a tombstone marker is placed in the database to prevent reloading on restart. 
+Terminates a supervisor and its associated indexing tasks, triggering the publishing of their segments. When terminated, a tombstone marker is placed in the database to prevent reloading on restart.
 
 The terminated supervisor still exists in the metadata store and its history can be retrieved.
 
-#### URL 
+#### URL
 
 <code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/:supervisorId/terminate</code>
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="49" label="200 SUCCESS">
 
-*Successfully terminated a supervisor* 
 
-<!--404 NOT FOUND-->
+*Successfully terminated a supervisor*
 
-*Invalid supervisor ID or supervisor not running* 
+</TabItem>
+<TabItem value="50" label="404 NOT FOUND">
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+*Invalid supervisor ID or supervisor not running*
+
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="51" label="cURL">
+
 
 ```shell
 curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/social_media/terminate"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="52" label="HTTP">
+
 
 ```HTTP
 POST /druid/indexer/v1/supervisor/social_media/terminate HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
@@ -3097,34 +3309,40 @@ Terminates all supervisors. Terminated supervisors still exist in the metadata s
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="53" label="200 SUCCESS">
 
-*Successfully terminated all supervisors* 
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+*Successfully terminated all supervisors*
+
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="54" label="cURL">
+
 
 ```shell
 curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/terminateAll"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="55" label="HTTP">
+
 
 ```HTTP
 POST /druid/indexer/v1/supervisor/terminateAll HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
@@ -3140,7 +3358,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ### Shut down a supervisor
 
-Shuts down a supervisor. This endpoint is deprecated and will be removed in future releases. Use the equivalent [terminate](#terminate-a-supervisor) endpoint instead. 
+Shuts down a supervisor. This endpoint is deprecated and will be removed in future releases. Use the equivalent [terminate](#terminate-a-supervisor) endpoint instead.
 
 #### URL
 

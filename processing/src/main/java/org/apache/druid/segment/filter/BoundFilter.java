@@ -42,12 +42,11 @@ import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFac
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
-import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
 import org.apache.druid.segment.index.AllTrueBitmapColumnIndex;
+import org.apache.druid.segment.index.AllUnknownBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
 import org.apache.druid.segment.index.semantic.LexicographicalRangeIndexes;
@@ -85,7 +84,7 @@ public class BoundFilter implements Filter
       // missing column -> match all rows if the predicate matches null; match no rows otherwise
       return getPredicateFactory().makeStringPredicate().apply(null)
              ? new AllTrueBitmapColumnIndex(selector)
-             : new AllFalseBitmapColumnIndex(selector);
+             : new AllUnknownBitmapColumnIndex(selector);
     }
 
     if (supportStringShortCircuit()) {
@@ -170,21 +169,12 @@ public class BoundFilter implements Filter
       }
 
       @Override
-      public double estimateSelectivity(int totalRows)
-      {
-        return Math.min(
-            1.0,
-            rangeIndex.estimateSelectivity(totalRows) + nullBitmap.estimateSelectivity(totalRows)
-        );
-      }
-
-      @Override
-      public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+      public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
       {
         return bitmapResultFactory.union(
             ImmutableList.of(
-                rangeIndex.computeBitmapResult(bitmapResultFactory),
-                nullBitmap.computeBitmapResult(bitmapResultFactory)
+                rangeIndex.computeBitmapResult(bitmapResultFactory, false),
+                nullBitmap.computeBitmapResult(bitmapResultFactory, false)
             )
         );
       }
@@ -223,12 +213,6 @@ public class BoundFilter implements Filter
   public boolean canVectorizeMatcher(ColumnInspector inspector)
   {
     return true;
-  }
-
-  @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
-  {
-    return Filters.supportsSelectivityEstimation(this, boundDimFilter.getDimension(), columnSelector, indexSelector);
   }
 
   @Override
@@ -343,6 +327,7 @@ public class BoundFilter implements Filter
     private final Supplier<DruidLongPredicate> longPredicateSupplier;
     private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
     private final Supplier<DruidDoublePredicate> doublePredicateSupplier;
+    private final boolean isNullUnknown;
 
     BoundDimFilterDruidPredicateFactory(ExtractionFn extractionFn, BoundDimFilter boundDimFilter)
     {
@@ -351,6 +336,11 @@ public class BoundFilter implements Filter
       this.longPredicateSupplier = boundDimFilter.getLongPredicateSupplier();
       this.floatPredicateSupplier = boundDimFilter.getFloatPredicateSupplier();
       this.doublePredicateSupplier = boundDimFilter.getDoublePredicateSupplier();
+      if (extractionFn != null) {
+        this.isNullUnknown = !doesMatch(extractionFn.apply(null), boundDimFilter);
+      } else {
+        this.isNullUnknown = !doesMatch(null, boundDimFilter);
+      }
     }
 
     @Override
@@ -397,6 +387,12 @@ public class BoundFilter implements Filter
         return doublePredicateSupplier.get();
       }
       return input -> doesMatch(String.valueOf(input), boundDimFilter);
+    }
+
+    @Override
+    public boolean isNullInputUnknown()
+    {
+      return isNullUnknown;
     }
 
     @Override

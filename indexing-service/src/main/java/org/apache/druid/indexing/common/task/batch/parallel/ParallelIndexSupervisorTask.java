@@ -42,9 +42,9 @@ import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.CurrentSubTaskHolder;
@@ -433,8 +433,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   {
     return determineLockGranularityAndTryLock(
         taskActionClient,
-        ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals(),
-        ingestionSchema.getIOConfig()
+        ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals()
     );
   }
 
@@ -1156,8 +1155,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         for (Interval interval : tombstoneIntervals) {
           SegmentIdWithShardSpec segmentIdWithShardSpec = allocateNewSegmentForTombstone(
               ingestionSchema,
-              interval.getStart(),
-              toolbox
+              interval.getStart()
           );
           tombstonesAnShards.put(interval, segmentIdWithShardSpec);
         }
@@ -1170,16 +1168,15 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       }
     }
 
-    final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish, commitMetadata) ->
-        toolbox.getTaskActionClient().submit(
-            SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish)
+    final TaskLockType taskLockType = getTaskLockHelper().getLockTypeToUse();
+    final TransactionalSegmentPublisher publisher =
+        (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) -> toolbox.getTaskActionClient().submit(
+            buildPublishAction(segmentsToBeOverwritten, segmentsToPublish, taskLockType)
         );
+
     final boolean published =
         newSegments.isEmpty()
-        || publisher.publishSegments(oldSegments,
-                                     Collections.emptySet(),
-                                     newSegments, annotateFunction,
-                                     null).isSuccess();
+        || publisher.publishSegments(oldSegments, newSegments, annotateFunction, null).isSuccess();
 
     if (published) {
       LOG.info("Published [%d] segments", newSegments.size());
@@ -1207,7 +1204,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
             convertToIndexTuningConfig(getIngestionSchema().getTuningConfig())
         ),
         getContext(),
-        getIngestionSchema().getTuningConfig().getMaxAllowedLockCount()
+        getIngestionSchema().getTuningConfig().getMaxAllowedLockCount(),
+        // Don't run cleanup in the IndexTask since we are wrapping it in the ParallelIndexSupervisorTask
+        false
     );
 
     if (currentSubTaskHolder.setTask(sequentialIndexTask)

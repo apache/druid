@@ -27,6 +27,7 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
 import org.apache.druid.common.guava.FutureUtils;
@@ -260,7 +261,8 @@ public class WorkerTaskManager
                 )
             );
           }
-        }
+        },
+        MoreExecutors.directExecutor()
     );
   }
 

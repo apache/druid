@@ -93,10 +93,78 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
                  .legacy(legacy);
   }
 
+  private Druids.ScanQueryBuilder newTestUnnestQueryWithFilterDataSource()
+  {
+    return Druids.newScanQueryBuilder()
+                 .dataSource(QueryRunnerTestHelper.UNNEST_FILTER_DATA_SOURCE)
+                 .columns(Collections.emptyList())
+                 .eternityInterval()
+                 .limit(3)
+                 .legacy(legacy);
+  }
+
   @Test
   public void testScanOnUnnest()
   {
     ScanQuery query = newTestUnnestQuery()
+        .intervals(I_0112_0114)
+        .columns(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
+        .limit(3)
+        .build();
+
+    final QueryRunner queryRunner = QueryRunnerTestHelper.makeQueryRunnerWithSegmentMapFn(
+        FACTORY,
+        new IncrementalIndexSegment(
+            index,
+            QueryRunnerTestHelper.SEGMENT_ID
+        ),
+        query,
+        "rtIndexvc"
+    );
+
+    Iterable<ScanResultValue> results = queryRunner.run(QueryPlus.wrap(query)).toList();
+    String[] columnNames;
+    if (legacy) {
+      columnNames = new String[]{
+          getTimestampName() + ":TIME",
+          QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
+      };
+    } else {
+      columnNames = new String[]{
+          QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST
+      };
+    }
+    String[] values;
+    if (legacy) {
+      values = new String[]{
+          "2011-01-12T00:00:00.000Z\ta",
+          "2011-01-12T00:00:00.000Z\tpreferred",
+          "2011-01-12T00:00:00.000Z\tb"
+      };
+    } else {
+      values = new String[]{
+          "a",
+          "preferred",
+          "b"
+      };
+    }
+
+    final List<List<Map<String, Object>>> events = ScanQueryRunnerTest.toEvents(columnNames, legacy, values);
+    List<ScanResultValue> expectedResults = toExpected(
+        events,
+        legacy
+        ? Lists.newArrayList(getTimestampName(), QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
+        : Collections.singletonList(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST),
+        0,
+        3
+    );
+    ScanQueryRunnerTest.verify(expectedResults, results);
+  }
+
+  @Test
+  public void testScanOnUnnestFilterDataSource()
+  {
+    ScanQuery query = newTestUnnestQueryWithFilterDataSource()
         .intervals(I_0112_0114)
         .columns(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
         .limit(3)

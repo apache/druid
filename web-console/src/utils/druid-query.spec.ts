@@ -21,10 +21,10 @@ import { sane } from '@druid-toolkit/query';
 import { DruidError, getDruidErrorMessage } from './druid-query';
 
 describe('DruidQuery', () => {
-  describe('DruidError.parsePosition', () => {
+  describe('DruidError.extractStartRowColumn', () => {
     it('works for single error 1', () => {
       expect(
-        DruidError.extractPosition({
+        DruidError.extractStartRowColumn({
           sourceType: 'sql',
           line: '2',
           column: '12',
@@ -39,7 +39,7 @@ describe('DruidQuery', () => {
 
     it('works for range', () => {
       expect(
-        DruidError.extractPosition({
+        DruidError.extractStartRowColumn({
           sourceType: 'sql',
           line: '1',
           column: '16',
@@ -51,8 +51,37 @@ describe('DruidQuery', () => {
       ).toEqual({
         row: 0,
         column: 15,
-        endRow: 0,
-        endColumn: 16,
+      });
+    });
+  });
+
+  describe('DruidError.extractEndRowColumn', () => {
+    it('works for single error 1', () => {
+      expect(
+        DruidError.extractEndRowColumn({
+          sourceType: 'sql',
+          line: '2',
+          column: '12',
+          token: "AS \\'l\\'",
+          expected: '...',
+        }),
+      ).toBeUndefined();
+    });
+
+    it('works for range', () => {
+      expect(
+        DruidError.extractEndRowColumn({
+          sourceType: 'sql',
+          line: '1',
+          column: '16',
+          endLine: '1',
+          endColumn: '17',
+          token: "AS \\'l\\'",
+          expected: '...',
+        }),
+      ).toEqual({
+        row: 0,
+        column: 16,
       });
     });
   });

@@ -59,6 +59,7 @@ public class KafkaInputFormatTest
 {
   private KafkaRecordEntity inputEntity;
   private final long timestamp = DateTimes.of("2021-06-24").getMillis();
+  private static final String TOPIC = "sample";
   private static final Iterable<Header> SAMPLE_HEADERS = ImmutableList.of(
       new Header()
       {
@@ -126,7 +127,8 @@ public class KafkaInputFormatTest
         ),
         "kafka.newheader.",
         "kafka.newkey.key",
-        "kafka.newts.timestamp"
+        "kafka.newts.timestamp",
+        "kafka.newtopic.topic"
     );
   }
 
@@ -166,7 +168,8 @@ public class KafkaInputFormatTest
         ),
         "kafka.newheader.",
         "kafka.newkey.key",
-        "kafka.newts.timestamp"
+        "kafka.newts.timestamp",
+        "kafka.newtopic.topic"
     );
     Assert.assertEquals(format, kif);
 
@@ -209,7 +212,8 @@ public class KafkaInputFormatTest
                         "foo",
                         "kafka.newheader.encoding",
                         "kafka.newheader.kafkapkc",
-                        "kafka.newts.timestamp"
+                        "kafka.newts.timestamp",
+                        "kafka.newtopic.topic"
                     )
                 )
             ),
@@ -231,7 +235,8 @@ public class KafkaInputFormatTest
                 "foo",
                 "kafka.newheader.encoding",
                 "kafka.newheader.kafkapkc",
-                "kafka.newts.timestamp"
+                "kafka.newts.timestamp",
+                "kafka.newtopic.topic"
             ),
             row.getDimensions()
         );
@@ -253,6 +258,10 @@ public class KafkaInputFormatTest
         Assert.assertEquals(
             String.valueOf(DateTimes.of("2021-06-24").getMillis()),
             Iterables.getOnlyElement(row.getDimension("kafka.newts.timestamp"))
+        );
+        Assert.assertEquals(
+            TOPIC,
+            Iterables.getOnlyElement(row.getDimension("kafka.newtopic.topic"))
         );
         Assert.assertEquals(
             "2021-06-25",
@@ -302,7 +311,8 @@ public class KafkaInputFormatTest
                         "foo",
                         "kafka.newheader.encoding",
                         "kafka.newheader.kafkapkc",
-                        "kafka.newts.timestamp"
+                        "kafka.newts.timestamp",
+                        "kafka.newtopic.topic"
                     )
                 )
             ),
@@ -478,7 +488,7 @@ public class KafkaInputFormatTest
             null, null, false, //make sure JsonReader is used
             false, false
         ),
-        "kafka.newheader.", "kafka.newkey.", "kafka.newts."
+        "kafka.newheader.", "kafka.newkey.", "kafka.newts.", "kafka.newtopic."
     );
 
     final InputEntityReader reader = localFormat.createReader(
@@ -489,7 +499,8 @@ public class KafkaInputFormatTest
                     ImmutableList.of(
                         "bar",
                         "foo",
-                        "kafka.newts.timestamp"
+                        "kafka.newts.timestamp",
+                        "kafka.newtopic.topic"
                     )
                 )
             ),
@@ -567,7 +578,8 @@ public class KafkaInputFormatTest
                         "foo",
                         "kafka.newheader.encoding",
                         "kafka.newheader.kafkapkc",
-                        "kafka.newts.timestamp"
+                        "kafka.newts.timestamp",
+                        "kafka.newtopic.topic"
                     )
                 )
             ),
@@ -612,6 +624,10 @@ public class KafkaInputFormatTest
           Assert.assertEquals(
               String.valueOf(DateTimes.of("2021-06-24").getMillis()),
               Iterables.getOnlyElement(row.getDimension("kafka.newts.timestamp"))
+          );
+          Assert.assertEquals(
+              TOPIC,
+              Iterables.getOnlyElement(row.getDimension("kafka.newtopic.topic"))
           );
           Assert.assertEquals(String.valueOf(i), Iterables.getOnlyElement(row.getDimension("kafka.newheader.indexH")));
 
@@ -669,7 +685,8 @@ public class KafkaInputFormatTest
                         "foo",
                         "kafka.newheader.encoding",
                         "kafka.newheader.kafkapkc",
-                        "kafka.newts.timestamp"
+                        "kafka.newts.timestamp",
+                        "kafka.newtopic.topic"
                     )
                 )
             ),
@@ -683,7 +700,8 @@ public class KafkaInputFormatTest
       while (iterator.hasNext()) {
         Throwable t = Assert.assertThrows(ParseException.class, () -> iterator.next());
         Assert.assertEquals(
-            "Timestamp[null] is unparseable! Event: {foo=x, kafka.newts.timestamp=1624492800000, kafka.newkey.key=sampleKey, root_baz=4, bar=null, kafka...",
+            "Timestamp[null] is unparseable! Event: {kafka.newtopic.topic=sample, foo=x, kafka.newts"
+            + ".timestamp=1624492800000, kafka.newkey.key=sampleKey...",
             t.getMessage()
         );
       }
@@ -733,6 +751,7 @@ public class KafkaInputFormatTest
         final InputRow row = iterator.next();
         Assert.assertEquals(
             Arrays.asList(
+                "kafka.newtopic.topic",
                 "foo",
                 "kafka.newts.timestamp",
                 "kafka.newkey.key",
@@ -766,6 +785,10 @@ public class KafkaInputFormatTest
         Assert.assertEquals(
             String.valueOf(DateTimes.of("2021-06-24").getMillis()),
             Iterables.getOnlyElement(row.getDimension("kafka.newts.timestamp"))
+        );
+        Assert.assertEquals(
+            TOPIC,
+            Iterables.getOnlyElement(row.getDimension("kafka.newtopic.topic"))
         );
         Assert.assertEquals(
             "2021-06-25",
@@ -834,6 +857,7 @@ public class KafkaInputFormatTest
             Arrays.asList(
                 "bar",
                 "kafka.newheader.kafkapkc",
+                "kafka.newtopic.topic",
                 "foo",
                 "kafka.newts.timestamp",
                 "kafka.newkey.key",
@@ -867,6 +891,10 @@ public class KafkaInputFormatTest
             Iterables.getOnlyElement(row.getDimension("kafka.newts.timestamp"))
         );
         Assert.assertEquals(
+            TOPIC,
+            Iterables.getOnlyElement(row.getDimension("kafka.newtopic.topic"))
+        );
+        Assert.assertEquals(
             "2021-06-25",
             Iterables.getOnlyElement(row.getDimension("timestamp"))
         );
@@ -889,7 +917,7 @@ public class KafkaInputFormatTest
   {
     return new KafkaRecordEntity(
         new ConsumerRecord<>(
-            "sample",
+            TOPIC,
             0,
             0,
             timestamp,

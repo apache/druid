@@ -95,7 +95,9 @@ curl --location --request GET 'http://localhost:8888/druid/coordinator/v1/rules'
 
 The rules API accepts an array of rules as JSON objects. The JSON object you send in the API request for each rule is specific to the rules types outlined below.
 
-> You must pass the entire array of rules, in your desired order, with each API request. Each POST request to the rules API overwrites the existing rules for the specified datasource.
+:::info
+ You must pass the entire array of rules, in your desired order, with each API request. Each POST request to the rules API overwrites the existing rules for the specified datasource.
+:::
 
 The order of rules is very important. The Coordinator reads rules in the order in which they appear in the rules list. For example, in the following screenshot the Coordinator evaluates data against rule 1, then rule 2, then rule 3:
 
@@ -341,6 +343,8 @@ To reload dropped data:
 
 1. Set your retention period&mdash;for example, change the retention period from one month to two months.
 2. Use the web console or the API to mark all segments belonging to the datasource as `used`.
+
+This prompts Druid to rerun the Coordinator rules and load all missing segments. The Coordinator identifies the latest version of the segments and drops older versions.
 
 ## Learn more
 

@@ -163,10 +163,10 @@ public class FilterPartitionTest extends BaseFilterTest
 
   private static final List<InputRow> ROWS = ImmutableList.<InputRow>builder()
       .addAll(DEFAULT_ROWS)
-      .add(makeDefaultSchemaRow("6", "B453B411", ImmutableList.of("c", "d", "e"), null, null, null, null))
-      .add(makeDefaultSchemaRow("7", "HELLO", ImmutableList.of("foo"), null, null, null, null))
-      .add(makeDefaultSchemaRow("8", "abc", ImmutableList.of("bar"), null, null, null, null))
-      .add(makeDefaultSchemaRow("9", "1", ImmutableList.of("foo", "bar"), null, null, null, null))
+      .add(makeDefaultSchemaRow("6", "B453B411", ImmutableList.of("c", "d", "e"), null, null, null, null, null))
+      .add(makeDefaultSchemaRow("7", "HELLO", ImmutableList.of("foo"), null, null, null, null, null))
+      .add(makeDefaultSchemaRow("8", "abc", ImmutableList.of("bar"), null, null, null, null, null))
+      .add(makeDefaultSchemaRow("9", "1", ImmutableList.of("foo", "bar"), null, null, null, null, null))
       .build();
 
   public FilterPartitionTest(

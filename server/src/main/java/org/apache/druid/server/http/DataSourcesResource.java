@@ -30,6 +30,8 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.commons.lang.StringUtils;
+import org.apache.druid.audit.AuditEntry;
+import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
@@ -56,11 +58,13 @@ import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
+import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
+import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -95,6 +99,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
+ *
  */
 @Path("/druid/coordinator/v1/datasources")
 public class DataSourcesResource
@@ -108,6 +113,7 @@ public class DataSourcesResource
   private final OverlordClient overlordClient;
   private final AuthorizerMapper authorizerMapper;
   private final DruidCoordinator coordinator;
+  private final AuditManager auditManager;
 
   @Inject
   public DataSourcesResource(
@@ -116,7 +122,8 @@ public class DataSourcesResource
       MetadataRuleManager metadataRuleManager,
       @Nullable OverlordClient overlordClient,
       AuthorizerMapper authorizerMapper,
-      DruidCoordinator coordinator
+      DruidCoordinator coordinator,
+      AuditManager auditManager
   )
   {
     this.serverInventoryView = serverInventoryView;
@@ -125,6 +132,7 @@ public class DataSourcesResource
     this.overlordClient = overlordClient;
     this.authorizerMapper = authorizerMapper;
     this.coordinator = coordinator;
+    this.auditManager = auditManager;
   }
 
   @GET
@@ -185,7 +193,8 @@ public class DataSourcesResource
   @ResourceFilters(DatasourceResourceFilter.class)
   public Response markAsUsedAllNonOvershadowedSegments(@PathParam("dataSourceName") final String dataSourceName)
   {
-    MarkSegments markSegments = () -> segmentsMetadataManager.markAsUsedAllNonOvershadowedSegmentsInDataSource(dataSourceName);
+    MarkSegments markSegments = () -> segmentsMetadataManager.markAsUsedAllNonOvershadowedSegmentsInDataSource(
+        dataSourceName);
     return doMarkSegments("markAsUsedAllNonOvershadowedSegments", dataSourceName, markSegments);
   }
 
@@ -217,13 +226,17 @@ public class DataSourcesResource
   @Consumes(MediaType.APPLICATION_JSON)
   public Response markSegmentsAsUnused(
       @PathParam("dataSourceName") final String dataSourceName,
-      final MarkDataSourceSegmentsPayload payload
+      final MarkDataSourceSegmentsPayload payload,
+      @Context final HttpServletRequest req
   )
   {
     MarkSegments markSegments = () -> {
       final Interval interval = payload.getInterval();
+      final int numUpdatedSegments;
+      final Object auditPayload;
       if (interval != null) {
-        return segmentsMetadataManager.markAsUnusedSegmentsInInterval(dataSourceName, interval);
+        numUpdatedSegments = segmentsMetadataManager.markAsUnusedSegmentsInInterval(dataSourceName, interval);
+        auditPayload = Collections.singletonMap("interval", interval);
       } else {
         final Set<SegmentId> segmentIds =
             payload.getSegmentIds()
@@ -233,12 +246,23 @@ public class DataSourcesResource
                    .collect(Collectors.toSet());
 
         // Note: segments for the "wrong" datasource are ignored.
-        return segmentsMetadataManager.markSegmentsAsUnused(
+        numUpdatedSegments = segmentsMetadataManager.markSegmentsAsUnused(
             segmentIds.stream()
                       .filter(segmentId -> segmentId.getDataSource().equals(dataSourceName))
                       .collect(Collectors.toSet())
         );
+        auditPayload = Collections.singletonMap("segmentIds", segmentIds);
       }
+      auditManager.doAudit(
+          AuditEntry.builder()
+                    .key(dataSourceName)
+                    .type("segment.markUnused")
+                    .payload(auditPayload)
+                    .auditInfo(AuthorizationUtils.buildAuditInfo(req))
+                    .request(AuthorizationUtils.buildRequestInfo("coordinator", req))
+                    .build()
+      );
+      return numUpdatedSegments;
     };
     return doMarkSegmentsWithPayload("markSegmentsAsUnused", dataSourceName, payload, markSegments);
   }
@@ -309,7 +333,8 @@ public class DataSourcesResource
   public Response markAsUnusedAllSegmentsOrKillUnusedSegmentsInInterval(
       @PathParam("dataSourceName") final String dataSourceName,
       @QueryParam("kill") final String kill,
-      @QueryParam("interval") final String interval
+      @QueryParam("interval") final String interval,
+      @Context HttpServletRequest req
   )
   {
     if (overlordClient == null) {
@@ -318,7 +343,7 @@ public class DataSourcesResource
 
     boolean killSegments = kill != null && Boolean.valueOf(kill);
     if (killSegments) {
-      return killUnusedSegmentsInInterval(dataSourceName, interval);
+      return killUnusedSegmentsInInterval(dataSourceName, interval, req);
     } else {
       MarkSegments markSegments = () -> segmentsMetadataManager.markAsUnusedAllSegmentsInDataSource(dataSourceName);
       return doMarkSegments("markAsUnusedAllSegments", dataSourceName, markSegments);
@@ -331,7 +356,8 @@ public class DataSourcesResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response killUnusedSegmentsInInterval(
       @PathParam("dataSourceName") final String dataSourceName,
-      @PathParam("interval") final String interval
+      @PathParam("interval") final String interval,
+      @Context final HttpServletRequest req
   )
   {
     if (overlordClient == null) {
@@ -342,7 +368,19 @@ public class DataSourcesResource
     }
     final Interval theInterval = Intervals.of(interval.replace('_', '/'));
     try {
-      FutureUtils.getUnchecked(overlordClient.runKillTask("api-issued", dataSourceName, theInterval, null), true);
+      final String killTaskId = FutureUtils.getUnchecked(
+          overlordClient.runKillTask("api-issued", dataSourceName, theInterval, null),
+          true
+      );
+      auditManager.doAudit(
+          AuditEntry.builder()
+                    .key(dataSourceName)
+                    .type("segment.kill")
+                    .payload(ImmutableMap.of("killTaskId", killTaskId, "interval", theInterval))
+                    .auditInfo(AuthorizationUtils.buildAuditInfo(req))
+                    .request(AuthorizationUtils.buildRequestInfo("coordinator", req))
+                    .build()
+      );
       return Response.ok().build();
     }
     catch (Exception e) {
@@ -479,7 +517,8 @@ public class DataSourcesResource
       return Response.ok(
           ImmutableMap.of(
               dataSourceName,
-              100 * ((double) (segmentsLoadStatistics.getNumLoadedSegments()) / (double) segmentsLoadStatistics.getNumPublishedSegments())
+              100 * ((double) (segmentsLoadStatistics.getNumLoadedSegments())
+                     / (double) segmentsLoadStatistics.getNumPublishedSegments())
           )
       ).build();
     }
@@ -487,7 +526,7 @@ public class DataSourcesResource
 
   private SegmentsLoadStatistics computeSegmentLoadStatistics(Iterable<DataSegment> segments)
   {
-    Map<SegmentId, SegmentLoadInfo> segmentLoadInfos = serverInventoryView.getSegmentLoadInfos();
+    Map<SegmentId, SegmentLoadInfo> segmentLoadInfos = serverInventoryView.getLoadInfoForAllSegments();
     int numPublishedSegments = 0;
     int numUnavailableSegments = 0;
     int numLoadedSegments = 0;
@@ -870,27 +909,33 @@ public class DataSourcesResource
       final Interval theInterval = Intervals.of(interval);
       final SegmentDescriptor descriptor = new SegmentDescriptor(theInterval, version, partitionNumber);
       final DateTime now = DateTimes.nowUtc();
-      // dropped means a segment will never be handed off, i.e it completed hand off
-      // init to true, reset to false only if this segment can be loaded by rules
-      boolean dropped = true;
+
+      // A segment that is not eligible for load will never be handed off
+      boolean eligibleForLoad = false;
       for (Rule rule : rules) {
         if (rule.appliesTo(theInterval, now)) {
-          if (rule instanceof LoadRule) {
-            dropped = false;
-          }
+          eligibleForLoad = rule instanceof LoadRule && ((LoadRule) rule).shouldMatchingSegmentBeLoaded();
           break;
         }
       }
-      if (dropped) {
+      if (!eligibleForLoad) {
         return Response.ok(true).build();
       }
 
-      TimelineLookup<String, SegmentLoadInfo> timeline = serverInventoryView.getTimeline(
+      VersionedIntervalTimeline<String, SegmentLoadInfo> timeline = serverInventoryView.getTimeline(
           new TableDataSource(dataSourceName)
       );
       if (timeline == null) {
-        log.debug("No timeline found for datasource[%s]", dataSourceName);
+        log.error("No timeline found for datasource[%s]", dataSourceName);
         return Response.ok(false).build();
+      }
+
+      // A segment with version lower than that of the latest chunk might never get handed off
+      // If there are multiple versions of this segment (due to a concurrent replace task),
+      // only the latest version would get handed off
+      List<TimelineObjectHolder<String, SegmentLoadInfo>> timelineObjects = timeline.lookup(Intervals.of(interval));
+      if (!timelineObjects.isEmpty() && timelineObjects.get(0).getVersion().compareTo(version) > 0) {
+        return Response.ok(true).build();
       }
 
       Iterable<ImmutableSegmentLoadInfo> servedSegmentsInInterval =

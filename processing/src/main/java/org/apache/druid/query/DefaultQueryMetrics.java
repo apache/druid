@@ -385,7 +385,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   {
     checkModifiedFromOwnerThread();
     for (Map.Entry<String, Number> metric : metrics.entrySet()) {
-      emitter.emit(builder.build(metric.getKey(), metric.getValue()));
+      emitter.emit(builder.setMetric(metric.getKey(), metric.getValue()));
     }
     metrics.clear();
   }

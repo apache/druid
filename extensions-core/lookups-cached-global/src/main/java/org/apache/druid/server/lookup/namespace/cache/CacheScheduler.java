@@ -116,6 +116,12 @@ public final class CacheScheduler
     }
 
     @VisibleForTesting
+    public void awaitTotalUpdatesWithTimeout(int totalUpdates, long timeoutMills)
+        throws InterruptedException, TimeoutException
+    {
+      impl.updateCounter.awaitCount(totalUpdates, timeoutMills, TimeUnit.MILLISECONDS);
+    }
+    @VisibleForTesting
     void awaitNextUpdates(int nextUpdates) throws InterruptedException
     {
       impl.updateCounter.awaitNextIncrements(nextUpdates);
@@ -180,9 +186,9 @@ public final class CacheScheduler
       final long updateMs = namespace.getPollMs();
       Runnable command = this::updateCache;
       if (updateMs > 0) {
-        return cacheManager.scheduledExecutorService().scheduleAtFixedRate(command, 0, updateMs, TimeUnit.MILLISECONDS);
+        return cacheManager.scheduledExecutorService().scheduleAtFixedRate(command, namespace.getJitterMills(), updateMs, TimeUnit.MILLISECONDS);
       } else {
-        return cacheManager.scheduledExecutorService().schedule(command, 0, TimeUnit.MILLISECONDS);
+        return cacheManager.scheduledExecutorService().schedule(command, namespace.getJitterMills(), TimeUnit.MILLISECONDS);
       }
     }
 
@@ -445,7 +451,7 @@ public final class CacheScheduler
               final long tasks = updatesStarted.get();
               serviceEmitter.emit(
                   ServiceMetricEvent.builder()
-                                    .build("namespace/deltaTasksStarted", tasks - priorUpdatesStarted)
+                                    .setMetric("namespace/deltaTasksStarted", tasks - priorUpdatesStarted)
               );
               priorUpdatesStarted = tasks;
             }

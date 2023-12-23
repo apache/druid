@@ -37,7 +37,6 @@ import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -125,12 +124,6 @@ public class DimensionPredicateFilter implements Filter
   }
 
   @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
-  {
-    return Filters.supportsSelectivityEstimation(this, dimension, columnSelector, indexSelector);
-  }
-
-  @Override
   public String toString()
   {
     if (extractionFn != null) {
@@ -146,12 +139,14 @@ public class DimensionPredicateFilter implements Filter
     private final Predicate<String> baseStringPredicate;
     private final DruidPredicateFactory predicateFactory;
     private final ExtractionFn extractionFn;
+    private final boolean isNullUnknown;
 
     DelegatingStringPredicateFactory(DruidPredicateFactory predicateFactory, ExtractionFn extractionFn)
     {
       this.predicateFactory = predicateFactory;
       this.baseStringPredicate = predicateFactory.makeStringPredicate();
       this.extractionFn = extractionFn;
+      this.isNullUnknown = !baseStringPredicate.apply(extractionFn.apply(null));
     }
 
     @Override
@@ -215,6 +210,12 @@ public class DimensionPredicateFilter implements Filter
           return baseStringPredicate.apply(extractionFn.apply(null));
         }
       };
+    }
+
+    @Override
+    public boolean isNullInputUnknown()
+    {
+      return isNullUnknown;
     }
 
     @Override

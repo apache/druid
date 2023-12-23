@@ -420,6 +420,12 @@ public class DruidException extends RuntimeException
       return this;
     }
 
+    public DruidExceptionBuilder withErrorCode(String errorCode)
+    {
+      this.errorCode = errorCode;
+      return this;
+    }
+
     public DruidExceptionBuilder ofCategory(Category category)
     {
       this.category = category;

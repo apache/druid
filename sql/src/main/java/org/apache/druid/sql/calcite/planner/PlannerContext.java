@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
@@ -79,12 +80,7 @@ public class PlannerContext
   /**
    * Undocumented context key, used to enable window functions.
    */
-  public static final String CTX_ENABLE_WINDOW_FNS = "windowsAreForClosers";
-
-  /**
-   * Undocumented context key, used to enable {@link org.apache.calcite.sql.fun.SqlStdOperatorTable#UNNEST}.
-   */
-  public static final String CTX_ENABLE_UNNEST = "enableUnnest";
+  public static final String CTX_ENABLE_WINDOW_FNS = "enableWindowing";
 
   public static final String CTX_SQL_USE_BOUNDS_AND_SELECTORS = "sqlUseBoundAndSelectors";
   public static final boolean DEFAULT_SQL_USE_BOUNDS_AND_SELECTORS = NullHandling.replaceWithDefault();
@@ -248,10 +244,17 @@ public class PlannerContext
     return plannerToolbox;
   }
 
+  public ExprMacroTable getExprMacroTable()
+  {
+    return plannerToolbox.exprMacroTable();
+  }
+
   public ExpressionParser getExpressionParser()
   {
     return expressionParser;
   }
+
+
 
   /**
    * Equivalent to {@link ExpressionParser#parse(String)} on {@link #getExpressionParser()}.
@@ -519,13 +522,6 @@ public class PlannerContext
       // Short-circuit: feature requires context flag.
       return false;
     }
-
-    if (feature == EngineFeature.UNNEST &&
-        !QueryContexts.getAsBoolean(CTX_ENABLE_UNNEST, queryContext.get(CTX_ENABLE_UNNEST), false)) {
-      // Short-circuit: feature requires context flag.
-      return false;
-    }
-
     return engine.featureAvailable(feature, this);
   }
 

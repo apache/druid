@@ -31,6 +31,12 @@ import javax.annotation.Nullable;
 
 // math operators live here
 
+@SuppressWarnings("unused")
+final class BinaryMathOperatorExpr
+{
+  // phony class to enable maven to track the compilation of this class
+}
+
 @SuppressWarnings("ClassName")
 final class BinPlusExpr extends BinaryEvalOpExprBase
 {

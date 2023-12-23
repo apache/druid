@@ -29,6 +29,7 @@ APIs
 apache.org
 AvroStorage
 ARN
+ASC
 autokill
 AWS
 AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
@@ -43,6 +44,7 @@ Base64
 Base64-encoded
 ByteBuffer
 bottlenecked
+cartesian
 concat
 CIDR
 CORS
@@ -53,6 +55,7 @@ Ceph
 CloudWatch
 ColumnDescriptor
 Corretto
+CLI
 DDL
 DML
 DNS
@@ -114,6 +117,7 @@ IcebergInputSource
 IETF
 IP
 IPv4
+IPv6
 IS_AGGREGATOR
 IS_BROADCAST
 IS_JOINABLE
@@ -218,6 +222,7 @@ SslContextFactory
 StatsD
 SYSTEM_TABLE
 TaskRunner
+TabItem
 TCP
 TGT
 TLS
@@ -242,6 +247,7 @@ aggregators
 ambari
 analytics
 arrayElement
+arrayContainsElement
 assumeNewlineDelimited
 assumeRoleArn
 assumeRoleExternalId
@@ -274,6 +280,7 @@ codebase
 codec
 colocated
 colocation
+colocating
 compactable
 compactionTask
 config
@@ -328,6 +335,7 @@ gzip
 gzipped
 hadoop
 hasher
+hashcode
 hashtable
 high-QPS
 historicals
@@ -347,12 +355,14 @@ interruptible
 isAllowList
 jackson-jq
 javadoc
+javascript
 joinable
 jsonCompression
 json_keys
 json_object
 json_paths
 json_query
+json_query_array
 json_value
 karlkfi
 kerberos
@@ -363,6 +373,7 @@ kubernetes
 kubexit
 k8s
 laning
+lastSegmentId
 lifecycle
 localhost
 log4j
@@ -425,7 +436,7 @@ pre-aggregation
 pre-computation
 pre-compute
 pre-computing
-pre-configured
+preconfigured
 pre-existing
 pre-filtered
 pre-filtering
@@ -436,6 +447,7 @@ preemptible
 prefetch
 prefetched
 prefetching
+precached
 prepend
 prepended
 prepending
@@ -490,6 +502,7 @@ Smoosh
 smoosh
 smooshed
 snapshotting
+sortOrder
 splittable
 ssl
 sslmode
@@ -498,6 +511,7 @@ stdout
 storages
 stringDictionaryEncoding
 stringified
+sub-conditions
 subarray
 subnet
 subqueries
@@ -510,6 +524,7 @@ supervisorTaskId
 SVG
 symlink
 syntaxes
+systemFields
 tiering
 timeseries
 Timeseries
@@ -743,6 +758,7 @@ TooManyWorkers
 NotEnoughMemory
 WorkerFailed
 WorkerRpcFailed
+TIMED_OUT
 # MSQ context parameters
 maxNumTasks
 taskAssignment
@@ -774,12 +790,20 @@ Minio
 multi-server
 BasicDataSource
 LeaderLatch
+2.x
+28.x 
 3.5.x
 3.4.x
 AllowAll
 AuthenticationResult
 AuthorizationLoadingLookupTest
+booleans
+EOF
+IE11
+InsufficientResourceException
 HttpClient
+JsonConfigurator
+KIP-297
 allowAll
 authenticatorChain
 defaultUser
@@ -790,8 +814,18 @@ c3.2xlarge
 defaultManualBrokerService
 maxPriority
 minPriority
+NUMBER_FEATURES
+NUMBER_OF_CONTRIBUTORS
+PreparedStatement
+pre-upgrade
+QueryCapacityExceededException
+QueryTimeoutException
+QueryUnsupportedException
+ResultSet
 runtime.properties
+SqlParseException
 timeBoundary
+ValidationException
 0x0
 0x9
 2GB
@@ -812,7 +846,6 @@ yaml
 Phadoop3
 dist-hadoop3
 hadoop3
-hadoop2
 2.x.x
 3.x.x
 ambari-metrics
@@ -878,6 +911,8 @@ P1D
 cycleSize
 doubleMax
 doubleAny
+doubleFirst
+doubleLast
 doubleMean
 doubleMeanNoNulls
 doubleMin
@@ -887,6 +922,8 @@ druid.generic.ignoreNullsForStringCardinality
 limitSpec
 longMax
 longAny
+longFirst
+longLast
 longMean
 longMeanNoNulls
 longMin
@@ -933,6 +970,7 @@ AccessKey
 accessKey
 aliyun-oss
 json
+Oshi
 OSS
 oss
 secretKey
@@ -1030,7 +1068,6 @@ PT17S
 GCS
 StaticGoogleBlobStoreFirehose
 gcs-connector
-hadoop2
 hdfs
 Aotearoa
 Czechia
@@ -1093,6 +1130,7 @@ numProcessors
 q.size
 repartitionTransitionDuration
 replicastaskCounttaskCount
+resetOffsets
 resetuseEarliestSequenceNumberPOST
 resumePOST
 statusrecentErrorsdruid.supervisor.maxStoredExceptionEventsstatedetailedStatestatedetailedStatestatestatePENDINGRUNNINGSUSPENDEDSTOPPINGUNHEALTHY_SUPERVISORUNHEALTHY_TASKSdetailedStatestatedruid.supervisor.unhealthinessThresholddruid.supervisor.taskUnhealthinessThresholdtaskDurationtaskCountreplicasdetailedStatedetailedStateRUNNINGPOST
@@ -1121,6 +1159,7 @@ simpleJson
 dimensionSpec
 flattenSpec
 binaryAsString
+replaceMissingValueWith
 sslFactory
 sslMode
 Proto
@@ -1251,6 +1290,7 @@ KafkaStringHeaderFormat
 kafka.header.
 kafka.key
 kafka.timestamp
+kafka.topic
 keyColumnName
 keyFormat
 listDelimiter
@@ -1268,6 +1308,7 @@ numShards
 IngestSegment
 IngestSegmentFirehose
 maxSizes
+snapshotTime
 windowPeriod
 2012-01-01T00
 2012-01-03T00
@@ -1472,10 +1513,20 @@ getExponent
 hypot
 ipv4_match
 ipv4_parse
-isnull
 ipv4_stringify
+ipv6_match
+
+# IPv6 Address Example Sections
+75e9
+efa4
+29c6
+85f6
+232c
+
+isnull
 java.lang.Math
 java.lang.String
+JNA
 log10
 log1p
 lpad
@@ -1502,6 +1553,8 @@ str1
 str2
 string_to_array
 stringAny
+stringFirst
+stringLast
 Strlen
 strlen
 strpos
@@ -1761,6 +1814,8 @@ enableJoinFilterPushDown
 enableJoinFilterRewrite
 enableRewriteJoinToFilter
 enableJoinFilterRewriteValueColumnFilters
+floatFirst
+floatLast
 floatSum
 joinFilterRewriteMaxSize
 maxQueuedBytes
@@ -2025,6 +2080,8 @@ orderbys
 org.apache.druid
 org.apache.druid.jetty.RequestLog
 org.apache.hadoop
+OSHI
+OshiSysMonitor
 overlord.html
 pendingSegments
 pre-flight
@@ -2044,6 +2101,7 @@ slf4j
 sql
 sqlQuery
 successfulSending
+[S]igar
 taskBlackListCleanupPeriod
 tasklogs
 timeBoundary
@@ -2163,6 +2221,8 @@ CHARACTER_LENGTH
 CURRENT_DATE
 CURRENT_TIMESTAMP
 DATE_TRUNC
+DECODE_BASE64_COMPLEX
+DECODE_BASE64_UTF8
 DS_CDF
 DS_GET_QUANTILE
 DS_GET_QUANTILES
@@ -2302,3 +2362,11 @@ terminateAll
 selfDiscovered
 loadstatus
 isLeader
+taskslots
+loadstatus
+sqlQueryId
+LAST_VALUE
+markUnused
+markUsed
+segmentId
+aggregateMultipleValues

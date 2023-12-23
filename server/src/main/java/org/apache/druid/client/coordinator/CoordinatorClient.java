@@ -20,12 +20,15 @@
 package org.apache.druid.client.coordinator;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.rpc.ServiceRetryPolicy;
+import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
 import java.util.List;
+import java.util.Set;
 
 public interface CoordinatorClient
 {
@@ -35,14 +38,25 @@ public interface CoordinatorClient
   ListenableFuture<Boolean> isHandoffComplete(String dataSource, SegmentDescriptor descriptor);
 
   /**
-   * Fetches segment metadata for the given dataSource and segmentId.
+   * Fetches segment metadata for the given dataSource and segmentId. If includeUnused is set to false, the segment is
+   * not returned if it is marked as unused.
    */
-  ListenableFuture<DataSegment> fetchUsedSegment(String dataSource, String segmentId);
+  ListenableFuture<DataSegment> fetchSegment(String dataSource, String segmentId, boolean includeUnused);
+
+  /**
+   * Fetches segments from the coordinator server view for the given dataSource and intervals.
+   */
+  Iterable<ImmutableSegmentLoadInfo> fetchServerViewSegments(String dataSource, List<Interval> intervals);
 
   /**
    * Fetches segment metadata for the given dataSource and intervals.
    */
   ListenableFuture<List<DataSegment>> fetchUsedSegments(String dataSource, List<Interval> intervals);
+
+  /**
+   * Retrieves detailed metadata information for the specified data sources, which includes {@code RowSignature}.
+   */
+  ListenableFuture<List<DataSourceInformation>> fetchDataSourceInformation(Set<String> datasources);
 
   /**
    * Returns a new instance backed by a ServiceClient which follows the provided retryPolicy

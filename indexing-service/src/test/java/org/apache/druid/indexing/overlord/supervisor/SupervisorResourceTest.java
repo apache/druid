@@ -28,6 +28,8 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
+import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.TestSeekableStreamDataSourceMetadata;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.security.Access;
@@ -1181,6 +1183,53 @@ public class SupervisorResourceTest extends EasyMockSupport
     Assert.assertEquals(ImmutableMap.of("id", "my-id"), response.getEntity());
 
     response = supervisorResource.reset("my-id-2");
+
+    Assert.assertEquals(404, response.getStatus());
+    Assert.assertEquals("my-id", id1.getValue());
+    Assert.assertEquals("my-id-2", id2.getValue());
+    verifyAll();
+
+    resetAll();
+
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
+    replayAll();
+
+    response = supervisorResource.terminate("my-id");
+
+    Assert.assertEquals(503, response.getStatus());
+    verifyAll();
+  }
+
+  @Test
+  public void testResetOffsets()
+  {
+    Capture<String> id1 = Capture.newInstance();
+    Capture<String> id2 = Capture.newInstance();
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).times(2);
+    EasyMock.expect(supervisorManager.resetSupervisor(
+        EasyMock.capture(id1),
+        EasyMock.anyObject(DataSourceMetadata.class)
+    )).andReturn(true);
+    EasyMock.expect(supervisorManager.resetSupervisor(
+        EasyMock.capture(id2),
+        EasyMock.anyObject(DataSourceMetadata.class)
+    )).andReturn(false);
+    replayAll();
+
+    DataSourceMetadata datasourceMetadata = new TestSeekableStreamDataSourceMetadata(
+        new SeekableStreamStartSequenceNumbers<>(
+            "topic",
+            ImmutableMap.of("0", "10", "1", "20", "2", "30"),
+            ImmutableSet.of()
+        )
+    );
+
+    Response response = supervisorResource.resetOffsets("my-id", datasourceMetadata);
+
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("id", "my-id"), response.getEntity());
+
+    response = supervisorResource.resetOffsets("my-id-2", datasourceMetadata);
 
     Assert.assertEquals(404, response.getStatus());
     Assert.assertEquals("my-id", id1.getValue());

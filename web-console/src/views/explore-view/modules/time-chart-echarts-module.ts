@@ -16,24 +16,32 @@
  * limitations under the License.
  */
 
-import { C, F, L, SqlExpression } from '@druid-toolkit/query';
+import { C, F, L, SqlCase, SqlExpression } from '@druid-toolkit/query';
 import { typedVisualModule } from '@druid-toolkit/visuals-core';
 import * as echarts from 'echarts';
 
-import { getInitQuery } from '../utils';
+import { highlightStore } from '../highlight-store/highlight-store';
+import { DATE_FORMAT, getAutoGranularity, getInitQuery, snapToGranularity } from '../utils';
 
-function transformData(data: any[]): any[] {
+const TIME_NAME = '__t__';
+const METRIC_NAME = '__met__';
+const STACK_NAME = '__stack__';
+const OTHERS_VALUE = 'Others';
+
+function transformData(data: any[], vs: string[]): Record<string, number>[] {
+  const zeroDatum = Object.fromEntries(vs.map(v => [v, 0]));
+
   let lastTime = -1;
-  let lastDatum: any;
+  let lastDatum: Record<string, number> | undefined;
   const ret = [];
   for (const d of data) {
-    if (d.time.valueOf() === lastTime) {
-      lastDatum[d.stack] = d.met;
-    } else {
+    const t = d[TIME_NAME];
+    if (t.valueOf() !== lastTime) {
       if (lastDatum) ret.push(lastDatum);
-      lastTime = d.time.valueOf();
-      lastDatum = { time: d.time, [d.stack]: d.met };
+      lastTime = t.valueOf();
+      lastDatum = { ...zeroDatum, [TIME_NAME]: t };
     }
+    lastDatum![d[STACK_NAME]] = d[METRIC_NAME];
   }
   if (lastDatum) ret.push(lastDatum);
   return ret;
@@ -43,10 +51,11 @@ export default typedVisualModule({
   parameters: {
     timeGranularity: {
       type: 'option',
-      options: ['PT1M', 'PT5M', 'PT30M', 'PT1H', 'P1D'],
-      default: 'PT1H',
+      options: ['auto', 'PT1M', 'PT5M', 'PT30M', 'PT1H', 'P1D'],
+      default: 'auto',
       control: {
         optionLabels: {
+          auto: 'Auto',
           PT1M: 'Minute',
           PT5M: '5 minutes',
           PT30M: '30 minutes',
@@ -73,6 +82,13 @@ export default typedVisualModule({
         visible: ({ params }) => Boolean(params.splitColumn),
       },
     },
+    showOthers: {
+      type: 'boolean',
+      default: true,
+      control: {
+        visible: ({ params }) => Boolean(params.splitColumn),
+      },
+    },
     metric: {
       type: 'aggregate',
       default: { expression: SqlExpression.parse('COUNT(*)'), name: 'Count', sqlType: 'BIGINT' },
@@ -82,8 +98,15 @@ export default typedVisualModule({
         // transferGroup: 'show-agg',
       },
     },
+    snappyHighlight: {
+      type: 'boolean',
+      default: true,
+      control: {
+        label: 'Snap highlight to nearest dates',
+      },
+    },
   },
-  module: ({ container, host }) => {
+  module: ({ container, host, updateWhere }) => {
     const myChart = echarts.init(container, 'dark');
 
     myChart.setOption({
@@ -93,6 +116,7 @@ export default typedVisualModule({
       },
       tooltip: {
         trigger: 'axis',
+        transitionDuration: 0,
         axisPointer: {
           type: 'cross',
           label: {
@@ -107,6 +131,10 @@ export default typedVisualModule({
         feature: {
           saveAsImage: {},
         },
+      },
+      brush: {
+        toolbox: ['lineX'],
+        xAxisIndex: 0,
       },
       grid: {
         left: '3%',
@@ -128,15 +156,29 @@ export default typedVisualModule({
       series: [],
     });
 
-    const resizeHandler = () => {
-      myChart.resize();
-    };
-
-    window.addEventListener('resize', resizeHandler);
+    // auto-enables the brush tool on load
+    myChart.dispatchAction({
+      type: 'takeGlobalCursor',
+      key: 'brush',
+      brushOption: {
+        brushType: 'lineX',
+      },
+    });
 
     return {
-      async update({ table, where, parameterValues }) {
-        const { splitColumn, metric, numberToStack, timeGranularity } = parameterValues;
+      async update({ table, where, parameterValues, context }) {
+        const { splitColumn, metric, numberToStack, showOthers, snappyHighlight } = parameterValues;
+
+        // this should probably be a parameter
+        const timeColumnName = '__time';
+
+        const timeGranularity =
+          parameterValues.timeGranularity === 'auto'
+            ? getAutoGranularity(where, timeColumnName)
+            : parameterValues.timeGranularity;
+
+        myChart.off('brush');
+        myChart.off('brushend');
 
         const vs = splitColumn
           ? (
@@ -153,46 +195,138 @@ export default typedVisualModule({
           await host.sqlQuery(
             getInitQuery(
               table,
-              splitColumn && vs ? where.and(splitColumn.expression.in(vs)) : where,
+              splitColumn && vs && !showOthers ? where.and(splitColumn.expression.in(vs)) : where,
             )
-              .addSelect(F.timeFloor(C('__time'), L(timeGranularity)).as('time'), {
+              .addSelect(F.timeFloor(C(timeColumnName), L(timeGranularity)).as(TIME_NAME), {
                 addToGroupBy: 'end',
                 addToOrderBy: 'end',
                 direction: 'ASC',
               })
-              .applyIf(splitColumn, q =>
-                q.addSelect(splitColumn!.expression.as('stack'), { addToGroupBy: 'end' }),
-              )
-              .addSelect(metric.expression.as('met')),
+              .applyIf(splitColumn, q => {
+                const splitEx = splitColumn!.expression;
+                return q.addSelect(
+                  (showOthers
+                    ? SqlCase.ifThenElse(splitEx.in(vs!), splitEx, L(OTHERS_VALUE))
+                    : splitEx
+                  ).as(STACK_NAME),
+                  { addToGroupBy: 'end' },
+                );
+              })
+              .addSelect(metric.expression.as(METRIC_NAME)),
           )
         ).toObjectArray();
 
-        const sourceData = vs ? transformData(dataset) : dataset;
+        const effectiveVs = vs && showOthers ? vs.concat(OTHERS_VALUE) : vs;
+        const sourceData = effectiveVs ? transformData(dataset, effectiveVs) : dataset;
+
+        myChart.on('brush', (params: any) => {
+          if (!params.areas.length) return;
+
+          // this is only used for the label and the data saved in the highlight
+          // the positioning is done with the true coordinates until the user
+          // releases the mouse button (in the `brushend` event)
+          const { start, end } = snappyHighlight
+            ? snapToGranularity(
+                params.areas[0].coordRange[0],
+                params.areas[0].coordRange[1],
+                timeGranularity,
+                context.timezone,
+              )
+            : { start: params.areas[0].coordRange[0], end: params.areas[0].coordRange[1] };
+
+          const x0 = myChart.convertToPixel({ xAxisIndex: 0 }, params.areas[0].coordRange[0]);
+          const x1 = myChart.convertToPixel({ xAxisIndex: 0 }, params.areas[0].coordRange[1]);
+
+          highlightStore.getState().setHighlight({
+            label: DATE_FORMAT.formatRange(start, end),
+            x: x0 + (x1 - x0) / 2,
+            y: 40,
+            data: { start, end },
+            onDrop: () => {
+              highlightStore.getState().dropHighlight();
+              myChart.dispatchAction({
+                type: 'brush',
+                command: 'clear',
+                areas: [],
+              });
+            },
+            onSave: () => {
+              updateWhere(
+                where.changeClauseInWhere(
+                  SqlExpression.parse(
+                    `TIME_IN_INTERVAL(${C(
+                      timeColumnName,
+                    )}, '${start.toISOString()}/${end.toISOString()}')`,
+                  ),
+                ) as SqlExpression,
+              );
+              highlightStore.getState().dropHighlight();
+              myChart.dispatchAction({
+                type: 'brush',
+                command: 'clear',
+                areas: [],
+              });
+            },
+          });
+        });
+
+        // once the user is done selecting a range, this will snap the start and end
+        myChart.on('brushend', () => {
+          const highlight = highlightStore.getState().highlight;
+          if (!highlight) return;
+
+          // this is already snapped
+          const { start, end } = highlight.data;
+
+          const x0 = myChart.convertToPixel({ xAxisIndex: 0 }, start);
+          const x1 = myChart.convertToPixel({ xAxisIndex: 0 }, end);
+
+          // positions the bubble on the snapped start and end
+          highlightStore.getState().updateHighlight({
+            x: x0 + (x1 - x0) / 2,
+          });
+
+          // gives the chart the snapped range to highlight
+          // (will replace the area the user just selected)
+          myChart.dispatchAction({
+            type: 'brush',
+            areas: [
+              {
+                brushType: 'lineX',
+                coordRange: [start, end],
+                xAxisIndex: 0,
+              },
+            ],
+          });
+        });
+
         const showSymbol = sourceData.length < 2;
         myChart.setOption(
           {
             dataset: {
-              dimensions: ['time'].concat(vs || ['met']),
+              dimensions: [TIME_NAME].concat(effectiveVs || [METRIC_NAME]),
               source: sourceData,
             },
-            legend: vs
+            animation: false,
+            legend: effectiveVs
               ? {
-                  data: vs,
+                  data: effectiveVs,
                 }
               : undefined,
-            series: (vs || ['met']).map(v => {
+            series: (effectiveVs || [METRIC_NAME]).map(v => {
               return {
                 id: v,
-                name: v,
+                name: effectiveVs ? v : metric.name,
                 type: 'line',
                 stack: 'Total',
                 showSymbol,
-                areaStyle: {},
+                lineStyle: v === OTHERS_VALUE ? { color: '#ccc' } : {},
+                areaStyle: v === OTHERS_VALUE ? { color: '#ccc' } : {},
                 emphasis: {
                   focus: 'series',
                 },
                 encode: {
-                  x: 'time',
+                  x: TIME_NAME,
                   y: v,
                   itemId: v,
                 },
@@ -204,8 +338,26 @@ export default typedVisualModule({
           },
         );
       },
+
+      resize() {
+        myChart.resize();
+
+        // if there is a highlight, update its x position
+        // by calculating new pixel position from the highlight's data
+        const highlight = highlightStore.getState().highlight;
+        if (highlight) {
+          const { start, end } = highlight.data;
+
+          const x0 = myChart.convertToPixel({ xAxisIndex: 0 }, start);
+          const x1 = myChart.convertToPixel({ xAxisIndex: 0 }, end);
+
+          highlightStore.getState().updateHighlight({
+            x: x0 + (x1 - x0) / 2,
+          });
+        }
+      },
+
       destroy() {
-        window.removeEventListener('resize', resizeHandler);
         myChart.dispose();
       },
     };

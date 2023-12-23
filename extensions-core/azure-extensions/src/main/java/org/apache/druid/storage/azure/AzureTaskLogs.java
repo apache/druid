@@ -95,7 +95,7 @@ public class AzureTaskLogs implements TaskLogs
     try {
       AzureUtils.retryAzureOperation(
           () -> {
-            azureStorage.uploadBlob(logFile, config.getContainer(), taskKey);
+            azureStorage.uploadBlockBlob(logFile, config.getContainer(), taskKey);
             return null;
           },
           config.getMaxTries()
@@ -129,12 +129,12 @@ public class AzureTaskLogs implements TaskLogs
   {
     final String container = config.getContainer();
     try {
-      if (!azureStorage.getBlobExists(container, taskKey)) {
+      if (!azureStorage.getBlockBlobExists(container, taskKey)) {
         return Optional.absent();
       }
       try {
         final long start;
-        final long length = azureStorage.getBlobLength(container, taskKey);
+        final long length = azureStorage.getBlockBlobLength(container, taskKey);
 
         if (offset > 0 && offset < length) {
           start = offset;
@@ -144,7 +144,7 @@ public class AzureTaskLogs implements TaskLogs
           start = 0;
         }
 
-        InputStream stream = azureStorage.getBlobInputStream(container, taskKey);
+        InputStream stream = azureStorage.getBlockBlobInputStream(container, taskKey);
         stream.skip(start);
 
         return Optional.of(stream);

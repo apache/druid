@@ -31,8 +31,6 @@ import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
-import org.apache.druid.server.coordinator.stats.Dimension;
-import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.After;
@@ -317,7 +315,7 @@ public class CostBalancerStrategyTest
   }
 
   @Test
-  public void testGetAndResetStats()
+  public void testGetStats()
   {
     final ServerHolder serverA = new ServerHolder(
         createHistorical().toImmutableDruidServer(),
@@ -332,20 +330,13 @@ public class CostBalancerStrategyTest
 
     // Verify that computation stats have been tracked
     strategy.findServersToLoadSegment(segment, Arrays.asList(serverA, serverB));
-    CoordinatorRunStats computeStats = strategy.getAndResetStats();
+    CoordinatorRunStats computeStats = strategy.getStats();
 
-    final RowKey rowKey = RowKey.with(Dimension.DATASOURCE, DS_WIKI)
-                                .with(Dimension.DESCRIPTION, "LOAD")
-                                .and(Dimension.TIER, "hot");
-    Assert.assertEquals(1L, computeStats.get(Stats.Balancer.COMPUTATION_COUNT, rowKey));
+    Assert.assertEquals(1L, computeStats.get(Stats.Balancer.COMPUTATION_COUNT));
 
-    long computeTime = computeStats.get(Stats.Balancer.COMPUTATION_TIME, rowKey);
+    long computeTime = computeStats.get(Stats.Balancer.COMPUTATION_TIME);
     Assert.assertTrue(computeTime >= 0 && computeTime <= 100);
     Assert.assertFalse(computeStats.hasStat(Stats.Balancer.COMPUTATION_ERRORS));
-
-    // Verify that stats have been reset
-    computeStats = strategy.getAndResetStats();
-    Assert.assertEquals(0, computeStats.rowCount());
   }
 
   @Test

@@ -24,6 +24,7 @@ import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.data.input.impl.NewSpatialDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -113,6 +114,24 @@ public class DimensionHandlerUtilsTest extends InitializedNullHandlingTest
     );
     Assert.assertTrue(stringHandler instanceof StringDimensionHandler);
     Assert.assertTrue(stringHandler.getDimensionSchema(stringCapabilities) instanceof StringDimensionSchema);
+  }
+
+  @Test
+  public void testGetHandlerFromStringCapabilitiesSpatialIndexes()
+  {
+    ColumnCapabilities stringCapabilities = ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities()
+                                                                  .setHasBitmapIndexes(true)
+                                                                  .setDictionaryEncoded(true)
+                                                                  .setDictionaryValuesUnique(true)
+                                                                  .setDictionaryValuesUnique(true)
+                                                                  .setHasSpatialIndexes(true);
+    DimensionHandler spatialHandler = DimensionHandlerUtils.getHandlerFromCapabilities(
+        DIM_NAME,
+        stringCapabilities,
+        DimensionSchema.MultiValueHandling.SORTED_SET
+    );
+    Assert.assertTrue(spatialHandler instanceof StringDimensionHandler);
+    Assert.assertTrue(spatialHandler.getDimensionSchema(stringCapabilities) instanceof NewSpatialDimensionSchema);
   }
 
   @Test

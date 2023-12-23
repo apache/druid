@@ -41,7 +41,7 @@ public class SimpleDictionaryMergingIteratorTest
     };
     SimpleDictionaryMergingIterator<String> dictionaryMergeIterator = new SimpleDictionaryMergingIterator<>(
         sortedLookups,
-        NestedDataColumnMerger.STRING_MERGING_COMPARATOR
+        AutoTypeColumnMerger.STRING_MERGING_COMPARATOR
     );
 
     List<String> expectedSequence = Lists.newArrayListWithExpectedSize(13);

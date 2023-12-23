@@ -19,6 +19,7 @@
 
 package org.apache.druid.storage.s3;
 
+import com.amazonaws.AbortedException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkClientException;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
@@ -395,6 +396,49 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
     // struggled with the idea of making it match on equaling this
     s3Client.deleteObjects(EasyMock.anyObject(DeleteObjectsRequest.class));
     EasyMock.expectLastCall().andThrow(new AmazonServiceException("")).once();
+
+    EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
+    segmentKiller = new S3DataSegmentKiller(Suppliers.ofInstance(s3Client), segmentPusherConfig, inputDataConfig);
+
+    SegmentLoadingException thrown = Assert.assertThrows(
+        SegmentLoadingException.class,
+        () -> segmentKiller.kill(ImmutableList.of(DATA_SEGMENT_1, DATA_SEGMENT_2))
+    );
+    Assert.assertEquals("Couldn't delete segments from S3. See the task logs for more details.", thrown.getMessage());
+  }
+
+  @Test
+  public void test_kill_listOfSegments_retryableExceptionThrown() throws SegmentLoadingException
+  {
+    DeleteObjectsRequest deleteObjectsRequest = new DeleteObjectsRequest(TEST_BUCKET);
+    deleteObjectsRequest.withKeys(KEY_1_PATH, KEY_1_PATH);
+    s3Client.deleteObjects(EasyMock.anyObject(DeleteObjectsRequest.class));
+    MultiObjectDeleteException.DeleteError retryableError = new MultiObjectDeleteException.DeleteError();
+    retryableError.setCode("RequestLimitExceeded");
+    MultiObjectDeleteException.DeleteError nonRetryableError = new MultiObjectDeleteException.DeleteError();
+    nonRetryableError.setCode("nonRetryableError");
+    EasyMock.expectLastCall()
+        .andThrow(new MultiObjectDeleteException(
+            ImmutableList.of(retryableError, nonRetryableError),
+            ImmutableList.of()
+        ))
+        .once();
+    EasyMock.expectLastCall().andVoid().times(2);
+
+
+    EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
+    segmentKiller = new S3DataSegmentKiller(Suppliers.ofInstance(s3Client), segmentPusherConfig, inputDataConfig);
+    segmentKiller.kill(ImmutableList.of(DATA_SEGMENT_1, DATA_SEGMENT_1));
+  }
+
+  @Test
+  public void test_kill_listOfSegments_unexpectedExceptionIsThrown()
+  {
+    DeleteObjectsRequest deleteObjectsRequest = new DeleteObjectsRequest(TEST_BUCKET);
+    deleteObjectsRequest.withKeys(KEY_1_PATH, KEY_2_PATH);
+    // struggled with the idea of making it match on equaling this
+    s3Client.deleteObjects(EasyMock.anyObject(DeleteObjectsRequest.class));
+    EasyMock.expectLastCall().andThrow(new AbortedException("")).once();
 
     EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
     segmentKiller = new S3DataSegmentKiller(Suppliers.ofInstance(s3Client), segmentPusherConfig, inputDataConfig);

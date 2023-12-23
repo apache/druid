@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.virtual;
 
-import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -35,6 +34,8 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.BucketExtractionFn;
+import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.query.filter.StringPredicateDruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
@@ -294,9 +295,9 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
           }
 
           @Override
-          public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+          public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
           {
-            return delegate.makeValueMatcher(predicate);
+            return delegate.makeValueMatcher(predicateFactory);
           }
 
           @Override
@@ -472,38 +473,38 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
 
     final ValueMatcher nullMatcher = selector.makeValueMatcher((String) null);
     final ValueMatcher fiveMatcher = selector.makeValueMatcher("5");
-    final ValueMatcher nonNullMatcher = selector.makeValueMatcher(Predicates.notNull());
+    final ValueMatcher nonNullMatcher = selector.makeValueMatcher(StringPredicateDruidPredicateFactory.of(Predicates.notNull(), false));
 
     CURRENT_ROW.set(ROW0);
-    Assert.assertEquals(true, nullMatcher.matches());
-    Assert.assertEquals(false, fiveMatcher.matches());
-    Assert.assertEquals(false, nonNullMatcher.matches());
+    Assert.assertEquals(true, nullMatcher.matches(false));
+    Assert.assertEquals(false, fiveMatcher.matches(false));
+    Assert.assertEquals(false, nonNullMatcher.matches(false));
     Assert.assertEquals(null, selector.lookupName(selector.getRow().get(0)));
 
     CURRENT_ROW.set(ROW1);
     if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(false, nullMatcher.matches());
-      Assert.assertEquals(false, fiveMatcher.matches());
-      Assert.assertEquals(true, nonNullMatcher.matches());
+      Assert.assertEquals(false, nullMatcher.matches(false));
+      Assert.assertEquals(false, fiveMatcher.matches(false));
+      Assert.assertEquals(true, nonNullMatcher.matches(false));
       Assert.assertEquals("4", selector.lookupName(selector.getRow().get(0)));
     } else {
       // y is null in row1
-      Assert.assertEquals(true, nullMatcher.matches());
-      Assert.assertEquals(false, fiveMatcher.matches());
-      Assert.assertEquals(false, nonNullMatcher.matches());
+      Assert.assertEquals(true, nullMatcher.matches(false));
+      Assert.assertEquals(false, fiveMatcher.matches(false));
+      Assert.assertEquals(false, nonNullMatcher.matches(false));
       Assert.assertEquals(null, selector.lookupName(selector.getRow().get(0)));
     }
 
     CURRENT_ROW.set(ROW2);
-    Assert.assertEquals(false, nullMatcher.matches());
-    Assert.assertEquals(false, fiveMatcher.matches());
-    Assert.assertEquals(true, nonNullMatcher.matches());
+    Assert.assertEquals(false, nullMatcher.matches(false));
+    Assert.assertEquals(false, fiveMatcher.matches(false));
+    Assert.assertEquals(true, nonNullMatcher.matches(false));
     Assert.assertEquals("5.1", selector.lookupName(selector.getRow().get(0)));
 
     CURRENT_ROW.set(ROW3);
-    Assert.assertEquals(false, nullMatcher.matches());
-    Assert.assertEquals(true, fiveMatcher.matches());
-    Assert.assertEquals(true, nonNullMatcher.matches());
+    Assert.assertEquals(false, nullMatcher.matches(false));
+    Assert.assertEquals(true, fiveMatcher.matches(false));
+    Assert.assertEquals(true, nonNullMatcher.matches(false));
     Assert.assertEquals("5", selector.lookupName(selector.getRow().get(0)));
   }
 
@@ -515,10 +516,10 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
         COLUMN_SELECTOR_FACTORY
     );
 
-    final ValueMatcher nonNullMatcher = selector.makeValueMatcher(Predicates.notNull());
+    final ValueMatcher nonNullMatcher = selector.makeValueMatcher(StringPredicateDruidPredicateFactory.of(Predicates.notNull(), false));
 
     CURRENT_ROW.set(ROW0);
-    Assert.assertEquals(false, nonNullMatcher.matches());
+    Assert.assertEquals(false, nonNullMatcher.matches(false));
 
 
   }
@@ -596,38 +597,38 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
 
     final ValueMatcher nullMatcher = selector.makeValueMatcher((String) null);
     final ValueMatcher fiveMatcher = selector.makeValueMatcher("5");
-    final ValueMatcher nonNullMatcher = selector.makeValueMatcher(Predicates.notNull());
+    final ValueMatcher nonNullMatcher = selector.makeValueMatcher(StringPredicateDruidPredicateFactory.of(Predicates.notNull(), false));
 
     CURRENT_ROW.set(ROW0);
-    Assert.assertEquals(true, nullMatcher.matches());
-    Assert.assertEquals(false, fiveMatcher.matches());
-    Assert.assertEquals(false, nonNullMatcher.matches());
+    Assert.assertEquals(true, nullMatcher.matches(false));
+    Assert.assertEquals(false, fiveMatcher.matches(false));
+    Assert.assertEquals(false, nonNullMatcher.matches(false));
     Assert.assertEquals(null, selector.lookupName(selector.getRow().get(0)));
 
     CURRENT_ROW.set(ROW1);
     if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(false, nullMatcher.matches());
-      Assert.assertEquals(false, fiveMatcher.matches());
-      Assert.assertEquals(true, nonNullMatcher.matches());
+      Assert.assertEquals(false, nullMatcher.matches(false));
+      Assert.assertEquals(false, fiveMatcher.matches(false));
+      Assert.assertEquals(true, nonNullMatcher.matches(false));
       Assert.assertEquals("4", selector.lookupName(selector.getRow().get(0)));
     } else {
       // y is null in row1
-      Assert.assertEquals(true, nullMatcher.matches());
-      Assert.assertEquals(false, fiveMatcher.matches());
-      Assert.assertEquals(false, nonNullMatcher.matches());
+      Assert.assertEquals(true, nullMatcher.matches(false));
+      Assert.assertEquals(false, fiveMatcher.matches(false));
+      Assert.assertEquals(false, nonNullMatcher.matches(false));
       Assert.assertEquals(null, selector.lookupName(selector.getRow().get(0)));
     }
 
     CURRENT_ROW.set(ROW2);
-    Assert.assertEquals(false, nullMatcher.matches());
-    Assert.assertEquals(true, fiveMatcher.matches());
-    Assert.assertEquals(true, nonNullMatcher.matches());
+    Assert.assertEquals(false, nullMatcher.matches(false));
+    Assert.assertEquals(true, fiveMatcher.matches(false));
+    Assert.assertEquals(true, nonNullMatcher.matches(false));
     Assert.assertEquals("5.1", selector.lookupName(selector.getRow().get(0)));
 
     CURRENT_ROW.set(ROW3);
-    Assert.assertEquals(false, nullMatcher.matches());
-    Assert.assertEquals(true, fiveMatcher.matches());
-    Assert.assertEquals(true, nonNullMatcher.matches());
+    Assert.assertEquals(false, nullMatcher.matches(false));
+    Assert.assertEquals(true, fiveMatcher.matches(false));
+    Assert.assertEquals(true, nonNullMatcher.matches(false));
     Assert.assertEquals("5", selector.lookupName(selector.getRow().get(0)));
   }
 
@@ -715,8 +716,8 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
 
     CURRENT_ROW.set(ROW0);
     Assert.assertEquals(DateTimes.of("2000-01-01").getMillis(), selector.getLong());
-    Assert.assertEquals((float) DateTimes.of("2000-01-01").getMillis(), selector.getFloat(), 0.0f);
-    Assert.assertEquals((double) DateTimes.of("2000-01-01").getMillis(), selector.getDouble(), 0.0d);
+    Assert.assertEquals(DateTimes.of("2000-01-01").getMillis(), selector.getFloat(), 0.0f);
+    Assert.assertEquals(DateTimes.of("2000-01-01").getMillis(), selector.getDouble(), 0.0d);
     Assert.assertEquals(DateTimes.of("2000-01-01").getMillis(), selector.getObject());
 
     CURRENT_ROW.set(ROW1);

@@ -4,7 +4,7 @@
     "expectedResults": [
       {
         "__time": 1377910953000,
-        "isRobot": "",
+        "isRobot": null,
         "added": 57,
         "delta": -143,
         "deleted": 200,
@@ -12,7 +12,7 @@
       },
       {
         "__time": 1377910953000,
-        "isRobot": "",
+        "isRobot": null,
         "added": 57,
         "delta": -143,
         "deleted": 200,
@@ -20,7 +20,7 @@
       },
       {
         "__time": 1377919965000,
-        "isRobot": "",
+        "isRobot": null,
         "added": 459,
         "delta": 330,
         "deleted": 129,
@@ -28,7 +28,7 @@
       },
       {
         "__time": 1377919965000,
-        "isRobot": "",
+        "isRobot": null,
         "added": 459,
         "delta": 330,
         "deleted": 129,
@@ -36,7 +36,7 @@
       },
       {
         "__time": 1377933081000,
-        "isRobot": "",
+        "isRobot": null,
         "added": 123,
         "delta": 111,
         "deleted": 12,
@@ -44,7 +44,7 @@
       },
       {
         "__time": 1377933081000,
-        "isRobot": "",
+        "isRobot": null,
         "added": 123,
         "delta": 111,
         "deleted": 12,

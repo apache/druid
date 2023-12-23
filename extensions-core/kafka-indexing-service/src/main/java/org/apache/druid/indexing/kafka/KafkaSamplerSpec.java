@@ -71,8 +71,11 @@ public class KafkaSamplerSpec extends SeekableStreamSamplerSpec
       props.put("enable.auto.commit", "false");
       props.put("auto.offset.reset", "none");
       props.put("request.timeout.ms", Integer.toString(samplerConfig.getTimeoutMs()));
+      KafkaSupervisorIOConfig kafkaSupervisorIOConfig = (KafkaSupervisorIOConfig) ioConfig;
 
-      return new KafkaRecordSupplier(props, objectMapper, ((KafkaSupervisorIOConfig) ioConfig).getConfigOverrides());
+      return new KafkaRecordSupplier(props, objectMapper, kafkaSupervisorIOConfig.getConfigOverrides(),
+                                     kafkaSupervisorIOConfig.isMultiTopic()
+      );
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);

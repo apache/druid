@@ -20,12 +20,15 @@
 package org.apache.druid.client.coordinator;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.rpc.ServiceRetryPolicy;
+import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
 import java.util.List;
+import java.util.Set;
 
 public class NoopCoordinatorClient implements CoordinatorClient
 {
@@ -36,13 +39,25 @@ public class NoopCoordinatorClient implements CoordinatorClient
   }
 
   @Override
-  public ListenableFuture<DataSegment> fetchUsedSegment(String dataSource, String segmentId)
+  public ListenableFuture<DataSegment> fetchSegment(String dataSource, String segmentId, boolean includeUnused)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public Iterable<ImmutableSegmentLoadInfo> fetchServerViewSegments(String dataSource, List<Interval> intervals)
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
   public ListenableFuture<List<DataSegment>> fetchUsedSegments(String dataSource, List<Interval> intervals)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public ListenableFuture<List<DataSourceInformation>> fetchDataSourceInformation(Set<String> datasources)
   {
     throw new UnsupportedOperationException();
   }

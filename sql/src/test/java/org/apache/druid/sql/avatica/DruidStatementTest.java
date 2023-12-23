@@ -32,6 +32,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
@@ -47,7 +48,6 @@ import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
-import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -489,13 +489,13 @@ public class DruidStatementTest extends CalciteTestBase
     Assert.assertEquals(SELECT_STAR_FROM_FOO, signature.sql);
     Assert.assertEquals(
         Lists.newArrayList(
-            Lists.newArrayList("__time", "TIMESTAMP", "java.lang.Long"),
+            Lists.newArrayList("__time", "TIMESTAMP", "java.math.BigDecimal"),
             Lists.newArrayList("dim1", "VARCHAR", "java.lang.String"),
             Lists.newArrayList("dim2", "VARCHAR", "java.lang.String"),
             Lists.newArrayList("dim3", "VARCHAR", "java.lang.String"),
-            Lists.newArrayList("cnt", "BIGINT", "java.lang.Number"),
-            Lists.newArrayList("m1", "FLOAT", "java.lang.Float"),
-            Lists.newArrayList("m2", "DOUBLE", "java.lang.Double"),
+            Lists.newArrayList("cnt", "BIGINT", "java.math.BigDecimal"),
+            Lists.newArrayList("m1", "FLOAT", "java.math.BigDecimal"),
+            Lists.newArrayList("m2", "DOUBLE", "java.math.BigDecimal"),
             Lists.newArrayList("unique_dim1", "OTHER", "java.lang.Object")
         ),
         Lists.transform(

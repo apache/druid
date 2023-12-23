@@ -226,6 +226,7 @@ function showKafkaLine(line: SampleEntry): string {
   if (!input) return 'Invalid kafka row';
   return compact([
     `[ Kafka timestamp: ${input['kafka.timestamp']}`,
+    `  Topic: ${input['kafka.topic']}`,
     ...filterMap(Object.entries(input), ([k, v]) => {
       if (!k.startsWith('kafka.header.')) return;
       return `  Header: ${k.slice(13)}=${v}`;
@@ -1366,13 +1367,16 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
               this.updateSpec(fillDataSourceNameIfNeeded(newSpec));
             } else {
-              const issue = issueWithSampleData(inputData, spec);
+              const issue = issueWithSampleData(
+                filterMap(inputData.data, l => l.input?.raw),
+                isStreamingSpec(spec),
+              );
               if (issue) {
                 AppToaster.show({
                   icon: IconNames.WARNING_SIGN,
                   intent: Intent.WARNING,
                   message: issue,
-                  timeout: 10000,
+                  timeout: 30000,
                 });
                 return false;
               }
@@ -3130,6 +3134,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const { spec } = this.state;
     const parallel = deepGet(spec, 'spec.tuningConfig.maxNumConcurrentSubTasks') > 1;
 
+    const appendToExisting = spec.spec?.ioConfig.appendToExisting;
+
     return (
       <>
         <div className="main">
@@ -3164,6 +3170,33 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                     appending to the segment set instead of replacing it.
                   </>
                 ),
+              },
+              {
+                name: 'context.taskLockType',
+                type: 'boolean',
+                label: `Allow concurrent ${
+                  appendToExisting ? 'append' : 'replace'
+                } tasks (experimental)`,
+                defaultValue: undefined,
+                valueAdjustment: v => {
+                  if (!v) return undefined;
+
+                  if (isStreamingSpec(spec)) {
+                    return 'APPEND';
+                  } else {
+                    return appendToExisting ? 'APPEND' : 'REPLACE';
+                  }
+                },
+                adjustValue: v => {
+                  if (v === undefined) return false;
+
+                  if (isStreamingSpec(spec)) {
+                    return v === 'APPEND';
+                  }
+
+                  return v === (appendToExisting ? 'APPEND' : 'REPLACE');
+                },
+                info: <p>Allows or forbids concurrent tasks.</p>,
               },
             ]}
             model={spec}

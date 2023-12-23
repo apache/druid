@@ -42,6 +42,7 @@ import {
   getIngestionTitle,
   guessSimpleInputFormat,
   INPUT_SOURCE_FIELDS,
+  issueWithSampleData,
   PLACEHOLDER_TIMESTAMP_SPEC,
 } from '../../../druid-models';
 import {
@@ -50,7 +51,7 @@ import {
   submitTaskQuery,
 } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
-import { UrlBaser } from '../../../singletons';
+import { AppToaster, UrlBaser } from '../../../singletons';
 import { filterMap, IntermediateQueryState } from '../../../utils';
 import type { SampleSpec } from '../../../utils/sampler';
 import { postToSampler } from '../../../utils/sampler';
@@ -93,7 +94,7 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
     Execution
   >({
     processQuery: async ({ inputSource, suggestedInputFormat }, cancelToken) => {
-      let guessedInputFormat: InputFormat | undefined;
+      let sampleLines: string[];
       if (mode === 'sampler') {
         const sampleSpec: SampleSpec = {
           type: 'index_parallel',
@@ -125,12 +126,7 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
 
         const sampleResponse = await postToSampler(sampleSpec, 'input-source-step');
 
-        const sampleLines: string[] = filterMap(sampleResponse.data, l =>
-          l.input ? l.input.raw : undefined,
-        );
-
-        if (!sampleLines.length) throw new Error('No data returned from sampler');
-        guessedInputFormat = guessSimpleInputFormat(sampleLines);
+        sampleLines = filterMap(sampleResponse.data, l => (l.input ? l.input.raw : undefined));
       } else {
         const tableExpression = externalConfigToTableExpression({
           inputSource,
@@ -154,8 +150,23 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
         );
 
         if (result instanceof IntermediateQueryState) return result;
-        guessedInputFormat = resultToInputFormat(result);
+        sampleLines = result.rows.map((r: string[]) => r[0]);
       }
+
+      if (!sampleLines.length) throw new Error('No data returned from sampler');
+
+      const issue = issueWithSampleData(sampleLines, false);
+      if (issue) {
+        AppToaster.show({
+          icon: IconNames.WARNING_SIGN,
+          intent: Intent.WARNING,
+          message: issue,
+          timeout: 30000,
+        });
+        throw new Error(`Issue detected in sample data.`);
+      }
+
+      const guessedInputFormat = guessSimpleInputFormat(sampleLines);
 
       if (suggestedInputFormat?.type === guessedInputFormat.type) {
         return suggestedInputFormat;
@@ -265,18 +276,18 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
                 <p>Your raw data can be in any of the following formats:</p>
                 <ul>
                   <li>
-                    <ExternalLink href="http://ndjson.org/">JSON (new line delimited)</ExternalLink>
+                    <ExternalLink href="https://jsonlines.org">JSON Lines</ExternalLink>
                   </li>
                   <li>CSV</li>
                   <li>TSV</li>
                   <li>
-                    <ExternalLink href="https://parquet.apache.org/">Parquet</ExternalLink>
+                    <ExternalLink href="https://parquet.apache.org">Parquet</ExternalLink>
                   </li>
                   <li>
-                    <ExternalLink href="https://orc.apache.org/">ORC</ExternalLink>
+                    <ExternalLink href="https://orc.apache.org">ORC</ExternalLink>
                   </li>
                   <li>
-                    <ExternalLink href="https://avro.apache.org/">Avro</ExternalLink>
+                    <ExternalLink href="https://avro.apache.org">Avro</ExternalLink>
                   </li>
                   <li>
                     Any line format that can be parsed with a custom regular expression (regex)

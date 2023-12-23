@@ -60,7 +60,6 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.having.HavingSpec;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -387,11 +386,6 @@ public class QuerySchedulerTest
     QueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(
         new GroupByQueryConfig()
         {
-          @Override
-          public String getDefaultStrategy()
-          {
-            return GroupByStrategySelector.STRATEGY_V2;
-          }
 
           @Override
           public String toString()

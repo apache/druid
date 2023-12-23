@@ -38,9 +38,7 @@ public class DynamicConfigProviderUtils
         }
       }
       Map<String, String> dynamicConfig = extraConfigFromProvider(config.get(dynamicConfigProviderKey), mapper);
-      for (Map.Entry<String, String> entry : dynamicConfig.entrySet()) {
-        newConfig.put(entry.getKey(), entry.getValue());
-      }
+      newConfig.putAll(dynamicConfig);
     }
     return newConfig;
   }
@@ -55,9 +53,7 @@ public class DynamicConfigProviderUtils
         }
       }
       Map<String, String> dynamicConfig = extraConfigFromProvider(config.get(dynamicConfigProviderKey), mapper);
-      for (Map.Entry<String, String> entry : dynamicConfig.entrySet()) {
-        newConfig.put(entry.getKey(), entry.getValue());
-      }
+      newConfig.putAll(dynamicConfig);
     }
     return newConfig;
   }

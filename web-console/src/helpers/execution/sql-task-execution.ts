@@ -57,7 +57,13 @@ export interface SubmitTaskQueryOptions {
 export async function submitTaskQuery(
   options: SubmitTaskQueryOptions,
 ): Promise<Execution | IntermediateQueryState<Execution>> {
-  const { query, context, prefixLines, cancelToken, preserveOnTermination, onSubmitted } = options;
+  const { query, prefixLines, cancelToken, preserveOnTermination, onSubmitted } = options;
+
+  // setting waitUntilSegmentsLoad to true by default
+  const context = {
+    waitUntilSegmentsLoad: true,
+    ...(options.context || {}),
+  };
 
   let sqlQuery: string;
   let jsonQuery: Record<string, any>;
@@ -224,16 +230,20 @@ export async function getTaskExecution(
     execution = execution.updateWithTaskPayload(taskPayload);
   }
 
-  // Still have to pull the destination page info from the async status
+  // Still have to pull the destination page info from the async status, do this in a best effort way since the statements API may have permission errors
   if (execution.status === 'SUCCESS' && !execution.destinationPages) {
-    const statusResp = await Api.instance.get<AsyncStatusResponse>(
-      `/druid/v2/sql/statements/${encodedId}`,
-      {
-        cancelToken,
-      },
-    );
+    try {
+      const statusResp = await Api.instance.get<AsyncStatusResponse>(
+        `/druid/v2/sql/statements/${encodedId}`,
+        {
+          cancelToken,
+        },
+      );
 
-    execution = execution.updateWithAsyncStatus(statusResp.data);
+      execution = execution.updateWithAsyncStatus(statusResp.data);
+    } catch (e) {
+      if (Api.isNetworkError(e)) throw e;
+    }
   }
 
   if (execution.hasPotentiallyStuckStage()) {
@@ -255,6 +265,11 @@ export async function updateExecutionWithDatasourceLoadedIfNeeded(
     execution.status !== 'SUCCESS'
   ) {
     return execution;
+  }
+
+  // This means we don't have to perform the SQL query to check if the segments are loaded
+  if (execution.queryContext?.waitUntilSegmentsLoad === true) {
+    return execution.markDestinationDatasourceLoaded();
   }
 
   const endTime = execution.getEndTime();

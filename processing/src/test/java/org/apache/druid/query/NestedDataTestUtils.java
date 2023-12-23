@@ -44,7 +44,7 @@ import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.NestedDataDimensionSchema;
+import org.apache.druid.segment.NestedDataColumnSchema;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
@@ -101,30 +101,30 @@ public class NestedDataTestUtils
                     .useSchemaDiscovery(true)
                     .build();
 
-  public static final DimensionsSpec TSV_V4_SCHEMA =
-      DimensionsSpec.builder()
-                    .setDimensions(
-                        Arrays.asList(
-                            new NestedDataDimensionSchema("dim"),
-                            new NestedDataDimensionSchema("nest_json"),
-                            new NestedDataDimensionSchema("nester_json"),
-                            new NestedDataDimensionSchema("variant_json"),
-                            new NestedDataDimensionSchema("list_json"),
-                            new NestedDataDimensionSchema("nonexistent")
-                        )
-                    )
-                    .build();
-
   public static final DimensionsSpec TSV_SCHEMA =
       DimensionsSpec.builder()
                     .setDimensions(
                         Arrays.asList(
-                            new AutoTypeColumnSchema("dim"),
-                            new AutoTypeColumnSchema("nest_json"),
-                            new AutoTypeColumnSchema("nester_json"),
-                            new AutoTypeColumnSchema("variant_json"),
-                            new AutoTypeColumnSchema("list_json"),
-                            new AutoTypeColumnSchema("nonexistent")
+                            new AutoTypeColumnSchema("dim", null),
+                            new AutoTypeColumnSchema("nest_json", null),
+                            new AutoTypeColumnSchema("nester_json", null),
+                            new AutoTypeColumnSchema("variant_json", null),
+                            new AutoTypeColumnSchema("list_json", null),
+                            new AutoTypeColumnSchema("nonexistent", null)
+                        )
+                    )
+                    .build();
+
+  public static final DimensionsSpec TSV_V4_SCHEMA =
+      DimensionsSpec.builder()
+                    .setDimensions(
+                        Arrays.asList(
+                            new NestedDataColumnSchema("dim", 4),
+                            new NestedDataColumnSchema("nest_json", 4),
+                            new NestedDataColumnSchema("nester_json", 4),
+                            new NestedDataColumnSchema("variant_json", 4),
+                            new NestedDataColumnSchema("list_json", 4),
+                            new NestedDataColumnSchema("nonexistent", 4)
                         )
                     )
                     .build();

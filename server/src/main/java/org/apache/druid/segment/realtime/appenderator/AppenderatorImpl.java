@@ -111,6 +111,7 @@ import java.util.stream.Collectors;
  * with <code>isLegacy</code> constructor argument set to false is the default. When {@link BatchAppenderator}
  * proves stable then the plan is to remove this class
  */
+@SuppressWarnings("CheckReturnValue")
 public class AppenderatorImpl implements Appenderator
 {
   // Rough estimate of memory footprint of a ColumnHolder based on actual heap dumps
@@ -430,7 +431,8 @@ public class AppenderatorImpl implements Appenderator
               {
                 persistError = t;
               }
-            }
+            },
+            MoreExecutors.directExecutor()
         );
       } else {
         isPersistRequired = true;

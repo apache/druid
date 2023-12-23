@@ -236,9 +236,9 @@ public class BroadcastDistributionRuleTest
     return DruidCoordinatorRuntimeParams
         .newBuilder(DateTimes.nowUtc())
         .withDruidCluster(druidCluster)
-        .withUsedSegmentsInTest(usedSegments)
+        .withUsedSegments(usedSegments)
         .withBalancerStrategy(new RandomBalancerStrategy())
-        .withSegmentAssignerUsing(new SegmentLoadQueueManager(null, null, null))
+        .withSegmentAssignerUsing(new SegmentLoadQueueManager(null, null))
         .build();
   }
 

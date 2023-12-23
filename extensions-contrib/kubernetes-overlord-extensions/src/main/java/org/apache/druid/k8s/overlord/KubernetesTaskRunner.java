@@ -23,6 +23,7 @@ import com.google.api.client.util.Lists;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -42,6 +43,8 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -58,7 +61,6 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -106,7 +108,8 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   private final HttpClient httpClient;
   private final PeonLifecycleFactory peonLifecycleFactory;
   private final ServiceEmitter emitter;
-
+  // currently worker categories aren't supported, so it's hardcoded.
+  protected static final String WORKER_CATEGORY = "_k8s_worker_category";
 
   public KubernetesTaskRunner(
       TaskAdapter adapter,
@@ -179,10 +182,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         KubernetesWorkItem workItem = tasks.get(task.getId());
 
         if (workItem == null) {
-          throw new ISE("Task [%s] disappeared", task.getId());
-        }
-
-        if (workItem.isShutdownRequested()) {
           throw new ISE("Task [%s] has been shut down", task.getId());
         }
 
@@ -194,7 +193,8 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         taskStatus = peonLifecycle.run(
             adapter.fromTask(task),
             config.getTaskLaunchTimeout().toStandardDuration().getMillis(),
-            config.getTaskTimeout().toStandardDuration().getMillis()
+            config.getTaskTimeout().toStandardDuration().getMillis(),
+            adapter.shouldUseDeepStorageForTaskPayload(task)
         );
       } else {
         taskStatus = peonLifecycle.join(
@@ -209,11 +209,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     catch (Exception e) {
       log.error(e, "Task [%s] execution caught an exception", task.getId());
       throw new RuntimeException(e);
-    }
-    finally {
-      synchronized (tasks) {
-        tasks.remove(task.getId());
-      }
     }
   }
 
@@ -233,7 +228,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
         IndexTaskUtils.setTaskDimensions(metricBuilder, workItem.getTask());
         emitter.emit(
-            metricBuilder.build(
+            metricBuilder.setMetric(
                 "task/pending/time",
                 new Duration(workItem.getCreatedTime(), DateTimes.nowUtc()).getMillis()
             )
@@ -266,6 +261,10 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     if (workItem == null) {
       log.info("Ignoring request to cancel unknown task [%s]", taskid);
       return;
+    }
+
+    synchronized (tasks) {
+      tasks.remove(taskid);
     }
 
     workItem.shutdown();
@@ -311,22 +310,25 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public List<Pair<Task, ListenableFuture<TaskStatus>>> restore()
   {
-    List<Pair<Task, ListenableFuture<TaskStatus>>> restoredTasks = new ArrayList<>();
+    return ImmutableList.of();
+  }
+
+  @Override
+  @LifecycleStart
+  public void start()
+  {
+    log.info("Starting K8sTaskRunner...");
+    // Load tasks from previously running jobs and wait for their statuses to be updated asynchronously.
     for (Job job : client.getPeonJobs()) {
       try {
-        Task task = adapter.toTask(job);
-        restoredTasks.add(Pair.of(task, joinAsync(task)));
+        joinAsync(adapter.toTask(job));
       }
       catch (IOException e) {
         log.error(e, "Error deserializing task from job [%s]", job.getMetadata().getName());
       }
     }
-    return restoredTasks;
-  }
+    log.info("Loaded %,d tasks from previous run", tasks.size());
 
-  @Override
-  public void start()
-  {
     cleanupExecutor.scheduleAtFixedRate(
         () ->
             client.deleteCompletedPeonJobsOlderThan(
@@ -340,8 +342,8 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     log.debug("Started cleanup executor for jobs older than %s...", config.getTaskCleanupDelay());
   }
 
-
   @Override
+  @LifecycleStop
   public void stop()
   {
     log.debug("Stopping KubernetesTaskRunner");
@@ -352,7 +354,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public Map<String, Long> getTotalTaskSlotCount()
   {
-    return ImmutableMap.of("taskQueue", (long) config.getCapacity());
+    return ImmutableMap.of(WORKER_CATEGORY, (long) config.getCapacity());
   }
 
   @Override
@@ -370,13 +372,13 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public Map<String, Long> getIdleTaskSlotCount()
   {
-    return Collections.emptyMap();
+    return ImmutableMap.of(WORKER_CATEGORY, (long) Math.max(0, config.getCapacity() - tasks.size()));
   }
 
   @Override
   public Map<String, Long> getUsedTaskSlotCount()
   {
-    return Collections.emptyMap();
+    return ImmutableMap.of(WORKER_CATEGORY, (long) Math.min(config.getCapacity(), tasks.size()));
   }
 
   @Override
@@ -389,12 +391,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   public Map<String, Long> getBlacklistedTaskSlotCount()
   {
     return Collections.emptyMap();
-  }
-
-  @Override
-  public boolean isK8sTaskRunner()
-  {
-    return true;
   }
 
   @Override
@@ -441,6 +437,17 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
                 .collect(Collectors.toList());
   }
 
+  @Override
+  public TaskLocation getTaskLocation(String taskId)
+  {
+    final KubernetesWorkItem workItem = tasks.get(taskId);
+    if (workItem == null) {
+      return TaskLocation.unknown();
+    } else {
+      return workItem.getLocation();
+    }
+  }
+
   @Nullable
   @Override
   public RunnerTaskState getRunnerTaskState(String taskId)
@@ -451,5 +458,17 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     }
 
     return workItem.getRunnerTaskState();
+  }
+
+  @Override
+  public int getTotalCapacity()
+  {
+    return config.getCapacity();
+  }
+
+  @Override
+  public int getUsedCapacity()
+  {
+    return tasks.size();
   }
 }
