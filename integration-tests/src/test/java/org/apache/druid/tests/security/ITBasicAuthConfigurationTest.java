@@ -91,10 +91,9 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   @Override
   protected void setupDatasourceAndContextParamsUser() throws Exception
   {
-    User user = User.DATASOURCE_AND_CONTEXT_PARAMS_USER;
     createUserAndRoleWithPermissions(
-        user.getName(),
-        user.getPassword(),
+        "datasourceAndContextParamsUser",
+        "helloworld",
         "datasourceAndContextParamsRole",
         DATASOURCE_QUERY_CONTEXT_PERMISSIONS
     );

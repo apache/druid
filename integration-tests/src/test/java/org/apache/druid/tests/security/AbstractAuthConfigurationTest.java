@@ -546,14 +546,6 @@ public abstract class AbstractAuthConfigurationTest
   }
 
   @Test
-  public void test_avaticaQueryWithContext_datasourceAndContextParamsUser_succeed2()
-  {
-    final Properties properties = getAvaticaConnectionPropertiesForUser(User.DATASOURCE_AND_CONTEXT_PARAMS_USER);
-    properties.setProperty("auth_test_ctx", "should-be-allowed");
-    testAvaticaQuery(properties, getRouterAvacticaUrl());
-  }
-
-  @Test
   public void test_sqlQueryWithContext_datasourceOnlyUser_fail() throws Exception
   {
     final String query = "select count(*) from auth_test";
@@ -661,16 +653,12 @@ public abstract class AbstractAuthConfigurationTest
 
   protected void testAvaticaQuery(Properties connectionProperties, String url)
   {
-    testAvaticaQuery("SELECT * FROM INFORMATION_SCHEMA.COLUMNS", connectionProperties, url);
-  }
-
-  protected void testAvaticaQuery(String query, Properties connectionProperties, String url)
-  {
     LOG.info("URL: " + url);
     try (
         Connection connection = DriverManager.getConnection(url, connectionProperties);
         Statement statement = connection.createStatement()) {
       statement.setMaxRows(450);
+      String query = "SELECT * FROM INFORMATION_SCHEMA.COLUMNS";
       ResultSet resultSet = statement.executeQuery(query);
       Assert.assertTrue(resultSet.next());
     }

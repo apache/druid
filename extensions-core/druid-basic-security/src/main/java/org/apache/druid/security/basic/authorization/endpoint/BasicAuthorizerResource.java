@@ -698,5 +698,4 @@ public class BasicAuthorizerResource
       );
     }
   }
-
 }
