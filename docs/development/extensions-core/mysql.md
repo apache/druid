@@ -36,10 +36,10 @@ This extension can use Oracle's MySQL JDBC driver which is not included in the D
 install it separately. There are a few ways to obtain this library:
 
 - It can be downloaded from the MySQL site at: https://dev.mysql.com/downloads/connector/j/
-- It can be fetched from Maven Central at: https://repo1.maven.org/maven2/mysql/mysql-connector-java/8.2.0/mysql-connector-java-8.2.0.jar
+- It can be fetched from Maven Central at: https://repo1.maven.org/maven2/com/mysql/mysql-connector-j/8.2.0/mysql-connector-j-8.2.0.jar
 - It may be available through your package manager, e.g. as `libmysql-java` on APT for a Debian-based OS
 
-This fetches the MySQL connector JAR file with a name like `mysql-connector-java-8.2.0.jar`.
+This fetches the MySQL connector JAR file with a name like `mysql-connector-j-8.2.0.jar`.
 
 Copy or symlink this file inside the folder `extensions/mysql-metadata-storage` under the distribution root directory.
 

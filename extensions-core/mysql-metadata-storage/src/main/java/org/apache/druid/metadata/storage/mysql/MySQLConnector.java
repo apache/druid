@@ -279,7 +279,7 @@ public class MySQLConnector extends SQLMetadataConnector
       if (failIfNotFound) {
         throw new ISE(e, "Could not find %s on the classpath. The MySQL Connector library is not included in the Druid "
                          + "distribution but is required to use MySQL. Please download a compatible library (for example "
-                         + "'mysql-connector-java-8.2.0.jar') and place it under 'extensions/mysql-metadata-storage/'. See "
+                         + "'mysql-connector-j-8.2.0.jar') and place it under 'extensions/mysql-metadata-storage/'. See "
                          + "https://druid.apache.org/downloads for more details.",
                       className
         );

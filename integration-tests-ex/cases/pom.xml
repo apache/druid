@@ -345,7 +345,7 @@
                     </ignoredUsedUndeclaredDependencies>
                     <!-- Dynamically loaded. -->
                     <ignoredUnusedDeclaredDependencies>
-                        <ignoredUnusedDeclaredDependency>mysql:mysql-connector-java:jar</ignoredUnusedDeclaredDependency>
+                        <ignoredUnusedDeclaredDependency>com.mysql:mysql-connector-j:jar</ignoredUnusedDeclaredDependency>
                     </ignoredUnusedDeclaredDependencies>
                 </configuration>
             </plugin>
