@@ -97,6 +97,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static org.apache.druid.metadata.SqlSegmentsMetadataQuery.IntervalMode.OVERLAPS;
+
 /**
  *
  */
@@ -180,18 +182,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         "SELECT created_date, payload FROM %1$s WHERE dataSource = :dataSource AND used = true"
     );
 
-    boolean hasEternityInterval = false;
-    for (Interval interval : intervals) {
-      if (Intervals.isEternity(interval)) {
-        hasEternityInterval = true;
-        break;
-      }
-    }
+    final boolean compareAsString = intervals.stream().allMatch(Intervals::canCompareEndpointsAsStrings);
 
     SqlSegmentsMetadataQuery.appendConditionForIntervalsAndMatchMode(
         queryBuilder,
-        hasEternityInterval ? Collections.emptyList() : intervals,
-        SqlSegmentsMetadataQuery.IntervalMode.OVERLAPS,
+        compareAsString ? intervals : Collections.emptyList(),
+        OVERLAPS,
         connector
     );
 
@@ -202,16 +198,30 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               .createQuery(queryString)
               .bind("dataSource", dataSource);
 
-          SqlSegmentsMetadataQuery.bindQueryIntervals(query, intervals);
+          if (compareAsString) {
+            SqlSegmentsMetadataQuery.bindQueryIntervals(query, intervals);
+          }
 
-          return query
-              .map((int index, ResultSet r, StatementContext ctx) ->
-                       new Pair<>(
-                           JacksonUtils.readValue(jsonMapper, r.getBytes("payload"), DataSegment.class),
-                           r.getString("created_date")
-                       )
-              )
-              .list();
+          return query.map((int index, ResultSet r, StatementContext ctx) ->
+                               new Pair<>(
+                                   JacksonUtils.readValue(jsonMapper, r.getBytes("payload"), DataSegment.class),
+                                   r.getString("created_date")
+                               )
+                      )
+                      .list()
+                      .stream()
+                      .filter(pair -> {
+                        if (intervals.isEmpty() || compareAsString) {
+                          return true;
+                        } else {
+                          for (Interval interval : intervals) {
+                            if (OVERLAPS.apply(interval, pair.lhs.getInterval())) {
+                              return true;
+                            }
+                          }
+                        }
+                        return false;
+                      }).collect(Collectors.toList());
         }
     );
   }
