@@ -44,6 +44,9 @@ import org.apache.calcite.util.Optionality;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.SerializablePairLongDoubleComplexMetricSerde;
+import org.apache.druid.query.aggregation.SerializablePairLongFloatComplexMetricSerde;
+import org.apache.druid.query.aggregation.SerializablePairLongLongComplexMetricSerde;
 import org.apache.druid.query.aggregation.any.DoubleAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.any.FloatAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.any.LongAnyAggregatorFactory;
@@ -68,6 +71,7 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -108,6 +112,18 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
             return new DoubleFirstAggregatorFactory(name, fieldName, timeColumn);
           case STRING:
           case COMPLEX:
+            if (type.getComplexTypeName() != null) {
+              switch (type.getComplexTypeName()) {
+                case SerializablePairLongLongComplexMetricSerde.TYPE_NAME:
+                  return new LongFirstAggregatorFactory(name, fieldName, timeColumn);
+                case SerializablePairLongFloatComplexMetricSerde.TYPE_NAME:
+                  return new FloatFirstAggregatorFactory(name, fieldName, timeColumn);
+                case SerializablePairLongDoubleComplexMetricSerde.TYPE_NAME:
+                  return new DoubleFirstAggregatorFactory(name, fieldName, timeColumn);
+                default:
+                  return new StringFirstAggregatorFactory(name, fieldName, timeColumn, maxStringBytes);
+              }
+            }
             return new StringFirstAggregatorFactory(name, fieldName, timeColumn, maxStringBytes);
           default:
             throw SimpleSqlAggregator.badTypeException(fieldName, "EARLIEST", type);
@@ -135,6 +151,18 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
             return new DoubleLastAggregatorFactory(name, fieldName, timeColumn);
           case STRING:
           case COMPLEX:
+            if (type.getComplexTypeName() != null) {
+              switch (type.getComplexTypeName()) {
+                case SerializablePairLongLongComplexMetricSerde.TYPE_NAME:
+                  return new LongLastAggregatorFactory(name, fieldName, timeColumn);
+                case SerializablePairLongFloatComplexMetricSerde.TYPE_NAME:
+                  return new FloatLastAggregatorFactory(name, fieldName, timeColumn);
+                case SerializablePairLongDoubleComplexMetricSerde.TYPE_NAME:
+                  return new DoubleLastAggregatorFactory(name, fieldName, timeColumn);
+                default:
+                  return new StringLastAggregatorFactory(name, fieldName, timeColumn, maxStringBytes);
+              }
+            }
             return new StringLastAggregatorFactory(name, fieldName, timeColumn, maxStringBytes);
           default:
             throw SimpleSqlAggregator.badTypeException(fieldName, "LATEST", type);
@@ -316,6 +344,16 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
     public RelDataType inferReturnType(SqlOperatorBinding sqlOperatorBinding)
     {
       RelDataType type = sqlOperatorBinding.getOperandType(this.ordinal);
+
+      // If complex and of type SerializablePairLong*, return type
+      if (type instanceof RowSignatures.ComplexSqlType) {
+        ColumnType complexColumnType = ((RowSignatures.ComplexSqlType) type).getColumnType();
+        String complexTypeName = complexColumnType.getComplexTypeName();
+        if (complexTypeName != null && (complexTypeName.equals(SerializablePairLongLongComplexMetricSerde.TYPE_NAME) || complexTypeName.equals(SerializablePairLongFloatComplexMetricSerde.TYPE_NAME) || complexTypeName.equals(SerializablePairLongDoubleComplexMetricSerde.TYPE_NAME))) {
+          return type;
+        }
+      }
+
       // For non-number and non-string type, which is COMPLEX type, we set the return type to VARCHAR.
       if (!SqlTypeUtil.isNumeric(type) &&
           !SqlTypeUtil.isString(type)) {
