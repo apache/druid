@@ -97,8 +97,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static org.apache.druid.metadata.SqlSegmentsMetadataQuery.IntervalMode.OVERLAPS;
-
 /**
  *
  */
@@ -183,11 +181,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     );
 
     final boolean compareAsString = intervals.stream().allMatch(Intervals::canCompareEndpointsAsStrings);
+    final SqlSegmentsMetadataQuery.IntervalMode intervalMode = SqlSegmentsMetadataQuery.IntervalMode.OVERLAPS;
 
     SqlSegmentsMetadataQuery.appendConditionForIntervalsAndMatchMode(
         queryBuilder,
         compareAsString ? intervals : Collections.emptyList(),
-        OVERLAPS,
+        intervalMode,
         connector
     );
 
@@ -215,7 +214,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                           return true;
                         } else {
                           for (Interval interval : intervals) {
-                            if (OVERLAPS.apply(interval, pair.lhs.getInterval())) {
+                            if (intervalMode.apply(interval, pair.lhs.getInterval())) {
                               return true;
                             }
                           }
