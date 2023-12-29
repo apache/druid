@@ -179,7 +179,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                      .add(new Object[]{"druid", CalciteTests.SOME_DATASOURCE, "TABLE", "NO", "NO"})
                      .add(new Object[]{"druid", CalciteTests.SOMEXDATASOURCE, "TABLE", "NO", "NO"})
                      .add(new Object[]{"druid", CalciteTests.USERVISITDATASOURCE, "TABLE", "NO", "NO"})
-                     .add(new Object[]{"druid", "wikipedia", "TABLE", "NO", "NO"})
+                     .add(new Object[]{"druid", CalciteTests.WIKIPEDIA, "TABLE", "NO", "NO"})
+                     .add(new Object[]{"druid", CalciteTests.WIKIPEDIA_FIRST_LAST, "TABLE", "NO", "NO"})
                      .add(new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE", "NO", "NO"})
                      .add(new Object[]{"INFORMATION_SCHEMA", "ROUTINES", "SYSTEM_TABLE", "NO", "NO"})
                      .add(new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE", "NO", "NO"})
@@ -217,7 +218,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                      .add(new Object[]{"druid", CalciteTests.SOME_DATASOURCE, "TABLE", "NO", "NO"})
                      .add(new Object[]{"druid", CalciteTests.SOMEXDATASOURCE, "TABLE", "NO", "NO"})
                      .add(new Object[]{"druid", CalciteTests.USERVISITDATASOURCE, "TABLE", "NO", "NO"})
-                     .add(new Object[]{"druid", "wikipedia", "TABLE", "NO", "NO"})
+                     .add(new Object[]{"druid", CalciteTests.WIKIPEDIA, "TABLE", "NO", "NO"})
+                     .add(new Object[]{"druid", CalciteTests.WIKIPEDIA_FIRST_LAST, "TABLE", "NO", "NO"})
                      .add(new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE", "NO", "NO"})
                      .add(new Object[]{"INFORMATION_SCHEMA", "ROUTINES", "SYSTEM_TABLE", "NO", "NO"})
                      .add(new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE", "NO", "NO"})
@@ -1071,6 +1073,36 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{"", "b"},
             new Object[]{"a", "b"},
             new Object[]{"abc", "b"}
+        )
+    );
+  }
+
+  @Test
+  public void testNumericLatestEarliestGroupBy()
+  {
+    testQuery(
+        "SELECT isNew, LATEST(long_last_added), EARLIEST(long_first_added), LATEST(float_last_added), EARLIEST(float_first_added), LATEST(double_last_added), EARLIEST(double_first_added) FROM wikipedia_first_last GROUP BY isNew",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.WIKIPEDIA_FIRST_LAST)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(dimensions(new DefaultDimensionSpec("isNew", "d0")))
+                        .setAggregatorSpecs(aggregators(
+                                                new LongLastAggregatorFactory("a0", "long_last_added", null),
+                                                new LongFirstAggregatorFactory("a1", "long_first_added", null),
+                                                new FloatLastAggregatorFactory("a2", "float_last_added", null),
+                                                new FloatFirstAggregatorFactory("a3", "float_first_added", null),
+                                                new DoubleLastAggregatorFactory("a4", "double_last_added", null),
+                                                new DoubleFirstAggregatorFactory("a5", "double_first_added", null)
+                                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"false", "182", "36", "182.0", "36.0", "182.0", "36.0"},
+            new Object[]{"true", "113", "345", "113.0", "345.0", "113.0", "345.0"}
         )
     );
   }

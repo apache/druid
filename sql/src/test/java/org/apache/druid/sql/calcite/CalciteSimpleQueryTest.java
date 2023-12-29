@@ -647,7 +647,7 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
         .expectedQueries(
             ImmutableList.of(
                 GroupByQuery.builder()
-                    .setDataSource("wikipedia")
+                    .setDataSource(CalciteTests.WIKIPEDIA)
                     .setInterval(querySegmentSpec(Filtration.eternity()))
                     .setGranularity(Granularities.ALL)
                     .setVirtualColumns(
