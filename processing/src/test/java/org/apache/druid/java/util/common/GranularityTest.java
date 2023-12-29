@@ -1011,7 +1011,6 @@ public class GranularityTest
             Granularities.YEAR,
             Granularities.QUARTER,
             Granularities.MONTH,
-            Granularities.WEEK,
             Granularities.DAY,
             Granularities.EIGHT_HOUR,
             Granularities.SIX_HOUR,

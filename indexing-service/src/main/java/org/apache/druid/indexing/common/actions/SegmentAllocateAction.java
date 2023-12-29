@@ -33,7 +33,6 @@ import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -53,9 +52,13 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 /**
- * Allocates a pending segment for a given timestamp. The preferredSegmentGranularity is used if there are no prior
- * segments for the given timestamp, or if the prior segments for the given timestamp are already at the
- * preferredSegmentGranularity. Otherwise, the prior segments will take precedence.
+ * Allocates a pending segment for a given timestamp.
+ * If a visible chunk of used segments contains the interval with the query granularity containing the timestamp,
+ * the pending segment is allocated with its interval.
+ * Else, if the interval with the preferred segment granularity containing the timestamp has no overlap
+ * with the existing used segments, the preferred segment granularity is used.
+ * Else, find the coarsest segment granularity, containing the interval with the query granularity for the timestamp,
+ * that does not overlap with the existing used segments. This granularity is used for allocation if it exists.
  * <p/>
  * This action implicitly acquires some task locks when it allocates segments. You do not have to acquire them
  * beforehand, although you *do* have to release them yourself. (Note that task locks are automatically released when
@@ -63,6 +66,8 @@ import java.util.stream.Collectors;
  * <p/>
  * If this action cannot acquire an appropriate task lock, or if it cannot expand an existing segment set, it returns
  * null.
+ * </p>
+ * Do NOT allocate WEEK granularity segments unless the preferred segment granularity is WEEK.
  */
 public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
 {
@@ -273,12 +278,8 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
   {
     // No existing segments for this row, but there might still be nearby ones that conflict with our preferred
     // segment granularity. Try that first, and then progressively smaller ones if it fails.
-    // Consider trying with WEEK granularity only if the preferred granularity is WEEK
     final List<Interval> tryIntervals = Granularity.granularitiesFinerThan(preferredSegmentGranularity)
                                                    .stream()
-                                                   .filter(granularity ->
-                                                               Granularities.WEEK.equals(preferredSegmentGranularity)
-                                                               || !Granularities.WEEK.equals(granularity))
                                                    .map(granularity -> granularity.bucket(timestamp))
                                                    .collect(Collectors.toList());
     for (Interval tryInterval : tryIntervals) {

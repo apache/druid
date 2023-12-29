@@ -31,7 +31,6 @@ import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -440,11 +439,6 @@ public class SegmentAllocationQueue
     final List<Granularity> candidateGranularities
         = Granularity.granularitiesFinerThan(requestBatch.key.preferredSegmentGranularity);
     for (Granularity granularity : candidateGranularities) {
-      // Do not try to allocate with WEEK granularity unless the preferred granularity itself is WEEK
-      if (!Granularities.WEEK.equals(requestBatch.key.preferredSegmentGranularity)
-          && Granularities.WEEK.equals(granularity)) {
-        continue;
-      }
       Map<Interval, List<SegmentAllocateRequest>> requestsByInterval =
           getRequestsByInterval(pendingRequests, granularity);
 
