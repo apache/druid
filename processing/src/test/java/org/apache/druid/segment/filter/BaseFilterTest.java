@@ -67,7 +67,6 @@ import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.ColumnInspector;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
@@ -141,6 +140,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           new ExpressionVirtualColumn("vd0", "d0", ColumnType.DOUBLE, TestExprMacroTable.INSTANCE),
           new ExpressionVirtualColumn("vf0", "f0", ColumnType.FLOAT, TestExprMacroTable.INSTANCE),
           new ExpressionVirtualColumn("vl0", "l0", ColumnType.LONG, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("nestedArrayLong", "array(arrayLong)", ColumnType.ofArray(ColumnType.LONG_ARRAY), TestExprMacroTable.INSTANCE),
           new ListFilteredVirtualColumn("allow-dim0", DefaultDimensionSpec.of("dim0"), ImmutableSet.of("3", "4"), true),
           new ListFilteredVirtualColumn("deny-dim0", DefaultDimensionSpec.of("dim0"), ImmutableSet.of("3", "4"), false),
           new ListFilteredVirtualColumn("allow-dim2", DefaultDimensionSpec.of("dim2"), ImmutableSet.of("a"), true),
@@ -166,10 +166,10 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                    .add(new DoubleDimensionSchema("d0"))
                    .add(new FloatDimensionSchema("f0"))
                    .add(new LongDimensionSchema("l0"))
-                   .add(new AutoTypeColumnSchema("arrayString"))
-                   .add(new AutoTypeColumnSchema("arrayLong"))
-                   .add(new AutoTypeColumnSchema("arrayDouble"))
-                   .add(new AutoTypeColumnSchema("variant"))
+                   .add(new AutoTypeColumnSchema("arrayString", ColumnType.STRING_ARRAY))
+                   .add(new AutoTypeColumnSchema("arrayLong", ColumnType.LONG_ARRAY))
+                   .add(new AutoTypeColumnSchema("arrayDouble", ColumnType.DOUBLE_ARRAY))
+                   .add(new AutoTypeColumnSchema("variant", null))
                    .build()
   );
 
@@ -441,7 +441,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                                 .getDimensions()
                                                 .stream()
                                                 .map(
-                                                    dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName())
+                                                    dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName(), null)
                                                 )
                                                 .collect(Collectors.toList())
                                       ),
@@ -469,7 +469,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                                 .getDimensions()
                                                 .stream()
                                                 .map(
-                                                    dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName())
+                                                    dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName(), null)
                                                 )
                                                 .collect(Collectors.toList())
                                       ),
@@ -498,7 +498,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                                         .getDimensions()
                                                         .stream()
                                                         .map(
-                                                            dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName())
+                                                            dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName(), null)
                                                         )
                                                         .collect(Collectors.toList())
                                               ),
@@ -821,21 +821,9 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
-      {
-        return false;
-      }
-
-      @Override
       public Set<String> getRequiredColumns()
       {
         return Collections.emptySet();
-      }
-
-      @Override
-      public double estimateSelectivity(ColumnIndexSelector indexSelector)
-      {
-        return 1.0;
       }
 
       @Nullable
@@ -900,18 +888,6 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       public Set<String> getRequiredColumns()
       {
         return null;
-      }
-
-      @Override
-      public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
-      {
-        return false;
-      }
-
-      @Override
-      public double estimateSelectivity(ColumnIndexSelector indexSelector)
-      {
-        return 1.0;
       }
 
       @Nullable

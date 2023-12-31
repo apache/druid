@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.ColumnarLongsSerializer;
@@ -56,7 +57,7 @@ public class ScalarLongColumnSerializer extends ScalarNestedCommonFormatColumnSe
   @Override
   protected int processValue(@Nullable Object rawValue) throws IOException
   {
-    final ExprEval<?> eval = ExprEval.bestEffortOf(rawValue);
+    final ExprEval<?> eval = ExprEval.bestEffortOf(rawValue).castTo(ExpressionType.LONG);
 
     final long val = eval.asLong();
     final int dictId = eval.isNumericNull() ? 0 : dictionaryIdLookup.lookupLong(val);

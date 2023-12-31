@@ -36,7 +36,6 @@ import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.CoordinatorSegmentWatcherConfig;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.DirectDruidClientFactory;
@@ -97,7 +96,6 @@ import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
 import org.apache.druid.segment.metadata.SegmentMetadataQuerySegmentWalker;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
-import org.apache.druid.server.audit.AuditManagerProvider;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
@@ -155,7 +153,7 @@ public class CliCoordinator extends ServerRunnable
 {
   private static final Logger log = new Logger(CliCoordinator.class);
   private static final String AS_OVERLORD_PROPERTY = "druid.coordinator.asOverlord.enabled";
-  private static final String CENTRALIZED_SCHEMA_MANAGEMENT_ENABLED = "druid.coordinator.centralizedTableSchema.enabled";
+  private static final String CENTRALIZED_SCHEMA_MANAGEMENT_ENABLED = "druid.centralizedDatasourceSchema.enabled";
 
   private Properties properties;
   private boolean beOverlord;
@@ -246,10 +244,6 @@ public class CliCoordinator extends ServerRunnable
 
             binder.bind(MetadataRuleManager.class)
                   .toProvider(MetadataRuleManagerProvider.class)
-                  .in(ManageLifecycle.class);
-
-            binder.bind(AuditManager.class)
-                  .toProvider(AuditManagerProvider.class)
                   .in(ManageLifecycle.class);
 
             binder.bind(LookupCoordinatorManager.class).in(LazySingleton.class);

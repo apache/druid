@@ -70,14 +70,14 @@ public class ExtendOperator extends SqlInternalOperator
   @Override
   public SqlNode rewriteCall(SqlValidator validator, SqlCall call)
   {
-    SqlBasicCall tableOpCall = (SqlBasicCall) call.operand(0);
+    SqlBasicCall tableOpCall = call.operand(0);
     if (!(tableOpCall.getOperator() instanceof SqlCollectionTableOperator)) {
       throw new ISE("First argument to EXTEND must be TABLE");
     }
 
     // The table function must be a Druid-defined table macro function
     // which is aware of the EXTEND schema.
-    SqlBasicCall tableFnCall = (SqlBasicCall) tableOpCall.operand(0);
+    SqlBasicCall tableFnCall = tableOpCall.operand(0);
     if (!(tableFnCall.getOperator() instanceof SchemaAwareUserDefinedTableMacro)) {
       // May be an unresolved function.
       throw new IAE(
@@ -89,7 +89,7 @@ public class ExtendOperator extends SqlInternalOperator
     // Move the schema from the second operand of EXTEND into a member
     // function of a shim table macro.
     SchemaAwareUserDefinedTableMacro tableFn = (SchemaAwareUserDefinedTableMacro) tableFnCall.getOperator();
-    SqlNodeList schema = (SqlNodeList) call.operand(1);
+    SqlNodeList schema = call.operand(1);
     SqlCall newCall = tableFn.rewriteCall(tableFnCall, schema);
 
     // Create a new TABLE(table_fn) node to replace the EXTEND node. After this,

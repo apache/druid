@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.serde.cell.StagedSerde;
 import org.apache.druid.segment.serde.cell.StorableBuffer;
 
 import javax.annotation.Nullable;
@@ -35,8 +34,14 @@ import java.nio.ByteOrder;
  * or
  * Long:StringSize:StringData
  */
-public class SerializablePairLongStringSimpleStagedSerde implements StagedSerde<SerializablePairLongString>
+public class SerializablePairLongStringSimpleStagedSerde extends AbstractSerializablePairLongObjectSimpleStagedSerde<SerializablePairLongString>
 {
+
+  public SerializablePairLongStringSimpleStagedSerde()
+  {
+    super(SerializablePairLongString.class);
+  }
+
   @Override
   public StorableBuffer serializeDelayed(@Nullable SerializablePairLongString value)
   {

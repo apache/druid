@@ -23,9 +23,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputStats;
+import org.apache.druid.data.input.impl.systemfield.SystemField;
 import org.apache.druid.data.input.impl.systemfield.SystemFieldDecoratorFactory;
+import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
@@ -44,6 +47,7 @@ import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 
 public class InputEntityIteratingReaderTest extends InitializedNullHandlingTest
@@ -107,6 +111,76 @@ public class InputEntityIteratingReaderTest extends InitializedNullHandlingTest
       }
       Assert.assertEquals(numFiles, i);
       Assert.assertEquals(totalFileSize, inputStats.getProcessedBytes());
+    }
+  }
+
+  @Test
+  public void testSampleWithSystemFields() throws IOException
+  {
+    final int numFiles = 5;
+    final List<File> files = new ArrayList<>();
+    for (int i = 0; i < numFiles; i++) {
+      final File file = temporaryFolder.newFile("test_" + i);
+      files.add(file);
+      try (Writer writer = Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8)) {
+        writer.write(StringUtils.format("%d,%s,%d\n", 20190101 + i, "name_" + i, i));
+        writer.write(StringUtils.format("%d,%s,%d", 20190102 + i, "name_" + (i + 1), i + 1));
+      }
+    }
+
+    LocalInputSource inputSource = new LocalInputSource(
+        temporaryFolder.getRoot(),
+        "test_*",
+        null,
+        new SystemFields(EnumSet.of(SystemField.URI, SystemField.PATH)));
+    final InputEntityIteratingReader reader = new InputEntityIteratingReader(
+        new InputRowSchema(
+            new TimestampSpec("time", "yyyyMMdd", null),
+            new DimensionsSpec(
+                DimensionsSpec.getDefaultSchemas(ImmutableList.of(
+                    "time",
+                    "name",
+                    "score",
+                    SystemField.URI.getFieldName(),
+                    SystemField.PATH.getFieldName()
+                ))
+            ),
+            ColumnsFilter.all()
+        ),
+        new CsvInputFormat(
+            ImmutableList.of("time", "name", "score"),
+            null,
+            null,
+            false,
+            0
+        ),
+        CloseableIterators.withEmptyBaggage(
+            files.stream().flatMap(file -> ImmutableList.of(new FileEntity(file)).stream()).iterator()
+        ),
+        SystemFieldDecoratorFactory.fromInputSource(inputSource),
+        temporaryFolder.newFolder()
+    );
+
+    try (CloseableIterator<InputRowListPlusRawValues> iterator = reader.sample()) {
+      int i = 0;
+      while (iterator.hasNext()) {
+        InputRow row = iterator.next().getInputRows().get(0);
+        Assert.assertEquals(DateTimes.of(StringUtils.format("2019-01-%02d", i + 1)), row.getTimestamp());
+        Assert.assertEquals(StringUtils.format("name_%d", i), Iterables.getOnlyElement(row.getDimension("name")));
+        Assert.assertEquals(Integer.toString(i), Iterables.getOnlyElement(row.getDimension("score")));
+        Assert.assertEquals(files.get(i).toURI().toString(), row.getDimension(SystemField.URI.getFieldName()).get(0));
+        Assert.assertEquals(files.get(i).getAbsolutePath(), row.getDimension(SystemField.PATH.getFieldName()).get(0));
+
+        Assert.assertTrue(iterator.hasNext());
+        row = iterator.next().getInputRows().get(0);
+        Assert.assertEquals(DateTimes.of(StringUtils.format("2019-01-%02d", i + 2)), row.getTimestamp());
+        Assert.assertEquals(StringUtils.format("name_%d", i + 1), Iterables.getOnlyElement(row.getDimension("name")));
+        Assert.assertEquals(Integer.toString(i + 1), Iterables.getOnlyElement(row.getDimension("score")));
+        Assert.assertEquals(files.get(i).toURI().toString(), row.getDimension(SystemField.URI.getFieldName()).get(0));
+        Assert.assertEquals(files.get(i).getAbsolutePath(), row.getDimension(SystemField.PATH.getFieldName()).get(0));
+        i++;
+      }
+      Assert.assertEquals(numFiles, i);
     }
   }
 

@@ -145,7 +145,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
   private static final String TOPIC_PREFIX = "testTopic";
   private static final String DATASOURCE = "testDS";
   private static final int NUM_PARTITIONS = 3;
-  private static final int TEST_CHAT_THREADS = 3;
   private static final long TEST_CHAT_RETRIES = 9L;
   private static final Period TEST_HTTP_TIMEOUT = new Period("PT10S");
   private static final Period TEST_SHUTDOWN_TIMEOUT = new Period("PT80S");
@@ -2708,8 +2707,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     ).andReturn(Futures.immediateFailedFuture(new RuntimeException())).times(2);
     taskQueue.shutdown(
         EasyMock.contains("sequenceName-0"),
-        EasyMock.eq("Task [%s] failed to respond to [set end offsets] in a timely manner, killing task"),
-        EasyMock.contains("sequenceName-0")
+        EasyMock.eq("Failed to set end offsets, killing task")
     );
     EasyMock.expectLastCall().times(2);
     EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true).times(2);
@@ -3966,7 +3964,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     DateTime minMessageTime = DateTimes.nowUtc();
     DateTime maxMessageTime = DateTimes.nowUtc().plus(10000);
 
-    KafkaSupervisor supervisor = getSupervisor(
+    KafkaSupervisor supervisor = createSupervisor(
         2,
         1,
         true,
@@ -4143,11 +4141,110 @@ public class KafkaSupervisorTest extends EasyMockSupport
     replayAll();
 
     Assert.assertTrue(supervisor.isTaskCurrent(42, "id0", taskMap));
-
     Assert.assertTrue(supervisor.isTaskCurrent(42, "id1", taskMap));
     Assert.assertFalse(supervisor.isTaskCurrent(42, "id2", taskMap));
     Assert.assertFalse(supervisor.isTaskCurrent(42, "id3", taskMap));
     Assert.assertFalse(supervisor.isTaskCurrent(42, "id4", taskMap));
+    verifyAll();
+  }
+
+  @Test
+  public void testSequenceNameDoesNotChangeWithTaskId()
+  {
+    final DateTime minMessageTime = DateTimes.nowUtc();
+    final DateTime maxMessageTime = DateTimes.nowUtc().plus(10000);
+
+    KafkaSupervisor supervisor = createSupervisor(
+        2,
+        1,
+        true,
+        "PT1H",
+        new Period("P1D"),
+        new Period("P1D"),
+        false,
+        kafkaHost,
+        dataSchema,
+        new KafkaSupervisorTuningConfig(
+            null,
+            1000,
+            null,
+            null,
+            50000,
+            null,
+            new Period("P1Y"),
+            null,
+            null,
+            null,
+            false,
+            null,
+            false,
+            null,
+            numThreads,
+            TEST_CHAT_RETRIES,
+            TEST_HTTP_TIMEOUT,
+            TEST_SHUTDOWN_TIMEOUT,
+            null,
+            null,
+            null,
+            null,
+            null
+        )
+    );
+
+    // Create task1 with some start and end offsets
+    final KafkaIndexTask task1 = createKafkaIndexTask(
+        "id0",
+        0,
+        new SeekableStreamStartSequenceNumbers<>(
+            "topic",
+            singlePartitionMap(topic, 0, 0L, 2, 0L),
+            ImmutableSet.of()
+        ),
+        new SeekableStreamEndSequenceNumbers<>(
+            "topic",
+            singlePartitionMap(topic, 0, Long.MAX_VALUE, 2, Long.MAX_VALUE)
+        ),
+        minMessageTime,
+        maxMessageTime,
+        dataSchema,
+        supervisor.getTuningConfig()
+    );
+
+    // Create task2 with same offsets
+    final KafkaIndexTask task2 = createKafkaIndexTask(
+        "id1",
+        0,
+        task1.getIOConfig().getStartSequenceNumbers(),
+        task1.getIOConfig().getEndSequenceNumbers(),
+        task1.getIOConfig().getMinimumMessageTime().get(),
+        task1.getIOConfig().getMaximumMessageTime().get(),
+        dataSchema,
+        supervisor.getTuningConfig()
+    );
+
+    replayAll();
+
+    final String sequenceTask1 = supervisor.generateSequenceName(
+        task1.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap(),
+        task1.getIOConfig().getMinimumMessageTime(),
+        task1.getIOConfig().getMaximumMessageTime(),
+        task1.getDataSchema(),
+        task1.getTuningConfig()
+    );
+    Assert.assertNotNull(sequenceTask1);
+
+    final String sequenceTask2 = supervisor.generateSequenceName(
+        task2.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap(),
+        task2.getIOConfig().getMinimumMessageTime(),
+        task2.getIOConfig().getMaximumMessageTime(),
+        task2.getDataSchema(),
+        task2.getTuningConfig()
+    );
+    Assert.assertNotNull(sequenceTask2);
+
+    Assert.assertNotEquals(task1.getId(), task2.getId());
+    Assert.assertEquals(sequenceTask1, sequenceTask2);
+
     verifyAll();
   }
 
@@ -4711,8 +4808,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   /**
    * Use when you don't want generateSequenceNumber overridden
    */
-
-  private KafkaSupervisor getSupervisor(
+  private KafkaSupervisor createSupervisor(
       int replicas,
       int taskCount,
       boolean useEarliestOffset,
@@ -4992,7 +5088,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     }
 
     @Override
-    protected String generateSequenceName(
+    public String generateSequenceName(
         Map<KafkaTopicPartition, Long> startPartitions,
         Optional<DateTime> minimumMessageTime,
         Optional<DateTime> maximumMessageTime,

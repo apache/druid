@@ -35,7 +35,6 @@ import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.TypeSignature;
@@ -114,6 +113,10 @@ public class NullFilter extends AbstractOptimizableDimFilter implements Filter
   @Override
   public RangeSet<String> getDimensionRangeSet(String dimension)
   {
+    if (!Objects.equals(getColumn(), dimension)) {
+      return null;
+    }
+
     RangeSet<String> retSet = TreeRangeSet.create();
     // Nulls are less than empty String in segments
     retSet.add(Range.lessThan(""));
@@ -152,12 +155,6 @@ public class NullFilter extends AbstractOptimizableDimFilter implements Filter
         VectorValueMatcherColumnProcessorFactory.instance(),
         factory
     ).makeMatcher(NullPredicateFactory.INSTANCE);
-  }
-
-  @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
-  {
-    return Filters.supportsSelectivityEstimation(this, column, columnSelector, indexSelector);
   }
 
   @Override

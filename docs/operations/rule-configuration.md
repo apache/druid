@@ -344,6 +344,8 @@ To reload dropped data:
 1. Set your retention period&mdash;for example, change the retention period from one month to two months.
 2. Use the web console or the API to mark all segments belonging to the datasource as `used`.
 
+This prompts Druid to rerun the Coordinator rules and load all missing segments. The Coordinator identifies the latest version of the segments and drops older versions.
+
 ## Learn more
 
 For more information about using retention rules in Druid, see the following topics:

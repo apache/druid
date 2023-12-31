@@ -488,7 +488,6 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
                                   .intervals(Collections.singletonList(Intervals.ETERNITY))
                                   .filters(
                                       new AndDimFilter(
-                                          new EqualityFilter("variantWithArrays", ColumnType.STRING, "1", null),
                                           new EqualityFilter("v0", ColumnType.STRING, "1", null)
                                       )
                                   )
@@ -524,7 +523,6 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
                                   .intervals(Collections.singletonList(Intervals.ETERNITY))
                                   .filters(
                                       new AndDimFilter(
-                                          new EqualityFilter("variantWithArrays", ColumnType.DOUBLE, 3.0, null),
                                           new EqualityFilter("v0", ColumnType.DOUBLE, 3.0, null)
                                       )
                                   )

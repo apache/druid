@@ -23,9 +23,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.inject.Injector;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TimeChunkLock;
 import org.apache.druid.indexing.common.actions.LockListAction;
+import org.apache.druid.indexing.common.actions.RetrieveSegmentsToReplaceAction;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalAppendAction;
@@ -39,6 +41,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.msq.indexing.error.InsertLockPreemptedFaultTest;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
@@ -62,12 +65,15 @@ public class MSQTestTaskActionClient implements TaskActionClient
       "foo2", ImmutableList.of(Intervals.of("2000-01-01/P1D"))
   );
   private final Set<DataSegment> publishedSegments = new HashSet<>();
+  private final Injector injector;
 
   public MSQTestTaskActionClient(
-      ObjectMapper mapper
+      ObjectMapper mapper,
+      Injector injector
   )
   {
     this.mapper = mapper;
+    this.injector = injector;
   }
 
   @Override
@@ -122,6 +128,14 @@ public class MSQTestTaskActionClient implements TaskActionClient
                                                                  .build()
                                      ).collect(Collectors.toSet());
       }
+    } else if (taskAction instanceof RetrieveSegmentsToReplaceAction) {
+      String dataSource = ((RetrieveSegmentsToReplaceAction) taskAction).getDataSource();
+      return (RetType) injector.getInstance(SpecificSegmentsQuerySegmentWalker.class)
+                               .getSegments()
+                               .stream()
+                               .filter(dataSegment -> dataSegment.getDataSource()
+                                                                 .equals(dataSource))
+                               .collect(Collectors.toSet());
     } else if (taskAction instanceof SegmentTransactionalInsertAction) {
       final Set<DataSegment> segments = ((SegmentTransactionalInsertAction) taskAction).getSegments();
       publishedSegments.addAll(segments);
