@@ -64,19 +64,11 @@ public class Filters
   private static final ColumnSelectorFactory ALL_NULL_COLUMN_SELECTOR_FACTORY = new AllNullColumnSelectorFactory();
 
   /**
-   * Convert a list of DimFilters to a list of Filters.
+   * Convert a {@link DimFilter} to an optimized {@link Filter} for use at the top level of a query.
    *
-   * @param dimFilters list of DimFilters, should all be non-null
-   *
-   * @return list of Filters
-   */
-  public static List<Filter> toFilters(List<DimFilter> dimFilters)
-  {
-    return dimFilters.stream().map(Filters::toFilter).collect(Collectors.toList());
-  }
-
-  /**
-   * Convert a DimFilter to a Filter.
+   * Must not be used by {@link DimFilter} to convert their children, because the three-valued logic parameter
+   * "includeUnknown" will not be correctly propagated. For {@link DimFilter} that convert their children, use
+   * {@link DimFilter#toOptimizedFilter(boolean)} instead.
    *
    * @param dimFilter dimFilter
    *
@@ -85,9 +77,8 @@ public class Filters
   @Nullable
   public static Filter toFilter(@Nullable DimFilter dimFilter)
   {
-    return dimFilter == null ? null : dimFilter.toOptimizedFilter();
+    return dimFilter == null ? null : dimFilter.toOptimizedFilter(false);
   }
-
 
   /**
    * Create a ValueMatcher that applies a predicate to row values.

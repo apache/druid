@@ -139,12 +139,6 @@ public class JavaScriptDimFilter extends AbstractOptimizableDimFilter implements
   }
 
   @Override
-  public DimFilter optimize()
-  {
-    return this;
-  }
-
-  @Override
   public Filter toFilter()
   {
     JavaScriptPredicateFactory predicateFactory = getPredicateFactory();
