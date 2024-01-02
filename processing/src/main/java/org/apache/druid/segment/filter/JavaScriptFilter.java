@@ -25,7 +25,6 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.JavaScriptDimFilter;
 import org.apache.druid.query.filter.ValueMatcher;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 
@@ -65,12 +64,6 @@ public class JavaScriptFilter implements Filter
   {
     // suboptimal, since we need create one context per call to predicate.apply()
     return Filters.makeValueMatcher(factory, dimension, predicateFactory);
-  }
-
-  @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
-  {
-    return Filters.supportsSelectivityEstimation(this, dimension, columnSelector, indexSelector);
   }
 
   @Override

@@ -17,20 +17,18 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.expression;
+package org.apache.druid.storage.google.output;
 
-import org.apache.druid.sql.calcite.util.CalciteTestBase;
-import org.junit.Rule;
-import org.junit.rules.ExpectedException;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.junit.Test;
 
-public abstract class ExpressionTestBase extends CalciteTestBase
+public class GoogleInputRangeTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
-  void expectException(Class<? extends Throwable> type, String message)
+  @Test
+  public void testEquals()
   {
-    expectedException.expect(type);
-    expectedException.expectMessage(message);
+    EqualsVerifier.forClass(GoogleInputRange.class)
+                  .usingGetClass()
+                  .verify();
   }
 }

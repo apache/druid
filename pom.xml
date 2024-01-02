@@ -129,7 +129,7 @@
         <com.google.apis.client.version>2.2.0</com.google.apis.client.version>
         <com.google.http.client.apis.version>1.42.3</com.google.http.client.apis.version>
         <com.google.apis.compute.version>v1-rev20230606-2.0.0</com.google.apis.compute.version>
-        <com.google.apis.storage.version>v1-rev20230301-2.0.0</com.google.apis.storage.version>
+        <com.google.cloud.storage.version>2.29.1</com.google.cloud.storage.version>
         <jdk.strong.encapsulation.argLine><!-- empty placeholder --></jdk.strong.encapsulation.argLine>
         <jdk.security.manager.allow.argLine><!-- empty placeholder --></jdk.security.manager.allow.argLine>
         <repoOrgId>maven.org</repoOrgId>
@@ -363,11 +363,6 @@
                 <groupId>net.minidev</groupId>
                 <artifactId>json-smart</artifactId>
                 <version>2.4.11</version>
-            </dependency>
-            <dependency>
-                <groupId>org.yaml</groupId>
-                <artifactId>snakeyaml</artifactId>
-                <version>1.33</version>
             </dependency>
 
             <!-- transitive dependency of testng
@@ -1842,7 +1837,7 @@
               <plugin>
                 <groupId>com.github.eirslett</groupId>
                 <artifactId>frontend-maven-plugin</artifactId>
-                <version>1.14.2</version>
+                <version>1.15.0</version>
               </plugin>
             </plugins>
         </pluginManagement>
@@ -2089,9 +2084,14 @@
                                 <exclude>**/test/resources/**/*</exclude> <!-- test data for "old" ITs. -->
                                 <exclude>**/docker/client_tls/*</exclude> <!-- generated files for "old" ITs. -->
                                 <exclude>resources/data/**/*</exclude> <!-- test data for "new" ITs. -->
-                                <exclude>**/derby.log</exclude>
                                 <exclude>**/jvm.config</exclude>
                                 <exclude>**/*.avsc</exclude>
+                                <exclude>**/*.png</exclude>
+                                <exclude>**/*.log</exclude>
+                                <exclude>**/*.jpg</exclude>
+                                <exclude>**/*.gif</exclude>
+                                <exclude>examples/quickstart/protobuf/metrics.desc</exclude>
+                                <exclude>examples/var/sv/.lock</exclude>
                                 <exclude>**/*.iml</exclude>
                                 <exclude>**/*.json</exclude>
                                 <exclude>**/*.parq</exclude>
@@ -2108,7 +2108,7 @@
                                 <exclude>.github/pull_request_template.md</exclude>
                                 <exclude>.github/dependabot.yml</exclude>
                                 <exclude>.github/workflows/codeql.yml</exclude>
-                                <exclude>.github/workflows/codeql-config.yml</exclude>
+                                <exclude>.github/config/codeql-config.yml</exclude>
                                 <exclude>git.version</exclude>
                                 <exclude>src/**/*.snap</exclude>
                                 <exclude>examples/conf/**</exclude>

@@ -17,22 +17,33 @@
  * under the License.
  */
 
-package org.apache.druid.query.search;
+package org.apache.druid.storage.google.output;
 
-public class ConciseBitmapDecisionHelper extends SearchQueryDecisionHelper
+
+import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.junit.Assert;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
+
+public class GoogleOutputConfigTest
 {
-  // This value comes from an experiment.
-  // See the discussion at https://github.com/apache/druid/pull/3792#issuecomment-268331804.
-  private static final double BITMAP_INTERSECT_COST = 7.425;
-  private static final ConciseBitmapDecisionHelper INSTANCE = new ConciseBitmapDecisionHelper();
 
-  public static ConciseBitmapDecisionHelper instance()
-  {
-    return INSTANCE;
-  }
+  @Rule
+  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  private ConciseBitmapDecisionHelper()
+  private static final String BUCKET = "bucket";
+  private static final String PREFIX = "prefix";
+  private static final int MAX_RETRY_COUNT = 0;
+
+  @Test
+  public void testTooLargeChunkSize()
   {
-    super(BITMAP_INTERSECT_COST);
+    HumanReadableBytes chunkSize = new HumanReadableBytes("17MiB");
+    Assert.assertThrows(
+        DruidException.class,
+        () -> new GoogleOutputConfig(BUCKET, PREFIX, temporaryFolder.newFolder(), chunkSize, MAX_RETRY_COUNT)
+    );
   }
 }

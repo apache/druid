@@ -243,15 +243,6 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
       return new SimpleBitmapColumnIndex()
       {
         final FixedIndexed<Long> dictionary = longDictionarySupplier.get();
-        @Override
-        public double estimateSelectivity(int totalRows)
-        {
-          final int id = dictionary.indexOf(longValue);
-          if (id < 0) {
-            return 0.0;
-          }
-          return (double) getBitmap(id).size() / totalRows;
-        }
 
         @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
@@ -286,28 +277,6 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
       final Long longValue = GuavaUtils.tryParseLong(value);
       return new SimpleBitmapColumnIndex()
       {
-        @Override
-        public double estimateSelectivity(int totalRows)
-        {
-          if (longValue == null) {
-            if (inputNull && NullHandling.sqlCompatible()) {
-              return (double) getBitmap(0).size() / totalRows;
-            } else {
-              return 0.0;
-            }
-          }
-          if (NullHandling.replaceWithDefault() && longValue.equals(NullHandling.defaultLongValue())) {
-            if (defaultValueIndex >= 0) {
-              return ((double) getBitmap(0).size() + (double) getBitmap(defaultValueIndex).size()) / totalRows;
-            }
-            return (double) getBitmap(0).size() / totalRows;
-          }
-          final int id = dictionary.indexOf(longValue);
-          if (id < 0) {
-            return 0.0;
-          }
-          return (double) getBitmap(id).size() / totalRows;
-        }
 
         @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)

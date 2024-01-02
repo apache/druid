@@ -50,6 +50,7 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
@@ -80,6 +81,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
@@ -7191,6 +7193,97 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             new Object[]{ImmutableList.of(1L, 2L, 3L), 2},
             new Object[]{ImmutableList.of(1L, 2L, 3L), 3}
         )
+    );
+  }
+
+  @Test
+  public void testArrayToMvPostaggInline()
+  {
+    cannotVectorize();
+    testQuery(
+        "WITH \"ext\" AS (\n"
+        + "  SELECT\n"
+        + "    CAST(\"c0\" AS TIMESTAMP) AS \"__time\",\n"
+        + "    STRING_TO_ARRAY(\"c1\", '<#>') AS \"strings\",\n"
+        + "    CAST(STRING_TO_ARRAY(\"c2\", '<#>') AS BIGINT ARRAY) AS \"longs\"\n"
+        + "  FROM (\n"
+        + "    VALUES\n"
+        + "    (0, 'A<#>B', '1<#>2'),\n"
+        + "    (0, 'C<#>D', '3<#>4')\n"
+        + "  ) AS \"t\" (\"c0\", \"c1\", \"c2\")\n"
+        + ")\n"
+        + "SELECT\n"
+        + "  ARRAY_TO_MV(\"strings\") AS \"strings\",\n"
+        + "  ARRAY_TO_MV(\"longs\") AS \"longs\",\n"
+        + "  COUNT(*) AS \"count\"\n"
+        + "FROM \"ext\"\n"
+        + "GROUP BY \"strings\", \"longs\"",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            InlineDataSource.fromIterable(
+                                Arrays.asList(
+                                    new Object[]{0L, "A<#>B", "1<#>2"},
+                                    new Object[]{0L, "C<#>D", "3<#>4"}
+                                ),
+                                RowSignature.builder()
+                                            .add("c0", ColumnType.LONG)
+                                            .add("c1", ColumnType.STRING)
+                                            .add("c2", ColumnType.STRING)
+                                            .build()
+                            )
+                        )
+                        .setQuerySegmentSpec(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.ETERNITY)))
+                        .setDimensions(
+                            new DefaultDimensionSpec("v0", "d0", ColumnType.STRING_ARRAY),
+                            new DefaultDimensionSpec("v1", "d1", ColumnType.LONG_ARRAY)
+                        )
+                        .setVirtualColumns(
+                            new ExpressionVirtualColumn(
+                                "v0",
+                                "string_to_array(\"c1\",'<#>')",
+                                ColumnType.STRING_ARRAY,
+                                TestExprMacroTable.INSTANCE
+                            ),
+                            new ExpressionVirtualColumn(
+                                "v1",
+                                "CAST(string_to_array(\"c2\",'<#>'), 'ARRAY<LONG>')",
+                                ColumnType.LONG_ARRAY,
+                                TestExprMacroTable.INSTANCE
+                            )
+                        )
+                        .setAggregatorSpecs(
+                            new CountAggregatorFactory("a0")
+                        )
+                        .setPostAggregatorSpecs(
+                            new ExpressionPostAggregator(
+                                "p0",
+                                "array_to_mv(\"d0\")",
+                                null,
+                                ColumnType.STRING,
+                                TestExprMacroTable.INSTANCE
+                            ),
+                            new ExpressionPostAggregator(
+                                "p1",
+                                "array_to_mv(\"d1\")",
+                                null,
+                                ColumnType.STRING,
+                                TestExprMacroTable.INSTANCE
+                            )
+                        )
+                        .setGranularity(Granularities.ALL)
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"[\"A\",\"B\"]", "[\"1\",\"2\"]", 1L},
+            new Object[]{"[\"C\",\"D\"]", "[\"3\",\"4\"]", 1L}
+        ),
+        RowSignature.builder()
+                    .add("strings", ColumnType.STRING)
+                    .add("longs", ColumnType.STRING)
+                    .add("count", ColumnType.LONG)
+                    .build()
     );
   }
 }

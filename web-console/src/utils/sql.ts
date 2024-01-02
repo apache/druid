@@ -123,7 +123,7 @@ export function findAllSqlQueriesInText(text: string): QuerySlice[] {
   let offset = 0;
   let m: RegExpExecArray | null = null;
   do {
-    m = /SELECT|WITH|INSERT|REPLACE/i.exec(remainingText);
+    m = /SELECT|WITH|INSERT|REPLACE|EXPLAIN/i.exec(remainingText);
     if (m) {
       const sql = findSqlQueryPrefix(remainingText.slice(m.index));
       const advanceBy = m.index + m[0].length; // Skip the initial word

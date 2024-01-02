@@ -17,55 +17,77 @@
  * under the License.
  */
 
-package org.apache.druid.audit;
+package org.apache.druid.server.audit;
 
-import org.apache.druid.common.config.ConfigSerde;
+import com.google.inject.Inject;
+import org.apache.druid.audit.AuditEntry;
+import org.apache.druid.audit.AuditManager;
+import org.apache.druid.error.DruidException;
 import org.joda.time.Interval;
-import org.skife.jdbi.v2.Handle;
 
+import java.util.Collections;
 import java.util.List;
 
-public class NoopAuditManager implements AuditManager
+/**
+ * Audit manager that logs audited events at the level specified in
+ * {@link LoggingAuditManagerConfig}.
+ */
+public class LoggingAuditManager implements AuditManager
 {
-  @Override
-  public <T> void doAudit(String key, String type, AuditInfo auditInfo, T payload, ConfigSerde<T> configSerde)
+  private final AuditLogger auditLogger;
+  private final LoggingAuditManagerConfig managerConfig;
+  private final AuditSerdeHelper serdeHelper;
+
+  @Inject
+  public LoggingAuditManager(
+      AuditManagerConfig config,
+      AuditSerdeHelper serdeHelper
+  )
   {
-    throw new UnsupportedOperationException();
+    if (!(config instanceof LoggingAuditManagerConfig)) {
+      throw DruidException.defensive("Config[%s] is not an instance of LoggingAuditManagerConfig", config);
+    }
+
+    this.managerConfig = (LoggingAuditManagerConfig) config;
+    this.serdeHelper = serdeHelper;
+    this.auditLogger = new AuditLogger(managerConfig.getLogLevel());
   }
 
   @Override
-  public void doAudit(AuditEntry auditEntry, Handle handler)
+  public void doAudit(AuditEntry entry)
   {
-    throw new UnsupportedOperationException();
+    if (serdeHelper.shouldProcessAuditEntry(entry)) {
+      auditLogger.log(serdeHelper.processAuditEntry(entry));
+    }
   }
 
   @Override
   public List<AuditEntry> fetchAuditHistory(String key, String type, Interval interval)
   {
-    throw new UnsupportedOperationException();
+    return Collections.emptyList();
   }
 
   @Override
   public List<AuditEntry> fetchAuditHistory(String type, Interval interval)
   {
-    throw new UnsupportedOperationException();
+    return Collections.emptyList();
   }
 
   @Override
   public List<AuditEntry> fetchAuditHistory(String key, String type, int limit)
   {
-    throw new UnsupportedOperationException();
+    return Collections.emptyList();
   }
 
   @Override
   public List<AuditEntry> fetchAuditHistory(String type, int limit)
   {
-    throw new UnsupportedOperationException();
+    return Collections.emptyList();
   }
 
   @Override
   public int removeAuditLogsOlderThan(long timestamp)
   {
-    throw new UnsupportedOperationException();
+    return 0;
   }
 }

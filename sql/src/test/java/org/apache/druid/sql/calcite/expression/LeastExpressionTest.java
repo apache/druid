@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.builtin.LeastOperatorConversion;
+import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -37,7 +38,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class LeastExpressionTest extends ExpressionTestBase
+public class LeastExpressionTest extends CalciteTestBase
 {
   private static final String DOUBLE_KEY = "d";
   private static final double DOUBLE_VALUE = 3.1;
