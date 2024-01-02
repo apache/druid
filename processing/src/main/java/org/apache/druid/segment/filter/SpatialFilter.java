@@ -34,7 +34,6 @@ import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
@@ -91,13 +90,6 @@ public class SpatialFilter implements Filter
       }
 
       @Override
-      public double estimateSelectivity(int totalRows)
-      {
-        // selectivity estimation for multi-value columns is not implemented yet.
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
       public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
       {
         Iterable<ImmutableBitmap> search = spatialIndex.getRTree().search(bound);
@@ -118,22 +110,9 @@ public class SpatialFilter implements Filter
   }
 
   @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
-  {
-    return false;
-  }
-
-  @Override
   public Set<String> getRequiredColumns()
   {
     return ImmutableSet.of(dimension);
-  }
-
-  @Override
-  public double estimateSelectivity(ColumnIndexSelector indexSelector)
-  {
-    // selectivity estimation for multi-value columns is not implemented yet.
-    throw new UnsupportedOperationException();
   }
 
   @Override

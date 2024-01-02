@@ -17,22 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.query.search;
+package org.apache.druid.query.aggregation;
 
-public class ConciseBitmapDecisionHelper extends SearchQueryDecisionHelper
+public class SerializablePairLongFloatColumnHeader extends AbstractSerializablePairLongObjectColumnHeader<SerializablePairLongFloat>
 {
-  // This value comes from an experiment.
-  // See the discussion at https://github.com/apache/druid/pull/3792#issuecomment-268331804.
-  private static final double BITMAP_INTERSECT_COST = 7.425;
-  private static final ConciseBitmapDecisionHelper INSTANCE = new ConciseBitmapDecisionHelper();
-
-  public static ConciseBitmapDecisionHelper instance()
+  SerializablePairLongFloatColumnHeader(byte[] bytes, long minValue)
   {
-    return INSTANCE;
+    super(bytes, minValue);
   }
 
-  private ConciseBitmapDecisionHelper()
+  SerializablePairLongFloatColumnHeader(int version, boolean useIntegerDeltas, long minTimestamp)
   {
-    super(BITMAP_INTERSECT_COST);
+    super(version, useIntegerDeltas, minTimestamp);
+  }
+
+  @Override
+  public SerializablePairLongFloatDeltaEncodedStagedSerde createSerde()
+  {
+    return new SerializablePairLongFloatDeltaEncodedStagedSerde(minValue, isUseIntegerDeltas());
   }
 }

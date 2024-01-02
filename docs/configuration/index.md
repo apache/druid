@@ -836,7 +836,7 @@ This section contains the configuration options for endpoints that are supported
 
 ## Master server
 
-This section contains the configuration options for the services that reside on Master servers (Coordinators and Overlords) in the suggested [three-server configuration](../design/processes.md#server-types).
+This section contains the configuration options for the services that reside on Master servers (Coordinators and Overlords) in the suggested [three-server configuration](../design/architecture.md#druid-servers).
 
 ### Coordinator
 
@@ -1393,7 +1393,7 @@ For GCE's properties, please refer to the [gce-extensions](../development/extens
 
 ## Data server
 
-This section contains the configuration options for the services that reside on Data servers (MiddleManagers/Peons and Historicals) in the suggested [three-server configuration](../design/processes.md#server-types).
+This section contains the configuration options for the services that reside on Data servers (MiddleManagers/Peons and Historicals) in the suggested [three-server configuration](../design/architecture.md#druid-servers).
 
 Configuration options for the [Indexer process](../design/indexer.md) are also provided here.
 
@@ -1724,7 +1724,7 @@ See [cache configuration](#cache-configuration) for how to configure cache setti
 
 ## Query server
 
-This section contains the configuration options for the processes that reside on Query servers (Brokers) in the suggested [three-server configuration](../design/processes.md#server-types).
+This section contains the configuration options for the services that reside on Query servers (Brokers) in the suggested [three-server configuration](../design/architecture.md#druid-servers).
 
 Configuration options for the experimental [Router process](../design/router.md) are also provided here.
 

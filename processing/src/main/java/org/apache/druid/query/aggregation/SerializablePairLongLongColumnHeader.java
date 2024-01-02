@@ -17,19 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.query.search;
+package org.apache.druid.query.aggregation;
 
-public abstract class SearchQueryDecisionHelper
+public class SerializablePairLongLongColumnHeader extends AbstractSerializablePairLongObjectColumnHeader<SerializablePairLongLong>
 {
-  private final double bitmapIntersectCost;
-
-  protected SearchQueryDecisionHelper(final double bitmapIntersectCost)
+  SerializablePairLongLongColumnHeader(byte[] bytes, long minValue)
   {
-    this.bitmapIntersectCost = bitmapIntersectCost;
+    super(bytes, minValue);
   }
 
-  public double getBitmapIntersectCost()
+  SerializablePairLongLongColumnHeader(int version, boolean useIntegerDeltas, long minTimestamp)
   {
-    return bitmapIntersectCost;
+    super(version, useIntegerDeltas, minTimestamp);
+  }
+
+  @Override
+  public SerializablePairLongLongDeltaEncodedStagedSerde createSerde()
+  {
+    return new SerializablePairLongLongDeltaEncodedStagedSerde(minValue, isUseIntegerDeltas());
   }
 }

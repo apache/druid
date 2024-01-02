@@ -49,7 +49,6 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
-import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.SimpleBitmapColumnIndex;
 import org.apache.druid.segment.index.SimpleImmutableBitmapIterableIndex;
@@ -415,14 +414,6 @@ public class ListFilteredVirtualColumn implements VirtualColumn
     {
       return new SimpleBitmapColumnIndex()
       {
-        @Override
-        public double estimateSelectivity(int totalRows)
-        {
-          return Filters.estimateSelectivity(
-              Collections.singletonList(nullValueBitmapSupplier.get()).iterator(),
-              totalRows
-          );
-        }
 
         @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknowns)
@@ -453,11 +444,6 @@ public class ListFilteredVirtualColumn implements VirtualColumn
     {
       return new SimpleBitmapColumnIndex()
       {
-        @Override
-        public double estimateSelectivity(int totalRows)
-        {
-          return Math.min(1, (double) getBitmapForValue().size() / totalRows);
-        }
 
         @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
@@ -558,15 +544,6 @@ public class ListFilteredVirtualColumn implements VirtualColumn
     {
       return new SimpleBitmapColumnIndex()
       {
-        @Override
-        public double estimateSelectivity(int totalRows)
-        {
-          final int start = 0, end = getCardinality();
-          return Filters.estimateSelectivity(
-              getBitmapsInRange(matcherFactory.makeStringPredicate(), start, end).iterator(),
-              totalRows
-          );
-        }
 
         @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)

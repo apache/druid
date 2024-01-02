@@ -34,9 +34,7 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.ColumnProcessors;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.filter.cnf.CNFFilterExplosionException;
 import org.apache.druid.segment.filter.cnf.CalciteCnfHelper;
@@ -52,7 +50,6 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
@@ -156,36 +153,6 @@ public class Filters
         new DefaultBitmapResultFactory(selector.getBitmapFactory()),
         false
     );
-  }
-
-  public static boolean supportsSelectivityEstimation(
-      Filter filter,
-      String dimension,
-      ColumnSelector columnSelector,
-      ColumnIndexSelector indexSelector
-  )
-  {
-    if (filter.getBitmapColumnIndex(indexSelector) != null) {
-      final ColumnHolder columnHolder = columnSelector.getColumnHolder(dimension);
-      if (columnHolder != null) {
-        return columnHolder.getCapabilities().hasMultipleValues().isFalse();
-      }
-    }
-    return false;
-  }
-
-  public static double estimateSelectivity(
-      final Iterator<ImmutableBitmap> bitmaps,
-      final long totalNumRows
-  )
-  {
-    long numMatchedRows = 0;
-    while (bitmaps.hasNext()) {
-      final ImmutableBitmap bitmap = bitmaps.next();
-      numMatchedRows += bitmap.size();
-    }
-
-    return Math.min(1, (double) numMatchedRows / totalNumRows);
   }
 
   @Nullable

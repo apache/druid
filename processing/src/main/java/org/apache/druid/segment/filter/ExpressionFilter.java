@@ -42,7 +42,6 @@ import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnInspector;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -229,22 +228,6 @@ public class ExpressionFilter implements Filter
       }
     }
     return null;
-  }
-
-  @Override
-  public boolean supportsSelectivityEstimation(
-      final ColumnSelector columnSelector,
-      final ColumnIndexSelector indexSelector
-  )
-  {
-    return false;
-  }
-
-  @Override
-  public double estimateSelectivity(final ColumnIndexSelector indexSelector)
-  {
-    // Selectivity estimation not supported.
-    throw new UnsupportedOperationException();
   }
 
   @Override

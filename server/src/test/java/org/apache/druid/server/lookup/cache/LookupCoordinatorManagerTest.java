@@ -104,6 +104,7 @@ public class LookupCoordinatorManagerTest
       Collections.emptySet()
   );
 
+  private final AuditInfo auditInfo = new AuditInfo("author", "identify", "comment", "127.0.0.1");
   private static StubServiceEmitter SERVICE_EMITTER;
 
   @BeforeClass
@@ -522,8 +523,6 @@ public class LookupCoordinatorManagerTest
       }
     };
     manager.start();
-    final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
-
     Assert.assertThrows(ISE.class, () -> manager.updateLookups(TIERED_LOOKUP_MAP_V0, auditInfo));
   }
 
@@ -546,7 +545,6 @@ public class LookupCoordinatorManagerTest
     };
     manager.start();
 
-    final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
     EasyMock.reset(configManager);
     EasyMock.expect(
         configManager.set(
@@ -578,7 +576,6 @@ public class LookupCoordinatorManagerTest
     };
     manager.start();
 
-    final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
     EasyMock.reset(configManager);
     EasyMock.expect(configManager.set(
                         EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
@@ -598,7 +595,6 @@ public class LookupCoordinatorManagerTest
         ImmutableMap.of("prop", "old")
     );
 
-    final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
     final LookupCoordinatorManager manager = new LookupCoordinatorManager(
         client,
         druidNodeDiscoveryProvider,
@@ -660,7 +656,6 @@ public class LookupCoordinatorManagerTest
         "v0",
         ImmutableMap.of("prop", "old")
     );
-    final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
     final LookupCoordinatorManager manager = new LookupCoordinatorManager(
         client,
         druidNodeDiscoveryProvider,
@@ -731,7 +726,6 @@ public class LookupCoordinatorManagerTest
       }
     };
     manager.start();
-    final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
     EasyMock.reset(configManager);
     EasyMock.expect(configManager.set(
                         EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
@@ -761,7 +755,6 @@ public class LookupCoordinatorManagerTest
       }
     };
     manager.start();
-    final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
 
     try {
       manager.updateLookups(TIERED_LOOKUP_MAP_V0, auditInfo);
@@ -779,7 +772,6 @@ public class LookupCoordinatorManagerTest
         ImmutableMap.of("prop", "old")
     );
 
-    final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
     final LookupCoordinatorManager manager = new LookupCoordinatorManager(
         client,
         druidNodeDiscoveryProvider,
@@ -853,7 +845,6 @@ public class LookupCoordinatorManagerTest
       }
     };
     manager.start();
-    final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
     EasyMock.reset(configManager);
     EasyMock.expect(
         configManager.set(
@@ -899,7 +890,6 @@ public class LookupCoordinatorManagerTest
       }
     };
     manager.start();
-    final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
     EasyMock.reset(configManager);
     EasyMock.expect(
         configManager.set(
@@ -944,7 +934,6 @@ public class LookupCoordinatorManagerTest
       }
     };
     manager.start();
-    final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
     EasyMock.reset(configManager);
     EasyMock.expect(
         configManager.set(
@@ -985,7 +974,6 @@ public class LookupCoordinatorManagerTest
       }
     };
     manager.start();
-    final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
     Assert.assertFalse(manager.deleteLookup(LOOKUP_TIER, "foo", auditInfo));
   }
 
@@ -1007,7 +995,6 @@ public class LookupCoordinatorManagerTest
       }
     };
     manager.start();
-    final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
     Assert.assertFalse(manager.deleteLookup(LOOKUP_TIER, "foo", auditInfo));
   }
 

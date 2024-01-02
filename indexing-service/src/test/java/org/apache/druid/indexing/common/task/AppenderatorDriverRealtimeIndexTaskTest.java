@@ -1606,6 +1606,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     };
     final TestUtils testUtils = new TestUtils();
     taskToolboxFactory = new TaskToolboxFactory(
+        null,
         taskConfig,
         new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
         taskActionClientFactory,

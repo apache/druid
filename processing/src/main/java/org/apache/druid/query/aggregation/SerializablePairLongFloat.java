@@ -17,13 +17,19 @@
  * under the License.
  */
 
-package org.apache.druid.server.audit;
+package org.apache.druid.query.aggregation;
 
-import com.google.inject.Provider;
-import org.apache.druid.audit.AuditManager;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.collections.SerializablePair;
 
-public interface AuditManagerProvider extends Provider<AuditManager>
+import javax.annotation.Nullable;
+
+public class SerializablePairLongFloat extends SerializablePair<Long, Float>
 {
-  @Override
-  AuditManager get();
+  @JsonCreator
+  public SerializablePairLongFloat(@JsonProperty("lhs") Long lhs, @JsonProperty("rhs") @Nullable Float rhs)
+  {
+    super(lhs, rhs);
+  }
 }

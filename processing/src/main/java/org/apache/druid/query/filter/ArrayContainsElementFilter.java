@@ -40,7 +40,6 @@ import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -269,12 +268,6 @@ public class ArrayContainsElementFilter extends AbstractOptimizableDimFilter imp
         VectorValueMatcherColumnProcessorFactory.instance(),
         factory
     ).makeMatcher(predicateFactory);
-  }
-
-  @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
-  {
-    return Filters.supportsSelectivityEstimation(this, column, columnSelector, indexSelector);
   }
 
   @Override

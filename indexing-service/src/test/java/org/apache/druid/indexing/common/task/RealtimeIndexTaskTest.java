@@ -979,6 +979,7 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
     };
     final TestUtils testUtils = new TestUtils();
     final TaskToolboxFactory toolboxFactory = new TaskToolboxFactory(
+        null,
         taskConfig,
         null, // taskExecutorNode
         taskActionClientFactory,

@@ -36,6 +36,7 @@
 
   <properties>
     <commons-io.version>2.11.0</commons-io.version>
+    <okio.version>3.6.0</okio.version>
   </properties>
 
   <repositories>
@@ -44,6 +45,19 @@
       <url>https://packages.confluent.io/maven/</url>
     </repository>
   </repositories>
+
+  <dependencyManagement>
+    <dependencies>
+      <!-- This is an indirect dependency of kafka-protobuf-provider
+      update to address vulnerability in transitive dependency okio  -->
+      <dependency>
+          <groupId>com.squareup.okio</groupId>
+          <artifactId>okio</artifactId>
+          <version>${okio.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
 
   <dependencies>
     <dependency>

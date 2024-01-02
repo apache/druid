@@ -6466,4 +6466,85 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testLeftJoinsOnTwoWithTables()
+  {
+    Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    testQuery(
+        "with raw1 as (\n"
+        + "  select\n"
+        + "  dim1,\n"
+        + "  count(*)/2 as c\n"
+        + "  from foo\n"
+        + "  GROUP BY 1\n"
+        + "),\n"
+        + " raw2 as (\n"
+        + "  select \n"
+        + "  dim1,\n"
+        + "  count(*)/2 as c\n"
+        + "  from foo\n"
+        + "  GROUP BY 1\n"
+        + ")\n"
+        + "select\n"
+        + "  r1.c-r2.c\n"
+        + "from raw1 r1\n"
+        + "left join raw2 r2\n"
+        + "on r1.dim1 = r2.dim1",
+        context,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDataSource(new TableDataSource(CalciteTests.DATASOURCE1))
+                                        .setDimensions(new DefaultDimensionSpec("dim1", "d0", ColumnType.STRING))
+                                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                                        .setPostAggregatorSpecs(expressionPostAgg(
+                                            "p0",
+                                            "(\"a0\" / 2)",
+                                            ColumnType.LONG
+                                        ))
+                                        .setContext(context)
+                                        .build()
+                        ),
+                        new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDataSource(new TableDataSource(CalciteTests.DATASOURCE1))
+                                        .setDimensions(new DefaultDimensionSpec("dim1", "d0", ColumnType.STRING))
+                                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                                        .setPostAggregatorSpecs(expressionPostAgg(
+                                            "p0",
+                                            "(\"a0\" / 2)",
+                                            ColumnType.LONG
+                                        ))
+                                        .setContext(context)
+                                        .build()
+                        ),
+                        "j0.",
+                        "(\"d0\" == \"j0.d0\")",
+                        JoinType.LEFT
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("v0")
+                .virtualColumns(expressionVirtualColumn("v0", "(\"p0\" - \"j0.p0\")", ColumnType.LONG))
+                .context(context)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L}
+        )
+    );
+  }
 }
