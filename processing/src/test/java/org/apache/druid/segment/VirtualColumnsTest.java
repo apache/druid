@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.segment.virtual;
+package org.apache.druid.segment;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
@@ -31,26 +31,14 @@ import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.BaseFloatColumnValueSelector;
-import org.apache.druid.segment.BaseLongColumnValueSelector;
-import org.apache.druid.segment.BaseObjectColumnValueSelector;
-import org.apache.druid.segment.ColumnInspector;
-import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.DimensionDictionarySelector;
-import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.DimensionSelectorUtils;
-import org.apache.druid.segment.IdLookup;
-import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.TestLongColumnSelector;
-import org.apache.druid.segment.VirtualColumn;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ZeroIndexedInts;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Rule;

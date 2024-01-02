@@ -396,9 +396,10 @@ public class VirtualColumns implements Cacheable
 
   /**
    * Get capabilities for the virtual column "columnName". If columnName is not a virtual column, returns null.
+   * Package-private since production callers want {@link #getColumnCapabilitiesWithFallback(ColumnInspector, String)}.
    */
   @Nullable
-  public ColumnCapabilities getColumnCapabilitiesWithoutFallback(ColumnInspector inspector, String columnName)
+  ColumnCapabilities getColumnCapabilitiesWithoutFallback(ColumnInspector inspector, String columnName)
   {
     final VirtualColumn virtualColumn = getVirtualColumn(columnName);
     if (virtualColumn != null) {
