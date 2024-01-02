@@ -175,6 +175,8 @@ When editing or adding tables, do not include extra characters to "prettify" the
 Some code editors may format tables by default.
 For an example of how to disable it, see the [IntelliJ formatting file for Druid](https://github.com/apache/druid/blob/master/dev/druid_intellij_formatting.xml#L78).
 
+:::tip
+
 **Correct**
 
 ```
@@ -190,6 +192,8 @@ For an example of how to disable it, see the [IntelliJ formatting file for Druid
 | -------- | -------- | ------------------- |
 | value 1  | val 2    | a-very-long-value 3 |
 ```
+
+:::
 
 ### Style checklist
 
