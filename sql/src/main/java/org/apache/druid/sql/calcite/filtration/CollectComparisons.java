@@ -151,7 +151,7 @@ public abstract class CollectComparisons<ExprType, ComparisonType extends ExprTy
    * comparison and those other expressions).
    */
   @Nullable
-  protected abstract Pair<ComparisonType, List<ExprType>> getCollectibleComparison(final ExprType expr);
+  protected abstract Pair<ComparisonType, List<ExprType>> getCollectibleComparison(ExprType expr);
 
   /**
    * Given a comparison, returns its collection key, which will be used to group it together with like comparisons.
@@ -159,12 +159,12 @@ public abstract class CollectComparisons<ExprType, ComparisonType extends ExprTy
    * null, the filter is considered non-collectible.
    */
   @Nullable
-  protected abstract CollectionKey getCollectionKey(final ComparisonType comparison);
+  protected abstract CollectionKey getCollectionKey(ComparisonType comparison);
 
   /**
    * Given a comparison, returns the strings that it matches.
    */
-  protected abstract Set<String> getMatchValues(final ComparisonType comparison);
+  protected abstract Set<String> getMatchValues(ComparisonType comparison);
 
   /**
    * Given a set of strings from {@link #getMatchValues(Object)} from various comparisons, returns a single collected
@@ -180,5 +180,5 @@ public abstract class CollectComparisons<ExprType, ComparisonType extends ExprTy
    * Given a list of expressions, returns an AND expression with those exprs as children. Only called if
    * {@link #getCollectibleComparison(Object)} returns nonempty right-hand-sides.
    */
-  protected abstract ExprType makeAnd(final List<ExprType> exprs);
+  protected abstract ExprType makeAnd(List<ExprType> exprs);
 }
