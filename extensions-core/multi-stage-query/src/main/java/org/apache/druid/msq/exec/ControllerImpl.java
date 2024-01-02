@@ -1296,6 +1296,8 @@ public class ControllerImpl implements Controller
   {
     final Int2ObjectMap<List<SegmentIdWithShardSpec>> retVal = new Int2ObjectAVLTreeMap<>();
 
+    // Empty segments validation already happens when the stages are started -- so we cannot have both
+    // isFailOnEmptyInsertEnabled and segmentsToGenerate.isEmpty() be true here.
     if (segmentsToGenerate.isEmpty()) {
       return retVal;
     }
