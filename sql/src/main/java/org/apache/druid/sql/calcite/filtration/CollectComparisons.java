@@ -171,10 +171,7 @@ public abstract class CollectComparisons<ExprType, ComparisonType extends ExprTy
    * comparison that matches all those strings.
    */
   @Nullable
-  protected abstract CollectedType makeCollectedComparison(
-      final CollectionKey key,
-      final InDimFilter.ValuesSet values
-  );
+  protected abstract CollectedType makeCollectedComparison(CollectionKey key, InDimFilter.ValuesSet values);
 
   /**
    * Given a list of expressions, returns an AND expression with those exprs as children. Only called if

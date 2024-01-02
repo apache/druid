@@ -37,6 +37,7 @@ import org.apache.druid.sql.calcite.table.RowSignatures;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
@@ -83,11 +84,14 @@ public class ConvertSelectorsToIns extends BottomUpTransform
    *
    * @param filter      filter to split
    * @param filterClass filter class to return as left-hand side
+   * @param preference  given two filters of filterClass in and AND, which one should be preferred to be returned
+   *                    as the left-hand side of the Pair? "Greater than" means more preferred.
    */
   @Nullable
   private static <T extends DimFilter> Pair<T, List<DimFilter>> splitAnd(
       final DimFilter filter,
-      final Class<T> filterClass
+      final Class<T> filterClass,
+      final Comparator<T> preference
   )
   {
     if (filter instanceof AndDimFilter) {
@@ -96,8 +100,10 @@ public class ConvertSelectorsToIns extends BottomUpTransform
 
       for (final DimFilter child : children) {
         if (filterClass.isAssignableFrom(child.getClass())) {
-          found = filterClass.cast(child);
-          break;
+          final T childFilter = filterClass.cast(child);
+          if (found == null || preference.compare(childFilter, found) > 0) {
+            found = childFilter;
+          }
         }
       }
 
@@ -139,7 +145,14 @@ public class ConvertSelectorsToIns extends BottomUpTransform
     @Override
     protected Pair<SelectorDimFilter, List<DimFilter>> getCollectibleComparison(DimFilter filter)
     {
-      return ConvertSelectorsToIns.splitAnd(filter, SelectorDimFilter.class);
+      return ConvertSelectorsToIns.splitAnd(
+          filter,
+          SelectorDimFilter.class,
+
+          // Prefer extracting nonnull vs null comparisons when ANDed, as nonnull comparisons are more likely to
+          // find companions in other ORs.
+          Comparator.comparing(selector -> selector.getValue() == null ? 0 : 1)
+      );
     }
 
     @Nullable
@@ -193,7 +206,14 @@ public class ConvertSelectorsToIns extends BottomUpTransform
     @Override
     protected Pair<EqualityFilter, List<DimFilter>> getCollectibleComparison(DimFilter filter)
     {
-      return ConvertSelectorsToIns.splitAnd(filter, EqualityFilter.class);
+      return ConvertSelectorsToIns.splitAnd(
+          filter,
+          EqualityFilter.class,
+
+          // Prefer extracting nonnull vs null comparisons when ANDed, as nonnull comparisons are more likely to
+          // find companions in other ORs.
+          Comparator.comparing(equality -> equality.getMatchValue() == null ? 0 : 1)
+      );
     }
 
     @Nullable
