@@ -2388,3 +2388,4 @@ collapsingLowestDense
 relativeError
 numBins
 quantilesFromDDSketch
+quantileFromDDSketch

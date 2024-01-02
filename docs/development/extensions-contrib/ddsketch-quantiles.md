@@ -23,7 +23,7 @@ title: "DDSketches for Approximate Quantiles module"
   -->
 
 
-This module provides aggregators for approximate quantile queries using the [DDSketch](https://github.com/datadog/sketches-java) library. The DDSketch library provides a fast, and fully-mergeable quantile sketch with relative error. If the true quantile is 100, a sketch with relative error of 1% guarantees a quantile value between 101 and 99. This is important and highly valuable behavior for long tail distributions. The best usecase for these sketches is for accurately describing the upper quantiles of long-tailed distributions such as network latencies.
+This module provides aggregators for approximate quantile queries using the [DDSketch](https://github.com/datadog/sketches-java) library. The DDSketch library provides a fast, and fully-mergeable quantile sketch with relative error. If the true quantile is 100, a sketch with relative error of 1% guarantees a quantile value between 101 and 99. This is important and highly valuable behavior for long tail distributions. The best use case for these sketches is for accurately describing the upper quantiles of long tailed distributions such as network latencies.
 
 To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) in the extensions load list.
 
@@ -52,14 +52,15 @@ The `ddSketch` aggregator operates over raw data and precomputed sketches.
 |type|Must be "ddSketch" |yes|
 |name|A String for the output (result) name of the calculation.|yes|
 |fieldName|A String for the name of the input field (can contain sketches or raw numeric values).|yes|
-|relativeError||Describes the precision in which to store the sketch. Must be a number between 0 and 1.|no, defaults to 0.01 (1% error)|
-|numBins|Total number of bins the sketch is allowed to use to describe the distribution. This has a direct impact on max memory used. The more total bins available, the larger the range of accurate quantiles.* |no, defaults to 1000|
+|relativeError|Describes the precision in which to store the sketch. Must be a number between 0 and 1.|no, defaults to 0.01 (1% error)|
+|numBins|Total number of bins the sketch is allowed to use to describe the distribution. This has a direct impact on max memory used. The more total bins available, the larger the range of accurate quantiles. With relative accuracy of 2%, only 275 bins are required to cover values between 1 millisecond and 1 minute. 800 bins are required to cover values between 1 nanosecond and 1 day.|no, defaults to 1000|
 
-* Exampes Tuning: With relative accuracy of 2%, only 275bins are required to cover values between 1millisecond and 1 minute. 800bins are required to cover values between 1 nanosecond and 1 day.
 
 ### Post Aggregators
 
 Users can query for a set of quantiles using the `quantilesFromDDSketch` post-aggregator on the sketches created by the `ddSketch` aggregators.
+
+#### quantilesFromDDSketch
 
 |property|description|required?|
 |--------|-----------|---------|
@@ -68,12 +69,14 @@ Users can query for a set of quantiles using the `quantilesFromDDSketch` post-ag
 |field|A computed ddSketch.|yes|
 |fractions|list of doubles from 0 to 1 of the quantiles to compute|yes|
 
+#### quantileFromDDSketch
+
 |property|description|required?|
 |--------|-----------|---------|
 |type|Must be "quantileFromDDSketch" |yes|
 |name|A String for the output (result) name of the calculation.|yes|
 |field|A computed ddSketch.|yes|
-|fractions|double from 0 to 1 of the quantile to compute|yes|
+|fraction|double from 0 to 1 of the quantile to compute|yes|
 
 
 
