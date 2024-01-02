@@ -119,9 +119,9 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
   {
     final VirtualColumns virtualColumns = makeVirtualColumns();
     final ColumnInspector baseInspector = column -> null;
-    Assert.assertEquals(ValueType.FLOAT, virtualColumns.getColumnCapabilities(baseInspector, "expr").getType());
-    Assert.assertEquals(ValueType.LONG, virtualColumns.getColumnCapabilities(baseInspector, "expr2").getType());
-    Assert.assertNull(virtualColumns.getColumnCapabilities(baseInspector, REAL_COLUMN_NAME));
+    Assert.assertEquals(ValueType.FLOAT, virtualColumns.getColumnCapabilitiesWithoutFallback(baseInspector, "expr").getType());
+    Assert.assertEquals(ValueType.LONG, virtualColumns.getColumnCapabilitiesWithoutFallback(baseInspector, "expr2").getType());
+    Assert.assertNull(virtualColumns.getColumnCapabilitiesWithoutFallback(baseInspector, REAL_COLUMN_NAME));
   }
 
   @Test
@@ -135,9 +135,9 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
         return null;
       }
     };
-    Assert.assertEquals(ValueType.FLOAT, virtualColumns.getColumnCapabilities(baseInspector, "expr").getType());
-    Assert.assertEquals(ValueType.DOUBLE, virtualColumns.getColumnCapabilities(baseInspector, "expr2").getType());
-    Assert.assertNull(virtualColumns.getColumnCapabilities(baseInspector, REAL_COLUMN_NAME));
+    Assert.assertEquals(ValueType.FLOAT, virtualColumns.getColumnCapabilitiesWithoutFallback(baseInspector, "expr").getType());
+    Assert.assertEquals(ValueType.DOUBLE, virtualColumns.getColumnCapabilitiesWithoutFallback(baseInspector, "expr2").getType());
+    Assert.assertNull(virtualColumns.getColumnCapabilitiesWithoutFallback(baseInspector, REAL_COLUMN_NAME));
   }
 
   @Test
@@ -519,10 +519,10 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
     final ExpressionVirtualColumn expr2 = new ExpressionVirtualColumn("v3", "v0 * x", null, TestExprMacroTable.INSTANCE);
     final VirtualColumns virtualColumns = VirtualColumns.create(ImmutableList.of(v0, v1, expr1, expr2));
 
-    Assert.assertEquals(ColumnType.STRING, virtualColumns.getColumnCapabilities(baseInspector, "v0").toColumnType());
-    Assert.assertEquals(ColumnType.LONG, virtualColumns.getColumnCapabilities(baseInspector, "v1").toColumnType());
-    Assert.assertEquals(ColumnType.DOUBLE, virtualColumns.getColumnCapabilities(baseInspector, "v2").toColumnType());
-    Assert.assertEquals(ColumnType.DOUBLE, virtualColumns.getColumnCapabilities(baseInspector, "v3").toColumnType());
+    Assert.assertEquals(ColumnType.STRING, virtualColumns.getColumnCapabilitiesWithoutFallback(baseInspector, "v0").toColumnType());
+    Assert.assertEquals(ColumnType.LONG, virtualColumns.getColumnCapabilitiesWithoutFallback(baseInspector, "v1").toColumnType());
+    Assert.assertEquals(ColumnType.DOUBLE, virtualColumns.getColumnCapabilitiesWithoutFallback(baseInspector, "v2").toColumnType());
+    Assert.assertEquals(ColumnType.DOUBLE, virtualColumns.getColumnCapabilitiesWithoutFallback(baseInspector, "v3").toColumnType());
     Assert.assertTrue(virtualColumns.canVectorize(baseInspector));
   }
 

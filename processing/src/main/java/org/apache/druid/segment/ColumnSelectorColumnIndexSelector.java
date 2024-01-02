@@ -99,6 +99,6 @@ public class ColumnSelectorColumnIndexSelector implements ColumnIndexSelector
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
   {
-    return virtualColumns.getColumnCapabilities(columnSelector, column);
+    return virtualColumns.getColumnCapabilitiesWithFallback(columnSelector, column);
   }
 }
