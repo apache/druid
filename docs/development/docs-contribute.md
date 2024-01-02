@@ -171,7 +171,7 @@ HUMAN_READABLE_BINARY_BYTE_FORMAT(value, \[precision])
 
 #### Markdown table format
 
-When editing or adding tables, do not include extra characters to "prettify" the table format within the markdown source.
+When editing or adding tables, do not include extra characters to "prettify" the table format within the Markdown source.
 Some code editors may format tables by default.
 For an example of how to disable it, see the [IntelliJ formatting file for Druid](https://github.com/apache/druid/blob/master/dev/druid_intellij_formatting.xml#L78).
 
