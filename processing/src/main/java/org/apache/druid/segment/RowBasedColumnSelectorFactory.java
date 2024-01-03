@@ -447,7 +447,8 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
     } else {
       final Function<T, Object> columnFunction = adapter.columnFunction(columnName);
       final ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(columnName);
-      final ValueType expectedType = capabilities == null ? null : capabilities.getType();
+      final ValueType numberType =
+          capabilities != null && capabilities.getType().isNumeric() ? capabilities.getType() : null;
 
       return new ColumnValueSelector<Object>()
       {
@@ -534,7 +535,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
             try {
               final Object valueToUse =
                   currentValue instanceof StructuredData ? ((StructuredData) currentValue).getValue() : currentValue;
-              currentValueAsNumber = Rows.objectToNumber(columnName, valueToUse, expectedType, throwParseExceptions);
+              currentValueAsNumber = Rows.objectToNumber(columnName, valueToUse, numberType, throwParseExceptions);
             }
             catch (Throwable e) {
               currentValueAsNumberId = RowIdSupplier.INIT;

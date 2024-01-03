@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.primitives.Longs;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.column.ValueType;
@@ -91,7 +92,7 @@ public final class Rows
    *
    * @param name                 field name of the object being converted (may be used for exception messages)
    * @param inputValue           the actual object being converted
-   * @param expectedType         expected numeric type, or null if it should be automatically detected
+   * @param outputType           expected return type, or null if it should be automatically detected
    * @param throwParseExceptions whether this method should throw a {@link ParseException} or use a default/null value
    *                             when {@param inputValue} is not numeric
    *
@@ -103,12 +104,16 @@ public final class Rows
   public static Number objectToNumber(
       final String name,
       final Object inputValue,
-      @Nullable final ValueType expectedType,
+      @Nullable final ValueType outputType,
       final boolean throwParseExceptions
   )
   {
+    if (outputType != null && !outputType.isNumeric()) {
+      throw new IAE("Output type[%s] must be numeric", outputType);
+    }
+
     if (inputValue == null) {
-      return (Number) NullHandling.defaultValueForType(expectedType != null ? expectedType : ValueType.LONG);
+      return (Number) NullHandling.defaultValueForType(outputType != null ? outputType : ValueType.LONG);
     } else if (inputValue instanceof Number) {
       return (Number) inputValue;
     } else if (inputValue instanceof String) {
@@ -121,36 +126,53 @@ public final class Rows
 
         // Try parsing as Long first, since it's significantly faster than Double parsing, and also there are various
         // integer numbers that can be represented as Long but cannot be represented as Double.
-        if (expectedType == null || expectedType == ValueType.LONG) {
+        if (outputType == null || outputType == ValueType.LONG) {
           v = Longs.tryParse(metricValueString);
         }
 
-        if ((expectedType == null && v == null) || expectedType == ValueType.DOUBLE) {
+        if (outputType != ValueType.LONG) {
           v = Double.valueOf(metricValueString);
         }
 
         if (v == null) {
           if (throwParseExceptions) {
-            throw new ParseException(String.valueOf(inputValue), "Unable to parse value[%s] for field[%s] as type[%s]", inputValue.getClass(), name, expectedType);
+            throw new ParseException(
+                String.valueOf(inputValue),
+                "Unable to parse value[%s] for field[%s] as type[%s]",
+                inputValue.getClass(),
+                name,
+                outputType
+            );
           } else {
-            return (Number) NullHandling.defaultValueForType(expectedType);
+            return (Number) NullHandling.defaultValueForType(outputType);
           }
         } else {
-          return v;
+          return outputType == ValueType.FLOAT ? Float.valueOf(v.floatValue()) : v;
         }
       }
       catch (Exception e) {
         if (throwParseExceptions) {
-          throw new ParseException(String.valueOf(inputValue), e, "Unable to parse value[%s] for field[%s]", inputValue, name);
+          throw new ParseException(
+              String.valueOf(inputValue),
+              e,
+              "Unable to parse value[%s] for field[%s]",
+              inputValue,
+              name
+          );
         } else {
-          return (Number) NullHandling.defaultValueForType(expectedType != null ? expectedType : ValueType.LONG);
+          return (Number) NullHandling.defaultValueForType(outputType != null ? outputType : ValueType.LONG);
         }
       }
     } else {
       if (throwParseExceptions) {
-        throw new ParseException(String.valueOf(inputValue), "Unknown type[%s] for field[%s]", inputValue.getClass(), name);
+        throw new ParseException(
+            String.valueOf(inputValue),
+            "Unknown type[%s] for field[%s]",
+            inputValue.getClass(),
+            name
+        );
       } else {
-        return (Number) NullHandling.defaultValueForType(expectedType != null ? expectedType : ValueType.LONG);
+        return (Number) NullHandling.defaultValueForType(outputType != null ? outputType : ValueType.LONG);
       }
     }
   }
