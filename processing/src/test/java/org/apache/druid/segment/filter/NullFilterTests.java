@@ -352,7 +352,7 @@ public class NullFilterTests
     {
       EqualsVerifier.forClass(NullFilter.class).usingGetClass()
                     .withNonnullFields("column")
-                    .withIgnoredFields("cachedOptimizedFilter")
+                    .withIgnoredFields("optimizedFilterIncludeUnknown", "optimizedFilterNoIncludeUnknown")
                     .verify();
     }
   }

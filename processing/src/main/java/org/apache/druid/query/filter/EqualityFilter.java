@@ -125,12 +125,6 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
   }
 
   @Override
-  public DimFilter optimize()
-  {
-    return this;
-  }
-
-  @Override
   public Filter toFilter()
   {
     return this;

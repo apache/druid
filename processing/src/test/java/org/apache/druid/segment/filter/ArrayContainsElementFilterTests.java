@@ -655,9 +655,24 @@ public class ArrayContainsElementFilterTests
       Assert.assertFalse(Arrays.equals(f1.getCacheKey(), f2.getCacheKey()));
       Assert.assertArrayEquals(f1.getCacheKey(), f3.getCacheKey());
 
-      f1 = new ArrayContainsElementFilter("x", ColumnType.DOUBLE_ARRAY, new Object[]{1.001, null, 20.0002, 300.0003}, null);
-      f1_2 = new ArrayContainsElementFilter("x", ColumnType.DOUBLE_ARRAY, Arrays.asList(1.001, null, 20.0002, 300.0003), null);
-      f2 = new ArrayContainsElementFilter("x", ColumnType.DOUBLE_ARRAY, new Object[]{1.001, 20.0002, 300.0003, null}, null);
+      f1 = new ArrayContainsElementFilter(
+          "x",
+          ColumnType.DOUBLE_ARRAY,
+          new Object[]{1.001, null, 20.0002, 300.0003},
+          null
+      );
+      f1_2 = new ArrayContainsElementFilter(
+          "x",
+          ColumnType.DOUBLE_ARRAY,
+          Arrays.asList(1.001, null, 20.0002, 300.0003),
+          null
+      );
+      f2 = new ArrayContainsElementFilter(
+          "x",
+          ColumnType.DOUBLE_ARRAY,
+          new Object[]{1.001, 20.0002, 300.0003, null},
+          null
+      );
       f3 = new ArrayContainsElementFilter(
           "x",
           ColumnType.DOUBLE_ARRAY,
@@ -669,7 +684,12 @@ public class ArrayContainsElementFilterTests
       Assert.assertArrayEquals(f1.getCacheKey(), f3.getCacheKey());
 
       NestedDataModule.registerHandlersAndSerde();
-      f1 = new ArrayContainsElementFilter("x", ColumnType.NESTED_DATA, ImmutableMap.of("x", ImmutableList.of(1, 2, 3)), null);
+      f1 = new ArrayContainsElementFilter(
+          "x",
+          ColumnType.NESTED_DATA,
+          ImmutableMap.of("x", ImmutableList.of(1, 2, 3)),
+          null
+      );
       f1_2 = new ArrayContainsElementFilter(
           "x",
           ColumnType.NESTED_DATA,
@@ -722,10 +742,16 @@ public class ArrayContainsElementFilterTests
                         "elementMatchValueEval",
                         "elementMatchValue",
                         "predicateFactory",
-                        "cachedOptimizedFilter"
+                        "optimizedFilterIncludeUnknown",
+                        "optimizedFilterNoIncludeUnknown"
                     )
                     .withPrefabValues(ColumnType.class, ColumnType.STRING, ColumnType.DOUBLE)
-                    .withIgnoredFields("predicateFactory", "cachedOptimizedFilter", "elementMatchValue")
+                    .withIgnoredFields(
+                        "predicateFactory",
+                        "optimizedFilterIncludeUnknown",
+                        "optimizedFilterNoIncludeUnknown",
+                        "elementMatchValue"
+                    )
                     .verify();
     }
   }
