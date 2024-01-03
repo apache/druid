@@ -20,6 +20,7 @@
 
 package org.apache.druid.k8s.overlord;
 
+import com.google.inject.Provider;
 import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 import org.apache.druid.k8s.overlord.runnerstrategy.KubernetesRunnerStrategy;
@@ -38,7 +39,7 @@ public class KubernetesAndWorkerTaskRunnerFactoryTest extends EasyMockSupport
 
   @Mock KubernetesTaskRunnerFactory kubernetesTaskRunnerFactory;
   @Mock HttpRemoteTaskRunnerFactory httpRemoteTaskRunnerFactory;
-  @Mock RemoteTaskRunnerFactory remoteTaskRunnerFactory;
+  @Mock Provider<RemoteTaskRunnerFactory> remoteTaskRunnerFactoryProvider;
 
   @Test
   public void test_useHttpTaskRunner_asDefault()
@@ -46,7 +47,7 @@ public class KubernetesAndWorkerTaskRunnerFactoryTest extends EasyMockSupport
     KubernetesAndWorkerTaskRunnerFactory factory = new KubernetesAndWorkerTaskRunnerFactory(
         kubernetesTaskRunnerFactory,
         httpRemoteTaskRunnerFactory,
-        remoteTaskRunnerFactory,
+        remoteTaskRunnerFactoryProvider,
         new KubernetesAndWorkerTaskRunnerConfig(null, null),
         new WorkerRunnerStrategy()
     );
@@ -65,11 +66,13 @@ public class KubernetesAndWorkerTaskRunnerFactoryTest extends EasyMockSupport
     KubernetesAndWorkerTaskRunnerFactory factory = new KubernetesAndWorkerTaskRunnerFactory(
         kubernetesTaskRunnerFactory,
         httpRemoteTaskRunnerFactory,
-        remoteTaskRunnerFactory,
+        remoteTaskRunnerFactoryProvider,
         new KubernetesAndWorkerTaskRunnerConfig(null, "remote"),
         new WorkerRunnerStrategy()
     );
 
+    RemoteTaskRunnerFactory remoteTaskRunnerFactory = EasyMock.createMock(RemoteTaskRunnerFactory.class);
+    EasyMock.expect(remoteTaskRunnerFactoryProvider.get()).andReturn(remoteTaskRunnerFactory);
     EasyMock.expect(remoteTaskRunnerFactory.build()).andReturn(null);
     EasyMock.expect(kubernetesTaskRunnerFactory.build()).andReturn(null);
 
@@ -84,12 +87,12 @@ public class KubernetesAndWorkerTaskRunnerFactoryTest extends EasyMockSupport
     KubernetesAndWorkerTaskRunnerFactory factory = new KubernetesAndWorkerTaskRunnerFactory(
         kubernetesTaskRunnerFactory,
         httpRemoteTaskRunnerFactory,
-        remoteTaskRunnerFactory,
+        remoteTaskRunnerFactoryProvider,
         new KubernetesAndWorkerTaskRunnerConfig(null, "noop"),
         new KubernetesRunnerStrategy()
     );
 
-    EasyMock.expect(remoteTaskRunnerFactory.build()).andReturn(null);
+    EasyMock.expect(remoteTaskRunnerFactoryProvider.get().build()).andReturn(null);
     EasyMock.expect(kubernetesTaskRunnerFactory.build()).andReturn(null);
 
     replayAll();
