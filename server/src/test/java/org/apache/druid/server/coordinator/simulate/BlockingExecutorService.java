@@ -61,6 +61,11 @@ public class BlockingExecutorService implements ExecutorService
     return !taskQueue.isEmpty();
   }
 
+  public int numPendingTasks()
+  {
+    return taskQueue.size();
+  }
+
   /**
    * Executes the next pending task on the calling thread itself.
    */

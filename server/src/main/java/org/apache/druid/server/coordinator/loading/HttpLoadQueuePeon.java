@@ -35,7 +35,8 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.server.coordination.DataSegmentChangeCallback;
 import org.apache.druid.server.coordination.DataSegmentChangeHandler;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
-import org.apache.druid.server.coordination.SegmentLoadDropHandler;
+import org.apache.druid.server.coordination.DataSegmentChangeResponse;
+import org.apache.druid.server.coordination.SegmentChangeStatus;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
@@ -77,8 +78,8 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       {
       };
 
-  public static final TypeReference<List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus>> RESPONSE_ENTITY_TYPE_REF =
-      new TypeReference<List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus>>()
+  public static final TypeReference<List<DataSegmentChangeResponse>> RESPONSE_ENTITY_TYPE_REF =
+      new TypeReference<List<DataSegmentChangeResponse>>()
       {
       };
 
@@ -225,7 +226,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
                   log.trace("Received NO CONTENT reseponse from [%s]", serverId);
                 } else if (HttpServletResponse.SC_OK == responseHandler.getStatus()) {
                   try {
-                    List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus> statuses =
+                    List<DataSegmentChangeResponse> statuses =
                         jsonMapper.readValue(result, RESPONSE_ENTITY_TYPE_REF);
                     log.trace("Server[%s] returned status response [%s].", serverId, statuses);
                     synchronized (lock) {
@@ -235,7 +236,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
                         return;
                       }
 
-                      for (SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus e : statuses) {
+                      for (DataSegmentChangeResponse e : statuses) {
                         switch (e.getStatus().getState()) {
                           case SUCCESS:
                           case FAILED:
@@ -300,7 +301,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     }
   }
 
-  private void handleResponseStatus(DataSegmentChangeRequest changeRequest, SegmentLoadDropHandler.Status status)
+  private void handleResponseStatus(DataSegmentChangeRequest changeRequest, SegmentChangeStatus status)
   {
     changeRequest.go(
         new DataSegmentChangeHandler()
@@ -317,7 +318,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
             updateSuccessOrFailureInHolder(segmentsToDrop.remove(segment), status);
           }
 
-          private void updateSuccessOrFailureInHolder(SegmentHolder holder, SegmentLoadDropHandler.Status status)
+          private void updateSuccessOrFailureInHolder(SegmentHolder holder, SegmentChangeStatus status)
           {
             if (holder == null) {
               return;
@@ -325,7 +326,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
 
             queuedSegments.remove(holder);
             activeRequestSegments.remove(holder.getSegment());
-            if (status.getState() == SegmentLoadDropHandler.Status.STATE.FAILED) {
+            if (status.getState() == SegmentChangeStatus.State.FAILED) {
               onRequestFailed(holder, status.getFailureCause());
             } else {
               onRequestCompleted(holder, RequestStatus.SUCCESS);

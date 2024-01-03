@@ -90,7 +90,6 @@ import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
-import org.apache.druid.indexing.test.TestDataSegmentAnnouncer;
 import org.apache.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -145,6 +144,7 @@ import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordination.TestDataSegmentAnnouncer;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
@@ -635,8 +635,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
           {
             announcedSinks++;
           }
-
-        },
+        }, // segment announcer
         EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
         handoffNotifierFactory,
         () -> queryRunnerFactoryConglomerate, // query runner factory conglomerate corporation unionized collective

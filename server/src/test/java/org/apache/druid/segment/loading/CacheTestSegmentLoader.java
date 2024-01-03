@@ -39,12 +39,17 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 
 /**
 */
 public class CacheTestSegmentLoader implements SegmentLoader
 {
+
+  private final Set<DataSegment> removedSegments = new HashSet<>();
+  private final Set<DataSegment> loadedSegments = new HashSet<>();
 
   @Override
   public ReferenceCountingSegment getSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback SegmentLazyLoadFailCallback)
@@ -175,12 +180,23 @@ public class CacheTestSegmentLoader implements SegmentLoader
   @Override
   public void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec)
   {
-
+    loadedSegments.add(segment);
   }
 
   @Override
   public void cleanup(DataSegment segment)
   {
-
+    removedSegments.add(segment);
   }
+
+  public Set<DataSegment> getLoadedSegments()
+  {
+    return loadedSegments;
+  }
+
+  public Set<DataSegment> getRemovedSegments()
+  {
+    return removedSegments;
+  }
+
 }

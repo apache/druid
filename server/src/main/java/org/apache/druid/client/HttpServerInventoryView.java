@@ -608,14 +608,13 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         {
           for (DataSegmentChangeRequest request : changes) {
             if (request instanceof SegmentChangeRequestLoad) {
-              addSegment(((SegmentChangeRequestLoad) request).getSegment(), false);
+              addSegment(request.getSegment(), false);
             } else if (request instanceof SegmentChangeRequestDrop) {
-              removeSegment(((SegmentChangeRequestDrop) request).getSegment(), false);
+              removeSegment(request.getSegment(), false);
             } else {
               log.error(
                   "Server[%s] gave a non load/drop dataSegmentChangeRequest[%s], Ignored.",
-                  druidServer.getName(),
-                  request
+                  druidServer.getName(), request
               );
             }
           }

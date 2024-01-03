@@ -36,7 +36,6 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordination.DataSegmentChangeCallback;
 import org.apache.druid.server.coordination.DataSegmentChangeHandler;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
-import org.apache.druid.server.coordination.SegmentChangeRequestDrop;
 import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
 import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
 import org.apache.druid.timeline.DataSegment;
@@ -235,11 +234,11 @@ public class LoadQueuePeonTest extends CuratorTestBase
       );
       Assert.assertEquals(
           segment,
-          ((SegmentChangeRequestDrop) jsonMapper.readValue(
+          jsonMapper.readValue(
               curator.getData()
                      .decompressed()
                      .forPath(dropRequestPath), DataSegmentChangeRequest.class
-          )).getSegment()
+          ).getSegment()
       );
 
       // simulate completion of drop request by historical
@@ -253,8 +252,8 @@ public class LoadQueuePeonTest extends CuratorTestBase
       Assert.assertNotNull(curator.checkExists().forPath(loadRequestPath));
       Assert.assertEquals(
           segment,
-          ((SegmentChangeRequestLoad) jsonMapper
-              .readValue(curator.getData().decompressed().forPath(loadRequestPath), DataSegmentChangeRequest.class))
+          jsonMapper
+              .readValue(curator.getData().decompressed().forPath(loadRequestPath), DataSegmentChangeRequest.class)
               .getSegment()
       );
 
