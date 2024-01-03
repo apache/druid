@@ -25,6 +25,7 @@ import com.google.common.primitives.Longs;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -90,6 +91,7 @@ public final class Rows
    *
    * @param name                 field name of the object being converted (may be used for exception messages)
    * @param inputValue           the actual object being converted
+   * @param expectedType         expected numeric type, or null if it should be automatically detected
    * @param throwParseExceptions whether this method should throw a {@link ParseException} or use a default/null value
    *                             when {@param inputValue} is not numeric
    *
@@ -98,14 +100,15 @@ public final class Rows
    * @throws ParseException if the input cannot be converted to a number and {@code throwParseExceptions} is true
    */
   @Nullable
-  public static <T extends Number> Number objectToNumber(
+  public static Number objectToNumber(
       final String name,
       final Object inputValue,
+      @Nullable final ValueType expectedType,
       final boolean throwParseExceptions
   )
   {
     if (inputValue == null) {
-      return NullHandling.defaultLongValue();
+      return (Number) NullHandling.defaultValueForType(expectedType != null ? expectedType : ValueType.LONG);
     } else if (inputValue instanceof Number) {
       return (Number) inputValue;
     } else if (inputValue instanceof String) {
@@ -113,28 +116,55 @@ public final class Rows
         String metricValueString = StringUtils.removeChar(((String) inputValue).trim(), ',');
         // Longs.tryParse() doesn't support leading '+', so we need to trim it ourselves
         metricValueString = trimLeadingPlusOfLongString(metricValueString);
-        Long v = Longs.tryParse(metricValueString);
-        // Do NOT use ternary operator here, because it makes Java to convert Long to Double
-        if (v != null) {
-          return v;
+
+        Number v = null;
+
+        // Try parsing as Long first, since it's significantly faster than Double parsing, and also there are various
+        // integer numbers that can be represented as Long but cannot be represented as Double.
+        if (expectedType == null || expectedType == ValueType.LONG) {
+          v = Longs.tryParse(metricValueString);
+        }
+
+        if ((expectedType == null && v == null) || expectedType == ValueType.DOUBLE) {
+          v = Double.valueOf(metricValueString);
+        }
+
+        if (v == null) {
+          if (throwParseExceptions) {
+            throw new ParseException(String.valueOf(inputValue), "Unable to parse value[%s] for field[%s] as type[%s]", inputValue.getClass(), name, expectedType);
+          } else {
+            return (Number) NullHandling.defaultValueForType(expectedType);
+          }
         } else {
-          return Double.valueOf(metricValueString);
+          return v;
         }
       }
       catch (Exception e) {
         if (throwParseExceptions) {
           throw new ParseException(String.valueOf(inputValue), e, "Unable to parse value[%s] for field[%s]", inputValue, name);
         } else {
-          return NullHandling.defaultLongValue();
+          return (Number) NullHandling.defaultValueForType(expectedType != null ? expectedType : ValueType.LONG);
         }
       }
     } else {
       if (throwParseExceptions) {
         throw new ParseException(String.valueOf(inputValue), "Unknown type[%s] for field[%s]", inputValue.getClass(), name);
       } else {
-        return NullHandling.defaultLongValue();
+        return (Number) NullHandling.defaultValueForType(expectedType != null ? expectedType : ValueType.LONG);
       }
     }
+  }
+
+  /**
+   * Shorthand for {@link #objectToNumber(String, Object, ValueType, boolean)} with null expectedType.
+   */
+  public static Number objectToNumber(
+      final String name,
+      final Object inputValue,
+      final boolean throwParseExceptions
+  )
+  {
+    return objectToNumber(name, inputValue, null, throwParseExceptions);
   }
 
   private static String trimLeadingPlusOfLongString(String metricValueString)

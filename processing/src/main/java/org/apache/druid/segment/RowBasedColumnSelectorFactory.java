@@ -32,6 +32,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.RangeIndexedInts;
 import org.apache.druid.segment.nested.StructuredData;
@@ -445,44 +446,55 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
       return new TimeLongColumnSelector();
     } else {
       final Function<T, Object> columnFunction = adapter.columnFunction(columnName);
+      final ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(columnName);
+      final ValueType expectedType = capabilities == null ? null : capabilities.getType();
 
       return new ColumnValueSelector<Object>()
       {
+        private long currentValueId = RowIdSupplier.INIT;
+        private long currentValueAsNumberId = RowIdSupplier.INIT;
+        @Nullable
+        private Object currentValue;
+        @Nullable
+        private Number currentValueAsNumber;
+
         @Override
         public boolean isNull()
         {
-          return !NullHandling.replaceWithDefault() && getCurrentValueAsNumber() == null;
+          updateCurrentValueAsNumber();
+          return !NullHandling.replaceWithDefault() && currentValueAsNumber == null;
         }
 
         @Override
         public double getDouble()
         {
-          final Number n = getCurrentValueAsNumber();
-          assert NullHandling.replaceWithDefault() || n != null;
-          return n != null ? n.doubleValue() : 0d;
+          updateCurrentValueAsNumber();
+          assert NullHandling.replaceWithDefault() || currentValueAsNumber != null;
+          return currentValueAsNumber != null ? currentValueAsNumber.doubleValue() : 0d;
         }
 
         @Override
         public float getFloat()
         {
-          final Number n = getCurrentValueAsNumber();
-          assert NullHandling.replaceWithDefault() || n != null;
-          return n != null ? n.floatValue() : 0f;
+          updateCurrentValueAsNumber();
+          assert NullHandling.replaceWithDefault() || currentValueAsNumber != null;
+          return currentValueAsNumber != null ? currentValueAsNumber.floatValue() : 0f;
         }
 
         @Override
         public long getLong()
         {
-          final Number n = getCurrentValueAsNumber();
-          assert NullHandling.replaceWithDefault() || n != null;
-          return n != null ? n.longValue() : 0L;
+          updateCurrentValueAsNumber();
+          assert NullHandling.replaceWithDefault() || currentValueAsNumber != null;
+          return currentValueAsNumber != null ? currentValueAsNumber.longValue() : 0L;
         }
 
         @Nullable
         @Override
         public Object getObject()
         {
-          return getCurrentValue();
+          updateCurrentValue();
+          return currentValue;
         }
 
         @Override
@@ -497,24 +509,42 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
           inspector.visit("row", rowSupplier);
         }
 
-        @Nullable
-        private Object getCurrentValue()
+        private void updateCurrentValue()
         {
-          return columnFunction.apply(rowSupplier.get());
+          if (rowIdSupplier == null || rowIdSupplier.getRowId() != currentValueId) {
+            try {
+              currentValue = columnFunction.apply(rowSupplier.get());
+            }
+            catch (Throwable e) {
+              currentValueId = RowIdSupplier.INIT;
+              throw e;
+            }
+
+            if (rowIdSupplier != null) {
+              currentValueId = rowIdSupplier.getRowId();
+            }
+          }
         }
 
-        @Nullable
-        private Number getCurrentValueAsNumber()
+        private void updateCurrentValueAsNumber()
         {
-          final Object currentValue = getCurrentValue();
-          if (currentValue instanceof StructuredData) {
-            return Rows.objectToNumber(columnName, ((StructuredData) currentValue).getValue(), throwParseExceptions);
+          updateCurrentValue();
+
+          if (rowIdSupplier == null || rowIdSupplier.getRowId() != currentValueAsNumberId) {
+            try {
+              final Object valueToUse =
+                  currentValue instanceof StructuredData ? ((StructuredData) currentValue).getValue() : currentValue;
+              currentValueAsNumber = Rows.objectToNumber(columnName, valueToUse, expectedType, throwParseExceptions);
+            }
+            catch (Throwable e) {
+              currentValueAsNumberId = RowIdSupplier.INIT;
+              throw e;
+            }
+
+            if (rowIdSupplier != null) {
+              currentValueAsNumberId = rowIdSupplier.getRowId();
+            }
           }
-          return Rows.objectToNumber(
-              columnName,
-              currentValue,
-              throwParseExceptions
-          );
         }
       };
     }
