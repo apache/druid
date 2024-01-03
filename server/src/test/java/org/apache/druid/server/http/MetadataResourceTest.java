@@ -19,11 +19,11 @@
 
 package org.apache.druid.server.http;
 
-import com.google.api.client.util.Sets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.error.DruidExceptionMatcher;
@@ -56,7 +56,6 @@ import org.mockito.stubbing.Answer;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
