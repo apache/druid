@@ -34,6 +34,7 @@ import org.apache.calcite.plan.volcano.AbstractConverter;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.metadata.DefaultRelMetadataProvider;
+import org.apache.calcite.rel.metadata.RelMetadataProvider;
 import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.calcite.rel.rules.DateRangeRules;
 import org.apache.calcite.rel.rules.JoinPushThroughJoinRule;
@@ -47,21 +48,17 @@ import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.sql.calcite.external.ExternalTableScanRule;
-import org.apache.druid.sql.calcite.rule.CaseToCoalesceRule;
-import org.apache.druid.sql.calcite.rule.CoalesceLookupRule;
 import org.apache.druid.sql.calcite.rule.DruidLogicalValuesRule;
 import org.apache.druid.sql.calcite.rule.DruidRelToDruidRule;
 import org.apache.druid.sql.calcite.rule.DruidRules;
 import org.apache.druid.sql.calcite.rule.DruidTableScanRule;
 import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
-import org.apache.druid.sql.calcite.rule.FilterDecomposeCoalesceRule;
 import org.apache.druid.sql.calcite.rule.FilterJoinExcludePushToChildRule;
 import org.apache.druid.sql.calcite.rule.ProjectAggregatePruneUnusedCallRule;
 import org.apache.druid.sql.calcite.rule.SortCollapseRule;
 import org.apache.druid.sql.calcite.rule.logical.DruidLogicalRules;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -226,37 +223,35 @@ public class CalciteRulesManager
 
   public List<Program> programs(final PlannerContext plannerContext)
   {
-    final boolean isDebug = plannerContext.queryContext().isDebug();
-
     // Program that pre-processes the tree before letting the full-on VolcanoPlanner loose.
-    final List<Program> prePrograms = new ArrayList<>();
-    prePrograms.add(new LoggingProgram("Start", isDebug));
-    prePrograms.add(Programs.subQuery(DefaultRelMetadataProvider.INSTANCE));
-    prePrograms.add(new LoggingProgram("Finished subquery program", isDebug));
-    prePrograms.add(DecorrelateAndTrimFieldsProgram.INSTANCE);
-    prePrograms.add(new LoggingProgram("Finished decorrelate and trim fields program", isDebug));
-    prePrograms.add(buildCoalesceProgram());
-    prePrograms.add(new LoggingProgram("Finished coalesce program", isDebug));
-    prePrograms.add(buildHepProgram(REDUCTION_RULES));
-    prePrograms.add(new LoggingProgram("Finished expression reduction program", isDebug));
+    final Program preProgram =
+        Programs.sequence(
+            Programs.subQuery(DefaultRelMetadataProvider.INSTANCE),
+            DecorrelateAndTrimFieldsProgram.INSTANCE,
+            buildHepProgram(REDUCTION_RULES, true, DefaultRelMetadataProvider.INSTANCE, HEP_DEFAULT_MATCH_LIMIT)
+        );
 
-    final Program preProgram = Programs.sequence(prePrograms.toArray(new Program[0]));
-
+    boolean isDebug = plannerContext.queryContext().isDebug();
     return ImmutableList.of(
         Programs.sequence(
+            new LoggingProgram("Start", isDebug),
             preProgram,
+            new LoggingProgram("After PreProgram", isDebug),
             Programs.ofRules(druidConventionRuleSet(plannerContext)),
-            new LoggingProgram("After Druid volcano planner program", isDebug)
+            new LoggingProgram("After volcano planner program", isDebug)
         ),
+        Programs.sequence(preProgram, Programs.ofRules(bindableConventionRuleSet(plannerContext))),
         Programs.sequence(
-            preProgram,
-            Programs.ofRules(bindableConventionRuleSet(plannerContext)),
-            new LoggingProgram("After bindable volcano planner program", isDebug)
-        ),
-        Programs.sequence(
-            preProgram,
+            // currently, adding logging program after every stage for easier debugging
+            new LoggingProgram("Start", isDebug),
+            Programs.subQuery(DefaultRelMetadataProvider.INSTANCE),
+            new LoggingProgram("After subquery program", isDebug),
+            DecorrelateAndTrimFieldsProgram.INSTANCE,
+            new LoggingProgram("After trim fields and decorelate program", isDebug),
+            buildHepProgram(REDUCTION_RULES, true, DefaultRelMetadataProvider.INSTANCE, HEP_DEFAULT_MATCH_LIMIT),
+            new LoggingProgram("After hep planner program", isDebug),
             Programs.ofRules(logicalConventionRuleSet(plannerContext)),
-            new LoggingProgram("After logical volcano planner program", isDebug)
+            new LoggingProgram("After volcano planner program", isDebug)
         )
     );
   }
@@ -290,6 +285,21 @@ public class CalciteRulesManager
       }
       return rel;
     }
+  }
+
+  public Program buildHepProgram(
+      final Iterable<? extends RelOptRule> rules,
+      final boolean noDag,
+      final RelMetadataProvider metadataProvider,
+      final int matchLimit
+  )
+  {
+    final HepProgramBuilder builder = HepProgram.builder();
+    builder.addMatchLimit(matchLimit);
+    for (RelOptRule rule : rules) {
+      builder.addRuleInstance(rule);
+    }
+    return Programs.of(builder.build(), noDag, metadataProvider);
   }
 
   public List<RelOptRule> druidConventionRuleSet(final PlannerContext plannerContext)
@@ -359,34 +369,8 @@ public class CalciteRulesManager
     return rules.build();
   }
 
-  private static Program buildHepProgram(final Iterable<? extends RelOptRule> rules)
-  {
-    final HepProgramBuilder builder = HepProgram.builder();
-    builder.addMatchLimit(CalciteRulesManager.HEP_DEFAULT_MATCH_LIMIT);
-    for (RelOptRule rule : rules) {
-      builder.addRuleInstance(rule);
-    }
-    return Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE);
-  }
-
-  /**
-   * Program that performs various manipulations related to COALESCE.
-   */
-  private static Program buildCoalesceProgram()
-  {
-    return buildHepProgram(
-        ImmutableList.of(
-            new CaseToCoalesceRule(),
-            new CoalesceLookupRule(),
-            new FilterDecomposeCoalesceRule()
-        )
-    );
-  }
-
-  /**
-   * Based on Calcite's Programs.DecorrelateProgram and Programs.TrimFieldsProgram, which are private and only
-   * accessible through Programs.standard (which we don't want, since it also adds Enumerable rules).
-   */
+  // Based on Calcite's Programs.DecorrelateProgram and Programs.TrimFieldsProgram, which are private and only
+  // accessible through Programs.standard (which we don't want, since it also adds Enumerable rules).
   private static class DecorrelateAndTrimFieldsProgram implements Program
   {
     private static final DecorrelateAndTrimFieldsProgram INSTANCE = new DecorrelateAndTrimFieldsProgram();
