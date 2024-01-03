@@ -27,6 +27,7 @@ import org.apache.druid.data.input.impl.CombiningInputSource;
 import org.apache.druid.data.input.impl.HttpInputSource;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.LocalInputSource;
+import org.apache.druid.data.input.impl.delta.DeltaInputSource;
 import org.apache.druid.guice.annotations.UnstableApi;
 import org.apache.druid.java.util.common.UOE;
 
@@ -56,7 +57,8 @@ import java.util.Set;
     @Type(name = LocalInputSource.TYPE_KEY, value = LocalInputSource.class),
     @Type(name = HttpInputSource.TYPE_KEY, value = HttpInputSource.class),
     @Type(name = InlineInputSource.TYPE_KEY, value = InlineInputSource.class),
-    @Type(name = CombiningInputSource.TYPE_KEY, value = CombiningInputSource.class)
+    @Type(name = CombiningInputSource.TYPE_KEY, value = CombiningInputSource.class),
+    @Type(name = DeltaInputSource.TYPE_KEY, value = DeltaInputSource.class)
 })
 public interface InputSource
 {

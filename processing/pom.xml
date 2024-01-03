@@ -342,6 +342,25 @@
       <version>${oshi.version}</version>
     </dependency>
 
+    <dependency>
+      <groupId>io.delta</groupId>
+      <artifactId>delta-kernel-api</artifactId>
+      <version>3.0.0</version>
+    </dependency>
+
+    <!-- Optional depdendency -->
+    <dependency>
+      <groupId>io.delta</groupId>
+      <artifactId>delta-kernel-defaults</artifactId>
+      <version>3.0.0</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-client-api</artifactId>
+      <version>3.3.6</version>
+    </dependency>
+
 
     <!-- Tests -->
     <dependency>

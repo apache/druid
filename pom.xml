@@ -175,7 +175,7 @@
         <module>extensions-core/azure-extensions</module>
         <module>extensions-core/datasketches</module>
         <module>extensions-core/druid-bloom-filter</module>
-        <module>extensions-core/druid-kerberos</module>
+<!--        <module>extensions-core/druid-kerberos</module>--> <!-- Conflicts with hadoop libraries from delta lake libraries-->
         <module>extensions-core/druid-pac4j</module>
         <module>extensions-core/hdfs-storage</module>
         <module>extensions-core/histogram</module>
