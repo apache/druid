@@ -31,6 +31,7 @@ public class CentralizedDatasourceSchemaConfig
   private boolean enabled = false;
 
   // If realtime segment schema should be published in segment announcement flow
+  // This config is temporary and will be removed.
   @JsonProperty
   private boolean announceRealtimeSegmentSchema = false;
 

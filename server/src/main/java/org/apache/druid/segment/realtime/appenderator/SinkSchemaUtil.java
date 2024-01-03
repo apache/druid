@@ -97,64 +97,64 @@ class SinkSchemaUtil
 
     for (Map.Entry<SegmentId, Pair<RowSignature, Integer>> entry : currentSinkSignatureMap.entrySet()) {
       SegmentId segmentId = entry.getKey();
-      RowSignature sinkSignature = entry.getValue().lhs;
+      RowSignature currentSinkSignature = entry.getValue().lhs;
 
       Integer numRows = entry.getValue().rhs;
 
       List<String> newColumns = new ArrayList<>();
       List<String> updatedColumns = new ArrayList<>();
-      Map<String, ColumnType> columnMapping = new HashMap<>();
+      Map<String, ColumnType> currentColumnMapping = new HashMap<>();
 
       // whether there are any changes to be published
-      boolean publish = false;
+      boolean shouldPublish = false;
       // if the resultant schema is delta
-      boolean delta = false;
+      boolean isDelta = false;
 
       if (!previousSinkSignatureMap.containsKey(segmentId)) {
         // new Sink
-        for (String column : sinkSignature.getColumnNames()) {
+        for (String column : currentSinkSignature.getColumnNames()) {
           newColumns.add(column);
-          sinkSignature.getColumnType(column).ifPresent(type -> columnMapping.put(column, type));
+          currentSinkSignature.getColumnType(column).ifPresent(type -> currentColumnMapping.put(column, type));
         }
-        if (newColumns.size() > 0 || numRows > 0) {
-          publish = true;
+        if (newColumns.size() > 0) {
+          shouldPublish = true;
         }
       } else {
         RowSignature previousSinkSignature = previousSinkSignatureMap.get(segmentId).lhs;
         Set<String> previousSinkDimensions = new HashSet<>(previousSinkSignature.getColumnNames());
 
         Integer previousNumRows = previousSinkSignatureMap.get(segmentId).rhs;
-        for (String column : sinkSignature.getColumnNames()) {
+        for (String column : currentSinkSignature.getColumnNames()) {
           boolean added = false;
           if (!previousSinkDimensions.contains(column)) {
             newColumns.add(column);
             added = true;
-          } else if (!Objects.equals(previousSinkSignature.getColumnType(column), sinkSignature.getColumnType(column))) {
+          } else if (!Objects.equals(previousSinkSignature.getColumnType(column), currentSinkSignature.getColumnType(column))) {
             updatedColumns.add(column);
             added = true;
           }
 
           if (added) {
-            sinkSignature.getColumnType(column).ifPresent(type -> columnMapping.put(column, type));
+            currentSinkSignature.getColumnType(column).ifPresent(type -> currentColumnMapping.put(column, type));
           }
         }
 
         if ((!Objects.equals(numRows, previousNumRows)) || (updatedColumns.size() > 0) || (newColumns.size() > 0)) {
-          publish = true;
-          delta = true;
+          shouldPublish = true;
+          isDelta = true;
         }
       }
 
-      if (publish) {
+      if (shouldPublish) {
         SegmentSchema segmentSchema =
             new SegmentSchema(
                 segmentId.getDataSource(),
                 segmentId.toString(),
-                delta,
+                isDelta,
                 numRows,
                 newColumns,
                 updatedColumns,
-                columnMapping
+                currentColumnMapping
             );
         sinkSchemas.add(segmentSchema);
       }

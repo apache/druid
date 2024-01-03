@@ -98,7 +98,6 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
           @Override
           public ServerView.CallbackAction segmentAdded(final DruidServerMetadata server, final DataSegment segment)
           {
-            log.info("Received segment update event %s", segment.getId());
             addSegment(server, segment);
             return ServerView.CallbackAction.CONTINUE;
           }
@@ -123,8 +122,9 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
           @Override
           public ServerView.CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
           {
-            log.debug("SegmentSchemas [%s]", segmentSchemas);
-            updateSchemaForSegments(segmentSchemas);
+            if (!realtimeSegmentSchemaAnnouncement) {
+              updateSchemaForSegments(segmentSchemas);
+            }
             return ServerView.CallbackAction.CONTINUE;
           }
         }
@@ -179,9 +179,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   {
     if (realtimeSegmentSchemaAnnouncement) {
       synchronized (lock) {
-        for (SegmentId segmentId : mutableSegments) {
-          segmentIds.remove(segmentId);
-        }
+        segmentIds.removeAll(mutableSegments);
       }
     }
     return segmentIds;
@@ -198,6 +196,11 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     for (SegmentSchemas.SegmentSchema segmentSchema : segmentSchemaList) {
       String dataSource = segmentSchema.getDataSource();
       SegmentId segmentId = SegmentId.tryParse(dataSource, segmentSchema.getSegmentId());
+
+      if (segmentId == null) {
+        log.error("Could not apply schema update. Failed parsing segmentId [%s]", segmentSchema.getSegmentId());
+        continue;
+      }
 
       log.debug("Applying schema update for segmentId [%s] datasource [%s]", segmentId, dataSource);
 
@@ -273,14 +276,14 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       // delta update
       // merge with the existing signature
       RowSignature.Builder builder = RowSignature.builder();
-      final Map<String, ColumnType> columnTypes = new LinkedHashMap<>();
+      final Map<String, ColumnType> mergedColumnTypes = new LinkedHashMap<>();
 
       for (String column : existingSignature.getColumnNames()) {
         final ColumnType columnType =
             existingSignature.getColumnType(column)
                     .orElseThrow(() -> new ISE("Encountered null type for column [%s]", column));
 
-        columnTypes.compute(column, (c, existingType) -> columnTypeMergePolicy.merge(existingType, columnType));
+        mergedColumnTypes.compute(column, (c, existingType) -> columnTypeMergePolicy.merge(existingType, columnType));
       }
 
       Map<String, ColumnType> columnMapping = segmentSchema.getColumnTypeMap();
@@ -291,20 +294,20 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       boolean existingNewColumns = false;
 
       for (String column : segmentSchema.getUpdatedColumns()) {
-        if (!columnTypes.containsKey(column)) {
+        if (!mergedColumnTypes.containsKey(column)) {
           missingUpdateColumns = true;
-          columnTypes.put(column, columnMapping.get(column));
+          mergedColumnTypes.put(column, columnMapping.get(column));
         } else {
-          columnTypes.compute(column, (c, existingType) -> columnTypeMergePolicy.merge(existingType, columnMapping.get(column)));
+          mergedColumnTypes.compute(column, (c, existingType) -> columnTypeMergePolicy.merge(existingType, columnMapping.get(column)));
         }
       }
 
       for (String column : segmentSchema.getNewColumns()) {
-        if (columnTypes.containsKey(column)) {
+        if (mergedColumnTypes.containsKey(column)) {
           existingNewColumns = true;
-          columnTypes.compute(column, (c, existingType) -> columnTypeMergePolicy.merge(existingType, columnMapping.get(column)));
+          mergedColumnTypes.compute(column, (c, existingType) -> columnTypeMergePolicy.merge(existingType, columnMapping.get(column)));
         } else {
-          columnTypes.put(column, columnMapping.get(column));
+          mergedColumnTypes.put(column, columnMapping.get(column));
         }
       }
 
@@ -320,7 +323,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
         ).emit();
       }
 
-      columnTypes.forEach(builder::add);
+      mergedColumnTypes.forEach(builder::add);
       return Optional.of(ROW_SIGNATURE_INTERNER.intern(builder.build()));
     } else {
       // delta update

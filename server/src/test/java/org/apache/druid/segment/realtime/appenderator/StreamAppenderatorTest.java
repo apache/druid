@@ -1626,7 +1626,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
     }
 
     @Override
-    public void announceSinkSchemaForTask(
+    public void announceSegmentSchema(
         String taskId,
         SegmentSchemas segmentSchemas,
         @Nullable SegmentSchemas segmentSchemasChange

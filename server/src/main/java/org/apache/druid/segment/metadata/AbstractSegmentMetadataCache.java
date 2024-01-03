@@ -253,7 +253,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
 
           try {
             while (!Thread.currentThread().isInterrupted()) {
-              final Set<SegmentId> segmentsToRefresh = new TreeSet<>(SEGMENT_ORDER);
+              final Set<SegmentId> segmentsToRefresh = new TreeSet<>();
               final Set<String> dataSourcesToRebuild = new TreeSet<>();
 
               try {

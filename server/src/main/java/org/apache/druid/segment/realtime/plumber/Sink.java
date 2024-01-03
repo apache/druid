@@ -90,10 +90,13 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   private final CopyOnWriteArrayList<FireHydrant> hydrants = new CopyOnWriteArrayList<>();
 
   private final LinkedHashSet<String> dimOrder = new LinkedHashSet<>();
-  // columns excluding current index, includes __time column
+
+  // columns excluding current index (the in-memory fire hydrant), includes __time column
   private final LinkedHashSet<String> columnsExcludingCurrIndex = new LinkedHashSet<>();
+
   // column types for columns in {@code columnsExcludingCurrIndex}
   private final Map<String, ColumnType> columnTypeExcludingCurrIndex = new HashMap<>();
+
   private final AtomicInteger numRowsExcludingCurrIndex = new AtomicInteger();
   private final String dedupColumn;
   private final Set<Long> dedupSet = new HashSet<>();
@@ -160,7 +163,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
       ReferenceCountingSegment segment = hydrant.getIncrementedSegment();
       try {
         QueryableIndex index = segment.asQueryableIndex();
-        mergeIndexDimensions(new QueryableIndexStorageAdapter(index));
+        overwriteIndexDimensions(new QueryableIndexStorageAdapter(index));
         numRowsExcludingCurrIndex.addAndGet(index.getNumRows());
       }
       finally {
@@ -404,7 +407,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
             ReferenceCountingSegment segment = lastHydrant.getIncrementedSegment();
             try {
               QueryableIndex oldIndex = segment.asQueryableIndex();
-              mergeIndexDimensions(new QueryableIndexStorageAdapter(oldIndex));
+              overwriteIndexDimensions(new QueryableIndexStorageAdapter(oldIndex));
               if (customDimensions) {
                 for (String dim : oldIndex.getAvailableDimensions()) {
                   dimOrder.add(dim);
@@ -417,7 +420,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
             }
           } else {
             IncrementalIndex oldIndex = lastHydrant.getIndex();
-            mergeIndexDimensions(new IncrementalIndexStorageAdapter(oldIndex));
+            overwriteIndexDimensions(new IncrementalIndexStorageAdapter(oldIndex));
             if (customDimensions) {
               dimOrder.addAll(oldIndex.getDimensionOrder());
               oldFormat = oldIndex.getColumnFormats();
@@ -445,7 +448,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   /**
    * Merge the column from the index with the existing columns.
    */
-  private void mergeIndexDimensions(StorageAdapter storageAdapter)
+  private void overwriteIndexDimensions(StorageAdapter storageAdapter)
   {
     RowSignature rowSignature = storageAdapter.getRowSignature();
     for (String dim : rowSignature.getColumnNames()) {

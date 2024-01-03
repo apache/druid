@@ -315,7 +315,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
   }
 
   @Override
-  public void announceSinkSchemaForTask(
+  public void announceSegmentSchema(
       String taskId,
       SegmentSchemas segmentSchemas,
       SegmentSchemas segmentSchemasChange

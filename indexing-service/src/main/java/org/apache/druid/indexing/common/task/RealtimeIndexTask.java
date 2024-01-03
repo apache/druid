@@ -313,7 +313,7 @@ public class RealtimeIndexTask extends AbstractTask
       }
 
       @Override
-      public void announceSinkSchemaForTask(String taskId, SegmentSchemas sinksSchema, SegmentSchemas sinksSchemaChange)
+      public void announceSegmentSchema(String taskId, SegmentSchemas sinksSchema, SegmentSchemas sinksSchemaChange)
       {
       }
 

@@ -1666,6 +1666,7 @@ public class StreamAppenderator implements Appenderator
     private final DataSegmentAnnouncer announcer;
     private final ScheduledExecutorService scheduledExecutorService;
     private final String taskId;
+    // This structure is accessed only by a single thread (Sink-Schema-Announcer-0), hence it is not thread safe.
     private Map<SegmentId, Pair<RowSignature, Integer>> previousSinkSignatureMap = new HashMap<>();
 
     SinkSchemaAnnouncer()
@@ -1715,7 +1716,7 @@ public class StreamAppenderator implements Appenderator
 
       // announce schema
       sinksSchema.ifPresent(
-          segmentsSchema -> announcer.announceSinkSchemaForTask(
+          segmentsSchema -> announcer.announceSegmentSchema(
               taskId,
               segmentsSchema,
               sinksSchemaChange.orElse(null)

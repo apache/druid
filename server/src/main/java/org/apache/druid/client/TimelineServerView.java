@@ -105,6 +105,9 @@ public interface TimelineServerView extends ServerView
 
     /**
      * Called when segment schema is announced.
+     * Schema flow HttpServerInventoryView -> CoordinatorServerView -> CoordinatorSegmentMetadataCache
+     * CoordinatorServerView simply delegates the schema information by invoking Timeline callback to metadata cache.
+     *
      * @param segmentSchemas segment schema
      * @return continue or unregister
      */

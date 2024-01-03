@@ -48,7 +48,7 @@ public class NoopDataSegmentAnnouncer implements DataSegmentAnnouncer
   }
 
   @Override
-  public void announceSinkSchemaForTask(String taskId, SegmentSchemas segmentSchemas, SegmentSchemas segmentSchemasChange)
+  public void announceSegmentSchema(String taskId, SegmentSchemas segmentSchemas, SegmentSchemas segmentSchemasChange)
   {
   }
 
