@@ -244,7 +244,7 @@ public class StreamAppenderatorTester implements AutoCloseable
                   )
               )
           ),
-          new NoopDataSegmentAnnouncer(),
+          announcer,
           emitter,
           new ForwardingQueryProcessingPool(queryExecutor),
           NoopJoinableFactory.INSTANCE,
