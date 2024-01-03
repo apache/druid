@@ -196,7 +196,7 @@ public class CliCoordinator extends ServerRunnable
     if (isSegmentMetadataCacheEnabled) {
       if (!properties.getOrDefault(SERVERVIEW_TYPE_PROPERTY, "http").equals("http")) {
         throw new RuntimeException(
-            "CentralizedDatasourceSchema feature is incompatible Zookeeper based segment discovery. "
+            "CentralizedDatasourceSchema feature is incompatible with Zookeeper based segment discovery. "
             + "Please consider switching to http based segment discovery (druid.serverview.type=http) "
             + "or disable the feature.");
       }

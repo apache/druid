@@ -220,6 +220,14 @@ public class CliPeon extends GuiceRunnable
             taskDirPath = taskAndStatusFile.get(0);
             attemptId = taskAndStatusFile.get(1);
 
+            if (Boolean.parseBoolean(properties.getProperty("druid.centralizedDatasourceSchema.enabled"))
+                && !properties.getOrDefault("druid.serverview.type", "http").equals("http")) {
+              throw new RuntimeException(
+                  "CentralizedDatasourceSchema feature is incompatible with Zookeeper based segment discovery. "
+                  + "Please consider switching to http based segment discovery (druid.serverview.type=http) "
+                  + "or disable the feature.");
+            }
+
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/peon");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
