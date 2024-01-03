@@ -38,7 +38,7 @@ If `druid.metadata.storage.connector.createTables` is set to `true` and the meta
 
 If either of those requirements are not met, pre-upgrade steps are required. You must make these updates before you upgrade to Druid 28.0.0, or the Coordinator and Overlord processes fail.
 
-Although you can manually alter your table to add the new `used_status_last_updated` column, Druid also provides a CLI tool to do it.
+Although you can manually alter your table to add the new `used_status_last_updated` column, Druid also provides a [CLI tool](https://druid.apache.org/docs/latest/operations/metadata-migration/#create-druid-tables) to do it.
 
 [#12599](https://github.com/apache/druid/pull/12599) [#14868](https://github.com/apache/druid/pull/14868)
 
