@@ -26,8 +26,9 @@ import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.common.StorageSharedKeyCredential;
 
-import javax.annotation.Nonnull;
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Factory class for generating BlobServiceClient objects.
@@ -36,32 +37,31 @@ public class AzureClientFactory
 {
 
   private final AzureAccountConfig config;
+  private final Map<Integer, BlobServiceClient> cachedBlobServiceClients;
 
   public AzureClientFactory(AzureAccountConfig config)
   {
     this.config = config;
+    this.cachedBlobServiceClients = new HashMap<>();
   }
 
-  public BlobServiceClient getBlobServiceClient()
+  // It's okay to store clients in a map here because all the configs for specifying azure retries are static, and there are only 2 of them.
+  // The 2 configs are AzureAccountConfig.maxTries and AzureOutputConfig.maxRetrr.
+  // We will only ever have at most 2 clients in cachedBlobServiceClients.
+  public BlobServiceClient getBlobServiceClient(Integer retryCount)
   {
-    return getAuthenticatedBlobServiceClientBuilder().buildClient();
-  }
+    if (!cachedBlobServiceClients.containsKey(retryCount)) {
+      BlobServiceClientBuilder clientBuilder = getAuthenticatedBlobServiceClientBuilder()
+          .retryOptions(new RetryOptions(
+              new ExponentialBackoffOptions()
+                  .setMaxRetries(retryCount != null ? retryCount : config.getMaxTries())
+                  .setBaseDelay(Duration.ofMillis(1000))
+                  .setMaxDelay(Duration.ofMillis(60000))
+          ));
+      cachedBlobServiceClients.put(retryCount, clientBuilder.buildClient());
+    }
 
-  /**
-   * Azure doesn't let us override retryConfigs on BlobServiceClient so we need a second instance.
-   * @param retryCount number of retries
-   * @return BlobServiceClient with a custom retryCount
-   */
-  public BlobServiceClient getRetriableBlobServiceClient(@Nonnull Integer retryCount)
-  {
-    BlobServiceClientBuilder clientBuilder = getAuthenticatedBlobServiceClientBuilder()
-        .retryOptions(new RetryOptions(
-          new ExponentialBackoffOptions()
-              .setMaxRetries(retryCount)
-              .setBaseDelay(Duration.ofMillis(1000))
-              .setMaxDelay(Duration.ofMillis(60000))
-      ));
-    return clientBuilder.buildClient();
+    return cachedBlobServiceClients.get(retryCount);
   }
 
   private BlobServiceClientBuilder getAuthenticatedBlobServiceClientBuilder()

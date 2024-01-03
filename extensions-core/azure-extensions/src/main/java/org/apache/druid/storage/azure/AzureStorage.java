@@ -40,7 +40,6 @@ import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileInputStream;
@@ -62,18 +61,6 @@ public class AzureStorage
 
   private static final Logger log = new Logger(AzureStorage.class);
 
-  /**
-   * Some segment processing tools such as DataSegmentKiller are initialized when an ingestion job starts
-   * if the extension is loaded, even when the implementation of DataSegmentKiller is not used. As a result,
-   * if we have a CloudBlobClient instead of a supplier of it, it can cause unnecessary config validation
-   * against Azure storage even when it's not used at all. To perform the config validation
-   * only when it is actually used, we use a supplier.
-   *
-   * See OmniDataSegmentKiller for how DataSegmentKillers are initialized.
-   */
-  private BlobServiceClient retriableBlobServiceClient;
-  private BlobServiceClient blobServiceClient;
-  private Integer maxAttempts = 0;
   private final AzureClientFactory azureClientFactory;
 
   public AzureStorage(
@@ -220,23 +207,9 @@ public class AzureStorage
   }
 
   @VisibleForTesting
-  BlobServiceClient getRetriableBlobServiceClient(@Nonnull Integer maxAttempts)
+  BlobServiceClient getBlobServiceClient(Integer maxAttempts)
   {
-    // To avoid keeping a ton of clients in memory, if maxAttempts is specified use a client with at least that many retries configured.
-    if (this.retriableBlobServiceClient == null || maxAttempts > this.maxAttempts) {
-      this.retriableBlobServiceClient = this.azureClientFactory.getRetriableBlobServiceClient(maxAttempts);
-      this.maxAttempts = maxAttempts;
-    }
-    return this.retriableBlobServiceClient;
-  }
-
-  @VisibleForTesting
-  BlobServiceClient getBlobServiceClient()
-  {
-    if (this.blobServiceClient == null) {
-      this.blobServiceClient = this.azureClientFactory.getBlobServiceClient();
-    }
-    return this.blobServiceClient;
+    return azureClientFactory.getBlobServiceClient(maxAttempts);
   }
 
   @VisibleForTesting
@@ -256,11 +229,11 @@ public class AzureStorage
 
   private BlobContainerClient getOrCreateBlobContainerClient(final String containerName)
   {
-    return getBlobServiceClient().createBlobContainerIfNotExists(containerName);
+    return getBlobServiceClient(null).createBlobContainerIfNotExists(containerName);
   }
 
   private BlobContainerClient getOrCreateBlobContainerClient(final String containerName, final Integer maxRetries)
   {
-    return getRetriableBlobServiceClient(maxRetries != null ? maxRetries : 0).createBlobContainerIfNotExists(containerName);
+    return getBlobServiceClient(maxRetries).createBlobContainerIfNotExists(containerName);
   }
 }
