@@ -340,7 +340,7 @@ The following Coordinator dynamic configs have been removed:
 * `emitBalancingStats`: Stats for errors encountered while balancing will always be emitted. Other debugging stats will not be emitted but can be logged by setting the appropriate `debugDimensions`.
 * `useBatchedSegmentSampler` and `percentOfSegmentsToConsiderPerMove`: Batched segment sampling is now the standard and will always be on.
 
-Use the new [smart segment loading](#smart-segment-loading) mode instead.
+Use the new [smart segment loading](https://druid.apache.org/docs/latest/configuration/#smart-segment-loading) mode instead.
 
 [#14524](https://github.com/apache/druid/pull/14524)
 
