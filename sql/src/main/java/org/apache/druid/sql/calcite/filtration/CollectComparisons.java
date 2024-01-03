@@ -37,20 +37,20 @@ import java.util.Set;
  * comparisons with the same {@link CollectionKey} can potentially become a single {@link CollectedType}.
  * For example: x = 'a', x = 'b' can become x IN ('a', 'b').
  */
-public abstract class CollectComparisons<ExprType, ComparisonType extends ExprType, CollectedType extends ExprType, CollectionKey>
+public abstract class CollectComparisons<BaseType, ComparisonType extends BaseType, CollectedType extends BaseType, CollectionKey>
 {
   /**
-   * List of {@link ExprType} that were ORed together.
+   * List of {@link BaseType} that were ORed together.
    */
-  private final List<ExprType> orExprs;
+  private final List<BaseType> orExprs;
 
   /**
    * Copy of {@link #orExprs} with point comparisons collected, or a reference to the same {@link #orExprs} if there
    * was nothing to collect.
    */
-  private List<ExprType> retVal;
+  private List<BaseType> retVal;
 
-  protected CollectComparisons(final List<ExprType> orExprs)
+  protected CollectComparisons(final List<BaseType> orExprs)
   {
     this.orExprs = orExprs;
   }
@@ -58,7 +58,7 @@ public abstract class CollectComparisons<ExprType, ComparisonType extends ExprTy
   /**
    * Perform collection logic on the exprs provided to the constructor.
    */
-  public List<ExprType> collect()
+  public List<BaseType> collect()
   {
     if (retVal != null) {
       return retVal;
@@ -69,12 +69,12 @@ public abstract class CollectComparisons<ExprType, ComparisonType extends ExprTy
     // Group comparisons together when they have the same collection key.
     // Map key: pair of collection key (from getCollectionKey), and any other expressions that may be ANDed in.
     // Map value: list of collectible comparisons paired with their original positions in "orExprs".
-    final Map<Pair<CollectionKey, List<ExprType>>, List<ObjectIntPair<ComparisonType>>> collectMap = new LinkedHashMap<>();
+    final Map<Pair<CollectionKey, List<BaseType>>, List<ObjectIntPair<ComparisonType>>> collectMap = new LinkedHashMap<>();
 
     // Group all comparisons from the "orExprs" list into the "selectors" map.
     for (int orExprIndex = 0; orExprIndex < orExprs.size(); orExprIndex++) {
-      final ExprType orExpr = orExprs.get(orExprIndex);
-      final Pair<ComparisonType, List<ExprType>> selectorFound = getCollectibleComparison(orExpr);
+      final BaseType orExpr = orExprs.get(orExprIndex);
+      final Pair<ComparisonType, List<BaseType>> selectorFound = getCollectibleComparison(orExpr);
 
       if (selectorFound != null) {
         final ComparisonType selector = selectorFound.lhs;
@@ -92,7 +92,7 @@ public abstract class CollectComparisons<ExprType, ComparisonType extends ExprTy
     }
 
     // Emit a collected comparison (e.g. IN filters) for each collection.
-    for (Map.Entry<Pair<CollectionKey, List<ExprType>>, List<ObjectIntPair<ComparisonType>>> entry : collectMap.entrySet()) {
+    for (Map.Entry<Pair<CollectionKey, List<BaseType>>, List<ObjectIntPair<ComparisonType>>> entry : collectMap.entrySet()) {
       final List<ObjectIntPair<ComparisonType>> comparisonList = entry.getValue();
       final InDimFilter.ValuesSet values = new InDimFilter.ValuesSet();
 
@@ -119,12 +119,12 @@ public abstract class CollectComparisons<ExprType, ComparisonType extends ExprTy
         }
 
         // Other expressions that were ANDed with this collection.
-        final List<ExprType> andExprs = entry.getKey().rhs;
+        final List<BaseType> andExprs = entry.getKey().rhs;
 
         if (andExprs.isEmpty()) {
           retVal.add(collected);
         } else {
-          final List<ExprType> allComparisons = new ArrayList<>(andExprs.size() + 1);
+          final List<BaseType> allComparisons = new ArrayList<>(andExprs.size() + 1);
           allComparisons.addAll(andExprs);
           allComparisons.add(collected);
           retVal.add(makeAnd(allComparisons));
@@ -151,7 +151,7 @@ public abstract class CollectComparisons<ExprType, ComparisonType extends ExprTy
    * comparison and those other expressions).
    */
   @Nullable
-  protected abstract Pair<ComparisonType, List<ExprType>> getCollectibleComparison(ExprType expr);
+  protected abstract Pair<ComparisonType, List<BaseType>> getCollectibleComparison(BaseType expr);
 
   /**
    * Given a comparison, returns its collection key, which will be used to group it together with like comparisons.
@@ -177,5 +177,5 @@ public abstract class CollectComparisons<ExprType, ComparisonType extends ExprTy
    * Given a list of expressions, returns an AND expression with those exprs as children. Only called if
    * {@link #getCollectibleComparison(Object)} returns nonempty right-hand-sides.
    */
-  protected abstract ExprType makeAnd(List<ExprType> exprs);
+  protected abstract BaseType makeAnd(List<BaseType> exprs);
 }
