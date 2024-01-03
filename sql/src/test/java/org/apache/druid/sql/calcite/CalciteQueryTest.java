@@ -86,6 +86,7 @@ import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
+import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.query.filter.RegexDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -3842,7 +3843,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         )
                         .setDimFilter(or(
                             in("dim2", ImmutableSet.of("a", "abc"), null),
-                            and(isNull("dim2"), in("dim1", ImmutableList.of("a", "abc"), null))
+                            and(new NullFilter("dim2", null), in("dim1", ImmutableList.of("a", "abc"), null))
                         ))
                         .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)))
                         .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
