@@ -55,6 +55,6 @@ public class CaseInsensitiveContainsExprMacro implements ExprMacroTable.ExprMacr
 
     final Expr arg = args.get(0);
     final Expr searchStr = args.get(1);
-    return new ContainsExpr(FN_NAME, arg, searchStr, false, shuttle -> apply(shuttle.visitAll(args)));
+    return new ContainsExpr(this, arg, searchStr, false);
   }
 }

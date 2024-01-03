@@ -20,8 +20,6 @@
 package org.apache.druid.query.expression;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableSet;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -30,10 +28,7 @@ import org.apache.druid.math.expr.InputBindings;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
-import java.util.function.Function;
 
 public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
 {
@@ -91,50 +86,44 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
   {
     validationHelperCheckAnyOfArgumentCount(args, 1, 2);
 
-    final Function<Expr.Shuttle, Expr> visitFn = shuttle -> shuttle.visit(apply(shuttle.visitAll(args)));
-
     if (args.size() == 1) {
-      return new TrimStaticCharsExpr(mode, args.get(0), DEFAULT_CHARS, null, visitFn);
+      return new TrimStaticCharsExpr(this, args, DEFAULT_CHARS);
     } else {
       final Expr charsArg = args.get(1);
       if (charsArg.isLiteral()) {
         final String charsString = charsArg.eval(InputBindings.nilBindings()).asString();
         final char[] chars = charsString == null ? EMPTY_CHARS : charsString.toCharArray();
-        return new TrimStaticCharsExpr(mode, args.get(0), chars, charsArg, visitFn);
+        return new TrimStaticCharsExpr(this, args, chars);
       } else {
-        return new TrimDynamicCharsExpr(mode, args.get(0), args.get(1), visitFn);
+        return new TrimDynamicCharsExpr(this, args);
       }
     }
   }
 
   @VisibleForTesting
-  static class TrimStaticCharsExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
+  static class TrimStaticCharsExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
   {
     private final TrimMode mode;
     private final char[] chars;
-    private final Expr charsExpr;
-    private final Function<Shuttle, Expr> visitFn;
+    private final Expr stringExpr;
 
     public TrimStaticCharsExpr(
-        final TrimMode mode,
-        final Expr stringExpr,
-        final char[] chars,
-        final Expr charsExpr,
-        final Function<Shuttle, Expr> visitFn
+        final TrimExprMacro macro,
+        final List<Expr> args,
+        final char[] chars
     )
     {
-      super(mode.getFnName(), stringExpr);
-      this.mode = mode;
+      super(macro, args);
+      this.mode = macro.mode;
+      this.stringExpr = args.get(0);
       this.chars = chars;
-      this.charsExpr = charsExpr;
-      this.visitFn = visitFn;
     }
 
     @Nonnull
     @Override
     public ExprEval eval(final ObjectBinding bindings)
     {
-      final ExprEval stringEval = arg.eval(bindings);
+      final ExprEval stringEval = stringExpr.eval(bindings);
 
       if (chars.length == 0 || stringEval.value() == null) {
         return stringEval;
@@ -172,76 +161,30 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
       }
     }
 
-    @Override
-    public Expr visit(Shuttle shuttle)
-    {
-      return visitFn.apply(shuttle);
-    }
-
     @Nullable
     @Override
     public ExpressionType getOutputType(InputBindingInspector inspector)
     {
       return ExpressionType.STRING;
     }
-
-    @Override
-    public String stringify()
-    {
-      if (charsExpr != null) {
-        return StringUtils.format("%s(%s, %s)", mode.getFnName(), arg.stringify(), charsExpr.stringify());
-      }
-      return super.stringify();
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      if (!super.equals(o)) {
-        return false;
-      }
-      TrimStaticCharsExpr that = (TrimStaticCharsExpr) o;
-
-      // Doesn't use "visitFn", but that's OK, because visitFn is determined entirely by "mode".
-      return mode == that.mode &&
-             Arrays.equals(chars, that.chars) &&
-             Objects.equals(charsExpr, that.charsExpr);
-    }
-
-    @Override
-    public int hashCode()
-    {
-      int result = Objects.hash(super.hashCode(), mode, charsExpr);
-      result = 31 * result + Arrays.hashCode(chars);
-      return result;
-    }
   }
 
   @VisibleForTesting
-  static class TrimDynamicCharsExpr implements Expr
+  static class TrimDynamicCharsExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
   {
     private final TrimMode mode;
     private final Expr stringExpr;
     private final Expr charsExpr;
-    private final Function<Shuttle, Expr> visitFn;
 
     public TrimDynamicCharsExpr(
-        final TrimMode mode,
-        final Expr stringExpr,
-        final Expr charsExpr,
-        final Function<Shuttle, Expr> visitFn
+        final TrimExprMacro macro,
+        final List<Expr> args
     )
     {
-      this.mode = mode;
-      this.stringExpr = stringExpr;
-      this.charsExpr = charsExpr;
-      this.visitFn = visitFn;
+      super(macro, args);
+      this.mode = macro.mode;
+      this.stringExpr = args.get(0);
+      this.charsExpr = args.get(1);
     }
 
     @Nonnull
@@ -293,54 +236,11 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
       }
     }
 
-    @Override
-    public String stringify()
-    {
-      return StringUtils.format("%s(%s, %s)", mode.getFnName(), stringExpr.stringify(), charsExpr.stringify());
-    }
-
-    @Override
-    public Expr visit(Shuttle shuttle)
-    {
-      return visitFn.apply(shuttle);
-    }
-
-    @Override
-    public BindingAnalysis analyzeInputs()
-    {
-      return stringExpr.analyzeInputs()
-                       .with(charsExpr)
-                       .withScalarArguments(ImmutableSet.of(stringExpr, charsExpr));
-    }
-
     @Nullable
     @Override
     public ExpressionType getOutputType(InputBindingInspector inspector)
     {
       return ExpressionType.STRING;
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      TrimDynamicCharsExpr that = (TrimDynamicCharsExpr) o;
-
-      // Doesn't use "visitFn", but that's OK, because visitFn is determined entirely by "mode".
-      return mode == that.mode &&
-             Objects.equals(stringExpr, that.stringExpr) &&
-             Objects.equals(charsExpr, that.charsExpr);
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return Objects.hash(mode, stringExpr, charsExpr);
     }
   }
 
