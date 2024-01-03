@@ -179,7 +179,7 @@ See the developer [style guide](https://github.com/apache/druid/blob/master/dev/
 
 **Correct**
 
-```
+```markdown
 | Column 1 | Column 2 | Column 3 |
 | --- | --- | --- |
 | value 1 | val 2 | a-very-long-value 3 |
