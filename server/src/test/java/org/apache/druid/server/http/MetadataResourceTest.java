@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.error.DruidExceptionMatcher;
@@ -170,7 +169,7 @@ public class MetadataResourceTest
         AvailableSegmentMetadata.builder(
             segments[0],
             0L,
-            Sets.newHashSet(),
+            Collections.emptySet(),
             null,
             20L
         ).build()
@@ -180,7 +179,7 @@ public class MetadataResourceTest
         AvailableSegmentMetadata.builder(
             segments[1],
             0L,
-            Sets.newHashSet(),
+            Collections.emptySet(),
             null,
             30L
         ).build()
@@ -190,7 +189,7 @@ public class MetadataResourceTest
         AvailableSegmentMetadata.builder(
             segments[1],
             0L,
-            Sets.newHashSet(),
+            Collections.emptySet(),
             null,
             30L
         ).build()
@@ -200,7 +199,7 @@ public class MetadataResourceTest
         AvailableSegmentMetadata.builder(
             realTimeSegments[0],
             1L,
-            Sets.newHashSet(),
+            Collections.emptySet(),
             null,
             10L
         ).build()
@@ -210,7 +209,7 @@ public class MetadataResourceTest
         AvailableSegmentMetadata.builder(
             realTimeSegments[1],
             1L,
-            Sets.newHashSet(),
+            Collections.emptySet(),
             null,
             40L
         ).build()
