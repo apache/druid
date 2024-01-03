@@ -405,7 +405,13 @@ public class InFilterTest extends BaseFilterTest
     assertFilterMatches(toInFilterWithFn("dim1", lookupFn, "HELLO"), ImmutableList.of("b", "e"));
     assertFilterMatches(toInFilterWithFn("dim1", lookupFn, "N/A"), ImmutableList.of());
 
-    assertFilterMatchesSkipArrays(toInFilterWithFn("dim2", lookupFn, "a"), ImmutableList.of());
+    if (optimize) {
+      // Arrays don't cause errors when the extractionFn is optimized, because the "IN" filter vanishes completely.
+      assertFilterMatches(toInFilterWithFn("dim2", lookupFn, "a"), ImmutableList.of());
+    } else {
+      assertFilterMatchesSkipArrays(toInFilterWithFn("dim2", lookupFn, "a"), ImmutableList.of());
+    }
+
     assertFilterMatchesSkipArrays(toInFilterWithFn("dim2", lookupFn, "HELLO"), ImmutableList.of("a", "d"));
     assertFilterMatchesSkipArrays(
         toInFilterWithFn("dim2", lookupFn, "HELLO", "BYE", "UNKNOWN"),

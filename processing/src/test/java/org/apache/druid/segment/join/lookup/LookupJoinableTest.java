@@ -22,6 +22,7 @@ package org.apache.druid.segment.join.lookup;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
+import com.google.common.collect.Sets;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.lookup.LookupExtractor;
@@ -38,7 +39,6 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -315,7 +315,7 @@ public class LookupJoinableTest extends InitializedNullHandlingTest
     );
 
     Assert.assertEquals(
-        InDimFilter.ValuesSet.copyOf(Arrays.asList("foo", "bar", "", null)),
+        Sets.newHashSet("foo", "bar", "", null),
         values.getColumnValues()
     );
   }
