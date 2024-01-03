@@ -130,7 +130,7 @@ public final class Rows
           v = Longs.tryParse(metricValueString);
         }
 
-        if (outputType != ValueType.LONG) {
+        if (v == null && outputType != ValueType.LONG) {
           v = Double.valueOf(metricValueString);
         }
 
