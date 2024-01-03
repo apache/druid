@@ -135,18 +135,95 @@ public class MSQFaultsTest extends MSQTestBase
                      .verifyResults();
   }
 
-
   @Test
-  public void testInsertCannotBeEmptyFault()
+  public void testInsertCannotBeEmptyFaultWithInsertQuery()
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
                                             .add("dim1", ColumnType.STRING)
                                             .add("cnt", ColumnType.LONG).build();
 
-    //Insert with a condition which results in 0 rows being inserted
+    // Insert with a condition which results in 0 rows being inserted
     testIngestQuery().setSql(
-                         "insert into foo1 select  __time, dim1 , count(*) as cnt from foo where dim1 is not null and __time < TIMESTAMP '1971-01-01 00:00:00' group by 1, 2 PARTITIONED by day clustered by dim1")
+                         "INSERT INTO foo1 "
+                         + " SELECT  __time, dim1 , count(*) AS cnt"
+                         + " FROM foo WHERE dim1 IS NOT NULL AND __time < TIMESTAMP '1971-01-01 00:00:00'"
+                         + " GROUP BY 1, 2"
+                         + " PARTITIONED BY ALL"
+                         + " CLUSTERED BY dim1")
+                     .setQueryContext(FAIL_EMPTY_INSERT_ENABLED_MSQ_CONTEXT)
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedMSQFault(new InsertCannotBeEmptyFault("foo1"))
+                     .verifyResults();
+  }
+
+  @Test
+  public void testInsertCannotBeEmptyFaultWithReplaceQuery()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("cnt", ColumnType.LONG).build();
+
+    // Insert with a condition which results in 0 rows being inserted
+    testIngestQuery().setSql(
+                         "REPLACE INTO foo1"
+                         + " OVERWRITE ALL"
+                         + " SELECT  __time, dim1 , count(*) AS cnt"
+                         + " FROM foo"
+                         + " WHERE dim1 IS NOT NULL AND __time < TIMESTAMP '1971-01-01 00:00:00'"
+                         + " GROUP BY 1, 2"
+                         + " PARTITIONED BY day"
+                         + " CLUSTERED BY dim1")
+                     .setQueryContext(FAIL_EMPTY_INSERT_ENABLED_MSQ_CONTEXT)
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedMSQFault(new InsertCannotBeEmptyFault("foo1"))
+                     .verifyResults();
+  }
+
+  @Test
+  public void testInsertCannotBeEmptyFaultWithInsertLimitQuery()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("cnt", ColumnType.LONG).build();
+
+    // Insert with a condition which results in 0 rows being inserted -- do nothing!
+    testIngestQuery().setSql(
+                         "INSERT INTO foo1 "
+                         + " SELECT  __time, dim1"
+                         + " FROM foo WHERE dim1 IS NOT NULL AND __time < TIMESTAMP '1971-01-01 00:00:00'"
+                         + " LIMIT 100"
+                         + " PARTITIONED BY ALL"
+                         + " CLUSTERED BY dim1")
+                     .setQueryContext(FAIL_EMPTY_INSERT_ENABLED_MSQ_CONTEXT)
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedMSQFault(new InsertCannotBeEmptyFault("foo1"))
+                     .verifyResults();
+  }
+
+  @Test
+  public void testInsertCannotBeEmptyFaultWithReplaceLimitQuery()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("cnt", ColumnType.LONG).build();
+
+    // Insert with a condition which results in 0 rows being inserted -- do nothing!
+    testIngestQuery().setSql(
+                         "REPLACE INTO foo1 "
+                         + " OVERWRITE ALL"
+                         + " SELECT  __time, dim1"
+                         + " FROM foo WHERE dim1 IS NOT NULL AND __time < TIMESTAMP '1971-01-01 00:00:00'"
+                         + " LIMIT 100"
+                         + " PARTITIONED BY ALL"
+                         + " CLUSTERED BY dim1")
+                     .setQueryContext(FAIL_EMPTY_INSERT_ENABLED_MSQ_CONTEXT)
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedMSQFault(new InsertCannotBeEmptyFault("foo1"))

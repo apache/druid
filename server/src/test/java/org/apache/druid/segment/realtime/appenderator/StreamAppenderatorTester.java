@@ -63,6 +63,7 @@ import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -95,6 +96,7 @@ public class StreamAppenderatorTester implements AutoCloseable
   private final List<DataSegment> pushedSegments = new CopyOnWriteArrayList<>();
 
   public StreamAppenderatorTester(
+      final int delayInMilli,
       final int maxRowsInMemory,
       final long maxSizeInBytes,
       final File basePersistDirectory,
@@ -213,44 +215,96 @@ public class StreamAppenderatorTester implements AutoCloseable
         throw new UnsupportedOperationException();
       }
     };
-    appenderator = Appenderators.createRealtime(
-        schema.getDataSource(),
-        schema,
-        tuningConfig,
-        metrics,
-        dataSegmentPusher,
-        objectMapper,
-        indexIO,
-        indexMerger,
-        new DefaultQueryRunnerFactoryConglomerate(
-            ImmutableMap.of(
-                TimeseriesQuery.class, new TimeseriesQueryRunnerFactory(
-                    new TimeseriesQueryQueryToolChest(),
-                    new TimeseriesQueryEngine(),
-                    QueryRunnerTestHelper.NOOP_QUERYWATCHER
-                ),
-                ScanQuery.class, new ScanQueryRunnerFactory(
-                    new ScanQueryQueryToolChest(
-                        new ScanQueryConfig(),
-                        new DefaultGenericQueryMetricsFactory()
-                    ),
-                    new ScanQueryEngine(),
-                    new ScanQueryConfig()
-                )
-            )
-        ),
-        announcer,
-        emitter,
-        new ForwardingQueryProcessingPool(queryExecutor),
-        NoopJoinableFactory.INSTANCE,
-        MapCache.create(2048),
-        new CacheConfig(),
-        new CachePopulatorStats(),
-        rowIngestionMeters,
-        new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-        true,
-        centralizedDatasourceSchemaConfig
-    );
+
+    if (delayInMilli <= 0) {
+      appenderator = Appenderators.createRealtime(
+          null,
+          schema.getDataSource(),
+          schema,
+          tuningConfig,
+          metrics,
+          dataSegmentPusher,
+          objectMapper,
+          indexIO,
+          indexMerger,
+          new DefaultQueryRunnerFactoryConglomerate(
+              ImmutableMap.of(
+                  TimeseriesQuery.class, new TimeseriesQueryRunnerFactory(
+                      new TimeseriesQueryQueryToolChest(),
+                      new TimeseriesQueryEngine(),
+                      QueryRunnerTestHelper.NOOP_QUERYWATCHER
+                  ),
+                  ScanQuery.class, new ScanQueryRunnerFactory(
+                      new ScanQueryQueryToolChest(
+                          new ScanQueryConfig(),
+                          new DefaultGenericQueryMetricsFactory()
+                      ),
+                      new ScanQueryEngine(),
+                      new ScanQueryConfig()
+                  )
+              )
+          ),
+          new NoopDataSegmentAnnouncer(),
+          emitter,
+          new ForwardingQueryProcessingPool(queryExecutor),
+          NoopJoinableFactory.INSTANCE,
+          MapCache.create(2048),
+          new CacheConfig(),
+          new CachePopulatorStats(),
+          rowIngestionMeters,
+          new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
+          true,
+          centralizedDatasourceSchemaConfig
+      );
+    } else {
+      SegmentLoaderConfig segmentLoaderConfig = new SegmentLoaderConfig()
+      {
+        @Override
+        public int getDropSegmentDelayMillis()
+        {
+          return delayInMilli;
+        }
+      };
+      appenderator = Appenderators.createRealtime(
+          segmentLoaderConfig,
+          schema.getDataSource(),
+          schema,
+          tuningConfig,
+          metrics,
+          dataSegmentPusher,
+          objectMapper,
+          indexIO,
+          indexMerger,
+          new DefaultQueryRunnerFactoryConglomerate(
+              ImmutableMap.of(
+                  TimeseriesQuery.class, new TimeseriesQueryRunnerFactory(
+                      new TimeseriesQueryQueryToolChest(),
+                      new TimeseriesQueryEngine(),
+                      QueryRunnerTestHelper.NOOP_QUERYWATCHER
+                  ),
+                  ScanQuery.class, new ScanQueryRunnerFactory(
+                      new ScanQueryQueryToolChest(
+                          new ScanQueryConfig(),
+                          new DefaultGenericQueryMetricsFactory()
+                      ),
+                      new ScanQueryEngine(),
+                      new ScanQueryConfig()
+                  )
+              )
+          ),
+          new NoopDataSegmentAnnouncer(),
+          emitter,
+          new ForwardingQueryProcessingPool(queryExecutor),
+          NoopJoinableFactory.INSTANCE,
+          MapCache.create(2048),
+          new CacheConfig(),
+          new CachePopulatorStats(),
+          rowIngestionMeters,
+          new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
+          true,
+          centralizedDatasourceSchemaConfig
+      );
+    }
   }
 
   private long getDefaultMaxBytesInMemory()
@@ -310,6 +364,7 @@ public class StreamAppenderatorTester implements AutoCloseable
     private boolean enablePushFailure;
     private RowIngestionMeters rowIngestionMeters;
     private boolean skipBytesInMemoryOverheadCheck;
+    private int delayInMilli = 0;
 
     public Builder maxRowsInMemory(final int maxRowsInMemory)
     {
@@ -347,9 +402,16 @@ public class StreamAppenderatorTester implements AutoCloseable
       return this;
     }
 
+    public Builder withSegmentDropDelayInMilli(int delayInMilli)
+    {
+      this.delayInMilli = delayInMilli;
+      return this;
+    }
+
     public StreamAppenderatorTester build()
     {
       return new StreamAppenderatorTester(
+          delayInMilli,
           maxRowsInMemory,
           maxSizeInBytes,
           Preconditions.checkNotNull(basePersistDirectory, "basePersistDirectory"),
@@ -367,6 +429,7 @@ public class StreamAppenderatorTester implements AutoCloseable
     )
     {
       return new StreamAppenderatorTester(
+          delayInMilli,
           maxRowsInMemory,
           maxSizeInBytes,
           Preconditions.checkNotNull(basePersistDirectory, "basePersistDirectory"),

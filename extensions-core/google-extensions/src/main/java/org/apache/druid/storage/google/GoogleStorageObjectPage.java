@@ -17,19 +17,35 @@
  * under the License.
  */
 
-package org.apache.druid.query.search;
+package org.apache.druid.storage.google;
 
-public abstract class SearchQueryDecisionHelper
+import javax.annotation.Nullable;
+import java.util.List;
+
+public class GoogleStorageObjectPage
 {
-  private final double bitmapIntersectCost;
+  final List<GoogleStorageObjectMetadata> objectList;
 
-  protected SearchQueryDecisionHelper(final double bitmapIntersectCost)
+  @Nullable
+  final String nextPageToken;
+
+  public GoogleStorageObjectPage(
+      List<GoogleStorageObjectMetadata> objectList,
+      String nextPageToken
+  )
   {
-    this.bitmapIntersectCost = bitmapIntersectCost;
+    this.objectList = objectList;
+    this.nextPageToken = nextPageToken;
   }
 
-  public double getBitmapIntersectCost()
+  public List<GoogleStorageObjectMetadata> getObjectList()
   {
-    return bitmapIntersectCost;
+    return objectList;
+  }
+
+  @Nullable
+  public String getNextPageToken()
+  {
+    return nextPageToken;
   }
 }

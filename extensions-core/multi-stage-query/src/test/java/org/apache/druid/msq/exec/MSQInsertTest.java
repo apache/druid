@@ -1468,6 +1468,56 @@ public class MSQInsertTest extends MSQTestBase
                      .verifyResults();
   }
 
+  @Test
+  public void testEmptyInsertQuery()
+  {
+    // Insert with a condition which results in 0 rows being inserted -- do nothing.
+    testIngestQuery().setSql(
+                         "INSERT INTO foo1 "
+                         + " SELECT  __time, dim1 , count(*) AS cnt"
+                         + " FROM foo WHERE dim1 IS NOT NULL AND __time < TIMESTAMP '1971-01-01 00:00:00'"
+                         + " GROUP BY 1, 2"
+                         + " PARTITIONED BY day"
+                         + " CLUSTERED BY dim1")
+                     .setQueryContext(context)
+                     .setExpectedResultRows(ImmutableList.of())
+                     .verifyResults();
+  }
+
+  @Test
+  public void testEmptyInsertQueryWithAllGranularity()
+  {
+    // Insert with a condition which results in 0 rows being inserted -- do nothing.
+    testIngestQuery().setSql(
+                         "INSERT INTO foo1 "
+                         + " SELECT  __time, dim1 , COUNT(*) AS cnt"
+                         + " FROM foo WHERE dim1 IS NOT NULL AND __time < TIMESTAMP '1971-01-01 00:00:00'"
+                         + " GROUP BY 1, 2"
+                         + " PARTITIONED BY ALL"
+                         + " CLUSTERED BY dim1")
+                     .setQueryContext(context)
+                     .setExpectedResultRows(ImmutableList.of())
+                     .verifyResults();
+  }
+
+  @Test
+  public void testEmptyInsertLimitQuery()
+  {
+    // Insert with a condition which results in 0 rows being inserted -- do nothing.
+    testIngestQuery().setSql(
+                         "INSERT INTO foo1 "
+                         + " SELECT  __time, dim1, COUNT(*) AS cnt"
+                         + " FROM foo WHERE dim1 IS NOT NULL AND __time < TIMESTAMP '1971-01-01 00:00:00'"
+                         + " GROUP BY 1, 2"
+                         + " LIMIT 100"
+                         + " PARTITIONED BY ALL"
+                         + " CLUSTERED BY dim1"
+                     )
+                     .setQueryContext(context)
+                     .setExpectedResultRows(ImmutableList.of())
+                     .verifyResults();
+  }
+
   private List<Object[]> expectedFooRows()
   {
     List<Object[]> expectedRows = new ArrayList<>();

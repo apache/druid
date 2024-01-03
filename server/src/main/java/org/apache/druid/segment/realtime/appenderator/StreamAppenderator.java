@@ -69,6 +69,7 @@ import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.FireHydrant;
@@ -99,6 +100,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -178,6 +180,9 @@ public class StreamAppenderator implements Appenderator
 
   private volatile Throwable persistError;
 
+  private final SegmentLoaderConfig segmentLoaderConfig;
+  private ScheduledExecutorService exec;
+
   /**
    * This constructor allows the caller to provide its own SinkQuerySegmentWalker.
    *
@@ -188,6 +193,7 @@ public class StreamAppenderator implements Appenderator
    * Appenderators.
    */
   StreamAppenderator(
+      SegmentLoaderConfig segmentLoaderConfig,
       String id,
       DataSchema schema,
       AppenderatorConfig tuningConfig,
@@ -205,7 +211,7 @@ public class StreamAppenderator implements Appenderator
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
-    log.info("Initialising stream appenderator. logging dataschema %s", schema);
+    this.segmentLoaderConfig = segmentLoaderConfig;
     this.myId = id;
     this.schema = Preconditions.checkNotNull(schema, "schema");
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
@@ -233,6 +239,20 @@ public class StreamAppenderator implements Appenderator
     this.useMaxMemoryEstimates = useMaxMemoryEstimates;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
     this.sinkSchemaAnnouncer = new SinkSchemaAnnouncer();
+
+    this.exec = Executors.newScheduledThreadPool(
+        1,
+        Execs.makeThreadFactory("StreamAppenderSegmentRemoval-%s")
+    );
+  }
+
+  @VisibleForTesting
+  void setExec(ScheduledExecutorService testExec)
+  {
+    if (exec != null) {
+      exec.shutdown();
+    }
+    exec = testExec;
   }
 
   @Override
@@ -1193,6 +1213,10 @@ public class StreamAppenderator implements Appenderator
     if (intermediateTempExecutor != null) {
       intermediateTempExecutor.shutdownNow();
     }
+
+    if (exec != null) {
+      exec.shutdownNow();
+    }
   }
 
   private void resetNextFlush()
@@ -1423,24 +1447,48 @@ public class StreamAppenderator implements Appenderator
                  .emit();
             }
 
-            droppingSinks.remove(identifier);
-            sinkTimeline.remove(
-                sink.getInterval(),
-                sink.getVersion(),
-                identifier.getShardSpec().createChunk(sink)
-            );
-            for (FireHydrant hydrant : sink) {
-              if (cache != null) {
-                cache.close(SinkQuerySegmentWalker.makeHydrantCacheIdentifier(hydrant));
+            Runnable removeRunnable = () -> {
+              droppingSinks.remove(identifier);
+              sinkTimeline.remove(
+                  sink.getInterval(),
+                  sink.getVersion(),
+                  identifier.getShardSpec().createChunk(sink)
+              );
+              for (FireHydrant hydrant : sink) {
+                if (cache != null) {
+                  cache.close(SinkQuerySegmentWalker.makeHydrantCacheIdentifier(hydrant));
+                }
+                hydrant.swapSegment(null);
               }
-              hydrant.swapSegment(null);
-            }
 
-            if (removeOnDiskData) {
-              removeDirectory(computePersistDir(identifier));
-            }
+              if (removeOnDiskData) {
+                removeDirectory(computePersistDir(identifier));
+              }
 
-            log.info("Dropped segment[%s].", identifier);
+              log.info("Dropped segment[%s].", identifier);
+            };
+
+            if (segmentLoaderConfig == null) {
+              log.info(
+                  "Unannounced segment[%s]",
+                  identifier
+              );
+              removeRunnable.run();
+            } else {
+              log.info(
+                  "Unannounced segment[%s], scheduling drop in [%d] millisecs",
+                  identifier,
+                  segmentLoaderConfig.getDropSegmentDelayMillis()
+              );
+              // Keep the segments in the cache and sinkTimeline for dropSegmentDelay after unannouncing the segments
+              // This way, in transit queries which still see the segments in this peon would be able to query the
+              // segments and not throw NullPtr exceptions.
+              exec.schedule(
+                  removeRunnable,
+                  segmentLoaderConfig.getDropSegmentDelayMillis(),
+                  TimeUnit.MILLISECONDS
+              );
+            }
 
             return null;
           }

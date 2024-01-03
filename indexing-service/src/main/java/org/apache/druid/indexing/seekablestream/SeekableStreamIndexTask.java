@@ -187,6 +187,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   )
   {
     return toolbox.getAppenderatorsManager().createRealtimeAppenderatorForTask(
+        toolbox.getSegmentLoaderConfig(),
         getId(),
         dataSchema,
         tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),

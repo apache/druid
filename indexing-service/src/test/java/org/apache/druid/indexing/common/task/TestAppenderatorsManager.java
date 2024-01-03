@@ -36,6 +36,7 @@ import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
@@ -51,6 +52,7 @@ public class TestAppenderatorsManager implements AppenderatorsManager
 
   @Override
   public Appenderator createRealtimeAppenderatorForTask(
+      SegmentLoaderConfig segmentLoaderConfig,
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,
@@ -74,6 +76,7 @@ public class TestAppenderatorsManager implements AppenderatorsManager
   )
   {
     realtimeAppenderator = Appenderators.createRealtime(
+        segmentLoaderConfig,
         taskId,
         schema,
         config,

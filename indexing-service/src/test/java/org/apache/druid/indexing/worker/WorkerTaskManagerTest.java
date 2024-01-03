@@ -129,6 +129,7 @@ public class WorkerTaskManagerTest
         jsonMapper,
         new TestTaskRunner(
             new TaskToolboxFactory(
+                null,
                 taskConfig,
                 null,
                 taskActionClientFactory,

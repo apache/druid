@@ -171,6 +171,7 @@ public class WorkerTaskMonitorTest
         jsonMapper,
         new SingleTaskBackgroundRunner(
             new TaskToolboxFactory(
+                null,
                 taskConfig,
                 null,
                 taskActionClientFactory,

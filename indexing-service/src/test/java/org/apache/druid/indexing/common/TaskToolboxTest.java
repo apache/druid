@@ -48,6 +48,7 @@ import org.apache.druid.segment.loading.DataSegmentArchiver;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.DataSegmentMover;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
@@ -95,6 +96,7 @@ public class TaskToolboxTest
   private IndexIO mockIndexIO = EasyMock.createMock(IndexIO.class);
   private Cache mockCache = EasyMock.createMock(Cache.class);
   private CacheConfig mockCacheConfig = EasyMock.createMock(CacheConfig.class);
+  private SegmentLoaderConfig segmentLoaderConfig = EasyMock.createMock(SegmentLoaderConfig.class);
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -116,6 +118,7 @@ public class TaskToolboxTest
         .build();
 
     taskToolbox = new TaskToolboxFactory(
+        segmentLoaderConfig,
         taskConfig,
         new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
         mockTaskActionClientFactory,
@@ -162,6 +165,12 @@ public class TaskToolboxTest
   public void testGetDataSegmentArchiver()
   {
     Assert.assertEquals(mockDataSegmentArchiver, taskToolbox.build(task).getDataSegmentArchiver());
+  }
+
+  @Test
+  public void testGetSegmentLoaderConfig()
+  {
+    Assert.assertEquals(segmentLoaderConfig, taskToolbox.build(task).getSegmentLoaderConfig());
   }
 
   @Test

@@ -62,6 +62,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.plumber.Sink;
@@ -150,6 +151,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
 
   @Override
   public Appenderator createRealtimeAppenderatorForTask(
+      SegmentLoaderConfig segmentLoaderConfig,
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,
@@ -179,6 +181,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       );
 
       Appenderator appenderator = new StreamAppenderator(
+          null,
           taskId,
           schema,
           rewriteAppenderatorConfigMemoryLimits(config),

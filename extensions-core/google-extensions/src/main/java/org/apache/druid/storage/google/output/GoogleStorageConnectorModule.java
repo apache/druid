@@ -17,22 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.query.search;
+package org.apache.druid.storage.google.output;
 
-public class RoaringBitmapDecisionHelper extends SearchQueryDecisionHelper
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.inject.Binder;
+import org.apache.druid.initialization.DruidModule;
+
+import java.util.Collections;
+import java.util.List;
+
+public class GoogleStorageConnectorModule implements DruidModule
 {
-  // This value comes from an experiment.
-  // See the discussion at https://github.com/apache/druid/pull/3792#issuecomment-268331804.
-  private static final double BITMAP_INTERSECT_COST = 4.5;
-  private static final RoaringBitmapDecisionHelper INSTANCE = new RoaringBitmapDecisionHelper();
-
-  public static RoaringBitmapDecisionHelper instance()
+  @Override
+  public List<? extends Module> getJacksonModules()
   {
-    return INSTANCE;
+    return Collections.singletonList(
+        new SimpleModule(this.getClass().getSimpleName()).registerSubtypes(GoogleStorageConnectorProvider.class));
   }
 
-  private RoaringBitmapDecisionHelper()
+  @Override
+  public void configure(Binder binder)
   {
-    super(BITMAP_INTERSECT_COST);
+
   }
 }

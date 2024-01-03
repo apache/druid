@@ -56,6 +56,7 @@ import org.apache.druid.segment.loading.DataSegmentArchiver;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.DataSegmentMover;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
@@ -73,6 +74,7 @@ import java.util.function.Function;
  */
 public class TaskToolboxFactory
 {
+  private final SegmentLoaderConfig segmentLoaderConfig;
   private final TaskConfig config;
   private final DruidNode taskExecutorNode;
   private final TaskActionClientFactory taskActionClientFactory;
@@ -117,6 +119,7 @@ public class TaskToolboxFactory
 
   @Inject
   public TaskToolboxFactory(
+      SegmentLoaderConfig segmentLoadConfig,
       TaskConfig config,
       @Parent DruidNode taskExecutorNode,
       TaskActionClientFactory taskActionClientFactory,
@@ -158,6 +161,7 @@ public class TaskToolboxFactory
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
+    this.segmentLoaderConfig = segmentLoadConfig;
     this.config = config;
     this.taskExecutorNode = taskExecutorNode;
     this.taskActionClientFactory = taskActionClientFactory;
@@ -214,6 +218,7 @@ public class TaskToolboxFactory
     final File taskWorkDir = config.getTaskWorkDir(task.getId());
     return new TaskToolbox.Builder()
         .config(config)
+        .config(segmentLoaderConfig)
         .taskExecutorNode(taskExecutorNode)
         .taskActionClient(taskActionClientFactory.create(task))
         .emitter(emitter)
