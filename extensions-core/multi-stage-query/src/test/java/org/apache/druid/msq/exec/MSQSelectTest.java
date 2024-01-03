@@ -705,6 +705,95 @@ public class MSQSelectTest extends MSQTestBase
   }
 
   @Test
+  public void testWindowOnFooWith2Windows()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("m1", ColumnType.FLOAT)
+                                            .add("cc", ColumnType.DOUBLE)
+                                            .build();
+
+    final Query groupByQuery = GroupByQuery.builder()
+                                           .setDataSource(CalciteTests.DATASOURCE1)
+                                           .setInterval(querySegmentSpec(Filtration
+                                                                             .eternity()))
+                                           .setGranularity(Granularities.ALL)
+                                           .setDimensions(dimensions(
+                                               new DefaultDimensionSpec(
+                                                   "m1",
+                                                   "d0",
+                                                   ColumnType.FLOAT
+                                               )
+                                           ))
+                                           .setContext(context)
+                                           .build();
+
+
+    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0);
+    final AggregatorFactory[] theAggs = {
+        new DoubleSumAggregatorFactory("w0", "d0")
+    };
+    WindowFramedAggregateProcessor proc = new WindowFramedAggregateProcessor(theFrame, theAggs);
+
+    final WindowOperatorQuery query = new WindowOperatorQuery(
+        new QueryDataSource(groupByQuery),
+        new LegacySegmentSpec(Intervals.ETERNITY),
+        context,
+        RowSignature.builder().add("d0", ColumnType.FLOAT).add("w0", ColumnType.DOUBLE).build(),
+        ImmutableList.of(
+            new NaivePartitioningOperatorFactory(ImmutableList.of("d0")),
+            new WindowOperatorFactory(proc)
+        ),
+        null
+    );
+    testSelectQuery()
+        .setSql("SELECT m1, m2,\n"
+                + "SUM(m2) OVER() as summ2\n"
+                + ",SUM(m1) OVER(PARTITION BY m2) as summ1\n"
+                + "from foo\n"
+                + "GROUP BY m1,m2")
+        .setExpectedMSQSpec(MSQSpec.builder()
+                                   .query(query)
+                                   .columnMappings(
+                                       new ColumnMappings(ImmutableList.of(
+                                           new ColumnMapping("d0", "m1"),
+                                           new ColumnMapping("w0", "cc")
+                                       )
+                                       ))
+                                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                                   .destination(isDurableStorageDestination()
+                                                ? DurableStorageMSQDestination.INSTANCE
+                                                : TaskReportMSQDestination.INSTANCE)
+                                   .build())
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedResultRows(ImmutableList.of(
+            new Object[]{1.0f, 1.0},
+            new Object[]{2.0f, 2.0},
+            new Object[]{3.0f, 3.0},
+            new Object[]{4.0f, 4.0},
+            new Object[]{5.0f, 5.0},
+            new Object[]{6.0f, 6.0}
+        ))
+        .setQueryContext(context)
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().totalFiles(1),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6).frames(1),
+            0, 0, "shuffle"
+        )
+        .verifyResults();
+  }
+
+
+  @Test
   public void testWindowOnFooWithEmptyOver()
   {
     RowSignature rowSignature = RowSignature.builder()

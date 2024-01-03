@@ -29,27 +29,44 @@ import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.kernel.FrameContext;
+import org.apache.druid.query.operator.OperatorFactory;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.column.RowSignature;
 
+import java.util.List;
 import java.util.function.Function;
 
 @JsonTypeName("window")
 public class WindowOperatorQueryFrameProcessorFactory extends BaseLeafFrameProcessorFactory
 {
   private final WindowOperatorQuery query;
+  private final List<OperatorFactory> operatorList;
+  RowSignature rearrangePoiter;
 
   @JsonCreator
-  public WindowOperatorQueryFrameProcessorFactory(@JsonProperty("query") WindowOperatorQuery query)
+  public WindowOperatorQueryFrameProcessorFactory(
+      @JsonProperty("query") WindowOperatorQuery query,
+      @JsonProperty("operators") List<OperatorFactory> operatorFactoryList,
+      RowSignature pointers
+  )
   {
     super(query);
     this.query = Preconditions.checkNotNull(query, "query");
+    this.operatorList = operatorFactoryList;
+    this.rearrangePoiter = pointers;
   }
 
   @JsonProperty
   public WindowOperatorQuery getQuery()
   {
     return query;
+  }
+
+  @JsonProperty
+  public List<OperatorFactory> getOperators()
+  {
+    return operatorList;
   }
 
   @Override
@@ -63,11 +80,13 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseLeafFrameProce
   {
     return new WindowOperatorQueryFrameProcessor(
         query,
+        operatorList,
         frameContext.jsonMapper(),
         baseInput,
         segmentMapFn,
         outputChannelHolder,
-        frameWriterFactoryHolder
+        frameWriterFactoryHolder,
+        rearrangePoiter
     );
   }
 }

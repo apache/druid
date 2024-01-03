@@ -23,6 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.FrameType;
+import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
@@ -31,6 +33,7 @@ import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.util.SettableLongVirtualColumn;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
+import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.io.Closer;
@@ -44,7 +47,10 @@ import org.apache.druid.query.operator.OperatorFactory;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.rowsandcols.LazilyDecoratedRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
+import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.concrete.RowBasedFrameRowAndColumns;
+import org.apache.druid.query.rowsandcols.semantic.ColumnSelectorFactoryMaker;
+import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
@@ -58,7 +64,10 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.BitSet;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
@@ -66,10 +75,13 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
 
   private static final Logger log = new Logger(ScanQueryFrameProcessor.class);
   private final WindowOperatorQuery query;
+
+  private final List<OperatorFactory> operatorFactoryList;
   private final ObjectMapper jsonMapper;
   private final SettableLongVirtualColumn partitionBoostVirtualColumn;
   private final VirtualColumns frameWriterVirtualColumns;
   private final Closer closer = Closer.create();
+  private final RowSignature outputStageSignature;
 
   private Cursor cursor;
   private Segment segment;
@@ -79,11 +91,13 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
 
   public WindowOperatorQueryFrameProcessor(
       final WindowOperatorQuery query,
+      final List<OperatorFactory> operatorFactoryList,
       final ObjectMapper jsonMapper,
       final ReadableInput baseInput,
       final Function<SegmentReference, SegmentReference> segmentMapFn,
       final ResourceHolder<WritableFrameChannel> outputChannelHolder,
-      final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder
+      final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder,
+      RowSignature rearrangePointer
   )
   {
     super(
@@ -95,6 +109,8 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
     this.query = query;
     this.jsonMapper = jsonMapper;
     this.partitionBoostVirtualColumn = new SettableLongVirtualColumn(QueryKitUtils.PARTITION_BOOST_COLUMN);
+    this.operatorFactoryList = operatorFactoryList;
+    this.outputStageSignature = rearrangePointer;
 
     final List<VirtualColumn> frameWriterVirtualColumns = new ArrayList<>();
     frameWriterVirtualColumns.add(partitionBoostVirtualColumn);
@@ -111,14 +127,14 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
 
   // deep storage
   @Override
-  protected ReturnOrAwait<Unit> runWithSegment(SegmentWithDescriptor segment) throws IOException
+  protected ReturnOrAwait<Unit> runWithSegment(SegmentWithDescriptor segment)
   {
     return null;
   }
 
   // realtime
   @Override
-  protected ReturnOrAwait<Unit> runWithLoadedSegment(SegmentWithDescriptor segment) throws IOException
+  protected ReturnOrAwait<Unit> runWithLoadedSegment(SegmentWithDescriptor segment)
   {
     return null;
   }
@@ -126,7 +142,6 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
   // previous stage output
   @Override
   protected ReturnOrAwait<Unit> runWithInputChannel(ReadableFrameChannel inputChannel, FrameReader inputFrameReader)
-      throws IOException
   {
     // Read the frames from the channel
     // convert to FrameRowsAndColumns
@@ -145,7 +160,7 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
       //Operator op = new SegmentToRowsAndColumnsOperator(frameSegment);
       // On the operator created above add the operators present in the query that we want to chain
 
-      for (OperatorFactory of : query.getOperators()) {
+      for (OperatorFactory of : operatorFactoryList) {
         op = of.wrap(op);
       }
 
@@ -157,17 +172,8 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
         @Override
         public Operator.Signal push(RowsAndColumns rac)
         {
-          //outputFrameChannel.output(rac.toFrame());
-          LazilyDecoratedRowsAndColumns tmpldrc = new LazilyDecoratedRowsAndColumns(
-              rac,
-              null,
-              null,
-              null,
-              OffsetLimit.limit(Integer.MAX_VALUE),
-              null,
-              null
-          );
-          Pair<byte[], RowSignature> pairFrames = tmpldrc.naiveMaterializeToRowFrames(rac);
+          // convert the rac to a row-based frame
+          Pair<byte[], RowSignature> pairFrames = materializeRacToRowFrames(rac, outputStageSignature);
           Frame f = Frame.wrap(pairFrames.lhs);
           try {
             Iterables.getOnlyElement(outputChannels())
@@ -218,5 +224,59 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
       }
     };
     return op;
+  }
+
+  public Pair<byte[], RowSignature> materializeRacToRowFrames(RowsAndColumns rac, RowSignature outputSignature)
+  {
+    final int numRows = rac.numRows();
+
+    BitSet rowsToSkip = null;
+
+    AtomicInteger rowId = new AtomicInteger(0);
+    final ColumnSelectorFactoryMaker csfm = ColumnSelectorFactoryMaker.fromRAC(rac);
+    final ColumnSelectorFactory selectorFactory = csfm.make(rowId);
+
+    //columnsToGenerate.addAll(rac.getColumnNames());
+    ArrayList<String> columnsToGenerate = new ArrayList<>(outputSignature.getColumnNames());
+
+
+    final RowSignature.Builder sigBob = RowSignature.builder();
+    final ArenaMemoryAllocatorFactory memFactory = new ArenaMemoryAllocatorFactory(200 << 20);
+
+
+    for (String column : columnsToGenerate) {
+      final Column racColumn = rac.findColumn(column);
+      if (racColumn == null) {
+        continue;
+      }
+      sigBob.add(column, racColumn.toAccessor().getType());
+    }
+
+    long remainingRowsToSkip = 0;
+    long remainingRowsToFetch = Integer.MAX_VALUE;
+
+    final FrameWriter frameWriter;
+    frameWriter = FrameWriters.makeFrameWriterFactory(
+        FrameType.ROW_BASED,
+        memFactory,
+        sigBob.build(),
+        Collections.emptyList()
+    ).newFrameWriter(selectorFactory);
+
+    rowId.set(0);
+    for (; rowId.get() < numRows && remainingRowsToFetch > 0; rowId.incrementAndGet()) {
+      final int theId = rowId.get();
+      if (rowsToSkip != null && rowsToSkip.get(theId)) {
+        continue;
+      }
+      if (remainingRowsToSkip > 0) {
+        remainingRowsToSkip--;
+        continue;
+      }
+      remainingRowsToFetch--;
+      frameWriter.addSelection();
+    }
+
+    return Pair.of(frameWriter.toByteArray(), sigBob.build());
   }
 }
