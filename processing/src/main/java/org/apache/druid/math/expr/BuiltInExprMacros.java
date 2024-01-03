@@ -152,7 +152,7 @@ public class BuiltInExprMacros
     public Expr apply(List<Expr> args)
     {
       validationHelperCheckArgumentCount(args, 1);
-      return new StringDecodeBase64UTFExpression(args);
+      return new StringDecodeBase64UTFExpression(this, args);
     }
 
     /**
@@ -166,13 +166,13 @@ public class BuiltInExprMacros
       return NAME;
     }
 
-    final class StringDecodeBase64UTFExpression extends ExprMacroTable.BaseScalarMacroFunctionExpr
+    static final class StringDecodeBase64UTFExpression extends ExprMacroTable.BaseScalarMacroFunctionExpr
     {
       private final Expr arg;
 
-      public StringDecodeBase64UTFExpression(List<Expr> args)
+      public StringDecodeBase64UTFExpression(StringDecodeBase64UTFExprMacro macro, List<Expr> args)
       {
-        super(StringDecodeBase64UTFExprMacro.this, args);
+        super(macro, args);
         this.arg = Iterables.getOnlyElement(args);
       }
 
