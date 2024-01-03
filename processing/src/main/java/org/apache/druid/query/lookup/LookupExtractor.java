@@ -76,7 +76,7 @@ public abstract class LookupExtractor
    * Otherwise unused. Implementations that override {@link #unapplyAll(Set)} may throw
    * {@link UnsupportedOperationException} from this method.
    *
-   * @param value the value to apply the reverse lookup. {@link NullHandling#nullToEmptyIfNeeded(String)} will have
+   * @param value the value to apply the reverse lookup. {@link NullHandling#emptyToNullIfNeeded(String)} will have
    *              been applied to the value.
    *
    * @return the list of keys that maps to the provided value.
@@ -86,7 +86,7 @@ public abstract class LookupExtractor
   /**
    * Reverse lookup from a given set of values.
    *
-   * @param values set of values to reverse lookup. {@link NullHandling#nullToEmptyIfNeeded(String)} will have
+   * @param values set of values to reverse lookup. {@link NullHandling#emptyToNullIfNeeded(String)} will have
    *               been applied to each value.
    *
    * @return iterator of keys that map to to the provided set of values. May contain duplicate keys. Returns null if

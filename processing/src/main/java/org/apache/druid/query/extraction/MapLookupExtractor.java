@@ -123,7 +123,14 @@ public class MapLookupExtractor extends LookupExtractor
     return Iterators.transform(
         Iterators.filter(
             map.entrySet().iterator(),
-            entry -> values.contains(NullHandling.emptyToNullIfNeeded(entry.getValue()))
+            entry -> {
+              if (entry.getKey() == null && NullHandling.sqlCompatible()) {
+                // apply always maps null to null in SQL-compatible mode.
+                return values.contains(null);
+              } else {
+                return values.contains(NullHandling.emptyToNullIfNeeded(entry.getValue()));
+              }
+            }
         ),
         Map.Entry::getKey
     );

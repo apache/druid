@@ -31,15 +31,18 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-
 
 public class MapLookupExtractorTest
 {
   private final Map<String, String> lookupMap =
-      ImmutableMap.of("foo", "bar", "null", "", "empty String", "", "", "empty_string");
+      ImmutableMap.of(
+          "foo", "bar",
+          "null", "",
+          "empty String", "",
+          "", "empty_string"
+      );
   private final MapLookupExtractor fn = new MapLookupExtractor(lookupMap, false);
 
   @BeforeClass
@@ -52,19 +55,14 @@ public class MapLookupExtractorTest
   public void testUnApply()
   {
     Assert.assertEquals(Collections.singletonList("foo"), unapply("bar"));
-    Assert.assertEquals(Sets.newHashSet("null", "empty String"), Sets.newHashSet(unapply("")));
     if (NullHandling.sqlCompatible()) {
-      Assert.assertEquals(
-          "Null value should be equal to empty list",
-          new HashSet<>(),
-          Sets.newHashSet(unapply((String) null))
-      );
+      Assert.assertEquals(Collections.emptySet(), Sets.newHashSet(unapply(null)));
+      Assert.assertEquals(Sets.newHashSet("null", "empty String"), Sets.newHashSet(unapply("")));
     } else {
-      Assert.assertEquals(
-          "Null value should be equal to empty string",
-          Sets.newHashSet("null", "empty String"),
-          Sets.newHashSet(unapply((String) null))
-      );
+      // Don't test unapply("") under replace-with-default mode, because it isn't allowed in that mode, and
+      // implementation behavior is undefined. unapply is specced such that it requires its inputs to go
+      // through nullToEmptyIfNeeded.
+      Assert.assertEquals(Sets.newHashSet("null", "empty String"), Sets.newHashSet(unapply(null)));
     }
     Assert.assertEquals(Sets.newHashSet(""), Sets.newHashSet(unapply("empty_string")));
     Assert.assertEquals("not existing value returns empty list", Collections.emptyList(), unapply("not There"));

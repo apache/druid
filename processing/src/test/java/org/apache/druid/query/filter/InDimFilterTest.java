@@ -346,7 +346,7 @@ public class InDimFilterTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testOptimizeLookup_replaceMissingValue_containsNullValues()
+  public void testOptimizeLookup_replaceMissingValue_containingNull()
   {
     final Map<String, String> lookupMap = new HashMap<>();
     lookupMap.put("nv", null);
@@ -408,6 +408,133 @@ public class InDimFilterTest extends InitializedNullHandlingTest
         "reverse lookup empty string (includeUnknown)",
         NullHandling.sqlCompatible() ? null : Collections.singleton("nv"),
         InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(""), extractionFn), true)
+    );
+  }
+
+  @Test
+  public void testOptimizeLookup_replaceMissingValue_containingEmptyString()
+  {
+    final Map<String, String> lookupMap = new HashMap<>();
+    lookupMap.put("emptystring", "");
+    lookupMap.put("abc", "def");
+    lookupMap.put("foo", "bar");
+    final MapLookupExtractor lookup = new MapLookupExtractor(lookupMap, false);
+    final LookupExtractionFn extractionFn = new LookupExtractionFn(lookup, false, "bar", null, true);
+
+    Assert.assertNull(
+        "reverse lookup bar",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("bar"), extractionFn), false)
+    );
+
+    Assert.assertNull(
+        "reverse lookup bar (includeUnknown)",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("bar"), extractionFn), true)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup baz",
+        Collections.emptySet(),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("baz"), extractionFn), false)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup baz (includeUnknown)",
+        NullHandling.sqlCompatible() ? Collections.emptySet() : null,
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("baz"), extractionFn), true)
+    );
+
+    Assert.assertNull(
+        "reverse lookup [def, bar, baz]",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Arrays.asList("def", "bar", "baz"), extractionFn), false)
+    );
+
+    Assert.assertNull(
+        "reverse lookup [def, bar, baz] (includeUnknown)",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Arrays.asList("def", "bar", "baz"), extractionFn), true)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup null",
+        NullHandling.sqlCompatible() ? Collections.emptySet() : Collections.singleton("emptystring"),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(null), extractionFn), false)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup null (includeUnknown)",
+        NullHandling.sqlCompatible() ? Collections.emptySet() : Collections.singleton("emptystring"),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(null), extractionFn), true)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup empty string",
+        Collections.singleton("emptystring"),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(""), extractionFn), false)
+    );
+
+    Assert.assertEquals(
+        "reverse lookup empty string (includeUnknown)",
+        Collections.singleton("emptystring"),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(""), extractionFn), true)
+    );
+  }
+
+  @Test
+  public void testOptimizeLookup_containingEmptyString()
+  {
+    final Map<String, String> lookupMap = new HashMap<>();
+    lookupMap.put("emptystring", "");
+    final MapLookupExtractor lookup = new MapLookupExtractor(lookupMap, false);
+    final LookupExtractionFn extractionFn = new LookupExtractionFn(lookup, false, null, null, true);
+
+    Assert.assertEquals(
+        "reverse lookup empty string",
+        NullHandling.sqlCompatible() ? Collections.singleton("emptystring") : null,
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(""), extractionFn), false)
+    );
+
+    Assert.assertNull(
+        "reverse lookup empty string (includeUnknown)",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(""), extractionFn), true)
+    );
+
+    Assert.assertNull(
+        "reverse lookup null",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(null), extractionFn), false)
+    );
+
+    Assert.assertNull(
+        "reverse lookup null (includeUnknown)",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(null), extractionFn), true)
+    );
+  }
+
+  @Test
+  public void testOptimizeLookup_emptyStringKey()
+  {
+    final Map<String, String> lookupMap = new HashMap<>();
+    lookupMap.put("", "bar");
+    final MapLookupExtractor lookup = new MapLookupExtractor(lookupMap, false);
+    final LookupExtractionFn extractionFn = new LookupExtractionFn(lookup, false, null, null, true);
+
+    Assert.assertEquals(
+        "reverse lookup bar",
+        NullHandling.sqlCompatible() ? Collections.singleton("") : Collections.singleton(null),
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("bar"), extractionFn), false)
+    );
+
+    Assert.assertNull(
+        "reverse lookup bar (includeUnknown)",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("bar"), extractionFn), true)
+    );
+
+    Assert.assertNull(
+        "reverse lookup null",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(null), extractionFn), false)
+    );
+
+    Assert.assertNull(
+        "reverse lookup null (includeUnknown)",
+        InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(null), extractionFn), true)
     );
   }
 
@@ -549,7 +676,7 @@ public class InDimFilterTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testOptimizeLookup_containingNull()
+  public void testOptimizeLookup_nullKey()
   {
     final Map<String, String> lookupMap = new HashMap<>();
     lookupMap.put(null, "nv");
@@ -558,7 +685,8 @@ public class InDimFilterTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(
         "reverse lookup nv",
-        Collections.singleton(null),
+        // null keys are always mapped to null in SQL-compatible mode
+        NullHandling.sqlCompatible() ? Collections.emptySet() : Collections.singleton(null),
         InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("nv"), extractionFn), false)
     );
 
