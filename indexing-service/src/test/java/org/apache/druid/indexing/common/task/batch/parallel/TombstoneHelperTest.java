@@ -547,6 +547,42 @@ public class TombstoneHelperTest
     );
   }
 
+
+  @Test
+  public void testTombstoneIntervalsForReplaceOverEternityInterval() throws IOException
+  {
+    Interval usedInterval = Intervals.ETERNITY;
+    Interval replaceInterval = Intervals.ETERNITY;
+    List<Interval> dropIntervals = Intervals.ONLY_ETERNITY;
+    Granularity replaceGranularity = Granularities.YEAR;
+
+    DataSegment existingUsedSegment =
+        DataSegment.builder()
+                   .dataSource("test")
+                   .interval(usedInterval)
+                   .version("oldVersion")
+                   .size(100)
+                   .build();
+    Assert.assertFalse(existingUsedSegment.isTombstone());
+
+    Mockito.when(taskActionClient.submit(any(TaskAction.class)))
+           .thenReturn(Collections.singletonList(existingUsedSegment));
+    TombstoneHelper tombstoneHelper = new TombstoneHelper(taskActionClient);
+
+    Set<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervalsForReplace(
+        dropIntervals,
+        ImmutableList.of(replaceInterval),
+        "test",
+        replaceGranularity,
+        MAX_BUCKETS
+    );
+
+    Assert.assertEquals(
+        ImmutableSet.of(Intervals.ETERNITY),
+        tombstoneIntervals
+    );
+  }
+
   @Test
   public void testTombstoneIntervalsForReplaceOverLargeFiniteInterval() throws IOException
   {
