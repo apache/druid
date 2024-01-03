@@ -47,7 +47,7 @@ Note that this document does not track the status of contrib extensions, all of 
 
 - [Configuration reference](../configuration/index.md#overlord-operations)
 - [Task reference](../ingestion/tasks.md#locking)
-- [Design](../design/architecture.md#availability-and-consistency)
+- [Design](../design/storage.md#availability-and-consistency)
 
 ## Front coding
 
