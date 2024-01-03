@@ -394,8 +394,12 @@ public class VirtualColumns implements Cacheable
     return virtualColumn.makeVectorObjectSelector(columnName, columnSelector, offset);
   }
 
+  /**
+   * Get capabilities for the virtual column "columnName". If columnName is not a virtual column, returns null.
+   * Package-private since production callers want {@link #getColumnCapabilitiesWithFallback(ColumnInspector, String)}.
+   */
   @Nullable
-  public ColumnCapabilities getColumnCapabilities(ColumnInspector inspector, String columnName)
+  ColumnCapabilities getColumnCapabilitiesWithoutFallback(ColumnInspector inspector, String columnName)
   {
     final VirtualColumn virtualColumn = getVirtualColumn(columnName);
     if (virtualColumn != null) {
@@ -405,10 +409,14 @@ public class VirtualColumns implements Cacheable
     }
   }
 
+  /**
+   * Get capabilities for the column "columnName". If columnName is not a virtual column, delegates to the
+   * provided {@link ColumnInspector}.
+   */
   @Nullable
   public ColumnCapabilities getColumnCapabilitiesWithFallback(ColumnInspector inspector, String columnName)
   {
-    final ColumnCapabilities virtualColumnCapabilities = getColumnCapabilities(inspector, columnName);
+    final ColumnCapabilities virtualColumnCapabilities = getColumnCapabilitiesWithoutFallback(inspector, columnName);
     if (virtualColumnCapabilities != null) {
       return virtualColumnCapabilities;
     } else {
