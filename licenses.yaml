@@ -4556,7 +4556,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 12.24.0
+version: 12.25.1
 libraries:
   - com.azure: azure-storage-blob
 
@@ -4567,7 +4567,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.10.1
+version: 1.11.1
 libraries:
   - com.azure: azure-identity
 
@@ -4578,7 +4578,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 12.20.0
+version: 12.21.1
 libraries:
   - com.azure: azure-storage-blob-batch
 
@@ -4589,7 +4589,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 12.23.0
+version: 12.24.1
 libraries:
   - com.azure: azure-storage-common
 
@@ -4600,7 +4600,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 12.9.0
+version: 12.10.1
 libraries:
   - com.azure: azure-storage-internal-avro
 
@@ -4616,23 +4616,12 @@ libraries:
   - com.azure: azure-json
 
 ---
-
-name: Microsoft Azure Netty
-license_category: binary
-module: extensions/druid-azure-extensions
-license_name: MIT License
-copyright: Microsoft
-version: 1.43.0
-libraries:
-  - com.azure: azure-core-http-netty
-
----
 name: Microsoft Azure Netty Http
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.13.7
+version: 1.13.11
 libraries:
   - com.azure: azure-core-http-netty
 
@@ -4643,7 +4632,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.43.0
+version: 1.45.1
 libraries:
   - com.azure: azure-core
 
@@ -4654,7 +4643,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.13.9
+version: 1.14.0
 libraries:
   - com.microsoft.azure: msal4j
 
@@ -4705,7 +4694,7 @@ name: Reactor Netty
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 1.0.34
+version: 1.0.39
 libraries:
   - io.projectreactor.netty: reactor-netty-core
   - io.projectreactor.netty: reactor-netty-http
@@ -4716,7 +4705,7 @@ name: Reactor Core
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 3.4.31
+version: 3.4.34
 libraries:
   - io.projectreactor: reactor-core
 ---
