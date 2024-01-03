@@ -237,7 +237,7 @@ public class InDimFilterTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(
         "reverse lookup baz",
-        Sets.newHashSet(),
+        Collections.emptySet(),
         InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("baz"), extractionFn), false)
     );
 
@@ -501,13 +501,13 @@ public class InDimFilterTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(
         "reverse lookup baz",
-        Sets.newHashSet(),
+        Collections.emptySet(),
         InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("baz"), extractionFn), false)
     );
 
     Assert.assertEquals(
         "reverse lookup baz (includeUnknown)",
-        Sets.newHashSet(),
+        Collections.emptySet(),
         InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("baz"), extractionFn), true)
     );
 
