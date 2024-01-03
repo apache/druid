@@ -27,8 +27,6 @@ import org.apache.druid.indexing.overlord.WorkerTaskRunner;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 import org.apache.druid.k8s.overlord.runnerstrategy.RunnerStrategy;
 
-import javax.annotation.Nullable;
-
 
 public class KubernetesAndWorkerTaskRunnerFactory implements TaskRunnerFactory<KubernetesAndWorkerTaskRunner>
 {
