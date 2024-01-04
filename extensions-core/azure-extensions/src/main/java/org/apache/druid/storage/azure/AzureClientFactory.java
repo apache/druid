@@ -45,7 +45,8 @@ public class AzureClientFactory
     this.cachedBlobServiceClients = new HashMap<>();
   }
 
-  public String getStorageAccount() {
+  public String getStorageAccount()
+  {
     return this.config.getAccount();
   }
 

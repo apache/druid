@@ -141,7 +141,6 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
   {
     EasyMock.expect(entityFactory.create(EasyMock.eq(CLOUD_OBJECT_LOCATION_1), EasyMock.anyObject(AzureStorage.class), EasyMock.eq(AzureStorageAccountInputSource.SCHEME))).andReturn(azureEntity1);
     EasyMock.expect(inputSplit.get()).andReturn(ImmutableList.of(CLOUD_OBJECT_LOCATION_1)).times(2);
-    EasyMock.expect(azureAccountConfig.getAccount()).andReturn("storageAccount");
     replayAll();
 
     List<CloudObjectLocation> objects = ImmutableList.of(CLOUD_OBJECT_LOCATION_1);
@@ -401,6 +400,7 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
         .usingGetClass()
         .withPrefabValues(Logger.class, new Logger(AzureStorage.class), new Logger(AzureStorage.class))
         .withPrefabValues(BlobContainerClient.class, new BlobContainerClientBuilder().buildClient(), new BlobContainerClientBuilder().buildClient())
+        .withPrefabValues(AzureStorage.class, new AzureStorage(null), new AzureStorage(null))
         .withNonnullFields("storage")
         .withNonnullFields("entityFactory")
         .withNonnullFields("azureCloudBlobIterableFactory")

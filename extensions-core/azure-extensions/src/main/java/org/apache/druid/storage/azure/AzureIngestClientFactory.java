@@ -23,8 +23,6 @@ import com.azure.core.http.policy.ExponentialBackoffOptions;
 import com.azure.core.http.policy.RetryOptions;
 import com.azure.identity.ClientSecretCredentialBuilder;
 import com.azure.identity.DefaultAzureCredentialBuilder;
-import com.azure.storage.blob.BlobContainerClient;
-import com.azure.storage.blob.BlobContainerClientBuilder;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.common.StorageSharedKeyCredential;
@@ -46,15 +44,16 @@ public class AzureIngestClientFactory extends AzureClientFactory
   }
 
   @Override
-  public String getStorageAccount() {
+  public String getStorageAccount()
+  {
     return storageAccount;
   }
 
   @Override
   public BlobServiceClient buildNewClient(Integer retryCount)
   {
-    BlobServiceClientBuilder clientBuilder =  new BlobServiceClientBuilder()
-      .endpoint("https://" + getStorageAccount() + ".blob.core.windows.net");
+    BlobServiceClientBuilder clientBuilder = new BlobServiceClientBuilder()
+        .endpoint("https://" + getStorageAccount() + ".blob.core.windows.net");
 
     if (azureInputSourceConfig.getKey() != null) {
       clientBuilder.credential(new StorageSharedKeyCredential(storageAccount, azureInputSourceConfig.getKey()));
@@ -76,10 +75,10 @@ public class AzureIngestClientFactory extends AzureClientFactory
       return super.buildNewClient(retryCount);
     }
     clientBuilder.retryOptions(new RetryOptions(
-      new ExponentialBackoffOptions()
-          .setMaxRetries(retryCount != null ? retryCount : config.getMaxTries())
-          .setBaseDelay(Duration.ofMillis(1000))
-          .setMaxDelay(Duration.ofMillis(60000))
+        new ExponentialBackoffOptions()
+            .setMaxRetries(retryCount != null ? retryCount : config.getMaxTries())
+            .setBaseDelay(Duration.ofMillis(1000))
+            .setMaxDelay(Duration.ofMillis(60000))
     ));
     return clientBuilder.buildClient();
   }
