@@ -238,6 +238,7 @@ public class JettyServerModule extends JerseyServletModule
     }
 
     final SslContextFactory.Server sslContextFactory;
+
     if (node.isEnableTlsPort()) {
       log.info("Creating https connector with port [%d]", node.getTlsPort());
       if (sslContextFactoryBinding == null) {
@@ -342,6 +343,7 @@ public class JettyServerModule extends JerseyServletModule
       // https://bugs.eclipse.org/bugs/show_bug.cgi?id=435322#c66 for jetty half open connection issues during failovers
       connector.setAcceptorPriorityDelta(-1);
       connector.setAcceptQueueSize(getTCPAcceptQueueSize());
+
       List<ConnectionFactory> monitoredConnFactories = new ArrayList<>();
       for (ConnectionFactory cf : connector.getConnectionFactories()) {
         // we only want to monitor the first connection factory, since it will pass the connection to subsequent
