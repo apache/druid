@@ -84,9 +84,9 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.KeyStore;
 import java.security.cert.CRL;
 import java.util.ArrayList;
@@ -496,10 +496,10 @@ public class JettyServerModule extends JerseyServletModule
   private static int getTCPAcceptQueueSize()
   {
     try {
-      final File file = new File("/proc/sys/net/core/somaxconn");
-      BufferedReader in = new BufferedReader(new FileReader(file));
+      BufferedReader in = Files.newBufferedReader(Paths.get("/proc/sys/net/core/somaxconn"));
       return Integer.parseInt(in.readLine().trim());
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       log.warn("Unable to read /proc/sys/net/core/somaxconn, falling back to default value for TCP accept queue size");
       return 128; // Default value of net.core.somaxconn on Linux
     }
