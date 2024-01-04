@@ -23,8 +23,15 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.inject.Inject;
 import org.apache.druid.math.expr.ExpressionProcessing;
+import org.apache.druid.query.BitmapResultFactory;
+import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.query.filter.vector.ReadableVectorMatch;
+import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.filter.NotFilter;
+import org.apache.druid.segment.index.BitmapColumnIndex;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -72,7 +79,11 @@ public class NullHandling
   }
 
   @VisibleForTesting
-  public static void initializeForTestsWithValues(Boolean useDefForNull, Boolean useThreeValueLogic, Boolean ignoreNullForString)
+  public static void initializeForTestsWithValues(
+      Boolean useDefForNull,
+      Boolean useThreeValueLogic,
+      Boolean ignoreNullForString
+  )
   {
     INSTANCE = new NullValueHandlingConfig(useDefForNull, useThreeValueLogic, ignoreNullForString);
   }
@@ -106,6 +117,16 @@ public class NullHandling
     return !replaceWithDefault();
   }
 
+  /**
+   * Whether filtering uses 3-valued logic. Used primarily by {@link NotFilter} to invert matches in a SQL compliant
+   * manner. When this is set, an "includeUnknown" parameter can be activated in various classes related to filtering;
+   * see below for references.
+   *
+   * @see ValueMatcher#matches(boolean) includeUnknown parameter
+   * @see VectorValueMatcher#match(ReadableVectorMatch, boolean) includeUnknown parameter
+   * @see BitmapColumnIndex#computeBitmapResult(BitmapResultFactory, boolean) includeUnknown parameter
+   * @see DimFilter#optimize(boolean) mayIncludeUnknown parameter
+   */
   public static boolean useThreeValueLogic()
   {
     return NullHandling.sqlCompatible() &&

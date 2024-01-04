@@ -36,9 +36,7 @@ import com.azure.storage.blob.options.BlockBlobOutputStreamOptions;
 import com.azure.storage.blob.specialized.BlockBlobClient;
 import com.azure.storage.common.Utility;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
 
@@ -51,7 +49,6 @@ import java.io.OutputStream;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Abstracts the Azure storage layer. Makes direct calls to Azure file system.
@@ -63,26 +60,12 @@ public class AzureStorage
   private static final int DELTA_BACKOFF_MS = 30_000;
 
   private static final Logger log = new Logger(AzureStorage.class);
-
-  /**
-   * Some segment processing tools such as DataSegmentKiller are initialized when an ingestion job starts
-   * if the extension is loaded, even when the implementation of DataSegmentKiller is not used. As a result,
-   * if we have a CloudBlobClient instead of a supplier of it, it can cause unnecessary config validation
-   * against Azure storage even when it's not used at all. To perform the config validation
-   * only when it is actually used, we use a supplier.
-   *
-   * See OmniDataSegmentKiller for how DataSegmentKillers are initialized.
-   */
-  private final Supplier<BlobServiceClient> blobServiceClient;
   private final AzureClientFactory azureClientFactory;
-  private final ConcurrentHashMap<String, Pair<Integer, BlobContainerClient>> blobContainerClients = new ConcurrentHashMap<>();
 
   public AzureStorage(
-      Supplier<BlobServiceClient> blobServiceClient,
       AzureClientFactory azureClientFactory
   )
   {
-    this.blobServiceClient = blobServiceClient;
     this.azureClientFactory = azureClientFactory;
   }
 
@@ -123,6 +106,7 @@ public class AzureStorage
 
     try (FileInputStream stream = new FileInputStream(file)) {
       // By default this creates a Block blob, no need to use a specific Block blob client.
+      // We also need to urlEncode the path to handle special characters.
       blobContainerClient.getBlobClient(Utility.urlEncode(blobPath)).upload(stream, file.length());
     }
   }
@@ -222,9 +206,9 @@ public class AzureStorage
   }
 
   @VisibleForTesting
-  BlobServiceClient getBlobServiceClient()
+  BlobServiceClient getBlobServiceClient(Integer maxAttempts)
   {
-    return this.blobServiceClient.get();
+    return azureClientFactory.getBlobServiceClient(maxAttempts);
   }
 
   @VisibleForTesting
@@ -242,31 +226,13 @@ public class AzureStorage
     );
   }
 
-  // If maxRetries is not specified, use the base BlobServiceClient to generate a BlobContainerClient.
-  // It has no retry policy and uses its own HttpClient, so building new BlobContainerClients is instant.
   private BlobContainerClient getOrCreateBlobContainerClient(final String containerName)
   {
-    return getBlobServiceClient().createBlobContainerIfNotExists(containerName);
+    return getBlobServiceClient(null).createBlobContainerIfNotExists(containerName);
   }
 
   private BlobContainerClient getOrCreateBlobContainerClient(final String containerName, final Integer maxRetries)
   {
-    if (maxRetries == null) {
-      return getOrCreateBlobContainerClient(containerName);
-    }
-
-    Pair<Integer, BlobContainerClient> blobContainerClientPair = blobContainerClients.get(containerName);
-    if (blobContainerClientPair != null && blobContainerClientPair.lhs != null && blobContainerClientPair.lhs >= maxRetries) {
-      return blobContainerClientPair.rhs;
-    }
-
-    BlobContainerClient blobContainerClient = azureClientFactory.getBlobContainerClient(getBlobServiceClient().getAccountName(), containerName, maxRetries);
-    blobContainerClient.createIfNotExists();
-
-    blobContainerClients.put(
-        containerName,
-        Pair.of(maxRetries, blobContainerClient)
-    );
-    return blobContainerClient;
+    return getBlobServiceClient(maxRetries).createBlobContainerIfNotExists(containerName);
   }
 }

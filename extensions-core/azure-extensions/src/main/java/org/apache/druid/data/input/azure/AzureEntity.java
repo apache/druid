@@ -56,8 +56,8 @@ public class AzureEntity extends RetryingInputEntity
     this.scheme = scheme;
     // If scheme is azureStorage, containerName is the first prefix in the path, otherwise containerName is the bucket
     if (AzureStorageAccountInputSource.SCHEME.equals(this.scheme)) {
-      String[] bucketParts = location.getPath().split("/", 2);
-      this.byteSource = byteSourceFactory.create(bucketParts[0], bucketParts[1], azureStorage);
+      String[] pathParts = location.getPath().split("/", 2);
+      this.byteSource = byteSourceFactory.create(pathParts[0], pathParts[1], azureStorage);
     } else {
       this.byteSource = byteSourceFactory.create(location.getBucket(), location.getPath(), azureStorage);
     }

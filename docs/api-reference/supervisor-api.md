@@ -6,9 +6,7 @@ sidebar_label: Supervisors
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-
 <!--
-
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
   ~ distributed with this work for additional information
@@ -3144,17 +3142,21 @@ Use this endpoint to selectively reset offsets for partitions without resetting 
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="1" label="200 SUCCESS">
+
 
 *Successfully reset offsets*
 
-<!--404 NOT FOUND-->
+</TabItem>
+<TabItem value="2" label="404 NOT FOUND">
+
 
 *Invalid supervisor ID*
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 ---
 #### Reset Offsets Metadata
@@ -3181,9 +3183,10 @@ The following table defines the fields within the `partitions` object in the res
 The following example shows how to reset offsets for a kafka supervisor with the name `social_media`. Let's say the supervisor is reading
 from a kafka topic `ads_media_stream` and has the stored offsets: `{"0": 0, "1": 10, "2": 20, "3": 40}`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="3" label="cURL">
+
 
 ```shell
 curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/social_media/resetOffsets"
@@ -3191,7 +3194,9 @@ curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/so
 --data-raw '{"type":"kafka","partitions":{"type":"end","stream":"ads_media_stream","partitionOffsetMap":{"0":100, "2": 650}}}'
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="4" label="HTTP">
+
 
 ```HTTP
 POST /druid/indexer/v1/supervisor/social_media/resetOffsets HTTP/1.1
@@ -3214,7 +3219,8 @@ Content-Type: application/json
 The above operation will reset offsets only for partitions 0 and 2 to 100 and 650 respectively. After a successful reset,
 when the supervisor's tasks restart, they will resume reading from `{"0": 100, "1": 10, "2": 650, "3": 40}`.
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 

@@ -35,7 +35,6 @@ import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.TypeSignature;
@@ -43,6 +42,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.index.AllTrueBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
 import org.apache.druid.segment.index.semantic.NullValueIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
@@ -99,12 +99,6 @@ public class NullFilter extends AbstractOptimizableDimFilter implements Filter
   }
 
   @Override
-  public DimFilter optimize()
-  {
-    return this;
-  }
-
-  @Override
   public Filter toFilter()
   {
     return this;
@@ -114,6 +108,10 @@ public class NullFilter extends AbstractOptimizableDimFilter implements Filter
   @Override
   public RangeSet<String> getDimensionRangeSet(String dimension)
   {
+    if (!Objects.equals(getColumn(), dimension)) {
+      return null;
+    }
+
     RangeSet<String> retSet = TreeRangeSet.create();
     // Nulls are less than empty String in segments
     retSet.add(Range.lessThan(""));
@@ -132,10 +130,14 @@ public class NullFilter extends AbstractOptimizableDimFilter implements Filter
       return new AllTrueBitmapColumnIndex(selector);
     }
     final NullValueIndex nullValueIndex = indexSupplier.as(NullValueIndex.class);
-    if (nullValueIndex == null) {
-      return null;
+    if (nullValueIndex != null) {
+      return nullValueIndex.get();
     }
-    return nullValueIndex.get();
+    final DruidPredicateIndexes predicateIndexes = indexSupplier.as(DruidPredicateIndexes.class);
+    if (predicateIndexes != null) {
+      return predicateIndexes.forPredicate(NullPredicateFactory.INSTANCE);
+    }
+    return null;
   }
 
   @Override
@@ -152,12 +154,6 @@ public class NullFilter extends AbstractOptimizableDimFilter implements Filter
         VectorValueMatcherColumnProcessorFactory.instance(),
         factory
     ).makeMatcher(NullPredicateFactory.INSTANCE);
-  }
-
-  @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
-  {
-    return Filters.supportsSelectivityEstimation(this, column, columnSelector, indexSelector);
   }
 
   @Override

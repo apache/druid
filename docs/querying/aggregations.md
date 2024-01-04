@@ -372,6 +372,7 @@ Example:
 | `name` | Output name for the value. | Yes |
 | `fieldName` | Name of the input column to compute the value over. | Yes |
 | `maxStringBytes` | Maximum size of string values to accumulate when computing the first or last value per group. Values longer than this will be truncated. | No. Defaults to 1024. |
+| `aggregateMultipleValues` | `aggregateMultipleValues` is an optional boolean flag controls the behavior of aggregating a [multi-value dimension](./multi-value-dimensions.md). `aggregateMultipleValues` is set as true by default and returns the stringified array in case of a multi-value dimension. By setting it to false, function will return first value instead. | No. Defaults to true. |
 
 Example:
 ```json

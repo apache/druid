@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.last;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.query.aggregation.VectorAggregator;
+import org.apache.druid.query.aggregation.first.FirstLastUtils;
 import org.apache.druid.query.aggregation.first.StringFirstLastUtils;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.vector.VectorObjectSelector;
@@ -81,7 +82,7 @@ public class StringLastVectorAggregator implements VectorAggregator
         continue;
       }
       index = i;
-      final boolean foldNeeded = StringFirstLastUtils.objectNeedsFoldCheck(objectsWhichMightBeStrings[index]);
+      final boolean foldNeeded = FirstLastUtils.objectNeedsFoldCheck(objectsWhichMightBeStrings[index], SerializablePairLongString.class);
       if (foldNeeded) {
         // Less efficient code path when folding is a possibility (we must read the value selector first just in case
         // it's a foldable object).
@@ -140,7 +141,7 @@ public class StringLastVectorAggregator implements VectorAggregator
     boolean foldNeeded = false;
     for (Object obj : objectsWhichMightBeStrings) {
       if (obj != null) {
-        foldNeeded = StringFirstLastUtils.objectNeedsFoldCheck(obj);
+        foldNeeded = FirstLastUtils.objectNeedsFoldCheck(obj, SerializablePairLongString.class);
         break;
       }
     }

@@ -19,19 +19,11 @@
 
 package org.apache.druid.storage.google;
 
-import com.google.api.client.http.HttpRequestInitializer;
-import com.google.api.client.http.HttpTransport;
-import com.google.api.client.json.JsonFactory;
-import com.google.api.services.storage.Storage;
-import com.google.api.services.storage.model.StorageObject;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import org.apache.druid.storage.google.ObjectStorageIteratorTest.MockStorage.MockObjects.MockList;
-import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.math.BigInteger;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,7 +31,7 @@ import java.util.stream.Collectors;
 
 public class ObjectStorageIteratorTest
 {
-  private static final ImmutableList<StorageObject> TEST_OBJECTS =
+  private static final ImmutableList<GoogleStorageObjectMetadata> TEST_OBJECTS =
       ImmutableList.of(
           makeStorageObject("b", "foo", 10L),
           makeStorageObject("b", "foo/", 0L), // directory
@@ -163,11 +155,11 @@ public class ObjectStorageIteratorTest
       final int maxListingLength
   )
   {
-    final List<StorageObject> expectedObjects = new ArrayList<>();
+    final List<GoogleStorageObjectMetadata> expectedObjects = new ArrayList<>();
 
     // O(N^2) but who cares -- the list is short.
     for (final String uri : expectedUris) {
-      final List<StorageObject> matches = TEST_OBJECTS
+      final List<GoogleStorageObjectMetadata> matches = TEST_OBJECTS
           .stream()
           .filter(storageObject -> GoogleUtils.objectToUri(storageObject).toString().equals(uri))
           .collect(Collectors.toList());
@@ -175,7 +167,7 @@ public class ObjectStorageIteratorTest
       expectedObjects.add(Iterables.getOnlyElement(matches));
     }
 
-    final List<StorageObject> actualObjects = ImmutableList.copyOf(
+    final List<GoogleStorageObjectMetadata> actualObjects = ImmutableList.copyOf(
         GoogleUtils.lazyFetchingStorageObjectsIterator(
             makeMockClient(TEST_OBJECTS),
             prefixes.stream().map(URI::create).iterator(),
@@ -194,70 +186,33 @@ public class ObjectStorageIteratorTest
    * Makes a mock Google Storage client that handles enough of "List" to test the functionality of the
    * {@link ObjectStorageIterator} class.
    */
-  static GoogleStorage makeMockClient(final List<StorageObject> storageObjects)
+  static GoogleStorage makeMockClient(final List<GoogleStorageObjectMetadata> storageObjects)
   {
     return new GoogleStorage(null)
     {
       @Override
-      public Storage.Objects.List list(final String bucket)
+      public GoogleStorageObjectPage list(
+          final String bucket,
+          final String prefix,
+          final Long pageSize,
+          final String pageToken
+      )
       {
-        return mockList(bucket, storageObjects);
-      }
-    };
-  }
-
-  @SuppressWarnings("UnnecessaryFullyQualifiedName")
-  static class MockStorage extends Storage
-  {
-    private MockStorage()
-    {
-      super(
-          EasyMock.niceMock(HttpTransport.class),
-          EasyMock.niceMock(JsonFactory.class),
-          EasyMock.niceMock(HttpRequestInitializer.class)
-      );
-    }
-
-    private MockList mockList(String bucket, java.util.List<StorageObject> storageObjects)
-    {
-      return new MockObjects().mockList(bucket, storageObjects);
-    }
-
-    class MockObjects extends Storage.Objects
-    {
-      private MockList mockList(String bucket, java.util.List<StorageObject> storageObjects)
-      {
-        return new MockList(bucket, storageObjects);
-      }
-
-      class MockList extends Objects.List
-      {
-        private final java.util.List<StorageObject> storageObjects;
-
-        private MockList(String bucket, java.util.List<StorageObject> storageObjects)
-        {
-          super(bucket);
-          this.storageObjects = storageObjects;
-        }
-
-        @Override
-        public com.google.api.services.storage.model.Objects execute()
         {
           // Continuation token is an index in the "objects" list.
-          final String continuationToken = getPageToken();
-          final int startIndex = continuationToken == null ? 0 : Integer.parseInt(continuationToken);
+          final int startIndex = pageToken == null ? 0 : Integer.parseInt(pageToken);
 
           // Find matching objects.
-          java.util.List<StorageObject> objects = new ArrayList<>();
+          List<GoogleStorageObjectMetadata> objects = new ArrayList<>();
           int nextIndex = -1;
 
           for (int i = startIndex; i < storageObjects.size(); i++) {
-            final StorageObject storageObject = storageObjects.get(i);
+            final GoogleStorageObjectMetadata storageObject = storageObjects.get(i);
 
-            if (storageObject.getBucket().equals(getBucket())
-                && storageObject.getName().startsWith(getPrefix())) {
+            if (storageObject.getBucket().equals(bucket)
+                && storageObject.getName().startsWith(prefix)) {
 
-              if (objects.size() == getMaxResults()) {
+              if (objects.size() == pageSize) {
                 // We reached our max key limit; set nextIndex (which will lead to a result with truncated = true).
                 nextIndex = i;
                 break;
@@ -268,30 +223,18 @@ public class ObjectStorageIteratorTest
             }
           }
 
-          com.google.api.services.storage.model.Objects retVal = new com.google.api.services.storage.model.Objects();
-          retVal.setItems(objects);
-          if (nextIndex >= 0) {
-            retVal.setNextPageToken(String.valueOf(nextIndex));
-          } else {
-            retVal.setNextPageToken(null);
-          }
+          GoogleStorageObjectPage retVal = new GoogleStorageObjectPage(
+              objects,
+              nextIndex >= 0 ? String.valueOf(nextIndex) : null
+          );
           return retVal;
         }
       }
-    }
+    };
   }
 
-  private static MockList mockList(String bucket, List<StorageObject> storageObjects)
+  static GoogleStorageObjectMetadata makeStorageObject(final String bucket, final String key, final long size)
   {
-    return new MockStorage().mockList(bucket, storageObjects);
-  }
-
-  static StorageObject makeStorageObject(final String bucket, final String key, final long size)
-  {
-    final StorageObject summary = new StorageObject();
-    summary.setBucket(bucket);
-    summary.setName(key);
-    summary.setSize(BigInteger.valueOf(size));
-    return summary;
+    return new GoogleStorageObjectMetadata(bucket, key, size, null);
   }
 }

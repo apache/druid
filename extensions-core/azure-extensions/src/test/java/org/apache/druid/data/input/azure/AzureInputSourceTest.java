@@ -376,6 +376,7 @@ public class AzureInputSourceTest extends EasyMockSupport
                   .usingGetClass()
                   .withPrefabValues(Logger.class, new Logger(AzureStorage.class), new Logger(AzureStorage.class))
                   .withPrefabValues(BlobContainerClient.class, new BlobContainerClientBuilder().buildClient(), new BlobContainerClientBuilder().buildClient())
+                  .withPrefabValues(AzureStorage.class, new AzureStorage(null), new AzureStorage(null))
                   .withNonnullFields("storage")
                   .withNonnullFields("entityFactory")
                   .withNonnullFields("azureCloudBlobIterableFactory")

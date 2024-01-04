@@ -373,7 +373,7 @@ public class CompactSegments implements CoordinatorCustomDuty
 
       final String dataSourceName = segmentsToCompact.get(0).getDataSource();
 
-      // As these segments will be compacted, we will aggregates the statistic to the Compacted statistics
+      // As these segments will be compacted, we will aggregate the statistic to the Compacted statistics
       AutoCompactionSnapshot.Builder snapshotBuilder = currentRunAutoCompactionSnapshotBuilders.computeIfAbsent(
           dataSourceName,
           k -> new AutoCompactionSnapshot.Builder(k, AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING)
@@ -395,7 +395,7 @@ public class CompactSegments implements CoordinatorCustomDuty
       Granularity segmentGranularityToUse = null;
       if (config.getGranularitySpec() == null || config.getGranularitySpec().getSegmentGranularity() == null) {
         // Determines segmentGranularity from the segmentsToCompact
-        // Each batch of segmentToCompact from CompactionSegmentIterator will contains the same interval as
+        // Each batch of segmentToCompact from CompactionSegmentIterator will contain the same interval as
         // segmentGranularity is not set in the compaction config
         Interval interval = segmentsToCompact.get(0).getInterval();
         if (segmentsToCompact.stream().allMatch(segment -> interval.overlaps(segment.getInterval()))) {

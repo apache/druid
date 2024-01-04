@@ -142,52 +142,6 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   }
 
   @Test
-  public void testGetBlobClientExpectedClient()
-  {
-    injector = makeInjectorWithProperties(PROPERTIES);
-
-    Supplier<BlobServiceClient> cloudBlobClient = injector.getInstance(
-        Key.get(new TypeLiteral<Supplier<BlobServiceClient>>(){})
-    );
-
-    Assert.assertEquals(AZURE_ACCOUNT_NAME, cloudBlobClient.get().getAccountName());
-  }
-
-  @Test
-  public void testGetAzureStorageContainerExpectedClient()
-  {
-    injector = makeInjectorWithProperties(PROPERTIES);
-
-    Supplier<BlobServiceClient> cloudBlobClient = injector.getInstance(
-        Key.get(new TypeLiteral<Supplier<BlobServiceClient>>(){})
-    );
-    Assert.assertEquals(AZURE_ACCOUNT_NAME, cloudBlobClient.get().getAccountName());
-
-    AzureStorage azureStorage = injector.getInstance(AzureStorage.class);
-    Assert.assertSame(cloudBlobClient.get(), azureStorage.getBlobServiceClient());
-  }
-
-  @Test
-  public void testGetAzureStorageContainerWithSASExpectedClient()
-  {
-    Properties properties = initializePropertes();
-    properties.setProperty("druid.azure.sharedAccessStorageToken", AZURE_SHARED_ACCESS_TOKEN);
-    properties.remove("druid.azure.key");
-
-    injector = makeInjectorWithProperties(properties);
-
-    Supplier<BlobServiceClient> blobServiceClient = injector.getInstance(
-        Key.get(new TypeLiteral<Supplier<BlobServiceClient>>(){})
-    );
-
-    AzureAccountConfig azureAccountConfig = injector.getInstance(AzureAccountConfig.class);
-    Assert.assertEquals(AZURE_SHARED_ACCESS_TOKEN, azureAccountConfig.getSharedAccessStorageToken());
-
-    AzureStorage azureStorage = injector.getInstance(AzureStorage.class);
-    Assert.assertSame(blobServiceClient.get(), azureStorage.getBlobServiceClient());
-  }
-
-  @Test
   public void testGetAzureByteSourceFactoryCanCreateAzureByteSource()
   {
     injector = makeInjectorWithProperties(PROPERTIES);
@@ -266,7 +220,7 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
     expectedException.expect(ProvisionException.class);
     expectedException.expectMessage(message);
     makeInjectorWithProperties(properties).getInstance(
-        Key.get(new TypeLiteral<Supplier<BlobServiceClient>>()
+        Key.get(new TypeLiteral<AzureClientFactory>()
         {
         })
     );
@@ -288,7 +242,7 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
     expectedException.expect(ProvisionException.class);
     expectedException.expectMessage(message);
     makeInjectorWithProperties(properties).getInstance(
-        Key.get(new TypeLiteral<Supplier<BlobServiceClient>>()
+        Key.get(new TypeLiteral<AzureClientFactory>()
         {
         })
     );
@@ -302,7 +256,7 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
     expectedException.expect(ProvisionException.class);
     expectedException.expectMessage("Either set 'key' or 'sharedAccessStorageToken' or 'useAzureCredentialsChain' in the azure config.");
     makeInjectorWithProperties(properties).getInstance(
-        Key.get(new TypeLiteral<Supplier<BlobServiceClient>>()
+        Key.get(new TypeLiteral<AzureClientFactory>()
         {
         })
     );

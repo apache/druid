@@ -121,12 +121,12 @@ The following properties are automatically set by the Coordinator:
 * `id`: Generated using the task type, datasource name, interval, and timestamp. The task ID is prefixed with `coordinator-issued`.
 * `context`: Set according to the user-provided `taskContext`.
 
-Compaction tasks typically fetch all [relevant segments](compaction.md#compaction-io-configuration) prior to launching any subtasks,
+Compaction tasks typically fetch all [relevant segments](manual-compaction.md#compaction-io-configuration) prior to launching any subtasks,
 _unless_ the following properties are all set to non-null values. It is strongly recommended to set them to non-null values to
 maximize performance and minimize disk usage of the `compact` tasks launched by auto-compaction:
 
-- [`granularitySpec`](compaction.md#compaction-granularity-spec), with non-null values for each of `segmentGranularity`, `queryGranularity`, and `rollup`
-- [`dimensionsSpec`](compaction.md#compaction-dimensions-spec)
+- [`granularitySpec`](manual-compaction.md#compaction-granularity-spec), with non-null values for each of `segmentGranularity`, `queryGranularity`, and `rollup`
+- [`dimensionsSpec`](manual-compaction.md#compaction-dimensions-spec)
 - `metricsSpec`
 
 For more details on each of the specs in an auto-compaction configuration, see [Automatic compaction dynamic configuration](../configuration/index.md#automatic-compaction-dynamic-configuration).
@@ -233,6 +233,10 @@ When using concurrent append and replace, keep the following in mind:
 
 ### Configure concurrent append and replace
 
+##### Update the compaction settings with the UI
+
+In the **Compaction config** for a datasource, set  **Allow concurrent compactions (experimental)** to **True**.
+
 ##### Update the compaction settings with the API
  
  Prepare your datasource for concurrent append and replace by setting its task lock type to `REPLACE`.
@@ -249,9 +253,6 @@ curl --location --request POST 'http://localhost:8081/druid/coordinator/v1/confi
 }'
 ```
 
-##### Update the compaction settings with the UI
-
-In the **Compaction config** for a datasource, set  **Allow concurrent compactions (experimental)** to **True**.
 
 #### Add a task lock type to your ingestion job
 
@@ -261,6 +262,13 @@ Next, you need to configure the task lock type for your ingestion job:
 - For legacy JSON-based batch ingestion, the context parameter goes in your ingestion spec, and the lock type can be either `APPEND` or `REPLACE`. 
  
 You can provide the context parameter through the API like any other parameter for ingestion job or through the UI.
+
+##### Add a task lock using the Druid console
+
+As part of the  **Load data** wizard for classic batch (JSON-based ingestion) and streaming ingestion, you can configure the task lock type for the ingestion during the **Publish** step:
+
+- If you set **Append to existing** to **True**, you can then set **Allow concurrent append tasks (experimental)** to **True**.
+- If you set **Append to existing** to **False**, you can then set **Allow concurrent replace tasks (experimental)** to **True**.
 
 ##### Add the task lock type through the API
 
@@ -295,18 +303,11 @@ Set  `taskLockType` to `REPLACE` if you're replacing data. For example, if you u
 - dynamic partitioning with append to existing set to `false`
 
 
-##### Add a task lock using the Druid console
-
-As part of the  **Load data** wizard for classic batch (JSON-based ingestion) and streaming ingestion, you can configure the task lock type for the ingestion during the **Publish** step:
-
-- If you set **Append to existing** to **True**, you can then set **Allow concurrent append tasks (experimental)** to **True**.
-- If you set **Append to existing** to **False**, you can then set **Allow concurrent replace tasks (experimental)** to **True**.
-
-
 ## Learn more
 
 See the following topics for more information:
-* [Compaction](compaction.md) for an overview of compaction and how to set up manual compaction in Druid.
+* [Compaction](compaction.md) for an overview of compaction in Druid.
+* [Manual compaction](manual-compaction.md) for how to manually perform compaction tasks.
 * [Segment optimization](../operations/segment-optimization.md) for guidance on evaluating and optimizing Druid segment size.
 * [Coordinator process](../design/coordinator.md#automatic-compaction) for details on how the Coordinator plans compaction tasks.
 

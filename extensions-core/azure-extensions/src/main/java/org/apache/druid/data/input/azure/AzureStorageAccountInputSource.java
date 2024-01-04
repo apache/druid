@@ -141,12 +141,10 @@ public class AzureStorageAccountInputSource extends CloudObjectInputSource
   @Override
   protected AzureEntity createEntity(CloudObjectLocation location)
   {
-    AzureIngestClientFactory azureIngestClientFactory = new AzureIngestClientFactory(azureAccountConfig, azureInputSourceConfig);
-    String[] bucketParts = location.getBucket().split("/");
-    String storageAccount = location.getBucket().contains("/") ? bucketParts[bucketParts.length - 1] : azureAccountConfig.getAccount();
+    AzureIngestClientFactory azureIngestClientFactory = new AzureIngestClientFactory(azureAccountConfig, azureInputSourceConfig, location.getBucket());
     return entityFactory.create(
         location,
-        new AzureStorage(Suppliers.memoize(() -> azureIngestClientFactory.getBlobServiceClient(storageAccount)), azureIngestClientFactory),
+        new AzureStorage(azureIngestClientFactory),
         SCHEME
     );
   }

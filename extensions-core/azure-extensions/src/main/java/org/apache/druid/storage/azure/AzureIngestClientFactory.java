@@ -19,6 +19,8 @@
 
 package org.apache.druid.storage.azure;
 
+import com.azure.core.http.policy.ExponentialBackoffOptions;
+import com.azure.core.http.policy.RetryOptions;
 import com.azure.identity.ClientSecretCredentialBuilder;
 import com.azure.identity.DefaultAzureCredentialBuilder;
 import com.azure.storage.blob.BlobContainerClient;
@@ -28,21 +30,31 @@ import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.common.StorageSharedKeyCredential;
 import org.apache.druid.data.input.azure.AzureInputSourceConfig;
 
+import java.time.Duration;
+
 
 public class AzureIngestClientFactory extends AzureClientFactory
 {
   private final AzureInputSourceConfig azureInputSourceConfig;
+  private final String storageAccount;
 
-  public AzureIngestClientFactory(AzureAccountConfig config, AzureInputSourceConfig azureInputSourceConfig)
+  public AzureIngestClientFactory(AzureAccountConfig config, AzureInputSourceConfig azureInputSourceConfig, String storageAccount)
   {
     super(config);
     this.azureInputSourceConfig = azureInputSourceConfig;
+    this.storageAccount = storageAccount;
   }
 
   @Override
-  public BlobServiceClient getBlobServiceClient(String storageAccount)
+  public String getStorageAccount() {
+    return storageAccount;
+  }
+
+  @Override
+  public BlobServiceClient buildNewClient(Integer retryCount)
   {
-    BlobServiceClientBuilder clientBuilder = getBlobServiceClientBuilder(storageAccount);
+    BlobServiceClientBuilder clientBuilder =  new BlobServiceClientBuilder()
+      .endpoint("https://" + getStorageAccount() + ".blob.core.windows.net");
 
     if (azureInputSourceConfig.getKey() != null) {
       clientBuilder.credential(new StorageSharedKeyCredential(storageAccount, azureInputSourceConfig.getKey()));
@@ -61,35 +73,14 @@ public class AzureIngestClientFactory extends AzureClientFactory
       );
     } else {
       // If no additional auth method is passed, fallback to default factory method
-      return super.getBlobServiceClient(storageAccount);
+      return super.buildNewClient(retryCount);
     }
-
-    return clientBuilder.buildClient();
-  }
-
-  @Override
-  public BlobContainerClient getBlobContainerClient(String storageAccount, String containerName, Integer maxRetries)
-  {
-    BlobContainerClientBuilder clientBuilder = getBlobContainerClientBuilder(storageAccount, containerName, maxRetries);
-    if (azureInputSourceConfig.getKey() != null) {
-      clientBuilder.credential(new StorageSharedKeyCredential(storageAccount, azureInputSourceConfig.getKey()));
-    } else if (azureInputSourceConfig.getSharedAccessStorageToken() != null) {
-      clientBuilder.sasToken(azureInputSourceConfig.getSharedAccessStorageToken());
-    } else if (azureInputSourceConfig.shouldUseAzureCredentialsChain() != null) {
-      DefaultAzureCredentialBuilder defaultAzureCredentialBuilder = new DefaultAzureCredentialBuilder()
-          .managedIdentityClientId(config.getManagedIdentityClientId());
-      clientBuilder.credential(defaultAzureCredentialBuilder.build());
-    } else if (azureInputSourceConfig.getAppRegistrationClientId() != null && azureInputSourceConfig.getAppRegistrationClientSecret() != null) {
-      clientBuilder.credential(new ClientSecretCredentialBuilder()
-          .clientSecret(azureInputSourceConfig.getAppRegistrationClientSecret())
-          .clientId(azureInputSourceConfig.getAppRegistrationClientId())
-          .tenantId(azureInputSourceConfig.getTenantId())
-          .build()
-      );
-    } else {
-      // If no additional auth method is passed, fallback to default factory method
-      return super.getBlobContainerClient(storageAccount, containerName, maxRetries);
-    }
+    clientBuilder.retryOptions(new RetryOptions(
+      new ExponentialBackoffOptions()
+          .setMaxRetries(retryCount != null ? retryCount : config.getMaxTries())
+          .setBaseDelay(Duration.ofMillis(1000))
+          .setMaxDelay(Duration.ofMillis(60000))
+    ));
     return clientBuilder.buildClient();
   }
 }
