@@ -4242,15 +4242,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
               .aggregators(aggregators(new CountAggregatorFactory("a0")))
               .context(QUERY_CONTEXT_DEFAULT);
     if (NullHandling.sqlCompatible()) {
-      builder.virtualColumns(expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING))
-             .filters(
-                 and(
-                     equality("dim2", "a", ColumnType.STRING),
-                     not(equality("v0", "z", ColumnType.STRING))
-                 )
-             );
+      builder = builder.virtualColumns(expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING))
+                       .filters(
+                           and(
+                               equality("dim2", "a", ColumnType.STRING),
+                               not(equality("v0", "z", ColumnType.STRING))
+                           )
+                       );
     } else {
-      builder.filters(
+      builder = builder.filters(
           and(
               equality("dim2", "a", ColumnType.STRING),
               not(selector("dim1", "z", new SubstringDimExtractionFn(0, 1)))
@@ -4284,15 +4284,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
               .aggregators(aggregators(new CountAggregatorFactory("a0")))
               .context(QUERY_CONTEXT_DEFAULT);
     if (NullHandling.sqlCompatible()) {
-      builder.virtualColumns(expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING))
-             .filters(
-                 and(
-                     equality("dim2", "a", ColumnType.STRING),
-                     not(equality("v0", "z", ColumnType.STRING))
-                 )
-             );
+      builder = builder.virtualColumns(expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING))
+                       .filters(
+                           and(
+                               equality("dim2", "a", ColumnType.STRING),
+                               not(equality("v0", "z", ColumnType.STRING))
+                           )
+                       );
     } else {
-      builder.filters(
+      builder = builder.filters(
           and(
               equality("dim2", "a", ColumnType.STRING),
               not(selector("dim1", "z", new SubstringDimExtractionFn(0, 1)))
@@ -4324,17 +4324,17 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
               .aggregators(aggregators(new CountAggregatorFactory("a0")))
               .context(QUERY_CONTEXT_DEFAULT);
     if (NullHandling.sqlCompatible()) {
-      builder.virtualColumns(
-                 expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING)
-             )
-             .filters(
-                 and(
-                     equality("dim2", "a", ColumnType.STRING),
-                     not(equality("v0", "z", ColumnType.STRING))
-                 )
-             );
+      builder = builder.virtualColumns(
+                           expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING)
+                       )
+                       .filters(
+                           and(
+                               equality("dim2", "a", ColumnType.STRING),
+                               not(equality("v0", "z", ColumnType.STRING))
+                           )
+                       );
     } else {
-      builder.filters(
+      builder = builder.filters(
           and(
               equality("dim2", "a", ColumnType.STRING),
               not(selector("dim1", "z", new SubstringDimExtractionFn(0, 1)))
@@ -4927,76 +4927,76 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
               .granularity(Granularities.ALL)
               .context(QUERY_CONTEXT_DEFAULT);
     if (NullHandling.sqlCompatible()) {
-      builder.virtualColumns(expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING))
-             .aggregators(
-                 aggregators(
-                     new FilteredAggregatorFactory(
-                         new LongSumAggregatorFactory("a0", "cnt"),
-                         equality("dim1", "abc", ColumnType.STRING)
-                     ),
-                     new FilteredAggregatorFactory(
-                         new LongSumAggregatorFactory("a1", "cnt"),
-                         not(istrue(equality("dim1", "abc", ColumnType.STRING)))
-                     ),
-                     new FilteredAggregatorFactory(
-                         new LongSumAggregatorFactory("a2", "cnt"),
-                         equality("v0", "a", ColumnType.STRING)
-                     ),
-                     new FilteredAggregatorFactory(
-                         new CountAggregatorFactory("a3"),
-                         and(
-                             notNull("dim2"),
-                             not(equality("dim1", "1", ColumnType.STRING))
-                         )
-                     ),
-                     new FilteredAggregatorFactory(
-                         new CountAggregatorFactory("a4"),
-                         not(equality("dim1", "1", ColumnType.STRING))
-                     ),
-                     new FilteredAggregatorFactory(
-                         new CountAggregatorFactory("a5"),
-                         not(equality("dim1", "1", ColumnType.STRING))
-                     ),
-                     new FilteredAggregatorFactory(
-                         new LongSumAggregatorFactory("a6", "cnt"),
-                         equality("dim2", "a", ColumnType.STRING)
-                     ),
-                     new FilteredAggregatorFactory(
-                         new LongSumAggregatorFactory("a7", "cnt"),
-                         and(
-                             equality("dim2", "a", ColumnType.STRING),
-                             not(equality("dim1", "1", ColumnType.STRING))
-                         )
-                     ),
-                     new FilteredAggregatorFactory(
-                         new LongSumAggregatorFactory("a8", "cnt"),
-                         not(equality("dim1", "1", ColumnType.STRING))
-                     ),
-                     new FilteredAggregatorFactory(
-                         new LongMaxAggregatorFactory("a9", "cnt"),
-                         not(equality("dim1", "1", ColumnType.STRING))
-                     ),
-                     new FilteredAggregatorFactory(
-                         new CardinalityAggregatorFactory(
-                             "a10",
-                             null,
-                             dimensions(new DefaultDimensionSpec("m1", "m1", ColumnType.FLOAT)),
-                             false,
-                             true
-                         ),
-                         not(equality("dim1", "1", ColumnType.STRING))
-                     ),
-                     new FilteredAggregatorFactory(
-                         new LongSumAggregatorFactory("a11", "cnt"),
-                         and(
-                             equality("dim2", "a", ColumnType.STRING),
-                             equality("dim1", "b", ColumnType.STRING)
-                         )
-                     )
-                 )
-             );
+      builder = builder.virtualColumns(expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING))
+                       .aggregators(
+                           aggregators(
+                               new FilteredAggregatorFactory(
+                                   new LongSumAggregatorFactory("a0", "cnt"),
+                                   equality("dim1", "abc", ColumnType.STRING)
+                               ),
+                               new FilteredAggregatorFactory(
+                                   new LongSumAggregatorFactory("a1", "cnt"),
+                                   not(istrue(equality("dim1", "abc", ColumnType.STRING)))
+                               ),
+                               new FilteredAggregatorFactory(
+                                   new LongSumAggregatorFactory("a2", "cnt"),
+                                   equality("v0", "a", ColumnType.STRING)
+                               ),
+                               new FilteredAggregatorFactory(
+                                   new CountAggregatorFactory("a3"),
+                                   and(
+                                       notNull("dim2"),
+                                       not(equality("dim1", "1", ColumnType.STRING))
+                                   )
+                               ),
+                               new FilteredAggregatorFactory(
+                                   new CountAggregatorFactory("a4"),
+                                   not(equality("dim1", "1", ColumnType.STRING))
+                               ),
+                               new FilteredAggregatorFactory(
+                                   new CountAggregatorFactory("a5"),
+                                   not(equality("dim1", "1", ColumnType.STRING))
+                               ),
+                               new FilteredAggregatorFactory(
+                                   new LongSumAggregatorFactory("a6", "cnt"),
+                                   equality("dim2", "a", ColumnType.STRING)
+                               ),
+                               new FilteredAggregatorFactory(
+                                   new LongSumAggregatorFactory("a7", "cnt"),
+                                   and(
+                                       equality("dim2", "a", ColumnType.STRING),
+                                       not(equality("dim1", "1", ColumnType.STRING))
+                                   )
+                               ),
+                               new FilteredAggregatorFactory(
+                                   new LongSumAggregatorFactory("a8", "cnt"),
+                                   not(equality("dim1", "1", ColumnType.STRING))
+                               ),
+                               new FilteredAggregatorFactory(
+                                   new LongMaxAggregatorFactory("a9", "cnt"),
+                                   not(equality("dim1", "1", ColumnType.STRING))
+                               ),
+                               new FilteredAggregatorFactory(
+                                   new CardinalityAggregatorFactory(
+                                       "a10",
+                                       null,
+                                       dimensions(new DefaultDimensionSpec("m1", "m1", ColumnType.FLOAT)),
+                                       false,
+                                       true
+                                   ),
+                                   not(equality("dim1", "1", ColumnType.STRING))
+                               ),
+                               new FilteredAggregatorFactory(
+                                   new LongSumAggregatorFactory("a11", "cnt"),
+                                   and(
+                                       equality("dim2", "a", ColumnType.STRING),
+                                       equality("dim1", "b", ColumnType.STRING)
+                                   )
+                               )
+                           )
+                       );
     } else {
-      builder.aggregators(
+      builder = builder.aggregators(
           aggregators(
               new FilteredAggregatorFactory(
                   new LongSumAggregatorFactory("a0", "cnt"),
@@ -7792,14 +7792,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                     )
                     .setContext(QUERY_CONTEXT_DEFAULT);
     if (NullHandling.sqlCompatible()) {
-      builder.setVirtualColumns(
-                 expressionVirtualColumn("v0", "regexp_extract(\"dim1\",'^(.)',1)", ColumnType.STRING)
-             )
-             .setDimFilter(
-                 not(equality("v0", "x", ColumnType.STRING))
-             );
+      builder = builder.setVirtualColumns(
+                           expressionVirtualColumn("v0", "regexp_extract(\"dim1\",'^(.)',1)", ColumnType.STRING)
+                       )
+                       .setDimFilter(
+                           not(equality("v0", "x", ColumnType.STRING))
+                       );
     } else {
-      builder.setDimFilter(
+      builder = builder.setDimFilter(
           not(selector("dim1", "x", new RegexDimExtractionFn("^(.)", 1, true, null)))
       );
     }
@@ -7863,26 +7863,30 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
               .aggregators(new CountAggregatorFactory("a0"))
               .context(QUERY_CONTEXT_DEFAULT);
     if (NullHandling.sqlCompatible()) {
-      builder.virtualColumns(
-                 expressionVirtualColumn("v0", "regexp_extract(\"dim1\",'^1')", ColumnType.STRING),
-                 expressionVirtualColumn("v1", "regexp_extract(concat('Z',\"dim1\"),'^Z2')", ColumnType.STRING)
-             )
-             .filters(
-                 or(
-                     notNull("v0"),
-                     notNull("v1")
-                 )
-             );
+      builder = builder.virtualColumns(
+                           expressionVirtualColumn("v0", "regexp_extract(\"dim1\",'^1')", ColumnType.STRING),
+                           expressionVirtualColumn("v1", "regexp_extract(concat('Z',\"dim1\"),'^Z2')", ColumnType.STRING)
+                       )
+                       .filters(
+                           or(
+                               notNull("v0"),
+                               notNull("v1")
+                           )
+                       );
     } else {
-      builder.virtualColumns(
-                 expressionVirtualColumn("v0", "regexp_extract(concat('Z',\"dim1\"),'^Z2')", ColumnType.STRING)
-             )
-             .filters(
-                 or(
-                     not(selector("dim1", NullHandling.defaultStringValue(), new RegexDimExtractionFn("^1", 0, true, null))),
-                     notNull("v0")
-                 )
-             );
+      builder = builder.virtualColumns(
+                           expressionVirtualColumn("v0", "regexp_extract(concat('Z',\"dim1\"),'^Z2')", ColumnType.STRING)
+                       )
+                       .filters(
+                           or(
+                               not(selector(
+                                   "dim1",
+                                   NullHandling.defaultStringValue(),
+                                   new RegexDimExtractionFn("^1", 0, true, null)
+                               )),
+                               notNull("v0")
+                           )
+                       );
     }
     testQuery(
         "SELECT COUNT(*)\n"
@@ -8824,14 +8828,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                     )
                     .setContext(QUERY_CONTEXT_DEFAULT);
     if (NullHandling.sqlCompatible()) {
-      builder.setVirtualColumns(
-                 expressionVirtualColumn("v0", "lookup(\"dim1\",'lookyloo')", ColumnType.STRING)
-             )
-             .setDimFilter(
-                 not(equality("v0", "xxx", ColumnType.STRING))
-             );
+      builder = builder.setVirtualColumns(
+                           expressionVirtualColumn("v0", "lookup(\"dim1\",'lookyloo')", ColumnType.STRING)
+                       )
+                       .setDimFilter(
+                           not(equality("v0", "xxx", ColumnType.STRING))
+                       );
     } else {
-      builder.setDimFilter(
+      builder = builder.setDimFilter(
           not(selector("dim1", "xxx", extractionFn))
       );
     }

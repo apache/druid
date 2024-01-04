@@ -1197,15 +1197,15 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         .context(QUERY_CONTEXT_DEFAULT);
 
     if (NullHandling.sqlCompatible()) {
-      builder.virtualColumns(expressionVirtualColumn("v0", "substring(\"dim3\", 0, 1)", ColumnType.STRING))
-             .filters(
-                 and(
-                     equality("v0", "a", ColumnType.STRING),
-                     equality("v0", "b", ColumnType.STRING)
-                 )
-             );
+      builder = builder.virtualColumns(expressionVirtualColumn("v0", "substring(\"dim3\", 0, 1)", ColumnType.STRING))
+                       .filters(
+                           and(
+                               equality("v0", "a", ColumnType.STRING),
+                               equality("v0", "b", ColumnType.STRING)
+                           )
+                       );
     } else {
-      builder.filters(
+      builder = builder.filters(
           and(
               selector("dim3", "a", new SubstringDimExtractionFn(0, 1)),
               selector("dim3", "b", new SubstringDimExtractionFn(0, 1))
