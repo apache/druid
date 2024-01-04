@@ -59,12 +59,12 @@ public class TestDataSegmentAnnouncer implements DataSegmentAnnouncer
   }
 
   @Override
-  public void announceSegmentSchema(String taskId, SegmentSchemas segmentSchemas, SegmentSchemas segmentSchemasChange)
+  public void announceSegmentSchemas(String taskId, SegmentSchemas segmentSchemas, SegmentSchemas segmentSchemasChange)
   {
   }
 
   @Override
-  public void unannouceTask(String taskId)
+  public void invalidateSegmentSchemaForTask(String taskId)
   {
   }
 }

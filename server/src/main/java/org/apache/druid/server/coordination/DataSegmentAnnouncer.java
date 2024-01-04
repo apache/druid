@@ -42,7 +42,7 @@ public interface DataSegmentAnnouncer
    * @param segmentSchemas absolute schema for all sinks, in case the client requests full sync.
    * @param segmentSchemasChange schema change for all sinks
    */
-  void announceSegmentSchema(
+  void announceSegmentSchemas(
       String taskId,
       SegmentSchemas segmentSchemas,
       @Nullable SegmentSchemas segmentSchemasChange
@@ -52,5 +52,5 @@ public interface DataSegmentAnnouncer
    * Unnannounce task.
    * @param taskId taskId
    */
-  void unannouceTask(String taskId);
+  void invalidateSegmentSchemaForTask(String taskId);
 }

@@ -1693,7 +1693,7 @@ public class StreamAppenderator implements Appenderator
     private void stop()
     {
       if (scheduledExecutorService != null) {
-        announcer.unannouceTask(taskId);
+        announcer.invalidateSegmentSchemaForTask(taskId);
         scheduledExecutorService.shutdown();
       }
     }
@@ -1716,7 +1716,7 @@ public class StreamAppenderator implements Appenderator
 
       // announce schema
       sinksSchema.ifPresent(
-          segmentsSchema -> announcer.announceSegmentSchema(
+          segmentsSchema -> announcer.announceSegmentSchemas(
               taskId,
               segmentsSchema,
               sinksSchemaChange.orElse(null)

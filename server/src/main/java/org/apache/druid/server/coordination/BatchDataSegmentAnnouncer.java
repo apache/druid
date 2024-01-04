@@ -315,7 +315,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
   }
 
   @Override
-  public void announceSegmentSchema(
+  public void announceSegmentSchemas(
       String taskId,
       SegmentSchemas segmentSchemas,
       SegmentSchemas segmentSchemasChange
@@ -333,7 +333,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
   }
 
   @Override
-  public void unannouceTask(String taskId)
+  public void invalidateSegmentSchemaForTask(String taskId)
   {
     log.info("Unannouncing task [%s].", taskId);
     taskSinkSchema.remove(taskId);

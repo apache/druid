@@ -122,7 +122,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
           @Override
           public ServerView.CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
           {
-            if (!realtimeSegmentSchemaAnnouncement) {
+            if (realtimeSegmentSchemaAnnouncement) {
               updateSchemaForSegments(segmentSchemas);
             }
             return ServerView.CallbackAction.CONTINUE;

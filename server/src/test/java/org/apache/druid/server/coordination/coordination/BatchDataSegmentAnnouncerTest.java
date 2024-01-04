@@ -399,7 +399,7 @@ public class BatchDataSegmentAnnouncerTest
             ImmutableMap.of("dim1", ColumnType.UNKNOWN_COMPLEX, "dim3", ColumnType.STRING)
         );
 
-    segmentAnnouncer.announceSegmentSchema(
+    segmentAnnouncer.announceSegmentSchemas(
         taskId,
         new SegmentSchemas(Collections.singletonList(absoluteSchema1)),
         new SegmentSchemas(Collections.singletonList(absoluteSchema1)));
@@ -419,7 +419,7 @@ public class BatchDataSegmentAnnouncerTest
             .getSegmentSchemaList()
             .get(0)
     );
-    segmentAnnouncer.announceSegmentSchema(
+    segmentAnnouncer.announceSegmentSchemas(
         taskId,
         new SegmentSchemas(Collections.singletonList(absoluteSchema2)),
         new SegmentSchemas(Collections.singletonList(deltaSchema))
