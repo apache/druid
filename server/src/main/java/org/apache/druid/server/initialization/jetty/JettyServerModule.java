@@ -83,6 +83,9 @@ import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.security.KeyStore;
 import java.security.cert.CRL;
@@ -235,7 +238,6 @@ public class JettyServerModule extends JerseyServletModule
     }
 
     final SslContextFactory.Server sslContextFactory;
-
     if (node.isEnableTlsPort()) {
       log.info("Creating https connector with port [%d]", node.getTlsPort());
       if (sslContextFactoryBinding == null) {
@@ -339,7 +341,7 @@ public class JettyServerModule extends JerseyServletModule
       // workaround suggested in -
       // https://bugs.eclipse.org/bugs/show_bug.cgi?id=435322#c66 for jetty half open connection issues during failovers
       connector.setAcceptorPriorityDelta(-1);
-      connector.setAcceptQueueSize(config.getAcceptQueueSize());
+      connector.setAcceptQueueSize(getTCPAcceptQueueSize());
       List<ConnectionFactory> monitoredConnFactories = new ArrayList<>();
       for (ConnectionFactory cf : connector.getConnectionFactories()) {
         // we only want to monitor the first connection factory, since it will pass the connection to subsequent
@@ -489,6 +491,18 @@ public class JettyServerModule extends JerseyServletModule
     // ServerConnector
     int numServerConnector = (druidNode.isEnablePlaintextPort() ? 1 : 0) + (druidNode.isEnableTlsPort() ? 1 : 0);
     return numServerConnector * 8;
+  }
+
+  private static int getTCPAcceptQueueSize()
+  {
+    try {
+      final File file = new File("/proc/sys/net/core/somaxconn");
+      BufferedReader in = new BufferedReader(new FileReader(file));
+      return Integer.parseInt(in.readLine().trim());
+    } catch (Exception e) {
+      log.warn("Unable to read /proc/sys/net/core/somaxconn, falling back to default value for TCP accept queue size");
+      return 128; // Default value of net.core.somaxconn on Linux
+    }
   }
 
   @Provides

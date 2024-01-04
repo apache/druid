@@ -1576,7 +1576,6 @@ Druid uses Jetty to serve HTTP requests.
 |`druid.server.http.enableForwardedRequestCustomizer`|If enabled, adds Jetty ForwardedRequestCustomizer which reads X-Forwarded-* request headers to manipulate servlet request object when Druid is used behind a proxy.|false|
 |`druid.server.http.allowedHttpMethods`|List of HTTP methods that should be allowed in addition to the ones required by Druid APIs. Druid APIs require GET, PUT, POST, and DELETE, which are always allowed. This option is not useful unless you have installed an extension that needs these additional HTTP methods or that adds functionality related to CORS. None of Druid's bundled extensions require these methods.|`[]`|
 |`druid.server.http.contentSecurityPolicy`|Content-Security-Policy header value to set on each non-POST response. Setting this property to an empty string, or omitting it, both result in the default `frame-ancestors: none` being set.|`frame-ancestors 'none'`|
-|`druid.server.http.acceptQueueSize`|Value of the backlog parameter passed to listen() by the Jetty server for TCP connections.|`System Default`|
 
 #### Indexer processing resources
 
@@ -1686,7 +1685,6 @@ Druid uses Jetty to serve HTTP requests.
 |`druid.server.http.maxQueryTimeout`|Maximum allowed value (in milliseconds) for `timeout` parameter. See [query-context](../querying/query-context.md) to know more about `timeout`. Query is rejected if the query context `timeout` is greater than this value. |`Long.MAX_VALUE`|
 |`druid.server.http.maxRequestHeaderSize`|Maximum size of a request header in bytes. Larger headers consume more memory and can make a server more vulnerable to denial of service attacks.|8 * 1024|
 |`druid.server.http.contentSecurityPolicy`|Content-Security-Policy header value to set on each non-POST response. Setting this property to an empty string, or omitting it, both result in the default `frame-ancestors: none` being set.|`frame-ancestors 'none'`|
-|`druid.server.http.acceptQueueSize`|Value of the backlog parameter passed to listen() by the Jetty server for TCP connections.|`System Default`|
 
 ##### Processing
 
@@ -1854,7 +1852,6 @@ Druid uses Jetty to serve HTTP requests. Each query being processed consumes a s
 |`druid.server.http.maxRequestHeaderSize`|Maximum size of a request header in bytes. Larger headers consume more memory and can make a server more vulnerable to denial of service attacks. |8 * 1024|
 |`druid.server.http.contentSecurityPolicy`|Content-Security-Policy header value to set on each non-POST response. Setting this property to an empty string, or omitting it, both result in the default `frame-ancestors: none` being set.|`frame-ancestors 'none'`|
 |`druid.server.http.enableHSTS`|If set to true, druid services will add strict transport security header `Strict-Transport-Security: max-age=63072000; includeSubDomains` to all HTTP responses|`false`|
-|`druid.server.http.acceptQueueSize`|Value of the backlog parameter passed to listen() by the Jetty server for TCP connections.|`System Default`|
 
 ##### Client configuration
 
