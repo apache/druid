@@ -229,7 +229,7 @@ public class ArrayContainsElementFilter extends AbstractOptimizableDimFilter imp
 
     if (elementMatchValueEval.valueOrDefault() != null && selector.getColumnCapabilities(column) != null && !selector.getColumnCapabilities(column).isArray()) {
       // column is not an array, behave like a normal equality filter
-      return EqualityFilter.getEqualityIndex(column, elementMatchValueEval, elementMatchValueType, selector);
+      return EqualityFilter.getEqualityIndex(column, elementMatchValueEval, elementMatchValueType, selector, predicateFactory);
     }
     // column exists, but has no indexes we can use
     return null;

@@ -42,6 +42,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.index.AllTrueBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
 import org.apache.druid.segment.index.semantic.NullValueIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
@@ -129,10 +130,14 @@ public class NullFilter extends AbstractOptimizableDimFilter implements Filter
       return new AllTrueBitmapColumnIndex(selector);
     }
     final NullValueIndex nullValueIndex = indexSupplier.as(NullValueIndex.class);
-    if (nullValueIndex == null) {
-      return null;
+    if (nullValueIndex != null) {
+      return nullValueIndex.get();
     }
-    return nullValueIndex.get();
+    final DruidPredicateIndexes predicateIndexes = indexSupplier.as(DruidPredicateIndexes.class);
+    if (predicateIndexes != null) {
+      return predicateIndexes.forPredicate(NullPredicateFactory.INSTANCE);
+    }
+    return null;
   }
 
   @Override
