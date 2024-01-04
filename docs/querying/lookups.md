@@ -141,6 +141,7 @@ Druid's default null handling mode. The list of examples is illustrative, albeit
 |`LOOKUP('sku:' \|\| sku, 'sku_to_name') = 'WhizBang Sprocket'`|No, expressions for the first arg are not reversible|
 |`COALESCE(LOOKUP(sku, 'sku_to_name'), 'N/A') = 'WhizBang Sprocket'`|Yes, but see next item for `= 'N/A'`|
 |`COALESCE(LOOKUP(sku, 'sku_to_name'), 'N/A') = 'N/A'`|No, unless `sku_to_name` is [injective](#injective-lookups), which allows Druid to ignore the `COALESCE`|
+|`COALESCE(LOOKUP(sku, 'sku_to_name'), 'N/A') = 'WhizBang Sprocket' IS NOT TRUE`|Yes|
 |`COALESCE(LOOKUP(sku, 'sku_to_name'), 'N/A') <> 'WhizBang Sprocket'`|Yes, but see next item for `<> 'N/A'`|
 |`COALESCE(LOOKUP(sku, 'sku_to_name'), 'N/A') <> 'N/A'`|No, unless `sku_to_name` is [injective](#injective-lookups), which allows Druid to ignore the `COALESCE`|
 |`COALESCE(LOOKUP(sku, 'sku_to_name'), sku) = 'WhizBang Sprocket'`|No, `COALESCE` is only reversible when the second argument is a constant|
