@@ -47,6 +47,7 @@ import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.sql.calcite.external.ExternalTableScanRule;
+import org.apache.druid.sql.calcite.rule.AggregatePullUpLookupRule;
 import org.apache.druid.sql.calcite.rule.CaseToCoalesceRule;
 import org.apache.druid.sql.calcite.rule.CoalesceLookupRule;
 import org.apache.druid.sql.calcite.rule.DruidLogicalValuesRule;
@@ -59,7 +60,6 @@ import org.apache.druid.sql.calcite.rule.FilterJoinExcludePushToChildRule;
 import org.apache.druid.sql.calcite.rule.ProjectAggregatePruneUnusedCallRule;
 import org.apache.druid.sql.calcite.rule.ReverseLookupRule;
 import org.apache.druid.sql.calcite.rule.SortCollapseRule;
-import org.apache.druid.sql.calcite.rule.AggregatePullUpLookupRule;
 import org.apache.druid.sql.calcite.rule.logical.DruidLogicalRules;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 

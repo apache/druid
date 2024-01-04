@@ -55,45 +55,42 @@ public class LookylooModule implements DruidModule
     final MapBinder<String, LookupExtractor> lookupBinder =
         MapBinder.newMapBinder(binder, String.class, LookupExtractor.class);
 
-    lookupBinder.addBinding(LookupEnabledTestExprMacroTable.LOOKYLOO)
-                .toInstance(
-                    new MapLookupExtractor(
-                        ImmutableMap.<String, String>builder()
-                                    .put("a", "xa")
-                                    .put("abc", "xabc")
-                                    .put("nosuchkey", "mysteryvalue")
-                                    .put("6", "x6")
-                                    .build(),
-                        false
-                    )
-                );
+    lookupBinder.addBinding(LookupEnabledTestExprMacroTable.LOOKYLOO).toInstance(
+        new MapLookupExtractor(
+            ImmutableMap.<String, String>builder()
+                        .put("a", "xa")
+                        .put("abc", "xabc")
+                        .put("nosuchkey", "mysteryvalue")
+                        .put("6", "x6")
+                        .build(),
+            false
+        )
+    );
 
-    lookupBinder.addBinding(LOOKYLOO_CHAINED)
-                .toInstance(
-                    new MapLookupExtractor(
-                        ImmutableMap.<String, String>builder()
-                                    .put("xa", "za")
-                                    .put("xabc", "zabc")
-                                    .put("x6", "z6")
-                                    .build(),
-                        false
-                    )
-                );
+    lookupBinder.addBinding(LOOKYLOO_CHAINED).toInstance(
+        new MapLookupExtractor(
+            ImmutableMap.<String, String>builder()
+                        .put("xa", "za")
+                        .put("xabc", "zabc")
+                        .put("x6", "z6")
+                        .build(),
+            false
+        )
+    );
 
-    lookupBinder.addBinding(LOOKYLOO_INJECTIVE)
-                .toInstance(
-                    new MapLookupExtractor(
-                        ImmutableMap.<String, String>builder()
-                                    .put("", "x")
-                                    .put("10.1", "x10.1")
-                                    .put("2", "x2")
-                                    .put("1", "x1")
-                                    .put("def", "xdef")
-                                    .put("abc", "xabc")
-                                    .build(),
-                        true
-                    )
-                );
+    lookupBinder.addBinding(LOOKYLOO_INJECTIVE).toInstance(
+        new MapLookupExtractor(
+            ImmutableMap.<String, String>builder()
+                        .put("", "x")
+                        .put("10.1", "x10.1")
+                        .put("2", "x2")
+                        .put("1", "x1")
+                        .put("def", "xdef")
+                        .put("abc", "xabc")
+                        .build(),
+            true
+        )
+    );
 
     binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
     binder.bind(LookupExtractorFactoryContainerProvider.class).to(TestLookupProvider.class);
