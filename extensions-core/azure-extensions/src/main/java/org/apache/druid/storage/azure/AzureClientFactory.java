@@ -55,7 +55,7 @@ public class AzureClientFactory
   // We will only ever have at most 2 clients in cachedBlobServiceClients.
   public BlobServiceClient getBlobServiceClient(Integer retryCount)
   {
-    return cachedBlobServiceClients.computeIfAbsent(retryCount, this::buildNewClient);
+    return cachedBlobServiceClients.computeIfAbsent(retryCount != null ? retryCount : config.getMaxTries(), this::buildNewClient);
   }
 
   protected BlobServiceClient buildNewClient(Integer retryCount)
@@ -64,7 +64,7 @@ public class AzureClientFactory
         .endpoint("https://" + getStorageAccount() + ".blob.core.windows.net");
 
     if (config.getKey() != null) {
-      clientBuilder.credential(new StorageSharedKeyCredential(config.getAccount(), config.getKey()));
+      clientBuilder.credential(new StorageSharedKeyCredential(getStorageAccount(), config.getKey()));
     } else if (config.getSharedAccessStorageToken() != null) {
       clientBuilder.sasToken(config.getSharedAccessStorageToken());
     } else if (config.getUseAzureCredentialsChain()) {
