@@ -21,6 +21,8 @@ package org.apache.druid.segment.join.lookup;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Sets;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.lookup.LookupExtractor;
@@ -37,7 +39,6 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -68,8 +69,10 @@ public class LookupJoinableTest extends InitializedNullHandlingTest
     keyValues.add(null);
 
     Mockito.doReturn(SEARCH_VALUE_VALUE).when(extractor).apply(SEARCH_KEY_VALUE);
-    Mockito.doReturn(ImmutableList.of(SEARCH_KEY_VALUE)).when(extractor).unapply(SEARCH_VALUE_VALUE);
-    Mockito.doReturn(ImmutableList.of()).when(extractor).unapply(SEARCH_VALUE_UNKNOWN);
+    Mockito.when(extractor.unapplyAll(Collections.singleton(SEARCH_VALUE_VALUE)))
+           .thenAnswer(invocation -> Iterators.singletonIterator(SEARCH_KEY_VALUE));
+    Mockito.when(extractor.unapplyAll(Collections.singleton(SEARCH_VALUE_UNKNOWN)))
+           .thenAnswer(invocation -> Collections.emptyIterator());
     Mockito.doReturn(true).when(extractor).canGetKeySet();
     Mockito.doReturn(keyValues).when(extractor).keySet();
     target = LookupJoinable.wrap(extractor);
@@ -312,7 +315,7 @@ public class LookupJoinableTest extends InitializedNullHandlingTest
     );
 
     Assert.assertEquals(
-        InDimFilter.ValuesSet.copyOf(Arrays.asList("foo", "bar", "", null)),
+        Sets.newHashSet("foo", "bar", "", null),
         values.getColumnValues()
     );
   }

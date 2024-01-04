@@ -207,7 +207,7 @@ abstract class BinaryBooleanOpExprBase extends BinaryOpExprBase
         break;
     }
     if (!ExpressionProcessing.useStrictBooleans() && !type.is(ExprType.STRING) && !type.isArray()) {
-      return ExprEval.ofBoolean(result, type.getType());
+      return ExprEval.ofBoolean(result, type);
     }
     return ExprEval.ofLongBoolean(result);
   }

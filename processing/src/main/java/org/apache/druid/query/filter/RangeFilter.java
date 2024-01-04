@@ -43,7 +43,6 @@ import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFac
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
@@ -262,12 +261,6 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
   }
 
   @Override
-  public DimFilter optimize()
-  {
-    return this;
-  }
-
-  @Override
   public Filter toFilter()
   {
     return this;
@@ -356,12 +349,6 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
         VectorValueMatcherColumnProcessorFactory.instance(),
         factory
     ).makeMatcher(getPredicateFactory());
-  }
-
-  @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
-  {
-    return Filters.supportsSelectivityEstimation(this, column, columnSelector, indexSelector);
   }
 
   @Override

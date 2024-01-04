@@ -22,7 +22,6 @@ package org.apache.druid.segment.index;
 import com.google.common.collect.Iterables;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.query.BitmapResultFactory;
-import org.apache.druid.segment.filter.Filters;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -32,11 +31,6 @@ import java.util.Collections;
  */
 public abstract class SimpleImmutableBitmapIterableIndex extends SimpleBitmapColumnIndex
 {
-  @Override
-  public double estimateSelectivity(int totalRows)
-  {
-    return Filters.estimateSelectivity(getBitmapIterable().iterator(), totalRows);
-  }
 
   @Override
   public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)

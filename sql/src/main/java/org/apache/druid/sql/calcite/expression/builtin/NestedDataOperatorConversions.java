@@ -48,11 +48,13 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.InputBindings;
+import org.apache.druid.query.expression.NestedDataExpressions;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.nested.NestedPathFinder;
 import org.apache.druid.segment.nested.NestedPathPart;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
+import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
@@ -77,6 +79,16 @@ public class NestedDataOperatorConversions
       ColumnType.NESTED_DATA,
       true
   );
+
+  public static final SqlReturnTypeInference NESTED_ARRAY_RETURN_TYPE_INFERENCE = opBinding ->
+      opBinding.getTypeFactory().createArrayType(
+          RowSignatures.makeComplexType(
+              opBinding.getTypeFactory(),
+              ColumnType.NESTED_DATA,
+              true
+          ),
+          -1
+      );
 
   public static class JsonPathsOperatorConversion implements SqlOperatorConversion
   {
@@ -228,6 +240,26 @@ public class NestedDataOperatorConversions
         );
       }
       return DruidExpression.ofExpression(ColumnType.NESTED_DATA, builder, druidExpressions);
+    }
+  }
+
+  public static class JsonQueryArrayOperatorConversion extends DirectOperatorConversion
+  {
+    private static final SqlFunction SQL_FUNCTION = OperatorConversions
+        .operatorBuilder(StringUtils.toUpperCase(NestedDataExpressions.JsonQueryArrayExprMacro.NAME))
+        .operandTypeChecker(
+            OperandTypes.family(
+                SqlTypeFamily.ANY,
+                SqlTypeFamily.CHARACTER
+            )
+        )
+        .returnTypeInference(NESTED_ARRAY_RETURN_TYPE_INFERENCE)
+        .functionCategory(SqlFunctionCategory.SYSTEM)
+        .build();
+
+    public JsonQueryArrayOperatorConversion()
+    {
+      super(SQL_FUNCTION, NestedDataExpressions.JsonQueryArrayExprMacro.NAME);
     }
   }
 

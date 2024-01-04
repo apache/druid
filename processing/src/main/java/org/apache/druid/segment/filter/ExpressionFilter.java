@@ -42,7 +42,6 @@ import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnInspector;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -232,22 +231,6 @@ public class ExpressionFilter implements Filter
   }
 
   @Override
-  public boolean supportsSelectivityEstimation(
-      final ColumnSelector columnSelector,
-      final ColumnIndexSelector indexSelector
-  )
-  {
-    return false;
-  }
-
-  @Override
-  public double estimateSelectivity(final ColumnIndexSelector indexSelector)
-  {
-    // Selectivity estimation not supported.
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public Set<String> getRequiredColumns()
   {
     return bindingDetails.get().getRequiredBindings();
@@ -361,6 +344,7 @@ public class ExpressionFilter implements Filter
    */
   private DruidPredicateFactory getBitmapPredicateFactory(@Nullable ColumnCapabilities inputCapabilites)
   {
+    final boolean isNullUnknown = expr.get().eval(InputBindings.nilBindings()).value() == null;
     return new DruidPredicateFactory()
     {
       @Override
@@ -446,6 +430,12 @@ public class ExpressionFilter implements Filter
         return input -> expr.get().eval(
             InputBindings.forInputSupplier(ExpressionType.fromColumnType(inputCapabilites), () -> input)
         ).asBoolean();
+      }
+
+      @Override
+      public boolean isNullInputUnknown()
+      {
+        return isNullUnknown;
       }
 
       // The hashcode and equals are to make SubclassesMustOverrideEqualsAndHashCodeTest stop complaining..

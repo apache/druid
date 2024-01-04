@@ -44,7 +44,6 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessorFactory;
 import org.apache.druid.segment.ColumnProcessors;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -58,6 +57,7 @@ import org.apache.druid.segment.filter.PredicateValueMatcherFactory;
 import org.apache.druid.segment.filter.ValueMatchers;
 import org.apache.druid.segment.index.AllUnknownBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
 import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.index.semantic.ValueIndexes;
 import org.apache.druid.segment.nested.StructuredData;
@@ -123,12 +123,6 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
         .appendByte(DimFilterUtils.STRING_SEPARATOR)
         .appendByteArray(valueBuffer.array())
         .build();
-  }
-
-  @Override
-  public DimFilter optimize()
-  {
-    return this;
   }
 
   @Override
@@ -235,7 +229,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     if (!Filters.checkFilterTuningUseIndex(column, selector, filterTuning)) {
       return null;
     }
-    return getEqualityIndex(column, matchValueEval, matchValueType, selector);
+    return getEqualityIndex(column, matchValueEval, matchValueType, selector, predicateFactory);
   }
 
   @Override
@@ -265,12 +259,6 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
         VectorValueMatcherColumnProcessorFactory.instance(),
         factory
     ).makeMatcher(new EqualityPredicateFactory(matchValueEval));
-  }
-
-  @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
-  {
-    return Filters.supportsSelectivityEstimation(this, column, columnSelector, indexSelector);
   }
 
   @Override
@@ -316,7 +304,8 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
       String column,
       ExprEval<?> matchValueEval,
       ColumnType matchValueType,
-      ColumnIndexSelector selector
+      ColumnIndexSelector selector,
+      DruidPredicateFactory predicateFactory
   )
   {
     final ColumnIndexSupplier indexSupplier = selector.getIndexSupplier(column);
@@ -338,6 +327,12 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
         return stringValueSetIndexes.forValue(matchValueEval.asString());
       }
     }
+    // fall back to predicate based index if it is available
+    final DruidPredicateIndexes predicateIndexes = indexSupplier.as(DruidPredicateIndexes.class);
+    if (predicateIndexes != null) {
+      return predicateIndexes.forPredicate(predicateFactory);
+    }
+
     // column exists, but has no indexes we can use
     return null;
   }
@@ -392,6 +387,9 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     @Override
     public Predicate<Object[]> makeArrayPredicate(@Nullable TypeSignature<ValueType> arrayType)
     {
+      if (!matchValue.isArray()) {
+        return Predicates.alwaysFalse();
+      }
       if (arrayType == null) {
         // fall back to per row detection if input array type is unknown
         return typeDetectingArrayPredicateSupplier.get();
