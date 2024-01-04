@@ -128,7 +128,6 @@ public class SearchOperatorConversion implements SqlOperatorConversion
 
     // Compute points that occur in the complement of the range set. These are "NOT IN" points.
     final List<Comparable> notInPoints;
-    final List<RexNode> notInRexNodes;
     final RexNode notInRexNode;
 
     if (sarg.isPoints()) {
