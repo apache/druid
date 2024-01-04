@@ -203,7 +203,7 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
       @Nullable final Set<DataSegment> tombstones,
       final TransactionalSegmentPublisher publisher,
       final Function<Set<DataSegment>, Set<DataSegment>> outputSegmentsAnnotateFunction
-  ) throws Exception
+  )
   {
     final Map<String, SegmentsForSequence> snapshot;
     synchronized (segments) {

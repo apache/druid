@@ -567,7 +567,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
       SegmentsAndCommitMetadata segmentsAndCommitMetadata,
       TransactionalSegmentPublisher publisher,
       java.util.function.Function<Set<DataSegment>, Set<DataSegment>> outputSegmentsAnnotateFunction
-  ) throws Exception
+  )
   {
     final Set<DataSegment> pushedAndTombstones = new HashSet<>(segmentsAndCommitMetadata.getSegments());
     if (tombstones != null) {
@@ -598,8 +598,8 @@ public abstract class BaseAppenderatorDriver implements Closeable
                                   ? null
                                   : ((AppenderatorDriverMetadata) metadata).getCallerMetadata();
 
-    return RetryUtils.retry(
-      () -> executor.submit(
+    return executor.submit(
+      () -> RetryUtils.retry(
         () -> {
           try {
             final ImmutableSet<DataSegment> ourSegments = ImmutableSet.copyOf(pushedAndTombstones);
@@ -685,10 +685,10 @@ public abstract class BaseAppenderatorDriver implements Closeable
             }
           }
           return segmentsAndCommitMetadata;
-        }
-      ),
-      e -> (e instanceof ExecutionException),
-      RetryUtils.DEFAULT_MAX_TRIES
+        },
+        e -> (e instanceof ExecutionException),
+        RetryUtils.DEFAULT_MAX_TRIES
+      )
     );
   }
 
