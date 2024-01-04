@@ -102,10 +102,9 @@ public class AzureEntityTest extends EasyMockSupport
         byteSourceFactory
     );
 
-    URI actualUri = azureEntity.getUri();
     Assert.assertEquals(
         URI.create(AzureStorageAccountInputSource.SCHEME + "://" + STORAGE_ACCOUNT_NAME + "/" + CONTAINER_NAME + "/" + BLOB_NAME),
-        actualUri
+        azureEntity.getUri()
     );
 
     verifyAll();
@@ -175,6 +174,26 @@ public class AzureEntityTest extends EasyMockSupport
     verifyAll();
   }
 
+  @Test
+  public void test_getPath_azureStorageScheme()
+  {
+    EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_NAME, azureStorage)).andReturn(byteSource);
+    replayAll();
+
+    azureEntity = new AzureEntity(
+        new CloudObjectLocation(STORAGE_ACCOUNT_NAME, CONTAINER_NAME + "/" + BLOB_NAME),
+        azureStorage,
+        AzureStorageAccountInputSource.SCHEME,
+        byteSourceFactory
+    );
+
+    Assert.assertEquals(
+        CONTAINER_NAME + "/" + BLOB_NAME,
+        azureEntity.getPath()
+    );
+
+    verifyAll();
+  }
   @Test
   public void test_getRetryCondition_returnsExpectedRetryCondition()
   {

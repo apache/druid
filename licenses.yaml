@@ -4252,7 +4252,6 @@ libraries:
   - com.azure: azure-json
 
 ---
-
 name: Microsoft Azure Netty Http
 license_category: binary
 module: extensions/druid-azure-extensions

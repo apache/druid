@@ -21,7 +21,6 @@ package org.apache.druid.storage.azure;
 
 import com.google.inject.assistedinject.Assisted;
 
-
 /**
  * Factory used to create {@link AzureByteSource}
  */

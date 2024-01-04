@@ -47,7 +47,7 @@ public class AzureClientFactory
 
   public String getStorageAccount()
   {
-    return this.config.getAccount();
+    return config.getAccount();
   }
 
   // It's okay to store clients in a map here because all the configs for specifying azure retries are static, and there are only 2 of them.

@@ -47,10 +47,6 @@ public class AzureStorageDruidModule implements DruidModule
 {
 
   public static final String SCHEME = "azure";
-  public static final String
-      STORAGE_CONNECTION_STRING_WITH_KEY = "DefaultEndpointsProtocol=%s;AccountName=%s;AccountKey=%s";
-  public static final String
-      STORAGE_CONNECTION_STRING_WITH_TOKEN = "DefaultEndpointsProtocol=%s;AccountName=%s;SharedAccessSignature=%s";
   public static final String INDEX_ZIP_FILE_NAME = "index.zip";
 
   @Override

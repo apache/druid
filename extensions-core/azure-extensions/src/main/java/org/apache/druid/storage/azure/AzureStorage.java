@@ -60,6 +60,7 @@ public class AzureStorage
   private static final int DELTA_BACKOFF_MS = 30_000;
 
   private static final Logger log = new Logger(AzureStorage.class);
+
   private final AzureClientFactory azureClientFactory;
 
   public AzureStorage(

@@ -34,6 +34,7 @@ import org.junit.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
+
 // Using Mockito for the whole test class since azure classes (e.g. BlobContainerClient) are final and can't be mocked with EasyMock
 public class AzureStorageTest
 {
@@ -46,7 +47,7 @@ public class AzureStorageTest
   private final String CONTAINER = "container";
   private final String BLOB_NAME = "blobName";
   private final Integer MAX_ATTEMPTS = 3;
-  
+
   @Before
   public void setup() throws BlobStorageException
   {

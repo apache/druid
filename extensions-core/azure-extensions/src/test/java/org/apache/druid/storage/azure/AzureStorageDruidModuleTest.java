@@ -31,6 +31,7 @@ import com.google.inject.ProvisionException;
 import com.google.inject.TypeLiteral;
 import org.apache.druid.data.input.azure.AzureEntityFactory;
 import org.apache.druid.data.input.azure.AzureInputSource;
+import org.apache.druid.data.input.azure.AzureStorageAccountInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.JsonConfigurator;
@@ -64,7 +65,7 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   private static final String AZURE_CONTAINER;
   private static final String AZURE_PREFIX;
   private static final int AZURE_MAX_LISTING_LENGTH;
-  private static final String PATH = "path";
+  private static final String PATH = "path/subpath";
   private static final Iterable<URI> EMPTY_PREFIXES_ITERABLE = ImmutableList.of();
   private static final Properties PROPERTIES;
 
@@ -158,7 +159,7 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   {
     EasyMock.expect(cloudObjectLocation1.getBucket()).andReturn(AZURE_CONTAINER);
     EasyMock.expect(cloudObjectLocation2.getBucket()).andReturn(AZURE_CONTAINER);
-    EasyMock.expect(cloudObjectLocation1.getPath()).andReturn(PATH);
+    EasyMock.expect(cloudObjectLocation1.getPath()).andReturn(PATH).times(2);
     EasyMock.expect(cloudObjectLocation2.getPath()).andReturn(PATH);
     replayAll();
 
@@ -166,9 +167,12 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
     AzureEntityFactory factory = injector.getInstance(AzureEntityFactory.class);
     Object object1 = factory.create(cloudObjectLocation1, azureStorage, AzureInputSource.SCHEME);
     Object object2 = factory.create(cloudObjectLocation2, azureStorage, AzureInputSource.SCHEME);
+    Object object3 = factory.create(cloudObjectLocation1, azureStorage, AzureStorageAccountInputSource.SCHEME);
     Assert.assertNotNull(object1);
     Assert.assertNotNull(object2);
+    Assert.assertNotNull(object3);
     Assert.assertNotSame(object1, object2);
+    Assert.assertNotSame(object1, object3);
   }
 
   @Test
