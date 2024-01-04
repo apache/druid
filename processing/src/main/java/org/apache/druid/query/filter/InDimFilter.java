@@ -32,7 +32,6 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ForwardingSortedSet;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.Sets;
@@ -438,8 +437,21 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
    * @param inFilter          in filter
    * @param mayIncludeUnknown same as the argument to {@link #optimize(boolean)}
    */
+  public static ValuesSet optimizeLookup(final InDimFilter inFilter, final boolean mayIncludeUnknown)
+  {
+    return optimizeLookup(inFilter, mayIncludeUnknown, Integer.MAX_VALUE);
+  }
+
+  /**
+   * If the provided "in" filter uses a {@link LookupExtractionFn} that can be reversed, then return the matching
+   * set of keys as a {@link ValuesSet}. Otherwise return null.
+   *
+   * @param inFilter          in filter
+   * @param mayIncludeUnknown same as the argument to {@link #optimize(boolean)}
+   * @param maxSize           maximum number of values in the returned filter
+   */
   @Nullable
-  static ValuesSet optimizeLookup(final InDimFilter inFilter, final boolean mayIncludeUnknown)
+  public static ValuesSet optimizeLookup(final InDimFilter inFilter, final boolean mayIncludeUnknown, final int maxSize)
   {
     final LookupExtractionFn exFn;
 
@@ -510,7 +522,12 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
       return null;
     }
 
-    Iterators.addAll(unapplied, keysIterator);
+    while (keysIterator.hasNext()) {
+      unapplied.add(keysIterator.next());
+      if (unapplied.size() > maxSize) {
+        return null;
+      }
+    }
 
     // In SQL-compatible null handling mode, lookup of null is always "replaceMissingValueWith", regardless of contents
     // of the lookup. So, if we're matching against "replaceMissingValueWith", we need to include null in the

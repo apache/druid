@@ -57,10 +57,13 @@ import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
 import org.apache.druid.sql.calcite.rule.FilterDecomposeCoalesceRule;
 import org.apache.druid.sql.calcite.rule.FilterJoinExcludePushToChildRule;
 import org.apache.druid.sql.calcite.rule.ProjectAggregatePruneUnusedCallRule;
+import org.apache.druid.sql.calcite.rule.ReverseLookupRule;
 import org.apache.druid.sql.calcite.rule.SortCollapseRule;
+import org.apache.druid.sql.calcite.rule.AggregatePullUpLookupRule;
 import org.apache.druid.sql.calcite.rule.logical.DruidLogicalRules;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -241,6 +244,12 @@ public class CalciteRulesManager
     prePrograms.add(buildReductionProgram(plannerContext));
     prePrograms.add(new LoggingProgram("Finished expression reduction program", isDebug));
 
+    final Program lookupProgram = buildLookupProgram(plannerContext);
+    if (lookupProgram != null) {
+      prePrograms.add(lookupProgram);
+      prePrograms.add(new LoggingProgram("Finished lookup program", isDebug));
+    }
+
     final Program preProgram = Programs.sequence(prePrograms.toArray(new Program[0]));
 
     return ImmutableList.of(
@@ -380,6 +389,32 @@ public class CalciteRulesManager
       builder.addRuleInstance(rule);
     }
     return Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE);
+  }
+
+  /**
+   * Program that performs various lookup simplification and optimizations. Runs as a pre-Volcano program since
+   * these changes are always considered good ideas, regardless of computed cost.
+   */
+  @Nullable
+  private static Program buildLookupProgram(final PlannerContext plannerContext)
+  {
+    final List<RelOptRule> rules = new ArrayList<>();
+
+    if (plannerContext.isSplitLookup()) {
+      // Include rule to split injective LOOKUP across a GROUP BY.
+      rules.add(new AggregatePullUpLookupRule(plannerContext));
+    }
+
+    if (plannerContext.isReverseLookup()) {
+      // Include rule to reduce certain LOOKUP expressions that appear in filters.
+      rules.add(new ReverseLookupRule(plannerContext));
+    }
+
+    if (rules.isEmpty()) {
+      return null;
+    } else {
+      return buildHepProgram(rules);
+    }
   }
 
   /**
