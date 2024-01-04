@@ -184,7 +184,7 @@ public class SegmentLoadDropHandlerTest
       }
 
       @Override
-      public void invalidateSegmentSchemaForTask(String taskId)
+      public void removeSegmentSchemasForTask(String taskId)
       {
       }
     };

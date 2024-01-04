@@ -36,7 +36,7 @@ public interface DataSegmentAnnouncer
   void unannounceSegments(Iterable<DataSegment> segments) throws IOException;
 
   /**
-   * Announce schema for all sinks for a given realtime task.
+   * Announces schema associated with all segments for the specified realtime task.
    *
    * @param taskId taskId
    * @param segmentSchemas absolute schema for all sinks, in case the client requests full sync.
@@ -49,8 +49,8 @@ public interface DataSegmentAnnouncer
   );
 
   /**
-   * Unnannounce task.
+   * Removes schema associated with all segments for the specified realtime task.
    * @param taskId taskId
    */
-  void invalidateSegmentSchemaForTask(String taskId);
+  void removeSegmentSchemasForTask(String taskId);
 }

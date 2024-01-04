@@ -1637,7 +1637,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
     }
 
     @Override
-    public void invalidateSegmentSchemaForTask(String taskId)
+    public void removeSegmentSchemasForTask(String taskId)
     {
       unnanouncementEvents.add(taskId);
     }

@@ -64,7 +64,7 @@ public class TestDataSegmentAnnouncer implements DataSegmentAnnouncer
   }
 
   @Override
-  public void invalidateSegmentSchemaForTask(String taskId)
+  public void removeSegmentSchemasForTask(String taskId)
   {
   }
 }

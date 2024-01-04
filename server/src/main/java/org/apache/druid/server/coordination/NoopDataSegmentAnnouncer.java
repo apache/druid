@@ -53,7 +53,7 @@ public class NoopDataSegmentAnnouncer implements DataSegmentAnnouncer
   }
 
   @Override
-  public void invalidateSegmentSchemaForTask(String taskId)
+  public void removeSegmentSchemasForTask(String taskId)
   {
   }
 }

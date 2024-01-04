@@ -318,7 +318,7 @@ public class RealtimeIndexTask extends AbstractTask
       }
 
       @Override
-      public void invalidateSegmentSchemaForTask(String taskId)
+      public void removeSegmentSchemasForTask(String taskId)
       {
       }
     };

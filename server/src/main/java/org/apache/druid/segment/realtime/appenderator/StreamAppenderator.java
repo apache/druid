@@ -1693,7 +1693,7 @@ public class StreamAppenderator implements Appenderator
     private void stop()
     {
       if (scheduledExecutorService != null) {
-        announcer.invalidateSegmentSchemaForTask(taskId);
+        announcer.removeSegmentSchemasForTask(taskId);
         scheduledExecutorService.shutdown();
       }
     }
