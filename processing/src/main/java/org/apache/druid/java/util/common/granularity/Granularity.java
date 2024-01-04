@@ -119,7 +119,7 @@ public abstract class Granularity implements Cacheable
       if ((gran == GranularityType.ALL && !gran0.equals(Granularities.ALL)) || gran == GranularityType.NONE) {
         continue;
       }
-      if (GranularityType.WEEK.equals(gran) && !Granularities.WEEK.equals(gran0)) {
+      if (gran == GranularityType.WEEK && !gran0.equals(Granularities.WEEK)) {
         continue;
       }
       final Granularity segmentGranularity = gran.create(origin, tz);
