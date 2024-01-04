@@ -265,6 +265,7 @@ public class CalciteRulesManager
   private Program buildReductionProgram(final PlannerContext plannerContext)
   {
     List<RelOptRule> hepRules = new ArrayList<RelOptRule>(REDUCTION_RULES);
+    // Apply CoreRules#FILTER_INTO_JOIN early to avoid exploring less optimal plans.
     if (plannerContext.getJoinAlgorithm().requiresSubquery()) {
       hepRules.add(CoreRules.FILTER_INTO_JOIN);
     }
