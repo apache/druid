@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.http;
 
-import com.google.api.client.util.Sets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -56,7 +55,6 @@ import org.mockito.stubbing.Answer;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -171,7 +169,7 @@ public class MetadataResourceTest
         AvailableSegmentMetadata.builder(
             segments[0],
             0L,
-            Sets.newHashSet(),
+            Collections.emptySet(),
             null,
             20L
         ).build()
@@ -181,7 +179,7 @@ public class MetadataResourceTest
         AvailableSegmentMetadata.builder(
             segments[1],
             0L,
-            Sets.newHashSet(),
+            Collections.emptySet(),
             null,
             30L
         ).build()
@@ -191,7 +189,7 @@ public class MetadataResourceTest
         AvailableSegmentMetadata.builder(
             segments[1],
             0L,
-            Sets.newHashSet(),
+            Collections.emptySet(),
             null,
             30L
         ).build()
@@ -201,7 +199,7 @@ public class MetadataResourceTest
         AvailableSegmentMetadata.builder(
             realTimeSegments[0],
             1L,
-            Sets.newHashSet(),
+            Collections.emptySet(),
             null,
             10L
         ).build()
@@ -211,7 +209,7 @@ public class MetadataResourceTest
         AvailableSegmentMetadata.builder(
             realTimeSegments[1],
             1L,
-            Sets.newHashSet(),
+            Collections.emptySet(),
             null,
             40L
         ).build()

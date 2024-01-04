@@ -344,6 +344,7 @@ public class ExpressionFilter implements Filter
    */
   private DruidPredicateFactory getBitmapPredicateFactory(@Nullable ColumnCapabilities inputCapabilites)
   {
+    final boolean isNullUnknown = expr.get().eval(InputBindings.nilBindings()).value() == null;
     return new DruidPredicateFactory()
     {
       @Override
@@ -429,6 +430,12 @@ public class ExpressionFilter implements Filter
         return input -> expr.get().eval(
             InputBindings.forInputSupplier(ExpressionType.fromColumnType(inputCapabilites), () -> input)
         ).asBoolean();
+      }
+
+      @Override
+      public boolean isNullInputUnknown()
+      {
+        return isNullUnknown;
       }
 
       // The hashcode and equals are to make SubclassesMustOverrideEqualsAndHashCodeTest stop complaining..

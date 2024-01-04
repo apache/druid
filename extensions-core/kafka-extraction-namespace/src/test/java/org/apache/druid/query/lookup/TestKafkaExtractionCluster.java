@@ -21,6 +21,7 @@ package org.apache.druid.query.lookup;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
@@ -261,7 +262,10 @@ public class TestKafkaExtractionCluster
 
       log.info("-------------------------     Checking baz bat     -------------------------------");
       Assert.assertEquals("bat", factory.get().apply("baz"));
-      Assert.assertEquals(Collections.singletonList("baz"), factory.get().unapply("bat"));
+      Assert.assertEquals(
+          Collections.singletonList("baz"),
+          Lists.newArrayList(factory.get().unapplyAll(Collections.singleton("bat")))
+      );
     }
   }
 
@@ -365,10 +369,10 @@ public class TestKafkaExtractionCluster
   {
     final LookupExtractor extractor = factory.get();
 
-    while (!expected.equals(extractor.unapply(key))) {
+    while (!expected.equals(Lists.newArrayList(extractor.unapplyAll(Collections.singleton(key))))) {
       Thread.sleep(100);
     }
 
-    Assert.assertEquals("update check", expected, extractor.unapply(key));
+    Assert.assertEquals("update check", expected, Lists.newArrayList(extractor.unapplyAll(Collections.singleton(key))));
   }
 }

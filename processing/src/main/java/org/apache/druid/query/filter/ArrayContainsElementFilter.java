@@ -122,12 +122,6 @@ public class ArrayContainsElementFilter extends AbstractOptimizableDimFilter imp
   }
 
   @Override
-  public DimFilter optimize()
-  {
-    return this;
-  }
-
-  @Override
   public Filter toFilter()
   {
     return this;

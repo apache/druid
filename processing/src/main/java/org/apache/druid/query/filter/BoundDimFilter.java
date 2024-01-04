@@ -253,12 +253,6 @@ public class BoundDimFilter extends AbstractOptimizableDimFilter implements DimF
   }
 
   @Override
-  public DimFilter optimize()
-  {
-    return this;
-  }
-
-  @Override
   public Filter toFilter()
   {
     return new BoundFilter(this);

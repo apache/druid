@@ -405,7 +405,13 @@ public class InFilterTest extends BaseFilterTest
     assertFilterMatches(toInFilterWithFn("dim1", lookupFn, "HELLO"), ImmutableList.of("b", "e"));
     assertFilterMatches(toInFilterWithFn("dim1", lookupFn, "N/A"), ImmutableList.of());
 
-    assertFilterMatchesSkipArrays(toInFilterWithFn("dim2", lookupFn, "a"), ImmutableList.of());
+    if (optimize) {
+      // Arrays don't cause errors when the extractionFn is optimized, because the "IN" filter vanishes completely.
+      assertFilterMatches(toInFilterWithFn("dim2", lookupFn, "a"), ImmutableList.of());
+    } else {
+      assertFilterMatchesSkipArrays(toInFilterWithFn("dim2", lookupFn, "a"), ImmutableList.of());
+    }
+
     assertFilterMatchesSkipArrays(toInFilterWithFn("dim2", lookupFn, "HELLO"), ImmutableList.of("a", "d"));
     assertFilterMatchesSkipArrays(
         toInFilterWithFn("dim2", lookupFn, "HELLO", "BYE", "UNKNOWN"),
@@ -521,8 +527,14 @@ public class InFilterTest extends BaseFilterTest
     Filter rewrittenFilter = filter.rewriteRequiredColumns(ImmutableMap.of("dim0", "dim1"));
     Assert.assertEquals(filter2, rewrittenFilter);
 
-    Throwable t = Assert.assertThrows(IAE.class, () -> filter.rewriteRequiredColumns(ImmutableMap.of("invalidName", "dim1")));
-    Assert.assertEquals("Received a non-applicable rewrite: {invalidName=dim1}, filter's dimension: dim0", t.getMessage());
+    Throwable t = Assert.assertThrows(
+        IAE.class,
+        () -> filter.rewriteRequiredColumns(ImmutableMap.of("invalidName", "dim1"))
+    );
+    Assert.assertEquals(
+        "Received a non-applicable rewrite: {invalidName=dim1}, filter's dimension: dim0",
+        t.getMessage()
+    );
   }
 
   @Test
@@ -531,7 +543,13 @@ public class InFilterTest extends BaseFilterTest
     EqualsVerifier.forClass(InDimFilter.class)
                   .usingGetClass()
                   .withNonnullFields("dimension", "values")
-                  .withIgnoredFields("cacheKeySupplier", "predicateFactory", "cachedOptimizedFilter", "valuesUtf8")
+                  .withIgnoredFields(
+                      "cacheKeySupplier",
+                      "predicateFactory",
+                      "optimizedFilterIncludeUnknown",
+                      "optimizedFilterNoIncludeUnknown",
+                      "valuesUtf8"
+                  )
                   .verify();
   }
 

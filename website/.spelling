@@ -2365,6 +2365,8 @@ isLeader
 taskslots
 loadstatus
 sqlQueryId
+useAzureCredentialsChain
+DefaultAzureCredential
 LAST_VALUE
 markUnused
 markUsed
