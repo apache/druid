@@ -293,7 +293,7 @@ ace.define(
       this.lineCommentStart = '//';
       this.blockComment = { start: '/*', end: '*/' };
       this.$id = 'ace/mode/hjson';
-    }.call(Mode.prototype));
+    }).call(Mode.prototype);
 
     exports.Mode = Mode;
   },
