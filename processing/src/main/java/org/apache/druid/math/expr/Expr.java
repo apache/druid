@@ -222,7 +222,7 @@ public interface Expr extends Cacheable
       }
 
       if (delegateRawIndex != null && outputType != null) {
-        return new ExprPredicateIndexSupplier(
+        return new ExpressionPredicateIndexSupplier(
             this,
             column,
             inputType,
