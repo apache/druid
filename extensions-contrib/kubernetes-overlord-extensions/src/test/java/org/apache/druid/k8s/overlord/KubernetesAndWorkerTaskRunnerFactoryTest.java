@@ -38,7 +38,7 @@ public class KubernetesAndWorkerTaskRunnerFactoryTest extends EasyMockSupport
 {
 
   @Mock KubernetesTaskRunnerFactory kubernetesTaskRunnerFactory;
-  @Mock HttpRemoteTaskRunnerFactory httpRemoteTaskRunnerFactory;
+  @Mock Provider<HttpRemoteTaskRunnerFactory> httpRemoteTaskRunnerFactoryProvider;
   @Mock Provider<RemoteTaskRunnerFactory> remoteTaskRunnerFactoryProvider;
 
   @Test
@@ -46,12 +46,14 @@ public class KubernetesAndWorkerTaskRunnerFactoryTest extends EasyMockSupport
   {
     KubernetesAndWorkerTaskRunnerFactory factory = new KubernetesAndWorkerTaskRunnerFactory(
         kubernetesTaskRunnerFactory,
-        httpRemoteTaskRunnerFactory,
+        httpRemoteTaskRunnerFactoryProvider,
         remoteTaskRunnerFactoryProvider,
         new KubernetesAndWorkerTaskRunnerConfig(null, null),
         new WorkerRunnerStrategy()
     );
 
+    HttpRemoteTaskRunnerFactory httpRemoteTaskRunnerFactory = EasyMock.createMock(HttpRemoteTaskRunnerFactory.class);
+    EasyMock.expect(httpRemoteTaskRunnerFactoryProvider.get()).andReturn(httpRemoteTaskRunnerFactory);
     EasyMock.expect(httpRemoteTaskRunnerFactory.build()).andReturn(null);
     EasyMock.expect(kubernetesTaskRunnerFactory.build()).andReturn(null);
 
@@ -65,7 +67,7 @@ public class KubernetesAndWorkerTaskRunnerFactoryTest extends EasyMockSupport
   {
     KubernetesAndWorkerTaskRunnerFactory factory = new KubernetesAndWorkerTaskRunnerFactory(
         kubernetesTaskRunnerFactory,
-        httpRemoteTaskRunnerFactory,
+        httpRemoteTaskRunnerFactoryProvider,
         remoteTaskRunnerFactoryProvider,
         new KubernetesAndWorkerTaskRunnerConfig(null, "remote"),
         new WorkerRunnerStrategy()
@@ -86,7 +88,7 @@ public class KubernetesAndWorkerTaskRunnerFactoryTest extends EasyMockSupport
   {
     KubernetesAndWorkerTaskRunnerFactory factory = new KubernetesAndWorkerTaskRunnerFactory(
         kubernetesTaskRunnerFactory,
-        httpRemoteTaskRunnerFactory,
+        httpRemoteTaskRunnerFactoryProvider,
         remoteTaskRunnerFactoryProvider,
         new KubernetesAndWorkerTaskRunnerConfig(null, "noop"),
         new KubernetesRunnerStrategy()

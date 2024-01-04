@@ -33,7 +33,7 @@ public class KubernetesAndWorkerTaskRunnerFactory implements TaskRunnerFactory<K
   public static final String TYPE_NAME = "k8sAndWorker";
 
   private final KubernetesTaskRunnerFactory kubernetesTaskRunnerFactory;
-  private final HttpRemoteTaskRunnerFactory httpRemoteTaskRunnerFactory;
+  private final Provider<HttpRemoteTaskRunnerFactory> httpRemoteTaskRunnerFactoryProvider;
   /**
    * In environments without Zookeeper, the standard RemoteTaskRunnerFactory may not function properly.
    * Use provider to bind RemoteTaskRunnerFactory conditionally.
@@ -47,14 +47,14 @@ public class KubernetesAndWorkerTaskRunnerFactory implements TaskRunnerFactory<K
   @Inject
   public KubernetesAndWorkerTaskRunnerFactory(
       KubernetesTaskRunnerFactory kubernetesTaskRunnerFactory,
-      HttpRemoteTaskRunnerFactory httpRemoteTaskRunnerFactory,
+      Provider<HttpRemoteTaskRunnerFactory> httpRemoteTaskRunnerFactoryProvider,
       Provider<RemoteTaskRunnerFactory> remoteTaskRunnerFactoryProvider,
       KubernetesAndWorkerTaskRunnerConfig kubernetesAndWorkerTaskRunnerConfig,
       RunnerStrategy runnerStrategy
   )
   {
     this.kubernetesTaskRunnerFactory = kubernetesTaskRunnerFactory;
-    this.httpRemoteTaskRunnerFactory = httpRemoteTaskRunnerFactory;
+    this.httpRemoteTaskRunnerFactoryProvider = httpRemoteTaskRunnerFactoryProvider;
     this.remoteTaskRunnerFactoryProvider = remoteTaskRunnerFactoryProvider;
     this.kubernetesAndWorkerTaskRunnerConfig = kubernetesAndWorkerTaskRunnerConfig;
     this.runnerStrategy = runnerStrategy;
@@ -75,7 +75,7 @@ public class KubernetesAndWorkerTaskRunnerFactory implements TaskRunnerFactory<K
   {
     String workerType = kubernetesAndWorkerTaskRunnerConfig.getWorkerType();
     return HttpRemoteTaskRunnerFactory.TYPE_NAME.equals(workerType) ?
-           httpRemoteTaskRunnerFactory.build() : remoteTaskRunnerFactoryProvider.get().build();
+           httpRemoteTaskRunnerFactoryProvider.get().build() : remoteTaskRunnerFactoryProvider.get().build();
   }
 
   @Override
