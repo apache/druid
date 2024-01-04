@@ -20,7 +20,7 @@ const path = require('path');
 const fg = require('fast-glob');
 const fs = require('fs-extra');
 
-const entries = fg.sync(['./build/docs/**/*.html'])
+const entries = fg.sync(['./build/docs/**/*.html']);
 
 function hasAnchor(html, anchor) {
   anchor = anchor.replace('#', '');
