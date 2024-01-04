@@ -19,40 +19,55 @@
 
 package org.apache.druid.storage.azure;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.azure.core.http.HttpHeaders;
+import com.azure.core.http.HttpRequest;
+import com.azure.core.http.rest.PagedResponse;
+import com.azure.core.util.IterableStream;
 
-import javax.validation.constraints.NotNull;
+import java.util.Collection;
 
-/**
- * Stores the configuration for writing task logs to Azure .
- */
-public class AzureTaskLogsConfig
+public class TestPagedResponse<T> implements PagedResponse<T>
 {
-  @JsonProperty
-  @NotNull
-  private String container = null;
+  private final Collection<T> responseItems;
 
-  @JsonProperty
-  @NotNull
-  private String prefix = null;
-
-  public AzureTaskLogsConfig()
+  public TestPagedResponse(Collection<T> responseItems)
   {
+    this.responseItems = responseItems;
   }
 
-  public AzureTaskLogsConfig(String container, String prefix)
+  @Override
+  public int getStatusCode()
   {
-    this.container = container;
-    this.prefix = prefix;
+    return 0;
   }
 
-  public String getContainer()
+  @Override
+  public HttpHeaders getHeaders()
   {
-    return container;
+    return null;
   }
 
-  public String getPrefix()
+  @Override
+  public HttpRequest getRequest()
   {
-    return prefix;
+    return null;
+  }
+
+  @Override
+  public IterableStream<T> getElements()
+  {
+    return IterableStream.of(responseItems);
+  }
+
+  @Override
+  public String getContinuationToken()
+  {
+    return null;
+  }
+
+  @Override
+  public void close()
+  {
+
   }
 }

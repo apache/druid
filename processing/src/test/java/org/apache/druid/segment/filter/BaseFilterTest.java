@@ -671,7 +671,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       return null;
     }
 
-    final DimFilter maybeOptimized = optimize ? dimFilter.optimize() : dimFilter;
+    final DimFilter maybeOptimized = optimize ? dimFilter.optimize(false) : dimFilter;
     final Filter filter = maybeOptimized.toFilter();
     try {
       return cnf ? Filters.toCnf(filter) : filter;
@@ -686,7 +686,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     if (dimFilter == null) {
       return null;
     }
-    return optimize ? dimFilter.optimize() : dimFilter;
+    return optimize ? dimFilter.optimize(false) : dimFilter;
   }
 
   private Sequence<Cursor> makeCursorSequence(final Filter filter)

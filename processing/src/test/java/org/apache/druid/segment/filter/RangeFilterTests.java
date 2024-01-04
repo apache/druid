@@ -1969,7 +1969,8 @@ public class RangeFilterTests
                     .withIgnoredFields(
                         "lower",
                         "upper",
-                        "cachedOptimizedFilter",
+                        "optimizedFilterIncludeUnknown",
+                        "optimizedFilterNoIncludeUnknown",
                         "stringPredicateSupplier",
                         "longPredicateSupplier",
                         "floatPredicateSupplier",
