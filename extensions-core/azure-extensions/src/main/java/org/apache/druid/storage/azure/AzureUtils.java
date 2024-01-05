@@ -43,8 +43,6 @@ public class AzureUtils
   public static final String DEFAULT_AZURE_ENDPOINT_SUFFIX = "core.windows.net";
   @VisibleForTesting
   static final String AZURE_STORAGE_HOST_ADDRESS = "blob.core.windows.net";
-  public static final String DEFAULT_AZURE_BLOB_STORAGE_ENDPOINT_SUFFIX = "blob." + DEFAULT_AZURE_ENDPOINT_SUFFIX;
-  private final String blobStorageEndpointSuffix;
 
   /**
    * Creates an AzureUtils object with the blob storage endpoint suffix.
@@ -53,13 +51,9 @@ public class AzureUtils
    *                                  <code>"blob.core.chinacloudapi.cn"</code> or
    *                                  <code>"blob.core.usgovcloudapi.net</code>"
    */
-  public AzureUtils(String blobStorageEndpointSuffix)
-  {
-    this.blobStorageEndpointSuffix = blobStorageEndpointSuffix;
-  }
 
   // The azure storage hadoop access pattern is:
-  // wasb[s]://<containername>@<accountname>.<blobStorageEndpointSuffix>/<path>
+  // wasb[s]://<containername>@<accountname>.blob.<endpointSuffix>/<path>
   // (from https://docs.microsoft.com/en-us/azure/hdinsight/hdinsight-hadoop-use-blob-storage)
   static final String AZURE_STORAGE_HADOOP_PROTOCOL = "wasbs";
 
@@ -102,7 +96,7 @@ public class AzureUtils
    * @return a String representing the blob path component of the uri with any leading 'blob.core.windows.net/' string
    * removed characters removed.
    */
-  public String maybeRemoveAzurePathPrefix(String blobPath)
+  public static String maybeRemoveAzurePathPrefix(String blobPath, String blobStorageEndpointSuffix)
   {
     boolean blobPathIsHadoop = blobPath.contains(blobStorageEndpointSuffix);
 

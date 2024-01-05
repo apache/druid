@@ -33,7 +33,7 @@ public class AzureUtilsTest
   private static final String CONTAINER_NAME = "container1";
   private static final String BLOB_NAME = "blob1";
   private static final String BLOB_PATH_WITH_LEADING_SLASH = "/" + BLOB_NAME;
-  private static final String BLOB_PATH_WITH_LEADING_AZURE_PREFIX = AzureUtils.DEFAULT_AZURE_BLOB_STORAGE_ENDPOINT_SUFFIX
+  private static final String BLOB_PATH_WITH_LEADING_AZURE_PREFIX = AzureUtils.AZURE_STORAGE_HOST_ADDRESS
                                                                     + "/"
                                                                     + BLOB_NAME;
   private static final URI URI_WITH_PATH_WITH_LEADING_SLASH;
@@ -74,16 +74,14 @@ public class AzureUtilsTest
   @Test
   public void test_maybeRemoveAzurePathPrefix_pathHasLeadingAzurePathPrefix_returnsPathWithLeadingAzurePathRemoved()
   {
-    final AzureUtils azureUtils = new AzureUtils(AzureUtils.DEFAULT_AZURE_BLOB_STORAGE_ENDPOINT_SUFFIX);
-    String path = azureUtils.maybeRemoveAzurePathPrefix(BLOB_PATH_WITH_LEADING_AZURE_PREFIX);
+    String path = AzureUtils.maybeRemoveAzurePathPrefix(BLOB_PATH_WITH_LEADING_AZURE_PREFIX, AzureUtils.AZURE_STORAGE_HOST_ADDRESS);
     Assert.assertEquals(BLOB_NAME, path);
   }
 
   @Test
   public void test_maybeRemoveAzurePathPrefix_pathDoesNotHaveAzurePathPrefix__returnsPathWithLeadingAzurePathRemoved()
   {
-    final AzureUtils azureUtils = new AzureUtils(AzureUtils.DEFAULT_AZURE_BLOB_STORAGE_ENDPOINT_SUFFIX);
-    String path = azureUtils.maybeRemoveAzurePathPrefix(BLOB_NAME);
+    String path = AzureUtils.maybeRemoveAzurePathPrefix(BLOB_NAME, AzureUtils.AZURE_STORAGE_HOST_ADDRESS);
     Assert.assertEquals(BLOB_NAME, path);
   }
 

@@ -113,7 +113,7 @@ public class AzureAccountConfig
     return endpointSuffix;
   }
 
-  public String getBlobStorageEndpointSuffix()
+  public String getBlobStorageEndpoint()
   {
     return "blob." + endpointSuffix;
   }

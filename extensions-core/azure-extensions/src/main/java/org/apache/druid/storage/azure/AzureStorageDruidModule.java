@@ -120,17 +120,6 @@ public class AzureStorageDruidModule implements DruidModule
 
 
   /**
-   * Creates a supplier that lazily initialize {@link AzureUtils}. It is used to inject an endpoint suffix into the
-   * {@link AzureUtils} constructor.
-   */
-  @Provides
-  @LazySingleton
-  public AzureUtils getAzureUtils(final AzureAccountConfig config)
-  {
-    return new AzureUtils(config.getBlobStorageEndpointSuffix());
-  }
-
-  /**
    * Creates a supplier that lazily initialize {@link CloudBlobClient}.
    * This is to avoid immediate config validation but defer it until you actually use the client.
    */
