@@ -499,12 +499,15 @@ public class JettyServerModule extends JerseyServletModule
   {
     try {
       BufferedReader in = Files.newBufferedReader(Paths.get("/proc/sys/net/core/somaxconn"));
-      return Integer.parseInt(in.readLine().trim());
+      String acceptQueueSize = in.readLine();
+      if (acceptQueueSize != null) {
+        return Integer.parseInt(acceptQueueSize);
+      }
     }
     catch (Exception e) {
       log.warn("Unable to read /proc/sys/net/core/somaxconn, falling back to default value for TCP accept queue size");
-      return 128; // Default value of net.core.somaxconn on Linux
     }
+    return 128; // Default value of net.core.somaxconn on Linux
   }
 
   @Provides
