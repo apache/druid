@@ -5347,7 +5347,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
-                        .setDimFilter(not(istrue(in("dim1", ImmutableList.of("abc", "def", "ghi"), null))))
+                        .setDimFilter(
+                            NullHandling.sqlCompatible()
+                            ? not(istrue(in("dim1", ImmutableList.of("abc", "def", "ghi"), null)))
+                            : not(in("dim1", ImmutableList.of("abc", "def", "ghi"), null)))
                         .setAggregatorSpecs(
                             aggregators(
                                 new CountAggregatorFactory("a0")
@@ -5444,8 +5447,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
                         .setDimFilter(
-                            and(
+                            NullHandling.sqlCompatible()
+                            ? and(
                                 not(istrue(in("dim1", ImmutableList.of("abc", "def", "ghi"), null))),
+                                range("dim1", ColumnType.STRING, null, "zzz", false, true)
+                            )
+                            : and(
+                                not(in("dim1", ImmutableList.of("abc", "def", "ghi"), null)),
                                 range("dim1", ColumnType.STRING, null, "zzz", false, true)
                             )
                         )
