@@ -28,6 +28,7 @@ import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.common.StorageSharedKeyCredential;
 import org.apache.druid.data.input.azure.AzureInputSourceConfig;
 
+import javax.annotation.Nullable;
 import java.time.Duration;
 
 
@@ -36,7 +37,7 @@ public class AzureIngestClientFactory extends AzureClientFactory
   private final AzureInputSourceConfig azureInputSourceConfig;
   private final String storageAccount;
 
-  public AzureIngestClientFactory(AzureAccountConfig config, AzureInputSourceConfig azureInputSourceConfig, String storageAccount)
+  public AzureIngestClientFactory(AzureAccountConfig config, @Nullable AzureInputSourceConfig azureInputSourceConfig, String storageAccount)
   {
     super(config);
     this.azureInputSourceConfig = azureInputSourceConfig;
@@ -55,8 +56,13 @@ public class AzureIngestClientFactory extends AzureClientFactory
     BlobServiceClientBuilder clientBuilder = new BlobServiceClientBuilder()
         .endpoint("https://" + getStorageAccount() + ".blob.core.windows.net");
 
+    if (azureInputSourceConfig == null) {
+      // If properties is not passed in inputSpec, use default azure credentials.
+      return super.buildNewClient(retryCount);
+    }
+
     if (azureInputSourceConfig.getKey() != null) {
-      clientBuilder.credential(new StorageSharedKeyCredential(storageAccount, azureInputSourceConfig.getKey()));
+      clientBuilder.credential(new StorageSharedKeyCredential(getStorageAccount(), azureInputSourceConfig.getKey()));
     } else if (azureInputSourceConfig.getSharedAccessStorageToken() != null) {
       clientBuilder.sasToken(azureInputSourceConfig.getSharedAccessStorageToken());
     } else if (azureInputSourceConfig.shouldUseAzureCredentialsChain() != null) {
@@ -71,7 +77,7 @@ public class AzureIngestClientFactory extends AzureClientFactory
           .build()
       );
     } else {
-      // If no additional auth method is passed, fallback to default factory method
+      // No credentials set in properties, use default azurecredentials.
       return super.buildNewClient(retryCount);
     }
     clientBuilder.retryOptions(new RetryOptions(

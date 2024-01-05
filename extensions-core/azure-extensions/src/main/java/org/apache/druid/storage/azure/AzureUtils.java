@@ -24,6 +24,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.azure.blob.CloudBlobHolder;
 
@@ -134,5 +135,12 @@ public class AzureUtils
         storage.emptyCloudBlobDirectory(nextObject.getContainerName(), nextObject.getName(), accountConfig.getMaxTries());
       }
     }
+  }
+
+  // Returns a <containerName, path> pair given a location using the azureStorage schema.
+  public static Pair<String, String> parseAzureStorageLocation(CloudObjectLocation location)
+  {
+    String[] pathParts = location.getPath().split("/", 2);
+    return Pair.of(pathParts[0], pathParts[1]);
   }
 }

@@ -122,7 +122,6 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
   {
     replayAll();
     azureInputSource = new AzureStorageAccountInputSource(
-        storage,
         entityFactory,
         azureCloudBlobIterableFactory,
         inputDataConfig,
@@ -145,7 +144,6 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
 
     List<CloudObjectLocation> objects = ImmutableList.of(CLOUD_OBJECT_LOCATION_1);
     azureInputSource = new AzureStorageAccountInputSource(
-        storage,
         entityFactory,
         azureCloudBlobIterableFactory,
         inputDataConfig,
@@ -181,7 +179,6 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
     replayAll();
 
     azureInputSource = new AzureStorageAccountInputSource(
-        storage,
         entityFactory,
         azureCloudBlobIterableFactory,
         inputDataConfig,
@@ -232,7 +229,6 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
     replayAll();
 
     azureInputSource = new AzureStorageAccountInputSource(
-        storage,
         entityFactory,
         azureCloudBlobIterableFactory,
         inputDataConfig,
@@ -264,7 +260,6 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
     replayAll();
 
     azureInputSource = new AzureStorageAccountInputSource(
-        storage,
         entityFactory,
         azureCloudBlobIterableFactory,
         inputDataConfig,
@@ -287,7 +282,6 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
   {
     List<URI> prefixes = ImmutableList.of(PREFIX_URI);
     azureInputSource = new AzureStorageAccountInputSource(
-        storage,
         entityFactory,
         azureCloudBlobIterableFactory,
         inputDataConfig,
@@ -312,7 +306,6 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
   {
     List<URI> prefixes = ImmutableList.of(PREFIX_URI);
     azureInputSource = new AzureStorageAccountInputSource(
-        storage,
         entityFactory,
         azureCloudBlobIterableFactory,
         inputDataConfig,
@@ -344,7 +337,6 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
   {
     List<URI> prefixes = ImmutableList.of(PREFIX_URI);
     azureInputSource = new AzureStorageAccountInputSource(
-        storage,
         entityFactory,
         azureCloudBlobIterableFactory,
         inputDataConfig,
@@ -363,7 +355,6 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
   public void test_systemFields()
   {
     azureInputSource = (AzureStorageAccountInputSource) new AzureStorageAccountInputSource(
-        storage,
         entityFactory,
         azureCloudBlobIterableFactory,
         inputDataConfig,
@@ -400,8 +391,6 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
         .usingGetClass()
         .withPrefabValues(Logger.class, new Logger(AzureStorage.class), new Logger(AzureStorage.class))
         .withPrefabValues(BlobContainerClient.class, new BlobContainerClientBuilder().buildClient(), new BlobContainerClientBuilder().buildClient())
-        .withPrefabValues(AzureStorage.class, new AzureStorage(null), new AzureStorage(null))
-        .withNonnullFields("storage")
         .withNonnullFields("entityFactory")
         .withNonnullFields("azureCloudBlobIterableFactory")
         .withNonnullFields("inputDataConfig")

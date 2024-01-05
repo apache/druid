@@ -24,6 +24,7 @@ import com.google.inject.assistedinject.Assisted;
 import com.google.inject.assistedinject.AssistedInject;
 import org.apache.druid.data.input.RetryingInputEntity;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.storage.azure.AzureByteSource;
 import org.apache.druid.storage.azure.AzureByteSourceFactory;
 import org.apache.druid.storage.azure.AzureStorage;
@@ -56,8 +57,8 @@ public class AzureEntity extends RetryingInputEntity
     this.scheme = scheme;
     // If scheme is azureStorage, containerName is the first prefix in the path, otherwise containerName is the bucket
     if (AzureStorageAccountInputSource.SCHEME.equals(this.scheme)) {
-      String[] pathParts = location.getPath().split("/", 2);
-      this.byteSource = byteSourceFactory.create(pathParts[0], pathParts[1], azureStorage);
+      Pair<String, String> locationInfo = AzureUtils.parseAzureStorageLocation(location);
+      this.byteSource = byteSourceFactory.create(locationInfo.lhs, locationInfo.rhs, azureStorage);
     } else {
       this.byteSource = byteSourceFactory.create(location.getBucket(), location.getPath(), azureStorage);
     }
