@@ -33,7 +33,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Random;
 
-public class BackwordCompatibleSerializablePairLongStringDeltaEncodedStagedSerdeTest
+public class BackwardCompatibleSerializablePairLongStringDeltaEncodedStagedSerdeTest
 {
   private static final OlderSerializablePairLongStringDeltaEncodedStagedSerde OLDER_INTEGER_SERDE =
       new OlderSerializablePairLongStringDeltaEncodedStagedSerde(0L, true);
@@ -71,11 +71,11 @@ public class BackwordCompatibleSerializablePairLongStringDeltaEncodedStagedSerde
 
     // Write using the older serde, read using the newer serde
     Assert.assertEquals(
-        new SerializablePairLongString(TIMESTAMP, ""),
+        new SerializablePairLongString(TIMESTAMP, null),
         readUsingSerde(writeUsingSerde(value, OLDER_INTEGER_SERDE), INTEGER_SERDE)
     );
     Assert.assertEquals(
-        new SerializablePairLongString(TIMESTAMP, ""),
+        new SerializablePairLongString(TIMESTAMP, null),
         readUsingSerde(writeUsingSerde(value, OLDER_LONG_SERDE), LONG_SERDE)
     );
 
@@ -104,11 +104,11 @@ public class BackwordCompatibleSerializablePairLongStringDeltaEncodedStagedSerde
 
     // Write using the older serde, read using the newer serde
     Assert.assertEquals(
-        new SerializablePairLongString(TIMESTAMP, ""),
+        new SerializablePairLongString(TIMESTAMP, null),
         readUsingSerde(writeUsingSerde(value, OLDER_INTEGER_SERDE), INTEGER_SERDE)
     );
     Assert.assertEquals(
-        new SerializablePairLongString(TIMESTAMP, ""),
+        new SerializablePairLongString(TIMESTAMP, null),
         readUsingSerde(writeUsingSerde(value, OLDER_LONG_SERDE), LONG_SERDE)
     );
 

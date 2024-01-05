@@ -32,7 +32,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Random;
 
-public class BackwordCompatibleSerializablePairLongStringSimpleStagedSerdeTest
+public class BackwardCompatibleSerializablePairLongStringSimpleStagedSerdeTest
 {
   private static final OlderSerializablePairLongStringSimpleStagedSerde OLDER_SERDE =
       new OlderSerializablePairLongStringSimpleStagedSerde();

@@ -84,7 +84,7 @@ public class SerializablePairLongStringDeltaEncodedStagedSerdeTest
   @Test
   public void testEmptyStringLong()
   {
-    assertValueEquals(new SerializablePairLongString(100L, ""), 8, LONG_SERDE);
+    assertValueEquals(new SerializablePairLongString(100L, ""), 12, LONG_SERDE);
   }
 
 

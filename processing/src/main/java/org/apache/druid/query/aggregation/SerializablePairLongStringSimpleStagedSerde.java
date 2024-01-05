@@ -34,6 +34,14 @@ import java.nio.ByteOrder;
  * <p>
  * or
  * Long:StringSize:StringData
+ *
+ * The StringSize can be following:
+ * -1 : Denotes an empty string
+ * 0  : Denotes a null string
+ * >0 : Denotes a non-empty string
+ *
+ * Mapping of null and empty string is done weirdly to preserve backward compatibility when nulls were returned all the
+ * time, and there was no distinction between empty and null string
  */
 public class SerializablePairLongStringSimpleStagedSerde implements StagedSerde<SerializablePairLongString>
 {
@@ -56,6 +64,8 @@ public class SerializablePairLongStringSimpleStagedSerde implements StagedSerde<
 
         byteBuffer.putLong(value.lhs);
         if (rhsString == null) {
+          byteBuffer.putInt(0);
+        } else if (rhsBytes.length == 0) {
           byteBuffer.putInt(-1);
         } else {
           byteBuffer.putInt(rhsBytes.length);
@@ -87,11 +97,13 @@ public class SerializablePairLongStringSimpleStagedSerde implements StagedSerde<
     int stringSize = readOnlyBuffer.getInt();
     String lastString = null;
 
-    if (stringSize >= 0) {
+    if (stringSize > 0) {
       byte[] stringBytes = new byte[stringSize];
 
       readOnlyBuffer.get(stringBytes, 0, stringSize);
       lastString = StringUtils.fromUtf8(stringBytes);
+    } else if (stringSize < 0) {
+      lastString = "";
     }
 
     return new SerializablePairLongString(lhs, lastString);
