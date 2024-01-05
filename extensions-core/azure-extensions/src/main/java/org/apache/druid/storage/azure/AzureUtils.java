@@ -44,14 +44,6 @@ public class AzureUtils
   @VisibleForTesting
   static final String AZURE_STORAGE_HOST_ADDRESS = "blob.core.windows.net";
 
-  /**
-   * Creates an AzureUtils object with the blob storage endpoint suffix.
-   *
-   * @param blobStorageEndpointSuffix the blob storage endpoint, like <code>"blob.core.windows.net"</code>,
-   *                                  <code>"blob.core.chinacloudapi.cn"</code> or
-   *                                  <code>"blob.core.usgovcloudapi.net</code>"
-   */
-
   // The azure storage hadoop access pattern is:
   // wasb[s]://<containername>@<accountname>.blob.<endpointSuffix>/<path>
   // (from https://docs.microsoft.com/en-us/azure/hdinsight/hdinsight-hadoop-use-blob-storage)
