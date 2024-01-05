@@ -30,7 +30,8 @@ import org.apache.druid.java.util.common.IAE;
 
 import java.util.Comparator;
 
-public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<KafkaTopicPartition, Long> implements Comparable<KafkaDataSourceMetadata> {
+public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<KafkaTopicPartition, Long> implements Comparable<KafkaDataSourceMetadata>
+{
 
   @JsonCreator
   public KafkaDataSourceMetadata(
