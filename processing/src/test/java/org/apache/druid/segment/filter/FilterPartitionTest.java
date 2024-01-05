@@ -130,7 +130,7 @@ public class FilterPartitionTest extends BaseFilterTest
           @Override
           public DruidObjectPredicate<String> makeStringPredicate()
           {
-            return DruidObjectPredicate.equalTo(valueOrNull);
+            return valueOrNull == null ? DruidObjectPredicate.isNull() : DruidObjectPredicate.equalTo(valueOrNull);
           }
 
           @Override
