@@ -169,7 +169,7 @@ public class SearchOperatorConversion implements SqlOperatorConversion
     }
 
     // Use RexUtil.sargRef to expand the rest of the sarg, if any.
-    if (!sarg.isPoints() || !sarg.isComplementedPoints()) {
+    if (!sarg.isPoints() && !sarg.isComplementedPoints()) {
       // Remaining ranges, after separating out the "IN" and "NOT IN" points.
       // The "IN" points are excluded, and the "NOT IN" points are added back in.
       final RangeSet<Comparable> remainderRanges = TreeRangeSet.create();
