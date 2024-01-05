@@ -67,8 +67,8 @@ public class AzureIngestClientFactoryTest extends EasyMockSupport
         null,
         null
     );
-    azureIngestClientFactory = new AzureIngestClientFactory(accountConfig, azureInputSourceConfig, ACCOUNT);
-    BlobServiceClient blobServiceClient = azureIngestClientFactory.getBlobServiceClient(3);
+    azureIngestClientFactory = new AzureIngestClientFactory(accountConfig, azureInputSourceConfig);
+    BlobServiceClient blobServiceClient = azureIngestClientFactory.getBlobServiceClient(3, ACCOUNT);
 
     Assert.assertEquals(ACCOUNT, blobServiceClient.getAccountName());
   }
@@ -84,9 +84,9 @@ public class AzureIngestClientFactoryTest extends EasyMockSupport
         null,
         null
     );
-    azureIngestClientFactory = new AzureIngestClientFactory(accountConfig, azureInputSourceConfig, ACCOUNT);
+    azureIngestClientFactory = new AzureIngestClientFactory(accountConfig, azureInputSourceConfig);
 
-    BlobServiceClient blobServiceClient = azureIngestClientFactory.getBlobServiceClient(3);
+    BlobServiceClient blobServiceClient = azureIngestClientFactory.getBlobServiceClient(3, ACCOUNT);
     StorageSharedKeyCredential storageSharedKeyCredential = StorageSharedKeyCredential.getSharedKeyCredentialFromPipeline(
         blobServiceClient.getHttpPipeline()
     );
@@ -110,8 +110,8 @@ public class AzureIngestClientFactoryTest extends EasyMockSupport
         null,
         null
     );
-    azureIngestClientFactory = new AzureIngestClientFactory(accountConfig, azureInputSourceConfig, ACCOUNT);
-    BlobServiceClient blobServiceClient = azureIngestClientFactory.getBlobServiceClient(3);
+    azureIngestClientFactory = new AzureIngestClientFactory(accountConfig, azureInputSourceConfig);
+    BlobServiceClient blobServiceClient = azureIngestClientFactory.getBlobServiceClient(3, ACCOUNT);
 
     AzureSasCredentialPolicy azureSasCredentialPolicy = null;
     for (int i = 0; i < blobServiceClient.getHttpPipeline().getPolicyCount(); i++) {
@@ -134,11 +134,11 @@ public class AzureIngestClientFactoryTest extends EasyMockSupport
         null,
         null
     );
-    azureIngestClientFactory = new AzureIngestClientFactory(accountConfig, azureInputSourceConfig, ACCOUNT);
+    azureIngestClientFactory = new AzureIngestClientFactory(accountConfig, azureInputSourceConfig);
     EasyMock.expect(accountConfig.getManagedIdentityClientId()).andReturn("managedIdentityClientId");
 
     replayAll();
-    BlobServiceClient blobServiceClient = azureIngestClientFactory.getBlobServiceClient(3);
+    BlobServiceClient blobServiceClient = azureIngestClientFactory.getBlobServiceClient(3, ACCOUNT);
     verifyAll();
 
     BearerTokenAuthenticationPolicy bearerTokenAuthenticationPolicy = null;
@@ -162,8 +162,8 @@ public class AzureIngestClientFactoryTest extends EasyMockSupport
         "clientSecret",
         "tenantId"
     );
-    azureIngestClientFactory = new AzureIngestClientFactory(accountConfig, azureInputSourceConfig, ACCOUNT);
-    BlobServiceClient blobServiceClient = azureIngestClientFactory.getBlobServiceClient(3);
+    azureIngestClientFactory = new AzureIngestClientFactory(accountConfig, azureInputSourceConfig);
+    BlobServiceClient blobServiceClient = azureIngestClientFactory.getBlobServiceClient(3, ACCOUNT);
     BearerTokenAuthenticationPolicy bearerTokenAuthenticationPolicy = null;
     for (int i = 0; i < blobServiceClient.getHttpPipeline().getPolicyCount(); i++) {
       if (blobServiceClient.getHttpPipeline().getPolicy(i) instanceof BearerTokenAuthenticationPolicy) {
@@ -180,16 +180,16 @@ public class AzureIngestClientFactoryTest extends EasyMockSupport
   {
     // We should only call getKey twice (both times in the first call to getBlobServiceClient)
     EasyMock.expect(azureInputSourceConfig.getKey()).andReturn(KEY).times(2);
-    azureIngestClientFactory = new AzureIngestClientFactory(accountConfig, azureInputSourceConfig, ACCOUNT);
+    azureIngestClientFactory = new AzureIngestClientFactory(accountConfig, azureInputSourceConfig);
     EasyMock.expect(accountConfig.getMaxTries()).andReturn(5);
     replayAll();
-    azureIngestClientFactory.getBlobServiceClient(null);
+    azureIngestClientFactory.getBlobServiceClient(null, ACCOUNT);
 
     // should use the cached client and not call getKey
-    azureIngestClientFactory.getBlobServiceClient(5);
+    azureIngestClientFactory.getBlobServiceClient(5, ACCOUNT);
 
     // should use the cached client and not call getKey
-    azureIngestClientFactory.getBlobServiceClient(5);
+    azureIngestClientFactory.getBlobServiceClient(5, ACCOUNT);
 
     verifyAll();
   }
@@ -205,10 +205,10 @@ public class AzureIngestClientFactoryTest extends EasyMockSupport
         null,
         null
     );
-    azureIngestClientFactory = new AzureIngestClientFactory(accountConfig, azureInputSourceConfig, ACCOUNT);
+    azureIngestClientFactory = new AzureIngestClientFactory(accountConfig, azureInputSourceConfig);
     EasyMock.expect(accountConfig.getKey()).andReturn(KEY).times(2);
     replayAll();
-    azureIngestClientFactory.getBlobServiceClient(5);
+    azureIngestClientFactory.getBlobServiceClient(5, ACCOUNT);
     verifyAll();
   }
 }

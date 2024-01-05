@@ -35,34 +35,26 @@ import java.time.Duration;
 public class AzureIngestClientFactory extends AzureClientFactory
 {
   private final AzureInputSourceConfig azureInputSourceConfig;
-  private final String storageAccount;
 
-  public AzureIngestClientFactory(AzureAccountConfig config, @Nullable AzureInputSourceConfig azureInputSourceConfig, String storageAccount)
+  public AzureIngestClientFactory(AzureAccountConfig config, @Nullable AzureInputSourceConfig azureInputSourceConfig)
   {
     super(config);
     this.azureInputSourceConfig = azureInputSourceConfig;
-    this.storageAccount = storageAccount;
   }
 
   @Override
-  public String getStorageAccount()
-  {
-    return storageAccount;
-  }
-
-  @Override
-  public BlobServiceClient buildNewClient(Integer retryCount)
+  public BlobServiceClient buildNewClient(Integer retryCount, String storageAccount)
   {
     BlobServiceClientBuilder clientBuilder = new BlobServiceClientBuilder()
-        .endpoint("https://" + getStorageAccount() + ".blob.core.windows.net");
+        .endpoint("https://" + storageAccount + ".blob.core.windows.net");
 
     if (azureInputSourceConfig == null) {
       // If properties is not passed in inputSpec, use default azure credentials.
-      return super.buildNewClient(retryCount);
+      return super.buildNewClient(retryCount, storageAccount);
     }
 
     if (azureInputSourceConfig.getKey() != null) {
-      clientBuilder.credential(new StorageSharedKeyCredential(getStorageAccount(), azureInputSourceConfig.getKey()));
+      clientBuilder.credential(new StorageSharedKeyCredential(storageAccount, azureInputSourceConfig.getKey()));
     } else if (azureInputSourceConfig.getSharedAccessStorageToken() != null) {
       clientBuilder.sasToken(azureInputSourceConfig.getSharedAccessStorageToken());
     } else if (azureInputSourceConfig.shouldUseAzureCredentialsChain() != null) {
@@ -78,7 +70,7 @@ public class AzureIngestClientFactory extends AzureClientFactory
       );
     } else {
       // No credentials set in properties, use default azurecredentials.
-      return super.buildNewClient(retryCount);
+      return super.buildNewClient(retryCount, storageAccount);
     }
     clientBuilder.retryOptions(new RetryOptions(
         new ExponentialBackoffOptions()

@@ -41,8 +41,7 @@ public class AzureClientFactoryTest
   {
     AzureAccountConfig config = new AzureAccountConfig();
     azureClientFactory = new AzureClientFactory(config);
-    config.setAccount(ACCOUNT);
-    BlobServiceClient blobServiceClient = azureClientFactory.getBlobServiceClient(null);
+    BlobServiceClient blobServiceClient = azureClientFactory.getBlobServiceClient(null, ACCOUNT);
     Assert.assertEquals(ACCOUNT, blobServiceClient.getAccountName());
   }
 
@@ -51,9 +50,8 @@ public class AzureClientFactoryTest
   {
     AzureAccountConfig config = new AzureAccountConfig();
     config.setKey("key");
-    config.setAccount(ACCOUNT);
     azureClientFactory = new AzureClientFactory(config);
-    BlobServiceClient blobServiceClient = azureClientFactory.getBlobServiceClient(null);
+    BlobServiceClient blobServiceClient = azureClientFactory.getBlobServiceClient(null, ACCOUNT);
     StorageSharedKeyCredential storageSharedKeyCredential = StorageSharedKeyCredential.getSharedKeyCredentialFromPipeline(
         blobServiceClient.getHttpPipeline()
     );
@@ -71,9 +69,8 @@ public class AzureClientFactoryTest
   {
     AzureAccountConfig config = new AzureAccountConfig();
     config.setSharedAccessStorageToken("sasToken");
-    config.setAccount(ACCOUNT);
     azureClientFactory = new AzureClientFactory(config);
-    BlobServiceClient blobServiceClient = azureClientFactory.getBlobServiceClient(null);
+    BlobServiceClient blobServiceClient = azureClientFactory.getBlobServiceClient(null, ACCOUNT);
     AzureSasCredentialPolicy azureSasCredentialPolicy = null;
     for (int i = 0; i < blobServiceClient.getHttpPipeline().getPolicyCount(); i++) {
       if (blobServiceClient.getHttpPipeline().getPolicy(i) instanceof AzureSasCredentialPolicy) {
@@ -89,9 +86,8 @@ public class AzureClientFactoryTest
   {
     AzureAccountConfig config = new AzureAccountConfig();
     config.setUseAzureCredentialsChain(true);
-    config.setAccount(ACCOUNT);
     azureClientFactory = new AzureClientFactory(config);
-    BlobServiceClient blobServiceClient = azureClientFactory.getBlobServiceClient(null);
+    BlobServiceClient blobServiceClient = azureClientFactory.getBlobServiceClient(null, ACCOUNT);
     BearerTokenAuthenticationPolicy bearerTokenAuthenticationPolicy = null;
     for (int i = 0; i < blobServiceClient.getHttpPipeline().getPolicyCount(); i++) {
       if (blobServiceClient.getHttpPipeline().getPolicy(i) instanceof BearerTokenAuthenticationPolicy) {
@@ -107,10 +103,9 @@ public class AzureClientFactoryTest
   {
     AzureAccountConfig config = new AzureAccountConfig();
     config.setUseAzureCredentialsChain(true);
-    config.setAccount(ACCOUNT);
     azureClientFactory = new AzureClientFactory(config);
-    BlobServiceClient blobServiceClient = azureClientFactory.getBlobServiceClient(null);
-    BlobServiceClient blobServiceClient2 = azureClientFactory.getBlobServiceClient(null);
+    BlobServiceClient blobServiceClient = azureClientFactory.getBlobServiceClient(null, ACCOUNT);
+    BlobServiceClient blobServiceClient2 = azureClientFactory.getBlobServiceClient(null, ACCOUNT);
     Assert.assertEquals(blobServiceClient, blobServiceClient2);
   }
 
@@ -119,10 +114,9 @@ public class AzureClientFactoryTest
   {
     AzureAccountConfig config = new AzureAccountConfig();
     config.setUseAzureCredentialsChain(true);
-    config.setAccount(ACCOUNT);
     azureClientFactory = new AzureClientFactory(config);
-    BlobServiceClient blobServiceClient = azureClientFactory.getBlobServiceClient(null);
-    BlobServiceClient blobServiceClient2 = azureClientFactory.getBlobServiceClient(1);
+    BlobServiceClient blobServiceClient = azureClientFactory.getBlobServiceClient(null, ACCOUNT);
+    BlobServiceClient blobServiceClient2 = azureClientFactory.getBlobServiceClient(1, ACCOUNT);
     Assert.assertNotEquals(blobServiceClient, blobServiceClient2);
   }
 
@@ -131,11 +125,10 @@ public class AzureClientFactoryTest
   {
     AzureAccountConfig config = EasyMock.createMock(AzureAccountConfig.class);
     EasyMock.expect(config.getKey()).andReturn("key").times(2);
-    EasyMock.expect(config.getAccount()).andReturn(ACCOUNT).times(2);
     EasyMock.expect(config.getMaxTries()).andReturn(3);
     azureClientFactory = new AzureClientFactory(config);
     EasyMock.replay(config);
-    azureClientFactory.getBlobServiceClient(null);
+    azureClientFactory.getBlobServiceClient(null, ACCOUNT);
     EasyMock.verify(config);
   }
 }

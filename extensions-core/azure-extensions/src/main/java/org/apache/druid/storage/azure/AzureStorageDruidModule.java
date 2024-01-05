@@ -135,9 +135,10 @@ public class AzureStorageDruidModule implements DruidModule
   @Provides
   @LazySingleton
   public AzureStorage getAzureStorageContainer(
-      final AzureClientFactory azureClientFactory
+      final AzureClientFactory azureClientFactory,
+      final AzureAccountConfig azureAccountConfig
   )
   {
-    return new AzureStorage(azureClientFactory);
+    return new AzureStorage(azureClientFactory, azureAccountConfig.getAccount());
   }
 }

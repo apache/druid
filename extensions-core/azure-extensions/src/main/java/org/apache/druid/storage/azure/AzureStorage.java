@@ -62,12 +62,15 @@ public class AzureStorage
   private static final Logger log = new Logger(AzureStorage.class);
 
   private final AzureClientFactory azureClientFactory;
+  private final String storageAccount;
 
   public AzureStorage(
-      AzureClientFactory azureClientFactory
+      AzureClientFactory azureClientFactory,
+      String storageAccount
   )
   {
     this.azureClientFactory = azureClientFactory;
+    this.storageAccount = storageAccount;
   }
 
   public List<String> emptyCloudBlobDirectory(final String containerName, final String virtualDirPath)
@@ -209,7 +212,7 @@ public class AzureStorage
   @VisibleForTesting
   BlobServiceClient getBlobServiceClient(Integer maxAttempts)
   {
-    return azureClientFactory.getBlobServiceClient(maxAttempts);
+    return azureClientFactory.getBlobServiceClient(maxAttempts, storageAccount);
   }
 
   @VisibleForTesting

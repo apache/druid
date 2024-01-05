@@ -44,6 +44,7 @@ public class AzureStorageTest
   BlobContainerClient blobContainerClient = Mockito.mock(BlobContainerClient.class);
   AzureClientFactory azureClientFactory = Mockito.mock(AzureClientFactory.class);
 
+  private final String STORAGE_ACCOUNT = "storageAccount";
   private final String CONTAINER = "container";
   private final String BLOB_NAME = "blobName";
   private final Integer MAX_ATTEMPTS = 3;
@@ -51,7 +52,7 @@ public class AzureStorageTest
   @Before
   public void setup() throws BlobStorageException
   {
-    azureStorage = new AzureStorage(azureClientFactory);
+    azureStorage = new AzureStorage(azureClientFactory, STORAGE_ACCOUNT);
   }
 
   @Test
@@ -66,7 +67,7 @@ public class AzureStorageTest
         ArgumentMatchers.any()
     );
     Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(CONTAINER);
-    Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(MAX_ATTEMPTS);
+    Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(MAX_ATTEMPTS, STORAGE_ACCOUNT);
 
     Assert.assertEquals(ImmutableList.of(BLOB_NAME), azureStorage.listDir(CONTAINER, "", MAX_ATTEMPTS));
   }
@@ -83,7 +84,7 @@ public class AzureStorageTest
         ArgumentMatchers.any()
     );
     Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(CONTAINER);
-    Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(null);
+    Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(null, STORAGE_ACCOUNT);
 
     Assert.assertEquals(ImmutableList.of(BLOB_NAME), azureStorage.listDir(CONTAINER, "", null));
   }

@@ -67,6 +67,7 @@ public class AzureStorageAccountInputSource extends CloudObjectInputSource
   private final AzureInputSourceConfig azureInputSourceConfig;
   private final AzureAccountConfig azureAccountConfig;
 
+  private final AzureIngestClientFactory azureIngestClientFactory;
 
   @JsonCreator
   public AzureStorageAccountInputSource(
@@ -91,6 +92,10 @@ public class AzureStorageAccountInputSource extends CloudObjectInputSource
     this.inputDataConfig = Preconditions.checkNotNull(inputDataConfig, "AzureInputDataConfig");
     this.azureInputSourceConfig = azureInputSourceConfig;
     this.azureAccountConfig = azureAccountConfig;
+    this.azureIngestClientFactory = new AzureIngestClientFactory(
+        azureAccountConfig,
+        azureInputSourceConfig
+    );
   }
 
   @JsonIgnore
@@ -138,14 +143,9 @@ public class AzureStorageAccountInputSource extends CloudObjectInputSource
   @Override
   protected AzureEntity createEntity(CloudObjectLocation location)
   {
-    AzureIngestClientFactory azureIngestClientFactory = new AzureIngestClientFactory(
-        azureAccountConfig,
-        azureInputSourceConfig,
-        location.getBucket()
-    );
     return entityFactory.create(
         location,
-        new AzureStorage(azureIngestClientFactory),
+        new AzureStorage(azureIngestClientFactory, location.getBucket()),
         SCHEME
     );
   }
@@ -179,13 +179,7 @@ public class AzureStorageAccountInputSource extends CloudObjectInputSource
       public long getObjectSize(CloudObjectLocation location)
       {
         try {
-          AzureStorage azureStorage = new AzureStorage(
-              new AzureIngestClientFactory(
-                  azureAccountConfig,
-                  azureInputSourceConfig,
-                  location.getBucket()
-              )
-          );
+          AzureStorage azureStorage = new AzureStorage(azureIngestClientFactory, location.getBucket());
           Pair<String, String> locationInfo = AzureUtils.parseAzureStorageLocation(location);
           final BlockBlobClient blobWithAttributes = azureStorage.getBlockBlobReferenceWithAttributes(
               locationInfo.lhs,
@@ -228,13 +222,14 @@ public class AzureStorageAccountInputSource extends CloudObjectInputSource
         azureCloudBlobIterableFactory.equals(that.azureCloudBlobIterableFactory) &&
         inputDataConfig.equals(that.inputDataConfig) &&
         azureInputSourceConfig.equals(that.azureInputSourceConfig) &&
-        azureAccountConfig.equals(that.azureAccountConfig);
+        azureAccountConfig.equals(that.azureAccountConfig) &&
+        azureIngestClientFactory.equals(that.azureIngestClientFactory);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), entityFactory, azureCloudBlobIterableFactory, inputDataConfig, azureInputSourceConfig, azureAccountConfig);
+    return Objects.hash(super.hashCode(), entityFactory, azureCloudBlobIterableFactory, inputDataConfig, azureInputSourceConfig, azureAccountConfig, azureIngestClientFactory);
   }
 
   @Override

@@ -25,7 +25,9 @@ import com.azure.identity.DefaultAzureCredentialBuilder;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.common.StorageSharedKeyCredential;
+import org.apache.druid.java.util.common.Pair;
 
+import javax.annotation.Nullable;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
@@ -37,7 +39,7 @@ public class AzureClientFactory
 {
 
   protected final AzureAccountConfig config;
-  private final Map<Integer, BlobServiceClient> cachedBlobServiceClients;
+  private final Map<Pair<String, Integer>, BlobServiceClient> cachedBlobServiceClients;
 
   public AzureClientFactory(AzureAccountConfig config)
   {
@@ -45,26 +47,21 @@ public class AzureClientFactory
     this.cachedBlobServiceClients = new HashMap<>();
   }
 
-  public String getStorageAccount()
-  {
-    return config.getAccount();
-  }
-
   // It's okay to store clients in a map here because all the configs for specifying azure retries are static, and there are only 2 of them.
-  // The 2 configs are AzureAccountConfig.maxTries and AzureOutputConfig.maxRetrr.
-  // We will only ever have at most 2 clients in cachedBlobServiceClients.
-  public BlobServiceClient getBlobServiceClient(Integer retryCount)
+  // The 2 configs are AzureAccountConfig.maxTries and AzureOutputConfig.maxRetry.
+  // We will only ever have at most 2 clients in cachedBlobServiceClients per storage account.
+  public BlobServiceClient getBlobServiceClient(@Nullable Integer retryCount, String storageAccount)
   {
-    return cachedBlobServiceClients.computeIfAbsent(retryCount != null ? retryCount : config.getMaxTries(), this::buildNewClient);
+    return cachedBlobServiceClients.computeIfAbsent(Pair.of(storageAccount, retryCount != null ? retryCount : config.getMaxTries()), key -> buildNewClient(key.rhs, key.lhs));
   }
 
-  protected BlobServiceClient buildNewClient(Integer retryCount)
+  protected BlobServiceClient buildNewClient(Integer retryCount, String storageAccount)
   {
     BlobServiceClientBuilder clientBuilder = new BlobServiceClientBuilder()
-        .endpoint("https://" + getStorageAccount() + ".blob.core.windows.net");
+        .endpoint("https://" + storageAccount + ".blob.core.windows.net");
 
     if (config.getKey() != null) {
-      clientBuilder.credential(new StorageSharedKeyCredential(getStorageAccount(), config.getKey()));
+      clientBuilder.credential(new StorageSharedKeyCredential(storageAccount, config.getKey()));
     } else if (config.getSharedAccessStorageToken() != null) {
       clientBuilder.sasToken(config.getSharedAccessStorageToken());
     } else if (config.getUseAzureCredentialsChain()) {
@@ -76,7 +73,7 @@ public class AzureClientFactory
     return clientBuilder
         .retryOptions(new RetryOptions(
             new ExponentialBackoffOptions()
-                .setMaxRetries(retryCount != null ? retryCount : config.getMaxTries())
+                .setMaxRetries(retryCount)
                 .setBaseDelay(Duration.ofMillis(1000))
                 .setMaxDelay(Duration.ofMillis(60000))
         ))

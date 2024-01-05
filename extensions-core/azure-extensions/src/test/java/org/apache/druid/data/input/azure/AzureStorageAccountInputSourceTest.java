@@ -38,6 +38,7 @@ import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.storage.azure.AzureAccountConfig;
 import org.apache.druid.storage.azure.AzureCloudBlobIterable;
 import org.apache.druid.storage.azure.AzureCloudBlobIterableFactory;
+import org.apache.druid.storage.azure.AzureIngestClientFactory;
 import org.apache.druid.storage.azure.AzureInputDataConfig;
 import org.apache.druid.storage.azure.AzureStorage;
 import org.apache.druid.storage.azure.blob.CloudBlobHolder;
@@ -391,6 +392,7 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
         .usingGetClass()
         .withPrefabValues(Logger.class, new Logger(AzureStorage.class), new Logger(AzureStorage.class))
         .withPrefabValues(BlobContainerClient.class, new BlobContainerClientBuilder().buildClient(), new BlobContainerClientBuilder().buildClient())
+        .withPrefabValues(AzureIngestClientFactory.class, new AzureIngestClientFactory(null, null), new AzureIngestClientFactory(null, null))
         .withNonnullFields("entityFactory")
         .withNonnullFields("azureCloudBlobIterableFactory")
         .withNonnullFields("inputDataConfig")
@@ -398,6 +400,7 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
         .withNonnullFields("scheme")
         .withNonnullFields("azureInputSourceConfig")
         .withNonnullFields("azureAccountConfig")
+        .withNonnullFields("azureIngestClientFactory")
         .verify();
   }
 
