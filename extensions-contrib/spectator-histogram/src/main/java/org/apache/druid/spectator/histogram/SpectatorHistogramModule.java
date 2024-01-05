@@ -87,8 +87,5 @@ public class SpectatorHistogramModule implements DruidModule
   public void configure(Binder binder)
   {
     registerSerde();
-    //TODO: samarth this probably needs to be added for sql
-    //SqlBindings.addAggregator(binder, SpectatorHistogramQuantileSqlAggregator.class);
-    //SqlBindings.addAggregator(binder, GenerateSpectatorHistogramSqlAggregator.class);
   }
 }

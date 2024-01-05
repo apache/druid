@@ -73,12 +73,14 @@ representation with the same aggregation performance and accuracy as
 data-sketches (depending on data-set, see limitations below).
 
 ## Limitations
-* Supports positive numeric values within the range of [0, 2^53). Negatives are
+* Supports positive long integer values within the range of [0, 2^53). Negatives are
 coerced to 0.
-* Fixed buckets with increasing bucket widths. Relative accuracy is maintained,
-but absolute accuracy reduces with larger values.
+* Decimals are not supported.
+* 276 fixed buckets with increasing bucket widths. In practice, the observed error of computed percentiles is in the range (0.1%, 3%). See [Bucket Boundaries](#histogram-bucket-boundaries) for the full list of bucket boundaries.
+* DruidSQL queries are yet not supported. You must use native Druid queries.
+* Vectorized queries are yet not supported.
 
-> If either of these limitations are a problem, then the data-sketch aggregator
+> If any of these limitations are a problem, then the data-sketch aggregator
 is most likely a better choice.
 
 ## Functionality
@@ -268,6 +270,69 @@ array of percentiles.
 
 ## Appendix
 
+### Example Ingestion Spec
+Example of ingesting the sample wikipedia dataset with a histogram metric column:
+```json
+{
+  "type": "index_parallel",
+  "spec": {
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "http",
+        "uris": ["https://druid.apache.org/data/wikipedia.json.gz"]
+      },
+      "inputFormat": { "type": "json" }
+    },
+    "dataSchema": {
+      "granularitySpec": {
+        "segmentGranularity": "day",
+        "queryGranularity": "minute",
+        "rollup": true
+      },
+      "dataSource": "wikipedia",
+      "timestampSpec": { "column": "timestamp", "format": "iso" },
+      "dimensionsSpec": {
+        "dimensions": [
+          "isRobot",
+          "channel",
+          "flags",
+          "isUnpatrolled",
+          "page",
+          "diffUrl",
+          "comment",
+          "isNew",
+          "isMinor",
+          "isAnonymous",
+          "user",
+          "namespace",
+          "cityName",
+          "countryName",
+          "regionIsoCode",
+          "metroCode",
+          "countryIsoCode",
+          "regionName"
+        ]
+      },
+      "metricsSpec": [
+        { "name": "count", "type": "count" },
+        { "name": "sum_added", "type": "longSum", "fieldName": "added" },
+        {
+          "name": "hist_added",
+          "type": "spectatorHistogram",
+          "fieldName": "added"
+        }
+      ]
+    },
+    "tuningConfig": {
+      "type": "index_parallel",
+      "partitionsSpec": { "type": "hashed" },
+      "forceGuaranteedRollup": true
+    }
+  }
+}
+```
+
 ### Example Query
 Example query using the sample wikipedia dataset:
 ```json
@@ -335,6 +400,8 @@ Results in
 ### Histogram Bucket Boundaries
 These are the upper bounds of each bucket index. There are 276 buckets.
 The first bucket index is 0 and the last bucket index is 275.
+As you can see the bucket widths increase as the bucket index increases. This leads to a greater absolute error for larger values, but maintains a relative error of rough percentage across the number range.
+i.e the maximum error at value 10 is 0 since the bucket width is 1. But for a value of 16,000,000,000 the bucket width is 1,431,655,768 giving an error of up to ~8.9%. In practice, the observed error of computed percentiles is in the range (0.1%, 3%).
 ```json
 [
   1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 21, 26, 31, 36, 41, 46,

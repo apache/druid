@@ -45,7 +45,7 @@ import java.util.Objects;
 // This will prevent class casting exceptions if trying to query with sum rather
 // than explicitly as a SpectatorHistogram
 //
-// The SpectatorHistorgram is a Number. That number is of intValue(),
+// The SpectatorHistogram is a Number. That number is of intValue(),
 // which is the count of the number of events in the histogram
 // (adding up the counts across all buckets).
 //

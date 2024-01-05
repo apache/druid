@@ -44,9 +44,9 @@ import java.util.Objects;
 @JsonTypeName(SpectatorHistogramAggregatorFactory.TYPE_NAME)
 public class SpectatorHistogramAggregatorFactory extends AggregatorFactory
 {
-
   @Nonnull
   private final String name;
+
   @Nonnull
   private final String fieldName;
 
@@ -267,7 +267,6 @@ public class SpectatorHistogramAggregatorFactory extends AggregatorFactory
     }
     final SpectatorHistogramAggregatorFactory that = (SpectatorHistogramAggregatorFactory) o;
 
-    //TODO: samarth should we check for equality of contents in count arrays?
     return Objects.equals(name, that.name) &&
            Objects.equals(fieldName, that.fieldName);
   }

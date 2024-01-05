@@ -35,6 +35,15 @@ import java.nio.channels.WritableByteChannel;
 import java.util.BitSet;
 import java.util.Objects;
 
+/**
+ * A header for storing offsets for columns with nullable values.
+ * Provides fast access to the offset start/end for a given row index, while supporting null values.
+ * For cases where data is sparse, this can save a lot of space.
+ * The nulls are stored in a bitset, and the offsets are stored in an int array.
+ * The cost of the nulls is 1 bit per row, the cost of the non-nulls is 4 bytes per row for the offset.
+ * In cases where every row is non-null, the bitset is omitted.
+ * In either case, we need the offsets because the values are variable length.
+ */
 public class NullableOffsetsHeader implements Serializer
 {
   private final WriteOutBytes offsetsWriter;
