@@ -129,16 +129,16 @@ Druid's default null handling mode. The list of examples is illustrative, albeit
 |SQL|Reversible?|
 |---|-----------|
 |`LOOKUP(sku, 'sku_to_name') = 'WhizBang Sprocket'`|Yes|
-|`LOOKUP(sku, 'sku_to_name') IS NOT DISTINCT FROM 'WhizBang Sprocket'`|Yes, for nonnull literals|
+|`LOOKUP(sku, 'sku_to_name') IS NOT DISTINCT FROM 'WhizBang Sprocket'`|Yes, for non-null literals|
 |`LOOKUP(sku, 'sku_to_name') <> 'WhizBang Sprocket'`|No, unless `sku_to_name` is [injective](#injective-lookups)|
-|`LOOKUP(sku, 'sku_to_name') IS DISTINCT FROM 'WhizBang Sprocket'`|Yes, for nonnull literals|
+|`LOOKUP(sku, 'sku_to_name') IS DISTINCT FROM 'WhizBang Sprocket'`|Yes, for non-null literals|
 |`LOOKUP(sku, 'sku_to_name') = 'WhizBang Sprocket' IS NOT TRUE`|Yes|
 |`LOOKUP(sku, 'sku_to_name') IN ('WhizBang Sprocket', 'WhizBang Chain')`|Yes|
 |`LOOKUP(sku, 'sku_to_name') NOT IN ('WhizBang Sprocket', 'WhizBang Chain')`|No, unless `sku_to_name` is [injective](#injective-lookups)|
 |`LOOKUP(sku, 'sku_to_name') IN ('WhizBang Sprocket', 'WhizBang Chain') IS NOT TRUE`|Yes|
 |`LOOKUP(sku, 'sku_to_name') IS NULL`|No|
 |`LOOKUP(sku, 'sku_to_name') IS NOT NULL`|No|
-|`LOOKUP('sku:' \|\| sku, 'sku_to_name') = 'WhizBang Sprocket'`|No, expressions for the first arg are not reversible|
+|`LOOKUP('sku:' \|\| sku, 'sku_to_name') = 'WhizBang Sprocket'`|No, expressions for the first argument are not reversible|
 |`COALESCE(LOOKUP(sku, 'sku_to_name'), 'N/A') = 'WhizBang Sprocket'`|Yes, but see next item for `= 'N/A'`|
 |`COALESCE(LOOKUP(sku, 'sku_to_name'), 'N/A') = 'N/A'`|No, unless `sku_to_name` is [injective](#injective-lookups), which allows Druid to ignore the `COALESCE`|
 |`COALESCE(LOOKUP(sku, 'sku_to_name'), 'N/A') = 'WhizBang Sprocket' IS NOT TRUE`|Yes|
