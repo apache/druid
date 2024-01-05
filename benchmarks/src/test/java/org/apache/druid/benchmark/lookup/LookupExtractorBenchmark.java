@@ -64,7 +64,6 @@ public class LookupExtractorBenchmark
   /**
    * Number of keys in the lookup table.
    */
-//  @Param({"1000", "1000000"})
   @Param({"1000000"})
   private int numKeys;
 
@@ -72,7 +71,6 @@ public class LookupExtractorBenchmark
    * Average number of keys that map to each value.
    */
   @Param({"1", "1000"})
-//  @Param({"1000"})
   private int keysPerValue;
 
   private LookupExtractor lookup;
