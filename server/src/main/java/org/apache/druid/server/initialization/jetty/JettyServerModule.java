@@ -34,6 +34,7 @@ import com.google.inject.Scopes;
 import com.google.inject.multibindings.Multibinder;
 import com.sun.jersey.guice.JerseyServletModule;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
+import org.apache.commons.lang3.SystemUtils;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
@@ -497,17 +498,19 @@ public class JettyServerModule extends JerseyServletModule
 
   private static int getTCPAcceptQueueSize()
   {
-    try {
-      BufferedReader in = Files.newBufferedReader(Paths.get("/proc/sys/net/core/somaxconn"));
-      String acceptQueueSize = in.readLine();
-      if (acceptQueueSize != null) {
-        return Integer.parseInt(acceptQueueSize);
+    if (SystemUtils.IS_OS_LINUX) {
+      try {
+        BufferedReader in = Files.newBufferedReader(Paths.get("/proc/sys/net/core/somaxconn"));
+        String acceptQueueSize = in.readLine();
+        if (acceptQueueSize != null) {
+          return Integer.parseInt(acceptQueueSize);
+        }
+      }
+      catch (Exception e) {
+        log.warn("Unable to read /proc/sys/net/core/somaxconn, falling back to default value for TCP accept queue size");
       }
     }
-    catch (Exception e) {
-      log.warn("Unable to read /proc/sys/net/core/somaxconn, falling back to default value for TCP accept queue size");
-    }
-    return 128; // Default value of net.core.somaxconn on Linux
+    return 128; // Default value of net.core.somaxconn
   }
 
   @Provides
