@@ -143,6 +143,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           new ExpressionVirtualColumn("vd0-add-sub", "d0 + (d0 - d0)", ColumnType.DOUBLE, TestExprMacroTable.INSTANCE),
           new ExpressionVirtualColumn("vf0-add-sub", "f0 + (f0 - f0)", ColumnType.FLOAT, TestExprMacroTable.INSTANCE),
           new ExpressionVirtualColumn("vl0-add-sub", "l0 + (l0 - l0)", ColumnType.LONG, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("vdim3-concat", "dim3 + dim3", ColumnType.LONG, TestExprMacroTable.INSTANCE),
           new ExpressionVirtualColumn("nestedArrayLong", "array(arrayLong)", ColumnType.ofArray(ColumnType.LONG_ARRAY), TestExprMacroTable.INSTANCE),
           new ListFilteredVirtualColumn("allow-dim0", DefaultDimensionSpec.of("dim0"), ImmutableSet.of("3", "4"), true),
           new ListFilteredVirtualColumn("deny-dim0", DefaultDimensionSpec.of("dim0"), ImmutableSet.of("3", "4"), false),
@@ -626,27 +627,31 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
             finishers.entrySet()) {
           for (boolean cnf : ImmutableList.of(false, true)) {
             for (boolean optimize : ImmutableList.of(false, true)) {
-              for (StringEncodingStrategy encodingStrategy : stringEncoding) {
-                final String testName = StringUtils.format(
-                    "bitmaps[%s], indexMerger[%s], finisher[%s], cnf[%s], optimize[%s], stringDictionaryEncoding[%s]",
-                    bitmapSerdeFactoryEntry.getKey(),
-                    segmentWriteOutMediumFactoryEntry.getKey(),
-                    finisherEntry.getKey(),
-                    cnf,
-                    optimize,
-                    encodingStrategy.getType()
-                );
-                final IndexBuilder indexBuilder = IndexBuilder
-                    .create()
-                    .schema(DEFAULT_INDEX_SCHEMA)
-                    .indexSpec(
-                        IndexSpec.builder()
-                                 .withBitmapSerdeFactory(bitmapSerdeFactoryEntry.getValue())
-                                 .withStringDictionaryEncoding(encodingStrategy)
-                                 .build()
-                    )
-                    .segmentWriteOutMediumFactory(segmentWriteOutMediumFactoryEntry.getValue());
-                constructors.add(new Object[]{testName, indexBuilder, finisherEntry.getValue(), cnf, optimize});
+              for (boolean storeNullColumns : ImmutableList.of(false, true)) {
+                for (StringEncodingStrategy encodingStrategy : stringEncoding) {
+                  final String testName = StringUtils.format(
+                      "bitmaps[%s], indexMerger[%s], finisher[%s], cnf[%s], optimize[%s], stringDictionaryEncoding[%s], storeNullColumns[%s]",
+                      bitmapSerdeFactoryEntry.getKey(),
+                      segmentWriteOutMediumFactoryEntry.getKey(),
+                      finisherEntry.getKey(),
+                      cnf,
+                      optimize,
+                      encodingStrategy.getType(),
+                      storeNullColumns
+                  );
+                  final IndexBuilder indexBuilder = IndexBuilder
+                      .create()
+                      .schema(DEFAULT_INDEX_SCHEMA)
+                      .writeNullColumns(storeNullColumns)
+                      .indexSpec(
+                          IndexSpec.builder()
+                                   .withBitmapSerdeFactory(bitmapSerdeFactoryEntry.getValue())
+                                   .withStringDictionaryEncoding(encodingStrategy)
+                                   .build()
+                      )
+                      .segmentWriteOutMediumFactory(segmentWriteOutMediumFactoryEntry.getValue());
+                  constructors.add(new Object[]{testName, indexBuilder, finisherEntry.getValue(), cnf, optimize});
+                }
               }
             }
           }
