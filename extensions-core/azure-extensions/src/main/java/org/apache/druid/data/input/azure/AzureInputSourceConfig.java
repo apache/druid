@@ -34,7 +34,6 @@ public class AzureInputSourceConfig
 {
   private final String sharedAccessStorageToken;
   private final String key;
-  private final Boolean useAzureCredentialsChain;
   private final String appRegistrationClientId;
   private final String appRegistrationClientSecret;
   private final String tenantId;
@@ -43,7 +42,6 @@ public class AzureInputSourceConfig
   public AzureInputSourceConfig(
       @JsonProperty("sharedAccessStorageToken") @Nullable String sharedAccessStorageToken,
       @JsonProperty("key") @Nullable String key,
-      @JsonProperty("useAzureCredentialsChain") @Nullable Boolean useAzureCredentialsChain,
       @JsonProperty("appRegistrationClientId") @Nullable String appRegistrationClientId,
       @JsonProperty("appRegistrationClientSecret") @Nullable String appRegistrationClientSecret,
       @JsonProperty("tenantId") @Nullable String tenantId
@@ -52,7 +50,6 @@ public class AzureInputSourceConfig
   {
     this.sharedAccessStorageToken = sharedAccessStorageToken;
     this.key = key;
-    this.useAzureCredentialsChain = useAzureCredentialsChain;
     this.appRegistrationClientId = appRegistrationClientId;
     this.appRegistrationClientSecret = appRegistrationClientSecret;
     this.tenantId = tenantId;
@@ -98,21 +95,12 @@ public class AzureInputSourceConfig
     return key;
   }
 
-  @Nullable
-  @JsonProperty("useAzureCredentialsChain")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Boolean shouldUseAzureCredentialsChain()
-  {
-    return useAzureCredentialsChain;
-  }
-
   @Override
   public String toString()
   {
     return "AzureInputSourceConfig{" +
         "sharedAccessStorageToken=" + sharedAccessStorageToken +
         ", key=" + key +
-        ", useAzureCredentialsChain=" + useAzureCredentialsChain +
         ", appRegistrationClientId=" + appRegistrationClientId +
         ", appRegistrationClientSecret=" + appRegistrationClientSecret +
         ", tenantId=" + tenantId +
@@ -131,7 +119,6 @@ public class AzureInputSourceConfig
     AzureInputSourceConfig that = (AzureInputSourceConfig) o;
     return Objects.equals(key, that.key)
         && Objects.equals(sharedAccessStorageToken, that.sharedAccessStorageToken)
-        && Objects.equals(useAzureCredentialsChain, that.useAzureCredentialsChain)
         && Objects.equals(appRegistrationClientId, that.appRegistrationClientId)
         && Objects.equals(appRegistrationClientSecret, that.appRegistrationClientSecret)
         && Objects.equals(tenantId, that.tenantId);
@@ -143,7 +130,6 @@ public class AzureInputSourceConfig
     return Objects.hash(
         sharedAccessStorageToken,
         key,
-        useAzureCredentialsChain,
         appRegistrationClientId,
         appRegistrationClientSecret,
         tenantId

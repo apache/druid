@@ -64,7 +64,6 @@ public class AzureIngestClientFactoryTest extends EasyMockSupport
         KEY,
         null,
         null,
-        null,
         null
     );
     azureIngestClientFactory = new AzureIngestClientFactory(accountConfig, azureInputSourceConfig);
@@ -79,7 +78,6 @@ public class AzureIngestClientFactoryTest extends EasyMockSupport
     AzureInputSourceConfig azureInputSourceConfig = new AzureInputSourceConfig(
         null,
         KEY,
-        null,
         null,
         null,
         null
@@ -107,7 +105,6 @@ public class AzureIngestClientFactoryTest extends EasyMockSupport
         null,
         null,
         null,
-        null,
         null
     );
     azureIngestClientFactory = new AzureIngestClientFactory(accountConfig, azureInputSourceConfig);
@@ -124,38 +121,9 @@ public class AzureIngestClientFactoryTest extends EasyMockSupport
   }
 
   @Test
-  public void test_blobServiceClientBuilder_useDefaultCredentialChain()
-  {
-    AzureInputSourceConfig azureInputSourceConfig = new AzureInputSourceConfig(
-        null,
-        null,
-        true,
-        null,
-        null,
-        null
-    );
-    azureIngestClientFactory = new AzureIngestClientFactory(accountConfig, azureInputSourceConfig);
-    EasyMock.expect(accountConfig.getManagedIdentityClientId()).andReturn("managedIdentityClientId");
-
-    replayAll();
-    BlobServiceClient blobServiceClient = azureIngestClientFactory.getBlobServiceClient(3, ACCOUNT);
-    verifyAll();
-
-    BearerTokenAuthenticationPolicy bearerTokenAuthenticationPolicy = null;
-    for (int i = 0; i < blobServiceClient.getHttpPipeline().getPolicyCount(); i++) {
-      if (blobServiceClient.getHttpPipeline().getPolicy(i) instanceof BearerTokenAuthenticationPolicy) {
-        bearerTokenAuthenticationPolicy = (BearerTokenAuthenticationPolicy) blobServiceClient.getHttpPipeline().getPolicy(i);
-      }
-    }
-
-    Assert.assertNotNull(bearerTokenAuthenticationPolicy);
-  }
-
-  @Test
   public void test_blobServiceClientBuilder_useAppRegistration()
   {
     AzureInputSourceConfig azureInputSourceConfig = new AzureInputSourceConfig(
-        null,
         null,
         null,
         "clientId",
@@ -198,7 +166,6 @@ public class AzureIngestClientFactoryTest extends EasyMockSupport
   public void test_blobServiceClientBuilder_fallbackToAzureAccountConfig()
   {
     AzureInputSourceConfig azureInputSourceConfig = new AzureInputSourceConfig(
-        null,
         null,
         null,
         null,

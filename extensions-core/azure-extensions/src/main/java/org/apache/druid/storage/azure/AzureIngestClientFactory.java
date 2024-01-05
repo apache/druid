@@ -22,7 +22,6 @@ package org.apache.druid.storage.azure;
 import com.azure.core.http.policy.ExponentialBackoffOptions;
 import com.azure.core.http.policy.RetryOptions;
 import com.azure.identity.ClientSecretCredentialBuilder;
-import com.azure.identity.DefaultAzureCredentialBuilder;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.common.StorageSharedKeyCredential;
@@ -57,10 +56,6 @@ public class AzureIngestClientFactory extends AzureClientFactory
       clientBuilder.credential(new StorageSharedKeyCredential(storageAccount, azureInputSourceConfig.getKey()));
     } else if (azureInputSourceConfig.getSharedAccessStorageToken() != null) {
       clientBuilder.sasToken(azureInputSourceConfig.getSharedAccessStorageToken());
-    } else if (azureInputSourceConfig.shouldUseAzureCredentialsChain() != null) {
-      DefaultAzureCredentialBuilder defaultAzureCredentialBuilder = new DefaultAzureCredentialBuilder()
-          .managedIdentityClientId(config.getManagedIdentityClientId());
-      clientBuilder.credential(defaultAzureCredentialBuilder.build());
     } else if (azureInputSourceConfig.getAppRegistrationClientId() != null && azureInputSourceConfig.getAppRegistrationClientSecret() != null) {
       clientBuilder.credential(new ClientSecretCredentialBuilder()
           .clientSecret(azureInputSourceConfig.getAppRegistrationClientSecret())
