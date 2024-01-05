@@ -46,9 +46,9 @@ public enum DruidPredicateMatch
    * Convenience method for {@link ValueMatcher} and {@link org.apache.druid.query.filter.vector.VectorValueMatcher}
    * implementations to pass through the 'includeUnknown' parameter to the predicate match result.
    */
-  public boolean matches(boolean includeUknown)
+  public boolean matches(boolean includeUnknown)
   {
-    return this == TRUE || (includeUknown && this == UNKNOWN);
+    return this == TRUE || (includeUnknown && this == UNKNOWN);
   }
 
   public static DruidPredicateMatch of(boolean val)

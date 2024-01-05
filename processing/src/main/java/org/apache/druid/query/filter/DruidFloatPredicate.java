@@ -28,7 +28,7 @@ package org.apache.druid.query.filter;
 @SuppressWarnings("unused")
 public interface DruidFloatPredicate
 {
-  DruidFloatPredicate ALWAYS_FALSE = input -> DruidPredicateMatch.FALSE;
+  DruidFloatPredicate ALWAYS_FALSE_WITH_NULL_UNKNOWN = input -> DruidPredicateMatch.FALSE;
 
   DruidFloatPredicate ALWAYS_TRUE = input -> DruidPredicateMatch.TRUE;
 

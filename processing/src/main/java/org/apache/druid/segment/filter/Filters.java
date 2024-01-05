@@ -131,6 +131,14 @@ public class Filters
     }
     // missing column -> match all rows if the predicate matches null; match no rows otherwise
     final DruidPredicateMatch match = predicateFactory.makeStringPredicate().apply(null);
+    return makeMissingColumnNullIndex(match, selector);
+  }
+
+  public static BitmapColumnIndex makeMissingColumnNullIndex(
+      DruidPredicateMatch match,
+      final ColumnIndexSelector selector
+  )
+  {
     if (match == DruidPredicateMatch.TRUE) {
       return new AllTrueBitmapColumnIndex(selector);
     }

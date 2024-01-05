@@ -504,7 +504,7 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
           // lower value is not null, but isn't convertible to a long so is effectively null, nothing matches
           // this shouldn't be possible because we only use numeric predicates when the match value type is numeric
           // but just in case...
-          return DruidLongPredicate.ALWAYS_FALSE;
+          return DruidLongPredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
         } else {
           if (lowerOpen) {
             // lower bound is open, so take the floor of the value so that x > 1.1 can match 2 but not 1
@@ -526,7 +526,7 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
           // upper value is not null, but isn't convertible to a long so is effectively null, nothing matches
           // this shouldn't be possible because we only use numeric predicates when the match value type is numeric
           // but just in case...
-          return DruidLongPredicate.ALWAYS_FALSE;
+          return DruidLongPredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
         } else {
           if (upperOpen) {
             // upper bound is open, take the ceil so that x < 1.1 can match 1 but not 2
@@ -568,7 +568,7 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
           // lower value is not null, but isn't convertible to a long so is effectively null, nothing matches
           // this shouldn't be possible because we only use numeric predicates when the match value type is numeric
           // but just in case...
-          return DruidDoublePredicate.ALWAYS_FALSE;
+          return DruidDoublePredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
         } else {
           lowerBound = lowerCast.asDouble();
           hasLowerBound = true;
@@ -584,7 +584,7 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
           // upper value is not null, but isn't convertible to a long so is effectively null, nothing matches
           // this shouldn't be possible because we only use numeric predicates when the match value type is numeric
           // but just in case...
-          return DruidDoublePredicate.ALWAYS_FALSE;
+          return DruidDoublePredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
         } else {
           hasUpperBound = true;
           upperBound = upperCast.asDouble();

@@ -550,19 +550,19 @@ public class FilterPartitionBenchmark
           @Override
           public DruidLongPredicate makeLongPredicate()
           {
-            return DruidLongPredicate.ALWAYS_FALSE;
+            return DruidLongPredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
           }
 
           @Override
           public DruidFloatPredicate makeFloatPredicate()
           {
-            return DruidFloatPredicate.ALWAYS_FALSE;
+            return DruidFloatPredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
           }
 
           @Override
           public DruidDoublePredicate makeDoublePredicate()
           {
-            return DruidDoublePredicate.ALWAYS_FALSE;
+            return DruidDoublePredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
           }
         };
 

@@ -59,9 +59,6 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.filter.Filters;
-import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
-import org.apache.druid.segment.index.AllTrueBitmapColumnIndex;
-import org.apache.druid.segment.index.AllUnknownBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.index.semantic.Utf8ValueSetIndexes;
@@ -305,13 +302,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
       if (indexSupplier == null) {
         // column doesn't exist, match against null
         DruidPredicateMatch match = predicateFactory.makeStringPredicate().apply(null);
-        if (match == DruidPredicateMatch.TRUE) {
-          return new AllTrueBitmapColumnIndex(selector);
-        }
-        if (match == DruidPredicateMatch.UNKNOWN) {
-          return new AllUnknownBitmapColumnIndex(selector);
-        }
-        return new AllFalseBitmapColumnIndex(selector.getBitmapFactory());
+        return Filters.makeMissingColumnNullIndex(match, selector);
       }
 
       final Utf8ValueSetIndexes utf8ValueSetIndexes = indexSupplier.as(Utf8ValueSetIndexes.class);

@@ -163,21 +163,21 @@ public class SpatialFilter implements Filter
     public DruidLongPredicate makeLongPredicate()
     {
       // SpatialFilter does not currently support longs
-      return DruidLongPredicate.ALWAYS_FALSE;
+      return DruidLongPredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
     }
 
     @Override
     public DruidFloatPredicate makeFloatPredicate()
     {
       // SpatialFilter does not currently support floats
-      return DruidFloatPredicate.ALWAYS_FALSE;
+      return DruidFloatPredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
     }
 
     @Override
     public DruidDoublePredicate makeDoublePredicate()
     {
       // SpatialFilter does not currently support doubles
-      return DruidDoublePredicate.ALWAYS_FALSE;
+      return DruidDoublePredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
     }
 
     @Override

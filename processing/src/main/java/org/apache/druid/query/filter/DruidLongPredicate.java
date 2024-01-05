@@ -25,7 +25,7 @@ package org.apache.druid.query.filter;
  */
 public interface DruidLongPredicate
 {
-  DruidLongPredicate ALWAYS_FALSE = input -> DruidPredicateMatch.FALSE;
+  DruidLongPredicate ALWAYS_FALSE_WITH_NULL_UNKNOWN = input -> DruidPredicateMatch.FALSE;
 
   DruidLongPredicate ALWAYS_TRUE = input -> DruidPredicateMatch.TRUE;
 

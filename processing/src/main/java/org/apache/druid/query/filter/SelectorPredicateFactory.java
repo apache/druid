@@ -90,7 +90,7 @@ public class SelectorPredicateFactory implements DruidPredicateFactory
       final Long valueAsLong = DimensionHandlerUtils.convertObjectToLong(value);
 
       if (valueAsLong == null) {
-        longPredicate = DruidLongPredicate.ALWAYS_FALSE;
+        longPredicate = DruidLongPredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
       } else {
         // store the primitive, so we don't unbox for every comparison
         final long unboxedLong = valueAsLong;
@@ -116,7 +116,7 @@ public class SelectorPredicateFactory implements DruidPredicateFactory
       final Float valueAsFloat = DimensionHandlerUtils.convertObjectToFloat(value);
 
       if (valueAsFloat == null) {
-        floatPredicate = DruidFloatPredicate.ALWAYS_FALSE;
+        floatPredicate = DruidFloatPredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
       } else {
         // Compare with floatToIntBits instead of == to canonicalize NaNs.
         final int floatBits = Float.floatToIntBits(valueAsFloat);
@@ -141,7 +141,7 @@ public class SelectorPredicateFactory implements DruidPredicateFactory
       final Double aDouble = DimensionHandlerUtils.convertObjectToDouble(value);
 
       if (aDouble == null) {
-        doublePredicate = DruidDoublePredicate.ALWAYS_FALSE;
+        doublePredicate = DruidDoublePredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
       } else {
         // Compare with doubleToLongBits instead of == to canonicalize NaNs.
         final long bits = Double.doubleToLongBits(aDouble);

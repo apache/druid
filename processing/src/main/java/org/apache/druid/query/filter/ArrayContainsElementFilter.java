@@ -320,10 +320,10 @@ public class ArrayContainsElementFilter extends AbstractOptimizableDimFilter imp
       // if element match value is an array, scalar matches can never be true
       final Object matchVal = elementMatchValue.valueOrDefault();
       if (matchVal == null || (elementMatchValue.isArray() && elementMatchValue.asArray().length > 1)) {
-        this.stringPredicateSupplier = DruidObjectPredicate::alwaysFalse;
-        this.longPredicateSupplier = () -> DruidLongPredicate.ALWAYS_FALSE;
-        this.doublePredicateSupplier = () -> DruidDoublePredicate.ALWAYS_FALSE;
-        this.floatPredicateSupplier = () -> DruidFloatPredicate.ALWAYS_FALSE;
+        this.stringPredicateSupplier = DruidObjectPredicate::alwaysFalseWithNullUnknown;
+        this.longPredicateSupplier = () -> DruidLongPredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
+        this.doublePredicateSupplier = () -> DruidDoublePredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
+        this.floatPredicateSupplier = () -> DruidFloatPredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
       } else {
         this.stringPredicateSupplier = equalityPredicateFactory::makeStringPredicate;
         this.longPredicateSupplier = equalityPredicateFactory::makeLongPredicate;
@@ -419,7 +419,7 @@ public class ArrayContainsElementFilter extends AbstractOptimizableDimFilter imp
           (ExpressionType) expressionType.getElementType()
       );
       if (castForComparison == null) {
-        return DruidObjectPredicate.alwaysFalse();
+        return DruidObjectPredicate.alwaysFalseWithNullUnknown();
       }
       final Object matchVal = castForComparison.value();
       return input -> {

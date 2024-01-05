@@ -101,7 +101,7 @@ public class PredicateValueMatcherFactory implements ColumnProcessorFactory<Valu
         return ValueMatchers.allTrue();
       }
       if (match == DruidPredicateMatch.UNKNOWN) {
-        return ValueMatchers.makeAlwaysFalseObjectMatcher(selector);
+        return ValueMatchers.makeAlwaysFalseWithNullUnknownObjectMatcher(selector);
       }
       // predicate matches null as false, there are no unknowns
       return ValueMatchers.allFalse();
@@ -145,7 +145,7 @@ public class PredicateValueMatcherFactory implements ColumnProcessorFactory<Valu
         return ValueMatchers.allTrue();
       }
       if (match == DruidPredicateMatch.UNKNOWN) {
-        return ValueMatchers.makeAlwaysFalseObjectMatcher(selector);
+        return ValueMatchers.makeAlwaysFalseWithNullUnknownObjectMatcher(selector);
       }
       // predicate matches null as false, there are no unknowns
       return ValueMatchers.allFalse();

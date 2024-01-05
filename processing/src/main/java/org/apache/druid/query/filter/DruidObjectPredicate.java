@@ -23,7 +23,7 @@ import javax.annotation.Nullable;
 
 public interface DruidObjectPredicate<T>
 {
-  static <T> DruidObjectPredicate<T> alwaysFalse()
+  static <T> DruidObjectPredicate<T> alwaysFalseWithNullUnknown()
   {
     return value -> value == null ? DruidPredicateMatch.UNKNOWN : DruidPredicateMatch.FALSE;
   }

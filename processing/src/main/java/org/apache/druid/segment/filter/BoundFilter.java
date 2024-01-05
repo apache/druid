@@ -85,13 +85,7 @@ public class BoundFilter implements Filter
     if (indexSupplier == null) {
       // missing column -> match all rows if the predicate matches null; match no rows otherwise
       final DruidPredicateMatch match = getPredicateFactory().makeStringPredicate().apply(null);
-      if (match == DruidPredicateMatch.TRUE) {
-        return new AllTrueBitmapColumnIndex(selector);
-      }
-      if (match == DruidPredicateMatch.UNKNOWN) {
-        return new AllUnknownBitmapColumnIndex(selector);
-      }
-      return new AllFalseBitmapColumnIndex(selector.getBitmapFactory());
+      return Filters.makeMissingColumnNullIndex(match, selector);
     }
 
     if (supportStringShortCircuit()) {

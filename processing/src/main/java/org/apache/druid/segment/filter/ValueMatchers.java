@@ -376,7 +376,7 @@ public class ValueMatchers
    * null values will be matched. This is typically used when the filter should never match any actual values, but
    * still needs to be able to report 'unknown' matches.
    */
-  public static ValueMatcher makeAlwaysFalseDimensionMatcher(final DimensionSelector selector, boolean multiValue)
+  public static ValueMatcher makeAlwaysFalseWithNullUnknownDimensionMatcher(final DimensionSelector selector, boolean multiValue)
   {
     final IdLookup lookup = selector.idLookup();
     // if the column doesn't have null
@@ -464,7 +464,7 @@ public class ValueMatchers
    * null values will be matched. This is typically used when the filter should never match any actual values, but
    * still needs to be able to report 'unknown' matches.
    */
-  public static ValueMatcher makeAlwaysFalseNumericMatcher(BaseNullableColumnValueSelector selector)
+  public static ValueMatcher makeAlwaysFalseWithNullUnknownNumericMatcher(BaseNullableColumnValueSelector selector)
   {
     return new ValueMatcher()
     {
@@ -487,7 +487,7 @@ public class ValueMatchers
    * null values will be matched. This is typically used when the filter should never match any actual values, but
    * still needs to be able to report 'unknown' matches.
    */
-  public static ValueMatcher makeAlwaysFalseObjectMatcher(BaseObjectColumnValueSelector<?> selector)
+  public static ValueMatcher makeAlwaysFalseWithNullUnknownObjectMatcher(BaseObjectColumnValueSelector<?> selector)
   {
     return new ValueMatcher()
     {
