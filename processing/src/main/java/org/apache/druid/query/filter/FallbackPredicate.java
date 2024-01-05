@@ -31,20 +31,20 @@ import javax.annotation.Nullable;
  * is encountered. Useful when processing data that might be mixed types, despite what the column capabilities might
  * claim the type is, such as variant 'auto' types. This class is not thread-safe.
  */
-public class FallbackPredicate<T> implements Predicate<T>
+public class FallbackPredicate<T> implements DruidObjectPredicate<T>
 {
-  private final Predicate<T> delegate;
+  private final DruidObjectPredicate<T> delegate;
   private final ExpressionType expectedType;
   private boolean needsCast = false;
 
-  public FallbackPredicate(Predicate<T> delegate, ExpressionType expectedType)
+  public FallbackPredicate(DruidObjectPredicate<T> delegate, ExpressionType expectedType)
   {
     this.delegate = delegate;
     this.expectedType = expectedType;
   }
 
   @Override
-  public boolean apply(@Nullable T input)
+  public DruidPredicateMatch apply(@Nullable T input)
   {
     if (needsCast) {
       return castApply(input);
@@ -58,7 +58,7 @@ public class FallbackPredicate<T> implements Predicate<T>
     }
   }
 
-  private boolean castApply(@Nullable T input)
+  private DruidPredicateMatch castApply(@Nullable T input)
   {
     final ExprEval<T> castEval = ExprEval.bestEffortOf(input).castTo(expectedType);
     return delegate.apply(castEval.value());

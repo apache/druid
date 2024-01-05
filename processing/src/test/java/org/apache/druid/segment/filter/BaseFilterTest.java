@@ -1106,6 +1106,24 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
         selectColumnValuesMatchingFilter(filter, "dim0")
     );
 
+    Assert.assertEquals(
+        "Cursor with postFiltering: " + filter,
+        expectedRows,
+        selectColumnValuesMatchingFilterUsingPostFiltering(filter, "dim0")
+    );
+
+    Assert.assertEquals(
+        "Filtered aggregator: " + filter,
+        expectedRows.size(),
+        selectCountUsingFilteredAggregator(filter)
+    );
+
+    Assert.assertEquals(
+        "RowBasedColumnSelectorFactory: " + filter,
+        expectedRows,
+        selectColumnValuesMatchingFilterUsingRowBasedColumnSelectorFactory(filter, "dim0")
+    );
+
     if (testVectorized) {
       Assert.assertEquals(
           "Cursor (vectorized): " + filter,
@@ -1118,40 +1136,17 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           expectedRows,
           selectColumnValuesMatchingFilterUsingVectorVirtualColumnCursor(filter, "vdim0", "dim0")
       );
-    }
 
-    Assert.assertEquals(
-        "Cursor with postFiltering: " + filter,
-        expectedRows,
-        selectColumnValuesMatchingFilterUsingPostFiltering(filter, "dim0")
-    );
-
-    if (testVectorized) {
       Assert.assertEquals(
           "Cursor with postFiltering (vectorized): " + filter,
           expectedRows,
           selectColumnValuesMatchingFilterUsingVectorizedPostFiltering(filter, "dim0")
       );
-    }
-
-    Assert.assertEquals(
-        "Filtered aggregator: " + filter,
-        expectedRows.size(),
-        selectCountUsingFilteredAggregator(filter)
-    );
-
-    if (testVectorized) {
       Assert.assertEquals(
           "Filtered aggregator (vectorized): " + filter,
           expectedRows.size(),
           selectCountUsingVectorizedFilteredAggregator(filter)
       );
     }
-
-    Assert.assertEquals(
-        "RowBasedColumnSelectorFactory: " + filter,
-        expectedRows,
-        selectColumnValuesMatchingFilterUsingRowBasedColumnSelectorFactory(filter, "dim0")
-    );
   }
 }

@@ -55,6 +55,7 @@ import org.apache.druid.segment.data.VByte;
 import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.SimpleBitmapColumnIndex;
+import org.apache.druid.segment.index.SimpleImmutableBitmapDelegatingIterableIndex;
 import org.apache.druid.segment.index.SimpleImmutableBitmapIndex;
 import org.apache.druid.segment.index.SimpleImmutableBitmapIterableIndex;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
@@ -319,7 +320,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
     @Override
     public BitmapColumnIndex forSortedValues(SortedSet<String> values)
     {
-      return new SimpleImmutableBitmapIterableIndex()
+      return new SimpleImmutableBitmapDelegatingIterableIndex()
       {
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable()
@@ -436,7 +437,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
       if (ColumnIndexSupplier.skipComputingRangeIndexes(columnConfig, numRows, endIndex - startIndex)) {
         return null;
       }
-      return new SimpleImmutableBitmapIterableIndex()
+      return new SimpleImmutableBitmapDelegatingIterableIndex()
       {
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable()
@@ -482,7 +483,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
       return new SimpleImmutableBitmapIterableIndex()
       {
         @Override
-        public Iterable<ImmutableBitmap> getBitmapIterable()
+        public Iterable<ImmutableBitmap> getBitmapIterable(boolean includeUnknown)
         {
           return () -> new Iterator<ImmutableBitmap>()
           {
@@ -522,12 +523,12 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
                 Long nextValue = iterator.next();
                 if (nextValue == null) {
                   if (NullHandling.sqlCompatible()) {
-                    nextSet = longPredicate.applyNull();
+                    nextSet = longPredicate.applyNull().matches(includeUnknown);
                   } else {
-                    nextSet = longPredicate.applyLong(NullHandling.defaultLongValue());
+                    nextSet = longPredicate.applyLong(NullHandling.defaultLongValue()).matches(includeUnknown);
                   }
                 } else {
-                  nextSet = longPredicate.applyLong(nextValue);
+                  nextSet = longPredicate.applyLong(nextValue).matches(includeUnknown);
                 }
                 if (nextSet) {
                   next = index;
@@ -536,16 +537,6 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
               }
             }
           };
-        }
-
-        @Nullable
-        @Override
-        protected ImmutableBitmap getUnknownsBitmap()
-        {
-          if (matcherFactory.isNullInputUnknown()) {
-            return nullValueBitmap;
-          }
-          return null;
         }
       };
     }

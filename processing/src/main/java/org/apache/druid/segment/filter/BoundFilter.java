@@ -20,7 +20,6 @@
 package org.apache.druid.segment.filter;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Doubles;
@@ -33,7 +32,9 @@ import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.query.filter.DruidPredicateMatch;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -45,6 +46,7 @@ import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
 import org.apache.druid.segment.index.AllTrueBitmapColumnIndex;
 import org.apache.druid.segment.index.AllUnknownBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
@@ -82,9 +84,14 @@ public class BoundFilter implements Filter
     final ColumnIndexSupplier indexSupplier = selector.getIndexSupplier(boundDimFilter.getDimension());
     if (indexSupplier == null) {
       // missing column -> match all rows if the predicate matches null; match no rows otherwise
-      return getPredicateFactory().makeStringPredicate().apply(null)
-             ? new AllTrueBitmapColumnIndex(selector)
-             : new AllUnknownBitmapColumnIndex(selector);
+      final DruidPredicateMatch match = getPredicateFactory().makeStringPredicate().apply(null);
+      if (match == DruidPredicateMatch.TRUE) {
+        return new AllTrueBitmapColumnIndex(selector);
+      }
+      if (match == DruidPredicateMatch.UNKNOWN) {
+        return new AllUnknownBitmapColumnIndex(selector);
+      }
+      return new AllFalseBitmapColumnIndex(selector.getBitmapFactory());
     }
 
     if (supportStringShortCircuit()) {
@@ -327,7 +334,6 @@ public class BoundFilter implements Filter
     private final Supplier<DruidLongPredicate> longPredicateSupplier;
     private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
     private final Supplier<DruidDoublePredicate> doublePredicateSupplier;
-    private final boolean isNullUnknown;
 
     BoundDimFilterDruidPredicateFactory(ExtractionFn extractionFn, BoundDimFilter boundDimFilter)
     {
@@ -336,20 +342,15 @@ public class BoundFilter implements Filter
       this.longPredicateSupplier = boundDimFilter.getLongPredicateSupplier();
       this.floatPredicateSupplier = boundDimFilter.getFloatPredicateSupplier();
       this.doublePredicateSupplier = boundDimFilter.getDoublePredicateSupplier();
-      if (extractionFn != null) {
-        this.isNullUnknown = !doesMatch(extractionFn.apply(null), boundDimFilter);
-      } else {
-        this.isNullUnknown = !doesMatch(null, boundDimFilter);
-      }
     }
 
     @Override
-    public Predicate<String> makeStringPredicate()
+    public DruidObjectPredicate<String> makeStringPredicate()
     {
       if (extractionFn != null) {
-        return input -> doesMatch(extractionFn.apply(input), boundDimFilter);
+        return input -> DruidPredicateMatch.of(doesMatch(extractionFn.apply(input), boundDimFilter));
       }
-      return input -> doesMatch(input, boundDimFilter);
+      return input -> DruidPredicateMatch.of(doesMatch(input, boundDimFilter));
 
     }
 
@@ -357,42 +358,36 @@ public class BoundFilter implements Filter
     public DruidLongPredicate makeLongPredicate()
     {
       if (extractionFn != null) {
-        return input -> doesMatch(extractionFn.apply(input), boundDimFilter);
+        return input -> DruidPredicateMatch.of(doesMatch(extractionFn.apply(input), boundDimFilter));
       }
       if (boundDimFilter.getOrdering().equals(StringComparators.NUMERIC)) {
         return longPredicateSupplier.get();
       }
-      return input -> doesMatch(String.valueOf(input), boundDimFilter);
+      return input -> DruidPredicateMatch.of(doesMatch(String.valueOf(input), boundDimFilter));
     }
 
     @Override
     public DruidFloatPredicate makeFloatPredicate()
     {
       if (extractionFn != null) {
-        return input -> doesMatch(extractionFn.apply(input), boundDimFilter);
+        return input -> DruidPredicateMatch.of(doesMatch(extractionFn.apply(input), boundDimFilter));
       }
       if (boundDimFilter.getOrdering().equals(StringComparators.NUMERIC)) {
         return floatPredicateSupplier.get();
       }
-      return input -> doesMatch(String.valueOf(input), boundDimFilter);
+      return input -> DruidPredicateMatch.of(doesMatch(String.valueOf(input), boundDimFilter));
     }
 
     @Override
     public DruidDoublePredicate makeDoublePredicate()
     {
       if (extractionFn != null) {
-        return input -> doesMatch(extractionFn.apply(input), boundDimFilter);
+        return input -> DruidPredicateMatch.of(doesMatch(extractionFn.apply(input), boundDimFilter));
       }
       if (boundDimFilter.getOrdering().equals(StringComparators.NUMERIC)) {
         return doublePredicateSupplier.get();
       }
-      return input -> doesMatch(String.valueOf(input), boundDimFilter);
-    }
-
-    @Override
-    public boolean isNullInputUnknown()
-    {
-      return isNullUnknown;
+      return input -> DruidPredicateMatch.of(doesMatch(String.valueOf(input), boundDimFilter));
     }
 
     @Override

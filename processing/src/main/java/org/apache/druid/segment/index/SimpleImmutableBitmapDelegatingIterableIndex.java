@@ -19,20 +19,34 @@
 
 package org.apache.druid.segment.index;
 
+import com.google.common.collect.Iterables;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.query.BitmapResultFactory;
 
-/**
- * {@link SimpleBitmapColumnIndex} for anything which can compute an {@link Iterable<ImmutableBitmap>} in some manner
- */
-public abstract class SimpleImmutableBitmapIterableIndex extends SimpleBitmapColumnIndex
-{
+import javax.annotation.Nullable;
+import java.util.Collections;
 
+public abstract class SimpleImmutableBitmapDelegatingIterableIndex extends SimpleBitmapColumnIndex
+{
   @Override
   public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
   {
-    return bitmapResultFactory.unionDimensionValueBitmaps(getBitmapIterable(includeUnknown));
+    if (includeUnknown) {
+      final ImmutableBitmap unknownsBitmap = getUnknownsBitmap();
+      if (unknownsBitmap != null) {
+        return bitmapResultFactory.unionDimensionValueBitmaps(
+            Iterables.concat(
+                getBitmapIterable(),
+                Collections.singletonList(unknownsBitmap)
+            )
+        );
+      }
+    }
+    return bitmapResultFactory.unionDimensionValueBitmaps(getBitmapIterable());
   }
 
-  protected abstract Iterable<ImmutableBitmap> getBitmapIterable(boolean includeUnknown);
+  protected abstract Iterable<ImmutableBitmap> getBitmapIterable();
+
+  @Nullable
+  protected abstract ImmutableBitmap getUnknownsBitmap();
 }

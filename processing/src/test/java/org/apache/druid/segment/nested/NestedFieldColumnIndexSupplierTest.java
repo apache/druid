@@ -26,6 +26,7 @@ import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.DefaultBitmapResultFactory;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.segment.column.ColumnConfig;
@@ -352,7 +353,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         true,
         "g",
         true,
-        s -> !"fooo".equals(s)
+        DruidObjectPredicate.notEqualTo("fooo")
     );
     ImmutableBitmap bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 9);
@@ -362,7 +363,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         true,
         "g",
         true,
-        s -> "fooo".equals(s)
+        DruidObjectPredicate.equalTo("fooo")
     );
     bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 2, 5);
@@ -372,7 +373,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         false,
         "z",
         false,
-        s -> !"fooo".equals(s)
+        DruidObjectPredicate.notEqualTo("fooo")
     );
     bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 1, 3, 4, 6, 7, 8, 9);
@@ -382,7 +383,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         false,
         "z",
         true,
-        s -> !"fooo".equals(s)
+        DruidObjectPredicate.notEqualTo("fooo")
     );
     bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 1, 3, 7, 8, 9);
@@ -392,7 +393,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         true,
         null,
         true,
-        s -> true
+        DruidObjectPredicate.alwaysTrue()
     );
     bitmap = forRange.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap, 0, 2, 4, 5, 6, 9);
@@ -1378,10 +1379,10 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     // string: [b, foo, fooo, z]
     // small enough should be cool
     Assert.assertNotNull(stringRange.forRange("fo", false, "fooo", false));
-    Assert.assertNotNull(stringRange.forRange("fo", false, "fooo", false, (s) -> true));
+    Assert.assertNotNull(stringRange.forRange("fo", false, "fooo", false, DruidObjectPredicate.alwaysTrue()));
     // range too big, no index
     Assert.assertNull(stringRange.forRange("fo", false, "z", false));
-    Assert.assertNull(stringRange.forRange("fo", false, "z", false, (s) -> true));
+    Assert.assertNull(stringRange.forRange("fo", false, "z", false, DruidObjectPredicate.alwaysTrue()));
 
     // long: [1, 3, 100, 300]
     // small enough should be cool
