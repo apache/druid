@@ -213,8 +213,9 @@ Injective lookups are eligible for the largest set of query rewrites. Injective 
   function may encounter null input values.
 
 To determine whether a lookup is injective, Druid relies on an `injective` property that you can set in the
-[lookup definition](../extensions-core/lookups-cached-global.md). In general, you should set `injective: true` for any
-lookup that satisfies the required properties, to allow Druid to run your queries as fast as possible.
+[lookup definition](../development/extensions-core/lookups-cached-global.md). In general, you should set
+`injective: true` for any lookup that satisfies the required properties, to allow Druid to run your queries as fast as
+possible.
 
 Druid does not verify whether lookups satisfy these required properties. Druid may return incorrect query results
 if you set `injective: true` for a lookup table that is not actually a one-to-one lookup.
