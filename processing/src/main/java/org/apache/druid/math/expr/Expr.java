@@ -204,7 +204,6 @@ public interface Expr extends Cacheable
       // map over the values of the index.
       final String column = Iterables.getOnlyElement(details.getRequiredBindings());
 
-      final ColumnCapabilities capabilities = columnIndexSelector.getColumnCapabilities(column);
       final ColumnIndexSupplier delegateIndexSupplier = columnIndexSelector.getIndexSupplier(column);
       if (delegateIndexSupplier == null) {
         return null;
@@ -213,6 +212,7 @@ public interface Expr extends Cacheable
           DictionaryEncodedValueIndex.class
       );
 
+      final ColumnCapabilities capabilities = columnIndexSelector.getColumnCapabilities(column);
       final ExpressionType inputType = ExpressionType.fromColumnTypeStrict(capabilities);
       final ColumnType outType;
       if (outputType == null) {
