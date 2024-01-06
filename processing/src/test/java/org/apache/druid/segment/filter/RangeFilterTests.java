@@ -889,7 +889,9 @@ public class RangeFilterTests
                 false,
                 null
             ),
-            canTestNumericNullsAsDefaultValues ? ImmutableList.of("0", "2", "7") : ImmutableList.of("0")
+            NullHandling.replaceWithDefault() && canTestNumericNullsAsDefaultValues
+            ? ImmutableList.of("0", "2", "7")
+            : ImmutableList.of("0")
         );
 
         assertFilterMatches(
@@ -902,7 +904,9 @@ public class RangeFilterTests
                 false,
                 null
             ),
-            canTestNumericNullsAsDefaultValues ? ImmutableList.of("0", "4", "6") : ImmutableList.of("0")
+            NullHandling.replaceWithDefault() && canTestNumericNullsAsDefaultValues
+            ? ImmutableList.of("0", "4", "6")
+            : ImmutableList.of("0")
         );
 
         assertFilterMatches(

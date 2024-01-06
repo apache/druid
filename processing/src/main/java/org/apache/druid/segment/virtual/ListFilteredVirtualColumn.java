@@ -22,8 +22,6 @@ package org.apache.druid.segment.virtual;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
@@ -36,6 +34,7 @@ import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.dimension.ListFilteredDimensionSpec;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.ColumnInspector;
@@ -51,7 +50,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.SimpleBitmapColumnIndex;
-import org.apache.druid.segment.index.SimpleImmutableBitmapIterableIndex;
+import org.apache.druid.segment.index.SimpleImmutableBitmapDelegatingIterableIndex;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedValueIndex;
 import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
@@ -265,8 +264,10 @@ public class ListFilteredVirtualColumn implements VirtualColumn
       return false;
     }
     ListFilteredVirtualColumn that = (ListFilteredVirtualColumn) o;
-    return allowList == that.allowList && name.equals(that.name) && delegate.equals(that.delegate) && values.equals(
-        that.values);
+    return allowList == that.allowList &&
+           name.equals(that.name) &&
+           delegate.equals(that.delegate) &&
+           values.equals(that.values);
   }
 
   @Override
@@ -292,15 +293,23 @@ public class ListFilteredVirtualColumn implements VirtualColumn
   )
   {
     final int start = NullHandling.isNullOrEquivalent(delegateIndex.getValue(idMapping.getReverseId(0))) ? 1 : 0;
-    return getBitmapsInRange(delegateIndex, idMapping, v -> true, start, idMapping.getValueCardinality());
+    return getBitmapsInRange(
+        delegateIndex,
+        idMapping,
+        DruidObjectPredicate.alwaysTrue(),
+        start,
+        idMapping.getValueCardinality(),
+        false
+    );
   }
 
   private static Iterable<ImmutableBitmap> getBitmapsInRange(
       DictionaryEncodedStringValueIndex delegate,
       IdMapping idMapping,
-      Predicate<String> matcher,
+      DruidObjectPredicate<String> matcher,
       int start,
-      int end
+      int end,
+      boolean includeUnknown
   )
   {
     return () -> new Iterator<ImmutableBitmap>()
@@ -314,7 +323,7 @@ public class ListFilteredVirtualColumn implements VirtualColumn
 
       private int findNext()
       {
-        while (currIndex < end && !matcher.apply(delegate.getValue(idMapping.getReverseId(currIndex)))) {
+        while (currIndex < end && !matcher.apply(delegate.getValue(idMapping.getReverseId(currIndex))).matches(includeUnknown)) {
           currIndex++;
         }
 
@@ -394,9 +403,9 @@ public class ListFilteredVirtualColumn implements VirtualColumn
       return -(minIndex + 1);
     }
 
-    Iterable<ImmutableBitmap> getBitmapsInRange(Predicate<String> matcher, int start, int end)
+    Iterable<ImmutableBitmap> getBitmapsInRange(DruidObjectPredicate<String> matcher, int start, int end, boolean includeUnknown)
     {
-      return ListFilteredVirtualColumn.getBitmapsInRange(delegate, idMapping, matcher, start, end);
+      return ListFilteredVirtualColumn.getBitmapsInRange(delegate, idMapping, matcher, start, end, includeUnknown);
     }
   }
 
@@ -470,7 +479,7 @@ public class ListFilteredVirtualColumn implements VirtualColumn
     @Override
     public BitmapColumnIndex forSortedValues(SortedSet<String> values)
     {
-      return new SimpleImmutableBitmapIterableIndex()
+      return new SimpleImmutableBitmapDelegatingIterableIndex()
       {
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable()
@@ -544,7 +553,6 @@ public class ListFilteredVirtualColumn implements VirtualColumn
     {
       return new SimpleBitmapColumnIndex()
       {
-
         @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
         {
@@ -552,11 +560,11 @@ public class ListFilteredVirtualColumn implements VirtualColumn
           Iterable<ImmutableBitmap> bitmaps;
           if (includeUnknown) {
             bitmaps = Iterables.concat(
-                getBitmapsInRange(matcherFactory.makeStringPredicate(), start, end),
+                getBitmapsInRange(matcherFactory.makeStringPredicate(), start, end, includeUnknown),
                 Collections.singletonList(nullValueBitmapSupplier.get())
             );
           } else {
-            bitmaps = getBitmapsInRange(matcherFactory.makeStringPredicate(), start, end);
+            bitmaps = getBitmapsInRange(matcherFactory.makeStringPredicate(), start, end, includeUnknown);
           }
           return bitmapResultFactory.unionDimensionValueBitmaps(bitmaps);
         }
@@ -588,7 +596,7 @@ public class ListFilteredVirtualColumn implements VirtualColumn
         boolean endStrict
     )
     {
-      return forRange(startValue, startStrict, endValue, endStrict, Predicates.alwaysTrue());
+      return forRange(startValue, startStrict, endValue, endStrict, DruidObjectPredicate.alwaysTrue());
     }
 
     @Override
@@ -598,10 +606,10 @@ public class ListFilteredVirtualColumn implements VirtualColumn
         boolean startStrict,
         @Nullable String endValue,
         boolean endStrict,
-        Predicate<String> matcher
+        DruidObjectPredicate<String> matcher
     )
     {
-      return new SimpleImmutableBitmapIterableIndex()
+      return new SimpleImmutableBitmapDelegatingIterableIndex()
       {
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable()
@@ -632,7 +640,7 @@ public class ListFilteredVirtualColumn implements VirtualColumn
 
           endIndex = Math.max(startIndex, endIndex);
           final int start = startIndex, end = endIndex;
-          return getBitmapsInRange(matcher, start, end);
+          return getBitmapsInRange(matcher, start, end, false);
         }
 
         @Nullable

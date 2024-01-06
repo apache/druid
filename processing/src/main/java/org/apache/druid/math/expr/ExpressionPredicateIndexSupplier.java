@@ -19,13 +19,11 @@
 
 package org.apache.druid.math.expr;
 
-import com.google.common.base.Predicate;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
@@ -35,8 +33,8 @@ import org.apache.druid.segment.index.semantic.DictionaryEncodedValueIndex;
 import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 public class ExpressionPredicateIndexSupplier implements ColumnIndexSupplier
 {
@@ -77,211 +75,190 @@ public class ExpressionPredicateIndexSupplier implements ColumnIndexSupplier
     @Override
     public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
     {
-      final Supplier<ValueAndUnknownIndexes> bitmapsSupplier;
       final java.util.function.Function<Object, ExprEval<?>> evalFunction =
           inputValue -> expr.eval(InputBindings.forInputSupplier(inputColumn, inputType, () -> inputValue));
-
-      switch (outputType.getType()) {
-        case STRING:
-          bitmapsSupplier = Suppliers.memoize(() -> computeStringBitmaps(matcherFactory, evalFunction));
-          break;
-        case LONG:
-          bitmapsSupplier = Suppliers.memoize(() -> computeLongBitmaps(matcherFactory, evalFunction));
-          break;
-        case DOUBLE:
-          bitmapsSupplier = Suppliers.memoize(() -> computeDoubleBitmaps(matcherFactory, evalFunction));
-          break;
-        case FLOAT:
-          bitmapsSupplier = Suppliers.memoize(() -> computeFloatBitmaps(matcherFactory, evalFunction));
-          break;
-        case ARRAY:
-          bitmapsSupplier = Suppliers.memoize(() -> computeArrayBitmaps(matcherFactory, evalFunction));
-          break;
-        default:
-          bitmapsSupplier = Suppliers.memoize(() -> computeComplexBitmaps(matcherFactory, evalFunction));
-          break;
-      }
 
       return new SimpleImmutableBitmapIterableIndex()
       {
         @Override
-        public Iterable<ImmutableBitmap> getBitmapIterable()
+        public Iterable<ImmutableBitmap> getBitmapIterable(boolean includeUnknown)
         {
-          return bitmapsSupplier.get().getMatches();
-        }
-
-        @Nullable
-        @Override
-        protected ImmutableBitmap getUnknownsBitmap()
-        {
-          return inputColumnIndexes.getBitmapFactory().union(bitmapsSupplier.get().getUnknowns());
+          switch (outputType.getType()) {
+            case STRING:
+              return computeStringBitmaps(matcherFactory.makeStringPredicate(), evalFunction, includeUnknown);
+            case LONG:
+              return computeLongBitmaps(matcherFactory.makeLongPredicate(), evalFunction, includeUnknown);
+            case DOUBLE:
+              return computeDoubleBitmaps(matcherFactory.makeDoublePredicate(), evalFunction, includeUnknown);
+            case FLOAT:
+              return computeFloatBitmaps(matcherFactory.makeFloatPredicate(), evalFunction, includeUnknown);
+            case ARRAY:
+              return computeArrayBitmaps(matcherFactory.makeArrayPredicate(outputType), evalFunction, includeUnknown);
+            default:
+              return computeObjectBitmaps(matcherFactory.makeObjectPredicate(), evalFunction, includeUnknown);
+          }
         }
       };
     }
   }
 
-  private ValueAndUnknownIndexes computeStringBitmaps(
-      DruidPredicateFactory matcherFactory,
-      java.util.function.Function<Object, ExprEval<?>> evalFunction
+  private Iterable<ImmutableBitmap> computeStringBitmaps(
+      DruidObjectPredicate<String> predicate,
+      java.util.function.Function<Object, ExprEval<?>> evalFunction,
+      boolean includeUnknown
   )
   {
-    final Predicate<String> predicate = matcherFactory.makeStringPredicate();
-    final List<ImmutableBitmap> matches = new ArrayList<>();
-    final List<ImmutableBitmap> unknowns = new ArrayList<>();
-
-    for (int i = 0; i < inputColumnIndexes.getCardinality(); i++) {
-      final Object inputValue = inputColumnIndexes.getValue(i);
-      final String result = evalFunction.apply(inputValue).asString();
-      if (result == null && matcherFactory.isNullInputUnknown()) {
-        unknowns.add(inputColumnIndexes.getBitmap(i));
-      } else if (predicate.apply(result)) {
-        matches.add(inputColumnIndexes.getBitmap(i));
-      }
-    }
-
-    return new ValueAndUnknownIndexes(matches, unknowns);
-  }
-
-  private ValueAndUnknownIndexes computeLongBitmaps(
-      DruidPredicateFactory matcherFactory,
-      java.util.function.Function<Object, ExprEval<?>> evalFunction
-  )
-  {
-    final DruidLongPredicate predicate = matcherFactory.makeLongPredicate();
-    final List<ImmutableBitmap> matches = new ArrayList<>();
-    final List<ImmutableBitmap> unknowns = new ArrayList<>();
-
-    for (int i = 0; i < inputColumnIndexes.getCardinality(); i++) {
-      final Object inputValue = inputColumnIndexes.getValue(i);
-      final ExprEval<?> result = evalFunction.apply(inputValue);
-      if (result.isNumericNull() && matcherFactory.isNullInputUnknown()) {
-        unknowns.add(inputColumnIndexes.getBitmap(i));
-      } else if (result.isNumericNull() && predicate.applyNull()) {
-        matches.add(inputColumnIndexes.getBitmap(i));
-      } else if (!result.isNumericNull() && predicate.applyLong(result.asLong())) {
-        matches.add(inputColumnIndexes.getBitmap(i));
-      }
-    }
-
-    return new ValueAndUnknownIndexes(matches, unknowns);
-  }
-
-  private ValueAndUnknownIndexes computeDoubleBitmaps(
-      DruidPredicateFactory matcherFactory,
-      java.util.function.Function<Object, ExprEval<?>> evalFunction
-  )
-  {
-    final DruidDoublePredicate predicate = matcherFactory.makeDoublePredicate();
-    final List<ImmutableBitmap> matches = new ArrayList<>();
-    final List<ImmutableBitmap> unknowns = new ArrayList<>();
-
-    for (int i = 0; i < inputColumnIndexes.getCardinality(); i++) {
-      final Object inputValue = inputColumnIndexes.getValue(i);
-      final ExprEval<?> result = evalFunction.apply(inputValue);
-      if (result.isNumericNull() && matcherFactory.isNullInputUnknown()) {
-        unknowns.add(inputColumnIndexes.getBitmap(i));
-      } else if (result.isNumericNull() && predicate.applyNull()) {
-        matches.add(inputColumnIndexes.getBitmap(i));
-      } else if (!result.isNumericNull() && predicate.applyDouble(result.asDouble())) {
-        matches.add(inputColumnIndexes.getBitmap(i));
-      }
-    }
-
-    return new ValueAndUnknownIndexes(matches, unknowns);
-  }
-
-  private ValueAndUnknownIndexes computeFloatBitmaps(
-      DruidPredicateFactory matcherFactory,
-      java.util.function.Function<Object, ExprEval<?>> evalFunction
-  )
-  {
-    final DruidFloatPredicate predicate = matcherFactory.makeFloatPredicate();
-    final List<ImmutableBitmap> matches = new ArrayList<>();
-    final List<ImmutableBitmap> unknowns = new ArrayList<>();
-
-    for (int i = 0; i < inputColumnIndexes.getCardinality(); i++) {
-      final Object inputValue = inputColumnIndexes.getValue(i);
-      final ExprEval<?> result = evalFunction.apply(inputValue);
-      if (result.isNumericNull() && matcherFactory.isNullInputUnknown()) {
-        unknowns.add(inputColumnIndexes.getBitmap(i));
-      } else if (result.isNumericNull() && predicate.applyNull()) {
-        matches.add(inputColumnIndexes.getBitmap(i));
-      } else if (!result.isNumericNull() && predicate.applyFloat((float) result.asDouble())) {
-        matches.add(inputColumnIndexes.getBitmap(i));
-      }
-    }
-
-    return new ValueAndUnknownIndexes(matches, unknowns);
-  }
-
-  private ValueAndUnknownIndexes computeArrayBitmaps(
-      DruidPredicateFactory matcherFactory,
-      java.util.function.Function<Object, ExprEval<?>> evalFunction
-  )
-  {
-    final Predicate<Object[]> predicate = matcherFactory.makeArrayPredicate(outputType);
-    final List<ImmutableBitmap> matches = new ArrayList<>();
-    final List<ImmutableBitmap> unknowns = new ArrayList<>();
-
-    for (int i = 0; i < inputColumnIndexes.getCardinality(); i++) {
-      final Object inputValue = inputColumnIndexes.getValue(i);
-      final Object[] result = evalFunction.apply(inputValue).asArray();
-      if (result == null && matcherFactory.isNullInputUnknown()) {
-        unknowns.add(inputColumnIndexes.getBitmap(i));
-      } else if (predicate.apply(result)) {
-        matches.add(inputColumnIndexes.getBitmap(i));
-      }
-    }
-
-    return new ValueAndUnknownIndexes(matches, unknowns);
-  }
-
-  private ValueAndUnknownIndexes computeComplexBitmaps(
-      DruidPredicateFactory matcherFactory,
-      java.util.function.Function<Object, ExprEval<?>> evalFunction
-  )
-  {
-    final Predicate<Object> predicate = matcherFactory.makeObjectPredicate();
-    final List<ImmutableBitmap> matches = new ArrayList<>();
-    final List<ImmutableBitmap> unknowns = new ArrayList<>();
-
-    for (int i = 0; i < inputColumnIndexes.getCardinality(); i++) {
-      final Object inputValue = inputColumnIndexes.getValue(i);
-      final Object result = evalFunction.apply(inputValue).valueOrDefault();
-      if (result == null && matcherFactory.isNullInputUnknown()) {
-        unknowns.add(inputColumnIndexes.getBitmap(i));
-      } else if (predicate.apply(result)) {
-        matches.add(inputColumnIndexes.getBitmap(i));
-      }
-    }
-
-    return new ValueAndUnknownIndexes(matches, unknowns);
-  }
-
-  /**
-   * Holder for two sets of {@link ImmutableBitmap}, the first set representing values that match the predicate after
-   * computing the expression, and the second for values which computing the expression evaluates to null and are
-   * considered 'unknown'
-   */
-  private static class ValueAndUnknownIndexes
-  {
-    private final List<ImmutableBitmap> matches;
-    private final List<ImmutableBitmap> unknowns;
-
-    private ValueAndUnknownIndexes(List<ImmutableBitmap> matches, List<ImmutableBitmap> unknowns)
+    return () -> new BitmapIterator(inputColumnIndexes)
     {
-      this.matches = matches;
-      this.unknowns = unknowns;
+      @Override
+      boolean nextMatches(@Nullable Object nextValue)
+      {
+        return predicate.apply(evalFunction.apply(nextValue).asString())
+                        .matches(includeUnknown);
+      }
+    };
+  }
+
+  private Iterable<ImmutableBitmap> computeLongBitmaps(
+      DruidLongPredicate predicate,
+      java.util.function.Function<Object, ExprEval<?>> evalFunction,
+      boolean includeUnknown
+  )
+  {
+    return () -> new BitmapIterator(inputColumnIndexes)
+    {
+      @Override
+      boolean nextMatches(@Nullable Object nextValue)
+      {
+        final ExprEval<?> result = evalFunction.apply(nextValue);
+        if (result.isNumericNull()) {
+          return predicate.applyNull().matches(includeUnknown);
+        }
+        return predicate.applyLong(result.asLong()).matches(includeUnknown);
+      }
+    };
+  }
+
+  private Iterable<ImmutableBitmap> computeDoubleBitmaps(
+      DruidDoublePredicate predicate,
+      java.util.function.Function<Object, ExprEval<?>> evalFunction,
+      boolean includeUnknown
+  )
+  {
+    return () -> new BitmapIterator(inputColumnIndexes)
+    {
+      @Override
+      boolean nextMatches(@Nullable Object nextValue)
+      {
+        final ExprEval<?> result = evalFunction.apply(nextValue);
+        if (result.isNumericNull()) {
+          return predicate.applyNull().matches(includeUnknown);
+        }
+        return predicate.applyDouble(result.asDouble()).matches(includeUnknown);
+      }
+    };
+  }
+
+  private Iterable<ImmutableBitmap> computeFloatBitmaps(
+      DruidFloatPredicate predicate,
+      java.util.function.Function<Object, ExprEval<?>> evalFunction,
+      boolean includeUnknown
+  )
+  {
+    return () -> new BitmapIterator(inputColumnIndexes)
+    {
+      @Override
+      boolean nextMatches(@Nullable Object nextValue)
+      {
+        final ExprEval<?> result = evalFunction.apply(nextValue);
+        if (result.isNumericNull()) {
+          return predicate.applyNull().matches(includeUnknown);
+        }
+        return predicate.applyFloat((float) result.asDouble()).matches(includeUnknown);
+      }
+    };
+  }
+
+  private Iterable<ImmutableBitmap> computeArrayBitmaps(
+      DruidObjectPredicate<Object[]> predicate,
+      java.util.function.Function<Object, ExprEval<?>> evalFunction,
+      boolean includeUnknown
+  )
+  {
+    return () -> new BitmapIterator(inputColumnIndexes)
+    {
+      @Override
+      boolean nextMatches(@Nullable Object nextValue)
+      {
+        final Object[] result = evalFunction.apply(nextValue).asArray();
+        return predicate.apply(result).matches(includeUnknown);
+      }
+    };
+  }
+
+  private Iterable<ImmutableBitmap> computeObjectBitmaps(
+      DruidObjectPredicate<Object> predicate,
+      java.util.function.Function<Object, ExprEval<?>> evalFunction,
+      boolean includeUnknown
+  )
+  {
+    return () -> new BitmapIterator(inputColumnIndexes)
+    {
+      @Override
+      boolean nextMatches(@Nullable Object nextValue)
+      {
+        final Object result = evalFunction.apply(nextValue).valueOrDefault();
+        return predicate.apply(result).matches(includeUnknown);
+      }
+    };
+  }
+
+  private abstract static class BitmapIterator implements Iterator<ImmutableBitmap>
+  {
+    private final DictionaryEncodedValueIndex<?> inputColumnIndexes;
+    int next;
+    int index = 0;
+    boolean nextSet = false;
+
+    private BitmapIterator(DictionaryEncodedValueIndex<?> inputColumnIndexes)
+    {
+      this.inputColumnIndexes = inputColumnIndexes;
     }
 
-    public List<ImmutableBitmap> getMatches()
+    @Override
+    public boolean hasNext()
     {
-      return matches;
+      if (!nextSet) {
+        findNext();
+      }
+      return nextSet;
     }
-    
-    public List<ImmutableBitmap> getUnknowns()
+
+    @Override
+    public ImmutableBitmap next()
     {
-      return unknowns;
+      if (!nextSet) {
+        findNext();
+        if (!nextSet) {
+          throw new NoSuchElementException();
+        }
+      }
+      nextSet = false;
+      return inputColumnIndexes.getBitmap(next);
     }
+
+    private void findNext()
+    {
+      while (!nextSet && index < inputColumnIndexes.getCardinality()) {
+        Object nextValue = inputColumnIndexes.getValue(index);
+        nextSet = nextMatches(nextValue);
+        if (nextSet) {
+          next = index;
+        }
+        index++;
+      }
+    }
+
+    abstract boolean nextMatches(@Nullable Object nextValue);
   }
 }
