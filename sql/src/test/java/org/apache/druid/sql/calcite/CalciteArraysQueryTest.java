@@ -7295,11 +7295,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestExtractionFn()
   {
-    // This tells the test to skip generating (vectorize = force) path
-    // Generates only 1 native query with vectorize = false
     skipVectorize();
-    // This tells that both vectorize = force and vectorize = false takes the same path of non vectorization
-    // Generates 2 native queries with 2 different values of vectorize
     cannotVectorize();
     testQuery(
         "SELECT substring(d3,1) FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) WHERE substring(d3,1) <> 'b'",
@@ -7332,6 +7328,41 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ) :
         ImmutableList.of(
             new Object[]{"a"},
+            new Object[]{"c"},
+            new Object[]{"d"}
+        )
+    );
+  }
+
+  @Test
+  public void testUnnestExtractionFnNull()
+  {
+    skipVectorize();
+    cannotVectorize();
+    testQuery(
+        "SELECT substring(d3,1) FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) WHERE substring(d3,1) is not null",
+        QUERY_CONTEXT_UNNEST,
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(UnnestDataSource.create(
+                      new TableDataSource(CalciteTests.DATASOURCE3),
+                      expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
+                      NullHandling.sqlCompatible()
+                      ? expressionFilter("notnull(substring(\"j0.unnest\", 0, -1))")
+                      : not(selector("j0.unnest", null, new SubstringDimExtractionFn(0, null)))
+                  ))
+                  .virtualColumns(expressionVirtualColumn("v0", "substring(\"j0.unnest\", 0, -1)", ColumnType.STRING))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_UNNEST)
+                  .columns(ImmutableList.of("v0"))
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"a"},
+            new Object[]{"b"},
+            new Object[]{"b"},
             new Object[]{"c"},
             new Object[]{"d"}
         )
