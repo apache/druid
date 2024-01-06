@@ -649,6 +649,23 @@ public class EqualityFilterTests
             NotDimFilter.of(new EqualityFilter("vd0-add-sub", ColumnType.DOUBLE, 0.0, null)),
             ImmutableList.of("1", "3", "4", "5")
         );
+
+        // virtual column that refers to another virtual column
+        assertFilterMatches(new EqualityFilter("double-vf0-add-sub", ColumnType.STRING, "0", null), ImmutableList.of("0", "4"));
+        assertFilterMatches(new EqualityFilter("double-vd0-add-sub", ColumnType.STRING, "0", null), ImmutableList.of("0", "2"));
+        assertFilterMatches(new EqualityFilter("double-vl0-add-sub", ColumnType.STRING, "0", null), ImmutableList.of("0", "3"));
+
+        assertFilterMatches(new EqualityFilter("double-vf0-add-sub", ColumnType.FLOAT, 0f, null), ImmutableList.of("0", "4"));
+        assertFilterMatches(
+            NotDimFilter.of(new EqualityFilter("double-vf0-add-sub", ColumnType.FLOAT, 0f, null)),
+            ImmutableList.of("1", "2", "3", "5")
+        );
+        assertFilterMatches(new EqualityFilter("double-vd0-add-sub", ColumnType.DOUBLE, 0.0, null), ImmutableList.of("0", "2"));
+        assertFilterMatches(
+            NotDimFilter.of(new EqualityFilter("double-vd0-add-sub", ColumnType.DOUBLE, 0.0, null)),
+            ImmutableList.of("1", "3", "4", "5")
+        );
+
         assertFilterMatches(new EqualityFilter("vl0", ColumnType.LONG, 0L, null), ImmutableList.of("0", "3"));
         assertFilterMatches(
             NotDimFilter.of(new EqualityFilter("vl0", ColumnType.LONG, 0L, null)),
@@ -713,6 +730,32 @@ public class EqualityFilterTests
           assertFilterMatches(new EqualityFilter("vf0-add-sub", ColumnType.STRING, "0", null), ImmutableList.of("0"));
           assertFilterMatches(new EqualityFilter("vd0-add-sub", ColumnType.STRING, "0", null), ImmutableList.of("0"));
           assertFilterMatches(new EqualityFilter("vl0-add-sub", ColumnType.STRING, "0", null), ImmutableList.of("0"));
+
+          assertFilterMatches(new EqualityFilter("double-vf0-add-sub", ColumnType.FLOAT, 0f, null), ImmutableList.of("0"));
+          assertFilterMatches(
+              NotDimFilter.of(new EqualityFilter("double-vf0-add-sub", ColumnType.FLOAT, 0f, null)),
+              NullHandling.sqlCompatible()
+              ? ImmutableList.of("1", "2", "3", "5")
+              : ImmutableList.of("1", "2", "3", "4", "5")
+          );
+          assertFilterMatches(new EqualityFilter("double-vd0-add-sub", ColumnType.DOUBLE, 0.0, null), ImmutableList.of("0"));
+          assertFilterMatches(
+              NotDimFilter.of(new EqualityFilter("double-vd0-add-sub", ColumnType.DOUBLE, 0.0, null)),
+              NullHandling.sqlCompatible()
+              ? ImmutableList.of("1", "3", "4", "5")
+              : ImmutableList.of("1", "2", "3", "4", "5")
+          );
+          assertFilterMatches(new EqualityFilter("double-vl0-add-sub", ColumnType.LONG, 0L, null), ImmutableList.of("0"));
+          assertFilterMatches(
+              NotDimFilter.of(new EqualityFilter("double-vl0-add-sub", ColumnType.LONG, 0L, null)),
+              NullHandling.sqlCompatible()
+              ? ImmutableList.of("1", "2", "4", "5")
+              : ImmutableList.of("1", "2", "3", "4", "5")
+          );
+
+          assertFilterMatches(new EqualityFilter("double-vf0-add-sub", ColumnType.STRING, "0", null), ImmutableList.of("0"));
+          assertFilterMatches(new EqualityFilter("double-vd0-add-sub", ColumnType.STRING, "0", null), ImmutableList.of("0"));
+          assertFilterMatches(new EqualityFilter("double-vl0-add-sub", ColumnType.STRING, "0", null), ImmutableList.of("0"));
         }
       }
     }

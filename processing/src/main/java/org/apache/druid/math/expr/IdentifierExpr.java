@@ -23,8 +23,7 @@ import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorProcessors;
-import org.apache.druid.segment.ColumnSelector;
-import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 
@@ -158,15 +157,13 @@ class IdentifierExpr implements Expr
 
   @Nullable
   @Override
-  public ColumnIndexSupplier asColumnIndexSupplier(ColumnSelector columnSelector, @Nullable ColumnType outputType)
+  public ColumnIndexSupplier asColumnIndexSupplier(
+      ColumnIndexSelector indexSelector,
+      @Nullable ColumnType outputType
+  )
   {
     // identifier just wraps a column, we can return its index supplier directly if the column exists
-    final ColumnHolder holder = columnSelector.getColumnHolder(binding);
-    if (holder == null) {
-      // column doesn't exist, no index supplier
-      return null;
-    }
-    return holder.getIndexSupplier();
+    return indexSelector.getIndexSupplier(binding);
   }
 
   @Override
