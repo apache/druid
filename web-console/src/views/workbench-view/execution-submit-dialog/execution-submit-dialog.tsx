@@ -179,7 +179,7 @@ export const ExecutionSubmitDialog = React.memo(function ExecutionSubmitDialog(
             fill
           />
         </FormGroup>
-        <p>You can also drag a file onto this dialog.</p>
+        <p>Alternatively, drag a file from your file browser onto this dialog.</p>
       </div>
       <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
