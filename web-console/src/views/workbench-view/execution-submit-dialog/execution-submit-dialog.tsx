@@ -167,8 +167,8 @@ export const ExecutionSubmitDialog = React.memo(function ExecutionSubmitDialog(
           rendering of that file here.
         </p>
         <p>
-          The query detail archive for a given query can be downloaded by clicking on that query in
-          the <Code>Recent query tasks</Code> panel on the right of the query view.
+          To download the query detail archive for a query, click on the query in
+          the <Code>Recent query tasks</Code> panel in the query view.
         </p>
         <FormGroup label="Select query detail archive file">
           <FileInput
