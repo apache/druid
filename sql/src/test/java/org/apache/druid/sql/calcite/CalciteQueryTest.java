@@ -11733,7 +11733,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{"abc-abc_abc"}
         )
     );
+  }
 
+  @Test
+  public void testConcat2()
+  {
     testQuery(
         "SELECT CONCAt(dim1, CONCAt(dim2,'x'), m2, 9999, dim1) as dimX FROM foo",
         ImmutableList.of(
@@ -11742,7 +11746,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .virtualColumns(expressionVirtualColumn(
                     "v0",
-                    "concat(\"dim1\",concat(\"dim2\",'x'),\"m2\",9999,\"dim1\")",
+                    "concat(\"dim1\",\"dim2\",'x',\"m2\",9999,\"dim1\")",
                     ColumnType.STRING
                 ))
                 .columns("v0")
@@ -11789,10 +11793,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{"def-def_def"}
         )
     );
+  }
 
-    final List<Object[]> secondResults;
+  @Test
+  public void testConcatGroup2()
+  {
+    final List<Object[]> results;
     if (useDefault) {
-      secondResults = ImmutableList.of(
+      results = ImmutableList.of(
           new Object[]{"10.1x2.0999910.1"},
           new Object[]{"1ax4.099991"},
           new Object[]{"2x3.099992"},
@@ -11801,7 +11809,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
           new Object[]{"defabcx5.09999def"}
       );
     } else {
-      secondResults = ImmutableList.of(
+      results = ImmutableList.of(
           new Object[]{null},
           new Object[]{"1ax4.099991"},
           new Object[]{"2x3.099992"},
@@ -11809,6 +11817,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
           new Object[]{"defabcx5.09999def"}
       );
     }
+
     testQuery(
         "SELECT CONCAT(dim1, CONCAT(dim2,'x'), m2, 9999, dim1) as dimX FROM foo GROUP BY 1",
         ImmutableList.of(
@@ -11817,7 +11826,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .setInterval(querySegmentSpec(Filtration.eternity()))
                 .setVirtualColumns(expressionVirtualColumn(
                     "v0",
-                    "concat(\"dim1\",concat(\"dim2\",'x'),\"m2\",9999,\"dim1\")",
+                    "concat(\"dim1\",\"dim2\",'x',\"m2\",9999,\"dim1\")",
                     ColumnType.STRING
                 ))
                 .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0")))
@@ -11826,7 +11835,172 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .build()
 
         ),
-        secondResults
+        results
+    );
+  }
+
+  @Test
+  public void testConcatDecomposeAlwaysFalseOrUnknown()
+  {
+    testQuery(
+        "SELECT CONCAT(dim1, 'x', dim2) as dimX\n"
+        + "FROM foo\n"
+        + "WHERE CONCAT(dim1, 'x', dim2) IN ('1a', '3x4')",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("v0", "concat(\"dim1\",'x',\"dim2\")", ColumnType.STRING))
+                .filters(and(
+                    equality("dim1", "3", ColumnType.STRING),
+                    equality("dim2", "4", ColumnType.STRING)
+                ))
+                .columns("v0")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testConcatDecomposeAlwaysFalseOrUnknownNegated()
+  {
+    testQuery(
+        "SELECT CONCAT(dim1, 'x', dim2) as dimX\n"
+        + "FROM foo\n"
+        + "WHERE CONCAT(dim1, 'x', dim2) NOT IN ('1a', '3x4', '4x5')\n",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn(
+                    "v0",
+                    "concat(\"dim1\",'x',\"dim2\")",
+                    ColumnType.STRING
+                ))
+                .filters(
+                    NullHandling.sqlCompatible()
+                    ? and(
+                        or(
+                            not(equality("dim1", "3", ColumnType.STRING)),
+                            not(equality("dim2", "4", ColumnType.STRING))
+                        ),
+                        or(
+                            not(equality("dim1", "4", ColumnType.STRING)),
+                            not(equality("dim2", "5", ColumnType.STRING))
+                        ),
+                        notNull("dim1"),
+                        notNull("dim2")
+                    )
+                    : and(
+                        or(
+                            not(equality("dim1", "3", ColumnType.STRING)),
+                            not(equality("dim2", "4", ColumnType.STRING))
+                        ),
+                        or(
+                            not(equality("dim1", "4", ColumnType.STRING)),
+                            not(equality("dim2", "5", ColumnType.STRING))
+                        )
+                    )
+                )
+                .columns("v0")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(
+            new Object[]{"xa"},
+            new Object[]{"2x"},
+            new Object[]{"1xa"},
+            new Object[]{"defxabc"}
+        )
+        : ImmutableList.of(
+            new Object[]{"xa"},
+            new Object[]{"10.1x"},
+            new Object[]{"2x"},
+            new Object[]{"1xa"},
+            new Object[]{"defxabc"},
+            new Object[]{"abcx"}
+        )
+    );
+  }
+
+  @Test
+  public void testConcatDecomposeIsNull()
+  {
+    testQuery(
+        "SELECT dim1, dim2, CONCAT(dim1, 'x', dim2) as dimX\n"
+        + "FROM foo\n"
+        + "WHERE CONCAT(dim1, 'x', dim2) IS NULL",
+        ImmutableList.of(
+            NullHandling.sqlCompatible()
+            ? newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn(
+                    "v0",
+                    "concat(\"dim1\",'x',\"dim2\")",
+                    ColumnType.STRING
+                ))
+                .filters(or(isNull("dim1"), isNull("dim2")))
+                .columns("dim1", "dim2", "v0")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+            : Druids.newScanQueryBuilder()
+                    .dataSource(
+                        InlineDataSource.fromIterable(
+                            ImmutableList.of(),
+                            RowSignature.builder()
+                                        .add("dim1", ColumnType.STRING)
+                                        .add("dim2", ColumnType.STRING)
+                                        .add("dimX", ColumnType.STRING)
+                                        .build()
+                        )
+                    )
+                    .intervals(querySegmentSpec(Filtration.eternity()))
+                    .columns("dim1", "dim2", "dimX")
+                    .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                    .legacy(false)
+                    .build()
+
+        ),
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(
+            new Object[]{"10.1", null, null},
+            new Object[]{"abc", null, null}
+        )
+        : ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testConcatDoubleBarsDecompose()
+  {
+    testQuery(
+        "SELECT dim1 || LOWER('x') || dim2 || 'z' as dimX\n"
+        + "FROM foo\n"
+        + "WHERE dim1 || LOWER('x') || dim2 || 'z' IN ('1xaz', '3x4z')",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("v0", "concat(\"dim1\",'x',\"dim2\",'z')", ColumnType.STRING))
+                .filters(or(
+                    and(equality("dim1", "1", ColumnType.STRING), equality("dim2", "a", ColumnType.STRING)),
+                    and(equality("dim1", "3", ColumnType.STRING), equality("dim2", "4", ColumnType.STRING))
+                ))
+                .columns("v0")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"1xaz"}
+        )
     );
   }
 
