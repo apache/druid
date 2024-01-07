@@ -163,11 +163,12 @@ export const ExecutionSubmitDialog = React.memo(function ExecutionSubmitDialog(
     >
       <div className={Classes.DIALOG_BODY}>
         <p>
-          You can load query detail archive files from other Druid clusters to render the query detail here.
+          You can load query detail archive files from other Druid clusters to render the query
+          detail here.
         </p>
         <p>
-          To download the query detail archive for a query, click on the query in
-          the <Code>Recent query tasks</Code> panel in the query view.
+          To download the query detail archive for a query, click on the query in the{' '}
+          <Code>Recent query tasks</Code> panel in the query view.
         </p>
         <FormGroup label="Select query detail archive file">
           <FileInput
@@ -178,7 +179,7 @@ export const ExecutionSubmitDialog = React.memo(function ExecutionSubmitDialog(
             fill
           />
         </FormGroup>
-        <p>Alternatively, drag a file from your file browser onto this dialog.</p>
+        <p>Alternatively, drag a file directly onto this dialog.</p>
       </div>
       <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
