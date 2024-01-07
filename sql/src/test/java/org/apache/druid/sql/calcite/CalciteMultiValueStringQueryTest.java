@@ -161,7 +161,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                                 new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING)
                             )
                         )
-                        .setDimFilter(equality("v0", "bfoo", ColumnType.STRING))
+                        .setDimFilter(equality("dim3", "b", ColumnType.STRING))
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setLimitSpec(new DefaultLimitSpec(
                             ImmutableList.of(new OrderByColumnSpec(
@@ -248,7 +248,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                 .dataSource(CalciteTests.DATASOURCE3)
                 .eternityInterval()
                 .virtualColumns(expressionVirtualColumn("v0", "concat(\"dim3\",'foo')", ColumnType.STRING))
-                .filters(equality("v0", "bfoo", ColumnType.STRING))
+                .filters(equality("dim3", "b", ColumnType.STRING))
                 .columns(ImmutableList.of("v0"))
                 .context(QUERY_CONTEXT_DEFAULT)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
