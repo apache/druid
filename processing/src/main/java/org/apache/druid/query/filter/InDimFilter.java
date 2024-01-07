@@ -26,7 +26,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ForwardingSortedSet;
@@ -301,10 +300,8 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
 
       if (indexSupplier == null) {
         // column doesn't exist, match against null
-        return Filters.makeMissingColumnNullIndex(
-            predicateFactory.makeStringPredicate().apply(null),
-            selector
-        );
+        DruidPredicateMatch match = predicateFactory.makeStringPredicate().apply(null);
+        return Filters.makeMissingColumnNullIndex(match, selector);
       }
 
       final Utf8ValueSetIndexes utf8ValueSetIndexes = indexSupplier.as(Utf8ValueSetIndexes.class);
@@ -552,10 +549,15 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
   }
 
   @SuppressWarnings("ReturnValueIgnored")
-  private static Predicate<String> createStringPredicate(final Set<String> values)
+  private static DruidObjectPredicate<String> createStringPredicate(final Set<String> values)
   {
     Preconditions.checkNotNull(values, "values");
-    return values::contains;
+    return value -> {
+      if (value == null) {
+        return values.contains(null) ? DruidPredicateMatch.TRUE : DruidPredicateMatch.UNKNOWN;
+      }
+      return DruidPredicateMatch.of(values.contains(value));
+    };
   }
 
   private static DruidLongPredicate createLongPredicate(final Set<String> values)
@@ -573,15 +575,15 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     return new DruidLongPredicate()
     {
       @Override
-      public boolean applyLong(long n)
+      public DruidPredicateMatch applyLong(long n)
       {
-        return longHashSet.contains(n);
+        return DruidPredicateMatch.of(longHashSet.contains(n));
       }
 
       @Override
-      public boolean applyNull()
+      public DruidPredicateMatch applyNull()
       {
-        return matchNull;
+        return matchNull ? DruidPredicateMatch.TRUE : DruidPredicateMatch.UNKNOWN;
       }
     };
   }
@@ -601,15 +603,15 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     return new DruidFloatPredicate()
     {
       @Override
-      public boolean applyFloat(float n)
+      public DruidPredicateMatch applyFloat(float n)
       {
-        return floatBitsHashSet.contains(Float.floatToIntBits(n));
+        return DruidPredicateMatch.of(floatBitsHashSet.contains(Float.floatToIntBits(n)));
       }
 
       @Override
-      public boolean applyNull()
+      public DruidPredicateMatch applyNull()
       {
-        return matchNull;
+        return matchNull ? DruidPredicateMatch.TRUE : DruidPredicateMatch.UNKNOWN;
       }
     };
   }
@@ -629,15 +631,15 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     return new DruidDoublePredicate()
     {
       @Override
-      public boolean applyDouble(double n)
+      public DruidPredicateMatch applyDouble(double n)
       {
-        return doubleBitsHashSet.contains(Double.doubleToLongBits(n));
+        return DruidPredicateMatch.of(doubleBitsHashSet.contains(Double.doubleToLongBits(n)));
       }
 
       @Override
-      public boolean applyNull()
+      public DruidPredicateMatch applyNull()
       {
-        return matchNull;
+        return matchNull ? DruidPredicateMatch.TRUE : DruidPredicateMatch.UNKNOWN;
       }
     };
   }
@@ -647,11 +649,10 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
   {
     private final ExtractionFn extractionFn;
     private final Set<String> values;
-    private final Supplier<Predicate<String>> stringPredicateSupplier;
+    private final Supplier<DruidObjectPredicate<String>> stringPredicateSupplier;
     private final Supplier<DruidLongPredicate> longPredicateSupplier;
     private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
     private final Supplier<DruidDoublePredicate> doublePredicateSupplier;
-    private final boolean hasNull;
 
     public InFilterDruidPredicateFactory(
         final ExtractionFn extractionFn,
@@ -660,7 +661,6 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     {
       this.extractionFn = extractionFn;
       this.values = values;
-      this.hasNull = values.contains(null);
 
       // As the set of filtered values can be large, parsing them as numbers should be done only if needed, and
       // only once. Pass in a common long predicate supplier to all filters created by .toFilter(), so that we only
@@ -673,10 +673,10 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     }
 
     @Override
-    public Predicate<String> makeStringPredicate()
+    public DruidObjectPredicate<String> makeStringPredicate()
     {
       if (extractionFn != null) {
-        final Predicate<String> stringPredicate = stringPredicateSupplier.get();
+        final DruidObjectPredicate<String> stringPredicate = stringPredicateSupplier.get();
         return input -> stringPredicate.apply(extractionFn.apply(input));
       } else {
         return stringPredicateSupplier.get();
@@ -687,7 +687,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     public DruidLongPredicate makeLongPredicate()
     {
       if (extractionFn != null) {
-        final Predicate<String> stringPredicate = stringPredicateSupplier.get();
+        final DruidObjectPredicate<String> stringPredicate = stringPredicateSupplier.get();
         return input -> stringPredicate.apply(extractionFn.apply(input));
       } else {
         return longPredicateSupplier.get();
@@ -698,7 +698,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     public DruidFloatPredicate makeFloatPredicate()
     {
       if (extractionFn != null) {
-        final Predicate<String> stringPredicate = stringPredicateSupplier.get();
+        final DruidObjectPredicate<String> stringPredicate = stringPredicateSupplier.get();
         return input -> stringPredicate.apply(extractionFn.apply(input));
       } else {
         return floatPredicateSupplier.get();
@@ -709,17 +709,11 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     public DruidDoublePredicate makeDoublePredicate()
     {
       if (extractionFn != null) {
-        final Predicate<String> stringPredicate = stringPredicateSupplier.get();
+        final DruidObjectPredicate<String> stringPredicate = stringPredicateSupplier.get();
         return input -> stringPredicate.apply(extractionFn.apply(input));
       } else {
         return doublePredicateSupplier.get();
       }
-    }
-
-    @Override
-    public boolean isNullInputUnknown()
-    {
-      return !hasNull;
     }
 
     @Override

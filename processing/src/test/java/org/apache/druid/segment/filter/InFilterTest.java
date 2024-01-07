@@ -377,9 +377,8 @@ public class InFilterTest extends BaseFilterTest
     );
     assertFilterMatches(
         NotDimFilter.of(toInFilterWithFn("dim3", yesNullFn, "NO")),
-        NullHandling.sqlCompatible() ? ImmutableList.of() : ImmutableList.of("a", "b", "c", "d", "e", "f")
+        ImmutableList.of("a", "b", "c", "d", "e", "f")
     );
-
     assertFilterMatches(
         toInFilterWithFn("dim3", yesNullFn, "YES"),
         ImmutableList.of("a", "b", "c", "d", "e", "f")
@@ -563,8 +562,7 @@ public class InFilterTest extends BaseFilterTest
                       "longPredicateSupplier",
                       "floatPredicateSupplier",
                       "doublePredicateSupplier",
-                      "stringPredicateSupplier",
-                      "hasNull"
+                      "stringPredicateSupplier"
                   )
                   .verify();
   }
