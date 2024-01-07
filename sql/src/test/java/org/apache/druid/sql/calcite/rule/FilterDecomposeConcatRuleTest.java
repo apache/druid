@@ -103,6 +103,36 @@ public class FilterDecomposeConcatRuleTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void test_twoInputs_castNumberInputRef()
+  {
+    // CAST(x AS VARCHAR) when x is BIGINT
+    final RexNode numericInputRef = rexBuilder.makeCast(
+        typeFactory.createTypeWithNullability(typeFactory.createSqlType(SqlTypeName.VARCHAR), true),
+        rexBuilder.makeInputRef(
+            typeFactory.createTypeWithNullability(typeFactory.createSqlType(SqlTypeName.BIGINT), true),
+            0
+        )
+    );
+
+    final RexNode concatCall =
+        concat(numericInputRef, literal("x"), inputRef(1));
+
+    Assert.assertEquals(
+        and(
+            equals(
+                numericInputRef,
+                literal("2")
+            ),
+            equals(
+                inputRef(1),
+                literal("3")
+            )
+        ),
+        shuttle.apply(equals(concatCall, literal("2x3")))
+    );
+  }
+
+  @Test
   public void test_twoInputs_notEquals()
   {
     final RexNode call =
