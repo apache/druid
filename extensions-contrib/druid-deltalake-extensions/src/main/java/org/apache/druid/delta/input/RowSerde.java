@@ -89,7 +89,7 @@ public class RowSerde
       return parseRowFromJsonWithSchema((ObjectNode) jsonNode.get("row"), schema);
     }
     catch (JsonProcessingException ex) {
-      throw new UncheckedIOException(ex);
+      throw new UncheckedIOException(ex); // todo: ise?
     }
   }
 

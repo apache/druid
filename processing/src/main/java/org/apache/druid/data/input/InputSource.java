@@ -27,7 +27,6 @@ import org.apache.druid.data.input.impl.CombiningInputSource;
 import org.apache.druid.data.input.impl.HttpInputSource;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.LocalInputSource;
-import org.apache.druid.data.input.impl.delta.DeltaInputSource;
 import org.apache.druid.guice.annotations.UnstableApi;
 import org.apache.druid.java.util.common.UOE;
 

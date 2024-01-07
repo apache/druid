@@ -33,6 +33,7 @@ import io.delta.kernel.data.FilteredColumnarBatch;
 import io.delta.kernel.data.Row;
 import io.delta.kernel.defaults.client.DefaultTableClient;
 import io.delta.kernel.internal.util.Utils;
+import io.delta.kernel.types.StructType;
 import io.delta.kernel.utils.CloseableIterator;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
@@ -100,7 +101,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
       File temporaryDirectory
   )
   {
-    log.info("READER Delta input source reader for tablePath[%s] and split[%s]", tablePath, deltaSplit);
+    log.info("READER Delta input source reader for inputRowSchema[%s], tablePath[%s] and split[%s]", inputRowSchema, tablePath, deltaSplit);
     Configuration hadoopConf = new Configuration();
     TableClient tableClient = DefaultTableClient.create(hadoopConf);
     try {
@@ -116,6 +117,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
       } else {
         Table table = Table.forPath(tableClient, tablePath);
         Snapshot latestSnapshot = table.getLatestSnapshot(tableClient);
+        StructType schema = latestSnapshot.getSchema(tableClient);
 
         Scan scan = latestSnapshot.getScanBuilder(tableClient).build();
         scanState = scan.getScanState(tableClient);

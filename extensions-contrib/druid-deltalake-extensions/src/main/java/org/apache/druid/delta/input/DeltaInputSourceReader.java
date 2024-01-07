@@ -142,7 +142,7 @@ public class DeltaInputSourceReader implements InputSourceReader
       }
 
       Row dataRow = currentBatch.next();
-
+      System.out.println("Datarow" + dataRow);
       // TODO: construct schema? remove this after debugging
       return new DeltaInputRow(dataRow, inputRowSchema);
     }
