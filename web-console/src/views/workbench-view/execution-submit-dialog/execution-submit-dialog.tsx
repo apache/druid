@@ -163,8 +163,7 @@ export const ExecutionSubmitDialog = React.memo(function ExecutionSubmitDialog(
     >
       <div className={Classes.DIALOG_BODY}>
         <p>
-          You can load query detail archive files downloaded from other Druid clusters to get a
-          rendering of that file here.
+          You can load query detail archive files from other Druid clusters to render the query detail here.
         </p>
         <p>
           To download the query detail archive for a query, click on the query in
