@@ -138,7 +138,7 @@ Druid's default null handling mode. The list of examples is illustrative, albeit
 |`LOOKUP(sku, 'sku_to_name') IN ('WhizBang Sprocket', 'WhizBang Chain') IS NOT TRUE`|Yes|
 |`LOOKUP(sku, 'sku_to_name') IS NULL`|No|
 |`LOOKUP(sku, 'sku_to_name') IS NOT NULL`|No|
-|`LOOKUP('sku:' \|\| sku, 'sku_to_name') = 'WhizBang Sprocket'`|No, expressions for the first argument are not reversible|
+|`LOOKUP(UPPER(sku), 'sku_to_name') = 'WhizBang Sprocket'`|Yes, to `UPPER(sku) = [key for 'WhizBang Sprocket']` (the `UPPER` function remains)|
 |`COALESCE(LOOKUP(sku, 'sku_to_name'), 'N/A') = 'WhizBang Sprocket'`|Yes, but see next item for `= 'N/A'`|
 |`COALESCE(LOOKUP(sku, 'sku_to_name'), 'N/A') = 'N/A'`|No, unless `sku_to_name` is [injective](#injective-lookups), which allows Druid to ignore the `COALESCE`|
 |`COALESCE(LOOKUP(sku, 'sku_to_name'), 'N/A') = 'WhizBang Sprocket' IS NOT TRUE`|Yes|

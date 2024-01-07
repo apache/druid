@@ -93,6 +93,22 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testFilterFunctionEquals()
+  {
+    cannotVectorize();
+
+    testQuery(
+        buildFilterTestSql("LOOKUP('key:' || dim1, 'lookyloo') = 'xabc'"),
+        QUERY_CONTEXT,
+        buildFilterTestExpectedQuery(
+            expressionVirtualColumn("v0", "concat('key:',\"dim1\")", ColumnType.STRING),
+            equality("v0", "abc", ColumnType.STRING)
+        ),
+        ImmutableList.of(new Object[]{"xabc", 1L})
+    );
+  }
+
+  @Test
   public void testFilterChainedEquals()
   {
     cannotVectorize();
