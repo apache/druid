@@ -94,6 +94,8 @@ public class CompactSegments implements CoordinatorCustomDuty
   // read by HTTP threads processing Coordinator API calls.
   private final AtomicReference<Map<String, AutoCompactionSnapshot>> autoCompactionSnapshotPerDataSource = new AtomicReference<>();
 
+  @JacksonInject private CompactionClient compactionClient;
+
   @Inject
   @JsonCreator
   public CompactSegments(
@@ -648,7 +650,7 @@ public class CompactSegments implements CoordinatorCustomDuty
 
     final String taskId = IdUtils.newTaskId(idPrefix, ClientCompactionTaskQuery.TYPE, dataSource, null);
     final Granularity segmentGranularity = granularitySpec == null ? null : granularitySpec.getSegmentGranularity();
-    final ClientTaskQuery taskPayload = new ClientCompactionTaskQuery(
+    final ClientCompactionTaskQuery taskPayload = new ClientCompactionTaskQuery(
         taskId,
         dataSource,
         new ClientCompactionIOConfig(
@@ -662,7 +664,8 @@ public class CompactSegments implements CoordinatorCustomDuty
         transformSpec,
         context
     );
-    FutureUtils.getUnchecked(overlordClient.runTask(taskId, taskPayload), true);
+//    FutureUtils.getUnchecked(overlordClient.runTask(taskId, taskPayload), true);
+    compactionClient.submitCompactionTask(taskPayload);
     return taskId;
   }
 }
