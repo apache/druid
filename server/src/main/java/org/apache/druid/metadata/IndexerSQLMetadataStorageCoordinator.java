@@ -180,18 +180,14 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         "SELECT created_date, payload FROM %1$s WHERE dataSource = :dataSource AND used = true"
     );
 
-    boolean hasEternityInterval = false;
-    for (Interval interval : intervals) {
-      if (Intervals.isEternity(interval)) {
-        hasEternityInterval = true;
-        break;
-      }
-    }
+    final boolean compareIntervalEndpointsAsString = intervals.stream()
+                                                              .allMatch(Intervals::canCompareEndpointsAsStrings);
+    final SqlSegmentsMetadataQuery.IntervalMode intervalMode = SqlSegmentsMetadataQuery.IntervalMode.OVERLAPS;
 
     SqlSegmentsMetadataQuery.appendConditionForIntervalsAndMatchMode(
         queryBuilder,
-        hasEternityInterval ? Collections.emptyList() : intervals,
-        SqlSegmentsMetadataQuery.IntervalMode.OVERLAPS,
+        compareIntervalEndpointsAsString ? intervals : Collections.emptyList(),
+        intervalMode,
         connector
     );
 
@@ -202,9 +198,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               .createQuery(queryString)
               .bind("dataSource", dataSource);
 
-          SqlSegmentsMetadataQuery.bindQueryIntervals(query, intervals);
+          if (compareIntervalEndpointsAsString) {
+            SqlSegmentsMetadataQuery.bindQueryIntervals(query, intervals);
+          }
 
-          return query
+          final List<Pair<DataSegment, String>> segmentsWithCreatedDates = query
               .map((int index, ResultSet r, StatementContext ctx) ->
                        new Pair<>(
                            JacksonUtils.readValue(jsonMapper, r.getBytes("payload"), DataSegment.class),
@@ -212,6 +210,21 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                        )
               )
               .list();
+
+          if (intervals.isEmpty() || compareIntervalEndpointsAsString) {
+            return segmentsWithCreatedDates;
+          } else {
+            return segmentsWithCreatedDates
+                .stream()
+                .filter(pair -> {
+                  for (Interval interval : intervals) {
+                    if (intervalMode.apply(interval, pair.lhs.getInterval())) {
+                      return true;
+                    }
+                  }
+                  return false;
+                }).collect(Collectors.toList());
+          }
         }
     );
   }
