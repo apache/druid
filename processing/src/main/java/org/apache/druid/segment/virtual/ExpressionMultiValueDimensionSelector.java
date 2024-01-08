@@ -19,11 +19,11 @@
 
 package org.apache.druid.segment.virtual;
 
-import com.google.common.base.Predicate;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -156,14 +156,13 @@ public class ExpressionMultiValueDimensionSelector implements DimensionSelector
       public boolean matches(boolean includeUnknown)
       {
         ExprEval evaluated = getEvaluated();
-        final boolean matchNull = includeUnknown && predicateFactory.isNullInputUnknown();
-        final Predicate<String> predicate = predicateFactory.makeStringPredicate();
+        final DruidObjectPredicate<String> predicate = predicateFactory.makeStringPredicate();
         if (evaluated.isArray()) {
           List<String> array = getArrayAsList(evaluated);
-          return array.stream().anyMatch(x -> (matchNull && x == null) || predicate.apply(x));
+          return array.stream().anyMatch(x -> predicate.apply(x).matches(includeUnknown));
         }
         final String rowValue = getValue(evaluated);
-        return (matchNull && rowValue == null) || predicate.apply(rowValue);
+        return predicate.apply(rowValue).matches(includeUnknown);
       }
 
       @Override

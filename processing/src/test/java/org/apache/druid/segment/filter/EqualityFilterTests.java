@@ -501,6 +501,12 @@ public class EqualityFilterTests
           ? ImmutableList.of()
           : ImmutableList.of("0", "1", "2", "3", "4", "5")
       );
+
+      assertFilterMatches(new EqualityFilter("vdim3-concat", ColumnType.STRING, "1", null), ImmutableList.of());
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("vdim3-concat", ColumnType.STRING, "1", null)),
+          NullHandling.sqlCompatible() ? ImmutableList.of() : ImmutableList.of("0", "1", "2", "3", "4", "5")
+      );
     }
 
     @Test

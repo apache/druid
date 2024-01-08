@@ -25,6 +25,7 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.query.filter.DruidPredicateMatch;
 import org.apache.druid.query.filter.LikeDimFilter;
 
 import javax.annotation.Nonnull;
@@ -80,7 +81,11 @@ public class LikeExprMacro implements ExprMacroTable.ExprMacro
       @Override
       public ExprEval eval(final ObjectBinding bindings)
       {
-        return ExprEval.ofLongBoolean(likeMatcher.matches(arg.eval(bindings).asString()));
+        final DruidPredicateMatch match = likeMatcher.matches(arg.eval(bindings).asString());
+        if (match == DruidPredicateMatch.UNKNOWN) {
+          return ExprEval.ofLong(null);
+        }
+        return ExprEval.ofLongBoolean(match.matches(false));
       }
 
       @Override

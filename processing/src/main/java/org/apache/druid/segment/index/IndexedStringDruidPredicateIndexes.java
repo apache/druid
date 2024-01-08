@@ -19,10 +19,9 @@
 
 package org.apache.druid.segment.index;
 
-import com.google.common.base.Predicate;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
@@ -64,14 +63,15 @@ public final class IndexedStringDruidPredicateIndexes<TDictionary extends Indexe
     if (ColumnIndexSupplier.skipComputingPredicateIndexes(columnConfig, numRows, dictionary.size())) {
       return null;
     }
+    final DruidObjectPredicate<String> stringPredicate = matcherFactory.makeStringPredicate();
+
     return new SimpleImmutableBitmapIterableIndex()
     {
       @Override
-      public Iterable<ImmutableBitmap> getBitmapIterable()
+      public Iterable<ImmutableBitmap> getBitmapIterable(boolean includeUnknown)
       {
         return () -> new Iterator<ImmutableBitmap>()
         {
-          final Predicate<String> stringPredicate = matcherFactory.makeStringPredicate();
           final Iterator<String> iterator = dictionary.iterator();
           @Nullable
           String next = null;
@@ -109,23 +109,13 @@ public final class IndexedStringDruidPredicateIndexes<TDictionary extends Indexe
           {
             while (!nextSet && iterator.hasNext()) {
               String nextValue = iterator.next();
-              nextSet = stringPredicate.apply(nextValue);
+              nextSet = stringPredicate.apply(nextValue).matches(includeUnknown);
               if (nextSet) {
                 next = nextValue;
               }
             }
           }
         };
-      }
-
-      @Nullable
-      @Override
-      protected ImmutableBitmap getUnknownsBitmap()
-      {
-        if (matcherFactory.isNullInputUnknown() && NullHandling.isNullOrEquivalent(dictionary.get(0))) {
-          return bitmaps.get(0);
-        }
-        return null;
       }
     };
   }

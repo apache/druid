@@ -209,6 +209,9 @@ public interface Expr extends Cacheable
       }
       final ColumnCapabilities capabilities = holder.getCapabilities();
       final ColumnIndexSupplier delegateIndexSupplier = holder.getIndexSupplier();
+      if (delegateIndexSupplier == null) {
+        return null;
+      }
       final DictionaryEncodedValueIndex<?> delegateRawIndex = delegateIndexSupplier.as(
           DictionaryEncodedValueIndex.class
       );

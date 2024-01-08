@@ -19,10 +19,10 @@
 
 package org.apache.druid.query.filter.vector;
 
-import com.google.common.base.Predicate;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.column.ColumnType;
@@ -31,7 +31,6 @@ import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 
 import javax.annotation.Nullable;
 import java.util.BitSet;
-import java.util.Objects;
 
 public class MultiValueStringVectorValueMatcher implements VectorValueMatcherFactory
 {
@@ -98,7 +97,7 @@ public class MultiValueStringVectorValueMatcher implements VectorValueMatcherFac
         }
       };
     } else {
-      return makeMatcher(s -> Objects.equals(s, etnValue), true);
+      return makeMatcher(etnValue == null ? DruidObjectPredicate.isNull() : DruidObjectPredicate.equalTo(etnValue));
     }
   }
 
@@ -116,13 +115,11 @@ public class MultiValueStringVectorValueMatcher implements VectorValueMatcherFac
   @Override
   public VectorValueMatcher makeMatcher(final DruidPredicateFactory predicateFactory)
   {
-    return makeMatcher(predicateFactory.makeStringPredicate(), predicateFactory.isNullInputUnknown());
+    return makeMatcher(predicateFactory.makeStringPredicate());
   }
 
-  private VectorValueMatcher makeMatcher(final Predicate<String> predicate, boolean isNullInputUnknown)
+  private VectorValueMatcher makeMatcher(final DruidObjectPredicate<String> predicate)
   {
-    final boolean matchNull = predicate.apply(null);
-
     if (selector.getValueCardinality() > 0) {
       final BitSet checkedIds = new BitSet(selector.getValueCardinality());
       final BitSet matchingIds = new BitSet(selector.getValueCardinality());
@@ -137,7 +134,6 @@ public class MultiValueStringVectorValueMatcher implements VectorValueMatcherFac
         {
           final IndexedInts[] vector = selector.getRowVector();
           final int[] selection = match.getSelection();
-          final boolean includeNulls = includeUnknown && isNullInputUnknown;
 
           int numRows = 0;
 
@@ -148,7 +144,7 @@ public class MultiValueStringVectorValueMatcher implements VectorValueMatcherFac
 
             if (n == 0) {
               // null should match empty rows in multi-value columns
-              if (matchNull || includeNulls) {
+              if (predicate.apply(null).matches(includeUnknown)) {
                 selection[numRows++] = rowNum;
               }
             } else {
@@ -160,7 +156,7 @@ public class MultiValueStringVectorValueMatcher implements VectorValueMatcherFac
                   matches = matchingIds.get(id);
                 } else {
                   final String val = selector.lookupName(id);
-                  matches = (includeNulls && val == null) || predicate.apply(val);
+                  matches = predicate.apply(val).matches(includeUnknown);
                   checkedIds.set(id);
                   if (matches) {
                     matchingIds.set(id);
@@ -188,7 +184,6 @@ public class MultiValueStringVectorValueMatcher implements VectorValueMatcherFac
         @Override
         public ReadableVectorMatch match(final ReadableVectorMatch mask, boolean includeUnknown)
         {
-          final boolean includeNulls = includeUnknown && isNullInputUnknown;
           final IndexedInts[] vector = selector.getRowVector();
           final int[] selection = match.getSelection();
 
@@ -201,14 +196,14 @@ public class MultiValueStringVectorValueMatcher implements VectorValueMatcherFac
 
             if (n == 0) {
               // null should match empty rows in multi-value columns
-              if (matchNull || includeNulls) {
+              if (predicate.apply(null).matches(includeUnknown)) {
                 selection[numRows++] = rowNum;
               }
             } else {
               for (int j = 0; j < n; j++) {
                 final int id = ints.get(j);
                 final String val = selector.lookupName(id);
-                if ((includeNulls && val == null) || predicate.apply(val)) {
+                if (predicate.apply(val).matches(includeUnknown)) {
                   selection[numRows++] = rowNum;
                   break;
                 }

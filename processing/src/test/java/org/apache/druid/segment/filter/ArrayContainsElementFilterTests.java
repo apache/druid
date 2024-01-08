@@ -331,6 +331,7 @@ public class ArrayContainsElementFilterTests
     public void testArrayLongColumnContainsArrays()
     {
       // only auto schema supports array columns... skip other segment types
+
       Assume.assumeTrue(isAutoSchema());
 
       // these are not nested arrays, expect no matches
