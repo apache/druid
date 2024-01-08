@@ -19,20 +19,18 @@
 
 package org.apache.druid.storage.azure;
 
+import com.azure.storage.blob.models.BlobStorageException;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
-import com.microsoft.azure.storage.StorageException;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
-import org.apache.druid.java.util.common.RetryUtils;
-import org.apache.druid.java.util.common.RetryUtils.Task;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.azure.blob.CloudBlobHolder;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Iterator;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Utility class for miscellaneous things involving Azure.
@@ -48,20 +46,23 @@ public class AzureUtils
   // (from https://docs.microsoft.com/en-us/azure/hdinsight/hdinsight-hadoop-use-blob-storage)
   static final String AZURE_STORAGE_HADOOP_PROTOCOL = "wasbs";
 
+  // This logic is copied from RequestRetryOptions in the azure client. We still need this logic because some classes like
+  // RetryingInputEntity need a predicate function to tell whether to retry, seperate from the Azure client retries.
   public static final Predicate<Throwable> AZURE_RETRY = e -> {
     if (e == null) {
       return false;
     }
     for (Throwable t = e; t != null; t = t.getCause()) {
-      if (t instanceof URISyntaxException) {
-        return false;
-      }
-
-      if (t instanceof StorageException) {
-        return true;
+      if (t instanceof BlobStorageException) {
+        int statusCode = ((BlobStorageException) t).getStatusCode();
+        return statusCode == 429 || statusCode == 500 || statusCode == 503;
       }
 
       if (t instanceof IOException) {
+        return true;
+      }
+
+      if (t instanceof TimeoutException) {
         return true;
       }
     }
@@ -119,7 +120,6 @@ public class AzureUtils
       String prefix,
       Predicate<CloudBlobHolder> filter
   )
-      throws Exception
   {
     AzureCloudBlobIterable azureCloudBlobIterable =
         azureCloudBlobIterableFactory.create(ImmutableList.of(new CloudObjectLocation(
@@ -131,26 +131,8 @@ public class AzureUtils
     while (iterator.hasNext()) {
       final CloudBlobHolder nextObject = iterator.next();
       if (filter.apply(nextObject)) {
-        deleteBucketKeys(storage, accountConfig.getMaxTries(), nextObject.getContainerName(), nextObject.getName());
+        storage.emptyCloudBlobDirectory(nextObject.getContainerName(), nextObject.getName(), accountConfig.getMaxTries());
       }
     }
-  }
-
-  private static void deleteBucketKeys(
-      AzureStorage storage,
-      int maxTries,
-      String bucket,
-      String prefix
-  ) throws Exception
-  {
-    AzureUtils.retryAzureOperation(() -> {
-      storage.emptyCloudBlobDirectory(bucket, prefix);
-      return null;
-    }, maxTries);
-  }
-
-  static <T> T retryAzureOperation(Task<T> f, int maxTries) throws Exception
-  {
-    return RetryUtils.retry(f, AZURE_RETRY, maxTries);
   }
 }

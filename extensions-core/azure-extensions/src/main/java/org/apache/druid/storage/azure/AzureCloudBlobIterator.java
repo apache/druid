@@ -19,16 +19,12 @@
 
 package org.apache.druid.storage.azure;
 
+import com.azure.storage.blob.models.BlobItem;
 import com.google.inject.assistedinject.Assisted;
 import com.google.inject.assistedinject.AssistedInject;
-import com.microsoft.azure.storage.ResultContinuation;
-import com.microsoft.azure.storage.ResultSegment;
-import com.microsoft.azure.storage.blob.ListBlobItem;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.azure.blob.CloudBlobHolder;
-import org.apache.druid.storage.azure.blob.ListBlobItemHolder;
-import org.apache.druid.storage.azure.blob.ListBlobItemHolderFactory;
 
 import java.net.URI;
 import java.util.Iterator;
@@ -42,36 +38,28 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobHolder>
 {
   private static final Logger log = new Logger(AzureCloudBlobIterator.class);
   private final AzureStorage storage;
-  private final ListBlobItemHolderFactory blobItemDruidFactory;
   private final Iterator<URI> prefixesIterator;
   private final int maxListingLength;
-
-  private ResultSegment<ListBlobItem> result;
   private String currentContainer;
   private String currentPrefix;
-  private ResultContinuation continuationToken;
   private CloudBlobHolder currentBlobItem;
-  private Iterator<ListBlobItem> blobItemIterator;
+  private Iterator<BlobItem> blobItemIterator;
   private final AzureAccountConfig config;
 
   @AssistedInject
   AzureCloudBlobIterator(
       AzureStorage storage,
-      ListBlobItemHolderFactory blobItemDruidFactory,
       AzureAccountConfig config,
       @Assisted final Iterable<URI> prefixes,
       @Assisted final int maxListingLength
   )
   {
     this.storage = storage;
-    this.blobItemDruidFactory = blobItemDruidFactory;
     this.config = config;
     this.prefixesIterator = prefixes.iterator();
     this.maxListingLength = maxListingLength;
-    this.result = null;
     this.currentContainer = null;
     this.currentPrefix = null;
-    this.continuationToken = null;
     this.currentBlobItem = null;
     this.blobItemIterator = null;
 
@@ -108,8 +96,6 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobHolder>
     log.debug("currentUri: %s\ncurrentContainer: %s\ncurrentPrefix: %s",
               currentUri, currentContainer, currentPrefix
     );
-    result = null;
-    continuationToken = null;
   }
 
   private void fetchNextBatch()
@@ -121,14 +107,13 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobHolder>
           currentContainer,
           currentPrefix
       );
-      result = AzureUtils.retryAzureOperation(() -> storage.listBlobsWithPrefixInContainerSegmented(
+      // We don't need to iterate by page because the client handles this, it will fetch the next page when necessary.
+      blobItemIterator = storage.listBlobsWithPrefixInContainerSegmented(
           currentContainer,
           currentPrefix,
-          continuationToken,
-          maxListingLength
-      ), config.getMaxTries());
-      continuationToken = result.getContinuationToken();
-      blobItemIterator = result.getResults().iterator();
+          maxListingLength,
+          config.getMaxTries()
+      ).stream().iterator();
     }
     catch (Exception e) {
       throw new RE(
@@ -146,19 +131,15 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobHolder>
    */
   private void advanceBlobItem()
   {
-    while (blobItemIterator.hasNext() || continuationToken != null || prefixesIterator.hasNext()) {
+    while (prefixesIterator.hasNext() || blobItemIterator.hasNext()) {
       while (blobItemIterator.hasNext()) {
-        ListBlobItemHolder blobItem = blobItemDruidFactory.create(blobItemIterator.next());
-        /* skip directory objects */
-        if (blobItem.isCloudBlob() && blobItem.getCloudBlob().getBlobLength() > 0) {
-          currentBlobItem = blobItem.getCloudBlob();
+        BlobItem blobItem = blobItemIterator.next();
+        if (!blobItem.isPrefix() && blobItem.getProperties().getContentLength() > 0) {
+          currentBlobItem = new CloudBlobHolder(blobItem, currentContainer);
           return;
         }
       }
-
-      if (continuationToken != null) {
-        fetchNextBatch();
-      } else if (prefixesIterator.hasNext()) {
+      if (prefixesIterator.hasNext()) {
         prepareNextRequest();
         fetchNextBatch();
       }

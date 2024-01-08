@@ -155,6 +155,11 @@ public class SqlTestFramework
         Injector injector
     );
 
+    default CatalogResolver createCatalogResolver()
+    {
+      return CatalogResolver.NULL_RESOLVER;
+    }
+
     /**
      * Configure the JSON mapper.
      *
@@ -419,7 +424,8 @@ public class SqlTestFramework
           plannerConfig,
           viewManager,
           componentSupplier.createSchemaManager(),
-          framework.authorizerMapper
+          framework.authorizerMapper,
+          framework.builder.catalogResolver
       );
 
       this.plannerFactory = new PlannerFactory(
