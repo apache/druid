@@ -562,9 +562,17 @@ public class Expressions
               druidExpression.getSimpleExtraction().getExtractionFn()
           );
         } else {
-          if (virtualColumnRegistry != null && druidExpression.getSimpleExtraction().getExtractionFn() != null) {
-            String column = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(druidExpression, druidExpression.getDruidType());
-            equalFilter = NullFilter.forColumn(column);
+          if (druidExpression.getSimpleExtraction().getExtractionFn() != null) {
+            if (virtualColumnRegistry != null) {
+              String column = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
+                  druidExpression,
+                  druidExpression.getDruidType()
+              );
+              equalFilter = NullFilter.forColumn(column);
+            } else {
+              // virtual column registry unavailable, fallback to expression filter
+              return null;
+            }
           } else {
             equalFilter = NullFilter.forColumn(druidExpression.getDirectColumn());
           }
@@ -770,6 +778,7 @@ public class Expressions
             );
           } else {
             // if this happens for some reason, bail and use an expression filter
+            return null;
           }
         }
 

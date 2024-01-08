@@ -34,6 +34,7 @@ import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -1158,10 +1159,10 @@ public class NestedFieldVirtualColumn implements VirtualColumn
   @Override
   public ColumnIndexSupplier getIndexSupplier(
       String columnName,
-      ColumnSelector selector
+      ColumnIndexSelector indexSelector
   )
   {
-    ColumnHolder holder = selector.getColumnHolder(this.columnName);
+    ColumnHolder holder = indexSelector.getColumnHolder(this.columnName);
     if (holder == null) {
       return null;
     }
