@@ -155,6 +155,10 @@ public class SupervisorResourceTest extends EasyMockSupport
     setupMockRequest();
     setupMockRequestForAudit();
 
+    EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true);
+    auditManager.doAudit(EasyMock.anyObject());
+    EasyMock.expectLastCall().once();
+
     replayAll();
 
     Response response = supervisorResource.specPost(spec, request);
