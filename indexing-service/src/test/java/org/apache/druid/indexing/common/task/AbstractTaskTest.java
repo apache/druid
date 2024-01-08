@@ -108,8 +108,9 @@ public class AbstractTaskTest
     };
     task.run(toolbox);
 
-    // call it 3 times, once to update location in setup, then one for status and location in cleanup
-    Mockito.verify(taskActionClient, times(3)).submit(any());
+    // call it 3 times, once to update location in setup, then one for status and location in cleanup,
+    // and finally for metadata cleanup
+    Mockito.verify(taskActionClient, times(4)).submit(any());
     verify(pusher, times(1)).pushTaskReports(eq("myID"), any());
     verify(pusher, times(1)).pushTaskStatus(eq("myID"), any());
   }
