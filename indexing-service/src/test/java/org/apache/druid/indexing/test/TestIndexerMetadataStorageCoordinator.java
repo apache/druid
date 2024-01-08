@@ -277,6 +277,12 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
     return null;
   }
 
+  @Override
+  public void cleanUpgradeSegmentsTableForTask(final String taskId)
+  {
+    throw new UnsupportedOperationException();
+  }
+
   public Set<DataSegment> getPublished()
   {
     return ImmutableSet.copyOf(published);

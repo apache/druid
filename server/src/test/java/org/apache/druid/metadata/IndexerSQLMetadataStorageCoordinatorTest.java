@@ -985,6 +985,80 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
+  public void testCleanUpgradeSegmentsTableForTask()
+  {
+    final String taskToClean = "taskToClean";
+    final ReplaceTaskLock replaceLockToClean = new ReplaceTaskLock(
+        taskToClean,
+        Intervals.of("2023-01-01/2023-02-01"),
+        "2023-03-01"
+    );
+    DataSegment segmentToClean0 = createSegment(
+        Intervals.of("2023-01-01/2023-02-01"),
+        "2023-02-01",
+        new NumberedShardSpec(0, 0)
+    );
+    DataSegment segmentToClean1 = createSegment(
+        Intervals.of("2023-01-01/2023-01-02"),
+        "2023-01-02",
+        new NumberedShardSpec(0, 0)
+    );
+    insertIntoUpgradeSegmentsTable(
+        ImmutableMap.of(segmentToClean0, replaceLockToClean, segmentToClean1, replaceLockToClean)
+    );
+    Assert.assertEquals(
+        ImmutableMap.of(
+            segmentToClean0.getId().toString(),
+            replaceLockToClean.getVersion(),
+            segmentToClean1.getId().toString(),
+            replaceLockToClean.getVersion()
+        ),
+        derbyConnector.retryWithHandle(
+            handle -> coordinator.getAppendSegmentsCommittedDuringTask(handle, taskToClean)
+        )
+    );
+
+    final String taskToLeave = "taskToLeave";
+    final ReplaceTaskLock replaceLockToLeave = new ReplaceTaskLock(
+        taskToLeave,
+        Intervals.of("2023-02-01/2023-03-01"),
+        "2023-03-01"
+    );
+    DataSegment segmentToLeave = createSegment(
+        Intervals.of("2023-02-01/2023-03-01"),
+        "2023-03-01",
+        new NumberedShardSpec(0, 0)
+    );
+    insertIntoUpgradeSegmentsTable(ImmutableMap.of(segmentToLeave, replaceLockToLeave));
+    Assert.assertEquals(
+        ImmutableMap.of(
+            segmentToLeave.getId().toString(),
+            replaceLockToLeave.getVersion()
+        ),
+        derbyConnector.retryWithHandle(
+            handle -> coordinator.getAppendSegmentsCommittedDuringTask(handle, taskToLeave)
+        )
+    );
+
+    coordinator.cleanUpgradeSegmentsTableForTask(taskToClean);
+    Assert.assertTrue(
+        derbyConnector.retryWithHandle(
+            handle -> coordinator.getAppendSegmentsCommittedDuringTask(handle, taskToClean)
+        ).isEmpty()
+    );
+    Assert.assertEquals(
+        ImmutableMap.of(
+            segmentToLeave.getId().toString(),
+            replaceLockToLeave.getVersion()
+        ),
+        derbyConnector.retryWithHandle(
+            handle -> coordinator.getAppendSegmentsCommittedDuringTask(handle, taskToLeave)
+        )
+    );
+
+  }
+
+  @Test
   public void testTransactionalAnnounceFailDbNotNullWantDifferent() throws IOException
   {
     final SegmentPublishResult result1 = coordinator.commitSegmentsAndMetadata(

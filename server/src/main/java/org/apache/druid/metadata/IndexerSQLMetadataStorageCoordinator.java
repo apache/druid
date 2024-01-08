@@ -2267,7 +2267,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    *
    * @return Map from append Segment ID to REPLACE lock version
    */
-  private Map<String, String> getAppendSegmentsCommittedDuringTask(
+  @VisibleForTesting
+  Map<String, String> getAppendSegmentsCommittedDuringTask(
       Handle handle,
       String taskId
   )
@@ -2672,6 +2673,22 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         },
         3,
         SQLMetadataConnector.DEFAULT_MAX_TRIES
+    );
+  }
+
+  @Override
+  public void cleanUpgradeSegmentsTableForTask(final String taskId)
+  {
+    connector.getDBI().inTransaction(
+        (handle, status) -> handle
+            .createStatement(
+                StringUtils.format(
+                    "DELETE FROM %s WHERE task_id = :task_id",
+                    dbTables.getUpgradeSegmentsTable()
+                )
+            )
+            .bind("task_id", taskId)
+            .execute()
     );
   }
 
