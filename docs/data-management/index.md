@@ -23,7 +23,7 @@ sidebar_label: "Overview"
   ~ under the License.
   -->
 
-Apache Druid stores data [partitioned by time chunk](../design/architecture.md#datasources-and-segments) in immutable
+Apache Druid stores data [partitioned by time chunk](../design/storage.md) in immutable
 files called [segments](../design/segments.md). Data management operations involving replacing, or deleting,
 these segments include:
 
