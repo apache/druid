@@ -20,8 +20,6 @@
 package org.apache.druid.segment.incremental;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -45,6 +43,7 @@ import org.apache.druid.query.filter.DimFilters;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -664,7 +663,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
     private class DictionaryRaceTestFilterDruidPredicateFactory implements DruidPredicateFactory
     {
       @Override
-      public Predicate<String> makeStringPredicate()
+      public DruidObjectPredicate<String> makeStringPredicate()
       {
         try {
           index.add(
@@ -679,7 +678,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
           throw new RuntimeException(isee);
         }
 
-        return Predicates.alwaysTrue();
+        return DruidObjectPredicate.alwaysTrue();
       }
 
       @Override

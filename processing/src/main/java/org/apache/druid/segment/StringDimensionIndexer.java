@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.base.Predicate;
 import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import org.apache.druid.collections.bitmap.BitmapFactory;
@@ -31,7 +30,9 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.query.filter.DruidPredicateMatch;
 import org.apache.druid.query.filter.StringPredicateDruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -422,9 +423,7 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
       {
         final BitSet checkedIds = new BitSet(maxId);
         final BitSet matchingIds = new BitSet(maxId);
-        final Predicate<String> predicate = predicateFactory.makeStringPredicate();
-        final boolean predicateMatchesNull = predicate.apply(null);
-        final int nullValueId = lookupId(null);
+        final DruidObjectPredicate<String> predicate = predicateFactory.makeStringPredicate();
 
         // Lazy matcher; only check an id if matches() is called.
         return new ValueMatcher()
@@ -432,30 +431,25 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
           @Override
           public boolean matches(boolean includeUnknown)
           {
-            final boolean matchNull = includeUnknown && predicateFactory.isNullInputUnknown();
             Object[] dims = currEntry.get().getDims();
             if (dimIndex >= dims.length) {
-              return matchNull || predicateMatchesNull;
+              return predicate.apply(null).matches(includeUnknown);
             }
 
             int[] dimsInt = (int[]) dims[dimIndex];
             if (dimsInt == null || dimsInt.length == 0) {
-              return matchNull || predicateMatchesNull;
+              return predicate.apply(null).matches(includeUnknown);
             }
 
             for (int id : dimsInt) {
-              if (includeUnknown && id == nullValueId) {
-                checkedIds.set(id);
-                return true;
-              }
               if (checkedIds.get(id)) {
                 if (matchingIds.get(id)) {
                   return true;
                 }
               } else {
-                final boolean matches = predicate.apply(lookupName(id));
+                final DruidPredicateMatch matches = predicate.apply(lookupName(id));
                 checkedIds.set(id);
-                if (matches) {
+                if (matches.matches(includeUnknown)) {
                   matchingIds.set(id);
                   return true;
                 }

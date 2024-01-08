@@ -19,8 +19,11 @@
 
 package org.apache.druid.segment.index.semantic;
 
+import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
+
+import javax.annotation.Nullable;
 
 /**
  * This exposes a 'raw' view into bitmap value indexes for {@link DictionaryEncodedColumn}. This allows callers
@@ -33,10 +36,24 @@ import org.apache.druid.segment.column.DictionaryEncodedColumn;
  * Most filter implementations should likely be using higher level index instead, such as {@link StringValueSetIndexes},
  * {@link LexicographicalRangeIndexes}, {@link NumericRangeIndexes}, or {@link DruidPredicateIndexes}.
  */
-public interface DictionaryEncodedValueIndex
+public interface DictionaryEncodedValueIndex<T>
 {
   /**
    * Get the {@link ImmutableBitmap} for dictionary id of the underlying dictionary
    */
   ImmutableBitmap getBitmap(int idx);
+
+  /**
+   * Get the cardinality of the underlying value dictionary
+   */
+  int getCardinality();
+
+  /**
+   * Get the value in the underlying value dictionary of the specified dictionary id
+   */
+  @Nullable
+  T getValue(int index);
+
+  @SuppressWarnings({"unreachable", "unused"})
+  BitmapFactory getBitmapFactory();
 }

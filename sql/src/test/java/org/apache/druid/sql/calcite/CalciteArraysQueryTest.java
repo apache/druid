@@ -957,9 +957,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 .dataSource(CalciteTests.DATASOURCE3)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(
-                    NullHandling.sqlCompatible()
-                    ? expressionFilter("array_overlap(substring(\"dim3\", 0, 1),array('a','b'))")
-                    : new InDimFilter("dim3", ImmutableList.of("a", "b"), new SubstringDimExtractionFn(0, 1))
+                    new InDimFilter("dim3", ImmutableList.of("a", "b"), new SubstringDimExtractionFn(0, 1))
                 )
                 .columns("dim3")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -1190,26 +1188,33 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayContainsFilterWithExtractionFn()
   {
+    Druids.ScanQueryBuilder builder = newScanQueryBuilder()
+        .dataSource(CalciteTests.DATASOURCE3)
+        .intervals(querySegmentSpec(Filtration.eternity()))
+        .columns("dim3")
+        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+        .limit(5)
+        .context(QUERY_CONTEXT_DEFAULT);
+
+    if (NullHandling.sqlCompatible()) {
+      builder = builder.virtualColumns(expressionVirtualColumn("v0", "substring(\"dim3\", 0, 1)", ColumnType.STRING))
+                       .filters(
+                           and(
+                               equality("v0", "a", ColumnType.STRING),
+                               equality("v0", "b", ColumnType.STRING)
+                           )
+                       );
+    } else {
+      builder = builder.filters(
+          and(
+              selector("dim3", "a", new SubstringDimExtractionFn(0, 1)),
+              selector("dim3", "b", new SubstringDimExtractionFn(0, 1))
+          )
+      );
+    }
     testQuery(
         "SELECT dim3 FROM druid.numfoo WHERE ARRAY_CONTAINS(SUBSTRING(dim3, 1, 1), ARRAY['a','b']) LIMIT 5",
-        ImmutableList.of(
-            newScanQueryBuilder()
-                .dataSource(CalciteTests.DATASOURCE3)
-                .intervals(querySegmentSpec(Filtration.eternity()))
-                .filters(
-                    NullHandling.sqlCompatible()
-                    ? expressionFilter("array_contains(substring(\"dim3\", 0, 1),array('a','b'))")
-                    : and(
-                        selector("dim3", "a", new SubstringDimExtractionFn(0, 1)),
-                        selector("dim3", "b", new SubstringDimExtractionFn(0, 1))
-                    )
-                )
-                .columns("dim3")
-                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .limit(5)
-                .context(QUERY_CONTEXT_DEFAULT)
-                .build()
-        ),
+        ImmutableList.of(builder.build()),
         ImmutableList.of(
             new Object[]{"[\"a\",\"b\"]"}
         )

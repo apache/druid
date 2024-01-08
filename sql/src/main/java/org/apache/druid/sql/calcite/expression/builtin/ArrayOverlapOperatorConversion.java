@@ -114,9 +114,7 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
     }
 
     final Expr expr = plannerContext.parseExpression(complexExpr.getExpression());
-    if (expr.isLiteral()
-        && !simpleExtractionExpr.isArray()
-        && (plannerContext.isUseBoundsAndSelectors() || simpleExtractionExpr.isDirectColumnAccess())) {
+    if (expr.isLiteral() && !simpleExtractionExpr.isArray()) {
       // Evaluate the expression to take out the array elements.
       // We can safely pass null if the expression is literal.
       ExprEval<?> exprEval = expr.eval(InputBindings.nilBindings());
@@ -131,9 +129,14 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
         if (plannerContext.isUseBoundsAndSelectors()) {
           return newSelectorDimFilter(simpleExtractionExpr.getSimpleExtraction(), Evals.asString(arrayElements[0]));
         } else {
-          // Cannot handle extractionFn here. We won't get one due to the isDirectColumnAccess check above.
+          final String column = simpleExtractionExpr.isDirectColumnAccess()
+                                ? simpleExtractionExpr.getSimpleExtraction().getColumn()
+                                : virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
+                                    simpleExtractionExpr,
+                                    simpleExtractionExpr.getDruidType()
+                                );
           return new EqualityFilter(
-              simpleExtractionExpr.getSimpleExtraction().getColumn(),
+              column,
               ExpressionType.toColumnType(exprEval.type()),
               arrayElements[0],
               null

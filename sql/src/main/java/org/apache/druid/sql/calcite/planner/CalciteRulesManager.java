@@ -87,6 +87,8 @@ public class CalciteRulesManager
    * those functions).
    * 3) {@link CoreRules#JOIN_COMMUTE}, {@link JoinPushThroughJoinRule#RIGHT}, {@link JoinPushThroughJoinRule#LEFT},
    * and {@link CoreRules#FILTER_INTO_JOIN}, which are part of {@link #FANCY_JOIN_RULES}.
+   * 4) {@link CoreRules#PROJECT_FILTER_TRANSPOSE} because PartialDruidQuery would like to have the Project on top of the Filter -
+   *    this rule could create a lot of non-usefull plans.
    */
   private static final List<RelOptRule> BASE_RULES =
       ImmutableList.of(
@@ -94,7 +96,6 @@ public class CalciteRulesManager
           CoreRules.AGGREGATE_PROJECT_STAR_TABLE,
           CoreRules.PROJECT_MERGE,
           CoreRules.FILTER_SCAN,
-          CoreRules.PROJECT_FILTER_TRANSPOSE,
           CoreRules.FILTER_PROJECT_TRANSPOSE,
           CoreRules.JOIN_PUSH_EXPRESSIONS,
           CoreRules.AGGREGATE_EXPAND_WITHIN_DISTINCT,
@@ -237,7 +238,7 @@ public class CalciteRulesManager
     prePrograms.add(new LoggingProgram("Finished decorrelate and trim fields program", isDebug));
     prePrograms.add(buildCoalesceProgram());
     prePrograms.add(new LoggingProgram("Finished coalesce program", isDebug));
-    prePrograms.add(buildHepProgram(REDUCTION_RULES));
+    prePrograms.add(buildReductionProgram(plannerContext));
     prePrograms.add(new LoggingProgram("Finished expression reduction program", isDebug));
 
     final Program preProgram = Programs.sequence(prePrograms.toArray(new Program[0]));
@@ -258,6 +259,18 @@ public class CalciteRulesManager
             Programs.ofRules(logicalConventionRuleSet(plannerContext)),
             new LoggingProgram("After logical volcano planner program", isDebug)
         )
+    );
+  }
+
+  private Program buildReductionProgram(final PlannerContext plannerContext)
+  {
+    List<RelOptRule> hepRules = new ArrayList<RelOptRule>(REDUCTION_RULES);
+    // Apply CoreRules#FILTER_INTO_JOIN early to avoid exploring less optimal plans.
+    if (plannerContext.getJoinAlgorithm().requiresSubquery()) {
+      hepRules.add(CoreRules.FILTER_INTO_JOIN);
+    }
+    return buildHepProgram(
+        hepRules
     );
   }
 
