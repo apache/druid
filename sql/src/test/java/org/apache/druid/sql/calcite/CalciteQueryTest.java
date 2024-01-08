@@ -11738,15 +11738,16 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testConcat2()
   {
+    // Tests flattening CONCAT, and tests reduction of concat('x', 'y') => 'xy'
     testQuery(
-        "SELECT CONCAt(dim1, CONCAt(dim2,'x'), m2, 9999, dim1) as dimX FROM foo",
+        "SELECT CONCAt(dim1, CONCAt(dim2,concat('x', 'y')), m2, 9999, dim1) as dimX FROM foo",
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .virtualColumns(expressionVirtualColumn(
                     "v0",
-                    "concat(\"dim1\",\"dim2\",'x',\"m2\",9999,\"dim1\")",
+                    "concat(\"dim1\",\"dim2\",'xy',\"m2\",9999,\"dim1\")",
                     ColumnType.STRING
                 ))
                 .columns("v0")
@@ -11755,12 +11756,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{"ax1.09999"},
-            new Object[]{NullHandling.sqlCompatible() ? null : "10.1x2.0999910.1"}, // dim2 is null
-            new Object[]{"2x3.099992"},
-            new Object[]{"1ax4.099991"},
-            new Object[]{"defabcx5.09999def"},
-            new Object[]{NullHandling.sqlCompatible() ? null : "abcx6.09999abc"} // dim2 is null
+            new Object[]{"axy1.09999"},
+            new Object[]{NullHandling.sqlCompatible() ? null : "10.1xy2.0999910.1"}, // dim2 is null
+            new Object[]{"2xy3.099992"},
+            new Object[]{"1axy4.099991"},
+            new Object[]{"defabcxy5.09999def"},
+            new Object[]{NullHandling.sqlCompatible() ? null : "abcxy6.09999abc"} // dim2 is null
         )
     );
   }
@@ -13837,8 +13838,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
     skipVectorize();
     testQuery(
-        // TODO(gianm): '||' used to be CONCAT('|', '|'), but for some reason this is no longer being reduced
-        "SELECT STRING_AGG(DISTINCT CONCAT(dim1, dim2), ','), STRING_AGG(DISTINCT CONCAT(dim1, dim2), '||') FROM foo",
+        "SELECT\n"
+        + "  STRING_AGG(DISTINCT CONCAT(dim1, dim2), ','),\n"
+        + "  STRING_AGG(DISTINCT CONCAT(dim1, dim2), CONCAT('|', '|'))\n"
+        + "FROM foo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)

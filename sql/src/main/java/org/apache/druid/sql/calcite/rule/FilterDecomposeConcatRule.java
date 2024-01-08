@@ -25,7 +25,6 @@ import com.google.common.collect.Multiset;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.core.Filter;
-import org.apache.calcite.rel.rules.ReduceExpressionsRule;
 import org.apache.calcite.rel.rules.SubstitutionRule;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCall;
@@ -76,8 +75,7 @@ public class FilterDecomposeConcatRule extends RelOptRule implements Substitutio
   }
 
   /**
-   * Shuttle that decomposes predicates on top of simple COALESCE calls. Implementation is similar to
-   * {@link ReduceExpressionsRule.CaseShuttle}.
+   * Shuttle that decomposes predicates on top of CONCAT calls.
    */
   static class DecomposeConcatShuttle extends RexShuttle
   {
@@ -262,6 +260,13 @@ public class FilterDecomposeConcatRule extends RelOptRule implements Substitutio
   @Nullable
   private static String getAsString(final RexNode rexNode)
   {
+    if (!SqlTypeFamily.STRING.contains(rexNode.getType())) {
+      // We don't expect this to happen, since this method is used when reading from RexNodes that are expected
+      // to be strings. But if it does (CONCAT operator that accepts non-strings?), return null so we skip the
+      // optimization.
+      return null;
+    }
+
     // Get matchValue from the matchLiteral (remove cast call if any, then read as string).
     final RexNode matchLiteral = RexUtil.removeCast(rexNode);
     if (SqlTypeFamily.STRING.contains(matchLiteral.getType())) {

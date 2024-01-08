@@ -79,8 +79,16 @@ public class FlattenConcatRule extends RelOptRule implements SubstitutionRule
       if (isNonTrivialStringConcat(call)) {
         final List<RexNode> newOperands = new ArrayList<>();
         for (final RexNode operand : call.getOperands()) {
-          if (isStringConcat(operand)) {
-            newOperands.addAll(((RexCall) visitCall((RexCall) operand)).getOperands());
+          if (isNonTrivialStringConcat(operand)) {
+            // Recursively flatten. We only flatten non-trivial CONCAT calls, because trivial ones (which do not
+            // reference any inputs) are reduced to constants by ReduceExpressionsRule.
+            final RexNode visitedOperand = visitCall((RexCall) operand);
+
+            if (isStringConcat(visitedOperand)) {
+              newOperands.addAll(((RexCall) visitedOperand).getOperands());
+            } else {
+              newOperands.add(visitedOperand);
+            }
           } else if (RexUtil.isNullLiteral(operand, true) && NullHandling.sqlCompatible()) {
             return rexBuilder.makeNullLiteral(call.getType());
           } else {
@@ -120,6 +128,6 @@ public class FlattenConcatRule extends RelOptRule implements SubstitutionRule
    */
   static boolean isNonTrivialStringConcat(final RexNode rexNode)
   {
-    return FlattenConcatRule.isStringConcat(rexNode) && !RelOptUtil.InputFinder.bits(rexNode).isEmpty();
+    return isStringConcat(rexNode) && !RelOptUtil.InputFinder.bits(rexNode).isEmpty();
   }
 }
