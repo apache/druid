@@ -40,7 +40,6 @@ import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -120,12 +119,6 @@ public class ArrayContainsElementFilter extends AbstractOptimizableDimFilter imp
         .appendByte(DimFilterUtils.STRING_SEPARATOR)
         .appendByteArray(valueBuffer.array())
         .build();
-  }
-
-  @Override
-  public DimFilter optimize()
-  {
-    return this;
   }
 
   @Override
@@ -236,7 +229,7 @@ public class ArrayContainsElementFilter extends AbstractOptimizableDimFilter imp
 
     if (elementMatchValueEval.valueOrDefault() != null && selector.getColumnCapabilities(column) != null && !selector.getColumnCapabilities(column).isArray()) {
       // column is not an array, behave like a normal equality filter
-      return EqualityFilter.getEqualityIndex(column, elementMatchValueEval, elementMatchValueType, selector);
+      return EqualityFilter.getEqualityIndex(column, elementMatchValueEval, elementMatchValueType, selector, predicateFactory);
     }
     // column exists, but has no indexes we can use
     return null;
@@ -269,12 +262,6 @@ public class ArrayContainsElementFilter extends AbstractOptimizableDimFilter imp
         VectorValueMatcherColumnProcessorFactory.instance(),
         factory
     ).makeMatcher(predicateFactory);
-  }
-
-  @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
-  {
-    return Filters.supportsSelectivityEstimation(this, column, columnSelector, indexSelector);
   }
 
   @Override

@@ -19,24 +19,36 @@
 
 package org.apache.druid.query.filter;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 
 /**
- * Base class for DimFilters that support optimization. This abstract class provides a default implementation of
- * toOptimizedFilter that relies on the existing optimize() and toFilter() methods. It uses a memoized supplier.
+ * Base class for most {@link DimFilter}.
+ *
+ * This abstract class provides a default implementation of {@link #toOptimizedFilter(boolean)} that uses a memoized
+ * supplier relying on {@link #optimize(boolean)} and {@link #toFilter()}. This fulfils the expectation that
+ * {@link #toOptimizedFilter(boolean)} returns the same instance when called multiple times.
+ *
+ * 
  */
 public abstract class AbstractOptimizableDimFilter implements DimFilter
 {
-  private final Supplier<Filter> cachedOptimizedFilter = Suppliers.memoize(
-      () -> optimize().toFilter()
-  );
+  private final Supplier<Filter> optimizedFilterIncludeUnknown = Suppliers.memoize(() -> optimize(true).toFilter());
+  private final Supplier<Filter> optimizedFilterNoIncludeUnknown = Suppliers.memoize(() -> optimize(false).toFilter());
 
-  @JsonIgnore
   @Override
-  public Filter toOptimizedFilter()
+  public DimFilter optimize(boolean mayIncludeUnknown)
   {
-    return cachedOptimizedFilter.get();
+    return this;
+  }
+
+  @Override
+  public final Filter toOptimizedFilter(boolean mayIncludeUnknown)
+  {
+    if (mayIncludeUnknown) {
+      return optimizedFilterIncludeUnknown.get();
+    } else {
+      return optimizedFilterNoIncludeUnknown.get();
+    }
   }
 }

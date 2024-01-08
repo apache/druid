@@ -25,6 +25,8 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.audit.AuditEntry;
+import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskInfo;
@@ -32,6 +34,7 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexing.common.task.KillUnusedSegmentsTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
@@ -67,6 +70,7 @@ import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
+import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTime;
@@ -104,7 +108,9 @@ public class OverlordResourceTest
   private IndexerMetadataStorageAdapter indexerMetadataStorageAdapter;
   private HttpServletRequest req;
   private TaskRunner taskRunner;
+  private TaskQueue taskQueue;
   private WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter;
+  private AuditManager auditManager;
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -113,6 +119,7 @@ public class OverlordResourceTest
   public void setUp()
   {
     taskRunner = EasyMock.createMock(TaskRunner.class);
+    taskQueue = EasyMock.createMock(TaskQueue.class);
     configManager = EasyMock.createMock(JacksonConfigManager.class);
     provisioningStrategy = EasyMock.createMock(ProvisioningStrategy.class);
     authConfig = EasyMock.createMock(AuthConfig.class);
@@ -121,6 +128,7 @@ public class OverlordResourceTest
     indexerMetadataStorageAdapter = EasyMock.createStrictMock(IndexerMetadataStorageAdapter.class);
     req = EasyMock.createStrictMock(HttpServletRequest.class);
     workerTaskRunnerQueryAdapter = EasyMock.createStrictMock(WorkerTaskRunnerQueryAdapter.class);
+    auditManager = EasyMock.createMock(AuditManager.class);
 
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(
         Optional.of(taskRunner)
@@ -165,7 +173,7 @@ public class OverlordResourceTest
         indexerMetadataStorageAdapter,
         null,
         configManager,
-        null,
+        auditManager,
         authMapper,
         workerTaskRunnerQueryAdapter,
         provisioningStrategy,
@@ -878,6 +886,53 @@ public class OverlordResourceTest
     );
     Task task = NoopTask.create();
     overlordResource.taskPost(task, req);
+  }
+
+  @Test
+  public void testKillTaskIsAudited()
+  {
+    EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(false);
+
+    final String username = Users.DRUID;
+    expectAuthorizationTokenCheck(username);
+    EasyMock.expect(req.getMethod()).andReturn("POST").once();
+    EasyMock.expect(req.getRequestURI()).andReturn("/indexer/v2/task").once();
+    EasyMock.expect(req.getQueryString()).andReturn("").once();
+    EasyMock.expect(req.getHeader(AuditManager.X_DRUID_AUTHOR)).andReturn(username).once();
+    EasyMock.expect(req.getHeader(AuditManager.X_DRUID_COMMENT)).andReturn("killing segments").once();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(new AuthenticationResult(username, "druid", null, null))
+            .once();
+    EasyMock.expect(req.getRemoteAddr()).andReturn("127.0.0.1").once();
+
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).once();
+
+    final Capture<AuditEntry> auditEntryCapture = EasyMock.newCapture();
+    auditManager.doAudit(EasyMock.capture(auditEntryCapture));
+    EasyMock.expectLastCall().once();
+
+    EasyMock.replay(
+        taskRunner,
+        taskMaster,
+        taskQueue,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter,
+        authConfig,
+        auditManager
+    );
+
+    Task task = new KillUnusedSegmentsTask("kill_all", "allow", Intervals.ETERNITY, null, false, 10, null);
+    overlordResource.taskPost(task, req);
+
+    Assert.assertTrue(auditEntryCapture.hasCaptured());
+    AuditEntry auditEntry = auditEntryCapture.getValue();
+    Assert.assertEquals(username, auditEntry.getAuditInfo().getAuthor());
+    Assert.assertEquals("killing segments", auditEntry.getAuditInfo().getComment());
+    Assert.assertEquals("druid", auditEntry.getAuditInfo().getIdentity());
+    Assert.assertEquals("127.0.0.1", auditEntry.getAuditInfo().getIp());
   }
 
   @Test

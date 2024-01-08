@@ -28,6 +28,7 @@ import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.SqlSyntax;
+import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.validate.SqlNameMatcher;
 import org.apache.druid.java.util.common.ISE;
@@ -72,9 +73,9 @@ import org.apache.druid.sql.calcite.expression.builtin.ArraySliceOperatorConvers
 import org.apache.druid.sql.calcite.expression.builtin.ArrayToMultiValueStringOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayToStringOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.BTrimOperatorConversion;
-import org.apache.druid.sql.calcite.expression.builtin.CaseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.CastOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.CeilOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.CoalesceOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ComplexDecodeBase64OperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ConcatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ContainsOperatorConversion;
@@ -297,8 +298,8 @@ public class DruidOperatorTable implements SqlOperatorTable
 
   private static final List<SqlOperatorConversion> IPV6ADDRESS_OPERATOR_CONVERSIONS =
       ImmutableList.<SqlOperatorConversion>builder()
-                  .add(new IPv6AddressMatchOperatorConversion())
-                  .build();
+                   .add(new IPv6AddressMatchOperatorConversion())
+                   .build();
 
   private static final List<SqlOperatorConversion> FORMAT_OPERATOR_CONVERSIONS =
       ImmutableList.<SqlOperatorConversion>builder()
@@ -339,6 +340,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new NestedDataOperatorConversions.JsonKeysOperatorConversion())
                    .add(new NestedDataOperatorConversions.JsonPathsOperatorConversion())
                    .add(new NestedDataOperatorConversions.JsonQueryOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonQueryArrayOperatorConversion())
                    .add(new NestedDataOperatorConversions.JsonValueAnyOperatorConversion())
                    .add(new NestedDataOperatorConversions.JsonValueBigintOperatorConversion())
                    .add(new NestedDataOperatorConversions.JsonValueDoubleOperatorConversion())
@@ -355,7 +357,7 @@ public class DruidOperatorTable implements SqlOperatorTable
   private static final List<SqlOperatorConversion> STANDARD_OPERATOR_CONVERSIONS =
       ImmutableList.<SqlOperatorConversion>builder()
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.ABS, "abs"))
-                   .add(new CaseOperatorConversion())
+                   .add(new DirectOperatorConversion(SqlStdOperatorTable.CASE, "case_searched"))
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.CHAR_LENGTH, "strlen"))
                    .add(CHARACTER_LENGTH_CONVERSION)
                    .add(new AliasedOperatorConversion(CHARACTER_LENGTH_CONVERSION, "LENGTH"))
@@ -391,6 +393,9 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.IS_TRUE, "istrue"))
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.IS_NOT_FALSE, "notfalse"))
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.IS_NOT_TRUE, "nottrue"))
+                   .add(new CoalesceOperatorConversion(SqlStdOperatorTable.COALESCE))
+                   .add(new CoalesceOperatorConversion(SqlLibraryOperators.NVL))
+                   .add(new CoalesceOperatorConversion(SqlLibraryOperators.IFNULL))
                    .add(new BinaryOperatorConversion(SqlStdOperatorTable.MULTIPLY, "*"))
                    .add(new BinaryOperatorConversion(SqlStdOperatorTable.MOD, "%"))
                    .add(new BinaryOperatorConversion(SqlStdOperatorTable.DIVIDE, "/"))

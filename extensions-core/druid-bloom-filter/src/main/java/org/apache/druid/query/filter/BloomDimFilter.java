@@ -84,13 +84,6 @@ public class BloomDimFilter extends AbstractOptimizableDimFilter implements DimF
         .build();
   }
 
-
-  @Override
-  public DimFilter optimize()
-  {
-    return this;
-  }
-
   @Override
   public Filter toFilter()
   {

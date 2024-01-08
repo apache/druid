@@ -145,6 +145,5 @@ public class DictionaryEncodedStringIndexSupplierBenchmark
   public void doValueSetCheck(Blackhole blackhole, BenchmarkState state)
   {
     BitmapColumnIndex bitmapIndex = state.stringValueSetIndex.forSortedValuesUtf8(state.values);
-    bitmapIndex.estimateSelectivity(10_000_000);
   }
 }

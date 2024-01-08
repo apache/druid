@@ -19,7 +19,8 @@
 
 package org.apache.druid.query.aggregation.first;
 
-import org.apache.druid.collections.SerializablePair;
+import org.apache.druid.query.aggregation.SerializablePairLongLong;
+import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
@@ -27,9 +28,14 @@ import java.nio.ByteBuffer;
 
 public class LongFirstVectorAggregator extends NumericFirstVectorAggregator
 {
+  public LongFirstVectorAggregator(VectorValueSelector timeSelector, VectorObjectSelector objectSelector)
+  {
+    super(timeSelector, null, objectSelector);
+  }
+
   public LongFirstVectorAggregator(VectorValueSelector timeSelector, VectorValueSelector valueSelector)
   {
-    super(timeSelector, valueSelector);
+    super(timeSelector, valueSelector, null);
   }
 
   @Override
@@ -38,14 +44,12 @@ public class LongFirstVectorAggregator extends NumericFirstVectorAggregator
     buf.putLong(position, 0);
   }
 
-
   @Override
   void putValue(ByteBuffer buf, int position, int index)
   {
-    long firstValue = valueSelector.getLongVector()[index];
+    long firstValue = valueSelector != null ? valueSelector.getLongVector()[index] : ((SerializablePairLongLong) objectSelector.getObjectVector()[index]).getRhs();
     buf.putLong(position, firstValue);
   }
-
 
   /**
    * @return The object as a pair with the position and the value stored at the position in the buffer.
@@ -55,6 +59,6 @@ public class LongFirstVectorAggregator extends NumericFirstVectorAggregator
   public Object get(ByteBuffer buf, int position)
   {
     final boolean rhsNull = isValueNull(buf, position);
-    return new SerializablePair<>(buf.getLong(position), rhsNull ? null : buf.getLong(position + VALUE_OFFSET));
+    return new SerializablePairLongLong(buf.getLong(position), rhsNull ? null : buf.getLong(position + VALUE_OFFSET));
   }
 }

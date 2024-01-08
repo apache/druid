@@ -31,7 +31,6 @@ import org.apache.druid.query.filter.vector.VectorMatch;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnInspector;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.index.BitmapColumnIndex;
@@ -77,12 +76,6 @@ public class IsBooleanFilter implements Filter
         public ColumnIndexCapabilities getIndexCapabilities()
         {
           return baseIndex.getIndexCapabilities();
-        }
-
-        @Override
-        public double estimateSelectivity(int totalRows)
-        {
-          return 1. - baseFilter.estimateSelectivity(selector);
         }
 
         @Override
@@ -174,12 +167,6 @@ public class IsBooleanFilter implements Filter
   public Filter rewriteRequiredColumns(Map<String, String> columnRewrites)
   {
     return new IsBooleanFilter(baseFilter.rewriteRequiredColumns(columnRewrites), isTrue);
-  }
-
-  @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
-  {
-    return baseFilter.supportsSelectivityEstimation(columnSelector, indexSelector);
   }
 
   @Override

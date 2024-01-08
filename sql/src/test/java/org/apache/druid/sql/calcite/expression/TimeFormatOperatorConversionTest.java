@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.builtin.TimeFormatOperatorConversion;
+import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -36,7 +37,7 @@ import java.util.Map;
 /**
  * Tests for TIME_FORMAT
  */
-public class TimeFormatOperatorConversionTest extends ExpressionTestBase
+public class TimeFormatOperatorConversionTest extends CalciteTestBase
 {
   private static final RowSignature ROW_SIGNATURE = RowSignature
       .builder()

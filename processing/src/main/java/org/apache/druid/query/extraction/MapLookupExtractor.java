@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterators;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.lookup.LookupExtractor;
@@ -33,10 +34,10 @@ import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @JsonTypeName("map")
 public class MapLookupExtractor extends LookupExtractor
@@ -111,18 +112,28 @@ public class MapLookupExtractor extends LookupExtractor
   @Override
   public List<String> unapply(@Nullable final String value)
   {
-    String valueToLookup = NullHandling.nullToEmptyIfNeeded(value);
-    if (valueToLookup == null) {
-      // valueToLookup is null only for SQL Compatible Null Behavior
-      // otherwise null will be replaced with empty string in nullToEmptyIfNeeded above.
-      // null value maps to empty list when SQL Compatible
-      return Collections.emptyList();
-    }
-    return map.entrySet()
-              .stream()
-              .filter(entry -> entry.getValue().equals(valueToLookup))
-              .map(entry -> entry.getKey())
-              .collect(Collectors.toList());
+    // Not needed, since we override unapplyAll.
+    throw new UnsupportedOperationException();
+  }
+
+  @Nullable
+  @Override
+  public Iterator<String> unapplyAll(Set<String> values)
+  {
+    return Iterators.transform(
+        Iterators.filter(
+            map.entrySet().iterator(),
+            entry -> {
+              if (entry.getKey() == null && NullHandling.sqlCompatible()) {
+                // apply always maps null to null in SQL-compatible mode.
+                return values.contains(null);
+              } else {
+                return values.contains(NullHandling.emptyToNullIfNeeded(entry.getValue()));
+              }
+            }
+        ),
+        Map.Entry::getKey
+    );
   }
 
   @Override

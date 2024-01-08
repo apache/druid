@@ -169,6 +169,32 @@ HUMAN_READABLE_BINARY_BYTE_FORMAT(value[, precision])
 HUMAN_READABLE_BINARY_BYTE_FORMAT(value, \[precision])
 :::
 
+#### Markdown table format
+
+When editing or adding tables, do not include extra characters to "prettify" the table format within the Markdown source.
+Some code editors may format tables by default.
+See the developer [style guide](https://github.com/apache/druid/blob/master/dev/style-conventions.md) for more information.
+
+:::tip
+
+**Correct**
+
+```markdown
+| Column 1 | Column 2 | Column 3 |
+| --- | --- | --- |
+| value 1 | val 2 | a-very-long-value 3 |
+```
+
+**Incorrect**
+
+```markdown
+| Column 1 | Column 2 | Column 3            |
+| -------- | -------- | ------------------- |
+| value 1  | val 2    | a-very-long-value 3 |
+```
+
+:::
+
 ### Style checklist
 
 Before publishing new content or updating an existing topic, you can audit your documentation using the following checklist to make sure your contributions align with existing documentation:

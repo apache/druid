@@ -40,12 +40,12 @@ import java.util.List;
 
 public class QueryLookupOperatorConversion implements SqlOperatorConversion
 {
-  private static final SqlFunction SQL_FUNCTION = OperatorConversions
+  public static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder("LOOKUP")
       .operandNames("expr", "lookupName", "replaceMissingValueWith")
       .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER)
       .requiredOperandCount(2)
-      .literalOperands(2)
+      .literalOperands(1, 2)
       .returnTypeNullable(SqlTypeName.VARCHAR)
       .functionCategory(SqlFunctionCategory.STRING)
       .build();
