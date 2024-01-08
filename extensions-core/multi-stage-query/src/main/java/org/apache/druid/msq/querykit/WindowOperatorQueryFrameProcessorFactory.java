@@ -35,6 +35,7 @@ import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.column.RowSignature;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Function;
 
 @JsonTypeName("window")
@@ -42,31 +43,58 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseLeafFrameProce
 {
   private final WindowOperatorQuery query;
   private final List<OperatorFactory> operatorList;
-  RowSignature rearrangePoiter;
+  private final RowSignature stageRowSignature;
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    WindowOperatorQueryFrameProcessorFactory that = (WindowOperatorQueryFrameProcessorFactory) o;
+    return Objects.equals(query, that.query)
+           && Objects.equals(operatorList, that.operatorList)
+           && Objects.equals(stageRowSignature, that.stageRowSignature);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(query, operatorList, stageRowSignature);
+  }
 
   @JsonCreator
   public WindowOperatorQueryFrameProcessorFactory(
       @JsonProperty("query") WindowOperatorQuery query,
-      @JsonProperty("operators") List<OperatorFactory> operatorFactoryList,
-      RowSignature pointers
+      @JsonProperty("operatorList") List<OperatorFactory> operatorFactoryList,
+      @JsonProperty("stageRowSignature") RowSignature stageRowSignature
   )
   {
     super(query);
     this.query = Preconditions.checkNotNull(query, "query");
-    this.operatorList = operatorFactoryList;
-    this.rearrangePoiter = pointers;
+    this.operatorList = Preconditions.checkNotNull(operatorFactoryList, "bad operator");
+    this.stageRowSignature = Preconditions.checkNotNull(stageRowSignature, "stageSignature");
   }
 
-  @JsonProperty
+  @JsonProperty("query")
   public WindowOperatorQuery getQuery()
   {
     return query;
   }
 
-  @JsonProperty
+  @JsonProperty("operatorList")
   public List<OperatorFactory> getOperators()
   {
     return operatorList;
+  }
+
+  @JsonProperty("stageRowSignature")
+  public RowSignature getSignature()
+  {
+    return stageRowSignature;
   }
 
   @Override
@@ -86,7 +114,17 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseLeafFrameProce
         segmentMapFn,
         outputChannelHolder,
         frameWriterFactoryHolder,
-        rearrangePoiter
+        stageRowSignature
     );
+  }
+
+  @Override
+  public String toString()
+  {
+    return "WindowOperatorQueryFrameProcessorFactory{" +
+           "query=" + query +
+           ", operatorList=" + operatorList +
+           ", stageRowSignature=" + stageRowSignature +
+           '}';
   }
 }

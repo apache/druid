@@ -40,7 +40,6 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
-import org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor;
 import org.apache.druid.query.operator.OffsetLimit;
 import org.apache.druid.query.operator.Operator;
 import org.apache.druid.query.operator.OperatorFactory;
@@ -73,7 +72,7 @@ import java.util.function.Function;
 public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
 {
 
-  private static final Logger log = new Logger(ScanQueryFrameProcessor.class);
+  private static final Logger log = new Logger(WindowOperatorQueryFrameProcessor.class);
   private final WindowOperatorQuery query;
 
   private final List<OperatorFactory> operatorFactoryList;
@@ -97,7 +96,7 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
       final Function<SegmentReference, SegmentReference> segmentMapFn,
       final ResourceHolder<WritableFrameChannel> outputChannelHolder,
       final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder,
-      RowSignature rearrangePointer
+      final RowSignature rowSignature
   )
   {
     super(
@@ -110,7 +109,7 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
     this.jsonMapper = jsonMapper;
     this.partitionBoostVirtualColumn = new SettableLongVirtualColumn(QueryKitUtils.PARTITION_BOOST_COLUMN);
     this.operatorFactoryList = operatorFactoryList;
-    this.outputStageSignature = rearrangePointer;
+    this.outputStageSignature = rowSignature;
 
     final List<VirtualColumn> frameWriterVirtualColumns = new ArrayList<>();
     frameWriterVirtualColumns.add(partitionBoostVirtualColumn);
@@ -125,14 +124,12 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
     this.frameWriterVirtualColumns = VirtualColumns.create(frameWriterVirtualColumns);
   }
 
-  // deep storage
   @Override
   protected ReturnOrAwait<Unit> runWithSegment(SegmentWithDescriptor segment)
   {
     return null;
   }
 
-  // realtime
   @Override
   protected ReturnOrAwait<Unit> runWithLoadedSegment(SegmentWithDescriptor segment)
   {
@@ -154,11 +151,17 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
       // Action item: need to implement a new rows and columns that accept a row-based frame
 
       // Create a frame rows and columns what would
+      /**
+       *  OVER(PARTITION BY m1)
+       */
       RowBasedFrameRowAndColumns frameRowsAndColumns = new RowBasedFrameRowAndColumns(f, inputFrameReader.signature());
       Operator op = getOperator(frameRowsAndColumns);
       //
       //Operator op = new SegmentToRowsAndColumnsOperator(frameSegment);
       // On the operator created above add the operators present in the query that we want to chain
+
+      // previous shuffle has partitioning
+      // need to remove partitioning here
 
       for (OperatorFactory of : operatorFactoryList) {
         op = of.wrap(op);
@@ -173,6 +176,9 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
         public Operator.Signal push(RowsAndColumns rac)
         {
           // convert the rac to a row-based frame
+          // Note that there can be multiple racs here
+          // one per partition
+          // But one rac will be written to 1 frame
           Pair<byte[], RowSignature> pairFrames = materializeRacToRowFrames(rac, outputStageSignature);
           Frame f = Frame.wrap(pairFrames.lhs);
           try {
@@ -236,7 +242,6 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
     final ColumnSelectorFactoryMaker csfm = ColumnSelectorFactoryMaker.fromRAC(rac);
     final ColumnSelectorFactory selectorFactory = csfm.make(rowId);
 
-    //columnsToGenerate.addAll(rac.getColumnNames());
     ArrayList<String> columnsToGenerate = new ArrayList<>(outputSignature.getColumnNames());
 
 
@@ -276,7 +281,6 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
       remainingRowsToFetch--;
       frameWriter.addSelection();
     }
-
     return Pair.of(frameWriter.toByteArray(), sigBob.build());
   }
 }
