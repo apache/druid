@@ -104,7 +104,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
             expressionVirtualColumn("v0", "concat('key:',\"dim1\")", ColumnType.STRING),
             equality("v0", "abc", ColumnType.STRING)
         ),
-        ImmutableList.of(new Object[]{"xabc", 1L})
+        ImmutableList.of()
     );
   }
 
@@ -676,7 +676,9 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
             ? not(in("dim1", ImmutableList.of("nonexistent", "x6", "xabc"), EXTRACTION_FN))
             : not(in("dim1", ImmutableList.of("6", "abc"), null))
         ),
-        ImmutableList.of(new Object[]{NullHandling.defaultStringValue(), 5L})
+        NullHandling.sqlCompatible()
+        ? Collections.emptyList()
+        : ImmutableList.of(new Object[]{NullHandling.defaultStringValue(), 5L})
     );
   }
 
@@ -693,7 +695,9 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
             ? not(in("dim1", ImmutableList.of("x6", "xabc", "nonexistent"), EXTRACTION_FN))
             : not(in("dim1", ImmutableList.of("6", "abc"), null))
         ),
-        ImmutableList.of(new Object[]{NullHandling.defaultStringValue(), 5L})
+        NullHandling.sqlCompatible()
+        ? Collections.emptyList()
+        : ImmutableList.of(new Object[]{NullHandling.defaultStringValue(), 5L})
     );
   }
 
