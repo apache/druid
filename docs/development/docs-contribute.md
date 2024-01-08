@@ -113,6 +113,7 @@ Now you're up to date, and you can make your changes.
    
    ```bash
    cd website
+   # You only need to install once
    npm install
    npm run build
 
