@@ -24,9 +24,12 @@ import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.initialization.CoreInjectorBuilder;
+import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.testoperator.CalciteTestOperatorModule;
+
+import java.util.HashMap;
 
 /**
  * Create the injector used for {@link CalciteTests#INJECTOR}, but in a way that
@@ -50,6 +53,7 @@ public class CalciteTestInjectorBuilder
           new CalciteTestOperatorModule(),
           new CacheTestHelperModule(ResultCacheMode.DISABLED)
       );
+      ci.addModule(binder -> binder.bind(QueryStackTests.TIMELINES_KEY).toInstance(new HashMap<>()));
       return ci.build();
     } catch (Exception e) {
       // Catches failures when used as a static initializer.
