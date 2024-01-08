@@ -43,6 +43,7 @@ import org.apache.druid.client.HttpServerInventoryViewResource;
 import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.ConfigProvider;
 import org.apache.druid.guice.DruidBinders;
 import org.apache.druid.guice.Jerseys;
@@ -52,6 +53,7 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.QueryableModule;
+import org.apache.druid.guice.ServerViewModule;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.http.JettyHttpClientModule;
@@ -154,8 +156,7 @@ public class CliCoordinator extends ServerRunnable
 {
   private static final Logger log = new Logger(CliCoordinator.class);
   private static final String AS_OVERLORD_PROPERTY = "druid.coordinator.asOverlord.enabled";
-  private static final String CENTRALIZED_DATASOURCE_SCHEMA_ENABLED = "druid.centralizedDatasourceSchema.enabled";
-  private static final String SERVERVIEW_TYPE_PROPERTY = "druid.serverview.type";
+  public static final String CENTRALIZED_DATASOURCE_SCHEMA_ENABLED = "druid.centralizedDatasourceSchema.enabled";
 
   private Properties properties;
   private boolean beOverlord;
@@ -194,11 +195,24 @@ public class CliCoordinator extends ServerRunnable
     modules.add(JettyHttpClientModule.global());
 
     if (isSegmentMetadataCacheEnabled) {
-      if (!properties.getOrDefault(SERVERVIEW_TYPE_PROPERTY, "http").equals("http")) {
-        throw new RuntimeException(
-            "CentralizedDatasourceSchema feature is incompatible with Zookeeper based segment discovery. "
-            + "Please consider switching to http based segment discovery (druid.serverview.type=http) "
-            + "or disable the feature.");
+      String serverViewType = (String) properties.getOrDefault(
+          ServerViewModule.SERVERVIEW_TYPE_PROPERTY,
+          ServerViewModule.DEFAULT_SERVERVIEW_TYPE
+      );
+      if (!serverViewType.equals(ServerViewModule.SERVERVIEW_TYPE_HTTP)) {
+        throw DruidException
+            .forPersona(DruidException.Persona.ADMIN)
+            .ofCategory(DruidException.Category.UNSUPPORTED)
+            .build(
+                StringUtils.format(
+                    "CentralizedDatasourceSchema feature is incompatible with config %1$s=%2$s. "
+                    + "Please consider switching to http based segment discovery (set %1$s=%3$s) "
+                    + "or disable the feature (set %4$s=false).",
+                    ServerViewModule.SERVERVIEW_TYPE_PROPERTY,
+                    serverViewType,
+                    ServerViewModule.SERVERVIEW_TYPE_HTTP,
+                    CliCoordinator.CENTRALIZED_DATASOURCE_SCHEMA_ENABLED
+                ));
       }
       modules.add(new CoordinatorSegmentMetadataCacheModule());
       modules.add(new QueryableModule());

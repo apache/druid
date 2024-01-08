@@ -283,7 +283,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
             existingSignature.getColumnType(column)
                     .orElseThrow(() -> new ISE("Encountered null type for column [%s]", column));
 
-        mergedColumnTypes.compute(column, (c, existingType) -> columnTypeMergePolicy.merge(existingType, columnType));
+        mergedColumnTypes.put(column, columnType);
       }
 
       Map<String, ColumnType> columnMapping = segmentSchema.getColumnTypeMap();

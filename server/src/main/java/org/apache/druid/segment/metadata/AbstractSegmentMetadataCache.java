@@ -111,12 +111,6 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   private static final int MAX_SEGMENTS_PER_QUERY = 15000;
   private static final long DEFAULT_NUM_ROWS = 0;
 
-  // Newest segments first, so they override older ones.
-  protected static final Comparator<SegmentId> SEGMENT_ORDER = Comparator
-      .comparing((SegmentId segmentId) -> segmentId.getInterval().getStart())
-      .reversed()
-      .thenComparing(Function.identity());
-
   private final QueryLifecycleFactory queryLifecycleFactory;
   private final SegmentMetadataCacheConfig config;
   // Escalator, so we can attach an authentication result to queries we generate.
@@ -142,6 +136,15 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
    * and thus there is no concurrency control for this variable.
    */
   private int totalSegments = 0;
+
+  // Newest segments first, so they override older ones.
+  protected static final Comparator<SegmentId> SEGMENT_ORDER = Comparator
+      .comparing((SegmentId segmentId) -> segmentId.getInterval().getStart())
+      .reversed()
+      .thenComparing(Function.identity());
+
+  protected static final Interner<RowSignature> ROW_SIGNATURE_INTERNER = Interners.newWeakInterner();
+
   /**
    * DataSource -> Segment -> AvailableSegmentMetadata(contains RowSignature) for that segment.
    * Use SortedMap for segments so they are merged in deterministic order, from older to newer.
@@ -190,7 +193,6 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
       = new ConcurrentHashMap<>();
 
   protected final ExecutorService callbackExec;
-  protected static final Interner<RowSignature> ROW_SIGNATURE_INTERNER = Interners.newWeakInterner();
 
   @GuardedBy("lock")
   protected boolean isServerViewInitialized = false;
