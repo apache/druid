@@ -295,10 +295,9 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
         null
     );
 
-    String actualToString = azureInputSource.toString();
     Assert.assertEquals(
         "AzureStorageAccountInputSource{uris=[], prefixes=[azureStorage://container/blob], objects=[], objectGlob=null, azureInputSourceConfig=" + azureInputSourceConfig.toString() + "}",
-        actualToString
+        azureInputSource.toString()
     );
   }
 
@@ -319,7 +318,6 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
         new SystemFields(EnumSet.of(SystemField.URI, SystemField.BUCKET, SystemField.PATH))
     );
 
-    String actualToString = azureInputSource.toString();
     Assert.assertEquals(
         "AzureStorageAccountInputSource{"
             + "uris=[], "
@@ -329,7 +327,7 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
             + "azureInputSourceConfig=" + azureInputSourceConfig.toString() + ", "
             + "systemFields=[__file_uri, __file_bucket, __file_path]"
             + "}",
-        actualToString
+        azureInputSource.toString()
     );
   }
 
