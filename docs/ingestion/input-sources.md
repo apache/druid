@@ -468,7 +468,7 @@ The `objects` property is:
 |path|The container and path where data is located.|None|yes|
 
 
-Properties Object:
+The `properties` property is:
 Either set sharedAccessStorageToken OR key OR appRegistrationClientId/appRegistrationClientSecret/tenantId OR set nothing.
 
 
