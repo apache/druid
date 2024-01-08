@@ -188,7 +188,7 @@ public class ServerConfig
 
   /**
    * This feature flag enables query requests queuing when admins want to reserve some threads for
-   * non-query requests. This feature flag is not documented and can be removed in the future.
+   * non-query requests. This feature flag is not documented and will be removed in the future.
    */
   @JsonProperty
   private boolean enableQueryRequestsQueuing = true;
