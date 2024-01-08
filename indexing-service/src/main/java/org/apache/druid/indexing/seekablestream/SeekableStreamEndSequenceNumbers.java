@@ -168,9 +168,6 @@ public class SeekableStreamEndSequenceNumbers<PartitionIdType, SequenceOffsetTyp
       for (Map.Entry<PartitionIdType, SequenceOffsetType> entry : partitionSequenceNumberMap.entrySet()) {
         PartitionIdType partitionId = entry.getKey();
         SequenceOffsetType sequenceOffset = entry.getValue();
-        if (!otherStart.partitionSequenceNumberMap.containsKey(partitionId)) {
-          throw new IAE("%th Partition is not present in old commited metadata", partitionId);
-        }
         if (otherStart.partitionSequenceNumberMap.get(partitionId) != null && comparator.compare(sequenceOffset, otherStart.partitionSequenceNumberMap.get(partitionId)) > 0) {
           res = true;
           break;
