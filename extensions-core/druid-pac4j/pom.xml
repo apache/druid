@@ -34,7 +34,7 @@
   </parent>
 
   <properties>
-    <pac4j.version>3.8.3</pac4j.version>
+    <pac4j.version>4.5.7</pac4j.version>
 
     <!-- Following must be updated along with any updates to pac4j version -->
     <nimbus.lang.tag.version>1.7</nimbus.lang.tag.version>

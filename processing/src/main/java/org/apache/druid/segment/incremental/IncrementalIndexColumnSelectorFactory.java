@@ -127,12 +127,8 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory, Ro
   @Nullable
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
-    if (virtualColumns.exists(columnName)) {
-      return virtualColumns.getColumnCapabilities(adapter, columnName);
-    }
-
     // Use adapter.getColumnCapabilities instead of index.getCapabilities (see note in IncrementalIndexStorageAdapater)
-    return adapter.getColumnCapabilities(columnName);
+    return virtualColumns.getColumnCapabilitiesWithFallback(adapter, columnName);
   }
 
   @Nullable

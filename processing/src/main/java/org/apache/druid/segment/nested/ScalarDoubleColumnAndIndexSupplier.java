@@ -56,6 +56,7 @@ import org.apache.druid.segment.data.VByte;
 import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.SimpleBitmapColumnIndex;
+import org.apache.druid.segment.index.SimpleImmutableBitmapDelegatingIterableIndex;
 import org.apache.druid.segment.index.SimpleImmutableBitmapIndex;
 import org.apache.druid.segment.index.SimpleImmutableBitmapIterableIndex;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
@@ -242,15 +243,6 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
       return new SimpleBitmapColumnIndex()
       {
         final FixedIndexed<Double> dictionary = doubleDictionarySupplier.get();
-        @Override
-        public double estimateSelectivity(int totalRows)
-        {
-          final int id = dictionary.indexOf(doubleValue);
-          if (id < 0) {
-            return 0.0;
-          }
-          return (double) getBitmap(id).size() / totalRows;
-        }
 
         @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
@@ -285,28 +277,6 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
 
       return new SimpleBitmapColumnIndex()
       {
-        @Override
-        public double estimateSelectivity(int totalRows)
-        {
-          if (doubleValue == null) {
-            if (inputNull && NullHandling.sqlCompatible()) {
-              return (double) getBitmap(0).size() / totalRows;
-            } else {
-              return 0.0;
-            }
-          }
-          if (NullHandling.replaceWithDefault() && doubleValue.equals(NullHandling.defaultDoubleValue())) {
-            if (defaultValueIndex >= 0) {
-              return ((double) getBitmap(0).size() + (double) getBitmap(defaultValueIndex).size()) / totalRows;
-            }
-            return (double) getBitmap(0).size() / totalRows;
-          }
-          final int id = dictionary.indexOf(doubleValue);
-          if (id < 0) {
-            return 0.0;
-          }
-          return (double) getBitmap(id).size() / totalRows;
-        }
 
         @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
@@ -350,7 +320,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
     @Override
     public BitmapColumnIndex forSortedValues(SortedSet<String> values)
     {
-      return new SimpleImmutableBitmapIterableIndex()
+      return new SimpleImmutableBitmapDelegatingIterableIndex()
       {
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable()
@@ -457,7 +427,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
       if (ColumnIndexSupplier.skipComputingRangeIndexes(columnConfig, numRows, endIndex - startIndex)) {
         return null;
       }
-      return new SimpleImmutableBitmapIterableIndex()
+      return new SimpleImmutableBitmapDelegatingIterableIndex()
       {
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable()
@@ -503,7 +473,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
       return new SimpleImmutableBitmapIterableIndex()
       {
         @Override
-        public Iterable<ImmutableBitmap> getBitmapIterable()
+        public Iterable<ImmutableBitmap> getBitmapIterable(boolean includeUnknown)
         {
           return () -> new Iterator<ImmutableBitmap>()
           {
@@ -542,12 +512,12 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
                 Double nextValue = iterator.next();
                 if (nextValue == null) {
                   if (NullHandling.sqlCompatible()) {
-                    nextSet = doublePredicate.applyNull();
+                    nextSet = doublePredicate.applyNull().matches(includeUnknown);
                   } else {
-                    nextSet = doublePredicate.applyDouble(NullHandling.defaultDoubleValue());
+                    nextSet = doublePredicate.applyDouble(NullHandling.defaultDoubleValue()).matches(includeUnknown);
                   }
                 } else {
-                  nextSet = doublePredicate.applyDouble(nextValue);
+                  nextSet = doublePredicate.applyDouble(nextValue).matches(includeUnknown);
                 }
                 if (nextSet) {
                   next = index;
@@ -556,16 +526,6 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
               }
             }
           };
-        }
-
-        @Nullable
-        @Override
-        protected ImmutableBitmap getUnknownsBitmap()
-        {
-          if (matcherFactory.isNullInputUnknown()) {
-            return nullValueBitmap;
-          }
-          return null;
         }
       };
     }

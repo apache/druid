@@ -107,7 +107,7 @@ public class ExternalColumnSelectorFactory implements ColumnSelectorFactory
           if (expressionType == null) {
             return delegateDimensionSelector.getObject();
           }
-          return ExprEval.ofType(expressionType, delegateDimensionSelector.getObject()).value();
+          return ExprEval.bestEffortOf(delegateDimensionSelector.getObject()).castTo(expressionType).value();
         }
         catch (Exception e) {
           throw createException(e, dimensionSpec.getDimension(), inputSource, offset);
@@ -211,7 +211,7 @@ public class ExternalColumnSelectorFactory implements ColumnSelectorFactory
           if (expressionType == null) {
             return delegateColumnValueSelector.getObject();
           }
-          return ExprEval.ofType(expressionType, delegateColumnValueSelector.getObject()).value();
+          return ExprEval.bestEffortOf(delegateColumnValueSelector.getObject()).castTo(expressionType).value();
         }
         catch (Exception e) {
           throw createException(e, columnName, inputSource, offset);

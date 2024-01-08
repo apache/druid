@@ -178,10 +178,6 @@ public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactor
   @Nullable
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
-    if (virtualColumns.exists(columnName)) {
-      return virtualColumns.getColumnCapabilities(columnCache, columnName);
-    }
-
-    return columnCache.getColumnCapabilities(columnName);
+    return virtualColumns.getColumnCapabilitiesWithFallback(columnCache, columnName);
   }
 }

@@ -99,6 +99,22 @@ public class InputBindings
     };
   }
 
+  public static Expr.InputBindingInspector inspectorForColumn(String column, ExpressionType type)
+  {
+    return new Expr.InputBindingInspector()
+    {
+      @Nullable
+      @Override
+      public ExpressionType getType(String name)
+      {
+        if (column.equals(name)) {
+          return type;
+        }
+        return null;
+      }
+    };
+  }
+
   /**
    * Creates a {@link Expr.ObjectBinding} backed by some {@link Row}. {@link ColumnHolder#TIME_COLUMN_NAME} is special
    * handled to be backed by {@link Row#getTimestampFromEpoch()}, all other values are ethically sourced from

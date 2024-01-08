@@ -25,29 +25,29 @@ package org.apache.druid.query.filter;
  */
 public interface DruidLongPredicate
 {
-  DruidLongPredicate ALWAYS_FALSE = input -> false;
+  DruidLongPredicate ALWAYS_FALSE_WITH_NULL_UNKNOWN = input -> DruidPredicateMatch.FALSE;
 
-  DruidLongPredicate ALWAYS_TRUE = input -> true;
+  DruidLongPredicate ALWAYS_TRUE = input -> DruidPredicateMatch.TRUE;
 
   DruidLongPredicate MATCH_NULL_ONLY = new DruidLongPredicate()
   {
     @Override
-    public boolean applyLong(long input)
+    public DruidPredicateMatch applyLong(long input)
     {
-      return false;
+      return DruidPredicateMatch.FALSE;
     }
 
     @Override
-    public boolean applyNull()
+    public DruidPredicateMatch applyNull()
     {
-      return true;
+      return DruidPredicateMatch.TRUE;
     }
   };
 
-  boolean applyLong(long input);
+  DruidPredicateMatch applyLong(long input);
 
-  default boolean applyNull()
+  default DruidPredicateMatch applyNull()
   {
-    return false;
+    return DruidPredicateMatch.UNKNOWN;
   }
 }

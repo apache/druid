@@ -21,7 +21,7 @@ package org.apache.druid.segment;
 
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
-public abstract class TestObjectColumnSelector<T> extends ObjectColumnSelector<T>
+public abstract class TestObjectColumnSelector<T> extends ObjectBasedColumnSelector<T>
 {
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)

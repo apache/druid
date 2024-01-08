@@ -275,6 +275,15 @@ public class MSQTestBase extends BaseCalciteQueryTest
                   )
                   .build();
 
+  public static final Map<String, Object> FAIL_EMPTY_INSERT_ENABLED_MSQ_CONTEXT =
+      ImmutableMap.<String, Object>builder()
+                  .putAll(DEFAULT_MSQ_CONTEXT)
+                  .put(
+                      MultiStageQueryContext.CTX_FAIL_ON_EMPTY_INSERT,
+                      true
+                  )
+                  .build();
+
   public static final Map<String, Object>
       ROLLUP_CONTEXT_PARAMS = ImmutableMap.<String, Object>builder()
                                           .put(MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS, false)
@@ -503,7 +512,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     doReturn(mock(Request.class)).when(brokerClient).makeRequest(any(), anyString());
 
-    testTaskActionClient = Mockito.spy(new MSQTestTaskActionClient(objectMapper));
+    testTaskActionClient = Mockito.spy(new MSQTestTaskActionClient(objectMapper, injector));
     indexingServiceClient = new MSQTestOverlordServiceClient(
         objectMapper,
         injector,
@@ -1105,8 +1114,14 @@ public class MSQTestBase extends BaseCalciteQueryTest
     {
       Preconditions.checkArgument(sql != null, "sql cannot be null");
       Preconditions.checkArgument(queryContext != null, "queryContext cannot be null");
-      Preconditions.checkArgument(expectedDataSource != null, "dataSource cannot be null");
-      Preconditions.checkArgument(expectedRowSignature != null, "expectedRowSignature cannot be null");
+      Preconditions.checkArgument(
+          (expectedResultRows != null && expectedResultRows.isEmpty()) || expectedDataSource != null,
+          "dataSource cannot be null when expectedResultRows is non-empty"
+      );
+      Preconditions.checkArgument(
+          (expectedResultRows != null && expectedResultRows.isEmpty()) || expectedRowSignature != null,
+          "expectedRowSignature cannot be null when expectedResultRows is non-empty"
+      );
       Preconditions.checkArgument(
           expectedResultRows != null || expectedMSQFault != null || expectedMSQFaultClass != null,
           "at least one of expectedResultRows, expectedMSQFault or expectedMSQFaultClass should be set to non null"
@@ -1145,9 +1160,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
             segmentManager.getAllDataSegments().stream().map(s -> s.toString()).collect(
                 Collectors.joining("\n"))
         );
-        //check if segments are created
-        Assert.assertNotEquals(0, segmentManager.getAllDataSegments().size());
-
+        // check if segments are created
+        if (!expectedResultRows.isEmpty()) {
+          Assert.assertNotEquals(0, segmentManager.getAllDataSegments().size());
+        }
 
         String foundDataSource = null;
         SortedMap<SegmentId, List<List<Object>>> segmentIdVsOutputRowsMap = new TreeMap<>();
@@ -1212,8 +1228,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
         );
 
 
-        // assert data source name
-        Assert.assertEquals(expectedDataSource, foundDataSource);
+        // assert data source name when result rows is non-empty
+        if (!expectedResultRows.isEmpty()) {
+          Assert.assertEquals(expectedDataSource, foundDataSource);
+        }
         // assert spec
         if (expectedMSQSpec != null) {
           assertMSQSpec(expectedMSQSpec, foundSpec);
@@ -1244,7 +1262,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         }
 
         // Assert on the tombstone intervals
-        // Tombstone segments are only published, but since they donot have any data, they are not pushed by the
+        // Tombstone segments are only published, but since they do not have any data, they are not pushed by the
         // SegmentGeneratorFrameProcessorFactory. We can get the tombstone segment ids published by taking a set
         // difference of all the segments published with the segments that are created by the SegmentGeneratorFrameProcessorFactory
         if (!testTaskActionClient.getPublishedSegments().isEmpty()) {
