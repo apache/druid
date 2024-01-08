@@ -84,7 +84,7 @@
     "d3-selection": "^2.0.0",
     "echarts": "^5.4.3",
     "file-saver": "^2.0.5",
-    "follow-redirects": "^1.14.7",
+    "follow-redirects": "^1.15.4",
     "fontsource-open-sans": "^3.0.9",
     "hjson": "^3.2.2",
     "json-bigint-native": "^1.2.0",
