@@ -180,12 +180,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         "SELECT created_date, payload FROM %1$s WHERE dataSource = :dataSource AND used = true"
     );
 
-    final boolean compareAsString = intervals.stream().allMatch(Intervals::canCompareEndpointsAsStrings);
+    final boolean compareIntervalEndpointsAsString = intervals.stream()
+                                                              .allMatch(Intervals::canCompareEndpointsAsStrings);
     final SqlSegmentsMetadataQuery.IntervalMode intervalMode = SqlSegmentsMetadataQuery.IntervalMode.OVERLAPS;
 
     SqlSegmentsMetadataQuery.appendConditionForIntervalsAndMatchMode(
         queryBuilder,
-        compareAsString ? intervals : Collections.emptyList(),
+        compareIntervalEndpointsAsString ? intervals : Collections.emptyList(),
         intervalMode,
         connector
     );
@@ -197,30 +198,33 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               .createQuery(queryString)
               .bind("dataSource", dataSource);
 
-          if (compareAsString) {
+          if (compareIntervalEndpointsAsString) {
             SqlSegmentsMetadataQuery.bindQueryIntervals(query, intervals);
           }
 
-          return query.map((int index, ResultSet r, StatementContext ctx) ->
-                               new Pair<>(
-                                   JacksonUtils.readValue(jsonMapper, r.getBytes("payload"), DataSegment.class),
-                                   r.getString("created_date")
-                               )
-                      )
-                      .list()
-                      .stream()
-                      .filter(pair -> {
-                        if (intervals.isEmpty() || compareAsString) {
-                          return true;
-                        } else {
-                          for (Interval interval : intervals) {
-                            if (intervalMode.apply(interval, pair.lhs.getInterval())) {
-                              return true;
-                            }
-                          }
-                        }
-                        return false;
-                      }).collect(Collectors.toList());
+          final List<Pair<DataSegment, String>> segmentsWithCreatedDates = query
+              .map((int index, ResultSet r, StatementContext ctx) ->
+                       new Pair<>(
+                           JacksonUtils.readValue(jsonMapper, r.getBytes("payload"), DataSegment.class),
+                           r.getString("created_date")
+                       )
+              )
+              .list();
+
+          if (intervals.isEmpty() || compareIntervalEndpointsAsString) {
+            return segmentsWithCreatedDates;
+          } else {
+            return segmentsWithCreatedDates
+                .stream()
+                .filter(pair -> {
+                  for (Interval interval : intervals) {
+                    if (intervalMode.apply(interval, pair.lhs.getInterval())) {
+                      return true;
+                    }
+                  }
+                  return false;
+                }).collect(Collectors.toList());
+          }
         }
     );
   }
