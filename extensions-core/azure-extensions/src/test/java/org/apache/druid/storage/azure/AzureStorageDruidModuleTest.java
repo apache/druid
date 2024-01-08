@@ -260,7 +260,7 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   }
 
   @Test
-  public void testGetAzureUtilsWithDefaultProperties()
+  public void testGetBlobStorageEndpointWithDefaultProperties()
   {
     Properties properties = initializePropertes();
     AzureAccountConfig config = makeInjectorWithProperties(properties).getInstance(AzureAccountConfig.class);
@@ -269,7 +269,7 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   }
 
   @Test
-  public void testGetAzureUtilsWithDefaultCustomBlobPath()
+  public void testGetBlobStorageEndpointWithCustomBlobPath()
   {
     Properties properties = initializePropertes();
     final String customSuffix = "core.usgovcloudapi.net";

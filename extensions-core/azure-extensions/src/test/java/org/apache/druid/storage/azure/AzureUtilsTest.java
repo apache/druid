@@ -33,7 +33,6 @@ import org.junit.runner.RunWith;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Properties;
 import java.util.concurrent.TimeoutException;
 
 @RunWith(EasyMockRunner.class)
@@ -209,14 +208,14 @@ public class AzureUtilsTest extends EasyMockSupport
   }
 
   @Test
-  public void testGetAzureUtilsWithDefaultProperties()
+  public void testRemoveAzurePathPrefixDefaultEndpoint()
   {
     String outputBlob = AzureUtils.maybeRemoveAzurePathPrefix("blob.core.windows.net/container/blob", "blob.core.windows.net");
     Assert.assertEquals("container/blob", outputBlob);
   }
 
   @Test
-  public void testGetAzureUtilsWithDefaultCustomBlobPath()
+  public void testRemoveAzurePathPrefixCustomEndpoint()
   {
     String outputBlob = AzureUtils.maybeRemoveAzurePathPrefix("blob.core.usgovcloudapi.net/container/blob", "blob.core.usgovcloudapi.net");
     Assert.assertEquals("container/blob", outputBlob);
