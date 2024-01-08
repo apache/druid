@@ -33,7 +33,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Represents the start sequenceNumber per partition of a sequence. This class keeps an additional set of
@@ -179,15 +178,19 @@ public class SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetT
 
     if (stream.equals(otherStart.stream)) {
       //Same stream, compare the offset
-      AtomicReference<Boolean> res = new AtomicReference<>(false);
-      partitionSequenceNumberMap.forEach(
-          (partitionId, sequenceOffset) -> {
-            if (otherStart.partitionSequenceNumberMap.get(partitionId) != null && comparator.compare(sequenceOffset, otherStart.partitionSequenceNumberMap.get(partitionId)) > 0) {
-              res.set(true);
-            }
-          }
-      );
-      if (res.get()) {
+      boolean res = false;
+      for (Map.Entry<PartitionIdType, SequenceOffsetType> entry : partitionSequenceNumberMap.entrySet()) {
+        PartitionIdType partitionId = entry.getKey();
+        SequenceOffsetType sequenceOffset = entry.getValue();
+        if (!otherStart.partitionSequenceNumberMap.containsKey(partitionId)) {
+          throw new IAE("%th Partition is not present in old commited metadata", partitionId);
+        }
+        if (otherStart.partitionSequenceNumberMap.get(partitionId) != null && comparator.compare(sequenceOffset, otherStart.partitionSequenceNumberMap.get(partitionId)) > 0) {
+          res = true;
+          break;
+        }
+      }
+      if (res) {
         return 1;
       }
     }

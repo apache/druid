@@ -63,6 +63,8 @@ public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<Ka
   }
 
   @Override
+  // This method is to compare KafkaDataSourceMetadata.
+  // It compares this and other SeekableStreamSequenceNumbers using naturalOrder comparator.
   public int compareTo(KafkaDataSourceMetadata other)
   {
     if (!getClass().equals(other.getClass())) {
