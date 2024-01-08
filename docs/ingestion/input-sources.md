@@ -477,8 +477,8 @@ Either set sharedAccessStorageToken OR key OR appRegistrationClientId/appRegistr
 |sharedAccessStorageToken|The plain text string of this Azure Blob Storage Shared Access Token|None|No|
 |key|The root key of Azure Blob Storage Account|None|no|
 |appRegistrationClientId|The client ID of the Azure App registration to authenticate as|None|No|
-|appRegistrationClientSecret|The client secret of the Azure App registration to authenticate as|None|Yes if `appRegistrationClientId`` is provided|
-|tenantId|The tenant ID of the Azure App registration to authenticate as|None|Yes if `appRegistrationClientId`` is provided|
+|appRegistrationClientSecret|The client secret of the Azure App registration to authenticate as|None|Yes if `appRegistrationClientId` is provided|
+|tenantId|The tenant ID of the Azure App registration to authenticate as|None|Yes if `appRegistrationClientId` is provided|
 
 
 ## HDFS input source
