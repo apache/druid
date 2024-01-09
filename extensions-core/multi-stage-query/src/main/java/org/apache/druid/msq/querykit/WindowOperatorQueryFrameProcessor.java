@@ -23,8 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.FrameType;
-import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
@@ -33,8 +31,6 @@ import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.util.SettableLongVirtualColumn;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
-import org.apache.druid.frame.write.FrameWriters;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -46,7 +42,6 @@ import org.apache.druid.query.operator.OperatorFactory;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.rowsandcols.LazilyDecoratedRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
-import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.concrete.RowBasedFrameRowAndColumns;
 import org.apache.druid.query.rowsandcols.semantic.ColumnSelectorFactoryMaker;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -64,7 +59,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.BitSet;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
@@ -81,10 +75,9 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
   private final VirtualColumns frameWriterVirtualColumns;
   private final Closer closer = Closer.create();
   private final RowSignature outputStageSignature;
-
+  private final SimpleSettableOffset cursorOffset = new SimpleAscendingOffset(Integer.MAX_VALUE);
   private Cursor cursor;
   private Segment segment;
-  private final SimpleSettableOffset cursorOffset = new SimpleAscendingOffset(Integer.MAX_VALUE);
   private FrameWriter frameWriter;
   private long currentAllocatorCapacity; // Used for generating FrameRowTooLargeException if needed
 
@@ -122,6 +115,32 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
     }
 
     this.frameWriterVirtualColumns = VirtualColumns.create(frameWriterVirtualColumns);
+  }
+
+  private static Operator getOperator(RowBasedFrameRowAndColumns frameRowsAndColumns)
+  {
+    LazilyDecoratedRowsAndColumns ldrc = new LazilyDecoratedRowsAndColumns(
+        frameRowsAndColumns,
+        null,
+        null,
+        null,
+        OffsetLimit.limit(Integer.MAX_VALUE),
+        null,
+        null
+    );
+    // Create an operator on top of the created rows and columns
+    Operator op = new Operator()
+    {
+      @Nullable
+      @Override
+      public Closeable goOrContinue(Closeable continuationObject, Receiver receiver)
+      {
+        receiver.push(ldrc);
+        receiver.completed();
+        return continuationObject;
+      }
+    };
+    return op;
   }
 
   @Override
@@ -179,11 +198,11 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
           // Note that there can be multiple racs here
           // one per partition
           // But one rac will be written to 1 frame
-          Pair<byte[], RowSignature> pairFrames = materializeRacToRowFrames(rac, outputStageSignature);
-          Frame f = Frame.wrap(pairFrames.lhs);
+          AtomicInteger rowId = new AtomicInteger(0);
+          createFrameWriterIfNeeded(rac, rowId);
+          materializeRacToRowFrames(rac, outputStageSignature, rowId);
           try {
-            Iterables.getOnlyElement(outputChannels())
-                     .write(new FrameWithPartition(f, FrameWithPartition.NO_PARTITION));
+            flushFrameWriter();
           }
           catch (IOException e) {
             throw new RuntimeException(e);
@@ -206,67 +225,14 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
     return ReturnOrAwait.runAgain();
   }
 
-  private static Operator getOperator(RowBasedFrameRowAndColumns frameRowsAndColumns)
-  {
-    LazilyDecoratedRowsAndColumns ldrc = new LazilyDecoratedRowsAndColumns(
-        frameRowsAndColumns,
-        null,
-        null,
-        null,
-        OffsetLimit.limit(Integer.MAX_VALUE),
-        null,
-        null
-    );
-    // Create an operator on top of the created rows and columns
-    Operator op = new Operator()
-    {
-      @Nullable
-      @Override
-      public Closeable goOrContinue(Closeable continuationObject, Receiver receiver)
-      {
-        receiver.push(ldrc);
-        receiver.completed();
-        return continuationObject;
-      }
-    };
-    return op;
-  }
-
-  public Pair<byte[], RowSignature> materializeRacToRowFrames(RowsAndColumns rac, RowSignature outputSignature)
+  public void materializeRacToRowFrames(RowsAndColumns rac, RowSignature outputSignature, AtomicInteger rowId)
   {
     final int numRows = rac.numRows();
 
     BitSet rowsToSkip = null;
 
-    AtomicInteger rowId = new AtomicInteger(0);
-    final ColumnSelectorFactoryMaker csfm = ColumnSelectorFactoryMaker.fromRAC(rac);
-    final ColumnSelectorFactory selectorFactory = csfm.make(rowId);
-
-    ArrayList<String> columnsToGenerate = new ArrayList<>(outputSignature.getColumnNames());
-
-
-    final RowSignature.Builder sigBob = RowSignature.builder();
-    final ArenaMemoryAllocatorFactory memFactory = new ArenaMemoryAllocatorFactory(200 << 20);
-
-
-    for (String column : columnsToGenerate) {
-      final Column racColumn = rac.findColumn(column);
-      if (racColumn == null) {
-        continue;
-      }
-      sigBob.add(column, racColumn.toAccessor().getType());
-    }
-
     long remainingRowsToSkip = 0;
     long remainingRowsToFetch = Integer.MAX_VALUE;
-
-    final FrameWriter frameWriter;
-    frameWriter = FrameWriters.makeFrameWriterFactory(
-        FrameType.ROW_BASED,
-        memFactory,
-        sigBob.build(),
-        Collections.emptyList()
-    ).newFrameWriter(selectorFactory);
 
     rowId.set(0);
     for (; rowId.get() < numRows && remainingRowsToFetch > 0; rowId.incrementAndGet()) {
@@ -281,6 +247,34 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
       remainingRowsToFetch--;
       frameWriter.addSelection();
     }
-    return Pair.of(frameWriter.toByteArray(), sigBob.build());
+  }
+
+  private void createFrameWriterIfNeeded(RowsAndColumns rac, AtomicInteger rowId)
+  {
+    if (frameWriter == null) {
+      final ColumnSelectorFactoryMaker csfm = ColumnSelectorFactoryMaker.fromRAC(rac);
+      final ColumnSelectorFactory frameWriterColumnSelectorFactory = csfm.make(rowId);
+      final FrameWriterFactory frameWriterFactory = getFrameWriterFactory();
+      frameWriter = frameWriterFactory.newFrameWriter(frameWriterColumnSelectorFactory);
+      currentAllocatorCapacity = frameWriterFactory.allocatorCapacity();
+    }
+  }
+
+  private long flushFrameWriter() throws IOException
+  {
+    if (frameWriter != null && frameWriter.getNumRows() > 0) {
+      final Frame frame = Frame.wrap(frameWriter.toByteArray());
+      Iterables.getOnlyElement(outputChannels()).write(new FrameWithPartition(frame, FrameWithPartition.NO_PARTITION));
+      frameWriter.close();
+      frameWriter = null;
+      return frame.numRows();
+    } else {
+      if (frameWriter != null) {
+        frameWriter.close();
+        frameWriter = null;
+      }
+
+      return 0;
+    }
   }
 }
