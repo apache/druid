@@ -19,6 +19,7 @@
 
 package org.apache.druid.security.basic.authentication.validator;
 
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.security.basic.BasicAuthUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -36,6 +37,32 @@ public class PasswordHashGeneratorTest
 
     Assert.assertEquals(BasicAuthUtils.SALT_LENGTH, salt.length);
     Assert.assertEquals(PasswordHashGenerator.KEY_LENGTH / 8, hash.length);
+  }
+
+  @Test(timeout = 60_000L)
+  public void testHashIsNotRecomputedWhenCached()
+  {
+    final PasswordHashGenerator hashGenerator = new PasswordHashGenerator();
+
+    final char[] password = "this_is_a_long_password".toCharArray();
+    final int iterations = BasicAuthUtils.DEFAULT_KEY_ITERATIONS;
+    final byte[] salt = BasicAuthUtils.generateSalt();
+
+    final Stopwatch stopwatch = Stopwatch.createUnstarted();
+
+    // Verify that the first computation takes a few ms
+    stopwatch.restart();
+    hashGenerator.getOrComputePasswordHash(password, salt, iterations);
+    long firstComputeTimeMillis = stopwatch.millisElapsed();
+    Assert.assertTrue(firstComputeTimeMillis > 50);
+
+    // Verify that each subsequent computation takes less than 1ms
+    for (int i = 0; i < 10; ++i) {
+      stopwatch.restart();
+      hashGenerator.getOrComputePasswordHash(password, salt, iterations);
+      long recomputeTimeMillis = stopwatch.millisElapsed();
+      Assert.assertTrue(recomputeTimeMillis <= 1);
+    }
   }
 
 }
