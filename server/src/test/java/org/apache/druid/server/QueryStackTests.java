@@ -120,8 +120,6 @@ public class QueryStackTests
   private static final ServiceEmitter EMITTER = new NoopServiceEmitter();
   private static final int COMPUTE_BUFFER_SIZE = 10 * 1024 * 1024;
 
-  private static final Injector INJECTOR = buildInjector();
-
   private QueryStackTests()
   {
     // No instantiation.
@@ -378,11 +376,6 @@ public class QueryStackTests
   }
 
   public static Injector injector()
-  {
-    return INJECTOR;
-  }
-
-  private static Injector buildInjector()
   {
     Injector startupInjector = new StartupInjectorBuilder()
         .build();
