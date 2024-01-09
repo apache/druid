@@ -34,6 +34,7 @@ import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedValueIndex;
 import org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier;
+import org.apache.druid.segment.virtual.ExpressionSelectors;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -213,6 +214,11 @@ public interface Expr extends Cacheable
       );
 
       final ColumnCapabilities capabilities = columnIndexSelector.getColumnCapabilities(column);
+      if (!ExpressionSelectors.canMapOverDictionary(details, capabilities)) {
+        // for mvds, expression might need to evaluate entire row, but we don't have those handy, so fall back to
+        // not using indexes
+        return NoIndexesColumnIndexSupplier.getInstance();
+      }
       final ExpressionType inputType = ExpressionType.fromColumnTypeStrict(capabilities);
       final ColumnType outType;
       if (outputType == null) {
