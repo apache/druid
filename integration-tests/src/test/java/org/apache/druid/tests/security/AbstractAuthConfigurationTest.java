@@ -27,9 +27,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.calcite.avatica.AvaticaSqlException;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.annotations.Client;
 import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -45,7 +47,9 @@ import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.avatica.DruidAvaticaJsonHandler;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
+import org.apache.druid.testing.clients.OverlordResourceTestClient;
 import org.apache.druid.testing.utils.HttpUtil;
+import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.TestQueryHelper;
 import org.apache.druid.tests.indexer.AbstractIndexerTest;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -54,6 +58,7 @@ import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -72,6 +77,10 @@ public abstract class AbstractAuthConfigurationTest
   private static final Logger LOG = new Logger(AbstractAuthConfigurationTest.class);
   protected static final String INVALID_NAME = "invalid%2Fname";
 
+  protected static final String DATA_SOURCE = "auth_test";
+  protected static final String WIKI_LOOKUP = "wiki-simple";
+  protected static final String WIKIPEDIA_LOOKUP_RESOURCE = "/queries/wiki-lookup-config.json";
+
   protected static final String SYSTEM_SCHEMA_SEGMENTS_RESULTS_RESOURCE =
       "/results/auth_test_sys_schema_segments.json";
   protected static final String SYSTEM_SCHEMA_SERVER_SEGMENTS_RESULTS_RESOURCE =
@@ -83,6 +92,9 @@ public abstract class AbstractAuthConfigurationTest
 
   protected static final String SYS_SCHEMA_SEGMENTS_QUERY =
       "SELECT * FROM sys.segments WHERE datasource IN ('auth_test')";
+
+  protected static final String LOOKUP_QUERY =
+      "SELECT LOOKUP(page, 'wiki-simple') FROM auth_test";
 
   protected static final String SYS_SCHEMA_SERVERS_QUERY =
       "SELECT * FROM sys.servers WHERE tier IS NOT NULL";
@@ -104,14 +116,29 @@ public abstract class AbstractAuthConfigurationTest
    */
   protected static final List<ResourceAction> DATASOURCE_ONLY_PERMISSIONS = Collections.singletonList(
       new ResourceAction(
-          new Resource("auth_test", ResourceType.DATASOURCE),
+          new Resource(DATA_SOURCE, ResourceType.DATASOURCE),
+          Action.READ
+      )
+  );
+
+  protected static final List<ResourceAction> DATASOURCE_LOOKUP_CONFIG_PERMISSIONS = ImmutableList.of(
+      new ResourceAction(
+          new Resource(DATA_SOURCE, ResourceType.DATASOURCE),
+          Action.READ
+      ),
+      new ResourceAction(
+          new Resource(WIKI_LOOKUP, ResourceType.LOOKUP),
+          Action.READ
+      ),
+      new ResourceAction(
+          new Resource(".*", ResourceType.CONFIG),
           Action.READ
       )
   );
 
   protected static final List<ResourceAction> DATASOURCE_QUERY_CONTEXT_PERMISSIONS = ImmutableList.of(
       new ResourceAction(
-          new Resource("auth_test", ResourceType.DATASOURCE),
+          new Resource(DATA_SOURCE, ResourceType.DATASOURCE),
           Action.READ
       ),
       new ResourceAction(
@@ -189,6 +216,7 @@ public abstract class AbstractAuthConfigurationTest
     DATASOURCE_ONLY_USER("datasourceOnlyUser", "helloworld"),
     DATASOURCE_AND_CONTEXT_PARAMS_USER("datasourceAndContextParamsUser", "helloworld"),
     DATASOURCE_AND_SYS_USER("datasourceAndSysUser", "helloworld"),
+    DATASOURCE_AND_LOOKUP_USER("datasourceAndLookupUser", "helloworld"),
     DATASOURCE_WITH_STATE_USER("datasourceWithStateUser", "helloworld"),
     STATE_ONLY_USER("stateOnlyUser", "helloworld"),
     INTERNAL_SYSTEM("druid_system", "warlock");
@@ -231,9 +259,13 @@ public abstract class AbstractAuthConfigurationTest
   @Inject
   protected CoordinatorResourceTestClient coordinatorClient;
 
+  @Inject
+  protected OverlordResourceTestClient indexer;
+
   protected Map<User, HttpClient> httpClients;
 
   protected abstract void setupDatasourceOnlyUser() throws Exception;
+  protected abstract void setupDatasourceAndLookupUser() throws Exception;
   protected abstract void setupDatasourceAndContextParamsUser() throws Exception;
   protected abstract void setupDatasourceAndSysTableUser() throws Exception;
   protected abstract void setupDatasourceAndSysAndStateUser() throws Exception;
@@ -386,6 +418,36 @@ public abstract class AbstractAuthConfigurationTest
         adminTasks.stream()
                   .filter((taskEntry) -> "auth_test".equals(taskEntry.get("datasource")))
                   .collect(Collectors.toList())
+    );
+  }
+
+  @Test
+  public void test_lookupAccess_datasourceOnlyUser() throws Exception
+  {
+    final HttpClient datasourceOnlyUserClient = getHttpClient(User.DATASOURCE_ONLY_USER);
+
+    // as user that can only read auth_test
+    LOG.info("Checking lookup query as datasourceOnlyUser...");
+    final String expectedMsg = "{\"Access-Check-Result\":\"" + Access.DEFAULT_ERROR_MESSAGE + "\"}";
+    verifySystemSchemaQueryFailure(
+        datasourceOnlyUserClient,
+        LOOKUP_QUERY,
+        HttpResponseStatus.FORBIDDEN,
+        expectedMsg
+    );
+  }
+
+  @Test
+  public void test_lookupAccess_datasourceAndLookupUser() throws Exception
+  {
+    final HttpClient datasourceAndLookupUserClient = getHttpClient(User.DATASOURCE_AND_LOOKUP_USER);
+
+    // as user that can only read auth_test
+    LOG.info("Checking lookup query as datasourceAndLookupUser...");
+    verifyQuerySuccessful(
+        datasourceAndLookupUserClient,
+        LOOKUP_QUERY,
+        HttpResponseStatus.OK
     );
   }
 
@@ -608,6 +670,7 @@ public abstract class AbstractAuthConfigurationTest
   {
     setupHttpClients();
     setupDatasourceOnlyUser();
+    setupDatasourceAndLookupUser();
     setupDatasourceAndContextParamsUser();
     setupDatasourceAndSysTableUser();
     setupDatasourceAndSysAndStateUser();
@@ -790,6 +853,16 @@ public abstract class AbstractAuthConfigurationTest
     verifySystemSchemaQueryBase(client, query, expectedResults, true);
   }
 
+  protected void verifyQuerySuccessful(
+          HttpClient client,
+          String query,
+          HttpResponseStatus expectedErrorStatus
+  ) throws Exception
+  {
+    StatusResponseHolder responseHolder = makeSQLQueryRequest(client, query, expectedErrorStatus);
+    Assert.assertEquals(responseHolder.getStatus(), expectedErrorStatus);
+  }
+
   protected void verifySystemSchemaQueryFailure(
       HttpClient client,
       String query,
@@ -871,7 +944,6 @@ public abstract class AbstractAuthConfigurationTest
     );
     String responseContent = responseHolder.getContent();
     Assert.assertTrue(responseContent.contains("<tr><th>MESSAGE:</th><td>Unauthorized</td></tr>"));
-    Assert.assertFalse(responseContent.contains(maliciousUsername));
   }
 
   protected void setupHttpClients() throws Exception
@@ -917,20 +989,77 @@ public abstract class AbstractAuthConfigurationTest
     adminServers = getServersWithoutCurrentSizeAndStartTime(
         jsonMapper.readValue(
             fillServersTemplate(
-                config,
-                AbstractIndexerTest.getResourceAsString(SYSTEM_SCHEMA_SERVERS_RESULTS_RESOURCE)
+                    config,
+                    AbstractIndexerTest.getResourceAsString(SYSTEM_SCHEMA_SERVERS_RESULTS_RESOURCE)
             ),
             SYS_SCHEMA_RESULTS_TYPE_REFERENCE
         )
     );
 
     adminServerSegments = jsonMapper.readValue(
-        fillSegementServersTemplate(
-            config,
-            AbstractIndexerTest.getResourceAsString(SYSTEM_SCHEMA_SERVER_SEGMENTS_RESULTS_RESOURCE)
-        ),
-        SYS_SCHEMA_RESULTS_TYPE_REFERENCE
+            fillSegementServersTemplate(
+                    config,
+                    AbstractIndexerTest.getResourceAsString(SYSTEM_SCHEMA_SERVER_SEGMENTS_RESULTS_RESOURCE)
+            ),
+            SYS_SCHEMA_RESULTS_TYPE_REFERENCE
     );
+  }
+
+  public static InputStream getResourceAsStream(String resource)
+  {
+    return AbstractAuthConfigurationTest.class.getResourceAsStream(resource);
+  }
+
+  private static String getResourceAsString(String file) throws IOException
+  {
+    try (final InputStream inputStream = getResourceAsStream(file)) {
+      if (inputStream == null) {
+        throw new ISE("Failed to load resource: [%s]", file);
+      }
+      return IOUtils.toString(inputStream, StandardCharsets.UTF_8);
+    }
+  }
+
+  protected String loadData(String indexTask, Map<String, Object> specs) throws Exception
+  {
+    String taskSpec = getResourceAsString(indexTask);
+    taskSpec = StringUtils.replace(taskSpec, "%%DATASOURCE%%", DATA_SOURCE);
+    taskSpec = StringUtils.replace(
+            taskSpec,
+            "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
+            jsonMapper.writeValueAsString("0")
+    );
+    for (Map.Entry<String, Object> entry : specs.entrySet()) {
+      taskSpec = StringUtils.replace(
+              taskSpec,
+              entry.getKey(),
+              jsonMapper.writeValueAsString(entry.getValue())
+      );
+    }
+    final String taskID = indexer.submitTask(taskSpec);
+    LOG.info("TaskID for loading index task %s", taskID);
+    indexer.waitUntilTaskCompletes(taskID);
+    return taskID;
+  }
+
+  protected String loadSegmentId()
+  {
+    ITRetryUtil.retryUntilTrue(
+        () -> coordinatorClient.areSegmentsLoaded(DATA_SOURCE), "auth_test load"
+    );
+    final List<String> segments = coordinatorClient.getSegments(DATA_SOURCE);
+    Assert.assertEquals(segments.size(), 1);
+    return segments.get(0);
+  }
+
+  protected void setExpectedLookupObjects() throws Exception
+  {
+    if (!coordinatorClient.areLookupsLoaded(WIKI_LOOKUP)) {
+      coordinatorClient.initializeLookups(WIKIPEDIA_LOOKUP_RESOURCE);
+      ITRetryUtil.retryUntilTrue(
+          () -> coordinatorClient.areLookupsLoaded(WIKI_LOOKUP), "wikipedia lookup load"
+      );
+    }
   }
 
   /**

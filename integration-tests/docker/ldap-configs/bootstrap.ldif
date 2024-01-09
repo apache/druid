@@ -172,3 +172,21 @@ objectClass: groupOfUniqueNames
 cn: datasourceAndContextParamsGroup
 description: datasourceAndContextParamsGroup users
 uniqueMember: uid=datasourceAndContextParamsUser,ou=Users,dc=example,dc=org
+
+dn: uid=datasourceAndLookupUser,ou=Users,dc=example,dc=org
+uid: datasourceAndLookupUser
+cn: datasourceAndLookupUser
+sn: datasourceAndLookupUser
+objectClass: top
+objectClass: posixAccount
+objectClass: inetOrgPerson
+homeDirectory: /home/datasourceAndLookupUser
+uidNumber: 10
+gidNumber: 10
+userPassword: helloworld
+
+dn: cn=datasourceAndLookupGroup,ou=Groups,dc=example,dc=org
+objectClass: groupOfUniqueNames
+cn: datasourceAndLookupGroup
+description: datasourceAndLookupGroup users
+uniqueMember: uid=datasourceAndLookupUser,ou=Users,dc=example,dc=org

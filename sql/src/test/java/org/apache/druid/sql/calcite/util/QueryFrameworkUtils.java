@@ -153,7 +153,7 @@ public class QueryFrameworkUtils
     Set<NamedSchema> namedSchemas = new HashSet<>();
     namedSchemas.add(new NamedDruidSchema(druidSchema, CalciteTests.DRUID_SCHEMA_NAME));
     namedSchemas.add(new NamedSystemSchema(plannerConfig, systemSchema));
-    namedSchemas.add(new NamedLookupSchema(lookupSchema));
+    namedSchemas.add(new NamedLookupSchema(injector.getInstance(PlannerConfig.class), lookupSchema));
 
     if (viewSchema != null) {
       namedSchemas.add(new NamedViewSchema(viewSchema));
