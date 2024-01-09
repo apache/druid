@@ -20,7 +20,6 @@
 package org.apache.druid.segment.filter;
 
 import com.google.common.base.Function;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
@@ -34,7 +33,9 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.query.filter.DruidPredicateMatch;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.OrDimFilter;
@@ -127,27 +128,27 @@ public class FilterPartitionTest extends BaseFilterTest
         final DruidPredicateFactory predicateFactory = new DruidPredicateFactory()
         {
           @Override
-          public Predicate<String> makeStringPredicate()
+          public DruidObjectPredicate<String> makeStringPredicate()
           {
-            return input -> Objects.equals(valueOrNull, input);
+            return valueOrNull == null ? DruidObjectPredicate.isNull() : DruidObjectPredicate.equalTo(valueOrNull);
           }
 
           @Override
           public DruidLongPredicate makeLongPredicate()
           {
-            return input -> Objects.equals(valueOrNull, String.valueOf(input));
+            return input -> DruidPredicateMatch.of(Objects.equals(valueOrNull, String.valueOf(input)));
           }
 
           @Override
           public DruidFloatPredicate makeFloatPredicate()
           {
-            return input -> Objects.equals(valueOrNull, String.valueOf(input));
+            return input -> DruidPredicateMatch.of(Objects.equals(valueOrNull, String.valueOf(input)));
           }
 
           @Override
           public DruidDoublePredicate makeDoublePredicate()
           {
-            return input -> Objects.equals(valueOrNull, String.valueOf(input));
+            return input -> DruidPredicateMatch.of(Objects.equals(valueOrNull, String.valueOf(input)));
           }
 
         };

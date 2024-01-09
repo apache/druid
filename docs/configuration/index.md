@@ -836,7 +836,7 @@ This section contains the configuration options for endpoints that are supported
 
 ## Master server
 
-This section contains the configuration options for the services that reside on Master servers (Coordinators and Overlords) in the suggested [three-server configuration](../design/processes.md#server-types).
+This section contains the configuration options for the services that reside on Master servers (Coordinators and Overlords) in the suggested [three-server configuration](../design/architecture.md#druid-servers).
 
 ### Coordinator
 
@@ -1393,7 +1393,7 @@ For GCE's properties, please refer to the [gce-extensions](../development/extens
 
 ## Data server
 
-This section contains the configuration options for the services that reside on Data servers (MiddleManagers/Peons and Historicals) in the suggested [three-server configuration](../design/processes.md#server-types).
+This section contains the configuration options for the services that reside on Data servers (MiddleManagers/Peons and Historicals) in the suggested [three-server configuration](../design/architecture.md#druid-servers).
 
 Configuration options for the [Indexer process](../design/indexer.md) are also provided here.
 
@@ -1722,7 +1722,7 @@ See [cache configuration](#cache-configuration) for how to configure cache setti
 
 ## Query server
 
-This section contains the configuration options for the processes that reside on Query servers (Brokers) in the suggested [three-server configuration](../design/processes.md#server-types).
+This section contains the configuration options for the services that reside on Query servers (Brokers) in the suggested [three-server configuration](../design/architecture.md#druid-servers).
 
 Configuration options for the experimental [Router process](../design/router.md) are also provided here.
 
@@ -1758,7 +1758,7 @@ Laning strategies allow you to control capacity utilization for heterogeneous qu
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.query.scheduler.numThreads`|Maximum number of concurrently-running queries. When this parameter is set lower than `druid.server.http.numThreads`, query requests beyond the limit are denied with HTTP 429 instead of waiting in the Jetty request queue. This has the effect of reserving the leftover Jetty threads for non-query requests.<br /><br />When this parameter is set equal to or higher than `druid.server.http.numThreads`, it has no effect.|Unbounded|
+|`druid.query.scheduler.numThreads`|Maximum number of concurrently-running queries. When this parameter is set lower than `druid.server.http.numThreads`, query requests beyond the limit are put into the Jetty request queue. This has the effect of reserving the leftover Jetty threads for non-query requests.<br /><br />When this parameter is set equal to or higher than `druid.server.http.numThreads`, it has no effect.|Unbounded|
 |`druid.query.scheduler.laning.strategy`|Query laning strategy to use to assign queries to a lane in order to control capacities for certain classes of queries.|`none`|
 |`druid.query.scheduler.prioritization.strategy`|Query prioritization strategy to automatically assign priorities.|`manual`|
 

@@ -64,7 +64,7 @@ public class ColumnTypeFactory implements TypeFactory<ColumnType>
           case STRING:
             return ColumnType.STRING_ARRAY;
           default:
-            throw new ISE("Unsupported expression type[%s]", type.asTypeString());
+            return ColumnType.ofArray(ofType(type.getElementType()));
         }
       case COMPLEX:
         return INTERNER.intern(new ColumnType(ValueType.COMPLEX, type.getComplexTypeName(), null));

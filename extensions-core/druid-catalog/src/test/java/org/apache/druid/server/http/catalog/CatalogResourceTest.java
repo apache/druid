@@ -150,9 +150,9 @@ public class CatalogResourceTest
     TableSpec inputSpec = TableBuilder.external("inline")
         .inputSource(toMap(new InlineInputSource("a,b,1\nc,d,2\n")))
         .inputFormat(BaseExternTableTest.CSV_FORMAT)
-        .column("a", Columns.VARCHAR)
-        .column("b", Columns.VARCHAR)
-        .column("c", Columns.BIGINT)
+        .column("a", Columns.STRING)
+        .column("b", Columns.STRING)
+        .column("c", Columns.LONG)
         .buildSpec();
     resp = resource.postTable(TableId.EXTERNAL_SCHEMA, "inline", inputSpec, 0, false, postBy(CatalogTests.WRITER_USER));
     assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());

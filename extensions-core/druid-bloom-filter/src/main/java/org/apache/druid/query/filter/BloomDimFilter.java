@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.RangeSet;
 import com.google.common.hash.HashCode;
@@ -84,13 +83,6 @@ public class BloomDimFilter extends AbstractOptimizableDimFilter implements DimF
         .build();
   }
 
-
-  @Override
-  public DimFilter optimize()
-  {
-    return this;
-  }
-
   @Override
   public Filter toFilter()
   {
@@ -98,16 +90,14 @@ public class BloomDimFilter extends AbstractOptimizableDimFilter implements DimF
         dimension,
         new DruidPredicateFactory()
         {
-          private final boolean isNullUnknown = !bloomKFilter.testBytes(null, 0, 0);
-
           @Override
-          public Predicate<String> makeStringPredicate()
+          public DruidObjectPredicate<String> makeStringPredicate()
           {
             return str -> {
               if (str == null) {
-                return bloomKFilter.testBytes(null, 0, 0);
+                return DruidPredicateMatch.of(bloomKFilter.testBytes(null, 0, 0));
               }
-              return bloomKFilter.testString(str);
+              return DruidPredicateMatch.of(bloomKFilter.testString(str));
             };
           }
 
@@ -117,15 +107,15 @@ public class BloomDimFilter extends AbstractOptimizableDimFilter implements DimF
             return new DruidLongPredicate()
             {
               @Override
-              public boolean applyLong(long input)
+              public DruidPredicateMatch applyLong(long input)
               {
-                return bloomKFilter.testLong(input);
+                return DruidPredicateMatch.of(bloomKFilter.testLong(input));
               }
 
               @Override
-              public boolean applyNull()
+              public DruidPredicateMatch applyNull()
               {
-                return bloomKFilter.testBytes(null, 0, 0);
+                return DruidPredicateMatch.of(bloomKFilter.testBytes(null, 0, 0));
               }
             };
           }
@@ -136,15 +126,15 @@ public class BloomDimFilter extends AbstractOptimizableDimFilter implements DimF
             return new DruidFloatPredicate()
             {
               @Override
-              public boolean applyFloat(float input)
+              public DruidPredicateMatch applyFloat(float input)
               {
-                return bloomKFilter.testFloat(input);
+                return DruidPredicateMatch.of(bloomKFilter.testFloat(input));
               }
 
               @Override
-              public boolean applyNull()
+              public DruidPredicateMatch applyNull()
               {
-                return bloomKFilter.testBytes(null, 0, 0);
+                return DruidPredicateMatch.of(bloomKFilter.testBytes(null, 0, 0));
               }
             };
           }
@@ -155,23 +145,17 @@ public class BloomDimFilter extends AbstractOptimizableDimFilter implements DimF
             return new DruidDoublePredicate()
             {
               @Override
-              public boolean applyDouble(double input)
+              public DruidPredicateMatch applyDouble(double input)
               {
-                return bloomKFilter.testDouble(input);
+                return DruidPredicateMatch.of(bloomKFilter.testDouble(input));
               }
 
               @Override
-              public boolean applyNull()
+              public DruidPredicateMatch applyNull()
               {
-                return bloomKFilter.testBytes(null, 0, 0);
+                return DruidPredicateMatch.of(bloomKFilter.testBytes(null, 0, 0));
               }
             };
-          }
-
-          @Override
-          public boolean isNullInputUnknown()
-          {
-            return isNullUnknown;
           }
         },
         extractionFn,

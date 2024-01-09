@@ -28,6 +28,7 @@ import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.math.expr.ExpressionTypeFactory;
 import org.apache.druid.math.expr.NamedFunction;
 import org.apache.druid.segment.nested.NestedPathFinder;
 import org.apache.druid.segment.nested.NestedPathPart;
@@ -44,6 +45,8 @@ import java.util.stream.Collectors;
 
 public class NestedDataExpressions
 {
+  private static ExpressionType JSON_ARRAY = ExpressionTypeFactory.getInstance().ofArray(ExpressionType.NESTED_DATA);
+
   public static class JsonObjectExprMacro implements ExprMacroTable.ExprMacro
   {
     public static final String NAME = "json_object";
@@ -587,6 +590,120 @@ public class NestedDataExpressions
       {
         // call all the output JSON typed
         return ExpressionType.NESTED_DATA;
+      }
+    }
+  }
+
+  public static class JsonQueryArrayExprMacro implements ExprMacroTable.ExprMacro
+  {
+    public static final String NAME = "json_query_array";
+
+    @Override
+    public String name()
+    {
+      return NAME;
+    }
+
+    @Override
+    public Expr apply(List<Expr> args)
+    {
+      if (args.get(1).isLiteral()) {
+        return new JsonQueryArrayExpr(args);
+      } else {
+        return new JsonQueryArrayDynamicExpr(args);
+      }
+    }
+
+    final class JsonQueryArrayExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
+    {
+      private final List<NestedPathPart> parts;
+
+      public JsonQueryArrayExpr(List<Expr> args)
+      {
+        super(name(), args);
+        this.parts = getJsonPathPartsFromLiteral(JsonQueryArrayExprMacro.this, args.get(1));
+      }
+
+      @Override
+      public ExprEval eval(ObjectBinding bindings)
+      {
+        ExprEval input = args.get(0).eval(bindings);
+        final Object value = NestedPathFinder.find(unwrap(input), parts);
+        if (value instanceof List) {
+          return ExprEval.ofArray(
+              JSON_ARRAY,
+              ExprEval.bestEffortArray((List) value).asArray()
+          );
+        }
+        return ExprEval.ofArray(
+            JSON_ARRAY,
+            ExprEval.bestEffortOf(value).asArray()
+        );
+      }
+
+      @Override
+      public Expr visit(Shuttle shuttle)
+      {
+        List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
+        if (newArgs.get(1).isLiteral()) {
+          return shuttle.visit(new JsonQueryArrayExpr(newArgs));
+        } else {
+          return shuttle.visit(new JsonQueryArrayDynamicExpr(newArgs));
+        }
+      }
+
+      @Nullable
+      @Override
+      public ExpressionType getOutputType(InputBindingInspector inspector)
+      {
+        // call all the output JSON typed
+        return ExpressionType.NESTED_DATA;
+      }
+    }
+
+    final class JsonQueryArrayDynamicExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
+    {
+      public JsonQueryArrayDynamicExpr(List<Expr> args)
+      {
+        super(name(), args);
+      }
+
+      @Override
+      public ExprEval eval(ObjectBinding bindings)
+      {
+        ExprEval input = args.get(0).eval(bindings);
+        ExprEval path = args.get(1).eval(bindings);
+        final List<NestedPathPart> parts = NestedPathFinder.parseJsonPath(path.asString());
+        final Object value = NestedPathFinder.find(unwrap(input), parts);
+        if (value instanceof List) {
+          return ExprEval.ofArray(
+              JSON_ARRAY,
+              ExprEval.bestEffortArray((List) value).asArray()
+          );
+        }
+        return ExprEval.ofArray(
+            JSON_ARRAY,
+            ExprEval.bestEffortOf(value).asArray()
+        );
+      }
+
+      @Override
+      public Expr visit(Shuttle shuttle)
+      {
+        List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
+        if (newArgs.get(1).isLiteral()) {
+          return shuttle.visit(new JsonQueryArrayExpr(newArgs));
+        } else {
+          return shuttle.visit(new JsonQueryArrayDynamicExpr(newArgs));
+        }
+      }
+
+      @Nullable
+      @Override
+      public ExpressionType getOutputType(InputBindingInspector inspector)
+      {
+        // call all the output ARRAY<COMPLEX<json>> typed
+        return JSON_ARRAY;
       }
     }
   }

@@ -20,8 +20,6 @@
 package org.apache.druid.segment.incremental;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -45,6 +43,7 @@ import org.apache.druid.query.filter.DimFilters;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -56,7 +55,6 @@ import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.query.topn.TopNQueryEngine;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.CloserRule;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
@@ -640,12 +638,6 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
     }
 
     @Override
-    public double estimateSelectivity(ColumnIndexSelector indexSelector)
-    {
-      return 1;
-    }
-
-    @Override
     public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
     {
       return Filters.makeValueMatcher(
@@ -653,12 +645,6 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
           "billy",
           new DictionaryRaceTestFilterDruidPredicateFactory()
       );
-    }
-
-    @Override
-    public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
-    {
-      return true;
     }
 
     @Override
@@ -677,7 +663,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
     private class DictionaryRaceTestFilterDruidPredicateFactory implements DruidPredicateFactory
     {
       @Override
-      public Predicate<String> makeStringPredicate()
+      public DruidObjectPredicate<String> makeStringPredicate()
       {
         try {
           index.add(
@@ -692,7 +678,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
           throw new RuntimeException(isee);
         }
 
-        return Predicates.alwaysTrue();
+        return DruidObjectPredicate.alwaysTrue();
       }
 
       @Override

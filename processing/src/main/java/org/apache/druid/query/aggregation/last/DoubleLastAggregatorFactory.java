@@ -21,21 +21,20 @@ package org.apache.druid.query.aggregation.last;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import org.apache.druid.collections.SerializablePair;
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.SerializablePairLongDouble;
+import org.apache.druid.query.aggregation.SerializablePairLongDoubleComplexMetricSerde;
 import org.apache.druid.query.aggregation.VectorAggregator;
-import org.apache.druid.query.aggregation.any.NilVectorAggregator;
 import org.apache.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.first.FirstLastUtils;
 import org.apache.druid.query.cache.CacheKeyBuilder;
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -45,6 +44,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
@@ -55,11 +55,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+@JsonTypeName("doubleLast")
 public class DoubleLastAggregatorFactory extends AggregatorFactory
 {
+  public static final ColumnType TYPE = ColumnType.ofComplex(SerializablePairLongDoubleComplexMetricSerde.TYPE_NAME);
   private static final Aggregator NIL_AGGREGATOR = new DoubleLastAggregator(
       NilColumnValueSelector.instance(),
-      NilColumnValueSelector.instance()
+      NilColumnValueSelector.instance(),
+      false
   )
   {
     @Override
@@ -71,7 +74,8 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
 
   private static final BufferAggregator NIL_BUFFER_AGGREGATOR = new DoubleLastBufferAggregator(
       NilColumnValueSelector.instance(),
-      NilColumnValueSelector.instance()
+      NilColumnValueSelector.instance(),
+      false
   )
   {
     @Override
@@ -104,13 +108,18 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    final BaseDoubleColumnValueSelector valueSelector = metricFactory.makeColumnValueSelector(fieldName);
+    final ColumnValueSelector valueSelector = metricFactory.makeColumnValueSelector(fieldName);
     if (valueSelector instanceof NilColumnValueSelector) {
       return NIL_AGGREGATOR;
     } else {
       return new DoubleLastAggregator(
           metricFactory.makeColumnValueSelector(timeColumn),
-          valueSelector
+          valueSelector,
+          FirstLastUtils.selectorNeedsFoldCheck(
+              valueSelector,
+              metricFactory.getColumnCapabilities(fieldName),
+              SerializablePairLongDouble.class
+          )
       );
     }
   }
@@ -126,26 +135,31 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
       VectorColumnSelectorFactory columnSelectorFactory
   )
   {
+    VectorValueSelector timeSelector = columnSelectorFactory.makeValueSelector(timeColumn);
     ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(fieldName);
     if (Types.isNumeric(capabilities)) {
       VectorValueSelector valueSelector = columnSelectorFactory.makeValueSelector(fieldName);
-      VectorValueSelector timeSelector = columnSelectorFactory.makeValueSelector(timeColumn);
       return new DoubleLastVectorAggregator(timeSelector, valueSelector);
-    } else {
-      return NilVectorAggregator.of(new SerializablePair<>(0L, NullHandling.defaultDoubleValue()));
     }
+    VectorObjectSelector objectSelector = columnSelectorFactory.makeObjectSelector(fieldName);
+    return new DoubleLastVectorAggregator(timeSelector, objectSelector);
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    final BaseDoubleColumnValueSelector valueSelector = metricFactory.makeColumnValueSelector(fieldName);
+    final ColumnValueSelector valueSelector = metricFactory.makeColumnValueSelector(fieldName);
     if (valueSelector instanceof NilColumnValueSelector) {
       return NIL_BUFFER_AGGREGATOR;
     } else {
       return new DoubleLastBufferAggregator(
           metricFactory.makeColumnValueSelector(timeColumn),
-          valueSelector
+          valueSelector,
+          FirstLastUtils.selectorNeedsFoldCheck(
+              valueSelector,
+              metricFactory.getColumnCapabilities(fieldName),
+              SerializablePairLongDouble.class
+          )
       );
     }
   }
@@ -178,74 +192,13 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
   @Override
   public AggregateCombiner makeAggregateCombiner()
   {
-    throw new UOE("DoubleLastAggregatorFactory is not supported during ingestion for rollup");
+    return new GenericLastAggregateCombiner(SerializablePairLongDouble.class);
   }
 
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new DoubleLastAggregatorFactory(name, name, timeColumn)
-    {
-      @Override
-      public Aggregator factorize(ColumnSelectorFactory metricFactory)
-      {
-        final ColumnValueSelector<SerializablePair<Long, Double>> selector =
-            metricFactory.makeColumnValueSelector(name);
-        return new DoubleLastAggregator(null, null)
-        {
-          @Override
-          public void aggregate()
-          {
-            SerializablePair<Long, Double> pair = selector.getObject();
-            if (pair.lhs >= lastTime) {
-              lastTime = pair.lhs;
-              if (pair.rhs != null) {
-                lastValue = pair.rhs;
-                rhsNull = false;
-              } else {
-                rhsNull = true;
-              }
-            }
-          }
-        };
-      }
-
-      @Override
-      public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
-      {
-        final ColumnValueSelector<SerializablePair<Long, Double>> selector =
-            metricFactory.makeColumnValueSelector(name);
-        return new DoubleLastBufferAggregator(null, null)
-        {
-          @Override
-          public void putValue(ByteBuffer buf, int position)
-          {
-            SerializablePair<Long, Double> pair = selector.getObject();
-            buf.putDouble(position, pair.rhs);
-          }
-
-          @Override
-          public void aggregate(ByteBuffer buf, int position)
-          {
-            SerializablePair<Long, Double> pair = selector.getObject();
-            long lastTime = buf.getLong(position);
-            if (pair.lhs >= lastTime) {
-              if (pair.rhs != null) {
-                updateTimeWithValue(buf, position, pair.lhs);
-              } else {
-                updateTimeWithNull(buf, position, pair.lhs);
-              }
-            }
-          }
-
-          @Override
-          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-          {
-            inspector.visit("selector", selector);
-          }
-        };
-      }
-    };
+    return new DoubleLastAggregatorFactory(name, name, timeColumn);
   }
 
   @Override
@@ -253,16 +206,16 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
   {
     Map map = (Map) object;
     if (map.get("rhs") == null) {
-      return new SerializablePair<>(((Number) map.get("lhs")).longValue(), null);
+      return new SerializablePairLongDouble(((Number) map.get("lhs")).longValue(), null);
     }
-    return new SerializablePair<>(((Number) map.get("lhs")).longValue(), ((Number) map.get("rhs")).doubleValue());
+    return new SerializablePairLongDouble(((Number) map.get("lhs")).longValue(), ((Number) map.get("rhs")).doubleValue());
   }
 
   @Override
   @Nullable
   public Object finalizeComputation(@Nullable Object object)
   {
-    return object == null ? null : ((SerializablePair<Long, Double>) object).rhs;
+    return object == null ? null : ((SerializablePairLongDouble) object).rhs;
   }
 
   @Override
@@ -302,8 +255,7 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
   @Override
   public ColumnType getIntermediateType()
   {
-    // if we don't pretend to be a primitive, group by v1 gets sad and doesn't work because no complex type serde
-    return storeDoubleAsFloat ? ColumnType.FLOAT : ColumnType.DOUBLE;
+    return TYPE;
   }
 
   @Override
