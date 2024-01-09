@@ -1170,10 +1170,15 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     if (theColumn instanceof CompressedNestedDataComplexColumn) {
       final CompressedNestedDataComplexColumn<?> nestedColumn = (CompressedNestedDataComplexColumn<?>) theColumn;
       final ColumnIndexSupplier nestedColumnPathIndexSupplier = nestedColumn.getColumnIndexSupplier(parts);
+      if (nestedColumnPathIndexSupplier == null && processFromRaw) {
+        // if processing from raw, a non-exstent path from parts doesn't mean the path doesn't really exist
+        // so fall back to no indexes
+        return NoIndexesColumnIndexSupplier.getInstance();
+      }
       if (expectedType != null) {
         final Set<ColumnType> types = nestedColumn.getColumnTypes(parts);
         // if the expected output type is numeric but not all of the input types are numeric, we might have additional
-        // null values than what the null value bitmap is tracking, wrap it
+        // null values than what the null value bitmap is tracking, fall back to not using indexes
         if (expectedType.isNumeric() && (types == null || types.stream().anyMatch(t -> !t.isNumeric()))) {
           return NoIndexesColumnIndexSupplier.getInstance();
         }
