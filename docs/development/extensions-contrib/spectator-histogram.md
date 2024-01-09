@@ -63,12 +63,12 @@ data store to benefit from high-dimensionality and high-cardinality data.
 
 SpectatorHistogram is designed for efficient parallel aggregations while still
 allowing for filtering and grouping by dimensions. 
-It provides similar functionality to the built-in data-sketch aggregator, but is
+It provides similar functionality to the built-in DataSketches `quantilesDoublesSketch` aggregator, but is
 opinionated and optimized for typical measurements from cloud services and web apps.
 For example, measurements such as page load time, transferred bytes, response time, and request latency.
 Through some trade-offs SpectatorHistogram provides a significantly more compact
 representation with the same aggregation performance and accuracy as
-data-sketches. Note that results depend on the dataset.
+DataSketches Quantiles Sketch. Note that results depend on the dataset.
 Also see the [limitations](#limitations] of this extension.
 
 ## Limitations
@@ -99,9 +99,9 @@ Again, these postAggregators can be used to compute percentiles from raw numeric
 values via the SpectatorHistogram aggregator or from pre-aggregated histograms.
 
 > If you're only using the aggregator to compute percentiles from raw numeric values,
-then you can use the built-in data-sketch aggregator instead. The performance
+then you can use the built-in quantilesDoublesSketch aggregator instead. The performance
 and accuracy are comparable. However, the DataSketch aggregator supports negative values,
-and you don't need to load an additional extension.
+and you don't need to download an additional extension.
  
 An aggregated SpectatorHistogram can also be queried using a `longSum` or `doubleSum`
 aggregator to retrieve the population of the histogram. This is effectively the count
@@ -271,7 +271,7 @@ array of percentiles.
 ## Examples
 
 ### Example Ingestion Spec
-Example of ingesting the sample wikipedia dataset with a histogram metric column:
+Example of ingesting the sample Wikipedia dataset with a histogram metric column:
 ```json
 {
   "type": "index_parallel",
@@ -334,7 +334,7 @@ Example of ingesting the sample wikipedia dataset with a histogram metric column
 ```
 
 ### Example Query
-Example query using the sample wikipedia dataset:
+Example query using the sample Wikipedia dataset:
 ```json
 {
   "queryType": "timeseries",
