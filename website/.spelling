@@ -131,6 +131,7 @@ InputFormat
 InputSource
 InputSources
 Integer.MAX_VALUE
+IntelliJ
 ioConfig
 Istio
 JBOD
@@ -2365,6 +2366,8 @@ isLeader
 taskslots
 loadstatus
 sqlQueryId
+useAzureCredentialsChain
+DefaultAzureCredential
 LAST_VALUE
 markUnused
 markUsed

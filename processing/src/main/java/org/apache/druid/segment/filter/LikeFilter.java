@@ -76,7 +76,7 @@ public class LikeFilter implements Filter
     final ColumnIndexSupplier indexSupplier = selector.getIndexSupplier(dimension);
     if (indexSupplier == null) {
       // Treat this as a column full of nulls
-      return likeMatcher.matches(null)
+      return likeMatcher.matches(null).matches(false)
              ? new AllTrueBitmapColumnIndex(selector)
              : new AllUnknownBitmapColumnIndex(selector);
     }

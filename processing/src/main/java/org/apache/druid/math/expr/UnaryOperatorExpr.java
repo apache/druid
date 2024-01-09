@@ -184,7 +184,7 @@ class UnaryNotExpr extends UnaryExpr
     if (!ExpressionProcessing.useStrictBooleans()) {
       // conforming to other boolean-returning binary operators
       ExpressionType retType = ret.type().is(ExprType.DOUBLE) ? ExpressionType.DOUBLE : ExpressionType.LONG;
-      return ExprEval.ofBoolean(!ret.asBoolean(), retType.getType());
+      return ExprEval.ofBoolean(!ret.asBoolean(), retType);
     }
     return ExprEval.ofLongBoolean(!ret.asBoolean());
   }

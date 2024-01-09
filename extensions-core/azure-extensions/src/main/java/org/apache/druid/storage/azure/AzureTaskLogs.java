@@ -19,9 +19,9 @@
 
 package org.apache.druid.storage.azure;
 
+import com.azure.storage.blob.models.BlobStorageException;
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
-import com.microsoft.azure.storage.StorageException;
 import org.apache.druid.common.utils.CurrentTimeMillisSupplier;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -31,7 +31,6 @@ import org.apache.druid.tasklogs.TaskLogs;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URISyntaxException;
 import java.util.Date;
 
 /**
@@ -93,13 +92,7 @@ public class AzureTaskLogs implements TaskLogs
   private void pushTaskFile(final File logFile, String taskKey)
   {
     try {
-      AzureUtils.retryAzureOperation(
-          () -> {
-            azureStorage.uploadBlockBlob(logFile, config.getContainer(), taskKey);
-            return null;
-          },
-          config.getMaxTries()
-      );
+      azureStorage.uploadBlockBlob(logFile, config.getContainer(), taskKey, accountConfig.getMaxTries());
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -153,7 +146,7 @@ public class AzureTaskLogs implements TaskLogs
         throw new IOException(e);
       }
     }
-    catch (StorageException | URISyntaxException e) {
+    catch (BlobStorageException e) {
       throw new IOE(e, "Failed to stream logs from: %s", taskKey);
     }
   }

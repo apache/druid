@@ -17,20 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.expression;
+package org.apache.druid.server.audit;
 
-import org.apache.druid.sql.calcite.util.CalciteTestBase;
-import org.junit.Rule;
-import org.junit.rules.ExpectedException;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
-public abstract class ExpressionTestBase extends CalciteTestBase
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = SQLAuditManagerConfig.class)
+@JsonSubTypes(value = {
+    @Type(name = "log", value = LoggingAuditManagerConfig.class),
+    @Type(name = "sql", value = SQLAuditManagerConfig.class)
+})
+public interface AuditManagerConfig
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
+  boolean isSkipNullField();
 
-  void expectException(Class<? extends Throwable> type, String message)
-  {
-    expectedException.expect(type);
-    expectedException.expectMessage(message);
-  }
+  long getMaxPayloadSizeBytes();
+
+  boolean isAuditSystemRequests();
 }

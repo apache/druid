@@ -22,8 +22,6 @@ package org.apache.druid.query.filter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
@@ -42,6 +40,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.index.AllTrueBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
 import org.apache.druid.segment.index.semantic.NullValueIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
@@ -98,12 +97,6 @@ public class NullFilter extends AbstractOptimizableDimFilter implements Filter
   }
 
   @Override
-  public DimFilter optimize()
-  {
-    return this;
-  }
-
-  @Override
   public Filter toFilter()
   {
     return this;
@@ -135,10 +128,14 @@ public class NullFilter extends AbstractOptimizableDimFilter implements Filter
       return new AllTrueBitmapColumnIndex(selector);
     }
     final NullValueIndex nullValueIndex = indexSupplier.as(NullValueIndex.class);
-    if (nullValueIndex == null) {
-      return null;
+    if (nullValueIndex != null) {
+      return nullValueIndex.get();
     }
-    return nullValueIndex.get();
+    final DruidPredicateIndexes predicateIndexes = indexSupplier.as(DruidPredicateIndexes.class);
+    if (predicateIndexes != null) {
+      return predicateIndexes.forPredicate(NullPredicateFactory.INSTANCE);
+    }
+    return null;
   }
 
   @Override
@@ -229,9 +226,9 @@ public class NullFilter extends AbstractOptimizableDimFilter implements Filter
     }
 
     @Override
-    public Predicate<String> makeStringPredicate()
+    public DruidObjectPredicate<String> makeStringPredicate()
     {
-      return Predicates.isNull();
+      return DruidObjectPredicate.isNull();
     }
 
     @Override
@@ -253,22 +250,15 @@ public class NullFilter extends AbstractOptimizableDimFilter implements Filter
     }
 
     @Override
-    public Predicate<Object[]> makeArrayPredicate(@Nullable TypeSignature<ValueType> arrayType)
+    public DruidObjectPredicate<Object[]> makeArrayPredicate(@Nullable TypeSignature<ValueType> arrayType)
     {
-      return Predicates.isNull();
+      return DruidObjectPredicate.isNull();
     }
 
     @Override
-    public Predicate<Object> makeObjectPredicate()
+    public DruidObjectPredicate<Object> makeObjectPredicate()
     {
-      return Predicates.isNull();
-    }
-
-    @Override
-    public boolean isNullInputUnknown()
-    {
-      // this filter only matches null inputs
-      return false;
+      return DruidObjectPredicate.isNull();
     }
 
     @Override

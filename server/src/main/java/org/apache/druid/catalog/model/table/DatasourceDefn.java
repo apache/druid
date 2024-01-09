@@ -68,16 +68,6 @@ public class DatasourceDefn extends TableDefn
    */
   public static final String HIDDEN_COLUMNS_PROPERTY = "hiddenColumns";
 
-  /**
-   * By default: columns are optional hints. If a datasource has columns defined,
-   * well validate them, but MSQ and other tools are free to create additional columns.
-   * That is, we assume "auto-discovered" columns by default. However, in some use cases,
-   * the schema may be carefully designed. This is especially true for ETL use cases in
-   * which multiple input schemas are mapped into a single datasource schema designed for
-   * ease of end user use. In this second use case, we may want to reject an attempt to
-   * ingest columns other than those in the schema. To do that, set {@code sealed = true}.
-   * In other words, "sealed" mode works like a traditional RDBMS.
-   */
   public static final String SEALED_PROPERTY = "sealed";
 
   public static final String TABLE_TYPE = "datasource";
@@ -148,7 +138,7 @@ public class DatasourceDefn extends TableDefn
   protected void validateColumn(ColumnSpec spec)
   {
     super.validateColumn(spec);
-    if (Columns.isTimeColumn(spec.name()) && spec.sqlType() != null) {
+    if (Columns.isTimeColumn(spec.name()) && spec.dataType() != null) {
       // Validate type in next PR
     }
   }
