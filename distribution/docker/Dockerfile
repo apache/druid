@@ -56,6 +56,8 @@ FROM $BASE_IMAGE
 
 LABEL maintainer="Apache Druid Developers <dev@druid.apache.org>"
 
+USER root
+
 COPY --from=busybox /bin/busybox /busybox/busybox
 RUN ["/busybox/busybox", "sh", "-c", "if [ ! -x \"$(command -v bash)\" ]; then \
                                         /busybox/busybox --install /bin; \
@@ -105,8 +107,12 @@ RUN mkdir /opt/druid/var /opt/shared \
 # Install iproute2 to get the ip command needed to set config of druid.host IP address
 # Command needed in druid.sh Line 140;
 RUN if [ ! -x "$(command -v ip)" ]; then \
-      apt update \
-      && apt install -y iproute2; \
+      if [ -x "$(command -v apt)" ]; then \
+        apt update \
+        && apt install -y iproute2; \
+      else \
+        apk add iproute2; \
+      fi; \
     fi;
 
 USER druid
