@@ -288,8 +288,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
                     }
 
                     // Wait some more, we'll wake up when it might be time to do another refresh.
-                    long waitMillis = Math.max(1, nextRefresh - System.currentTimeMillis());
-                    lock.wait(waitMillis);
+                    lock.wait(Math.max(1, nextRefresh - System.currentTimeMillis()));
                   }
 
                   segmentsToRefresh.addAll(segmentsNeedingRefresh);
@@ -882,16 +881,11 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
         querySegmentSpec,
         new AllColumnIncluderator(),
         false,
+        // disable the parallel merge because we don't care about the merge and don't want to consume its resources
         QueryContexts.override(
             internalQueryConfig.getContext(),
-            ImmutableMap.of(
-                // disable the parallel merge because we don't care about the merge and don't want to consume its resources
-                QueryContexts.BROKER_PARALLEL_MERGE_KEY,
-                false,
-                // dont use result cache for metadata
-                QueryContexts.POPULATE_RESULT_LEVEL_CACHE_KEY,
-                false
-            )
+            QueryContexts.BROKER_PARALLEL_MERGE_KEY,
+            false
         ),
         EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
         false,
