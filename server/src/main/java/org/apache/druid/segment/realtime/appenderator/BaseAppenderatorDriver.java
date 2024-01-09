@@ -62,7 +62,6 @@ import java.util.NavigableMap;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -676,17 +675,12 @@ public abstract class BaseAppenderatorDriver implements Closeable
                 segmentsAndCommitMetadata.getSegments(),
                 "Failed publish, not removing segments"
             );
-            if (e.getMessage() != null && e.getMessage().contains("Failed to update the metadata Store. The new start metadata is ahead of last commited end state.")) {
-              // we can recover from this error.
-              throw new ExecutionException(e);
-            } else {
-              Throwables.propagateIfPossible(e);
-              throw new RuntimeException(e);
-            }
+            Throwables.propagateIfPossible(e);
+            throw new RuntimeException(e);
           }
           return segmentsAndCommitMetadata;
         },
-        e -> (e instanceof ExecutionException),
+        e -> (e.getMessage() != null && e.getMessage().contains("Failed to update the metadata Store. The new start metadata is ahead of last commited end state.")),
         RetryUtils.DEFAULT_MAX_TRIES
       )
     );
