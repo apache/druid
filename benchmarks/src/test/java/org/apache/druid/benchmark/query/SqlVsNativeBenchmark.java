@@ -20,7 +20,6 @@
 package org.apache.druid.benchmark.query;
 
 import com.google.common.collect.ImmutableSet;
-import com.google.inject.Injector;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -118,9 +117,7 @@ public class SqlVsNativeBenchmark
     final QueryRunnerFactoryConglomerate conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(closer);
     final PlannerConfig plannerConfig = new PlannerConfig();
 
-    Injector injector = QueryStackTests.injector();
-    this.walker = closer
-        .register(new SpecificSegmentsQuerySegmentWalker(injector, conglomerate).add(dataSegment, index));
+    this.walker = closer.register(new SpecificSegmentsQuerySegmentWalker(conglomerate).add(dataSegment, index));
     final DruidSchemaCatalog rootSchema =
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     engine = CalciteTests.createMockSqlEngine(walker, conglomerate);

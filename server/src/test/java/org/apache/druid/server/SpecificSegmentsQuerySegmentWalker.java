@@ -121,6 +121,11 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
     );
   }
 
+  public SpecificSegmentsQuerySegmentWalker(final QueryRunnerFactoryConglomerate conglomerate)
+  {
+    this(QueryStackTests.injector(), conglomerate);
+  }
+
   /**
    * Create an instance without any lookups and with a default {@link JoinableFactory} that handles only inline
    * datasources.
