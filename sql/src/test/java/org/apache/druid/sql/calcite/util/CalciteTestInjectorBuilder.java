@@ -24,7 +24,6 @@ import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.initialization.CoreInjectorBuilder;
-import org.apache.druid.server.QueryStackTestsModule;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.testoperator.CalciteTestOperatorModule;
@@ -49,8 +48,7 @@ public class CalciteTestInjectorBuilder
           new LookylooModule(),
           new SqlAggregationModule(),
           new CalciteTestOperatorModule(),
-          new CacheTestHelperModule(ResultCacheMode.DISABLED),
-          new QueryStackTestsModule()
+          new CacheTestHelperModule(ResultCacheMode.DISABLED)
       );
       return ci.build();
     }

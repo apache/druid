@@ -395,8 +395,7 @@ public class QueryStackTests
         .addModule(new ExpressionModule())
         .addModule(new SegmentWranglerModule())
         .addModule(new CacheTestHelperModule(ResultCacheMode.DISABLED))
-        .addModule(binder -> binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupProvider))
-        .addModule(new QueryStackTestsModule());
+        .addModule(binder -> binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupProvider));
 
     return injectorBuilder.build();
   }
