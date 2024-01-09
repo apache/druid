@@ -77,7 +77,6 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Object>
   @Nullable
   private final HavingSpec havingSpec;
 
-  @Nullable
   private final SettableLongVirtualColumn partitionBoostVirtualColumn;
 
   private Cursor frameCursor = null;
@@ -87,7 +86,6 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Object>
 
   public GroupByPostShuffleFrameProcessor(
       final GroupByQuery query,
-      final boolean partitionBoosted,
       final GroupingEngine groupingEngine,
       final ReadableFrameChannel inputChannel,
       final WritableFrameChannel outputChannel,
@@ -105,9 +103,7 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Object>
     this.mergeFn = groupingEngine.createMergeFn(query);
     this.finalizeFn = makeFinalizeFn(query);
     this.havingSpec = cloneHavingSpec(query);
-    this.partitionBoostVirtualColumn = partitionBoosted
-                                       ? new SettableLongVirtualColumn(QueryKitUtils.PARTITION_BOOST_COLUMN)
-                                       : null;
+    this.partitionBoostVirtualColumn = new SettableLongVirtualColumn(QueryKitUtils.PARTITION_BOOST_COLUMN);
     this.columnSelectorFactoryForFrameWriter =
         makeVirtualColumnsForFrameWriter(partitionBoostVirtualColumn, jsonMapper, query).wrap(
             RowBasedGrouperHelper.createResultRowBasedColumnSelectorFactory(
@@ -242,9 +238,7 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Object>
     finalizeFn.accept(outputRow);
 
     if (frameWriter.addSelection()) {
-      if (partitionBoostVirtualColumn != null) {
-        partitionBoostVirtualColumn.setValue(partitionBoostVirtualColumn.getValue() + 1);
-      }
+      incrementBoostColumn();
       outputRow = null;
       return false;
     } else if (frameWriter.getNumRows() > 0) {
@@ -252,9 +246,7 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Object>
       setUpFrameWriterIfNeeded();
 
       if (frameWriter.addSelection()) {
-        if (partitionBoostVirtualColumn != null) {
-          partitionBoostVirtualColumn.setValue(partitionBoostVirtualColumn.getValue() + 1);
-        }
+        incrementBoostColumn();
         outputRow = null;
         return true;
       } else {
@@ -328,10 +320,7 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Object>
   {
     List<VirtualColumn> virtualColumns = new ArrayList<>();
 
-    if (partitionBoostVirtualColumn != null) {
-      virtualColumns.add(partitionBoostVirtualColumn);
-    }
-
+    virtualColumns.add(partitionBoostVirtualColumn);
     final VirtualColumn segmentGranularityVirtualColumn =
         QueryKitUtils.makeSegmentGranularityVirtualColumn(jsonMapper, query);
     if (segmentGranularityVirtualColumn != null) {
@@ -339,5 +328,14 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Object>
     }
 
     return VirtualColumns.create(virtualColumns);
+  }
+
+  /**
+   * Increments the value of the partition boosting column. It should be called once the row value has been written
+   * to the frame
+   */
+  private void incrementBoostColumn()
+  {
+    partitionBoostVirtualColumn.setValue(partitionBoostVirtualColumn.getValue() + 1);
   }
 }

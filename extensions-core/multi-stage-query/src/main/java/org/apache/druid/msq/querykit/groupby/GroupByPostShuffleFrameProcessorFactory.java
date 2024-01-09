@@ -55,16 +55,13 @@ import java.util.function.Consumer;
 public class GroupByPostShuffleFrameProcessorFactory extends BaseFrameProcessorFactory
 {
   private final GroupByQuery query;
-  private final boolean partitionBoosted;
 
   @JsonCreator
   public GroupByPostShuffleFrameProcessorFactory(
-      @JsonProperty("query") GroupByQuery query,
-      @JsonProperty("partitionBoosted") boolean partitionBoosted
+      @JsonProperty("query") GroupByQuery query
   )
   {
     this.query = query;
-    this.partitionBoosted = partitionBoosted;
   }
 
   @JsonProperty
@@ -116,7 +113,6 @@ public class GroupByPostShuffleFrameProcessorFactory extends BaseFrameProcessorF
 
           return new GroupByPostShuffleFrameProcessor(
               query,
-              partitionBoosted,
               engine,
               readableInput.getChannel(),
               outputChannel.getWritableChannel(),
