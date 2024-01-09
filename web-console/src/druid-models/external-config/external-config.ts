@@ -134,7 +134,6 @@ export function externalConfigToInitDimensions(
         const columnName = columnDeclaration.getColumnName();
         if (timeExpression && timeExpression.containsColumnName(columnName)) return;
         return C(columnName);
-        // return C(columnName).applyIf(isArrays[i], ex => F('MV_TO_ARRAY', ex).as(columnName) as any);
       }),
     )
     .slice(0, MULTI_STAGE_QUERY_MAX_COLUMNS);

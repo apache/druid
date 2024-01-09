@@ -69,7 +69,15 @@ export const DIMENSION_SPEC_FIELDS: Field<DimensionSpec>[] = [
     name: 'castToType',
     type: 'string',
     defined: typeIsKnown(KNOWN_TYPES, 'auto'),
-    suggestions: [undefined, 'ARRAY<STRING>', 'ARRAY<LONG>', 'ARRAY<DOUBLE>'],
+    suggestions: [
+      undefined,
+      'STRING',
+      'LONG',
+      'DOUBLE',
+      'ARRAY<STRING>',
+      'ARRAY<LONG>',
+      'ARRAY<DOUBLE>',
+    ],
   },
 ];
 
