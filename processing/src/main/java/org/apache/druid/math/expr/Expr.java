@@ -515,8 +515,8 @@ public interface Expr extends Cacheable
    * @see Parser#applyUnappliedBindings
    * @see Parser#applyUnapplied
    * @see Parser#liftApplyLambda
-   * @see org.apache.druid.segment.virtual.ExpressionSelectors#makeDimensionSelector
-   * @see org.apache.druid.segment.virtual.ExpressionSelectors#makeColumnValueSelector
+   * @see ExpressionSelectors#makeDimensionSelector
+   * @see ExpressionSelectors#makeColumnValueSelector
    */
   @SuppressWarnings("JavadocReference")
   class BindingAnalysis
