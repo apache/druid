@@ -22,8 +22,6 @@ package org.apache.druid.query.filter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
@@ -228,9 +226,9 @@ public class NullFilter extends AbstractOptimizableDimFilter implements Filter
     }
 
     @Override
-    public Predicate<String> makeStringPredicate()
+    public DruidObjectPredicate<String> makeStringPredicate()
     {
-      return Predicates.isNull();
+      return DruidObjectPredicate.isNull();
     }
 
     @Override
@@ -252,22 +250,15 @@ public class NullFilter extends AbstractOptimizableDimFilter implements Filter
     }
 
     @Override
-    public Predicate<Object[]> makeArrayPredicate(@Nullable TypeSignature<ValueType> arrayType)
+    public DruidObjectPredicate<Object[]> makeArrayPredicate(@Nullable TypeSignature<ValueType> arrayType)
     {
-      return Predicates.isNull();
+      return DruidObjectPredicate.isNull();
     }
 
     @Override
-    public Predicate<Object> makeObjectPredicate()
+    public DruidObjectPredicate<Object> makeObjectPredicate()
     {
-      return Predicates.isNull();
-    }
-
-    @Override
-    public boolean isNullInputUnknown()
-    {
-      // this filter only matches null inputs
-      return false;
+      return DruidObjectPredicate.isNull();
     }
 
     @Override

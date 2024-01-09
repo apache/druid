@@ -54,6 +54,7 @@ public class AzureIngestClientFactoryTest extends EasyMockSupport
   @Before
   public void setup()
   {
+    EasyMock.expect(accountConfig.getBlobStorageEndpoint()).andReturn("blob.core.windows.net").anyTimes();
   }
 
   @Test
@@ -67,7 +68,9 @@ public class AzureIngestClientFactoryTest extends EasyMockSupport
         null
     );
     azureIngestClientFactory = new AzureIngestClientFactory(accountConfig, azureInputSourceConfig);
+    replayAll();
     BlobServiceClient blobServiceClient = azureIngestClientFactory.getBlobServiceClient(3, ACCOUNT);
+    verifyAll();
 
     Assert.assertEquals(ACCOUNT, blobServiceClient.getAccountName());
   }
@@ -84,7 +87,9 @@ public class AzureIngestClientFactoryTest extends EasyMockSupport
     );
     azureIngestClientFactory = new AzureIngestClientFactory(accountConfig, azureInputSourceConfig);
 
+    replayAll();
     BlobServiceClient blobServiceClient = azureIngestClientFactory.getBlobServiceClient(3, ACCOUNT);
+    verifyAll();
     StorageSharedKeyCredential storageSharedKeyCredential = StorageSharedKeyCredential.getSharedKeyCredentialFromPipeline(
         blobServiceClient.getHttpPipeline()
     );
@@ -108,7 +113,9 @@ public class AzureIngestClientFactoryTest extends EasyMockSupport
         null
     );
     azureIngestClientFactory = new AzureIngestClientFactory(accountConfig, azureInputSourceConfig);
+    replayAll();
     BlobServiceClient blobServiceClient = azureIngestClientFactory.getBlobServiceClient(3, ACCOUNT);
+    verifyAll();
 
     AzureSasCredentialPolicy azureSasCredentialPolicy = null;
     for (int i = 0; i < blobServiceClient.getHttpPipeline().getPolicyCount(); i++) {
@@ -131,7 +138,9 @@ public class AzureIngestClientFactoryTest extends EasyMockSupport
         "tenantId"
     );
     azureIngestClientFactory = new AzureIngestClientFactory(accountConfig, azureInputSourceConfig);
+    replayAll();
     BlobServiceClient blobServiceClient = azureIngestClientFactory.getBlobServiceClient(3, ACCOUNT);
+    verifyAll();
     BearerTokenAuthenticationPolicy bearerTokenAuthenticationPolicy = null;
     for (int i = 0; i < blobServiceClient.getHttpPipeline().getPolicyCount(); i++) {
       if (blobServiceClient.getHttpPipeline().getPolicy(i) instanceof BearerTokenAuthenticationPolicy) {

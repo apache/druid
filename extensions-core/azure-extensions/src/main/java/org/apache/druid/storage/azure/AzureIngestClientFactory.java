@@ -45,7 +45,7 @@ public class AzureIngestClientFactory extends AzureClientFactory
   public BlobServiceClient buildNewClient(Integer retryCount, String storageAccount)
   {
     BlobServiceClientBuilder clientBuilder = new BlobServiceClientBuilder()
-        .endpoint("https://" + storageAccount + ".blob.core.windows.net");
+        .endpoint("https://" + storageAccount + "." + config.getBlobStorageEndpoint());
 
     if (azureInputSourceConfig == null) {
       // If properties is not passed in inputSpec, use default azure credentials.

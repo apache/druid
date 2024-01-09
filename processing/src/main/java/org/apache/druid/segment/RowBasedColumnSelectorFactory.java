@@ -20,11 +20,11 @@
 package org.apache.druid.segment;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -262,24 +262,22 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
         @Override
         public ValueMatcher makeValueMatcher(final DruidPredicateFactory predicateFactory)
         {
-          final Predicate<String> predicate = predicateFactory.makeStringPredicate();
-          final boolean predicateMatchNull = predicate.apply(null);
+          final DruidObjectPredicate<String> predicate = predicateFactory.makeStringPredicate();
 
           return new ValueMatcher()
           {
             @Override
             public boolean matches(boolean includeUnknown)
             {
-              final boolean matchNull = includeUnknown && predicateFactory.isNullInputUnknown();
               updateCurrentValues();
 
               if (dimensionValues.isEmpty()) {
-                return matchNull || predicateMatchNull;
+                return predicate.apply(null).matches(includeUnknown);
               }
 
               for (String dimensionValue : dimensionValues) {
                 final String coerced = NullHandling.emptyToNullIfNeeded(dimensionValue);
-                if ((matchNull && coerced == null) || predicate.apply(coerced)) {
+                if (predicate.apply(coerced).matches(includeUnknown)) {
                   return true;
                 }
               }

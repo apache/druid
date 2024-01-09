@@ -87,19 +87,31 @@ public class CatalogUpdateNotifier implements CatalogUpdateListener
   public void start()
   {
     notifier.start();
-    LOG.info("Catalog catalog update notifier started");
+    LOG.info("Catalog update notifier started");
   }
 
   @LifecycleStop
   public void stop()
   {
     notifier.stop();
-    LOG.info("Catalog catalog update notifier stopped");
+    LOG.info("Catalog update notifier stopped");
   }
 
   @Override
   public void updated(UpdateEvent event)
   {
     notifier.send(JacksonUtils.toBytes(smileMapper, event));
+  }
+
+  @Override
+  public void flush()
+  {
+    // Not generated on this path
+  }
+
+  @Override
+  public void resync()
+  {
+    // Not generated on this path
   }
 }

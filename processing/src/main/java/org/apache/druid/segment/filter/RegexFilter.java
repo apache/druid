@@ -20,13 +20,14 @@
 package org.apache.druid.segment.filter;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Predicate;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.query.filter.DruidPredicateMatch;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 
@@ -67,27 +68,27 @@ public class RegexFilter extends DimensionPredicateFilter
     }
 
     @Override
-    public Predicate<String> makeStringPredicate()
+    public DruidObjectPredicate<String> makeStringPredicate()
     {
-      return input -> (input != null) && pattern.matcher(input).find();
+      return input -> input == null ? DruidPredicateMatch.UNKNOWN : DruidPredicateMatch.of(pattern.matcher(input).find());
     }
 
     @Override
     public DruidLongPredicate makeLongPredicate()
     {
-      return input -> pattern.matcher(String.valueOf(input)).find();
+      return input -> DruidPredicateMatch.of(pattern.matcher(String.valueOf(input)).find());
     }
 
     @Override
     public DruidFloatPredicate makeFloatPredicate()
     {
-      return input -> pattern.matcher(String.valueOf(input)).find();
+      return input -> DruidPredicateMatch.of(pattern.matcher(String.valueOf(input)).find());
     }
 
     @Override
     public DruidDoublePredicate makeDoublePredicate()
     {
-      return input -> pattern.matcher(String.valueOf(input)).find();
+      return input -> DruidPredicateMatch.of(pattern.matcher(String.valueOf(input)).find());
     }
 
     @Override

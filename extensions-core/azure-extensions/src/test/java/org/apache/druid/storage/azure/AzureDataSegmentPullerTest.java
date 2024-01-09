@@ -60,13 +60,14 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
     final File toDir = FileUtils.createTempDir();
     try {
       final InputStream zipStream = new FileInputStream(pulledFile);
+      final AzureAccountConfig config = new AzureAccountConfig();
 
       EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_PATH, azureStorage)).andReturn(new AzureByteSource(azureStorage, CONTAINER_NAME, BLOB_PATH));
       EasyMock.expect(azureStorage.getBlockBlobInputStream(0L, CONTAINER_NAME, BLOB_PATH)).andReturn(zipStream);
 
       replayAll();
 
-      AzureDataSegmentPuller puller = new AzureDataSegmentPuller(byteSourceFactory, azureStorage);
+      AzureDataSegmentPuller puller = new AzureDataSegmentPuller(byteSourceFactory, azureStorage, config);
 
       FileUtils.FileCopyResult result = puller.getSegmentFiles(CONTAINER_NAME, BLOB_PATH, toDir);
 
@@ -92,13 +93,14 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
     final File toDir = FileUtils.createTempDir();
     try {
       final InputStream zipStream = new FileInputStream(pulledFile);
+      final AzureAccountConfig config = new AzureAccountConfig();
 
       EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_PATH, azureStorage)).andReturn(new AzureByteSource(azureStorage, CONTAINER_NAME, BLOB_PATH));
       EasyMock.expect(azureStorage.getBlockBlobInputStream(0L, CONTAINER_NAME, BLOB_PATH)).andReturn(zipStream);
 
       replayAll();
 
-      AzureDataSegmentPuller puller = new AzureDataSegmentPuller(byteSourceFactory, azureStorage);
+      AzureDataSegmentPuller puller = new AzureDataSegmentPuller(byteSourceFactory, azureStorage, config);
 
       FileUtils.FileCopyResult result = puller.getSegmentFiles(CONTAINER_NAME, BLOB_PATH_HADOOP, toDir);
 
@@ -119,6 +121,7 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
   public void test_getSegmentFiles_nonRecoverableErrorRaisedWhenPullingSegmentFiles_doNotDeleteOutputDirectory()
       throws IOException, BlobStorageException, SegmentLoadingException
   {
+    final AzureAccountConfig config = new AzureAccountConfig();
 
     final File outDir = FileUtils.createTempDir();
     try {
@@ -131,7 +134,7 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
 
       replayAll();
 
-      AzureDataSegmentPuller puller = new AzureDataSegmentPuller(byteSourceFactory, azureStorage);
+      AzureDataSegmentPuller puller = new AzureDataSegmentPuller(byteSourceFactory, azureStorage, config);
 
       puller.getSegmentFiles(CONTAINER_NAME, BLOB_PATH, outDir);
     }
@@ -149,6 +152,7 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
   public void test_getSegmentFiles_recoverableErrorRaisedWhenPullingSegmentFiles_deleteOutputDirectory()
       throws IOException, BlobStorageException, SegmentLoadingException
   {
+    final AzureAccountConfig config = new AzureAccountConfig();
 
     final File outDir = FileUtils.createTempDir();
     try {
@@ -163,7 +167,7 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
       EasyMock.replay(azureStorage);
       EasyMock.replay(byteSourceFactory);
 
-      AzureDataSegmentPuller puller = new AzureDataSegmentPuller(byteSourceFactory, azureStorage);
+      AzureDataSegmentPuller puller = new AzureDataSegmentPuller(byteSourceFactory, azureStorage, config);
 
       puller.getSegmentFiles(CONTAINER_NAME, BLOB_PATH, outDir);
 

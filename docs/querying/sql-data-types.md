@@ -77,7 +77,7 @@ When `druid.generic.useDefaultValueForNull = true` (legacy mode), Druid instead 
 
 ## Arrays
 
-Druid supports [`ARRAY` types](arrays.md), which behave as standard SQL arrays, where results are grouped by matching entire arrays. The [`UNNEST` operator](./sql-array-functions.md#unn) can be used to perform operations on individual array elements, translating each element into a separate row. 
+Druid supports [`ARRAY` types](arrays.md), which behave as standard SQL arrays, where results are grouped by matching entire arrays. The [`UNNEST` operator](./sql.md#unnest) can be used to perform operations on individual array elements, translating each element into a separate row. 
 
 `ARRAY` typed columns can be stored in segments with JSON-based ingestion using the 'auto' typed dimension schema shared with [schema auto-discovery](../ingestion/schema-design.md#schema-auto-discovery-for-dimensions) to detect and ingest arrays as ARRAY typed columns. For [SQL based ingestion](../multi-stage-query/index.md), the query context parameter `arrayIngestMode` must be specified as `"array"` to ingest ARRAY types. In Druid 28, the default mode for this parameter is `"mvd"` for backwards compatibility, which instead can only handle `ARRAY<STRING>` which it stores in [multi-value string columns](#multi-value-strings). 
 

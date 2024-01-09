@@ -481,9 +481,9 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
       buf.append(sig.getColumnName(i)).append(" ");
       ColumnType type = sig.getColumnType(i).get();
       if (type == ColumnType.STRING) {
-        buf.append(Columns.VARCHAR);
+        buf.append(Columns.SQL_VARCHAR);
       } else if (type == ColumnType.LONG) {
-        buf.append(Columns.BIGINT);
+        buf.append(Columns.SQL_BIGINT);
       } else if (type == ColumnType.DOUBLE) {
         buf.append(Columns.DOUBLE);
       } else if (type == ColumnType.FLOAT) {

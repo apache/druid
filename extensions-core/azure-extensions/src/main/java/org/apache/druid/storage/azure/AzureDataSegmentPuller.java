@@ -39,14 +39,18 @@ public class AzureDataSegmentPuller
   private final AzureByteSourceFactory byteSourceFactory;
   private final AzureStorage azureStorage;
 
+  private final AzureAccountConfig azureAccountConfig;
+
   @Inject
   public AzureDataSegmentPuller(
       AzureByteSourceFactory byteSourceFactory,
-      AzureStorage azureStorage
+      AzureStorage azureStorage,
+      AzureAccountConfig azureAccountConfig
   )
   {
     this.byteSourceFactory = byteSourceFactory;
     this.azureStorage = azureStorage;
+    this.azureAccountConfig = azureAccountConfig;
   }
 
   FileUtils.FileCopyResult getSegmentFiles(
@@ -63,7 +67,7 @@ public class AzureDataSegmentPuller
           "Loading container: [%s], with blobPath: [%s] and outDir: [%s]", containerName, blobPath, outDir
       );
 
-      final String actualBlobPath = AzureUtils.maybeRemoveAzurePathPrefix(blobPath);
+      final String actualBlobPath = AzureUtils.maybeRemoveAzurePathPrefix(blobPath, azureAccountConfig.getBlobStorageEndpoint());
 
       final ByteSource byteSource = byteSourceFactory.create(containerName, actualBlobPath, azureStorage);
       final FileUtils.FileCopyResult result = CompressionUtils.unzip(

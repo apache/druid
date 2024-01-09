@@ -139,7 +139,9 @@ public class LikeFilterTest extends BaseFilterTest
     );
     assertFilterMatches(
         NotDimFilter.of(new LikeDimFilter("dim1", "bar", null, new SubstringDimExtractionFn(3, 3))),
-        ImmutableList.of("0", "1", "3", "5", "6")
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of("0", "1", "3", "5", "6")
+        : ImmutableList.of("5", "6")
     );
 
     assertFilterMatches(
@@ -150,7 +152,7 @@ public class LikeFilterTest extends BaseFilterTest
         NotDimFilter.of(new LikeDimFilter("dim2", "bbb", null, new SubstringDimExtractionFn(0, 3))),
         NullHandling.replaceWithDefault()
         ? ImmutableList.of("0", "1", "2", "3", "4", "6")
-        : ImmutableList.of("0", "1", "2", "4", "6")
+        : ImmutableList.of("1", "2", "4", "6")
     );
   }
 
@@ -194,7 +196,9 @@ public class LikeFilterTest extends BaseFilterTest
     );
     assertFilterMatches(
         NotDimFilter.of(new LikeDimFilter("dim1", "a%", null, new SubstringDimExtractionFn(1, null))),
-        ImmutableList.of("0", "1", "2", "4", "5", "6")
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of("0", "1", "2", "4", "5", "6")
+        : ImmutableList.of("1", "2", "4", "5", "6")
     );
 
     assertFilterMatches(
@@ -205,7 +209,7 @@ public class LikeFilterTest extends BaseFilterTest
         NotDimFilter.of(new LikeDimFilter("dim2", "a%", null, new SubstringDimExtractionFn(1, null))),
         NullHandling.replaceWithDefault()
         ? ImmutableList.of("0", "3", "4", "5", "6")
-        : ImmutableList.of("0", "4", "5", "6")
+        : ImmutableList.of("4", "5", "6")
     );
   }
 
