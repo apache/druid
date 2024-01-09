@@ -26,30 +26,28 @@ title: "Spectator Histogram module"
 This module provides Apache Druid approximate histogram aggregators and percentile
 post-aggregators based on Spectator fixed-bucket histograms.
 
-Consider using this extension if you need percentile approximations and:
-* want fast and accurate queries
-* at a lower storage cost
-* and have a large dataset
-* using only positive measurements
+Consider SpectatorHistogram to compute percentile approximations. This extension has a reduced storage footprint compared to the [DataSketches extension](../extensions-core/datasketches-extension.md), which results in smaller segment sizes, faster loading from deep storage, and lower memory usage. This extension provides fast and accurate queries on large datasets at low storage cost.
 
-> The main benefit of this extension over data-sketches is the reduced storage
-footprint. Which leads to smaller segment sizes, faster loading from deep storage
-and lower memory usage.
+This aggregator only applies when your raw data contains positive long integer values. Do not use this aggregator if you have negative values in your data.
 
 In the Druid instance shown below, the example Wikipedia dataset is loaded 3 times.
-* As-is, no rollup applied
-* With a single extra metric column of type `spectatorHistogram` ingesting the `added` column
-* With a single extra metric column of type `quantilesDoublesSketch` ingesting the `added` column
+* `wikipedia` contains the dataset ingested as is, without rollup
+* `wikipedia_spectator` contains the dataset with a single extra metric column of type `spectatorHistogram` for the `added` column
+* `wikipedia_datasketch` contains the dataset with a single extra metric column of type `quantilesDoublesSketch` for the `added` column
 
-Spectator histograms average just 6 extra bytes per row, while the data-sketch
-adds 48 bytes per row. This is an 8 x reduction in additional storage size.
+Spectator histograms average just 6 extra bytes per row, while the DataSketch
+adds 48 bytes per row. This represents an eightfold reduction in additional storage size for spectator histograms.
+
 ![Comparison of datasource sizes in web console](../../assets/spectator-histogram-size-comparison.png)
 
-As rollup improves, so does the size saving. For example, ingesting the wikipedia data
-with day-grain query granularity and removing all dimensions except `countryName`,
-we get to a segment that has just 106 rows. The base segment is 87 bytes per row,
-adding a single `spectatorHistogram` column adds just 27 bytes per row on average vs
-`quantilesDoublesSketch` adding 255 bytes per row. This is a 9.4 x reduction in additional storage size.
+As rollup improves, so does the size savings. For example, when you ingest the Wikipedia dataset
+with day-grain query granularity and remove all dimensions except `countryName`,
+this results in a segment that has just 106 rows. The base segment has 87 bytes per row.
+Compare the following bytes per row for SpectatorHistogram versus DataSketches:
+* An additional `spectatorHistogram` column adds 27 bytes per row on average.
+* An additional `quantilesDoublesSketch` column adds 255 bytes per row.
+
+SpectatorHistogram reduces the additional storage size by 9.4 times in this example.
 Storage gains will differ per dataset depending on the variance and rollup of the data.
 
 ## Background
@@ -66,41 +64,43 @@ data store to benefit from high-dimensionality and high-cardinality data.
 SpectatorHistogram is designed for efficient parallel aggregations while still
 allowing for filtering and grouping by dimensions. 
 It provides similar functionality to the built-in data-sketch aggregator, but is
-opinionated and optimized for typical measurements of cloud services and web-apps.
-Measurements such as page load time, transferred bytes, response time, request latency, etc.
-Through some trade-offs we're able to provide a significantly more compact
+opinionated and optimized for typical measurements from cloud services and web apps.
+For example, measurements such as page load time, transferred bytes, response time, and request latency.
+Through some trade-offs SpectatorHistogram provides a significantly more compact
 representation with the same aggregation performance and accuracy as
-data-sketches (depending on data-set, see limitations below).
+data-sketches. Note that results depend on the dataset.
+Also see the [limitations](#limitations] of this extension.
 
 ## Limitations
 * Supports positive long integer values within the range of [0, 2^53). Negatives are
 coerced to 0.
-* Decimals are not supported.
-* 276 fixed buckets with increasing bucket widths. In practice, the observed error of computed percentiles is in the range (0.1%, 3%). See [Bucket Boundaries](#histogram-bucket-boundaries) for the full list of bucket boundaries.
-* DruidSQL queries are yet not supported. You must use native Druid queries.
-* Vectorized queries are yet not supported.
+* Does not support decimals.
+* Does not support Druid SQL queries, only native queries.
+* Does not support vectorized queries.
+* Generates 276 fixed buckets with increasing bucket widths. In practice, the observed error of computed percentiles ranges from 0.1% to 3%, exclusive. See [Bucket boundaries](#histogram-bucket-boundaries) for the full list of bucket boundaries.
 
-> If any of these limitations are a problem, then the data-sketch aggregator
-is most likely a better choice.
+:::tip
+If these limitations don't work for your use case, then use [DataSketches](../extensions-core/datasketches-extension.md) instead.
+:::
 
 ## Functionality
-The SpectatorHistogram aggregator is capable of generating histograms from raw numeric
-values as well as aggregating/combining pre-aggregated histograms generated using
+The SpectatorHistogram aggregator can generate histograms from raw numeric
+values as well as aggregating or combining pre-aggregated histograms generated using
 the SpectatorHistogram aggregator itself.
 While you can generate histograms on the fly at query time, it is generally more
 performant to generate histograms during ingestion and then combine them at
 query time. This is especially true where rollup is enabled. It may be misleading or 
-incorrect to generate histogram from already rolled-up summed data.
+incorrect to generate histograms from already rolled-up summed data.
 
 The module provides postAggregators, `percentileSpectatorHistogram` (singular) and
-`percentilesSpectatorHistogram` (plural), that can be used to compute approximate 
+`percentilesSpectatorHistogram` (plural), to compute approximate 
 percentiles from histograms generated by the SpectatorHistogram aggregator.
 Again, these postAggregators can be used to compute percentiles from raw numeric
 values via the SpectatorHistogram aggregator or from pre-aggregated histograms.
 
 > If you're only using the aggregator to compute percentiles from raw numeric values,
 then you can use the built-in data-sketch aggregator instead. The performance
-and accuracy are comparable, the data-sketch aggregator supports negative values,
+and accuracy are comparable. However, the DataSketch aggregator supports negative values,
 and you don't need to load an additional extension.
  
 An aggregated SpectatorHistogram can also be queried using a `longSum` or `doubleSum`
@@ -117,7 +117,7 @@ amount of data that's needed to send from the client across the wire.
 SpectatorHistogram supports ingesting pre-aggregated histograms in real-time and batch.
 They can be sent as a JSON map, keyed by the spectator bucket ID and the value is the
 count of values. This is the same format as the serialized JSON representation of the
-histogram. The keys need not be ordered or contiguous e.g.
+histogram. The keys need not be ordered or contiguous. For example:
 
 ```json
 { "4":  8, "5": 15, "6": 37, "7": 9, "8": 3, "10": 1, "13": 1 }
@@ -138,7 +138,7 @@ JSON format where the keys are the bucket index and the values are the count of 
 in that bucket.
 
 The buckets are defined as per the Spectator [PercentileBuckets](https://github.com/Netflix/spectator/blob/main/spectator-api/src/main/java/com/netflix/spectator/api/histogram/PercentileBuckets.java) specification.
-See [Appendix](#histogram-bucket-boundaries) for the full list of bucket boundaries.
+See [Histogram bucket boundaries](#histogram-bucket-boundaries) for the full list of bucket boundaries.
 ```js
   // The set of buckets is generated by using powers of 4 and incrementing by one-third of the
   // previous power of 4 in between as long as the value is less than the next power of 4 minus
@@ -157,8 +157,8 @@ See [Appendix](#histogram-bucket-boundaries) for the full list of bucket boundar
 ```
 
 There are multiple aggregator types included, all of which are based on the same
-underlying implementation. The different types signal to the Atlas-Druid service (if using)
-how to handle the resulting data from a query.
+underlying implementation. If you use the Atlas-Druid service, the different types
+signal the service on how to handle the resulting data from a query.
 
 * spectatorHistogramTimer signals that the histogram is representing
 a collection of timer values. It is recommended to normalize timer values to nanoseconds
@@ -242,14 +242,14 @@ This returns an array of percentiles corresponding to those requested.
 }
 ```
 
-> Note: It's more efficient to request multiple percentiles in a single query
+> It's more efficient to request multiple percentiles in a single query
 than to request individual percentiles in separate queries. This array-based
 helper is provided for convenience and has a marginal performance benefit over
 using the singular percentile post-aggregator multiple times within a query.
 The more expensive part of the query is the aggregation of the histogram.
 The post-aggregation calculations all happen on the same aggregated histogram.
 
-Results will contain arrays matching the length and order of the requested
+The results contain arrays matching the length and order of the requested
 array of percentiles.
 
 ```
@@ -268,7 +268,7 @@ array of percentiles.
 | field       | A field reference pointing to the aggregated histogram.      | yes       |
 | percentiles | Non-empty array of decimal percentiles between 0.0 and 100.0 | yes       |
 
-## Appendix
+## Examples
 
 ### Example Ingestion Spec
 Example of ingesting the sample wikipedia dataset with a histogram metric column:
@@ -397,11 +397,11 @@ Results in
 ]
 ```
 
-### Histogram Bucket Boundaries
-These are the upper bounds of each bucket index. There are 276 buckets.
+## Histogram bucket boundaries
+The following array lists the upper bounds of each bucket index. There are 276 buckets in total.
 The first bucket index is 0 and the last bucket index is 275.
-As you can see the bucket widths increase as the bucket index increases. This leads to a greater absolute error for larger values, but maintains a relative error of rough percentage across the number range.
-i.e the maximum error at value 10 is 0 since the bucket width is 1. But for a value of 16,000,000,000 the bucket width is 1,431,655,768 giving an error of up to ~8.9%. In practice, the observed error of computed percentiles is in the range (0.1%, 3%).
+The bucket widths increase as the bucket index increases. This leads to a greater absolute error for larger values, but maintains a relative error of rough percentage across the number range.
+For example, the maximum error at value 10 is zero since the bucket width is 1 (the difference of `11-10`). For a value of 16,000,000,000, the bucket width is 1,431,655,768 (from `17179869184-15748213416`). This gives an error of up to ~8.9%, from `1,431,655,768/16,000,000,000*100`. In practice, the observed error of computed percentiles is in the range of (0.1%, 3%).
 ```json
 [
   1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 21, 26, 31, 36, 41, 46,
