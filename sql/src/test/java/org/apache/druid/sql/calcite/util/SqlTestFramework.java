@@ -583,9 +583,7 @@ public class SqlTestFramework
         .addModule(new SegmentWranglerModule())
         .addModule(new SqlAggregationModule())
         .addModule(new ExpressionModule())
-        .addModule(new TestSetupModule(builder))
-        ;
-//        .addModule(binder -> binder.bind(QueryStackTests.TIMELINES_KEY).toInstance(new HashMap<>()));
+        .addModule(new TestSetupModule(builder));
 
     builder.componentSupplier.configureGuice(injectorBuilder);
 
