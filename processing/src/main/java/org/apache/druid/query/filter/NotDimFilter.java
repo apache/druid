@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.RangeSet;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.filter.NotFilter;
 
 import java.nio.ByteBuffer;
@@ -67,9 +68,9 @@ public class NotDimFilter extends AbstractOptimizableDimFilter implements DimFil
 
   @SuppressWarnings("ObjectEquality")
   @Override
-  public DimFilter optimize()
+  public DimFilter optimize(final boolean mayIncludeUnknown)
   {
-    final DimFilter optimized = this.getField().optimize();
+    final DimFilter optimized = this.getField().optimize(!mayIncludeUnknown && NullHandling.useThreeValueLogic());
     if (optimized == FalseDimFilter.instance()) {
       return TrueDimFilter.instance();
     } else if (optimized == TrueDimFilter.instance()) {

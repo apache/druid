@@ -43,7 +43,6 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.ReadableOffset;
-import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.chrono.ISOChronology;
 
@@ -116,7 +115,7 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
 
     // sort of like the dump segment tool, but build key column indexes when reading the segment
     final Sequence<Cursor> cursors = adapter.makeCursors(
-        Filters.toFilter(null),
+        null,
         queryableIndex.getDataInterval().withChronology(ISOChronology.getInstanceUTC()),
         VirtualColumns.EMPTY,
         Granularities.ALL,

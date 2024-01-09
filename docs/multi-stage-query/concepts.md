@@ -34,7 +34,7 @@ sidebar_label: "Key concepts"
 The `druid-multi-stage-query` extension adds a multi-stage query (MSQ) task engine that executes SQL statements as batch
 tasks in the indexing service, which execute on [Middle Managers](../design/architecture.md#druid-services).
 [INSERT](reference.md#insert) and [REPLACE](reference.md#replace) tasks publish
-[segments](../design/architecture.md#datasources-and-segments) just like [all other forms of batch
+[segments](../design/storage.md) just like [all other forms of batch
 ingestion](../ingestion/index.md#batch). Each query occupies at least two task slots while running: one controller task,
 and at least one worker task. As an experimental feature, the MSQ task engine also supports running SELECT queries as
 batch tasks. The behavior and result format of plain SELECT (without INSERT or REPLACE) is subject to change.

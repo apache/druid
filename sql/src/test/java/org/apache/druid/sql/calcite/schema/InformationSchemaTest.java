@@ -38,6 +38,7 @@ import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.table.RowSignatures;
@@ -72,7 +73,8 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
         new PlannerConfig(),
         null,
         new NoopDruidSchemaManager(),
-        CalciteTests.TEST_AUTHORIZER_MAPPER
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
+        CatalogResolver.NULL_RESOLVER
     );
 
     informationSchema = new InformationSchema(

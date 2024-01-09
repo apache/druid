@@ -26,14 +26,15 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ForwardingSortedSet;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
+import com.google.common.collect.Sets;
 import com.google.common.collect.TreeRangeSet;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
@@ -67,6 +68,8 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -75,7 +78,11 @@ import java.util.TreeSet;
 
 public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
 {
-  // Values can contain `null` object. Values are sorted (nulls-first).
+  /**
+   * Values matched by this filter. Values are sorted (nulls-first). Values can contain `null` in SQL-compatible null
+   * handling mode. When {@link NullHandling#replaceWithDefault()}, the values set does not contain empty string.
+   * (It may contain null.)
+   */
   private final ValuesSet values;
   // Computed eagerly, not lazily, because lazy computations would block all processing threads for a given query.
   private final SortedSet<ByteBuffer> valuesUtf8;
@@ -171,13 +178,6 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     Preconditions.checkNotNull(values, "values cannot be null");
 
     this.values = values;
-
-    if (!NullHandling.sqlCompatible() && values.contains("")) {
-      // In non-SQL-compatible mode, empty strings must be converted to nulls for the filter.
-      this.values.remove("");
-      this.values.add(null);
-    }
-
     this.valuesUtf8 = this.values.toUtf8();
     this.dimension = Preconditions.checkNotNull(dimension, "dimension cannot be null");
     this.extractionFn = extractionFn;
@@ -227,22 +227,32 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
   }
 
   @Override
-  public DimFilter optimize()
+  public DimFilter optimize(final boolean mayIncludeUnknown)
   {
-    InDimFilter inFilter = optimizeLookup();
+    final ExtractionFn newExtractionFn;
+    ValuesSet newValues = optimizeLookup(this, mayIncludeUnknown);
 
-    if (inFilter.values.isEmpty()) {
-      return FalseDimFilter.instance();
+    if (newValues == null) {
+      newValues = values;
+      newExtractionFn = extractionFn;
+    } else {
+      newExtractionFn = null;
     }
-    if (inFilter.values.size() == 1) {
+
+    if (newValues.isEmpty()) {
+      return FalseDimFilter.instance();
+    } else if (newValues.size() == 1) {
       return new SelectorDimFilter(
-          inFilter.dimension,
-          inFilter.values.iterator().next(),
-          inFilter.getExtractionFn(),
+          dimension,
+          newValues.iterator().next(),
+          newExtractionFn,
           filterTuning
       );
+    } else if (newValues == values) {
+      return this;
+    } else {
+      return new InDimFilter(dimension, newValues, newExtractionFn, filterTuning);
     }
-    return inFilter;
   }
 
   @Override
@@ -291,10 +301,8 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
 
       if (indexSupplier == null) {
         // column doesn't exist, match against null
-        return Filters.makeMissingColumnNullIndex(
-            predicateFactory.makeStringPredicate().apply(null),
-            selector
-        );
+        DruidPredicateMatch match = predicateFactory.makeStringPredicate().apply(null);
+        return Filters.makeMissingColumnNullIndex(match, selector);
       }
 
       final Utf8ValueSetIndexes utf8ValueSetIndexes = indexSupplier.as(Utf8ValueSetIndexes.class);
@@ -420,48 +428,119 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
         .build();
   }
 
-  private InDimFilter optimizeLookup()
+  /**
+   * If the provided "in" filter uses a {@link LookupExtractionFn} that can be reversed, then return the matching
+   * set of keys as a {@link ValuesSet}. Otherwise return null.
+   *
+   * @param inFilter          in filter
+   * @param mayIncludeUnknown same as the argument to {@link #optimize(boolean)}
+   */
+  @Nullable
+  static ValuesSet optimizeLookup(final InDimFilter inFilter, final boolean mayIncludeUnknown)
   {
-    if (extractionFn instanceof LookupExtractionFn
-        && ((LookupExtractionFn) extractionFn).isOptimize()) {
-      LookupExtractionFn exFn = (LookupExtractionFn) extractionFn;
-      LookupExtractor lookup = exFn.getLookup();
+    final LookupExtractionFn exFn;
 
-      final ValuesSet keys = new ValuesSet();
-      for (String value : values) {
+    if (inFilter.getExtractionFn() instanceof LookupExtractionFn) {
+      exFn = (LookupExtractionFn) inFilter.getExtractionFn();
+    } else {
+      // Not a lookup extractionFn.
+      return null;
+    }
 
-        // We cannot do an unapply()-based optimization if the selector value
-        // and the replaceMissingValuesWith value are the same, since we have to match on
-        // all values that are not present in the lookup.
-        final String convertedValue = NullHandling.emptyToNullIfNeeded(value);
-        if (!exFn.isRetainMissingValue() && Objects.equals(convertedValue, exFn.getReplaceMissingValueWith())) {
-          return this;
-        }
-        keys.addAll(lookup.unapply(convertedValue));
+    if (!exFn.isOptimize()) {
+      return null;
+    }
 
-        // If retainMissingValues is true and the selector value is not in the lookup map,
-        // there may be row values that match the selector value but are not included
-        // in the lookup map. Match on the selector value as well.
-        // If the selector value is overwritten in the lookup map, don't add selector value to keys.
-        if (exFn.isRetainMissingValue() && NullHandling.isNullOrEquivalent(lookup.apply(convertedValue))) {
-          keys.add(convertedValue);
+    if (!exFn.isInjective()
+        && !exFn.isRetainMissingValue()
+        && inFilter.values.contains(NullHandling.emptyToNullIfNeeded(exFn.getReplaceMissingValueWith()))) {
+      // We cannot do an unapply()-based optimization when the original filter is configured to match on values that are
+      // not present in the lookup key set. This would require creating a filter like "NOT IN (lookup key set)", which
+      // we aren't willing to do, since it requires iterating the entire lookup and may be prohibitively large.
+      return null;
+    }
+
+    final LookupExtractor lookup = exFn.getLookup();
+
+    if (mayIncludeUnknown && !inFilter.values.contains(null)) {
+      // We need to return an optimized filter that works as expected when run in includeUnknown mode, which means
+      // it must be able to match in scenarios where the original filter's extractionFn returns null. This is generally
+      // impractical, because it leads to needing to match the complement of the lookup key set. However, it's
+      // manageable if a lookup has no null values, and is either injective (one-to-one) or is being queried with a
+      // nonnull replaceMissingValueWith. In these cases, the extractionFn can't return null, so there isn't anything
+      // to worry about.
+
+      boolean ok = false;
+
+      if (!NullHandling.isNullOrEquivalent(exFn.getReplaceMissingValueWith()) || exFn.isInjective()) {
+        final Iterator<String> keysWithNullValues = lookup.unapplyAll(Collections.singleton(null));
+        if (keysWithNullValues != null) {
+          if (!keysWithNullValues.hasNext()) {
+            ok = true;
+          } else {
+            final String nullUnapplied = keysWithNullValues.next();
+            if (!keysWithNullValues.hasNext() && nullUnapplied == null) {
+              ok = true;
+            }
+          }
         }
       }
 
-      if (keys.isEmpty()) {
-        return this;
-      } else {
-        return new InDimFilter(dimension, keys, null, filterTuning);
+      if (!ok) {
+        return null;
       }
     }
-    return this;
+
+    final Set<String> valuesToUnapply;
+    if (!NullHandling.isNullOrEquivalent(exFn.getReplaceMissingValueWith())
+        && inFilter.values.contains(exFn.getReplaceMissingValueWith())) {
+      // When matching against replaceMissingValueWith, this filter matches null values.
+      valuesToUnapply = Sets.union(inFilter.values, Collections.singleton(null));
+    } else {
+      valuesToUnapply = inFilter.values;
+    }
+
+    final ValuesSet unapplied = new ValuesSet();
+    final Iterator<String> keysIterator = lookup.unapplyAll(valuesToUnapply);
+    if (keysIterator == null) {
+      // unapply not supported by this lookup implementation.
+      return null;
+    }
+
+    Iterators.addAll(unapplied, keysIterator);
+
+    // In SQL-compatible null handling mode, lookup of null is always "replaceMissingValueWith", regardless of contents
+    // of the lookup. So, if we're matching against "replaceMissingValueWith", we need to include null in the
+    // unapplied set.
+    if (NullHandling.sqlCompatible() && inFilter.values.contains(exFn.getReplaceMissingValueWith())) {
+      unapplied.add(null);
+    }
+
+    // If retainMissingValues is true and the selector value is not in the lookup map,
+    // there may be row values that match the selector value but are not included
+    // in the lookup map. Match on the selector value as well.
+    // If the selector value is overwritten in the lookup map, don't add selector value to keys.
+    if (exFn.isRetainMissingValue()) {
+      for (final String value : inFilter.values) {
+        if (NullHandling.isNullOrEquivalent(lookup.apply(NullHandling.emptyToNullIfNeeded(value)))) {
+          unapplied.add(value);
+        }
+      }
+    }
+
+    return unapplied;
   }
 
   @SuppressWarnings("ReturnValueIgnored")
-  private static Predicate<String> createStringPredicate(final Set<String> values)
+  private static DruidObjectPredicate<String> createStringPredicate(final Set<String> values)
   {
     Preconditions.checkNotNull(values, "values");
-    return values::contains;
+    return value -> {
+      if (value == null) {
+        return values.contains(null) ? DruidPredicateMatch.TRUE : DruidPredicateMatch.UNKNOWN;
+      }
+      return DruidPredicateMatch.of(values.contains(value));
+    };
   }
 
   private static DruidLongPredicate createLongPredicate(final Set<String> values)
@@ -479,15 +558,15 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     return new DruidLongPredicate()
     {
       @Override
-      public boolean applyLong(long n)
+      public DruidPredicateMatch applyLong(long n)
       {
-        return longHashSet.contains(n);
+        return DruidPredicateMatch.of(longHashSet.contains(n));
       }
 
       @Override
-      public boolean applyNull()
+      public DruidPredicateMatch applyNull()
       {
-        return matchNull;
+        return matchNull ? DruidPredicateMatch.TRUE : DruidPredicateMatch.UNKNOWN;
       }
     };
   }
@@ -507,15 +586,15 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     return new DruidFloatPredicate()
     {
       @Override
-      public boolean applyFloat(float n)
+      public DruidPredicateMatch applyFloat(float n)
       {
-        return floatBitsHashSet.contains(Float.floatToIntBits(n));
+        return DruidPredicateMatch.of(floatBitsHashSet.contains(Float.floatToIntBits(n)));
       }
 
       @Override
-      public boolean applyNull()
+      public DruidPredicateMatch applyNull()
       {
-        return matchNull;
+        return matchNull ? DruidPredicateMatch.TRUE : DruidPredicateMatch.UNKNOWN;
       }
     };
   }
@@ -535,15 +614,15 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     return new DruidDoublePredicate()
     {
       @Override
-      public boolean applyDouble(double n)
+      public DruidPredicateMatch applyDouble(double n)
       {
-        return doubleBitsHashSet.contains(Double.doubleToLongBits(n));
+        return DruidPredicateMatch.of(doubleBitsHashSet.contains(Double.doubleToLongBits(n)));
       }
 
       @Override
-      public boolean applyNull()
+      public DruidPredicateMatch applyNull()
       {
-        return matchNull;
+        return matchNull ? DruidPredicateMatch.TRUE : DruidPredicateMatch.UNKNOWN;
       }
     };
   }
@@ -553,11 +632,10 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
   {
     private final ExtractionFn extractionFn;
     private final Set<String> values;
-    private final Supplier<Predicate<String>> stringPredicateSupplier;
+    private final Supplier<DruidObjectPredicate<String>> stringPredicateSupplier;
     private final Supplier<DruidLongPredicate> longPredicateSupplier;
     private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
     private final Supplier<DruidDoublePredicate> doublePredicateSupplier;
-    private final boolean hasNull;
 
     public InFilterDruidPredicateFactory(
         final ExtractionFn extractionFn,
@@ -566,7 +644,6 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     {
       this.extractionFn = extractionFn;
       this.values = values;
-      this.hasNull = values.contains(null);
 
       // As the set of filtered values can be large, parsing them as numbers should be done only if needed, and
       // only once. Pass in a common long predicate supplier to all filters created by .toFilter(), so that we only
@@ -579,10 +656,10 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     }
 
     @Override
-    public Predicate<String> makeStringPredicate()
+    public DruidObjectPredicate<String> makeStringPredicate()
     {
       if (extractionFn != null) {
-        final Predicate<String> stringPredicate = stringPredicateSupplier.get();
+        final DruidObjectPredicate<String> stringPredicate = stringPredicateSupplier.get();
         return input -> stringPredicate.apply(extractionFn.apply(input));
       } else {
         return stringPredicateSupplier.get();
@@ -593,7 +670,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     public DruidLongPredicate makeLongPredicate()
     {
       if (extractionFn != null) {
-        final Predicate<String> stringPredicate = stringPredicateSupplier.get();
+        final DruidObjectPredicate<String> stringPredicate = stringPredicateSupplier.get();
         return input -> stringPredicate.apply(extractionFn.apply(input));
       } else {
         return longPredicateSupplier.get();
@@ -604,7 +681,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     public DruidFloatPredicate makeFloatPredicate()
     {
       if (extractionFn != null) {
-        final Predicate<String> stringPredicate = stringPredicateSupplier.get();
+        final DruidObjectPredicate<String> stringPredicate = stringPredicateSupplier.get();
         return input -> stringPredicate.apply(extractionFn.apply(input));
       } else {
         return floatPredicateSupplier.get();
@@ -615,17 +692,11 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     public DruidDoublePredicate makeDoublePredicate()
     {
       if (extractionFn != null) {
-        final Predicate<String> stringPredicate = stringPredicateSupplier.get();
+        final DruidObjectPredicate<String> stringPredicate = stringPredicateSupplier.get();
         return input -> stringPredicate.apply(extractionFn.apply(input));
       } else {
         return doublePredicateSupplier.get();
       }
-    }
-
-    @Override
-    public boolean isNullInputUnknown()
-    {
-      return !hasNull;
     }
 
     @Override
@@ -660,16 +731,20 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
 
     /**
      * Create a ValuesSet from another Collection. The Collection will be reused if it is a {@link SortedSet} with
-     * the {@link Comparators#naturalNullsFirst()} comparator.
+     * the {@link Comparators#naturalNullsFirst()} comparator, and doesn't contain empty string in
+     * {@link NullHandling#replaceWithDefault()} mode.
      */
     private ValuesSet(final Collection<String> values)
     {
-      if (values instanceof SortedSet && Comparators.naturalNullsFirst()
-                                                    .equals(((SortedSet<String>) values).comparator())) {
+      if (values instanceof SortedSet
+          && Comparators.naturalNullsFirst().equals(((SortedSet<String>) values).comparator())
+          && !(NullHandling.replaceWithDefault() && values.contains(""))) {
         this.values = (SortedSet<String>) values;
       } else {
         this.values = new TreeSet<>(Comparators.naturalNullsFirst());
-        this.values.addAll(values);
+        for (String value : values) {
+          this.values.add(NullHandling.emptyToNullIfNeeded(value));
+        }
       }
     }
 
@@ -682,15 +757,28 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     }
 
     /**
-     * Creates a ValuesSet wrapping the provided single value.
+     * Creates a ValuesSet wrapping the provided single value, with {@link NullHandling#emptyToNullIfNeeded(String)}
+     * applied.
      *
      * @throws IllegalStateException if the provided collection cannot be wrapped since it has the wrong comparator
      */
     public static ValuesSet of(@Nullable final String value)
     {
       final ValuesSet retVal = ValuesSet.create();
-      retVal.add(value);
+      retVal.add(NullHandling.emptyToNullIfNeeded(value));
       return retVal;
+    }
+
+    /**
+     * Creates a ValuesSet copying the provided iterator, with {@link NullHandling#emptyToNullIfNeeded(String)} applied.
+     */
+    public static ValuesSet copyOf(final Iterator<String> values)
+    {
+      final TreeSet<String> copyOfValues = new TreeSet<>(Comparators.naturalNullsFirst());
+      while (values.hasNext()) {
+        copyOfValues.add(NullHandling.emptyToNullIfNeeded(values.next()));
+      }
+      return new ValuesSet(copyOfValues);
     }
 
     /**
@@ -698,9 +786,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
      */
     public static ValuesSet copyOf(final Collection<String> values)
     {
-      final TreeSet<String> copyOfValues = new TreeSet<>(Comparators.naturalNullsFirst());
-      copyOfValues.addAll(values);
-      return new ValuesSet(copyOfValues);
+      return copyOf(values.iterator());
     }
 
     public SortedSet<ByteBuffer> toUtf8()
@@ -716,6 +802,19 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
       }
 
       return valuesUtf8;
+    }
+
+    @Override
+    public boolean add(String s)
+    {
+      // In non-SQL-compatible mode, empty strings must be converted to nulls for the filter.
+      return delegate().add(NullHandling.emptyToNullIfNeeded(s));
+    }
+
+    @Override
+    public boolean addAll(Collection<? extends String> other)
+    {
+      return standardAddAll(other);
     }
 
     @Override

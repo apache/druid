@@ -48,10 +48,10 @@ public interface VectorValueMatcher extends VectorSizeInspector
    *
    * @param mask           must not be null; use {@link VectorMatch#allTrue} if you don't need a mask.
    * @param includeUnknown mapping for Druid native two state logic system into SQL three-state logic system. If set
-   *                       to true, this method should also return true if the result is 'unknown' to be a match, such
-   *                       as from the input being null valued. Used primarily to allow
-   *                       {@link org.apache.druid.segment.filter.NotFilter} to invert a match in an SQL compliant
-   *                       manner
+   *                       to true, match vectors returned by this method should include true values wherever the
+   *                       matching result is 'unknown', such as from the input being null valued.
+   *                       See {@link NullHandling#useThreeValueLogic()}.
+   *
    * @return the subset of "mask" that this value matcher accepts. May be the same instance as {@param mask} if
    * every row in the mask matches the filter.
    */

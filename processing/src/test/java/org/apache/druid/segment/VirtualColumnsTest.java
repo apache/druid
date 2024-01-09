@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.segment.virtual;
+package org.apache.druid.segment;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
@@ -31,26 +31,14 @@ import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.BaseFloatColumnValueSelector;
-import org.apache.druid.segment.BaseLongColumnValueSelector;
-import org.apache.druid.segment.BaseObjectColumnValueSelector;
-import org.apache.druid.segment.ColumnInspector;
-import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.DimensionDictionarySelector;
-import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.DimensionSelectorUtils;
-import org.apache.druid.segment.IdLookup;
-import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.TestLongColumnSelector;
-import org.apache.druid.segment.VirtualColumn;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ZeroIndexedInts;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -119,9 +107,9 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
   {
     final VirtualColumns virtualColumns = makeVirtualColumns();
     final ColumnInspector baseInspector = column -> null;
-    Assert.assertEquals(ValueType.FLOAT, virtualColumns.getColumnCapabilities(baseInspector, "expr").getType());
-    Assert.assertEquals(ValueType.LONG, virtualColumns.getColumnCapabilities(baseInspector, "expr2").getType());
-    Assert.assertNull(virtualColumns.getColumnCapabilities(baseInspector, REAL_COLUMN_NAME));
+    Assert.assertEquals(ValueType.FLOAT, virtualColumns.getColumnCapabilitiesWithoutFallback(baseInspector, "expr").getType());
+    Assert.assertEquals(ValueType.LONG, virtualColumns.getColumnCapabilitiesWithoutFallback(baseInspector, "expr2").getType());
+    Assert.assertNull(virtualColumns.getColumnCapabilitiesWithoutFallback(baseInspector, REAL_COLUMN_NAME));
   }
 
   @Test
@@ -135,9 +123,9 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
         return null;
       }
     };
-    Assert.assertEquals(ValueType.FLOAT, virtualColumns.getColumnCapabilities(baseInspector, "expr").getType());
-    Assert.assertEquals(ValueType.DOUBLE, virtualColumns.getColumnCapabilities(baseInspector, "expr2").getType());
-    Assert.assertNull(virtualColumns.getColumnCapabilities(baseInspector, REAL_COLUMN_NAME));
+    Assert.assertEquals(ValueType.FLOAT, virtualColumns.getColumnCapabilitiesWithoutFallback(baseInspector, "expr").getType());
+    Assert.assertEquals(ValueType.DOUBLE, virtualColumns.getColumnCapabilitiesWithoutFallback(baseInspector, "expr2").getType());
+    Assert.assertNull(virtualColumns.getColumnCapabilitiesWithoutFallback(baseInspector, REAL_COLUMN_NAME));
   }
 
   @Test
@@ -519,10 +507,10 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
     final ExpressionVirtualColumn expr2 = new ExpressionVirtualColumn("v3", "v0 * x", null, TestExprMacroTable.INSTANCE);
     final VirtualColumns virtualColumns = VirtualColumns.create(ImmutableList.of(v0, v1, expr1, expr2));
 
-    Assert.assertEquals(ColumnType.STRING, virtualColumns.getColumnCapabilities(baseInspector, "v0").toColumnType());
-    Assert.assertEquals(ColumnType.LONG, virtualColumns.getColumnCapabilities(baseInspector, "v1").toColumnType());
-    Assert.assertEquals(ColumnType.DOUBLE, virtualColumns.getColumnCapabilities(baseInspector, "v2").toColumnType());
-    Assert.assertEquals(ColumnType.DOUBLE, virtualColumns.getColumnCapabilities(baseInspector, "v3").toColumnType());
+    Assert.assertEquals(ColumnType.STRING, virtualColumns.getColumnCapabilitiesWithoutFallback(baseInspector, "v0").toColumnType());
+    Assert.assertEquals(ColumnType.LONG, virtualColumns.getColumnCapabilitiesWithoutFallback(baseInspector, "v1").toColumnType());
+    Assert.assertEquals(ColumnType.DOUBLE, virtualColumns.getColumnCapabilitiesWithoutFallback(baseInspector, "v2").toColumnType());
+    Assert.assertEquals(ColumnType.DOUBLE, virtualColumns.getColumnCapabilitiesWithoutFallback(baseInspector, "v3").toColumnType());
     Assert.assertTrue(virtualColumns.canVectorize(baseInspector));
   }
 

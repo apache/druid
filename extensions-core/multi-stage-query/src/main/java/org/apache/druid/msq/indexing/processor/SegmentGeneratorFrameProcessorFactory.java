@@ -126,6 +126,14 @@ public class SegmentGeneratorFrameProcessorFactory
       Consumer<Throwable> warningPublisher
   )
   {
+    if (extra == null || extra.isEmpty()) {
+      return new ProcessorsAndChannels<>(
+          ProcessorManagers.of(Sequences.<SegmentGeneratorFrameProcessor>empty())
+                           .withAccumulation(new HashSet<>(), (acc, segment) -> acc),
+          OutputChannels.none()
+      );
+    }
+
     final RowIngestionMeters meters = frameContext.rowIngestionMeters();
 
     final ParseExceptionHandler parseExceptionHandler = new ParseExceptionHandler(

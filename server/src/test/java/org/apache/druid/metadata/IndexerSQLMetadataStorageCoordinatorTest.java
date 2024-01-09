@@ -1309,7 +1309,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
-  public void testRetrieveUnusedSegmentsUsingMultipleIntervalsInSingleBatchLimitAndOffsetInRange() throws IOException
+  public void testRetrieveUnusedSegmentsUsingMultipleIntervalsInSingleBatchLimitAndLastSegmentId() throws IOException
   {
     final List<DataSegment> segments = createAndGetUsedYearSegments(2034, 2133);
     markAllSegmentsUnused(new HashSet<>(segments));
@@ -1330,7 +1330,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
-  public void testRetrieveUnusedSegmentsUsingMultipleIntervalsLimitAndOffsetInRange() throws IOException
+  public void testRetrieveUnusedSegmentsUsingMultipleIntervalsLimitAndLastSegmentId() throws IOException
   {
     final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
     markAllSegmentsUnused(new HashSet<>(segments));
@@ -1351,7 +1351,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
-  public void testRetrieveUnusedSegmentsUsingMultipleIntervalsAndLimitOutOfRange() throws IOException
+  public void testRetrieveUnusedSegmentsUsingMultipleIntervals() throws IOException
   {
     final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
     markAllSegmentsUnused(new HashSet<>(segments));
@@ -3002,6 +3002,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     List<Pair<DataSegment, String>> resultForEternity =
         coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Collections.singletonList(Intervals.ETERNITY));
     Assert.assertEquals(resultForExactInterval, resultForEternity);
+
+    List<Pair<DataSegment, String>> resultForFirstHalfEternity =
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Collections.singletonList(firstHalfEternityRangeSegment.getInterval()));
+    Assert.assertEquals(resultForExactInterval, resultForFirstHalfEternity);
+
+    List<Pair<DataSegment, String>> resultForSecondHalfEternity =
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Collections.singletonList(secondHalfEternityRangeSegment.getInterval()));
+    Assert.assertEquals(resultForExactInterval, resultForSecondHalfEternity);
   }
 
   @Test
@@ -3017,6 +3025,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     List<Pair<DataSegment, String>> resultForEternity =
         coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Collections.singletonList(eternitySegment.getInterval()));
     Assert.assertEquals(3, resultForEternity.size());
+
+    List<Pair<DataSegment, String>> resultForFirstHalfEternity =
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Collections.singletonList(firstHalfEternityRangeSegment.getInterval()));
+    Assert.assertEquals(3, resultForFirstHalfEternity.size());
+
+    List<Pair<DataSegment, String>> resultForSecondHalfEternity =
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Collections.singletonList(secondHalfEternityRangeSegment.getInterval()));
+    Assert.assertEquals(3, resultForSecondHalfEternity.size());
   }
 
   @Test

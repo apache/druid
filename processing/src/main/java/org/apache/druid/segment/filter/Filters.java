@@ -30,6 +30,7 @@ import org.apache.druid.query.filter.BooleanFilter;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.query.filter.DruidPredicateMatch;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -39,6 +40,7 @@ import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.filter.cnf.CNFFilterExplosionException;
 import org.apache.druid.segment.filter.cnf.CalciteCnfHelper;
 import org.apache.druid.segment.filter.cnf.HiveCnfHelper;
+import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
 import org.apache.druid.segment.index.AllTrueBitmapColumnIndex;
 import org.apache.druid.segment.index.AllUnknownBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
@@ -64,19 +66,11 @@ public class Filters
   private static final ColumnSelectorFactory ALL_NULL_COLUMN_SELECTOR_FACTORY = new AllNullColumnSelectorFactory();
 
   /**
-   * Convert a list of DimFilters to a list of Filters.
+   * Convert a {@link DimFilter} to an optimized {@link Filter} for use at the top level of a query.
    *
-   * @param dimFilters list of DimFilters, should all be non-null
-   *
-   * @return list of Filters
-   */
-  public static List<Filter> toFilters(List<DimFilter> dimFilters)
-  {
-    return dimFilters.stream().map(Filters::toFilter).collect(Collectors.toList());
-  }
-
-  /**
-   * Convert a DimFilter to a Filter.
+   * Must not be used by {@link DimFilter} to convert their children, because the three-valued logic parameter
+   * "includeUnknown" will not be correctly propagated. For {@link DimFilter} that convert their children, use
+   * {@link DimFilter#toOptimizedFilter(boolean)} instead.
    *
    * @param dimFilter dimFilter
    *
@@ -85,9 +79,8 @@ public class Filters
   @Nullable
   public static Filter toFilter(@Nullable DimFilter dimFilter)
   {
-    return dimFilter == null ? null : dimFilter.toOptimizedFilter();
+    return dimFilter == null ? null : dimFilter.toOptimizedFilter(false);
   }
-
 
   /**
    * Create a ValueMatcher that applies a predicate to row values.
@@ -137,14 +130,22 @@ public class Filters
       return null;
     }
     // missing column -> match all rows if the predicate matches null; match no rows otherwise
-    return predicateFactory.makeStringPredicate().apply(null)
-           ? new AllTrueBitmapColumnIndex(selector)
-           : new AllUnknownBitmapColumnIndex(selector);
+    final DruidPredicateMatch match = predicateFactory.makeStringPredicate().apply(null);
+    return makeMissingColumnNullIndex(match, selector);
   }
 
-  public static BitmapColumnIndex makeMissingColumnNullIndex(boolean matchesNull, final ColumnIndexSelector selector)
+  public static BitmapColumnIndex makeMissingColumnNullIndex(
+      DruidPredicateMatch match,
+      final ColumnIndexSelector selector
+  )
   {
-    return matchesNull ? new AllTrueBitmapColumnIndex(selector) : new AllUnknownBitmapColumnIndex(selector);
+    if (match == DruidPredicateMatch.TRUE) {
+      return new AllTrueBitmapColumnIndex(selector);
+    }
+    if (match == DruidPredicateMatch.UNKNOWN) {
+      return new AllUnknownBitmapColumnIndex(selector);
+    }
+    return new AllFalseBitmapColumnIndex(selector.getBitmapFactory());
   }
 
   public static ImmutableBitmap computeDefaultBitmapResults(Filter filter, ColumnIndexSelector selector)
