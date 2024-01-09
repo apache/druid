@@ -23,8 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
-import com.google.inject.Key;
-import com.google.inject.name.Names;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.guice.DruidInjectorBuilder;
@@ -101,7 +99,6 @@ import org.junit.Assert;
 import javax.annotation.Nullable;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -122,8 +119,6 @@ public class QueryStackTests
 
   private static final ServiceEmitter EMITTER = new NoopServiceEmitter();
   private static final int COMPUTE_BUFFER_SIZE = 10 * 1024 * 1024;
-
-  public static final Key<Map> TIMELINES_KEY = Key.get(Map.class, Names.named("timelines"));
 
   private QueryStackTests()
   {
@@ -394,7 +389,7 @@ public class QueryStackTests
         .addModule(new SegmentWranglerModule())
         .addModule(new CacheTestHelperModule(ResultCacheMode.DISABLED))
         .addModule(binder -> binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupProvider))
-        .addModule(binder -> binder.bind(TIMELINES_KEY).toInstance(new HashMap<>()));
+        .addModule(new QueryStackTestsModule());
 
     return injectorBuilder.build();
   }

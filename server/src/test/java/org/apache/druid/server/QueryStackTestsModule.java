@@ -20,8 +20,10 @@
 package org.apache.druid.server;
 
 import com.google.inject.AbstractModule;
+import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.name.Named;
+import com.google.inject.name.Names;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 
@@ -30,6 +32,8 @@ import java.util.Map;
 
 public class QueryStackTestsModule extends AbstractModule
 {
+  public static final Key<Map> TIMELINES_KEY = Key.get(Map.class, Names.named("timelines"));
+
 
   private final Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines = new HashMap<>();
 

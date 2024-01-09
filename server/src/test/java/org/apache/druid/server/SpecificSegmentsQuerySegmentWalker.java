@@ -102,7 +102,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
       final QueryScheduler scheduler
   )
   {
-    this.timelines = injector.getInstance(QueryStackTests.TIMELINES_KEY);
+    this.timelines = injector.getInstance(QueryStackTestsModule.TIMELINES_KEY);
     this.walker = QueryStackTests.createClientQuerySegmentWalker(
         injector,
         QueryStackTests.createClusterQuerySegmentWalker(
