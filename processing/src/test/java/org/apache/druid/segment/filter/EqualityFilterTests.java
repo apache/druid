@@ -483,6 +483,16 @@ public class EqualityFilterTests
             : ImmutableList.of("0", "2", "3", "4")
         );
       }
+
+      // array_offset behaves same on both mvds and arrays
+      assertFilterMatchesSkipVectorize(
+          new EqualityFilter("vdim2-offset", ColumnType.STRING, "b", null),
+          ImmutableList.of("0")
+      );
+      assertFilterMatchesSkipVectorize(
+          NotDimFilter.of(new EqualityFilter("vdim2-offset", ColumnType.STRING, "b", null)),
+          NullHandling.sqlCompatible() ? ImmutableList.of() : ImmutableList.of("1", "2", "3", "4", "5")
+      );
     }
 
     @Test
