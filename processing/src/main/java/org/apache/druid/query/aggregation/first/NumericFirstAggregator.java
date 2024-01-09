@@ -19,28 +19,31 @@
 
 package org.apache.druid.query.aggregation.first;
 
+import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
-import org.apache.druid.segment.BaseNullableColumnValueSelector;
+import org.apache.druid.segment.ColumnValueSelector;
 
 /**
  * Base type for on heap 'first' aggregator for primitive numeric column selectors
  */
-public abstract class NumericFirstAggregator<TSelector extends BaseNullableColumnValueSelector> implements Aggregator
+public abstract class NumericFirstAggregator implements Aggregator
 {
   private final boolean useDefault = NullHandling.replaceWithDefault();
   private final BaseLongColumnValueSelector timeSelector;
+  private final boolean needsFoldCheck;
 
-  final TSelector valueSelector;
+  final ColumnValueSelector valueSelector;
 
   long firstTime;
   boolean rhsNull;
 
-  public NumericFirstAggregator(BaseLongColumnValueSelector timeSelector, TSelector valueSelector)
+  public NumericFirstAggregator(BaseLongColumnValueSelector timeSelector, ColumnValueSelector valueSelector, boolean needsFoldCheck)
   {
     this.timeSelector = timeSelector;
     this.valueSelector = valueSelector;
+    this.needsFoldCheck = needsFoldCheck;
 
     firstTime = Long.MAX_VALUE;
     rhsNull = !useDefault;
@@ -49,7 +52,12 @@ public abstract class NumericFirstAggregator<TSelector extends BaseNullableColum
   /**
    * Store the current primitive typed 'first' value
    */
-  abstract void setCurrentValue();
+  abstract void setFirstValue();
+
+  /**
+   * Store a non-null first value
+   */
+  abstract void setFirstValue(Number firstValue);
 
   @Override
   public void aggregate()
@@ -57,13 +65,33 @@ public abstract class NumericFirstAggregator<TSelector extends BaseNullableColum
     if (timeSelector.isNull()) {
       return;
     }
+
+    if (needsFoldCheck) {
+      final Object object = valueSelector.getObject();
+      if (object instanceof SerializablePair) {
+        SerializablePair<Long, Number> inPair = (SerializablePair<Long, Number>) object;
+
+        if (inPair.lhs < firstTime) {
+          firstTime = inPair.lhs;
+          if (inPair.rhs == null) {
+            rhsNull = true;
+          } else {
+            rhsNull = false;
+            setFirstValue(inPair.rhs);
+          }
+        }
+        return;
+      }
+    }
+
     long time = timeSelector.getLong();
     if (time < firstTime) {
       firstTime = time;
       if (useDefault || !valueSelector.isNull()) {
-        setCurrentValue();
+        setFirstValue();
         rhsNull = false;
       } else {
+        setFirstValue(0);
         rhsNull = true;
       }
     }

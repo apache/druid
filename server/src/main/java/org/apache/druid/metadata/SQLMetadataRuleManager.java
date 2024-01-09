@@ -336,10 +336,10 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
     final String ruleString;
     try {
       ruleString = jsonMapper.writeValueAsString(newRules);
-      log.info("Updating [%s] with rules [%s] as per [%s]", dataSource, ruleString, auditInfo);
+      log.info("Updating datasource[%s] with rules[%s] as per [%s]", dataSource, ruleString, auditInfo);
     }
     catch (JsonProcessingException e) {
-      log.error(e, "Unable to write rules as string for [%s]", dataSource);
+      log.error(e, "Unable to write rules as string for datasource[%s]", dataSource);
       return false;
     }
     synchronized (lock) {
@@ -352,7 +352,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                             .key(dataSource)
                             .type("rules")
                             .auditInfo(auditInfo)
-                            .payload(ruleString)
+                            .serializedPayload(ruleString)
                             .auditTime(auditTime)
                             .build(),
                   handle

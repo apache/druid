@@ -134,6 +134,7 @@ public class KillCompactionConfig extends MetadataCleanupDuty
         },
         new AuditInfo(
             "KillCompactionConfig",
+            "KillCompactionConfig",
             "CoordinatorDuty for automatic deletion of compaction config",
             ""
         )

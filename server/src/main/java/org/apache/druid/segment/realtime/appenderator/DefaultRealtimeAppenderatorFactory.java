@@ -96,6 +96,7 @@ public class DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
   {
     final RowIngestionMeters rowIngestionMeters = new NoopRowIngestionMeters();
     return Appenderators.createRealtime(
+        null,
         schema.getDataSource(),
         schema,
         config.withBasePersistDirectory(

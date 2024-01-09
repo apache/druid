@@ -28,8 +28,8 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -40,15 +40,15 @@ public class RetrieveSegmentsActionsTest
 {
   private static final Interval INTERVAL = Intervals.of("2017-10-01/2017-10-15");
 
-  @Rule
-  public TaskActionTestKit actionTestKit = new TaskActionTestKit();
+  @ClassRule
+  public static TaskActionTestKit actionTestKit = new TaskActionTestKit();
 
-  private Task task;
-  private Set<DataSegment> expectedUnusedSegments;
-  private Set<DataSegment> expectedUsedSegments;
+  private static Task task;
+  private static Set<DataSegment> expectedUnusedSegments;
+  private static Set<DataSegment> expectedUsedSegments;
 
-  @Before
-  public void setup() throws IOException
+  @BeforeClass
+  public static void setup() throws IOException
   {
     task = NoopTask.create();
 
@@ -77,7 +77,7 @@ public class RetrieveSegmentsActionsTest
     expectedUnusedSegments.forEach(s -> actionTestKit.getSegmentsMetadataManager().markSegmentAsUnused(s.getId()));
   }
 
-  private DataSegment createSegment(Interval interval, String version)
+  private static DataSegment createSegment(Interval interval, String version)
   {
     return new DataSegment(
         task.getDataSource(),

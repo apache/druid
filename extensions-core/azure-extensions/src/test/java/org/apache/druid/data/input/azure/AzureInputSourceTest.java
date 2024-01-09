@@ -154,7 +154,7 @@ public class AzureInputSourceTest extends EasyMockSupport
   }
 
   @Test
-  public void test_createSplits_successfullyCreatesCloudLocation_returnsExpectedLocations() throws Exception
+  public void test_createSplits_successfullyCreatesCloudLocation_returnsExpectedLocations()
   {
     List<URI> prefixes = ImmutableList.of(PREFIX_URI);
     List<List<CloudObjectLocation>> expectedCloudLocations = ImmutableList.of(ImmutableList.of(CLOUD_OBJECT_LOCATION_1));
@@ -194,7 +194,6 @@ public class AzureInputSourceTest extends EasyMockSupport
 
   @Test
   public void test_getPrefixesSplitStream_withObjectGlob_successfullyCreatesCloudLocation_returnsExpectedLocations()
-      throws Exception
   {
     List<URI> prefixes = ImmutableList.of(PREFIX_URI);
     List<List<CloudObjectLocation>> expectedCloudLocations = ImmutableList.of(ImmutableList.of(CLOUD_OBJECT_LOCATION_1));
@@ -372,6 +371,7 @@ public class AzureInputSourceTest extends EasyMockSupport
     EqualsVerifier.forClass(AzureInputSource.class)
                   .usingGetClass()
                   .withPrefabValues(Logger.class, new Logger(AzureStorage.class), new Logger(AzureStorage.class))
+                  .withPrefabValues(AzureStorage.class, new AzureStorage(null), new AzureStorage(null))
                   .withNonnullFields("storage")
                   .withNonnullFields("entityFactory")
                   .withNonnullFields("azureCloudBlobIterableFactory")

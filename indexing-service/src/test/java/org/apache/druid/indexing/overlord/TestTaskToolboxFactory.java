@@ -77,6 +77,7 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
   )
   {
     super(
+        null,
         bob.config,
         bob.taskExecutorNode,
         bob.taskActionClientFactory,

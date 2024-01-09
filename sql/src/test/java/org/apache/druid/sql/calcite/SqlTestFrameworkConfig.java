@@ -148,6 +148,7 @@ public @interface SqlTestFrameworkConfig
     {
       try {
         SqlTestFramework.Builder builder = new SqlTestFramework.Builder(testHost)
+            .catalogResolver(testHost.createCatalogResolver())
             .minTopNThreshold(config.minTopNThreshold())
             .mergeBufferCount(config.numMergeBuffers())
             .withOverrideModule(config.resultCache().makeModule());
