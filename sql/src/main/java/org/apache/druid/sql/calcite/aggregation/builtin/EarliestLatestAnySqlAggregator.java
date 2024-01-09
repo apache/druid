@@ -112,18 +112,6 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
             return new DoubleFirstAggregatorFactory(name, fieldName, timeColumn);
           case STRING:
           case COMPLEX:
-            if (type.getComplexTypeName() != null) {
-              switch (type.getComplexTypeName()) {
-                case SerializablePairLongLongComplexMetricSerde.TYPE_NAME:
-                  return new LongFirstAggregatorFactory(name, fieldName, timeColumn);
-                case SerializablePairLongFloatComplexMetricSerde.TYPE_NAME:
-                  return new FloatFirstAggregatorFactory(name, fieldName, timeColumn);
-                case SerializablePairLongDoubleComplexMetricSerde.TYPE_NAME:
-                  return new DoubleFirstAggregatorFactory(name, fieldName, timeColumn);
-                default:
-                  return new StringFirstAggregatorFactory(name, fieldName, timeColumn, maxStringBytes);
-              }
-            }
             return new StringFirstAggregatorFactory(name, fieldName, timeColumn, maxStringBytes);
           default:
             throw SimpleSqlAggregator.badTypeException(fieldName, "EARLIEST", type);
@@ -151,18 +139,6 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
             return new DoubleLastAggregatorFactory(name, fieldName, timeColumn);
           case STRING:
           case COMPLEX:
-            if (type.getComplexTypeName() != null) {
-              switch (type.getComplexTypeName()) {
-                case SerializablePairLongLongComplexMetricSerde.TYPE_NAME:
-                  return new LongLastAggregatorFactory(name, fieldName, timeColumn);
-                case SerializablePairLongFloatComplexMetricSerde.TYPE_NAME:
-                  return new FloatLastAggregatorFactory(name, fieldName, timeColumn);
-                case SerializablePairLongDoubleComplexMetricSerde.TYPE_NAME:
-                  return new DoubleLastAggregatorFactory(name, fieldName, timeColumn);
-                default:
-                  return new StringLastAggregatorFactory(name, fieldName, timeColumn, maxStringBytes);
-              }
-            }
             return new StringLastAggregatorFactory(name, fieldName, timeColumn, maxStringBytes);
           default:
             throw SimpleSqlAggregator.badTypeException(fieldName, "LATEST", type);
@@ -345,12 +321,21 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
     {
       RelDataType type = sqlOperatorBinding.getOperandType(this.ordinal);
 
-      // If complex and of type SerializablePairLong*, return type
+      // If complex and of type SerializablePairLong*, return scalar type
       if (type instanceof RowSignatures.ComplexSqlType) {
         ColumnType complexColumnType = ((RowSignatures.ComplexSqlType) type).getColumnType();
         String complexTypeName = complexColumnType.getComplexTypeName();
-        if (complexTypeName != null && (complexTypeName.equals(SerializablePairLongLongComplexMetricSerde.TYPE_NAME) || complexTypeName.equals(SerializablePairLongFloatComplexMetricSerde.TYPE_NAME) || complexTypeName.equals(SerializablePairLongDoubleComplexMetricSerde.TYPE_NAME))) {
-          return type;
+        if (complexTypeName != null) {
+          switch (complexTypeName) {
+            case SerializablePairLongLongComplexMetricSerde.TYPE_NAME:
+              return sqlOperatorBinding.getTypeFactory().createSqlType(SqlTypeName.BIGINT);
+            case SerializablePairLongFloatComplexMetricSerde.TYPE_NAME:
+              return sqlOperatorBinding.getTypeFactory().createSqlType(SqlTypeName.FLOAT);
+            case SerializablePairLongDoubleComplexMetricSerde.TYPE_NAME:
+              return sqlOperatorBinding.getTypeFactory().createSqlType(SqlTypeName.DOUBLE);
+            default:
+              return sqlOperatorBinding.getTypeFactory().createSqlType(SqlTypeName.VARCHAR);
+          }
         }
       }
 
