@@ -35,7 +35,7 @@ In the Druid instance shown below, the example Wikipedia dataset is loaded 3 tim
 * `wikipedia_spectator` contains the dataset with a single extra metric column of type `spectatorHistogram` for the `added` column
 * `wikipedia_datasketch` contains the dataset with a single extra metric column of type `quantilesDoublesSketch` for the `added` column
 
-Spectator histograms average just 6 extra bytes per row, while the DataSketch
+Spectator histograms average just 6 extra bytes per row, while the `quantilesDoublesSketch`
 adds 48 bytes per row. This represents an eightfold reduction in additional storage size for spectator histograms.
 
 ![Comparison of datasource sizes in web console](../../assets/spectator-histogram-size-comparison.png)
@@ -100,7 +100,7 @@ values via the SpectatorHistogram aggregator or from pre-aggregated histograms.
 
 > If you're only using the aggregator to compute percentiles from raw numeric values,
 then you can use the built-in quantilesDoublesSketch aggregator instead. The performance
-and accuracy are comparable. However, the DataSketch aggregator supports negative values,
+and accuracy are comparable. However, the DataSketches aggregator supports negative values,
 and you don't need to download an additional extension.
  
 An aggregated SpectatorHistogram can also be queried using a `longSum` or `doubleSum`
