@@ -22,7 +22,6 @@ package org.apache.druid.benchmark.query;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.inject.Injector;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -327,8 +326,7 @@ public class SqlNestedDataBenchmark
         PROCESSING_CONFIG
     );
 
-    Injector injector = QueryStackTests.injector();
-    final SpecificSegmentsQuerySegmentWalker walker = new SpecificSegmentsQuerySegmentWalker(injector, conglomerate).add(
+    final SpecificSegmentsQuerySegmentWalker walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
         dataSegment,
         index
     );
