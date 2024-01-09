@@ -33,7 +33,7 @@ public class CacheTestHelperModule extends AbstractModule
   public enum ResultCacheMode
   {
     DISABLED,
-    ENABLE;
+    ENABLED;
 
     public Module makeModule()
     {
@@ -83,7 +83,7 @@ public class CacheTestHelperModule extends AbstractModule
     cacheConfig = new TestCacheConfig(resultCacheMode);
 
     switch (resultCacheMode) {
-      case ENABLE:
+      case ENABLED:
         etagProvider = new EtagProvider.ProvideEtagBasedOnDatasource();
         cache = MapCache.create(1_000_000L);
         break;

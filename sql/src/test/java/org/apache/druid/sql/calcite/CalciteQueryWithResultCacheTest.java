@@ -28,7 +28,7 @@ import org.junit.Ignore;
  * Because the ResultCache instance is a configuration level object; it may affect other testcases.
  */
 @Ignore
-@SqlTestFrameworkConfig(resultCache = ResultCacheMode.ENABLE)
+@SqlTestFrameworkConfig(resultCache = ResultCacheMode.ENABLED)
 public class CalciteQueryWithResultCacheTest extends CalciteQueryTest
 {
 }
