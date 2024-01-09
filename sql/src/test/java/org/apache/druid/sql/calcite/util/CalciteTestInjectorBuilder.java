@@ -53,7 +53,8 @@ public class CalciteTestInjectorBuilder
           new QueryStackTestsModule()
       );
       return ci.build();
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       // Catches failures when used as a static initializer.
       e.printStackTrace();
       System.exit(1);
