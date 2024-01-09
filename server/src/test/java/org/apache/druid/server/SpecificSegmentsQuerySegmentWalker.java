@@ -23,8 +23,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import com.google.common.io.Closeables;
 import com.google.inject.Injector;
-import com.google.inject.Key;
-import com.google.inject.name.Names;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FrameBasedInlineDataSource;
 import org.apache.druid.query.InlineDataSource;
@@ -56,6 +54,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -70,7 +69,7 @@ import java.util.Set;
 public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, Closeable
 {
   private final QuerySegmentWalker walker;
-  private final Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines;
+  private final Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines = new HashMap<>();
   private final List<Closeable> closeables = new ArrayList<>();
   private final List<DataSegment> segments = new ArrayList<>();
   private static final LookupExtractorFactoryContainerProvider LOOKUP_EXTRACTOR_FACTORY_CONTAINER_PROVIDER =
@@ -102,11 +101,10 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
       final QueryScheduler scheduler
   )
   {
-    this.timelines = injector.getInstance(QueryStackTestsModule.TIMELINES_KEY);
     this.walker = QueryStackTests.createClientQuerySegmentWalker(
         injector,
         QueryStackTests.createClusterQuerySegmentWalker(
-            injector.getInstance(Key.get(Map.class, Names.named("timelines"))),
+            timelines,
             conglomerate,
             scheduler,
             injector
