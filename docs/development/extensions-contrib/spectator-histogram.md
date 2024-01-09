@@ -64,8 +64,12 @@ data store to benefit from high-dimensionality and high-cardinality data.
 SpectatorHistogram is designed for efficient parallel aggregations while still
 allowing for filtering and grouping by dimensions. 
 It provides similar functionality to the built-in DataSketches `quantilesDoublesSketch` aggregator, but is
-opinionated and optimized for typical measurements from cloud services and web apps.
-For example, measurements such as page load time, transferred bytes, response time, and request latency.
+opinionated to maintain higher absolute accuracy at smaller values.
+Larger values have lower absolute accuracy; however, relative accuracy is maintained across the range.
+See [Bucket boundaries](#histogram-bucket-boundaries) for more information.
+The SpectatorHistogram is optimized for typical measurements from cloud services and web apps,
+such as page load time, transferred bytes, response time, and request latency.
+
 Through some trade-offs SpectatorHistogram provides a significantly more compact
 representation with the same aggregation performance and accuracy as
 DataSketches Quantiles Sketch. Note that results depend on the dataset.
