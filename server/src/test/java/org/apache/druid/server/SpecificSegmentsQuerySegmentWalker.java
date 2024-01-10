@@ -69,7 +69,7 @@ import java.util.Set;
 public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, Closeable
 {
   private final QuerySegmentWalker walker;
-  private final Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines = new HashMap<>();
+  private final Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines;
   private final List<Closeable> closeables = new ArrayList<>();
   private final List<DataSegment> segments = new ArrayList<>();
   private static final LookupExtractorFactoryContainerProvider LOOKUP_EXTRACTOR_FACTORY_CONTAINER_PROVIDER =
@@ -101,6 +101,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
       final QueryScheduler scheduler
   )
   {
+    this.timelines = new HashMap<>();
     this.walker = QueryStackTests.createClientQuerySegmentWalker(
         injector,
         QueryStackTests.createClusterQuerySegmentWalker(
