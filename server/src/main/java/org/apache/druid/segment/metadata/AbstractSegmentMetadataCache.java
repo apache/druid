@@ -55,7 +55,6 @@ import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.SegmentSchema;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -194,8 +193,6 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
    */
   private int totalSegments = 0;
 
-  private SegmentSchemaIdGenerator schemaIdGenerator;
-
   protected final ExecutorService callbackExec;
 
   @GuardedBy("lock")
@@ -227,21 +224,15 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   @GuardedBy("lock")
   protected final TreeSet<SegmentId> segmentsNeedingRefresh = new TreeSet<>(SEGMENT_ORDER);
 
-  protected FinalizedSegmentSchemaCache schemaCache;
-
   public AbstractSegmentMetadataCache(
       final QueryLifecycleFactory queryLifecycleFactory,
       final SegmentMetadataCacheConfig config,
       final Escalator escalator,
       final InternalQueryConfig internalQueryConfig,
-      final ServiceEmitter emitter,
-      final FinalizedSegmentSchemaCache schemaCache,
-      SegmentSchemaIdGenerator schemaIdGenerator
+      final ServiceEmitter emitter
   )
   {
     this.queryLifecycleFactory = Preconditions.checkNotNull(queryLifecycleFactory, "queryLifecycleFactory");
-    this.schemaCache = schemaCache;
-    this.schemaIdGenerator = schemaIdGenerator;
     this.config = Preconditions.checkNotNull(config, "config");
     this.columnTypeMergePolicy = config.getMetadataColumnTypeMergePolicy();
     this.cacheExec = Execs.singleThreaded("DruidSchema-Cache-%d");
@@ -486,7 +477,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
                       // segmentReplicatable is used to determine if segments are served by historical or realtime servers
                       long isRealtime = server.isSegmentReplicationTarget() ? 0 : 1;
                       segmentMetadata = AvailableSegmentMetadata
-                          .builder(segment, isRealtime, ImmutableSet.of(server), DEFAULT_NUM_ROWS) // Added without needing a refresh
+                          .builder(segment, isRealtime, ImmutableSet.of(server), null, DEFAULT_NUM_ROWS) // Added without needing a refresh
                           .build();
                       markSegmentAsNeedRefresh(segment.getId());
                       if (!server.isSegmentReplicationTarget()) {
@@ -662,18 +653,6 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   }
 
   /**
-   * If segment schema publishing is enabled, segment schema will be published alongwith segment metadata.
-   * Then the Coordinator polls the segment metadata and segment schema. It then assigns segments to be loaded on historical servers.
-   * Once a given segment is loaded on a historical server, it is added to the inventory view.
-   * Thus, all segment published after the schema publish feature is enabled will have schema cached.
-   * However, already existing segments will not have their schema published.
-   */
-  public Set<SegmentId> filterSegmentsWithCachedSchema(Set<SegmentId> segments)
-  {
-    return segments.stream().filter(id -> !schemaCache.isSchemaCached(id)).collect(Collectors.toSet());
-  }
-
-  /**
    * Attempt to refresh "segmentSignatures" for a set of segments. Returns the set of segments actually refreshed,
    * which may be a subset of the asked-for set.
    */
@@ -756,7 +735,6 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
         } else {
           final RowSignature rowSignature = analysisToRowSignature(analysis);
           log.debug("Segment[%s] has signature[%s].", segmentId, rowSignature);
-
           segmentMetadataInfo.compute(
               dataSource,
               (datasourceKey, dataSourceSegments) -> {
@@ -778,6 +756,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
                         } else {
                           final AvailableSegmentMetadata updatedSegmentMetadata = AvailableSegmentMetadata
                               .from(segmentMetadata)
+                              .withRowSignature(rowSignature)
                               .withNumRows(analysis.getNumRows())
                               .build();
                           retVal.add(segmentId);
@@ -829,9 +808,8 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
 
     if (segmentsMap != null && !segmentsMap.isEmpty()) {
       for (AvailableSegmentMetadata availableSegmentMetadata : segmentsMap.values()) {
-        final Optional<SegmentSchema> segmentSchema = schemaCache.getSchemaForSegment(availableSegmentMetadata.getSegment().getId());
-        if (segmentSchema != null && segmentSchema.getRowSignature() != null) {
-          RowSignature rowSignature = segmentSchema.getRowSignature();
+        final RowSignature rowSignature = availableSegmentMetadata.getRowSignature();
+        if (rowSignature != null) {
           for (String column : rowSignature.getColumnNames()) {
             final ColumnType columnType =
                 rowSignature.getColumnType(column)

@@ -46,7 +46,6 @@ import java.util.Set;
 public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCache<DataSourceInformation>
 {
   private static final EmittingLogger log = new EmittingLogger(CoordinatorSegmentMetadataCache.class);
-  private SegmentSchemaBackfillQueue schemaPersistQueue;
 
   @Inject
   public CoordinatorSegmentMetadataCache(
@@ -55,15 +54,12 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       SegmentMetadataCacheConfig config,
       Escalator escalator,
       InternalQueryConfig internalQueryConfig,
-      ServiceEmitter emitter,
-      FinalizedSegmentSchemaCache schemaCache,
-      SegmentSchemaIdGenerator schemaIdGenerator,
-      SegmentSchemaBackfillQueue schemaPersistQueue
+      ServiceEmitter emitter
   )
   {
-    super(queryLifecycleFactory, config, escalator, internalQueryConfig, emitter, schemaCache, schemaIdGenerator);
+    super(queryLifecycleFactory, config, escalator, internalQueryConfig, emitter);
+
     initServerViewTimelineCallback(serverView);
-    this.schemaPersistQueue = schemaPersistQueue;
   }
 
   private void initServerViewTimelineCallback(final CoordinatorServerView serverView)
@@ -121,20 +117,16 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   @Override
   public void refresh(final Set<SegmentId> segmentsToRefresh, final Set<String> dataSourcesToRebuild) throws IOException
   {
-    Set<SegmentId> filteredSegmentsToRefresh = filterSegmentsWithCachedSchema(segmentsToRefresh);
-    Set<SegmentId> cachedSegments = Sets.difference(segmentsToRefresh, filteredSegmentsToRefresh);
-
     // Refresh the segments.
-    final Set<SegmentId> refreshed = refreshSegments(filteredSegmentsToRefresh);
+    final Set<SegmentId> refreshed = refreshSegments(segmentsToRefresh);
 
     synchronized (lock) {
       // Add missing segments back to the refresh list.
-      segmentsNeedingRefresh.addAll(Sets.difference(filteredSegmentsToRefresh, refreshed));
+      segmentsNeedingRefresh.addAll(Sets.difference(segmentsToRefresh, refreshed));
 
       // Compute the list of datasources to rebuild tables for.
       dataSourcesToRebuild.addAll(dataSourcesNeedingRebuild);
       refreshed.forEach(segment -> dataSourcesToRebuild.add(segment.getDataSource()));
-      cachedSegments.forEach(segment -> dataSourcesToRebuild.add(segment.getDataSource()));
       dataSourcesNeedingRebuild.clear();
     }
 
