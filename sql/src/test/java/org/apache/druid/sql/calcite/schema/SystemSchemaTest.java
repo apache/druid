@@ -247,7 +247,7 @@ public class SystemSchemaTest extends CalciteTestBase
                                               .rows(ROWS3)
                                               .buildMMappedIndex();
 
-    walker = new SpecificSegmentsQuerySegmentWalker(conglomerate)
+    walker = SpecificSegmentsQuerySegmentWalker.SpecificSegmentsQuerySegmentWalker1(conglomerate)
         .add(segment1, index1)
         .add(segment2, index2)
         .add(segment3, index3);

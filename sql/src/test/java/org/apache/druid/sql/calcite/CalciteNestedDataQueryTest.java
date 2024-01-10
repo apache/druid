@@ -321,7 +321,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     .buildMMappedIndex();
 
 
-    SpecificSegmentsQuerySegmentWalker walker = new SpecificSegmentsQuerySegmentWalker(injector, conglomerate);
+    SpecificSegmentsQuerySegmentWalker walker = SpecificSegmentsQuerySegmentWalker.SpecificSegmentsQuerySegmentWalker1(injector, conglomerate);
     walker.add(
         DataSegment.builder()
                    .dataSource(DATA_SOURCE)

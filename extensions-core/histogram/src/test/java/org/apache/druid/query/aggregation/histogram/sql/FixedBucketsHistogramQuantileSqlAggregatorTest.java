@@ -103,7 +103,7 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends BaseCalciteQ
                                              .rows(TestDataBuilder.ROWS1)
                                              .buildMMappedIndex();
 
-    return new SpecificSegmentsQuerySegmentWalker(injector, conglomerate).add(
+    return SpecificSegmentsQuerySegmentWalker.SpecificSegmentsQuerySegmentWalker1(injector, conglomerate).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.DATASOURCE1)
                    .interval(index.getDataInterval())
