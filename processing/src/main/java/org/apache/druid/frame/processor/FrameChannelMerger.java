@@ -123,11 +123,11 @@ public class FrameChannelMerger implements FrameProcessor<Long>
           } else if (frame2 == null) {
             return -1;
           } else {
-              return currentFrames[k1].comparisonWidget.compare(
-                  currentFrames[k1].rowNumber,
-                  currentFrames[k2].comparisonWidget,
-                  currentFrames[k2].rowNumber
-              );
+            return currentFrames[k1].comparisonWidget.compare(
+                currentFrames[k1].rowNumber,
+                currentFrames[k2].comparisonWidget,
+                currentFrames[k2].rowNumber
+            );
           }
         }
     );

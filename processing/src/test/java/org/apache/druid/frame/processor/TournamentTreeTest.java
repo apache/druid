@@ -28,6 +28,7 @@ import org.junit.Test;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Deque;
 import java.util.List;
 
@@ -127,20 +128,18 @@ public class TournamentTreeTest
       intsRead.add(queues.get(tree.getMin()).poll());
     }
 
-    Assert.assertEquals(
-        ImmutableList.of(
-            0, 0, 0,
-            1, 1, 1, 1, 1, 1, 1,
-            2, 2, 2, 2,
-            3, 3, 3, 3,
-            4, 4, 4, 4, 4, 4,
-            5, 5, 5, 5, 5,
-            6, 6, 6, 6, 6, 6,
-            7, 7, 7, 7, 7, 7, 7,
-            8, 8,
-            9, 9
-        ),
-        intsRead
-    );
+    final List<Integer> expected = new ArrayList<>();
+    expected.addAll(Arrays.asList(0, 0, 0));
+    expected.addAll(Arrays.asList(1, 1, 1, 1, 1, 1, 1));
+    expected.addAll(Arrays.asList(2, 2, 2, 2));
+    expected.addAll(Arrays.asList(3, 3, 3, 3));
+    expected.addAll(Arrays.asList(4, 4, 4, 4, 4, 4));
+    expected.addAll(Arrays.asList(5, 5, 5, 5, 5));
+    expected.addAll(Arrays.asList(6, 6, 6, 6, 6, 6));
+    expected.addAll(Arrays.asList(7, 7, 7, 7, 7, 7, 7));
+    expected.addAll(Arrays.asList(8, 8));
+    expected.addAll(Arrays.asList(9, 9));
+
+    Assert.assertEquals(expected, intsRead);
   }
 }
