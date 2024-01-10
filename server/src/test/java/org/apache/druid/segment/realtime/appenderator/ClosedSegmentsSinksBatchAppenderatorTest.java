@@ -113,13 +113,13 @@ public class ClosedSegmentsSinksBatchAppenderatorTest extends InitializedNullHan
       Assert.assertEquals(
           IDENTIFIERS.subList(0, 3),
           Lists.transform(
-              segmentsAndCommitMetadata.getSegments(),
+              segmentsAndCommitMetadata.getSegmentWithSchemas(),
               SegmentIdWithShardSpec::fromDataSegment
           ).stream().sorted().collect(Collectors.toList())
       );
       Assert.assertEquals(
           tester.getPushedSegments().stream().sorted().collect(Collectors.toList()),
-          segmentsAndCommitMetadata.getSegments().stream().sorted().collect(Collectors.toList())
+          segmentsAndCommitMetadata.getSegmentWithSchemas().stream().sorted().collect(Collectors.toList())
       );
 
       appenderator.close();
@@ -179,13 +179,13 @@ public class ClosedSegmentsSinksBatchAppenderatorTest extends InitializedNullHan
       Assert.assertEquals(
           Collections.singletonList(segmentIdWithNonUTCTime),
           Lists.transform(
-              segmentsAndCommitMetadata.getSegments(),
+              segmentsAndCommitMetadata.getSegmentWithSchemas(),
               SegmentIdWithShardSpec::fromDataSegment
           ).stream().sorted().collect(Collectors.toList())
       );
       Assert.assertEquals(
           tester.getPushedSegments().stream().sorted().collect(Collectors.toList()),
-          segmentsAndCommitMetadata.getSegments().stream().sorted().collect(Collectors.toList())
+          segmentsAndCommitMetadata.getSegmentWithSchemas().stream().sorted().collect(Collectors.toList())
       );
 
       appenderator.close();
@@ -619,7 +619,7 @@ public class ClosedSegmentsSinksBatchAppenderatorTest extends InitializedNullHan
       Assert.assertEquals(
           IDENTIFIERS.subList(0, 1),
           Lists.transform(
-              segmentsAndCommitMetadata.getSegments(),
+              segmentsAndCommitMetadata.getSegmentWithSchemas(),
               SegmentIdWithShardSpec::fromDataSegment
           ).stream().sorted().collect(Collectors.toList())
       );
@@ -857,14 +857,14 @@ public class ClosedSegmentsSinksBatchAppenderatorTest extends InitializedNullHan
       Assert.assertEquals(
           Collections.singletonList(IDENTIFIERS.get(0)),
           Lists.transform(
-              segmentsAndCommitMetadata.getSegments(),
+              segmentsAndCommitMetadata.getSegmentWithSchemas(),
               SegmentIdWithShardSpec::fromDataSegment
           ).stream().sorted().collect(Collectors.toList())
       );
 
       Assert.assertEquals(
           tester.getPushedSegments().stream().sorted().collect(Collectors.toList()),
-          segmentsAndCommitMetadata.getSegments().stream().sorted().collect(Collectors.toList())
+          segmentsAndCommitMetadata.getSegmentWithSchemas().stream().sorted().collect(Collectors.toList())
       );
       // the responsability for dropping is in the BatchAppenderatorDriver, drop manually:
       appenderator.drop(IDENTIFIERS.get(0));
@@ -923,8 +923,8 @@ public class ClosedSegmentsSinksBatchAppenderatorTest extends InitializedNullHan
       final SegmentsAndCommitMetadata segmentsAndCommitMetadataForSecondFuture = secondFuture.get();
 
       // all segments must have been pushed:
-      Assert.assertEquals(segmentsAndCommitMetadataForFirstFuture.getSegments().size(), 1);
-      Assert.assertEquals(segmentsAndCommitMetadataForSecondFuture.getSegments().size(), 1);
+      Assert.assertEquals(segmentsAndCommitMetadataForFirstFuture.getSegmentWithSchemas().size(), 1);
+      Assert.assertEquals(segmentsAndCommitMetadataForSecondFuture.getSegmentWithSchemas().size(), 1);
 
     }
   }

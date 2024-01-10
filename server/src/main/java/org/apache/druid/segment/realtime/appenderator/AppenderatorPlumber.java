@@ -467,7 +467,7 @@ public class AppenderatorPlumber implements Plumber
           public void onSuccess(SegmentsAndCommitMetadata result)
           {
             // Immediately publish after pushing
-            for (DataSegment pushedSegment : result.getSegments()) {
+            for (DataSegment pushedSegment : result.getSegmentWithSchemas()) {
               try {
                 segmentPublisher.publishSegment(pushedSegment);
               }

@@ -46,8 +46,8 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.segment.metadata.SchemaPayload;
-import org.apache.druid.segment.metadata.SegmentSchemaCache;
+import org.apache.druid.segment.column.SchemaPayload;
+import org.apache.druid.segment.metadata.FinalizedSegmentSchemaCache;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentId;
@@ -82,6 +82,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -160,7 +162,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   private final Duration periodicPollDelay;
   private final Supplier<MetadataStorageTablesConfig> dbTables;
   private final SQLMetadataConnector connector;
-  private final SegmentSchemaCache segmentSchemaCache;
+  private final FinalizedSegmentSchemaCache segmentSchemaCache;
 
   /**
    * This field is made volatile to avoid "ghost secondary reads" that may result in NPE, see
@@ -246,7 +248,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       Supplier<SegmentsMetadataManagerConfig> config,
       Supplier<MetadataStorageTablesConfig> dbTables,
       SQLMetadataConnector connector,
-      SegmentSchemaCache segmentSchemaCache
+      FinalizedSegmentSchemaCache segmentSchemaCache
   )
   {
     this.jsonMapper = jsonMapper;
@@ -995,7 +997,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   {
     log.debug("Starting polling of segment table");
 
-    Map<SegmentId, Pair<Long, Long>> segmentStats = new HashMap<>();
+    ConcurrentMap<SegmentId, FinalizedSegmentSchemaCache.SegmentStats> segmentStats = new ConcurrentHashMap<>();
 
     // some databases such as PostgreSQL require auto-commit turned off
     // to stream results back, enabling transactions disables auto-commit
@@ -1019,7 +1021,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                       {
                         try {
                           DataSegment segment = jsonMapper.readValue(r.getBytes("payload"), DataSegment.class);
-                          segmentStats.put(segment.getId(), Pair.of(r.getLong("schema_id"), r.getLong("num_rows")));
+                          segmentStats.put(segment.getId(), new FinalizedSegmentSchemaCache.SegmentStats(r.getLong("schema_id"), r.getLong("num_rows")));
                           return replaceWithExistingSegmentIfPresent(segment);
                         }
                         catch (IOException e) {

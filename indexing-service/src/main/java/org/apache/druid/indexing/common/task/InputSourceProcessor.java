@@ -120,7 +120,7 @@ public class InputSourceProcessor
               // If those segments are not pushed here, the remaining available space in appenderator will be kept
               // small which could lead to smaller segments.
               final SegmentsAndCommitMetadata pushed = driver.pushAllAndClear(pushTimeout);
-              LOG.debugSegments(pushed.getSegments(), "Pushed segments");
+              LOG.debugSegments(pushed.getSegmentWithSchemas(), "Pushed segments");
             }
           }
         } else {
@@ -129,7 +129,7 @@ public class InputSourceProcessor
       }
 
       final SegmentsAndCommitMetadata pushed = driver.pushAllAndClear(pushTimeout);
-      LOG.debugSegments(pushed.getSegments(), "Pushed segments");
+      LOG.debugSegments(pushed.getSegmentWithSchemas(), "Pushed segments");
 
       return pushed;
     }

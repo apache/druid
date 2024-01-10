@@ -22,6 +22,7 @@ package org.apache.druid.segment.realtime.appenderator;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegmentWithSchema;
 import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
 import org.apache.druid.timeline.partition.BuildingShardSpec;
 import org.apache.druid.timeline.partition.OverwriteShardSpec;
@@ -50,19 +51,19 @@ public final class SegmentPublisherHelper
    * - When segment lock is used, the overwriting task should set the proper size of the atomic update group.
    *   See {@link #annotateAtomicUpdateGroupFn}.
    */
-  static Set<DataSegment> annotateShardSpec(Set<DataSegment> segments)
+  static Set<DataSegmentWithSchema> annotateShardSpec(Set<DataSegmentWithSchema> segments)
   {
-    final Map<Interval, List<DataSegment>> intervalToSegments = new HashMap<>();
+    final Map<Interval, List<DataSegmentWithSchema>> intervalToSegments = new HashMap<>();
     segments.forEach(
-        segment -> intervalToSegments.computeIfAbsent(segment.getInterval(), k -> new ArrayList<>()).add(segment)
+        segment -> intervalToSegments.computeIfAbsent(segment.getDataSegment().getInterval(), k -> new ArrayList<>()).add(segment)
     );
 
-    for (Entry<Interval, List<DataSegment>> entry : intervalToSegments.entrySet()) {
+    for (Entry<Interval, List<DataSegmentWithSchema>> entry : intervalToSegments.entrySet()) {
       final Interval interval = entry.getKey();
-      final List<DataSegment> segmentsPerInterval = entry.getValue();
-      final ShardSpec firstShardSpec = segmentsPerInterval.get(0).getShardSpec();
+      final List<DataSegmentWithSchema> segmentsPerInterval = entry.getValue();
+      final ShardSpec firstShardSpec = segmentsPerInterval.get(0).getDataSegment().getShardSpec();
       final boolean anyMismatch = segmentsPerInterval.stream().anyMatch(
-          segment -> segment.getShardSpec().getClass() != firstShardSpec.getClass()
+          segment -> segment.getDataSegment().getShardSpec().getClass() != firstShardSpec.getClass()
       );
       if (anyMismatch) {
         throw new ISE(
@@ -71,7 +72,7 @@ public final class SegmentPublisherHelper
             segmentsPerInterval
         );
       }
-      final Function<DataSegment, DataSegment> annotateFn;
+      final Function<DataSegmentWithSchema, DataSegmentWithSchema> annotateFn;
       if (firstShardSpec instanceof OverwriteShardSpec) {
         annotateFn = annotateAtomicUpdateGroupFn(segmentsPerInterval.size());
       } else if (firstShardSpec instanceof BuildingShardSpec) {
@@ -83,11 +84,13 @@ public final class SegmentPublisherHelper
         int actualCorePartitionSetSize = Math.toIntExact(
             segmentsPerInterval
                 .stream()
-                .filter(segment -> segment.getShardSpec().getPartitionNum() < expectedCorePartitionSetSize)
+                .filter(segment -> segment.getDataSegment().getShardSpec().getPartitionNum() < expectedCorePartitionSetSize)
                 .count()
         );
         if (expectedCorePartitionSetSize != actualCorePartitionSetSize) {
-          LOG.errorSegments(segmentsPerInterval, "Cannot publish segments due to incomplete time chunk");
+          LOG.errorSegments(
+              segmentsPerInterval.stream().map(DataSegmentWithSchema::getDataSegment).collect(Collectors.toList()),
+              "Cannot publish segments due to incomplete time chunk");
           throw new ISE(
               "Cannot publish segments due to incomplete time chunk for interval[%s]. "
               + "Expected [%s] segments in the core partition, but only [%] segments are found. "
@@ -112,20 +115,22 @@ public final class SegmentPublisherHelper
     return intervalToSegments.values().stream().flatMap(Collection::stream).collect(Collectors.toSet());
   }
 
-  private static Function<DataSegment, DataSegment> annotateAtomicUpdateGroupFn(int atomicUpdateGroupSize)
+  private static Function<DataSegmentWithSchema, DataSegmentWithSchema> annotateAtomicUpdateGroupFn(int atomicUpdateGroupSize)
   {
     // The segments which are published together consist an atomicUpdateGroup.
-    return segment -> {
-      final OverwriteShardSpec shardSpec = (OverwriteShardSpec) segment.getShardSpec();
-      return segment.withShardSpec(shardSpec.withAtomicUpdateGroupSize((short) atomicUpdateGroupSize));
+    return segmentWithSchema -> {
+      final OverwriteShardSpec shardSpec = (OverwriteShardSpec) segmentWithSchema.getDataSegment().getShardSpec();
+      return new DataSegmentWithSchema(segmentWithSchema.getDataSegment().withShardSpec(shardSpec.withAtomicUpdateGroupSize((short) atomicUpdateGroupSize)), segmentWithSchema.getSegmentSchema());
     };
   }
 
-  private static Function<DataSegment, DataSegment> annotateCorePartitionSetSizeFn(int corePartitionSetSize)
+  private static Function<DataSegmentWithSchema, DataSegmentWithSchema> annotateCorePartitionSetSizeFn(int corePartitionSetSize)
   {
-    return segment -> {
-      final BuildingShardSpec<?> shardSpec = (BuildingShardSpec<?>) segment.getShardSpec();
-      return segment.withShardSpec(shardSpec.convert(corePartitionSetSize));
+    return segmentWithSchema -> {
+      final BuildingShardSpec<?> shardSpec = (BuildingShardSpec<?>) segmentWithSchema.getDataSegment().getShardSpec();
+      return new DataSegmentWithSchema(
+          segmentWithSchema.getDataSegment().withShardSpec(shardSpec.convert(corePartitionSetSize)),
+          segmentWithSchema.getSegmentSchema());
     };
   }
 

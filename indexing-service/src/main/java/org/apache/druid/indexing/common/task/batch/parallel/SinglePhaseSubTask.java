@@ -461,9 +461,9 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
             // If those segments are not published here, the available space in appenderator will be kept to be small
             // which makes the size of segments smaller.
             final SegmentsAndCommitMetadata pushed = driver.pushAllAndClear(pushTimeout);
-            pushedSegments.addAll(pushed.getSegments());
-            LOG.info("Pushed [%s] segments", pushed.getSegments().size());
-            LOG.infoSegments(pushed.getSegments(), "Pushed segments");
+            pushedSegments.addAll(pushed.getSegmentWithSchemas());
+            LOG.info("Pushed [%s] segments", pushed.getSegmentWithSchemas().size());
+            LOG.infoSegments(pushed.getSegmentWithSchemas(), "Pushed segments");
           }
         } else {
           throw new ISE("Failed to add a row with timestamp[%s]", inputRow.getTimestamp());
@@ -473,9 +473,9 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
       }
 
       final SegmentsAndCommitMetadata pushed = driver.pushAllAndClear(pushTimeout);
-      pushedSegments.addAll(pushed.getSegments());
-      LOG.info("Pushed [%s] segments", pushed.getSegments().size());
-      LOG.infoSegments(pushed.getSegments(), "Pushed segments");
+      pushedSegments.addAll(pushed.getSegmentWithSchemas());
+      LOG.info("Pushed [%s] segments", pushed.getSegmentWithSchemas().size());
+      LOG.infoSegments(pushed.getSegmentWithSchemas(), "Pushed segments");
       appenderator.close();
 
       return pushedSegments;

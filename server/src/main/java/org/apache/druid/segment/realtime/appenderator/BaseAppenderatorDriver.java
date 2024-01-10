@@ -487,7 +487,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
         (Function<SegmentsAndCommitMetadata, SegmentsAndCommitMetadata>) segmentsAndMetadata -> {
           // Sanity check
           final Set<SegmentIdWithShardSpec> pushedSegments = segmentsAndMetadata
-              .getSegments()
+              .getSegmentWithSchemas()
               .stream()
               .map(SegmentIdWithShardSpec::fromDataSegment)
               .collect(Collectors.toSet());
@@ -495,14 +495,14 @@ public abstract class BaseAppenderatorDriver implements Closeable
           if (!pushedSegments.equals(Sets.newHashSet(segmentIdentifiers))) {
             log.warn(
                 "Removing [%s] segments from deep storage because sanity check failed",
-                segmentsAndMetadata.getSegments().size()
+                segmentsAndMetadata.getSegmentWithSchemas().size()
             );
             log.warnSegments(
-                segmentsAndMetadata.getSegments(),
+                segmentsAndMetadata.getSegmentWithSchemas(),
                 "Removing segments due to failed sanity check"
             );
 
-            segmentsAndMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
+            segmentsAndMetadata.getSegmentWithSchemas().forEach(dataSegmentKiller::killQuietly);
 
             throw new ISE(
                 "Pushed different segments than requested. Pushed[%s], requested[%s].",
@@ -527,11 +527,11 @@ public abstract class BaseAppenderatorDriver implements Closeable
    */
   ListenableFuture<SegmentsAndCommitMetadata> dropInBackground(SegmentsAndCommitMetadata segmentsAndCommitMetadata)
   {
-    log.debugSegments(segmentsAndCommitMetadata.getSegments(), "Dropping segments");
+    log.debugSegments(segmentsAndCommitMetadata.getSegmentWithSchemas(), "Dropping segments");
 
     final ListenableFuture<?> dropFuture = Futures.allAsList(
         segmentsAndCommitMetadata
-            .getSegments()
+            .getSegmentWithSchemas()
             .stream()
             .map(segment -> appenderator.drop(SegmentIdWithShardSpec.fromDataSegment(segment)))
             .collect(Collectors.toList())
@@ -542,7 +542,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
         (Function<Object, SegmentsAndCommitMetadata>) x -> {
           final Object metadata = segmentsAndCommitMetadata.getCommitMetadata();
           return new SegmentsAndCommitMetadata(
-              segmentsAndCommitMetadata.getSegments(),
+              segmentsAndCommitMetadata.getSegmentWithSchemas(),
               metadata == null ? null : ((AppenderatorDriverMetadata) metadata).getCallerMetadata()
           );
         },
@@ -567,7 +567,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
       java.util.function.Function<Set<DataSegment>, Set<DataSegment>> outputSegmentsAnnotateFunction
   )
   {
-    final Set<DataSegment> pushedAndTombstones = new HashSet<>(segmentsAndCommitMetadata.getSegments());
+    final Set<DataSegment> pushedAndTombstones = new HashSet<>(segmentsAndCommitMetadata.getSegmentWithSchemas());
     if (tombstones != null) {
       pushedAndTombstones.addAll(tombstones);
     }
@@ -609,10 +609,10 @@ public abstract class BaseAppenderatorDriver implements Closeable
             if (publishResult.isSuccess()) {
               log.info(
                   "Published [%s] segments with commit metadata [%s]",
-                  segmentsAndCommitMetadata.getSegments().size(),
+                  segmentsAndCommitMetadata.getSegmentWithSchemas().size(),
                   callerMetadata
               );
-              log.infoSegments(segmentsAndCommitMetadata.getSegments(), "Published segments");
+              log.infoSegments(segmentsAndCommitMetadata.getSegmentWithSchemas(), "Published segments");
             } else {
               // Publishing didn't affirmatively succeed. However, segments with our identifiers may still be active
               // now after all, for two possible reasons:
@@ -624,7 +624,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
               //    now live!
 
               final Set<SegmentIdWithShardSpec> segmentsIdentifiers = segmentsAndCommitMetadata
-                  .getSegments()
+                  .getSegmentWithSchemas()
                   .stream()
                   .map(SegmentIdWithShardSpec::fromDataSegment)
                   .collect(Collectors.toSet());
@@ -637,7 +637,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
                     ourSegments.size()
                 );
                 log.infoSegments(
-                    segmentsAndCommitMetadata.getSegments(),
+                    segmentsAndCommitMetadata.getSegmentWithSchemas(),
                     "Could not publish segments"
                 );
 
@@ -649,11 +649,11 @@ public abstract class BaseAppenderatorDriver implements Closeable
                 ).isEmpty();
 
                 if (physicallyDisjoint) {
-                  segmentsAndCommitMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
+                  segmentsAndCommitMetadata.getSegmentWithSchemas().forEach(dataSegmentKiller::killQuietly);
                 }
               } else {
                 // Our segments aren't active. Publish failed for some reason. Clean them up and then throw an error.
-                segmentsAndCommitMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
+                segmentsAndCommitMetadata.getSegmentWithSchemas().forEach(dataSegmentKiller::killQuietly);
 
                 if (publishResult.getErrorMsg() != null) {
                   log.errorSegments(ourSegments, "Failed to publish segments");
@@ -672,7 +672,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
             // Must not remove segments here, we aren't sure if our transaction succeeded or not.
             log.noStackTrace().warn(e, "Failed publish");
             log.warnSegments(
-                segmentsAndCommitMetadata.getSegments(),
+                segmentsAndCommitMetadata.getSegmentWithSchemas(),
                 "Failed publish, not removing segments"
             );
             Throwables.propagateIfPossible(e);

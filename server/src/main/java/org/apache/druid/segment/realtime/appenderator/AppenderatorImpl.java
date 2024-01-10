@@ -60,8 +60,12 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.SegmentSchema;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -74,6 +78,7 @@ import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.DataSegmentWithSchema;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.Interval;
 
@@ -766,7 +771,7 @@ public class AppenderatorImpl implements Appenderator
         // segments.
         persistAll(committer),
         (Function<Object, SegmentsAndCommitMetadata>) commitMetadata -> {
-          final List<DataSegment> dataSegments = new ArrayList<>();
+          final List<DataSegmentWithSchema> dataSegments = new ArrayList<>();
 
           log.info("Preparing to push (stats): processed rows: [%d], sinks: [%d], fireHydrants (across sinks): [%d]",
                    rowIngestionMeters.getProcessed(), theSinks.size(), pushedHydrantsCount.get()
@@ -997,6 +1002,18 @@ public class AppenderatorImpl implements Appenderator
       log.warn(e, "Failed to push merged index for segment[%s].", identifier);
       throw new RuntimeException(e);
     }
+  }
+
+  private SegmentSchema getSegmentSchema(File segmentFile) throws IOException
+  {
+    final QueryableIndex queryableIndex = indexIO.loadIndex(segmentFile);
+    final StorageAdapter storageAdapter = new QueryableIndexStorageAdapter(queryableIndex);
+    final RowSignature rowSignature = storageAdapter.getRowSignature();
+    long numRows = storageAdapter.getNumRows();
+
+    // todo add aggregator factory here
+
+    return new SegmentSchema(rowSignature);
   }
 
   @Override

@@ -1,10 +1,10 @@
-package org.apache.druid.segment.metadata;
+package org.apache.druid.segment.column;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.segment.column.RowSignature;
 
+import java.util.HashMap;
 import java.util.Map;
 
 public class SchemaPayload
@@ -19,6 +19,12 @@ public class SchemaPayload
   {
     this.rowSignature = rowSignature;
     this.aggregatorFactories = aggregatorFactories;
+  }
+
+  public SchemaPayload(RowSignature rowSignature)
+  {
+    this.rowSignature = rowSignature;
+    this.aggregatorFactories = new HashMap<>();
   }
 
   @JsonProperty

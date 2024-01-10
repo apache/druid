@@ -132,7 +132,7 @@ public class OpenAndClosedSegmentsBatchAppenderatorDriverTest extends EasyMockSu
             new SegmentIdWithShardSpec(DATA_SOURCE, Intervals.of("2000/PT1H"), VERSION, new NumberedShardSpec(0, 0)),
             new SegmentIdWithShardSpec(DATA_SOURCE, Intervals.of("2000T01/PT1H"), VERSION, new NumberedShardSpec(0, 0))
         ),
-        published.getSegments()
+        published.getSegmentWithSchemas()
                  .stream()
                  .map(SegmentIdWithShardSpec::fromDataSegment)
                  .collect(Collectors.toSet())
@@ -167,7 +167,7 @@ public class OpenAndClosedSegmentsBatchAppenderatorDriverTest extends EasyMockSu
             new SegmentIdWithShardSpec(DATA_SOURCE, Intervals.of("2000T01/PT1H"), VERSION, new NumberedShardSpec(0, 0)),
             new SegmentIdWithShardSpec(DATA_SOURCE, Intervals.of("2000T01/PT1H"), VERSION, new NumberedShardSpec(1, 0))
         ),
-        published.getSegments()
+        published.getSegmentWithSchemas()
                  .stream()
                  .map(SegmentIdWithShardSpec::fromDataSegment)
                  .collect(Collectors.toSet())

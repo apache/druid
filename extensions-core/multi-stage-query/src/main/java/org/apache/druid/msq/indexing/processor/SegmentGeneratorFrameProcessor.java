@@ -157,7 +157,7 @@ public class SegmentGeneratorFrameProcessor implements FrameProcessor<DataSegmen
         appenderator.clear();
 
         log.debug("Finished work for segment [%s].", segmentIdWithShardSpec.asSegmentId());
-        return ReturnOrAwait.returnObject(Iterables.getOnlyElement(metadata.getSegments()));
+        return ReturnOrAwait.returnObject(Iterables.getOnlyElement(metadata.getSegmentWithSchemas()));
       }
     } else {
       if (appenderator.getSegments().isEmpty()) {

@@ -145,7 +145,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
           IDENTIFIERS.subList(0, 2),
           sorted(
               Lists.transform(
-                  segmentsAndCommitMetadata.getSegments(),
+                  segmentsAndCommitMetadata.getSegmentWithSchemas(),
                   new Function<DataSegment, SegmentIdWithShardSpec>()
                   {
                     @Override
@@ -157,7 +157,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
               )
           )
       );
-      Assert.assertEquals(sorted(tester.getPushedSegments()), sorted(segmentsAndCommitMetadata.getSegments()));
+      Assert.assertEquals(sorted(tester.getPushedSegments()), sorted(segmentsAndCommitMetadata.getSegmentWithSchemas()));
 
       // clear
       appenderator.clear();

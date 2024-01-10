@@ -1,0 +1,145 @@
+Schema
+--
+Schema table [schema_id(auto-incremented, pk), fingerprint(string, unique), payload]
+segments table [segment_id, schema_id (foreign key), ... ]
+
+Write Flow
+--
+[within transaction]
+Task publish segment metadata and schema together in a transaction.
+First insert the schema which doesn't exist.
+Fetch new schema id as well as the existing schema id associated with segments.
+Insert segments with associated schema id.
+
+Cleanup Flow
+--
+[within transaction]
+Identify schema which is not related to any segments in segments table.
+Delete the schema.
+lower priority, lock, failing cleanup is okay
+
+
+race condition
+schema1 not associated with any segment
+cleanup task tries to remove it
+same time insert task tried to associated the schema1 with a new segment
+scenario1
+lets say cleanup task fails and insert task succeeds
+now say we delete in-memory cache of scheam in the same transaction, schema1 is no longer cache in-memory
+now say segment1 is added to inventory, the in-memory lookup for schema of segment1 results in cache miss
+we try to execute smq and fetch its schema and again to publishs it schema
+
+s1, schema1 fresh publish
+in-memory vai poll s1, schema1 cached
+inventory view s1 got added, find schema1
+lets say s1 got deleted (drop segment)
+cleanup trigger and deletes schema1
+in-memory cache fetches all schemas
+meanwhile a new task again insert schema1 for segment s2
+
+variation
+--
+
+
+scenario2
+cleanup succeeds, insert fails
+
+solution
+--
+- poll all schema in each poll
+- post cleanup trigger full schema refresh
+
+
+
+In-memory poll flow
+--
+Poll the newly created schema since last poll .
+Merge with existing schema in-memory.
+Poll the segment metadata each minute includes segmentId, schemaId, numRows, full refresh.
+
+only query is to fetch schema for a given segment_id
+
+how to cleanup stale schema from in-memory:
+should it be in the same transaction as cleanup or after the cleanup transaction has succeeded
+> delete stale schema from cache within same cleanup transaction, if transaction fails, in failure handling readd removed schema
+
+Smc schema flow
+--
+new (finalized) segment added (via inventory view)
+check if its schema is present in the cache using segmentId
+(segment published to db -> coordinator polls segment metadata -> instructrs some historical to load it -> ..)
+if it is not present implies that schema for it was not published or the publish feature is disabled
+execute smq, fetch its schema
+in background publish segment schema (rehydration of hot segments)
+[within transaction]
+generate fingerprint, publish schema within a transaction, also associated segment with schema_id
+it is possible that the same fingerprint is cached
+but doesn't matter since we need to associate segment with schema id
+
+
+smc refactoring
+--
+currently
+update when segments is added/removed from inventory view
+when smq is run and schema for segments is to be updated
+
+query -> when refresh loop runs and datasource scheam is to be built
+
+map segmentId -> metadata (servers, numRows, rowSignature) -> schema is updated as a result of smq
+schema from this map is used to build datasource schema in refresh loop
+
+
+published segments schema is present in separate schemaCache -> updated from db poll
+realtime segmetn schema is pushed by realtime task and needs to go in somewhere
+
+refresh loop should know what segments scheam is missing and decide on executing smq
+and also needs to know the location of cache schema
+
+
+refresh loop is changed to execute smq only for segments for which schema is not present in the cache
+but datasource rebuilding also now needs to get its schema from multiple places
+
+currently all schema is cache inside a map in smc
+
+segment cache ->
+- populated by db poll
+- cleanup by cleanup job
+
+where to add result of smq, schema cache or cache in smc
+- populated by result of smq
+(this would cause schema cache to differ from db, but we are kind of )
+
+map inside smc
+- [no] populated by result of smq
+- populated by updates from realtime task
+
+proposal
+
+[option1]
+maintain all schema in class FinalizedSegmentSchemaCache -
+internally two map one for realtime and another for published segments
+smq result is also added to the in-memory cache
+realtime schema map is updated only by realtime segments updated (who clears this map?)
+the query method checks both the maps for a given segmentId
+no changes in smc, but only in coordiantorsmc override methods
+
+
+in-transit schema publish flow
+--
+execute smq
+add smq result to schemaCache (numRows & signature)
+publish smq result to db
+
+why to keep smq results in-memory?
+to avoid repeated smq for same segments
+
+how to invalidate smq result from schemaCache?
+option1
+- clear the in-transit schema on db poll, but it is possible that not all schema has been published
+
+
+option2
+maintain two structures
+- smqResults -> populated after smq is executed
+- smqPublishedResults -> populated after sqm result is published to db
+- clear sqmPublishedResults on db poll

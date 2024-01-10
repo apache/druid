@@ -55,6 +55,7 @@ import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.SegmentSchema;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -226,7 +227,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   @GuardedBy("lock")
   protected final TreeSet<SegmentId> segmentsNeedingRefresh = new TreeSet<>(SEGMENT_ORDER);
 
-  protected SegmentSchemaCache schemaCache;
+  protected FinalizedSegmentSchemaCache schemaCache;
 
   public AbstractSegmentMetadataCache(
       final QueryLifecycleFactory queryLifecycleFactory,
@@ -234,7 +235,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
       final Escalator escalator,
       final InternalQueryConfig internalQueryConfig,
       final ServiceEmitter emitter,
-      final SegmentSchemaCache schemaCache,
+      final FinalizedSegmentSchemaCache schemaCache,
       SegmentSchemaIdGenerator schemaIdGenerator
   )
   {
@@ -660,6 +661,13 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     }
   }
 
+  /**
+   * If segment schema publishing is enabled, segment schema will be published alongwith segment metadata.
+   * Then the Coordinator polls the segment metadata and segment schema. It then assigns segments to be loaded on historical servers.
+   * Once a given segment is loaded on a historical server, it is added to the inventory view.
+   * Thus, all segment published after the schema publish feature is enabled will have schema cached.
+   * However, already existing segments will not have their schema published.
+   */
   public Set<SegmentId> filterSegmentsWithCachedSchema(Set<SegmentId> segments)
   {
     return segments.stream().filter(id -> !schemaCache.isSchemaCached(id)).collect(Collectors.toSet());
@@ -821,7 +829,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
 
     if (segmentsMap != null && !segmentsMap.isEmpty()) {
       for (AvailableSegmentMetadata availableSegmentMetadata : segmentsMap.values()) {
-        final SegmentSchema segmentSchema = schemaCache.getSchemaForSegment(availableSegmentMetadata.getSegment().getId());
+        final Optional<SegmentSchema> segmentSchema = schemaCache.getSchemaForSegment(availableSegmentMetadata.getSegment().getId());
         if (segmentSchema != null && segmentSchema.getRowSignature() != null) {
           RowSignature rowSignature = segmentSchema.getRowSignature();
           for (String column : rowSignature.getColumnNames()) {

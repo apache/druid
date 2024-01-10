@@ -56,7 +56,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       Escalator escalator,
       InternalQueryConfig internalQueryConfig,
       ServiceEmitter emitter,
-      SegmentSchemaCache schemaCache,
+      FinalizedSegmentSchemaCache schemaCache,
       SegmentSchemaIdGenerator schemaIdGenerator,
       SegmentSchemaBackfillQueue schemaPersistQueue
   )
@@ -122,6 +122,8 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   public void refresh(final Set<SegmentId> segmentsToRefresh, final Set<String> dataSourcesToRebuild) throws IOException
   {
     Set<SegmentId> filteredSegmentsToRefresh = filterSegmentsWithCachedSchema(segmentsToRefresh);
+    Set<SegmentId> cachedSegments = Sets.difference(segmentsToRefresh, filteredSegmentsToRefresh);
+
     // Refresh the segments.
     final Set<SegmentId> refreshed = refreshSegments(filteredSegmentsToRefresh);
 
@@ -132,6 +134,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       // Compute the list of datasources to rebuild tables for.
       dataSourcesToRebuild.addAll(dataSourcesNeedingRebuild);
       refreshed.forEach(segment -> dataSourcesToRebuild.add(segment.getDataSource()));
+      cachedSegments.forEach(segment -> dataSourcesToRebuild.add(segment.getDataSource()));
       dataSourcesNeedingRebuild.clear();
     }
 
