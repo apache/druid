@@ -164,7 +164,9 @@ public class QueryStackTests
       Injector injector
   )
   {
-    return new TestClusterQuerySegmentWalker(timelines, conglomerate, scheduler, injector);
+    return new TestClusterQuerySegmentWalker(
+        timelines, conglomerate, scheduler, injector.getInstance(EtagProvider.KEY)
+    );
   }
 
   public static LocalQuerySegmentWalker createLocalQuerySegmentWalker(

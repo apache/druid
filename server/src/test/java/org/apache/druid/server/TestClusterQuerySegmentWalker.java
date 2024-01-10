@@ -82,18 +82,6 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
       Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
       QueryRunnerFactoryConglomerate conglomerate,
       @Nullable QueryScheduler scheduler,
-      Injector injector
-  )
-  {
-    this(timelines, conglomerate, scheduler, injector.getInstance(EtagProvider.KEY));
-
-
-  }
-
-  TestClusterQuerySegmentWalker(
-      Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
-      QueryRunnerFactoryConglomerate conglomerate,
-      @Nullable QueryScheduler scheduler,
       EtagProvider etagProvider
   )
   {
