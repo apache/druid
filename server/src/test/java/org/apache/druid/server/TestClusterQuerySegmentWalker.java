@@ -22,7 +22,6 @@ package org.apache.druid.server;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.inject.Injector;
 import org.apache.druid.client.SegmentServerSelector;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
