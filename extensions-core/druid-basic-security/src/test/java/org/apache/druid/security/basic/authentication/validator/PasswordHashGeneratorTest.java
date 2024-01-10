@@ -19,7 +19,7 @@
 
 package org.apache.druid.security.basic.authentication.validator;
 
-import org.apache.druid.java.util.common.Stopwatch;
+import com.google.common.cache.CacheStats;
 import org.apache.druid.security.basic.BasicAuthUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -48,20 +48,22 @@ public class PasswordHashGeneratorTest
     final int iterations = BasicAuthUtils.DEFAULT_KEY_ITERATIONS;
     final byte[] salt = BasicAuthUtils.generateSalt();
 
-    final Stopwatch stopwatch = Stopwatch.createUnstarted();
+    final byte[] expectedHash = PasswordHashGenerator.computePasswordHash(password, salt, iterations);
 
     // Verify that the first computation takes a few ms
-    stopwatch.restart();
-    hashGenerator.getOrComputePasswordHash(password, salt, iterations);
-    long firstComputeTimeMillis = stopwatch.millisElapsed();
-    Assert.assertTrue(firstComputeTimeMillis > 50);
+    byte[] firstHash = hashGenerator.getOrComputePasswordHash(password, salt, iterations);
+    Assert.assertArrayEquals(expectedHash, firstHash);
+    CacheStats stats = hashGenerator.getCacheStats();
+    Assert.assertEquals(0, stats.hitCount());
+    Assert.assertEquals(1, stats.missCount());
 
     // Verify that each subsequent computation takes less than 1ms
     for (int i = 0; i < 10; ++i) {
-      stopwatch.restart();
-      hashGenerator.getOrComputePasswordHash(password, salt, iterations);
-      long recomputeTimeMillis = stopwatch.millisElapsed();
-      Assert.assertTrue(recomputeTimeMillis <= 1);
+      byte[] recomputedHash = hashGenerator.getOrComputePasswordHash(password, salt, iterations);
+      Assert.assertArrayEquals(expectedHash, recomputedHash);
+      stats = hashGenerator.getCacheStats();
+      Assert.assertEquals(i + 1, stats.hitCount());
+      Assert.assertEquals(1, stats.missCount());
     }
   }
 

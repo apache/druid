@@ -21,6 +21,7 @@ package org.apache.druid.security.basic.authentication.validator;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheStats;
 import com.google.common.hash.Hashing;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.RE;
@@ -59,6 +60,7 @@ public class PasswordHashGenerator
 
   private final Cache<CacheKey, byte[]> cache = CacheBuilder.newBuilder()
                                                             .maximumSize(1000)
+                                                            .recordStats()
                                                             .expireAfterAccess(Duration.ofMinutes(60))
                                                             .build();
 
@@ -76,6 +78,11 @@ public class PasswordHashGenerator
     catch (ExecutionException e) {
       throw DruidException.defensive().build(e, "Could not compute hash of password");
     }
+  }
+
+  public CacheStats getCacheStats()
+  {
+    return cache.stats();
   }
 
   /**
