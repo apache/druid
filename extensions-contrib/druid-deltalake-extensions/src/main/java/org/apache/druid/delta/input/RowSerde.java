@@ -72,6 +72,7 @@ public class RowSerde
       return OBJECT_MAPPER.writeValueAsString(rowWithSchema);
     }
     catch (JsonProcessingException e) {
+      // todo: throw druid exception
       throw new UncheckedIOException(e);
     }
   }

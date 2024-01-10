@@ -42,6 +42,7 @@ public class DeltaSplit
     return stateRow;
   }
 
+  // TODO: fileRows?
   @JsonProperty("file")
   public List<String> getFile()
   {

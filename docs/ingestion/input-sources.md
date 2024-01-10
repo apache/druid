@@ -1006,7 +1006,9 @@ This input source provides the following filters: `and`, `equals`, `interval`, a
 |type|Set this value to `not`.|yes|
 |filter|The iceberg filter on which logical NOT is applied|yes|
 
+## DeltaLake input source
 
+TODO: fill in details about the input source
 
 The [secondary partitioning method](native-batch.md#partitionsspec) determines the requisite number of concurrent worker tasks that run in parallel to complete ingestion with the Combining input source.
 Set this value in `maxNumConcurrentSubTasks` in `tuningConfig` based on the secondary partitioning method:

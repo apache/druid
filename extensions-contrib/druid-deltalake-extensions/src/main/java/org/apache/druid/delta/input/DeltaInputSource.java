@@ -207,8 +207,8 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
     );
   }
 
-  private Row deserialize(TableClient myTableClient, String row)
+  private Row deserialize(TableClient tableClient, String row)
   {
-    return RowSerde.deserializeRowFromJson(myTableClient, row);
+    return RowSerde.deserializeRowFromJson(tableClient, row);
   }
 }
