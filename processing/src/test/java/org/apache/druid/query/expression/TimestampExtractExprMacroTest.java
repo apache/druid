@@ -20,10 +20,13 @@
 package org.apache.druid.query.expression;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
+import org.apache.druid.math.expr.Parser;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -99,5 +102,30 @@ public class TimestampExtractExprMacroTest
             ExprEval.of(TimestampExtractExprMacro.Unit.MILLENNIUM.toString()).toExpr()
         ));
     Assert.assertEquals(3, expression.eval(InputBindings.nilBindings()).asInt());
+  }
+
+  @Test
+  public void testApplyExtractDowWithTimeZoneShouldBeFriday()
+  {
+    Expr expression = target.apply(
+        ImmutableList.of(
+            ExprEval.of("2023-12-15").toExpr(),
+            ExprEval.of(TimestampExtractExprMacro.Unit.DOW.toString()).toExpr(),
+            ExprEval.of("UTC").toExpr()
+        ));
+    Assert.assertEquals(5, expression.eval(InputBindings.nilBindings()).asInt());
+  }
+
+  @Test
+  public void testApplyExtractDowWithDynamicTimeZoneShouldBeFriday()
+  {
+    Expr expression = Parser.parse("timestamp_extract(time, 'DOW', timezone)", TestExprMacroTable.INSTANCE);
+    Expr.ObjectBinding bindings = InputBindings.forInputSuppliers(
+        ImmutableMap.of(
+            "time", InputBindings.inputSupplier(ExpressionType.STRING, () -> "2023-12-15"),
+            "timezone", InputBindings.inputSupplier(ExpressionType.STRING, () -> "UTC")
+        )
+    );
+    Assert.assertEquals(5, expression.eval(bindings).asInt());
   }
 }

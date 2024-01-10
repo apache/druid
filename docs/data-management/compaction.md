@@ -74,7 +74,7 @@ For more information, see [Avoid conflicts with ingestion](../data-management/au
 
 ### Segment granularity handling
 
-Unless you modify the segment granularity in [`granularitySpec`](#compaction-granularity-spec), Druid attempts to retain the granularity for the compacted segments. When segments have different segment granularities with no overlap in interval Druid creates a separate compaction task for each to retain the segment granularity in the compacted segment.
+Unless you modify the segment granularity in [`granularitySpec`](manual-compaction.md#compaction-granularity-spec), Druid attempts to retain the granularity for the compacted segments. When segments have different segment granularities with no overlap in interval Druid creates a separate compaction task for each to retain the segment granularity in the compacted segment.
 
 If segments have different segment granularities before compaction but there is some overlap in interval, Druid attempts find start and end of the overlapping interval and uses the closest segment granularity level for the compacted segment.
 
@@ -82,7 +82,7 @@ For example consider two overlapping segments: segment "A" for the interval 01/0
 
 ### Query granularity handling
 
-Unless you modify the query granularity in the [`granularitySpec`](#compaction-granularity-spec), Druid retains the query granularity for the compacted segments. If segments have different query granularities before compaction, Druid chooses the finest level of granularity for the resulting compacted segment. For example if a compaction task combines two segments, one with day query granularity and one with minute query granularity, the resulting segment uses minute query granularity.
+Unless you modify the query granularity in the [`granularitySpec`](manual-compaction.md#compaction-granularity-spec), Druid retains the query granularity for the compacted segments. If segments have different query granularities before compaction, Druid chooses the finest level of granularity for the resulting compacted segment. For example if a compaction task combines two segments, one with day query granularity and one with minute query granularity, the resulting segment uses minute query granularity.
 
 :::info
  In Apache Druid 0.21.0 and prior, Druid sets the granularity for compacted segments to the default granularity of `NONE` regardless of the query granularity of the original segments.
@@ -108,6 +108,6 @@ You can check that your segments are rolled up or not by using [Segment Metadata
 
 See the following topics for more information:
 - [Segment optimization](../operations/segment-optimization.md) for guidance to determine if compaction will help in your case.
-- [Manual compaction](./manual-compaction.md) for how to run a one-time compaction task
+- [Manual compaction](./manual-compaction.md) for how to run a one-time compaction task.
 - [Automatic compaction](automatic-compaction.md) for how to enable and configure automatic compaction.
 

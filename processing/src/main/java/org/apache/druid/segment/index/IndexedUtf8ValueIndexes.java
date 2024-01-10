@@ -82,11 +82,6 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
     final ByteBuffer utf8 = StringUtils.toUtf8ByteBuffer(value);
     return new SimpleBitmapColumnIndex()
     {
-      @Override
-      public double estimateSelectivity(int totalRows)
-      {
-        return Math.min(1, (double) getBitmapForValue().size() / totalRows);
-      }
 
       @Override
       public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
@@ -168,7 +163,7 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
   {
     // for large number of in-filter values in comparison to the dictionary size, use the sorted merge algorithm.
     if (size > SORTED_MERGE_RATIO_THRESHOLD * dictionary.size()) {
-      return new SimpleImmutableBitmapIterableIndex()
+      return new SimpleImmutableBitmapDelegatingIterableIndex()
       {
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable()
@@ -245,9 +240,9 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
    * Iterates over the value set, using binary search to look up each element. The algorithm works well for smaller
    * number of values, and must be used if the values are not sorted in the same manner as {@link #dictionary}
    */
-  private SimpleImmutableBitmapIterableIndex getSimpleImmutableBitmapIterableIndexFromIterator(Iterable<ByteBuffer> valuesUtf8, boolean valuesContainsNull)
+  private SimpleImmutableBitmapDelegatingIterableIndex getSimpleImmutableBitmapIterableIndexFromIterator(Iterable<ByteBuffer> valuesUtf8, boolean valuesContainsNull)
   {
-    return new SimpleImmutableBitmapIterableIndex()
+    return new SimpleImmutableBitmapDelegatingIterableIndex()
     {
       @Override
       public Iterable<ImmutableBitmap> getBitmapIterable()

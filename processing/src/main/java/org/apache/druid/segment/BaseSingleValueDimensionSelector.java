@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.base.Predicate;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.CalledFromHotLoop;
@@ -77,15 +77,14 @@ public abstract class BaseSingleValueDimensionSelector implements DimensionSelec
   @Override
   public ValueMatcher makeValueMatcher(final DruidPredicateFactory predicateFactory)
   {
-    final Predicate<String> predicate = predicateFactory.makeStringPredicate();
+    final DruidObjectPredicate<String> predicate = predicateFactory.makeStringPredicate();
     return new ValueMatcher()
     {
       @Override
       public boolean matches(boolean includeUnknown)
       {
         final String rowValue = getValue();
-        final boolean matchNull = includeUnknown && predicateFactory.isNullInputUnknown();
-        return (matchNull && rowValue == null) || predicate.apply(rowValue);
+        return predicate.apply(rowValue).matches(includeUnknown);
       }
 
       @Override

@@ -19,33 +19,44 @@
 
 package org.apache.druid.query.aggregation.last;
 
+import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
-import org.apache.druid.segment.BaseNullableColumnValueSelector;
+import org.apache.druid.segment.ColumnValueSelector;
 
 /**
  * Base type for on heap 'last' aggregator for primitive numeric column selectors..
  *
  * This could probably share a base class with {@link org.apache.druid.query.aggregation.first.NumericFirstAggregator}
  */
-public abstract class NumericLastAggregator<TSelector extends BaseNullableColumnValueSelector> implements Aggregator
+public abstract class NumericLastAggregator implements Aggregator
 {
   private final boolean useDefault = NullHandling.replaceWithDefault();
-  private final BaseLongColumnValueSelector timeSelector;
 
-  final TSelector valueSelector;
+  private final BaseLongColumnValueSelector timeSelector;
+  final ColumnValueSelector valueSelector;
+  final boolean needsFoldCheck;
+
   long lastTime;
   boolean rhsNull;
 
-  public NumericLastAggregator(BaseLongColumnValueSelector timeSelector, TSelector valueSelector)
+  public NumericLastAggregator(BaseLongColumnValueSelector timeSelector, ColumnValueSelector valueSelector, boolean needsFoldCheck)
   {
     this.timeSelector = timeSelector;
     this.valueSelector = valueSelector;
+    this.needsFoldCheck = needsFoldCheck;
 
     lastTime = Long.MIN_VALUE;
     rhsNull = !useDefault;
   }
+
+  /**
+   * Store the current primitive typed 'last' value
+   */
+  abstract void setLastValue();
+
+  abstract void setLastValue(Number lastValue);
 
   @Override
   public void aggregate()
@@ -53,13 +64,33 @@ public abstract class NumericLastAggregator<TSelector extends BaseNullableColumn
     if (timeSelector.isNull()) {
       return;
     }
+
+    if (needsFoldCheck) {
+      final Object object = valueSelector.getObject();
+      if (object instanceof SerializablePair) {
+        final SerializablePair<Long, Number> inPair = (SerializablePair<Long, Number>) object;
+
+        if (inPair.lhs >= lastTime) {
+          lastTime = inPair.lhs;
+
+          if (inPair.rhs == null) {
+            rhsNull = true;
+          } else {
+            rhsNull = false;
+            setLastValue(inPair.rhs);
+          }
+        }
+        return;
+      }
+    }
     long time = timeSelector.getLong();
     if (time >= lastTime) {
       lastTime = time;
       if (useDefault || !valueSelector.isNull()) {
-        setCurrentValue();
+        setLastValue();
         rhsNull = false;
       } else {
+        setLastValue(0);
         rhsNull = true;
       }
     }
@@ -70,9 +101,4 @@ public abstract class NumericLastAggregator<TSelector extends BaseNullableColumn
   {
     // nothing to close
   }
-
-  /**
-   * Store the current primitive typed 'last' value
-   */
-  abstract void setCurrentValue();
 }

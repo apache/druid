@@ -43,6 +43,7 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.topn.DimensionTopNMetricSpec;
 import org.apache.druid.query.topn.InvertedTopNMetricSpec;
 import org.apache.druid.query.topn.TopNQueryBuilder;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -623,10 +624,17 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         "SELECT distinct dim1 FROM druid.foo WHERE substring(substring(dim1, 2), 1, 1) = 'e' OR dim2 = 'a'",
         ImmutableList.of(
             GroupByQuery.builder()
-                .setDataSource(CalciteTests.DATASOURCE1)
-                .setInterval(querySegmentSpec(Filtration.eternity()))
-                .setGranularity(Granularities.ALL)
-                .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
+                        .setVirtualColumns(
+                            NullHandling.replaceWithDefault()
+                            ? VirtualColumns.EMPTY
+                            : VirtualColumns.create(
+                                expressionVirtualColumn("v0", "substring(substring(\"dim1\", 1, -1), 0, 1)", ColumnType.STRING)
+                            )
+                        )
                 .setDimFilter(
                     or(
                         NullHandling.replaceWithDefault()
@@ -638,7 +646,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                                 new SubstringDimExtractionFn(0, 1)
                             )
                         )
-                        : expressionFilter("(substring(substring(\"dim1\", 1, -1), 0, 1) == 'e')"),
+                        : equality("v0", "e", ColumnType.STRING),
                         equality("dim2", "a", ColumnType.STRING)
                     )
                 )

@@ -31,6 +31,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryPlus;
@@ -43,10 +44,13 @@ import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.plumber.Committers;
+import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -55,12 +59,17 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class StreamAppenderatorTest extends InitializedNullHandlingTest
@@ -951,6 +960,101 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testDelayedDrop() throws Exception
+  {
+    class TestScheduledThreadPoolExecutor extends ScheduledThreadPoolExecutor
+    {
+      ScheduledFuture<?> scheduledFuture;
+
+      public TestScheduledThreadPoolExecutor()
+      {
+        super(1);
+      }
+
+      @Override
+      public ScheduledFuture<?> schedule(
+          Runnable command,
+          long delay, TimeUnit unit
+      )
+      {
+        ScheduledFuture<?> future = super.schedule(command, delay, unit);
+        scheduledFuture = future;
+        return future;
+      }
+
+      ScheduledFuture<?> getLastScheduledFuture()
+      {
+        return scheduledFuture;
+      }
+    }
+
+    try (
+        final StreamAppenderatorTester tester =
+            new StreamAppenderatorTester.Builder().maxRowsInMemory(2)
+                                                  .basePersistDirectory(temporaryFolder.newFolder())
+                                                  .enablePushFailure(true)
+                                                  .withSegmentDropDelayInMilli(1000)
+                                                  .build()) {
+      final Appenderator appenderator = tester.getAppenderator();
+      TestScheduledThreadPoolExecutor testExec = new TestScheduledThreadPoolExecutor();
+      ((StreamAppenderator) appenderator).setExec(testExec);
+
+      appenderator.startJob();
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 2), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(IDENTIFIERS.get(1), ir("2000", "foo", 4), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(IDENTIFIERS.get(2), ir("2001", "foo", 8), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(IDENTIFIERS.get(2), ir("2001T01", "foo", 16), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(IDENTIFIERS.get(2), ir("2001T02", "foo", 32), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(IDENTIFIERS.get(2), ir("2001T03", "foo", 64), Suppliers.ofInstance(Committers.nil()));
+
+      // Query1: 2000/2001
+      final TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
+                                           .dataSource(StreamAppenderatorTester.DATASOURCE)
+                                           .intervals(ImmutableList.of(Intervals.of("2000/2001")))
+                                           .aggregators(
+                                               Arrays.asList(
+                                                   new LongSumAggregatorFactory("count", "count"),
+                                                   new LongSumAggregatorFactory("met", "met")
+                                               )
+                                           )
+                                           .granularity(Granularities.DAY)
+                                           .build();
+
+      appenderator.drop(IDENTIFIERS.get(0)).get();
+
+      // segment 0 won't be dropped immediately
+      final List<Result<TimeseriesResultValue>> results1 =
+          QueryPlus.wrap(query1).run(appenderator, ResponseContext.createEmpty()).toList();
+      Assert.assertEquals(
+          "query1",
+          ImmutableList.of(
+              new Result<>(
+                  DateTimes.of("2000"),
+                  new TimeseriesResultValue(ImmutableMap.of("count", 3L, "met", 7L))
+              )
+          ),
+          results1
+      );
+
+      // segment 0 would eventually be dropped at some time after 1 secs drop delay
+      testExec.getLastScheduledFuture().get(5000, TimeUnit.MILLISECONDS);
+
+      final List<Result<TimeseriesResultValue>> results = QueryPlus.wrap(query1)
+                                                                   .run(appenderator, ResponseContext.createEmpty())
+                                                                   .toList();
+      List<Result<TimeseriesResultValue>> expectedResults =
+          ImmutableList.of(
+              new Result<>(
+                  DateTimes.of("2000"),
+                  new TimeseriesResultValue(ImmutableMap.of("count", 1L, "met", 4L))
+              )
+          );
+      Assert.assertEquals("query after dropped", expectedResults, results);
+    }
+  }
+
+  @Test
   public void testQueryByIntervals() throws Exception
   {
     try (
@@ -1262,6 +1366,166 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
     }
   }
 
+  @Test
+  public void testSchemaAnnouncement() throws Exception
+  {
+    TestSchemaAnnouncer dataSegmentAnnouncer = new TestSchemaAnnouncer();
+
+    try (final StreamAppenderatorTester tester =
+             new StreamAppenderatorTester.Builder().maxRowsInMemory(2)
+                                                   .enablePushFailure(true)
+                                                   .basePersistDirectory(temporaryFolder.newFolder())
+                                                   .build(dataSegmentAnnouncer, CentralizedDatasourceSchemaConfig.create())) {
+      final StreamAppenderator appenderator = (StreamAppenderator) tester.getAppenderator();
+
+      final ConcurrentMap<String, String> commitMetadata = new ConcurrentHashMap<>();
+      final Supplier<Committer> committerSupplier = committerSupplierFromConcurrentMap(commitMetadata);
+      StreamAppenderator.SinkSchemaAnnouncer sinkSchemaAnnouncer = appenderator.getSinkSchemaAnnouncer();
+
+      // startJob
+      Assert.assertEquals(null, appenderator.startJob());
+
+      // getDataSource
+      Assert.assertEquals(StreamAppenderatorTester.DATASOURCE, appenderator.getDataSource());
+
+      // add first row
+      commitMetadata.put("x", "1");
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
+
+      // trigger schema computation
+      sinkSchemaAnnouncer.computeAndAnnounce();
+
+      // verify schema
+      List<Pair<String, SegmentSchemas>> announcedAbsoluteSchema = dataSegmentAnnouncer.getAnnouncedAbsoluteSchema();
+      List<Pair<String, SegmentSchemas>> announcedDeltaSchema = dataSegmentAnnouncer.getAnnouncedDeltaSchema();
+
+      Assert.assertEquals(1, announcedAbsoluteSchema.size());
+      Assert.assertEquals(1, announcedDeltaSchema.size());
+
+      // verify absolute schema
+      Assert.assertEquals(appenderator.getId(), announcedAbsoluteSchema.get(0).lhs);
+      List<SegmentSchemas.SegmentSchema> segmentSchemas = announcedAbsoluteSchema.get(0).rhs.getSegmentSchemaList();
+      Assert.assertEquals(1, segmentSchemas.size());
+      SegmentSchemas.SegmentSchema absoluteSchemaId1Row1 = segmentSchemas.get(0);
+      Assert.assertEquals(IDENTIFIERS.get(0).asSegmentId().toString(), absoluteSchemaId1Row1.getSegmentId());
+      Assert.assertEquals(1, absoluteSchemaId1Row1.getNumRows().intValue());
+      Assert.assertFalse(absoluteSchemaId1Row1.isDelta());
+      Assert.assertEquals(Collections.emptyList(), absoluteSchemaId1Row1.getUpdatedColumns());
+      Assert.assertEquals(Lists.newArrayList("__time", "dim", "count", "met"), absoluteSchemaId1Row1.getNewColumns());
+      Assert.assertEquals(
+          ImmutableMap.of("__time", ColumnType.LONG, "count", ColumnType.LONG, "dim", ColumnType.STRING, "met", ColumnType.LONG),
+          absoluteSchemaId1Row1.getColumnTypeMap());
+
+      // verify delta schema
+      Assert.assertEquals(appenderator.getId(), announcedDeltaSchema.get(0).lhs);
+      segmentSchemas = announcedDeltaSchema.get(0).rhs.getSegmentSchemaList();
+      SegmentSchemas.SegmentSchema deltaSchemaId1Row1 = segmentSchemas.get(0);
+      Assert.assertEquals(1, segmentSchemas.size());
+      Assert.assertEquals(IDENTIFIERS.get(0).asSegmentId().toString(), deltaSchemaId1Row1.getSegmentId());
+      Assert.assertEquals(1, deltaSchemaId1Row1.getNumRows().intValue());
+      // absolute schema is sent for a new sink
+      Assert.assertFalse(deltaSchemaId1Row1.isDelta());
+      Assert.assertEquals(Collections.emptyList(), deltaSchemaId1Row1.getUpdatedColumns());
+      Assert.assertEquals(Lists.newArrayList("__time", "dim", "count", "met"), deltaSchemaId1Row1.getNewColumns());
+      Assert.assertEquals(
+          ImmutableMap.of("__time", ColumnType.LONG, "count", ColumnType.LONG, "dim", ColumnType.STRING, "met", ColumnType.LONG),
+          deltaSchemaId1Row1.getColumnTypeMap());
+
+      dataSegmentAnnouncer.clear();
+
+      // add second row
+      commitMetadata.put("x", "2");
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "bar", 2), committerSupplier);
+
+      // trigger schema computation
+      sinkSchemaAnnouncer.computeAndAnnounce();
+
+      // verify schema
+      announcedAbsoluteSchema = dataSegmentAnnouncer.getAnnouncedAbsoluteSchema();
+      announcedDeltaSchema = dataSegmentAnnouncer.getAnnouncedDeltaSchema();
+
+      Assert.assertEquals(1, announcedAbsoluteSchema.size());
+      Assert.assertEquals(1, announcedDeltaSchema.size());
+
+      // verify absolute schema
+      Assert.assertEquals(appenderator.getId(), announcedAbsoluteSchema.get(0).lhs);
+      segmentSchemas = announcedAbsoluteSchema.get(0).rhs.getSegmentSchemaList();
+      Assert.assertEquals(1, segmentSchemas.size());
+      SegmentSchemas.SegmentSchema absoluteSchemaId1Row2 = segmentSchemas.get(0);
+      Assert.assertEquals(IDENTIFIERS.get(0).asSegmentId().toString(), absoluteSchemaId1Row2.getSegmentId());
+      Assert.assertEquals(2, absoluteSchemaId1Row2.getNumRows().intValue());
+      Assert.assertFalse(absoluteSchemaId1Row2.isDelta());
+      Assert.assertEquals(Collections.emptyList(), absoluteSchemaId1Row2.getUpdatedColumns());
+      Assert.assertEquals(Lists.newArrayList("__time", "dim", "count", "met"), absoluteSchemaId1Row2.getNewColumns());
+      Assert.assertEquals(
+          ImmutableMap.of("__time", ColumnType.LONG, "count", ColumnType.LONG, "dim", ColumnType.STRING, "met", ColumnType.LONG),
+          absoluteSchemaId1Row2.getColumnTypeMap());
+
+      // verify delta
+      Assert.assertEquals(appenderator.getId(), announcedDeltaSchema.get(0).lhs);
+      segmentSchemas = announcedDeltaSchema.get(0).rhs.getSegmentSchemaList();
+      SegmentSchemas.SegmentSchema deltaSchemaId1Row2 = segmentSchemas.get(0);
+      Assert.assertEquals(1, segmentSchemas.size());
+      Assert.assertEquals(IDENTIFIERS.get(0).asSegmentId().toString(), deltaSchemaId1Row2.getSegmentId());
+      Assert.assertEquals(2, deltaSchemaId1Row2.getNumRows().intValue());
+      Assert.assertTrue(deltaSchemaId1Row2.isDelta());
+      Assert.assertEquals(Collections.emptyList(), deltaSchemaId1Row2.getUpdatedColumns());
+      Assert.assertEquals(Collections.emptyList(), deltaSchemaId1Row2.getNewColumns());
+      Assert.assertEquals(Collections.emptyMap(), deltaSchemaId1Row2.getColumnTypeMap());
+
+      dataSegmentAnnouncer.clear();
+
+      // add first row for second segment
+      commitMetadata.put("x", "3");
+      appenderator.add(IDENTIFIERS.get(1), ir("2000", "qux", 4), committerSupplier);
+
+      sinkSchemaAnnouncer.computeAndAnnounce();
+
+      // verify schema
+      announcedAbsoluteSchema = dataSegmentAnnouncer.getAnnouncedAbsoluteSchema();
+      announcedDeltaSchema = dataSegmentAnnouncer.getAnnouncedDeltaSchema();
+
+      Assert.assertEquals(1, announcedAbsoluteSchema.size());
+      Assert.assertEquals(1, announcedDeltaSchema.size());
+
+      // verify absolute schema
+      Assert.assertEquals(appenderator.getId(), announcedAbsoluteSchema.get(0).lhs);
+      segmentSchemas = announcedAbsoluteSchema.get(0).rhs.getSegmentSchemaList();
+      Assert.assertEquals(2, segmentSchemas.size());
+      SegmentSchemas.SegmentSchema absoluteSchemaId2Row1 =
+          segmentSchemas.stream()
+                        .filter(v -> v.getSegmentId().equals(IDENTIFIERS.get(1).asSegmentId().toString()))
+                        .findFirst()
+                        .get();
+      Assert.assertEquals(IDENTIFIERS.get(1).asSegmentId().toString(), absoluteSchemaId2Row1.getSegmentId());
+      Assert.assertEquals(1, absoluteSchemaId2Row1.getNumRows().intValue());
+      Assert.assertFalse(absoluteSchemaId2Row1.isDelta());
+      Assert.assertEquals(Collections.emptyList(), absoluteSchemaId2Row1.getUpdatedColumns());
+      Assert.assertEquals(Lists.newArrayList("__time", "dim", "count", "met"), absoluteSchemaId2Row1.getNewColumns());
+      Assert.assertEquals(
+          ImmutableMap.of("__time", ColumnType.LONG, "count", ColumnType.LONG, "dim", ColumnType.STRING, "met", ColumnType.LONG),
+          absoluteSchemaId2Row1.getColumnTypeMap());
+
+      // verify delta
+      Assert.assertEquals(appenderator.getId(), announcedDeltaSchema.get(0).lhs);
+      segmentSchemas = announcedDeltaSchema.get(0).rhs.getSegmentSchemaList();
+      SegmentSchemas.SegmentSchema deltaSchemaId2Row1 =
+          segmentSchemas.stream()
+                        .filter(v -> v.getSegmentId().equals(IDENTIFIERS.get(1).asSegmentId().toString()))
+                        .findFirst()
+                        .get();
+      Assert.assertEquals(1, segmentSchemas.size());
+      Assert.assertEquals(IDENTIFIERS.get(1).asSegmentId().toString(), deltaSchemaId2Row1.getSegmentId());
+      Assert.assertEquals(1, deltaSchemaId2Row1.getNumRows().intValue());
+      Assert.assertFalse(deltaSchemaId2Row1.isDelta());
+      Assert.assertEquals(Collections.emptyList(), deltaSchemaId2Row1.getUpdatedColumns());
+      Assert.assertEquals(Lists.newArrayList("__time", "dim", "count", "met"), deltaSchemaId2Row1.getNewColumns());
+      Assert.assertEquals(
+          ImmutableMap.of("__time", ColumnType.LONG, "count", ColumnType.LONG, "dim", ColumnType.STRING, "met", ColumnType.LONG),
+          deltaSchemaId2Row1.getColumnTypeMap());
+    }
+  }
+
   private static SegmentIdWithShardSpec si(String interval, String version, int partitionNum)
   {
     return new SegmentIdWithShardSpec(
@@ -1331,4 +1595,73 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
     return xsSorted;
   }
 
+  static class TestSchemaAnnouncer implements DataSegmentAnnouncer
+  {
+    private List<Pair<String, SegmentSchemas>> announcedAbsoluteSchema = new ArrayList<>();
+    private List<Pair<String, SegmentSchemas>> announcedDeltaSchema = new ArrayList<>();
+    private List<String> unnanouncementEvents = new ArrayList<>();
+
+    @Override
+    public void announceSegment(DataSegment segment)
+    {
+      // noop
+    }
+
+    @Override
+    public void unannounceSegment(DataSegment segment)
+    {
+      // noop
+    }
+
+    @Override
+    public void announceSegments(Iterable<DataSegment> segments)
+    {
+      // noop
+    }
+
+    @Override
+    public void unannounceSegments(Iterable<DataSegment> segments)
+    {
+      // noop
+    }
+
+    @Override
+    public void announceSegmentSchemas(
+        String taskId,
+        SegmentSchemas segmentSchemas,
+        @Nullable SegmentSchemas segmentSchemasChange
+    )
+    {
+      announcedAbsoluteSchema.add(Pair.of(taskId, segmentSchemas));
+      announcedDeltaSchema.add(Pair.of(taskId, segmentSchemasChange));
+    }
+
+    @Override
+    public void removeSegmentSchemasForTask(String taskId)
+    {
+      unnanouncementEvents.add(taskId);
+    }
+
+    public List<Pair<String, SegmentSchemas>> getAnnouncedAbsoluteSchema()
+    {
+      return announcedAbsoluteSchema;
+    }
+
+    public List<Pair<String, SegmentSchemas>> getAnnouncedDeltaSchema()
+    {
+      return announcedDeltaSchema;
+    }
+
+    public List<String> getUnnanouncementEvents()
+    {
+      return unnanouncementEvents;
+    }
+
+    public void clear()
+    {
+      announcedAbsoluteSchema.clear();
+      announcedDeltaSchema.clear();
+      unnanouncementEvents.clear();
+    }
+  }
 }
