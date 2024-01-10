@@ -43,6 +43,7 @@ import io.delta.kernel.types.StringType;
 import io.delta.kernel.types.StructField;
 import io.delta.kernel.types.StructType;
 import io.delta.kernel.types.TimestampType;
+import org.apache.druid.error.InvalidInput;
 
 import java.io.UncheckedIOException;
 import java.util.HashMap;
@@ -72,8 +73,7 @@ public class RowSerde
       return OBJECT_MAPPER.writeValueAsString(rowWithSchema);
     }
     catch (JsonProcessingException e) {
-      // todo: throw druid exception
-      throw new UncheckedIOException(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -89,8 +89,8 @@ public class RowSerde
           TableSchemaSerDe.fromJson(tableClient.getJsonHandler(), schemaNode.asText());
       return parseRowFromJsonWithSchema((ObjectNode) jsonNode.get("row"), schema);
     }
-    catch (JsonProcessingException ex) {
-      throw new UncheckedIOException(ex); // todo: ise?
+    catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
     }
   }
 
@@ -137,7 +137,7 @@ public class RowSerde
         Row subRow = row.getStruct(fieldId);
         value = convertRowToJsonObject(subRow);
       } else {
-        throw new UnsupportedOperationException("NYI");
+        throw InvalidInput.exception("Unsupported fieldType[%s] for fieldId[%s]", fieldType, fieldId);
       }
 
       rowObject.put(name, value);

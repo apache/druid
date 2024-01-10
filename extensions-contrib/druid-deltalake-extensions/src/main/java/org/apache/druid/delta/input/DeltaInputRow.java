@@ -19,7 +19,6 @@
 
 package org.apache.druid.delta.input;
 
-import io.delta.kernel.types.ArrayType;
 import io.delta.kernel.types.BinaryType;
 import io.delta.kernel.types.BooleanType;
 import io.delta.kernel.types.ByteType;
@@ -30,7 +29,6 @@ import io.delta.kernel.types.DoubleType;
 import io.delta.kernel.types.FloatType;
 import io.delta.kernel.types.IntegerType;
 import io.delta.kernel.types.LongType;
-import io.delta.kernel.types.MapType;
 import io.delta.kernel.types.ShortType;
 import io.delta.kernel.types.StringType;
 import io.delta.kernel.types.StructField;
@@ -42,6 +40,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.MapInputRowParser;
+import org.apache.druid.error.InvalidInput;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -58,8 +57,9 @@ public class DeltaInputRow implements InputRow
   private final io.delta.kernel.data.Row row;
   private final StructType schema;
   private final Object2IntMap<String> fieldNameToOrdinal = new Object2IntOpenHashMap<>();
-  private static final ZoneId ZONE_ID = ZoneId.systemDefault(); // TIMEZONE HANDLING?????
   private final InputRow delegateRow;
+
+  private static final ZoneId ZONE_ID = ZoneId.systemDefault(); // TODO: Timezone handling?
 
   public DeltaInputRow(io.delta.kernel.data.Row row, InputRowSchema inputRowSchema)
   {
@@ -76,7 +76,6 @@ public class DeltaInputRow implements InputRow
       theMap.put(fieldName, _getRaw(fieldName));
     }
     delegateRow = MapInputRowParser.parse(inputRowSchema, theMap);
-
   }
 
   @Override
@@ -111,25 +110,6 @@ public class DeltaInputRow implements InputRow
   }
 
   @Nullable
-  public Object _getRaw(String dimension)
-  {
-    StructField field = schema.get(dimension);
-    if (field == null) {
-      return null;
-    } else if (field.isMetadataColumn()) {
-      return null;
-    }
-
-
-    int ordinal = fieldNameToOrdinal.getInt(dimension);
-    if (ordinal < 0) {
-      return null;
-    }
-    return getValue(field.getDataType(), row, ordinal);
-
-  }
-
-  @Nullable
   @Override
   public Number getMetric(String metric)
   {
@@ -140,6 +120,37 @@ public class DeltaInputRow implements InputRow
   public int compareTo(Row o)
   {
     return this.getTimestamp().compareTo(o.getTimestamp());
+  }
+
+  @Override
+  public String toString()
+  {
+    return "DeltaInputRow{" +
+           "row=" + row +
+           ", schema=" + schema +
+           ", fieldNameToOrdinal=" + fieldNameToOrdinal +
+           ", delegateRow=" + delegateRow +
+           '}';
+  }
+
+  public Map<String, Object> getRawRowAsMap()
+  {
+    return RowSerde.convertRowToJsonObject(row);
+  }
+
+  @Nullable
+  private Object _getRaw(String dimension)
+  {
+    StructField field = schema.get(dimension);
+    if (field == null || field.isMetadataColumn()) {
+      return null;
+    }
+
+    int ordinal = fieldNameToOrdinal.getInt(dimension);
+    if (ordinal < 0) {
+      return null;
+    }
+    return getValue(field.getDataType(), row, ordinal);
   }
 
   @Nullable
@@ -167,7 +178,8 @@ public class DeltaInputRow implements InputRow
       LocalDateTime dateTime = LocalDateTime.ofEpochSecond(
           microSecsSinceEpochUTC / 1_000_000 /* epochSecond */,
           (int) (1000 * microSecsSinceEpochUTC % 1_000_000) /* nanoOfSecond */,
-          ZoneOffset.UTC);
+          ZoneOffset.UTC
+      );
       return dateTime.atZone(ZONE_ID).toInstant().toEpochMilli();
     } else if (dataType instanceof FloatType) {
       return dataRow.getFloat(columnOrdinal);
@@ -179,19 +191,8 @@ public class DeltaInputRow implements InputRow
       return new String(dataRow.getBinary(columnOrdinal));
     } else if (dataType instanceof DecimalType) {
       return dataRow.getDecimal(columnOrdinal).longValue();
-    } else if (dataType instanceof StructType) {
-      return "TODO: struct value";
-    } else if (dataType instanceof ArrayType) {
-      return "TODO: list value";
-    } else if (dataType instanceof MapType) {
-      return "TODO: map value";
     } else {
-      throw new UnsupportedOperationException("unsupported data type: " + dataType);
+      throw InvalidInput.exception("Unsupported data type[%s]", dataType);
     }
-  }
-
-  public Map<String, Object> getRawRowAsMap()
-  {
-    return RowSerde.convertRowToJsonObject(row);
   }
 }

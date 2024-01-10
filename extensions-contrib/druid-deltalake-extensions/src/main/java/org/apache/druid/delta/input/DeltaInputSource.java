@@ -110,7 +110,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
 
       if (deltaSplit != null) {
         scanState = deserialize(tableClient, deltaSplit.getStateRow());
-        scanRowList = deltaSplit.getFile()
+        scanRowList = deltaSplit.getFiles()
                                 .stream()
                                 .map(row -> deserialize(tableClient, row))
                                 .collect(Collectors.toList());

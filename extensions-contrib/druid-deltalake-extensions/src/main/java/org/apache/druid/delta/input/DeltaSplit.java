@@ -27,13 +27,16 @@ import java.util.List;
 public class DeltaSplit
 {
   private final String stateRow;
-  private final List<String> fileRows;
+  private final List<String> files;
 
   @JsonCreator
-  public DeltaSplit(@JsonProperty("state") String stateRow, @JsonProperty("file") List<String> fileRows)
+  public DeltaSplit(
+      @JsonProperty("state") final String stateRow,
+      @JsonProperty("file") final List<String> files
+  )
   {
     this.stateRow = stateRow;
-    this.fileRows = fileRows;
+    this.files = files;
   }
 
   @JsonProperty("state")
@@ -42,11 +45,10 @@ public class DeltaSplit
     return stateRow;
   }
 
-  // TODO: fileRows?
-  @JsonProperty("file")
-  public List<String> getFile()
+  @JsonProperty("files")
+  public List<String> getFiles()
   {
-    return fileRows;
+    return files;
   }
 
   @Override
@@ -54,7 +56,7 @@ public class DeltaSplit
   {
     return "DeltaSplit{" +
            "stateRow=" + stateRow +
-           ", file=" + fileRows +
+           ", files=" + files +
            "}";
   }
 }
