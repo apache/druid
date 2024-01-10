@@ -52,6 +52,9 @@ public class AzureAccountConfig
   @JsonProperty
   private Boolean useAzureCredentialsChain = Boolean.FALSE;
 
+  @JsonProperty
+  private String endpointSuffix = AzureUtils.DEFAULT_AZURE_ENDPOINT_SUFFIX;
+
   @SuppressWarnings("unused") // Used by Jackson deserialization?
   public void setProtocol(String protocol)
   {
@@ -73,6 +76,12 @@ public class AzureAccountConfig
   public void setKey(String key)
   {
     this.key = key;
+  }
+
+  @SuppressWarnings("unused") // Used by Jackson deserialization?
+  public void setEndpointSuffix(String endpointSuffix)
+  {
+    this.endpointSuffix = endpointSuffix;
   }
 
   public String getProtocol()
@@ -120,5 +129,15 @@ public class AzureAccountConfig
   public void setUseAzureCredentialsChain(Boolean useAzureCredentialsChain)
   {
     this.useAzureCredentialsChain = useAzureCredentialsChain;
+  }
+
+  public String getEndpointSuffix()
+  {
+    return endpointSuffix;
+  }
+
+  public String getBlobStorageEndpoint()
+  {
+    return "blob." + endpointSuffix;
   }
 }

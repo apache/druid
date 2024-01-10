@@ -31,6 +31,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryPlus;
@@ -43,10 +44,13 @@ import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.plumber.Committers;
+import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -55,6 +59,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -1360,6 +1366,166 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
     }
   }
 
+  @Test
+  public void testSchemaAnnouncement() throws Exception
+  {
+    TestSchemaAnnouncer dataSegmentAnnouncer = new TestSchemaAnnouncer();
+
+    try (final StreamAppenderatorTester tester =
+             new StreamAppenderatorTester.Builder().maxRowsInMemory(2)
+                                                   .enablePushFailure(true)
+                                                   .basePersistDirectory(temporaryFolder.newFolder())
+                                                   .build(dataSegmentAnnouncer, CentralizedDatasourceSchemaConfig.create())) {
+      final StreamAppenderator appenderator = (StreamAppenderator) tester.getAppenderator();
+
+      final ConcurrentMap<String, String> commitMetadata = new ConcurrentHashMap<>();
+      final Supplier<Committer> committerSupplier = committerSupplierFromConcurrentMap(commitMetadata);
+      StreamAppenderator.SinkSchemaAnnouncer sinkSchemaAnnouncer = appenderator.getSinkSchemaAnnouncer();
+
+      // startJob
+      Assert.assertEquals(null, appenderator.startJob());
+
+      // getDataSource
+      Assert.assertEquals(StreamAppenderatorTester.DATASOURCE, appenderator.getDataSource());
+
+      // add first row
+      commitMetadata.put("x", "1");
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
+
+      // trigger schema computation
+      sinkSchemaAnnouncer.computeAndAnnounce();
+
+      // verify schema
+      List<Pair<String, SegmentSchemas>> announcedAbsoluteSchema = dataSegmentAnnouncer.getAnnouncedAbsoluteSchema();
+      List<Pair<String, SegmentSchemas>> announcedDeltaSchema = dataSegmentAnnouncer.getAnnouncedDeltaSchema();
+
+      Assert.assertEquals(1, announcedAbsoluteSchema.size());
+      Assert.assertEquals(1, announcedDeltaSchema.size());
+
+      // verify absolute schema
+      Assert.assertEquals(appenderator.getId(), announcedAbsoluteSchema.get(0).lhs);
+      List<SegmentSchemas.SegmentSchema> segmentSchemas = announcedAbsoluteSchema.get(0).rhs.getSegmentSchemaList();
+      Assert.assertEquals(1, segmentSchemas.size());
+      SegmentSchemas.SegmentSchema absoluteSchemaId1Row1 = segmentSchemas.get(0);
+      Assert.assertEquals(IDENTIFIERS.get(0).asSegmentId().toString(), absoluteSchemaId1Row1.getSegmentId());
+      Assert.assertEquals(1, absoluteSchemaId1Row1.getNumRows().intValue());
+      Assert.assertFalse(absoluteSchemaId1Row1.isDelta());
+      Assert.assertEquals(Collections.emptyList(), absoluteSchemaId1Row1.getUpdatedColumns());
+      Assert.assertEquals(Lists.newArrayList("__time", "dim", "count", "met"), absoluteSchemaId1Row1.getNewColumns());
+      Assert.assertEquals(
+          ImmutableMap.of("__time", ColumnType.LONG, "count", ColumnType.LONG, "dim", ColumnType.STRING, "met", ColumnType.LONG),
+          absoluteSchemaId1Row1.getColumnTypeMap());
+
+      // verify delta schema
+      Assert.assertEquals(appenderator.getId(), announcedDeltaSchema.get(0).lhs);
+      segmentSchemas = announcedDeltaSchema.get(0).rhs.getSegmentSchemaList();
+      SegmentSchemas.SegmentSchema deltaSchemaId1Row1 = segmentSchemas.get(0);
+      Assert.assertEquals(1, segmentSchemas.size());
+      Assert.assertEquals(IDENTIFIERS.get(0).asSegmentId().toString(), deltaSchemaId1Row1.getSegmentId());
+      Assert.assertEquals(1, deltaSchemaId1Row1.getNumRows().intValue());
+      // absolute schema is sent for a new sink
+      Assert.assertFalse(deltaSchemaId1Row1.isDelta());
+      Assert.assertEquals(Collections.emptyList(), deltaSchemaId1Row1.getUpdatedColumns());
+      Assert.assertEquals(Lists.newArrayList("__time", "dim", "count", "met"), deltaSchemaId1Row1.getNewColumns());
+      Assert.assertEquals(
+          ImmutableMap.of("__time", ColumnType.LONG, "count", ColumnType.LONG, "dim", ColumnType.STRING, "met", ColumnType.LONG),
+          deltaSchemaId1Row1.getColumnTypeMap());
+
+      dataSegmentAnnouncer.clear();
+
+      // add second row
+      commitMetadata.put("x", "2");
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "bar", 2), committerSupplier);
+
+      // trigger schema computation
+      sinkSchemaAnnouncer.computeAndAnnounce();
+
+      // verify schema
+      announcedAbsoluteSchema = dataSegmentAnnouncer.getAnnouncedAbsoluteSchema();
+      announcedDeltaSchema = dataSegmentAnnouncer.getAnnouncedDeltaSchema();
+
+      Assert.assertEquals(1, announcedAbsoluteSchema.size());
+      Assert.assertEquals(1, announcedDeltaSchema.size());
+
+      // verify absolute schema
+      Assert.assertEquals(appenderator.getId(), announcedAbsoluteSchema.get(0).lhs);
+      segmentSchemas = announcedAbsoluteSchema.get(0).rhs.getSegmentSchemaList();
+      Assert.assertEquals(1, segmentSchemas.size());
+      SegmentSchemas.SegmentSchema absoluteSchemaId1Row2 = segmentSchemas.get(0);
+      Assert.assertEquals(IDENTIFIERS.get(0).asSegmentId().toString(), absoluteSchemaId1Row2.getSegmentId());
+      Assert.assertEquals(2, absoluteSchemaId1Row2.getNumRows().intValue());
+      Assert.assertFalse(absoluteSchemaId1Row2.isDelta());
+      Assert.assertEquals(Collections.emptyList(), absoluteSchemaId1Row2.getUpdatedColumns());
+      Assert.assertEquals(Lists.newArrayList("__time", "dim", "count", "met"), absoluteSchemaId1Row2.getNewColumns());
+      Assert.assertEquals(
+          ImmutableMap.of("__time", ColumnType.LONG, "count", ColumnType.LONG, "dim", ColumnType.STRING, "met", ColumnType.LONG),
+          absoluteSchemaId1Row2.getColumnTypeMap());
+
+      // verify delta
+      Assert.assertEquals(appenderator.getId(), announcedDeltaSchema.get(0).lhs);
+      segmentSchemas = announcedDeltaSchema.get(0).rhs.getSegmentSchemaList();
+      SegmentSchemas.SegmentSchema deltaSchemaId1Row2 = segmentSchemas.get(0);
+      Assert.assertEquals(1, segmentSchemas.size());
+      Assert.assertEquals(IDENTIFIERS.get(0).asSegmentId().toString(), deltaSchemaId1Row2.getSegmentId());
+      Assert.assertEquals(2, deltaSchemaId1Row2.getNumRows().intValue());
+      Assert.assertTrue(deltaSchemaId1Row2.isDelta());
+      Assert.assertEquals(Collections.emptyList(), deltaSchemaId1Row2.getUpdatedColumns());
+      Assert.assertEquals(Collections.emptyList(), deltaSchemaId1Row2.getNewColumns());
+      Assert.assertEquals(Collections.emptyMap(), deltaSchemaId1Row2.getColumnTypeMap());
+
+      dataSegmentAnnouncer.clear();
+
+      // add first row for second segment
+      commitMetadata.put("x", "3");
+      appenderator.add(IDENTIFIERS.get(1), ir("2000", "qux", 4), committerSupplier);
+
+      sinkSchemaAnnouncer.computeAndAnnounce();
+
+      // verify schema
+      announcedAbsoluteSchema = dataSegmentAnnouncer.getAnnouncedAbsoluteSchema();
+      announcedDeltaSchema = dataSegmentAnnouncer.getAnnouncedDeltaSchema();
+
+      Assert.assertEquals(1, announcedAbsoluteSchema.size());
+      Assert.assertEquals(1, announcedDeltaSchema.size());
+
+      // verify absolute schema
+      Assert.assertEquals(appenderator.getId(), announcedAbsoluteSchema.get(0).lhs);
+      segmentSchemas = announcedAbsoluteSchema.get(0).rhs.getSegmentSchemaList();
+      Assert.assertEquals(2, segmentSchemas.size());
+      SegmentSchemas.SegmentSchema absoluteSchemaId2Row1 =
+          segmentSchemas.stream()
+                        .filter(v -> v.getSegmentId().equals(IDENTIFIERS.get(1).asSegmentId().toString()))
+                        .findFirst()
+                        .get();
+      Assert.assertEquals(IDENTIFIERS.get(1).asSegmentId().toString(), absoluteSchemaId2Row1.getSegmentId());
+      Assert.assertEquals(1, absoluteSchemaId2Row1.getNumRows().intValue());
+      Assert.assertFalse(absoluteSchemaId2Row1.isDelta());
+      Assert.assertEquals(Collections.emptyList(), absoluteSchemaId2Row1.getUpdatedColumns());
+      Assert.assertEquals(Lists.newArrayList("__time", "dim", "count", "met"), absoluteSchemaId2Row1.getNewColumns());
+      Assert.assertEquals(
+          ImmutableMap.of("__time", ColumnType.LONG, "count", ColumnType.LONG, "dim", ColumnType.STRING, "met", ColumnType.LONG),
+          absoluteSchemaId2Row1.getColumnTypeMap());
+
+      // verify delta
+      Assert.assertEquals(appenderator.getId(), announcedDeltaSchema.get(0).lhs);
+      segmentSchemas = announcedDeltaSchema.get(0).rhs.getSegmentSchemaList();
+      SegmentSchemas.SegmentSchema deltaSchemaId2Row1 =
+          segmentSchemas.stream()
+                        .filter(v -> v.getSegmentId().equals(IDENTIFIERS.get(1).asSegmentId().toString()))
+                        .findFirst()
+                        .get();
+      Assert.assertEquals(1, segmentSchemas.size());
+      Assert.assertEquals(IDENTIFIERS.get(1).asSegmentId().toString(), deltaSchemaId2Row1.getSegmentId());
+      Assert.assertEquals(1, deltaSchemaId2Row1.getNumRows().intValue());
+      Assert.assertFalse(deltaSchemaId2Row1.isDelta());
+      Assert.assertEquals(Collections.emptyList(), deltaSchemaId2Row1.getUpdatedColumns());
+      Assert.assertEquals(Lists.newArrayList("__time", "dim", "count", "met"), deltaSchemaId2Row1.getNewColumns());
+      Assert.assertEquals(
+          ImmutableMap.of("__time", ColumnType.LONG, "count", ColumnType.LONG, "dim", ColumnType.STRING, "met", ColumnType.LONG),
+          deltaSchemaId2Row1.getColumnTypeMap());
+    }
+  }
+
   private static SegmentIdWithShardSpec si(String interval, String version, int partitionNum)
   {
     return new SegmentIdWithShardSpec(
@@ -1429,4 +1595,73 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
     return xsSorted;
   }
 
+  static class TestSchemaAnnouncer implements DataSegmentAnnouncer
+  {
+    private List<Pair<String, SegmentSchemas>> announcedAbsoluteSchema = new ArrayList<>();
+    private List<Pair<String, SegmentSchemas>> announcedDeltaSchema = new ArrayList<>();
+    private List<String> unnanouncementEvents = new ArrayList<>();
+
+    @Override
+    public void announceSegment(DataSegment segment)
+    {
+      // noop
+    }
+
+    @Override
+    public void unannounceSegment(DataSegment segment)
+    {
+      // noop
+    }
+
+    @Override
+    public void announceSegments(Iterable<DataSegment> segments)
+    {
+      // noop
+    }
+
+    @Override
+    public void unannounceSegments(Iterable<DataSegment> segments)
+    {
+      // noop
+    }
+
+    @Override
+    public void announceSegmentSchemas(
+        String taskId,
+        SegmentSchemas segmentSchemas,
+        @Nullable SegmentSchemas segmentSchemasChange
+    )
+    {
+      announcedAbsoluteSchema.add(Pair.of(taskId, segmentSchemas));
+      announcedDeltaSchema.add(Pair.of(taskId, segmentSchemasChange));
+    }
+
+    @Override
+    public void removeSegmentSchemasForTask(String taskId)
+    {
+      unnanouncementEvents.add(taskId);
+    }
+
+    public List<Pair<String, SegmentSchemas>> getAnnouncedAbsoluteSchema()
+    {
+      return announcedAbsoluteSchema;
+    }
+
+    public List<Pair<String, SegmentSchemas>> getAnnouncedDeltaSchema()
+    {
+      return announcedDeltaSchema;
+    }
+
+    public List<String> getUnnanouncementEvents()
+    {
+      return unnanouncementEvents;
+    }
+
+    public void clear()
+    {
+      announcedAbsoluteSchema.clear();
+      announcedDeltaSchema.clear();
+      unnanouncementEvents.clear();
+    }
+  }
 }

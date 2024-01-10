@@ -117,6 +117,8 @@ public class CalciteTests
   public static final String SOMEXDATASOURCE = "somexdatasource";
   public static final String USERVISITDATASOURCE = "visits";
   public static final String DRUID_SCHEMA_NAME = "druid";
+  public static final String WIKIPEDIA = "wikipedia";
+  public static final String WIKIPEDIA_FIRST_LAST = "wikipedia_first_last";
 
   public static final String TEST_SUPERUSER_NAME = "testSuperuser";
   public static final AuthorizerMapper TEST_AUTHORIZER_MAPPER = new AuthorizerMapper(null)

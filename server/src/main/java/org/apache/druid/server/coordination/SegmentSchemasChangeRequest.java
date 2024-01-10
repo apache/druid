@@ -19,23 +19,42 @@
 
 package org.apache.druid.server.coordination;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 
 import javax.annotation.Nullable;
 
 /**
+ * Implementation of {@link DataSegmentChangeRequest}, which encapsulates segment schema changes.
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "action")
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "load", value = SegmentChangeRequestLoad.class),
-    @JsonSubTypes.Type(name = "drop", value = SegmentChangeRequestDrop.class),
-    @JsonSubTypes.Type(name = "noop", value = SegmentChangeRequestNoop.class),
-    @JsonSubTypes.Type(name = "schema", value = SegmentSchemasChangeRequest.class)
-})
-public interface DataSegmentChangeRequest
+public class SegmentSchemasChangeRequest implements DataSegmentChangeRequest
 {
-  void go(DataSegmentChangeHandler handler, @Nullable DataSegmentChangeCallback callback);
+  private final SegmentSchemas segmentSchemas;
 
-  String asString();
+  @JsonCreator
+  public SegmentSchemasChangeRequest(
+      @JsonProperty("segmentSchemas") SegmentSchemas segmentSchemas
+  )
+  {
+    this.segmentSchemas = segmentSchemas;
+  }
+
+  @JsonProperty
+  public SegmentSchemas getSegmentSchemas()
+  {
+    return segmentSchemas;
+  }
+
+  @Override
+  public void go(DataSegmentChangeHandler handler, @Nullable DataSegmentChangeCallback callback)
+  {
+    // noop
+  }
+
+  @Override
+  public String asString()
+  {
+    return segmentSchemas.toString();
+  }
 }
