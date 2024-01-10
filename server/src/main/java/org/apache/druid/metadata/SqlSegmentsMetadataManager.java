@@ -48,7 +48,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.column.SchemaPayload;
-import org.apache.druid.segment.metadata.FinalizedSegmentSchemaCache;
+import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentId;
@@ -163,7 +163,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   private final Duration periodicPollDelay;
   private final Supplier<MetadataStorageTablesConfig> dbTables;
   private final SQLMetadataConnector connector;
-  private final FinalizedSegmentSchemaCache segmentSchemaCache;
+  private final SegmentSchemaCache segmentSchemaCache;
 
   /**
    * This field is made volatile to avoid "ghost secondary reads" that may result in NPE, see
@@ -249,7 +249,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       Supplier<SegmentsMetadataManagerConfig> config,
       Supplier<MetadataStorageTablesConfig> dbTables,
       SQLMetadataConnector connector,
-      FinalizedSegmentSchemaCache segmentSchemaCache
+      SegmentSchemaCache segmentSchemaCache
   )
   {
     this.jsonMapper = jsonMapper;
@@ -1043,7 +1043,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   {
     log.debug("Starting polling of segment table");
 
-    ConcurrentMap<SegmentId, FinalizedSegmentSchemaCache.SegmentStats> segmentStats = new ConcurrentHashMap<>();
+    ConcurrentMap<SegmentId, SegmentSchemaCache.SegmentStats> segmentStats = new ConcurrentHashMap<>();
 
     // some databases such as PostgreSQL require auto-commit turned off
     // to stream results back, enabling transactions disables auto-commit
@@ -1067,7 +1067,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                       {
                         try {
                           DataSegment segment = jsonMapper.readValue(r.getBytes("payload"), DataSegment.class);
-                          segmentStats.put(segment.getId(), new FinalizedSegmentSchemaCache.SegmentStats(r.getLong("schema_id"), r.getLong("num_rows")));
+                          segmentStats.put(segment.getId(), new SegmentSchemaCache.SegmentStats(r.getLong("schema_id"), r.getLong("num_rows")));
                           return replaceWithExistingSegmentIfPresent(segment);
                         }
                         catch (IOException e) {

@@ -45,7 +45,7 @@ public class SegmentSchemaBackfillQueue
   private final ObjectMapper jsonMapper;
   private final BlockingDeque<SchemaPayloadWithNumRows> segmentSchemaQueue = new LinkedBlockingDeque<>();
 
-  private FinalizedSegmentSchemaCache cache;
+  private SegmentSchemaCache cache;
 
   public SegmentSchemaBackfillQueue(
       MetadataStorageTablesConfig dbTables,
