@@ -93,6 +93,9 @@ public class TournamentTree
   public int getMin()
   {
     if (!initialized) {
+      // Defer initialization until the first getMin() call, since the tree object might be created before the
+      // comparator is fully valid. (The comparator is typically not valid until at least one row is available
+      // from each run.)
       initialize();
       initialized = true;
     }
@@ -103,7 +106,7 @@ public class TournamentTree
   @Override
   public String toString()
   {
-    return "LoserTree{" +
+    return "TournamentTree{" +
            "numElements=" + numElementsRounded +
            ", tree=" + Arrays.toString(tree) +
            '}';
