@@ -72,7 +72,8 @@ module.exports={
         ],
         "redirects": Redirects
       }
-    ]
+    ],
+    "docusaurus-lunr-search"
   ],
   "themeConfig": {
     colorMode: {
