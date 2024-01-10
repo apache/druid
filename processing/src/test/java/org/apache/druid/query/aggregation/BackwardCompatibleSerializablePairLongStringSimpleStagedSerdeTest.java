@@ -59,7 +59,7 @@ public class BackwardCompatibleSerializablePairLongStringSimpleStagedSerdeTest
     SerializablePairLongString value = new SerializablePairLongString(Long.MAX_VALUE, null);
     // Write using the older serde, read using the newer serde
     Assert.assertEquals(
-        new SerializablePairLongString(Long.MAX_VALUE, ""),
+        new SerializablePairLongString(Long.MAX_VALUE, null),
         readUsingSerde(writeUsingSerde(value, OLDER_SERDE), SERDE)
     );
     // Write using the newer serde, read using the older serde
@@ -77,7 +77,7 @@ public class BackwardCompatibleSerializablePairLongStringSimpleStagedSerdeTest
     SerializablePairLongString value = new SerializablePairLongString(Long.MAX_VALUE, "");
     // Write using the older serde, read using the newer serde
     Assert.assertEquals(
-        new SerializablePairLongString(Long.MAX_VALUE, ""),
+        new SerializablePairLongString(Long.MAX_VALUE, null),
         readUsingSerde(writeUsingSerde(value, OLDER_SERDE), SERDE)
     );
     // Write using the newer serde, read using the older serde
