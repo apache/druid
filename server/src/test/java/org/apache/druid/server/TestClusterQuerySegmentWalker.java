@@ -76,7 +76,7 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
   private final QueryRunnerFactoryConglomerate conglomerate;
   @Nullable
   private final QueryScheduler scheduler;
-  private EtagProvider etagProvider;
+  private final EtagProvider etagProvider;
 
   TestClusterQuerySegmentWalker(
       Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
@@ -85,11 +85,24 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
       Injector injector
   )
   {
+    this(timelines, conglomerate, scheduler, injector.getInstance(EtagProvider.KEY));
+
+
+  }
+
+  TestClusterQuerySegmentWalker(
+      Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
+      QueryRunnerFactoryConglomerate conglomerate,
+      @Nullable QueryScheduler scheduler,
+      EtagProvider etagProvider
+  )
+  {
     this.timelines = timelines;
     this.conglomerate = conglomerate;
     this.scheduler = scheduler;
-    this.etagProvider = injector.getInstance(EtagProvider.KEY);
+    this.etagProvider = etagProvider;
   }
+
 
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
