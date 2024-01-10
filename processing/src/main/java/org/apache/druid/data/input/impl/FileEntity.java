@@ -51,7 +51,9 @@ public class FileEntity implements InputEntity
       @Override
       public void close()
       {
-        // do nothing
+        if (!file.delete()) {
+          LOG.warn("Failed to remove file[%s]", file.getAbsolutePath());
+        }
       }
     };
   }

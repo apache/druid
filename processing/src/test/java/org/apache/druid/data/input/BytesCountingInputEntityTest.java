@@ -125,6 +125,23 @@ public class BytesCountingInputEntityTest
     Assert.assertEquals(bufferSize, inputStats.getProcessedBytes());
   }
 
+  @Test
+  public void testClose() throws IOException
+  {
+    final int fileSize = 200;
+    final File sourceFile = folder.newFile("testWithFileEntity");
+    writeBytesToFile(sourceFile, fileSize);
+
+    final BytesCountingInputEntity inputEntity = new BytesCountingInputEntity(new FileEntity(sourceFile), inputStats);
+    InputEntity.CleanableFile cleanableFile = inputEntity.fetch(folder.newFolder(), new byte[50]);
+
+    Assert.assertTrue(cleanableFile.file().exists());
+    Assert.assertEquals(fileSize, inputStats.getProcessedBytes());
+
+    cleanableFile.close();
+    Assert.assertFalse(cleanableFile.file().exists());
+  }
+
   private void writeBytesToFile(File sourceFile, int numBytes) throws IOException
   {
     if (!sourceFile.exists()) {
