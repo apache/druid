@@ -154,12 +154,12 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
                        .processorFactory(new GroupByPreShuffleFrameProcessorFactory(queryToRun))
     );
 
-    ClusterBy resultClusterBy = computeResultClusterByWithPartitionBoost(
+    ClusterBy resultClusterBy = computeResultClusterBy(
         queryToRun,
         segmentGranularity,
         partitionBoost
     );
-    RowSignature resultSignature = computeResultSignatureWithPartitionBoost(
+    RowSignature resultSignature = computeResultSignature(
         queryToRun,
         segmentGranularity,
         resultClusterBy,
@@ -230,9 +230,10 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
   }
 
   /**
-   * Computes the result clusterBy which may or may not have the partition boosted column
+   * Computes the result clusterBy which may or may not have the partition boosted column, depending on the
+   * {@code partitionBoost} parameter passed
    */
-  private static ClusterBy computeResultClusterByWithPartitionBoost(
+  private static ClusterBy computeResultClusterBy(
       final GroupByQuery query,
       final Granularity segmentGranularity,
       final boolean partitionBoost
@@ -256,10 +257,11 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
   }
 
   /**
-   * Computes the result signature which may or may not have the partition boosted column. It expects that the clusterBy
-   * already has the partition boost column if the parameter 'partitionBoost' is set as true.
+   * Computes the result signature which may or may not have the partition boosted column depending on the
+   * {@code partitionBoost} passed. It expects that the clusterBy already has the partition boost column
+   * if the parameter {@code partitionBoost} is set as true.
    */
-  private static RowSignature computeResultSignatureWithPartitionBoost(
+  private static RowSignature computeResultSignature(
       final GroupByQuery query,
       final Granularity segmentGranularity,
       final ClusterBy resultClusterBy,
