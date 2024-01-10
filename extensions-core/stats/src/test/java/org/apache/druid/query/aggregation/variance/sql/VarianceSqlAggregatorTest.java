@@ -112,7 +112,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                     .rows(TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS)
                     .buildMMappedIndex();
 
-    return SpecificSegmentsQuerySegmentWalker.SpecificSegmentsQuerySegmentWalker1(injector, conglomerate).add(
+    return SpecificSegmentsQuerySegmentWalker.createWalker(injector, conglomerate).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.DATASOURCE3)
                    .interval(index.getDataInterval())

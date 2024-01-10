@@ -326,7 +326,7 @@ public class SqlNestedDataBenchmark
         PROCESSING_CONFIG
     );
 
-    final SpecificSegmentsQuerySegmentWalker walker = SpecificSegmentsQuerySegmentWalker.SpecificSegmentsQuerySegmentWalker1(conglomerate).add(
+    final SpecificSegmentsQuerySegmentWalker walker = SpecificSegmentsQuerySegmentWalker.createWalker(conglomerate).add(
         dataSegment,
         index
     );

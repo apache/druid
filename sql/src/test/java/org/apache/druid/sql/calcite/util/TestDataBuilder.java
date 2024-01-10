@@ -776,7 +776,7 @@ public class TestDataBuilder
         .rows(USER_VISIT_ROWS)
         .buildMMappedIndex();
 
-    return SpecificSegmentsQuerySegmentWalker.SpecificSegmentsQuerySegmentWalker1(
+    return SpecificSegmentsQuerySegmentWalker.createWalker(
         injector,
         conglomerate,
         injector.getInstance(SegmentWrangler.class),

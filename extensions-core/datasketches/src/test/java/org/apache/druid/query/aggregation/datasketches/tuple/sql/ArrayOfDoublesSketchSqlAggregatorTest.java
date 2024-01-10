@@ -139,7 +139,7 @@ public class ArrayOfDoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                              .rows(ROWS)
                                              .buildMMappedIndex();
 
-    return SpecificSegmentsQuerySegmentWalker.SpecificSegmentsQuerySegmentWalker1(injector, conglomerate).add(
+    return SpecificSegmentsQuerySegmentWalker.createWalker(injector, conglomerate).add(
         DataSegment.builder()
                    .dataSource(DATA_SOURCE)
                    .interval(index.getDataInterval())

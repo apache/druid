@@ -88,26 +88,31 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
         }
       };
 
+  public static SpecificSegmentsQuerySegmentWalker createWalker(
+      final QueryRunnerFactoryConglomerate conglomerate)
+  {
+    return createWalker(QueryStackTests.injector(), conglomerate);
+  }
+
   /**
    * Create an instance using the provided query runner factory conglomerate and lookup provider.
    * If a JoinableFactory is provided, it will be used instead of the default. If a scheduler is included,
    * the runner will schedule queries according to the scheduling config.
-   * @return
    */
-  public static SpecificSegmentsQuerySegmentWalker SpecificSegmentsQuerySegmentWalker1(
+  public static SpecificSegmentsQuerySegmentWalker createWalker(
       final Injector injector,
       final QueryRunnerFactoryConglomerate conglomerate,
       final SegmentWrangler segmentWrangler,
       final JoinableFactoryWrapper joinableFactoryWrapper,
       final QueryScheduler scheduler)
   {
-    Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines1 = new HashMap<>();
+    Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines = new HashMap<>();
     return new SpecificSegmentsQuerySegmentWalker(
-        timelines1,
+        timelines,
         QueryStackTests.createClientQuerySegmentWalker(
             injector,
             QueryStackTests.createClusterQuerySegmentWalker(
-                timelines1,
+                timelines,
                 conglomerate,
                 scheduler,
                 injector
@@ -125,28 +130,13 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
     );
   }
 
-  public SpecificSegmentsQuerySegmentWalker(
-      Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
-      QuerySegmentWalker walker)
-  {
-    this.timelines = timelines;
-    this.walker = walker;
-  }
-
-  public static SpecificSegmentsQuerySegmentWalker SpecificSegmentsQuerySegmentWalker1(
-      final QueryRunnerFactoryConglomerate conglomerate)
-  {
-    return SpecificSegmentsQuerySegmentWalker1(QueryStackTests.injector(), conglomerate);
-  }
-
   /**
    * Create an instance without any lookups and with a default {@link JoinableFactory} that handles only inline
    * datasources.
-   * @return
    */
-  public static SpecificSegmentsQuerySegmentWalker SpecificSegmentsQuerySegmentWalker1(final Injector injector, final QueryRunnerFactoryConglomerate conglomerate)
+  public static SpecificSegmentsQuerySegmentWalker createWalker(final Injector injector, final QueryRunnerFactoryConglomerate conglomerate)
   {
-    return SpecificSegmentsQuerySegmentWalker1(
+    return createWalker(
         injector,
         conglomerate,
         new MapSegmentWrangler(
@@ -162,6 +152,14 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
         new JoinableFactoryWrapper(QueryStackTests.makeJoinableFactoryForLookup(LOOKUP_EXTRACTOR_FACTORY_CONTAINER_PROVIDER)),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER
     );
+  }
+
+  public SpecificSegmentsQuerySegmentWalker(
+      Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
+      QuerySegmentWalker walker)
+  {
+    this.timelines = timelines;
+    this.walker = walker;
   }
 
   public SpecificSegmentsQuerySegmentWalker add(final DataSegment descriptor, final Segment segment)

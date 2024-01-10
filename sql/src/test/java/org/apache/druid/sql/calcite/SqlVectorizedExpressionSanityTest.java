@@ -130,7 +130,7 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
     );
     CONGLOMERATE = QueryStackTests.createQueryRunnerFactoryConglomerate(CLOSER);
 
-    WALKER = SpecificSegmentsQuerySegmentWalker.SpecificSegmentsQuerySegmentWalker1(CONGLOMERATE).add(
+    WALKER = SpecificSegmentsQuerySegmentWalker.createWalker(CONGLOMERATE).add(
         dataSegment,
         INDEX
     );

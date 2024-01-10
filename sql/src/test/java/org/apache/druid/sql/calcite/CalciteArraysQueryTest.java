@@ -202,7 +202,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                     .inputTmpDir(temporaryFolder.newFolder())
                     .buildMMappedIndex();
 
-    SpecificSegmentsQuerySegmentWalker walker = SpecificSegmentsQuerySegmentWalker.SpecificSegmentsQuerySegmentWalker1(
+    SpecificSegmentsQuerySegmentWalker walker = SpecificSegmentsQuerySegmentWalker.createWalker(
         injector,
         conglomerate,
         new MapSegmentWrangler(

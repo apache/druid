@@ -52,7 +52,7 @@ public class DruidSchemaNoDataInitTest extends CalciteTestBase
       final QueryRunnerFactoryConglomerate conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(closer);
       final BrokerSegmentMetadataCache cache = new BrokerSegmentMetadataCache(
           CalciteTests.createMockQueryLifecycleFactory(
-              SpecificSegmentsQuerySegmentWalker.SpecificSegmentsQuerySegmentWalker1(conglomerate),
+              SpecificSegmentsQuerySegmentWalker.createWalker(conglomerate),
               conglomerate
           ),
           new TestTimelineServerView(Collections.emptyList()),
