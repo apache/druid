@@ -36,6 +36,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
@@ -143,6 +144,12 @@ public class BrokerServerView implements TimelineServerView
             initialized.countDown();
             runTimelineCallbacks(TimelineCallback::timelineInitialized);
             return ServerView.CallbackAction.CONTINUE;
+          }
+
+          @Override
+          public CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
+          {
+            return CallbackAction.CONTINUE;
           }
         },
         segmentFilter

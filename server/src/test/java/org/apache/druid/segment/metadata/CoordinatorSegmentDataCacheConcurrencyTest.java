@@ -42,6 +42,7 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
@@ -141,6 +142,12 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
           {
             return null;
           }
+
+          @Override
+          public CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
+          {
+            return CallbackAction.CONTINUE;
+          }
         }
     );
 
@@ -179,7 +186,8 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -226,6 +234,12 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
 
           @Override
           public CallbackAction serverSegmentRemoved(DruidServerMetadata server, DataSegment segment)
+          {
+            return CallbackAction.CONTINUE;
+          }
+
+          @Override
+          public CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
           {
             return CallbackAction.CONTINUE;
           }
@@ -285,7 +299,8 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -332,6 +347,12 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
 
           @Override
           public CallbackAction serverSegmentRemoved(DruidServerMetadata server, DataSegment segment)
+          {
+            return CallbackAction.CONTINUE;
+          }
+
+          @Override
+          public CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
           {
             return CallbackAction.CONTINUE;
           }
