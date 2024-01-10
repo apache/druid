@@ -1191,7 +1191,6 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
               )
           )
           .run();
-      System.out.println("|sad");
     }
   }
 
