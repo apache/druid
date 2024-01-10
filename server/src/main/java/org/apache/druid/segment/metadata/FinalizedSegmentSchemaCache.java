@@ -1,8 +1,7 @@
 package org.apache.druid.segment.metadata;
 
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.SchemaPayload;
-import org.apache.druid.segment.column.SegmentSchema;
+import org.apache.druid.segment.column.SchemaPayloadWithNumRows;
 import org.apache.druid.timeline.SegmentId;
 
 import java.util.Optional;
@@ -26,7 +25,7 @@ public class FinalizedSegmentSchemaCache
   // in between
   private volatile ConcurrentMap<SegmentId, SegmentStats> segmentStatsMap = new ConcurrentHashMap<>();
 
-  private ConcurrentMap<SegmentId, RowSignature>
+  private ConcurrentMap<SegmentId, >
 
   public void updateSegmentStatsReference(ConcurrentMap<SegmentId, SegmentStats> segmentStatsMap)
   {
@@ -45,7 +44,7 @@ public class FinalizedSegmentSchemaCache
     schemaPayloadMap.put(schemaId, schemaPayload);
   }
 
-  public Optional<SegmentSchema> getSchemaForSegment(SegmentId segmentId)
+  public Optional<SchemaPayloadWithNumRows> getSchemaForSegment(SegmentId segmentId)
   {
      if (!segmentStatsMap.containsKey(segmentId)) {
        return Optional.empty();
@@ -58,7 +57,7 @@ public class FinalizedSegmentSchemaCache
 
      long schemaId = segmentStats.getSchemaId();
 
-    return Optional.of(new SegmentSchema(
+    return Optional.of(new SchemaPayloadWithNumRows(
         schemaId,
         segmentId.toString(),
         segmentStats.getNumRows(),

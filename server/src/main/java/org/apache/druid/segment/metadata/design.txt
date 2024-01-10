@@ -135,11 +135,30 @@ to avoid repeated smq for same segments
 
 how to invalidate smq result from schemaCache?
 option1
-- clear the in-transit schema on db poll, but it is possible that not all schema has been published
+- clear the in-transit schema on db poll
+drawback
+- but it is possible that not all schema has been published
 
 
 option2
 maintain two structures
-- smqResults -> populated after smq is executed
-- smqPublishedResults -> populated after sqm result is published to db
-- clear sqmPublishedResults on db poll
+- smqResults -> populated after smq is executed -> accessed for refresh
+- smqPublishedResults -> populated after smq result is published to db and clear the corresponding entry in smqResults
+- clear smqPublishedResults on db poll
+
+
+
+realtime schema publish flow
+--
+the problem is that the api is generically written and tommorrow
+
+
+SchemaCache
+- smqResult, smqPublishedResult (in-transit) (eventually empty)
+- realtime schema
+- schema polled from db
+
+
+BackFillQueue
+- publish certain schema
+- on success interact with SchemaCache to update smqResult and smqPublishedResult

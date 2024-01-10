@@ -14,7 +14,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
 import org.apache.druid.segment.column.SchemaPayload;
-import org.apache.druid.segment.column.SegmentSchema;
+import org.apache.druid.segment.column.SchemaPayloadWithNumRows;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.PreparedBatch;
 
@@ -36,14 +36,16 @@ import java.util.stream.IntStream;
 public class SegmentSchemaBackfillQueue
 {
   private static final EmittingLogger log = new EmittingLogger(SegmentSchemaBackfillQueue.class);
-  private static final int MAX_BATCH_SIZE = 500;
+  private static final int MAX_BATCH_SIZE = 5000;
   private static final int DB_ACTION_PARTITION_SIZE = 100;
   private final long maxWaitTimeMillis;
   private final ScheduledExecutorService executor;
   private final MetadataStorageTablesConfig dbTables;
   private final SQLMetadataConnector connector;
   private final ObjectMapper jsonMapper;
-  private final BlockingDeque<SegmentSchema> segmentSchemaQueue = new LinkedBlockingDeque<>();
+  private final BlockingDeque<SchemaPayloadWithNumRows> segmentSchemaQueue = new LinkedBlockingDeque<>();
+
+  private FinalizedSegmentSchemaCache cache;
 
   public SegmentSchemaBackfillQueue(
       MetadataStorageTablesConfig dbTables,
@@ -74,7 +76,7 @@ public class SegmentSchemaBackfillQueue
     }
   }
 
-  public void add(SegmentSchema segmentSchema)
+  public void add(SchemaPayloadWithNumRows segmentSchema)
   {
     segmentSchemaQueue.add(segmentSchema);
   }
@@ -91,7 +93,7 @@ public class SegmentSchemaBackfillQueue
 
   private void processBatchesDue()
   {
-    List<SegmentSchema> polled = null; // process 500 segments
+    List<SchemaPayloadWithNumRows> polled = null; // process 500 segments
 
     // first filter out created schema
 
@@ -100,7 +102,7 @@ public class SegmentSchemaBackfillQueue
     connector.retryTransaction((handle, status) -> updateSegments(handle, polled), 1, 1);
   }
 
-  private int persistSchema(Handle handle, List<SegmentSchema> segmentSchemas)
+  private int persistSchema(Handle handle, List<SchemaPayloadWithNumRows> segmentSchemas)
   {
     try {
       // find out all the unique schema insert them and get their id
@@ -108,7 +110,7 @@ public class SegmentSchemaBackfillQueue
 
       Map<String, SchemaPayload> schemaPayloadMap = new HashMap<>();
 
-      for (SegmentSchema segmentSchema : segmentSchemas) {
+      for (SchemaPayloadWithNumRows segmentSchema : segmentSchemas) {
         schemaPayloadMap.put(segmentSchema.getFingerprint(), segmentSchema.getSchemaPayload());
       }
 
@@ -157,27 +159,27 @@ public class SegmentSchemaBackfillQueue
     }
   }
 
-  private int updateSegments(Handle handle, List<SegmentSchema> segmentSchemas)
+  private int updateSegments(Handle handle, List<SchemaPayloadWithNumRows> segmentSchemas)
   {
-    Set<String> updatedSegments = segmentUpdatedBatch(handle, segmentSchemas.stream().map(SegmentSchema::getSegmentId).collect(
+    Set<String> updatedSegments = segmentUpdatedBatch(handle, segmentSchemas.stream().map(SchemaPayloadWithNumRows::getSegmentId).collect(
         Collectors.toSet()));
-    List<SegmentSchema> segmentsToUpdate = segmentSchemas.stream().filter(v -> updatedSegments.contains(v.getSegmentId())).collect(Collectors.toList());
+    List<SchemaPayloadWithNumRows> segmentsToUpdate = segmentSchemas.stream().filter(v -> updatedSegments.contains(v.getSegmentId())).collect(Collectors.toList());
 
     // fetch schemaId
     Map<String, Integer> fingerprintSchemaIdMap =
-        schemaIdFetchBatch(handle, segmentsToUpdate.stream().map(SegmentSchema::getFingerprint).collect(Collectors.toSet()));
+        schemaIdFetchBatch(handle, segmentsToUpdate.stream().map(SchemaPayloadWithNumRows::getFingerprint).collect(Collectors.toSet()));
 
     // update schemaId and numRows in segments table
     String updateSql = "";
     PreparedBatch segmentUpdateBatch = handle.prepareBatch(updateSql);
 
-    List<List<SegmentSchema>> partitionedSegmentIds = Lists.partition(
+    List<List<SchemaPayloadWithNumRows>> partitionedSegmentIds = Lists.partition(
         segmentsToUpdate,
         DB_ACTION_PARTITION_SIZE
     );
 
-    for (List<SegmentSchema> partition : partitionedSegmentIds) {
-      for (SegmentSchema segmentSchema : segmentsToUpdate) {
+    for (List<SchemaPayloadWithNumRows> partition : partitionedSegmentIds) {
+      for (SchemaPayloadWithNumRows segmentSchema : segmentsToUpdate) {
         String fingerprint = segmentSchema.getFingerprint();
         if (!fingerprintSchemaIdMap.containsKey(fingerprint)) {
           // this should not happen

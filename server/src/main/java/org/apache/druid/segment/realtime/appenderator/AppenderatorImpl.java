@@ -65,7 +65,7 @@ import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.SegmentSchema;
+import org.apache.druid.segment.column.SchemaPayloadWithNumRows;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -1004,7 +1004,7 @@ public class AppenderatorImpl implements Appenderator
     }
   }
 
-  private SegmentSchema getSegmentSchema(File segmentFile) throws IOException
+  private SchemaPayloadWithNumRows getSegmentSchema(File segmentFile) throws IOException
   {
     final QueryableIndex queryableIndex = indexIO.loadIndex(segmentFile);
     final StorageAdapter storageAdapter = new QueryableIndexStorageAdapter(queryableIndex);
@@ -1013,7 +1013,7 @@ public class AppenderatorImpl implements Appenderator
 
     // todo add aggregator factory here
 
-    return new SegmentSchema(rowSignature);
+    return new SchemaPayloadWithNumRows(rowSignature);
   }
 
   @Override

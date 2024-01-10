@@ -1,10 +1,10 @@
 package org.apache.druid.segment.metadata;
 
-import org.apache.druid.segment.column.SegmentSchema;
+import org.apache.druid.segment.column.SchemaPayloadWithNumRows;
 
 public class SegmentSchemaIdGenerator
 {
-  public String generateId(SegmentSchema segmentSchema)
+  public String generateId(SchemaPayloadWithNumRows segmentSchema)
   {
     return null;
   }

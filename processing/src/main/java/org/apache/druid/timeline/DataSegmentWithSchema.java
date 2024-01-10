@@ -1,13 +1,13 @@
 package org.apache.druid.timeline;
 
-import org.apache.druid.segment.column.SegmentSchema;
+import org.apache.druid.segment.column.SchemaPayloadWithNumRows;
 
 public class DataSegmentWithSchema
 {
   private final DataSegment dataSegment;
-  private final SegmentSchema segmentSchema;
+  private final SchemaPayloadWithNumRows segmentSchema;
 
-  public DataSegmentWithSchema(DataSegment dataSegment, SegmentSchema segmentSchema)
+  public DataSegmentWithSchema(DataSegment dataSegment, SchemaPayloadWithNumRows segmentSchema)
   {
     this.dataSegment = dataSegment;
     this.segmentSchema = segmentSchema;
@@ -18,7 +18,7 @@ public class DataSegmentWithSchema
     return dataSegment;
   }
 
-  public SegmentSchema getSegmentSchema()
+  public SchemaPayloadWithNumRows getSegmentSchema()
   {
     return segmentSchema;
   }
