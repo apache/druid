@@ -581,7 +581,13 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             ),
             row(
                 Pair.of("TABLE_CAT", "druid"),
-                Pair.of("TABLE_NAME", "wikipedia"),
+                Pair.of("TABLE_NAME", CalciteTests.WIKIPEDIA),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
+            ),
+            row(
+                Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.WIKIPEDIA_FIRST_LAST),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
             )
@@ -661,7 +667,13 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             ),
             row(
                 Pair.of("TABLE_CAT", "druid"),
-                Pair.of("TABLE_NAME", "wikipedia"),
+                Pair.of("TABLE_NAME", CalciteTests.WIKIPEDIA),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
+            ),
+            row(
+                Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.WIKIPEDIA_FIRST_LAST),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
             )

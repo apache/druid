@@ -85,14 +85,14 @@ public class AzureUtilsTest extends EasyMockSupport
   @Test
   public void test_maybeRemoveAzurePathPrefix_pathHasLeadingAzurePathPrefix_returnsPathWithLeadingAzurePathRemoved()
   {
-    String path = AzureUtils.maybeRemoveAzurePathPrefix(BLOB_PATH_WITH_LEADING_AZURE_PREFIX);
+    String path = AzureUtils.maybeRemoveAzurePathPrefix(BLOB_PATH_WITH_LEADING_AZURE_PREFIX, AzureUtils.AZURE_STORAGE_HOST_ADDRESS);
     Assert.assertEquals(BLOB_NAME, path);
   }
 
   @Test
   public void test_maybeRemoveAzurePathPrefix_pathDoesNotHaveAzurePathPrefix__returnsPathWithLeadingAzurePathRemoved()
   {
-    String path = AzureUtils.maybeRemoveAzurePathPrefix(BLOB_NAME);
+    String path = AzureUtils.maybeRemoveAzurePathPrefix(BLOB_NAME, AzureUtils.AZURE_STORAGE_HOST_ADDRESS);
     Assert.assertEquals(BLOB_NAME, path);
   }
 
@@ -205,5 +205,19 @@ public class AzureUtilsTest extends EasyMockSupport
   {
     boolean retry = AzureUtils.AZURE_RETRY.apply(RUNTIME_EXCEPTION_WRAPPED_IN_RUNTIME_EXCEPTON);
     Assert.assertFalse(retry);
+  }
+
+  @Test
+  public void testRemoveAzurePathPrefixDefaultEndpoint()
+  {
+    String outputBlob = AzureUtils.maybeRemoveAzurePathPrefix("blob.core.windows.net/container/blob", "blob.core.windows.net");
+    Assert.assertEquals("container/blob", outputBlob);
+  }
+
+  @Test
+  public void testRemoveAzurePathPrefixCustomEndpoint()
+  {
+    String outputBlob = AzureUtils.maybeRemoveAzurePathPrefix("blob.core.usgovcloudapi.net/container/blob", "blob.core.usgovcloudapi.net");
+    Assert.assertEquals("container/blob", outputBlob);
   }
 }
