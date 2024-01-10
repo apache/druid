@@ -51,6 +51,9 @@ import java.util.Map;
 
 /**
  * Utility class to serialize and deserialize {@link Row} object.
+ * Code borrowed from <a href="https://github.com/delta-io/delta/blob/master/kernel/examples/table-reader/src/main/java/io/delta/kernel/examples/utils/RowSerDe.java">
+ * RowSerde.java</a>.
+ *
  */
 public class RowSerde
 {

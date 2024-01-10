@@ -43,7 +43,6 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.error.InvalidInput;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.Streams;
 import org.apache.hadoop.conf.Configuration;
 
@@ -51,7 +50,6 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
@@ -74,15 +72,12 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
   @Nullable
   private final DeltaSplit deltaSplit;
 
-  private static final Logger log = new Logger(DeltaInputSource.class);
-
   @JsonCreator
   public DeltaInputSource(
       @JsonProperty("tablePath") String tablePath,
       @JsonProperty("deltaSplit") @Nullable DeltaSplit deltaSplit
   )
   {
-    log.info("CONST Delta input source reader for tablePath[%s] and split[%s]", tablePath, deltaSplit);
     this.tablePath = Preconditions.checkNotNull(tablePath, "tablePath cannot be null");
     this.deltaSplit = deltaSplit;
   }
@@ -101,7 +96,6 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
       File temporaryDirectory
   )
   {
-    log.info("READER Delta input source reader for inputRowSchema[%s], tablePath[%s] and split[%s]", inputRowSchema, tablePath, deltaSplit);
     Configuration hadoopConf = new Configuration();
     TableClient tableClient = DefaultTableClient.create(hadoopConf);
     try {
@@ -117,7 +111,6 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
       } else {
         Table table = Table.forPath(tableClient, tablePath);
         Snapshot latestSnapshot = table.getLatestSnapshot(tableClient);
-        StructType schema = latestSnapshot.getSchema(tableClient);
 
         Scan scan = latestSnapshot.getScanBuilder(tableClient).build();
         scanState = scan.getScanState(tableClient);
@@ -154,10 +147,9 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
   {
     if (null != deltaSplit) {
       // can't split a split
-      return Collections.singletonList(new InputSplit<>(deltaSplit)).stream();
+      return Stream.of(new InputSplit<>(deltaSplit));
     }
 
-    log.info("CREATE SPLITS Delta input source reader for tablePath[%s] and split[%s]", tablePath, deltaSplit);
     TableClient tableClient = DefaultTableClient.create(new Configuration());
     final Snapshot latestSnapshot;
     final Table table;
@@ -200,7 +192,6 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
   @Override
   public InputSource withSplit(InputSplit<DeltaSplit> split)
   {
-    log.info("WITH SPLIT Delta input source reader for tablePath[%s] and split[%s]", tablePath, deltaSplit);
     return new DeltaInputSource(
         tablePath,
         split.get()
