@@ -50,10 +50,14 @@ public class DeltaInputSourceTest
 
     for (int idx = 0; idx < DeltaTestUtil.EXPECTED_ROWS.size(); idx++) {
       Map<String, Object> expectedRow = DeltaTestUtil.EXPECTED_ROWS.get(idx);
+      InputRowListPlusRawValues actualSampledRow = actualSampledRows.get(idx);
+      Assert.assertNull(actualSampledRow.getParseException());
       Assert.assertEquals(
           expectedRow,
-          actualSampledRows.get(idx).getRawValues()
+          actualSampledRow.getRawValues()
       );
+      Assert.assertNotNull(actualSampledRow.getRawValuesList());
+      Assert.assertEquals(expectedRow, actualSampledRow.getRawValuesList().get(0));
     }
   }
 
@@ -67,8 +71,6 @@ public class DeltaInputSourceTest
     Assert.assertNotNull(inputSourceReader);
 
     List<InputRow> actualReadRows = readAllRows(inputSourceReader);
-    Assert.assertNotNull(actualReadRows);
-
     Assert.assertEquals(DeltaTestUtil.EXPECTED_ROWS.size(), actualReadRows.size());
 
 
@@ -76,7 +78,12 @@ public class DeltaInputSourceTest
       Map<String, Object> expectedRow = DeltaTestUtil.EXPECTED_ROWS.get(idx);
       InputRow actualInputRow = actualReadRows.get(idx);
       for (String key : expectedRow.keySet()) {
-        Assert.assertEquals(expectedRow.get(key), actualInputRow.getDimension(key));
+        if (DeltaTestUtil.SCHEMA.getTimestampSpec().getTimestampColumn().equals(key)) {
+          final long expectedMillis = ((Long) expectedRow.get(key) / 1_000_000) * 1000;
+          Assert.assertEquals(expectedMillis, actualInputRow.getTimestampFromEpoch());
+        } else {
+          Assert.assertEquals(expectedRow.get(key), actualInputRow.getDimension(key).get(0));
+        }
       }
     }
   }

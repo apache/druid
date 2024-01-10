@@ -42,5 +42,4 @@ public class RowSerdeTest
     Assert.assertEquals(scanState.getSchema(), row.getSchema());
   }
 
-
 }
