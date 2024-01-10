@@ -19,35 +19,25 @@
 
 package org.apache.druid.delta.input;
 
-import io.delta.kernel.ScanBuilder;
-import io.delta.kernel.Snapshot;
-import io.delta.kernel.Table;
+import io.delta.kernel.Scan;
 import io.delta.kernel.TableNotFoundException;
-import io.delta.kernel.client.TableClient;
 import io.delta.kernel.data.Row;
 import io.delta.kernel.defaults.client.DefaultTableClient;
-import io.delta.kernel.types.StructType;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class RowSerdeTest
 {
-  private static final String DELTA_TABLE_PATH = "src/test/resources/people-delta-table";
-
   @Test
   public void testSerializeDeserializeRoundtrip() throws TableNotFoundException
   {
-    TableClient tableClient = DefaultTableClient.create(new Configuration());
-    Table table = Table.forPath(tableClient, DELTA_TABLE_PATH);
-    Snapshot snapshot = table.getLatestSnapshot(tableClient);
-    StructType readSchema = snapshot.getSchema(tableClient);
-    ScanBuilder scanBuilder = snapshot.getScanBuilder(tableClient)
-                                      .withReadSchema(tableClient, readSchema);
-    Row scanState = scanBuilder.build().getScanState(tableClient);
+    final DefaultTableClient tableClient = DefaultTableClient.create(new Configuration());
+    final Scan scan = DeltaTestUtil.getScan(tableClient);
+    final Row scanState = scan.getScanState(tableClient);
 
-    String rowJson = RowSerde.serializeRowToJson(scanState);
-    Row row = RowSerde.deserializeRowFromJson(tableClient, rowJson);
+    final String rowJson = RowSerde.serializeRowToJson(scanState);
+    final Row row = RowSerde.deserializeRowFromJson(tableClient, rowJson);
 
     Assert.assertEquals(scanState.getSchema(), row.getSchema());
   }
