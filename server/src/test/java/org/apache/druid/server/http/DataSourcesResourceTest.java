@@ -631,7 +631,10 @@ public class DataSourcesResourceTest
   {
     prepareRequestForAudit();
 
-    DataSourcesResource dataSourcesResource = createResource();
+    OverlordClient overlordClient = EasyMock.createStrictMock(OverlordClient.class);
+    EasyMock.replay(overlordClient, server);
+    DataSourcesResource dataSourcesResource =
+        new DataSourcesResource(inventoryView, segmentsMetadataManager, null, overlordClient, null, null, auditManager);
     Response response = dataSourcesResource
         .markAsUnusedAllSegmentsOrKillUnusedSegmentsInInterval("datasource", null, null, request);
     Assert.assertEquals(200, response.getStatus());
