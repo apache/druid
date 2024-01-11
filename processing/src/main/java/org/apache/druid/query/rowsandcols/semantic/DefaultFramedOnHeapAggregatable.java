@@ -140,24 +140,24 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
 
   public static Iterable<AggRange> buildGroupIteratorFor(AppendableRowsAndColumns rac, WindowFrame frame)
   {
-    int[] rangeToRowId1 = ClusteredGroupPartitioner.fromRAC(rac).computeBoundaries(frame.getOrderByColNames());
-    return new GroupIteratorForWindowFrame(rac, frame, rangeToRowId1);
+    int[] groupBoundaries = ClusteredGroupPartitioner.fromRAC(rac).computeBoundaries(frame.getOrderByColNames());
+    return new GroupIteratorForWindowFrame(rac, frame, groupBoundaries);
   }
 
   static class GroupIteratorForWindowFrame implements Iterable<AggRange>
   {
-    private final int[] rangeToRowId;
+    private final int[] groupBoundaries;
     private final int numRows;
     private final int numRanges;
     private final int lowerOffset;
     private final int upperOffset;
 
-    public GroupIteratorForWindowFrame(RowsAndColumns rac, WindowFrame frame, int[] rangeToRowIds)
+    public GroupIteratorForWindowFrame(RowsAndColumns rac, WindowFrame frame, int[] groupBoundaries)
     {
       assert (frame.getPeerType() == PeerType.RANGE);
-      rangeToRowId = rangeToRowIds;
+      this.groupBoundaries = groupBoundaries;
       numRows = rac.numRows();
-      numRanges = rangeToRowId.length - 1;
+      numRanges = groupBoundaries.length - 1;
       lowerOffset = frame.getLowerOffsetClamped(numRanges);
       upperOffset = frame.getUpperOffsetClamped(numRanges) + 1;
     }
@@ -201,7 +201,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
 
         private int rangeToRowIndex(int rangeId)
         {
-          return rangeToRowId[rangeId];
+          return groupBoundaries[rangeId];
         }
 
         private int relativeRangeId(int rangeOffset)
