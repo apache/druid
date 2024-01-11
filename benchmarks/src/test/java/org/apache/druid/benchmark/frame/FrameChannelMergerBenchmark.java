@@ -198,7 +198,7 @@ public class FrameChannelMergerBenchmark
    * by {@link KeyGenerator}.
    */
   @Setup(Level.Trial)
-  public void setupTrial() throws IOException
+  public void setupTrial()
   {
     exec = new FrameProcessorExecutor(
         MoreExecutors.listeningDecorator(
