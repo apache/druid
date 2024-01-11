@@ -86,7 +86,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
         }
       }
     } else {
-      return computeRangeAggregates(aggFactories, frame);
+      return computeGroupAggregates(aggFactories, frame);
     }
   }
 
@@ -123,22 +123,22 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     }
   }
 
-  private RowsAndColumns computeRangeAggregates(
+  private RowsAndColumns computeGroupAggregates(
       AggregatorFactory[] aggFactories,
       WindowFrame frame)
   {
-    Iterable<AggRange> groupIterator = buildIteratorFor(rac, frame);
+    Iterable<AggRange> groupIterator = buildGroupIteratorFor(rac, frame);
     ResultPopulator resultRac = new ResultPopulator(aggFactories, rac.numRows());
     AggIntervalCursor aggCursor = new AggIntervalCursor(rac, aggFactories);
-    for (AggRange xRange : groupIterator) {
-      aggCursor.moveTo(xRange.inputRows);
-      resultRac.write(xRange.outputRows, aggCursor);
+    for (AggRange aggRange : groupIterator) {
+      aggCursor.moveTo(aggRange.inputRows);
+      resultRac.write(aggRange.outputRows, aggCursor);
     }
     resultRac.appendTo(rac);
     return rac;
   }
 
-  public static Iterable<AggRange> buildIteratorFor(AppendableRowsAndColumns rac, WindowFrame frame)
+  public static Iterable<AggRange> buildGroupIteratorFor(AppendableRowsAndColumns rac, WindowFrame frame)
   {
     int[] rangeToRowId1 = ClusteredGroupPartitioner.fromRAC(rac).computeBoundaries(frame.getOrderByColNames());
     return new GroupIteratorForWindowFrame(rac, frame, rangeToRowId1);
