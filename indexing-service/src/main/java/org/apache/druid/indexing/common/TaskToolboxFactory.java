@@ -57,6 +57,7 @@ import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.DataSegmentMover;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
@@ -114,6 +115,7 @@ public class TaskToolboxFactory
   private final ShuffleClient shuffleClient;
   private final TaskLogPusher taskLogPusher;
   private final String attemptId;
+  private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
   @Inject
   public TaskToolboxFactory(
@@ -155,7 +157,8 @@ public class TaskToolboxFactory
       ParallelIndexSupervisorTaskClientProvider supervisorTaskClientProvider,
       ShuffleClient shuffleClient,
       TaskLogPusher taskLogPusher,
-      @AttemptId String attemptId
+      @AttemptId String attemptId,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     this.segmentLoaderConfig = segmentLoadConfig;
@@ -197,6 +200,7 @@ public class TaskToolboxFactory
     this.shuffleClient = shuffleClient;
     this.taskLogPusher = taskLogPusher;
     this.attemptId = attemptId;
+    this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
   }
 
   public TaskToolbox build(Task task)
@@ -260,6 +264,7 @@ public class TaskToolboxFactory
         .shuffleClient(shuffleClient)
         .taskLogPusher(taskLogPusher)
         .attemptId(attemptId)
+        .centralizedTableSchemaConfig(centralizedDatasourceSchemaConfig)
         .build();
   }
 }

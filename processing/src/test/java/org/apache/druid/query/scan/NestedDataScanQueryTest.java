@@ -37,6 +37,8 @@ import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.filter.BoundDimFilter;
+import org.apache.druid.query.filter.NotDimFilter;
+import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -797,6 +799,122 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
       );
     }
     Assert.assertEquals(resultsSegments.get(0).getEvents().toString(), resultsRealtime.get(0).getEvents().toString());
+  }
+
+  @Test
+  public void testIngestAndScanSegmentsAndFilterPartialPathArrayIndex() throws Exception
+  {
+    Query<ScanResultValue> scanQuery = Druids.newScanQueryBuilder()
+                                             .dataSource("test_datasource")
+                                             .intervals(
+                                                 new MultipleIntervalSegmentSpec(
+                                                     Collections.singletonList(Intervals.ETERNITY)
+                                                 )
+                                             )
+                                             .filters(
+                                                 NotDimFilter.of(NullFilter.forColumn("v0"))
+                                             )
+                                             .virtualColumns(
+                                                 new NestedFieldVirtualColumn(
+                                                     "complexObj",
+                                                     "v0",
+                                                     ColumnType.NESTED_DATA,
+                                                     null,
+                                                     true,
+                                                     "$.y[0]",
+                                                     false
+                                                 )
+                                             )
+                                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                             .limit(100)
+                                             .context(ImmutableMap.of())
+                                             .build();
+    List<Segment> segs = NestedDataTestUtils.createSegmentsForJsonInput(
+        tempFolder,
+        closer,
+        NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE,
+        Granularities.HOUR,
+        true,
+        IndexSpec.DEFAULT
+    );
+
+    List<Segment> realtimeSegs = ImmutableList.of(
+        NestedDataTestUtils.createIncrementalIndexForJsonInput(
+            tempFolder,
+            NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE,
+            Granularities.NONE,
+            true
+        )
+    );
+
+    final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
+    final Sequence<ScanResultValue> seqRealtime = helper.runQueryOnSegmentsObjs(realtimeSegs, scanQuery);
+    List<ScanResultValue> results = seq.toList();
+    List<ScanResultValue> resultsRealtime = seqRealtime.toList();
+    logResults(results);
+    logResults(resultsRealtime);
+    Assert.assertEquals(1, results.size());
+    Assert.assertEquals(4, ((List) results.get(0).getEvents()).size());
+    Assert.assertEquals(results.size(), resultsRealtime.size());
+    Assert.assertEquals(results.get(0).getEvents().toString(), resultsRealtime.get(0).getEvents().toString());
+  }
+
+  @Test
+  public void testIngestAndScanSegmentsAndFilterPartialPath() throws Exception
+  {
+    Query<ScanResultValue> scanQuery = Druids.newScanQueryBuilder()
+                                             .dataSource("test_datasource")
+                                             .intervals(
+                                                 new MultipleIntervalSegmentSpec(
+                                                     Collections.singletonList(Intervals.ETERNITY)
+                                                 )
+                                             )
+                                             .filters(
+                                                 NotDimFilter.of(NullFilter.forColumn("v0"))
+                                             )
+                                             .virtualColumns(
+                                                 new NestedFieldVirtualColumn(
+                                                     "obj",
+                                                     "v0",
+                                                     ColumnType.NESTED_DATA,
+                                                     null,
+                                                     true,
+                                                     "$.b",
+                                                     false
+                                                 )
+                                             )
+                                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                             .limit(100)
+                                             .context(ImmutableMap.of())
+                                             .build();
+    List<Segment> segs = NestedDataTestUtils.createSegmentsForJsonInput(
+        tempFolder,
+        closer,
+        NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE,
+        Granularities.HOUR,
+        true,
+        IndexSpec.DEFAULT
+    );
+
+    List<Segment> realtimeSegs = ImmutableList.of(
+        NestedDataTestUtils.createIncrementalIndexForJsonInput(
+            tempFolder,
+            NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE,
+            Granularities.NONE,
+            true
+        )
+    );
+
+    final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
+    final Sequence<ScanResultValue> seqRealtime = helper.runQueryOnSegmentsObjs(realtimeSegs, scanQuery);
+    List<ScanResultValue> results = seq.toList();
+    List<ScanResultValue> resultsRealtime = seqRealtime.toList();
+    logResults(results);
+    logResults(resultsRealtime);
+    Assert.assertEquals(1, results.size());
+    Assert.assertEquals(6, ((List) results.get(0).getEvents()).size());
+    Assert.assertEquals(results.size(), resultsRealtime.size());
+    Assert.assertEquals(results.get(0).getEvents().toString(), resultsRealtime.get(0).getEvents().toString());
   }
 
   private static void logResults(List<ScanResultValue> results)

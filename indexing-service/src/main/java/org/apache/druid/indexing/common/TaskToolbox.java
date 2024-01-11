@@ -56,6 +56,7 @@ import org.apache.druid.segment.loading.DataSegmentMover;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
@@ -130,6 +131,7 @@ public class TaskToolbox
 
   private final TaskLogPusher taskLogPusher;
   private final String attemptId;
+  private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
   public TaskToolbox(
       SegmentLoaderConfig segmentLoaderConfig,
@@ -171,7 +173,8 @@ public class TaskToolbox
       ParallelIndexSupervisorTaskClientProvider supervisorTaskClientProvider,
       ShuffleClient shuffleClient,
       TaskLogPusher taskLogPusher,
-      String attemptId
+      String attemptId,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     this.segmentLoaderConfig = segmentLoaderConfig;
@@ -215,6 +218,7 @@ public class TaskToolbox
     this.shuffleClient = shuffleClient;
     this.taskLogPusher = taskLogPusher;
     this.attemptId = attemptId;
+    this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
   }
 
   public SegmentLoaderConfig getSegmentLoaderConfig()
@@ -487,6 +491,11 @@ public class TaskToolbox
     return createAdjustedRuntimeInfo(JvmUtils.getRuntimeInfo(), appenderatorsManager);
   }
 
+  public CentralizedDatasourceSchemaConfig getCentralizedTableSchemaConfig()
+  {
+    return centralizedDatasourceSchemaConfig;
+  }
+
   /**
    * Create {@link AdjustedRuntimeInfo} based on the given {@link RuntimeInfo} and {@link AppenderatorsManager}. This
    * is a way to allow code to properly apportion the amount of processors and heap available to the entire JVM.
@@ -553,6 +562,7 @@ public class TaskToolbox
     private ShuffleClient shuffleClient;
     private TaskLogPusher taskLogPusher;
     private String attemptId;
+    private CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
     public Builder()
     {
@@ -598,6 +608,7 @@ public class TaskToolbox
       this.intermediaryDataManager = other.intermediaryDataManager;
       this.supervisorTaskClientProvider = other.supervisorTaskClientProvider;
       this.shuffleClient = other.shuffleClient;
+      this.centralizedDatasourceSchemaConfig = other.centralizedDatasourceSchemaConfig;
     }
 
     public Builder config(final SegmentLoaderConfig segmentLoaderConfig)
@@ -840,6 +851,12 @@ public class TaskToolbox
       return this;
     }
 
+    public Builder centralizedTableSchemaConfig(final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig)
+    {
+      this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
+      return this;
+    }
+
     public TaskToolbox build()
     {
       return new TaskToolbox(
@@ -882,7 +899,8 @@ public class TaskToolbox
           supervisorTaskClientProvider,
           shuffleClient,
           taskLogPusher,
-          attemptId
+          attemptId,
+          centralizedDatasourceSchemaConfig
       );
     }
   }

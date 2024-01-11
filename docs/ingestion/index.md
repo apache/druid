@@ -24,7 +24,7 @@ sidebar_label: Overview
   -->
 
 Loading data in Druid is called _ingestion_ or _indexing_. When you ingest data into Druid, Druid reads the data from
-your source system and stores it in data files called [_segments_](../design/architecture.md#datasources-and-segments).
+your source system and stores it in data files called [_segments_](../design/segments.md).
 In general, segment files contain a few million rows each.
 
 For most ingestion methods, the Druid [MiddleManager](../design/middlemanager.md) processes or the

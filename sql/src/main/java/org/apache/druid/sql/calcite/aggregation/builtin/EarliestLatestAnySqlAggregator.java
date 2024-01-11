@@ -44,6 +44,9 @@ import org.apache.calcite.util.Optionality;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.SerializablePairLongDoubleComplexMetricSerde;
+import org.apache.druid.query.aggregation.SerializablePairLongFloatComplexMetricSerde;
+import org.apache.druid.query.aggregation.SerializablePairLongLongComplexMetricSerde;
 import org.apache.druid.query.aggregation.any.DoubleAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.any.FloatAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.any.LongAnyAggregatorFactory;
@@ -68,6 +71,7 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -316,6 +320,25 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
     public RelDataType inferReturnType(SqlOperatorBinding sqlOperatorBinding)
     {
       RelDataType type = sqlOperatorBinding.getOperandType(this.ordinal);
+
+      // If complex and of type SerializablePairLong*, return scalar type
+      if (type instanceof RowSignatures.ComplexSqlType) {
+        ColumnType complexColumnType = ((RowSignatures.ComplexSqlType) type).getColumnType();
+        String complexTypeName = complexColumnType.getComplexTypeName();
+        if (complexTypeName != null) {
+          switch (complexTypeName) {
+            case SerializablePairLongLongComplexMetricSerde.TYPE_NAME:
+              return sqlOperatorBinding.getTypeFactory().createSqlType(SqlTypeName.BIGINT);
+            case SerializablePairLongFloatComplexMetricSerde.TYPE_NAME:
+              return sqlOperatorBinding.getTypeFactory().createSqlType(SqlTypeName.FLOAT);
+            case SerializablePairLongDoubleComplexMetricSerde.TYPE_NAME:
+              return sqlOperatorBinding.getTypeFactory().createSqlType(SqlTypeName.DOUBLE);
+            default:
+              return sqlOperatorBinding.getTypeFactory().createSqlType(SqlTypeName.VARCHAR);
+          }
+        }
+      }
+
       // For non-number and non-string type, which is COMPLEX type, we set the return type to VARCHAR.
       if (!SqlTypeUtil.isNumeric(type) &&
           !SqlTypeUtil.isString(type)) {
