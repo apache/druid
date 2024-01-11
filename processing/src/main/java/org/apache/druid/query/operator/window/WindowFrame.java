@@ -39,12 +39,7 @@ public class WindowFrame
 {
   public static WindowFrame unbounded()
   {
-    return WindowFrame.rows1(true, 0, true, 0);
-  }
-
-  public static Rows rows1(boolean b, int i, boolean c, int j)
-  {
-    return rows(b ? null : i, c ? null : j);
+    return rows(null, null);
   }
 
   public static Rows rows(Integer lowerOffset, Integer upperOffset)
@@ -52,12 +47,7 @@ public class WindowFrame
     return new WindowFrame.Rows(lowerOffset, upperOffset);
   }
 
-  public static Groups groups1(boolean b, int i, boolean c, int j, List<ColumnWithDirection> singletonList)
-  {
-    return groups(b ? null : i, c ? null : j, singletonList);
-  }
-
-  private static Groups groups(
+  public static Groups groups(
       final Integer lowerOffset,
       final Integer upperOffset,
       final List<ColumnWithDirection> orderBy)
@@ -167,7 +157,7 @@ public class WindowFrame
 
   public static WindowFrame forOrderBy(ColumnWithDirection... orderBy)
   {
-    return WindowFrame.groups1(true, 0, false, 0, Lists.newArrayList(orderBy));
+    return groups(null, 0, Lists.newArrayList(orderBy));
   }
 
   public List<String> getOrderByColNames()
