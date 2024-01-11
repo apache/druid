@@ -167,13 +167,12 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     {
       return new Iterator<AggInterval>()
       {
-        int currentRowIndex = 0;
         int currentGroupIndex = 0;
 
         @Override
         public boolean hasNext()
         {
-          return currentRowIndex < numRows;
+          return currentGroupIndex < numGroups;
         }
 
         @Override
@@ -194,7 +193,6 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
               )
           );
 
-          currentRowIndex = groupToRowIndex(currentGroupIndex + 1);
           currentGroupIndex++;
           return r;
         }
