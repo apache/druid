@@ -138,24 +138,26 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
         );
         ResourceHolder<ByteBuffer> processingBuffer = pool.take()
     ) {
-
+      final GroupByQuery query = GroupByQuery.builder()
+                                             .setDataSource("test")
+                                             .setGranularity(Granularities.ALL)
+                                             .setInterval(new Interval(DateTimes.EPOCH, DateTimes.nowUtc()))
+                                             .addDimension("billy")
+                                             .addDimension("sally")
+                                             .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
+                                             .addOrderByColumn("billy")
+                                             .build();
+      final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
+      final Interval interval = Iterables.getOnlyElement(query.getIntervals());
       final Sequence<ResultRow> rows = GroupByQueryEngine.process(
-          GroupByQuery.builder()
-                      .setDataSource("test")
-                      .setGranularity(Granularities.ALL)
-                      .setInterval(new Interval(DateTimes.EPOCH, DateTimes.nowUtc()))
-                      .addDimension("billy")
-                      .addDimension("sally")
-                      .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
-                      .addOrderByColumn("billy")
-                      .build(),
+          query,
           new IncrementalIndexStorageAdapter(index),
           processingBuffer.get(),
           null,
           new GroupByQueryConfig(),
           new DruidProcessingConfig(),
-          null,
-          Intervals.ETERNITY,
+          filter,
+          interval,
           null
       );
 
@@ -200,36 +202,38 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
         );
         ResourceHolder<ByteBuffer> processingBuffer = pool.take();
     ) {
-
+      final GroupByQuery query = GroupByQuery.builder()
+                                             .setDataSource("test")
+                                             .setGranularity(Granularities.ALL)
+                                             .setInterval(new Interval(DateTimes.EPOCH, DateTimes.nowUtc()))
+                                             .addDimension("billy")
+                                             .addDimension("sally")
+                                             .addAggregator(
+                                                 new LongSumAggregatorFactory("cnt", "cnt")
+                                             )
+                                             .addAggregator(
+                                                 new JavaScriptAggregatorFactory(
+                                                     "fieldLength",
+                                                     Arrays.asList("sally", "billy"),
+                                                     "function(current, s, b) { return current + (s == null ? 0 : s.length) + (b == null ? 0 : b.length); }",
+                                                     "function() { return 0; }",
+                                                     "function(a,b) { return a + b; }",
+                                                     JavaScriptConfig.getEnabledInstance()
+                                                 )
+                                             )
+                                             .addOrderByColumn("billy")
+                                             .build();
+      final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
+      final Interval interval = Iterables.getOnlyElement(query.getIntervals());
       final Sequence<ResultRow> rows = GroupByQueryEngine.process(
-          GroupByQuery.builder()
-                      .setDataSource("test")
-                      .setGranularity(Granularities.ALL)
-                      .setInterval(new Interval(DateTimes.EPOCH, DateTimes.nowUtc()))
-                      .addDimension("billy")
-                      .addDimension("sally")
-                      .addAggregator(
-                          new LongSumAggregatorFactory("cnt", "cnt")
-                      )
-                      .addAggregator(
-                          new JavaScriptAggregatorFactory(
-                              "fieldLength",
-                              Arrays.asList("sally", "billy"),
-                              "function(current, s, b) { return current + (s == null ? 0 : s.length) + (b == null ? 0 : b.length); }",
-                              "function() { return 0; }",
-                              "function(a,b) { return a + b; }",
-                              JavaScriptConfig.getEnabledInstance()
-                          )
-                      )
-                      .addOrderByColumn("billy")
-                      .build(),
+          query,
           new IncrementalIndexStorageAdapter(index),
           processingBuffer.get(),
           null,
           new GroupByQueryConfig(),
           new DruidProcessingConfig(),
-          null,
-          Intervals.ETERNITY,
+          filter,
+          interval,
           null
       );
 
@@ -378,23 +382,27 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
         ResourceHolder<ByteBuffer> processingBuffer = pool.take();
     ) {
 
+      final GroupByQuery query = GroupByQuery.builder()
+                                             .setDataSource("test")
+                                             .setGranularity(Granularities.ALL)
+                                             .setInterval(new Interval(DateTimes.EPOCH, DateTimes.nowUtc()))
+                                             .addDimension("billy")
+                                             .addDimension("sally")
+                                             .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
+                                             .setDimFilter(DimFilters.dimEquals("sally", (String) null))
+                                             .build();
+      final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
+      final Interval interval = Iterables.getOnlyElement(query.getIntervals());
+
       final Sequence<ResultRow> rows = GroupByQueryEngine.process(
-          GroupByQuery.builder()
-                      .setDataSource("test")
-                      .setGranularity(Granularities.ALL)
-                      .setInterval(new Interval(DateTimes.EPOCH, DateTimes.nowUtc()))
-                      .addDimension("billy")
-                      .addDimension("sally")
-                      .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
-                      .setDimFilter(DimFilters.dimEquals("sally", (String) null))
-                      .build(),
+          query,
           new IncrementalIndexStorageAdapter(index),
           processingBuffer.get(),
           null,
           new GroupByQueryConfig(),
           new DruidProcessingConfig(),
-          null,
-          Intervals.ETERNITY,
+          filter,
+          interval,
           null
       );
 
