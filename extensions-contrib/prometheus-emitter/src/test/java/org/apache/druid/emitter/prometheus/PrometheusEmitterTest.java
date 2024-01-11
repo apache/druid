@@ -94,7 +94,12 @@ public class PrometheusEmitterTest
     ServiceMetricEvent build = ServiceMetricEvent.builder()
                                                  .setDimension("server", "druid-data01.vpc.region")
                                                  .setMetric("segment/loadQueue/count", 10)
-                                                 .build(ImmutableMap.of("service", "historical", "host", "druid.test.cn"));
+                                                 .build(ImmutableMap.of(
+                                                     "service",
+                                                     "historical",
+                                                     "host",
+                                                     "druid.test.cn"
+                                                 ));
     emitter.emit(build);
     Double count = CollectorRegistry.defaultRegistry.getSampleValue(
         "druid_segment_loadqueue_count",
@@ -204,57 +209,110 @@ public class PrometheusEmitterTest
   public void testTimerMetric()
   {
     CollectorRegistry.defaultRegistry.clear();
-    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace", null, 0, "pushgateway", true, true, 60, null, false, null);
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(
+        PrometheusEmitterConfig.Strategy.pushgateway,
+        "namespace",
+        null,
+        0,
+        "pushgateway",
+        true,
+        true,
+        60,
+        null,
+        false,
+        null
+    );
     PrometheusEmitterModule prometheusEmitterModule = new PrometheusEmitterModule();
     Emitter emitter = prometheusEmitterModule.getEmitter(config);
     ServiceMetricEvent build = ServiceMetricEvent.builder()
-            .setDimension("dataSource", "test")
-            .setDimension("taskType", "index_parallel")
-            .setMetric("task/run/time", 500)
-            .build(ImmutableMap.of("service", "overlord", "host", "druid.test.cn"));
+                                                 .setDimension("dataSource", "test")
+                                                 .setDimension("taskType", "index_parallel")
+                                                 .setMetric("task/run/time", 500)
+                                                 .build(ImmutableMap.of(
+                                                     "service",
+                                                     "overlord",
+                                                     "host",
+                                                     "druid.test.cn"
+                                                 ));
     emitter.emit(build);
     double assertEpsilon = 0.0001;
     Assert.assertEquals(0.0, CollectorRegistry.defaultRegistry.getSampleValue(
-            "namespace_task_run_time_bucket", new String[]{"dataSource", "druid_service", "host_name", "taskType", "le"}, new String[]{"test", "overlord", "druid.test.cn", "index_parallel", "0.1"}
+        "namespace_task_run_time_bucket",
+        new String[]{"dataSource", "druid_service", "host_name", "taskType", "le"},
+        new String[]{"test", "overlord", "druid.test.cn", "index_parallel", "0.1"}
     ), assertEpsilon);
     Assert.assertEquals(1.0, CollectorRegistry.defaultRegistry.getSampleValue(
-            "namespace_task_run_time_bucket", new String[]{"dataSource", "druid_service", "host_name", "taskType", "le"}, new String[]{"test", "overlord", "druid.test.cn", "index_parallel", "0.5"}
+        "namespace_task_run_time_bucket",
+        new String[]{"dataSource", "druid_service", "host_name", "taskType", "le"},
+        new String[]{"test", "overlord", "druid.test.cn", "index_parallel", "0.5"}
     ), assertEpsilon);
   }
 
   @Test
-  public void testHistograMetric() {
+  public void testHistograMetric()
+  {
     CollectorRegistry.defaultRegistry.clear();
-    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace", null, 0, "pushgateway", true, true, 60, null, false, null);
-    PrometheusEmitterModule prometheusEmitterModule =  new PrometheusEmitterModule();
-    Emitter emitter = prometheusEmitterModule.getEmitter(config);
-    ServiceMetricEvent metric = ServiceMetricEvent.builder()
-            .setDimension("dataSource", "test")
-            .setMetric("sqlQuery/time", 500)
-            .build(ImmutableMap.of("service", "broker", "host", "druid.test.cn"));
-    emitter.emit(metric);
-    double epsilon = 0.0001;
-    Assert.assertEquals(0.0, CollectorRegistry.defaultRegistry.getSampleValue(
-            "namespace_sqlquery_time_bucket", new String[]{"dataSource", "druid_service", "host_name", "le"}, new String[]{"test", "broker", "druid.test.cn", "100.0"}
-    ), epsilon);
-    Assert.assertEquals(1.0, CollectorRegistry.defaultRegistry.getSampleValue(
-            "namespace_sqlquery_time_bucket", new String[]{"dataSource", "druid_service", "host_name", "le"}, new String[]{"test", "broker", "druid.test.cn", "500.0"}
-    ), epsilon);
-  }
-
-  @Test
-  public void testSummaryMetric() {
-    CollectorRegistry.defaultRegistry.clear();
-    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace", null, 0, "pushgateway", true, true, 60, null, false, null);
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(
+        PrometheusEmitterConfig.Strategy.pushgateway,
+        "namespace",
+        null,
+        0,
+        "pushgateway",
+        true,
+        true,
+        60,
+        null,
+        false,
+        null
+    );
     PrometheusEmitterModule prometheusEmitterModule = new PrometheusEmitterModule();
     Emitter emitter = prometheusEmitterModule.getEmitter(config);
     ServiceMetricEvent metric = ServiceMetricEvent.builder()
-            .setDimension("dataSource", "test")
-            .setMetric("sqlQuery/planningTimeMs", 500)
-            .build(ImmutableMap.of("service", "broker", "host", "druid.test.cn"));
+                                                  .setDimension("dataSource", "test")
+                                                  .setMetric("sqlQuery/time", 500)
+                                                  .build(ImmutableMap.of("service", "broker", "host", "druid.test.cn"));
+    emitter.emit(metric);
+    double epsilon = 0.0001;
+    Assert.assertEquals(0.0, CollectorRegistry.defaultRegistry.getSampleValue(
+        "namespace_sqlquery_time_bucket",
+        new String[]{"dataSource", "druid_service", "host_name", "le"},
+        new String[]{"test", "broker", "druid.test.cn", "100.0"}
+    ), epsilon);
+    Assert.assertEquals(1.0, CollectorRegistry.defaultRegistry.getSampleValue(
+        "namespace_sqlquery_time_bucket",
+        new String[]{"dataSource", "druid_service", "host_name", "le"},
+        new String[]{"test", "broker", "druid.test.cn", "500.0"}
+    ), epsilon);
+  }
+
+  @Test
+  public void testSummaryMetric()
+  {
+    CollectorRegistry.defaultRegistry.clear();
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(
+        PrometheusEmitterConfig.Strategy.pushgateway,
+        "namespace",
+        null,
+        0,
+        "pushgateway",
+        true,
+        true,
+        60,
+        null,
+        false,
+        null
+    );
+    PrometheusEmitterModule prometheusEmitterModule = new PrometheusEmitterModule();
+    Emitter emitter = prometheusEmitterModule.getEmitter(config);
+    ServiceMetricEvent metric = ServiceMetricEvent.builder()
+                                                  .setDimension("dataSource", "test")
+                                                  .setMetric("sqlQuery/planningTimeMs", 500)
+                                                  .build(ImmutableMap.of("service", "broker", "host", "druid.test.cn"));
     emitter.emit(metric);
     Assert.assertEquals(500.0, CollectorRegistry.defaultRegistry.getSampleValue(
-           "namespace_sqlquery_planningtimems_sum", new String[]{"dataSource", "druid_service", "host_name"}, new String[]{"test", "broker", "druid.test.cn"}
+        "namespace_sqlquery_planningtimems_sum",
+        new String[]{"dataSource", "druid_service", "host_name"},
+        new String[]{"test", "broker", "druid.test.cn"}
     ), 0.0001);
   }
 

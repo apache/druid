@@ -45,24 +45,16 @@ import java.util.regex.Pattern;
 public class PrometheusEmitter implements Emitter
 {
   private static final Logger log = new Logger(PrometheusEmitter.class);
-  private final PrometheusEmitterConfig config;
-  private final PrometheusEmitterConfig.Strategy strategy;
-
-  private final Metrics metrics;
   private static final Pattern PATTERN = Pattern.compile("[^a-zA-Z0-9_][^a-zA-Z0-9_]*");
-
   private static final String TAG_HOSTNAME = "host_name";
   private static final String TAG_SERVICE = "druid_service";
-
+  private final PrometheusEmitterConfig config;
+  private final PrometheusEmitterConfig.Strategy strategy;
+  private final Metrics metrics;
   private HTTPServer server;
   private PushGateway pushGateway;
   private volatile String identifier;
   private ScheduledExecutorService exec;
-
-  static PrometheusEmitter of(PrometheusEmitterConfig config)
-  {
-    return new PrometheusEmitter(config);
-  }
 
   public PrometheusEmitter(PrometheusEmitterConfig config)
   {
@@ -71,6 +63,20 @@ public class PrometheusEmitter implements Emitter
     this.metrics = new Metrics(config);
   }
 
+  static PrometheusEmitter of(PrometheusEmitterConfig config)
+  {
+    return new PrometheusEmitter(config);
+  }
+
+  private static URL createURLSneakily(final String urlString)
+  {
+    try {
+      return new URL(urlString);
+    }
+    catch (MalformedURLException e) {
+      throw new RuntimeException(e);
+    }
+  }
 
   @Override
   public void start()
@@ -101,16 +107,6 @@ public class PrometheusEmitter implements Emitter
           config.getFlushPeriod(),
           TimeUnit.SECONDS
       );
-    }
-  }
-
-  private static URL createURLSneakily(final String urlString)
-  {
-    try {
-      return new URL(urlString);
-    }
-    catch (MalformedURLException e) {
-      throw new RuntimeException(e);
     }
   }
 
@@ -200,7 +196,10 @@ public class PrometheusEmitter implements Emitter
 
       try {
         if (config.getWaitForShutdownDelay().getMillis() > 0) {
-          log.info("Waiting [%s]ms before deleting metrics from the push gateway.", config.getWaitForShutdownDelay().getMillis());
+          log.info(
+              "Waiting [%s]ms before deleting metrics from the push gateway.",
+              config.getWaitForShutdownDelay().getMillis()
+          );
           Thread.sleep(config.getWaitForShutdownDelay().getMillis());
         }
       }
