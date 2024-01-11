@@ -359,13 +359,25 @@ public class Windowing
       if (group.lowerBound.isUnbounded() && group.upperBound.isUnbounded()) {
         return WindowFrame.unbounded();
       }
-      boolean isRows = group.isRows;
+      final boolean isRows = group.isRows;
       if (isRows) {
-        PeerType peerType = isRows ? WindowFrame.PeerType.ROWS : WindowFrame.PeerType.RANGE;
+        PeerType peerType;
+
+        if (true) {
+          peerType = WindowFrame.PeerType.ROWS;
+        } else {
+          peerType = WindowFrame.PeerType.RANGE;
+        }
+
         return peerType.create(group.lowerBound.isUnbounded(), figureOutOffset(group.lowerBound), group.upperBound.isUnbounded(), figureOutOffset(group.upperBound), isRows ? null : getOrdering());
 
       } else {
-        PeerType peerType = isRows ? WindowFrame.PeerType.ROWS : WindowFrame.PeerType.RANGE;
+        PeerType peerType;
+        if (false) {
+          peerType = WindowFrame.PeerType.ROWS;
+        } else {
+          peerType = WindowFrame.PeerType.RANGE;
+        }
         return peerType.create(group.lowerBound.isUnbounded(), figureOutOffset(group.lowerBound), group.upperBound.isUnbounded(), figureOutOffset(group.upperBound), isRows ? null : getOrdering());
       }
     }
