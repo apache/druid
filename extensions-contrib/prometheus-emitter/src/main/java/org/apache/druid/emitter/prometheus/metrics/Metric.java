@@ -23,8 +23,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.prometheus.client.SimpleCollector;
-import lombok.Getter;
-import lombok.Setter;
 import org.apache.druid.emitter.prometheus.PrometheusEmitterConfig;
 import org.apache.druid.java.util.common.StringUtils;
 
@@ -49,13 +47,9 @@ public abstract class Metric<T extends SimpleCollector<?>>
   public final MetricType type;
   public final String help;
 
-  @Getter
   private String namespace;
-  @Getter
   private String formattedName;
 
-  @Getter
-  @Setter
   @JsonIgnore
   private T collector;
 
@@ -68,6 +62,26 @@ public abstract class Metric<T extends SimpleCollector<?>>
     this.dimensions = dimensions;
     this.type = type;
     this.help = help;
+  }
+
+  public String getNamespace()
+  {
+    return namespace;
+  }
+
+  public T getCollector()
+  {
+    return collector;
+  }
+
+  public void setCollector(T collector)
+  {
+    this.collector = collector;
+  }
+
+  public String getFormattedName()
+  {
+    return formattedName;
   }
 
   public abstract void record(String[] labelValues, double value);

@@ -21,7 +21,6 @@ package org.apache.druid.emitter.prometheus.metrics;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import lombok.Getter;
 
 import java.util.SortedSet;
 
@@ -30,7 +29,6 @@ import java.util.SortedSet;
 public class Timer extends Histogram
 {
   private static final double[] BUCKETS = {.1, .25, .5, .75, 1, 2.5, 5, 7.5, 10, 30, 60, 120, 300};
-  @Getter
   private final double conversionFactor;
 
   public Timer(
@@ -42,6 +40,11 @@ public class Timer extends Histogram
   {
     super(dimensions, type, help, BUCKETS);
     this.conversionFactor = conversionFactor;
+  }
+
+  public double getConversionFactor()
+  {
+    return conversionFactor;
   }
 
   @Override

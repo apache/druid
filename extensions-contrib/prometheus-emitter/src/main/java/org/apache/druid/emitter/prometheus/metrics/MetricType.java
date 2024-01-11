@@ -19,10 +19,6 @@
 
 package org.apache.druid.emitter.prometheus.metrics;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-
-@AllArgsConstructor
 public enum MetricType
 {
   count(DimensionMapNames.COUNTER),
@@ -31,8 +27,17 @@ public enum MetricType
   histogram(DimensionMapNames.HISTOGRAM),
   summary(DimensionMapNames.SUMMARY);
 
-  @Getter
   private final String dimensionMapName;
+
+  MetricType(String dimensionMapName)
+  {
+    this.dimensionMapName = dimensionMapName;
+  }
+
+  public String getDimensionMapName()
+  {
+    return dimensionMapName;
+  }
 
   // TODO: get rid of this inner class after upgrading jackson in parent
   //       ref: https://github.com/FasterXML/jackson-databind/issues/2739

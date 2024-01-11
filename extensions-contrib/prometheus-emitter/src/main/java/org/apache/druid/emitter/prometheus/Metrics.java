@@ -22,7 +22,6 @@ package org.apache.druid.emitter.prometheus;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
-import lombok.Getter;
 import org.apache.druid.emitter.prometheus.metrics.Metric;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -40,7 +39,6 @@ public class Metrics
   private static final Logger log = new Logger(Metrics.class);
 
   private final ObjectMapper mapper = new ObjectMapper();
-  @Getter
   private final Map<String, Metric<?>> registeredMetrics;
 
   public Metrics(PrometheusEmitterConfig emitterConfig)
@@ -48,6 +46,11 @@ public class Metrics
     this.registeredMetrics = Collections.unmodifiableMap(readConfig(
         emitterConfig.getDimensionMapPath()));
     registeredMetrics.forEach((name, metric) -> metric.createCollector(name, emitterConfig));
+  }
+
+  public Map<String, Metric<?>> getRegisteredMetrics()
+  {
+    return registeredMetrics;
   }
 
   private Map<String, Metric<?>> readConfig(@Nullable String path)
