@@ -3210,6 +3210,88 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testDecomposeCaseWhenThreeArg()
+  {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT\n"
+        + "  dim1, dim2, CASE WHEN dim1 = 'abc' THEN dim1 ELSE dim2 END\n"
+        + "FROM druid.foo\n"
+        + "WHERE\n"
+        + "  CASE WHEN dim1 = 'abc' THEN dim1 ELSE dim2 END = 'abc'",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .virtualColumns(
+                    expressionVirtualColumn(
+                        "v0",
+                        "case_searched((\"dim1\" == 'abc'),\"dim1\",\"dim2\")",
+                        ColumnType.STRING
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .filters(
+                    or(
+                        equality("dim1", "abc", ColumnType.STRING),
+                        and(
+                            equality("dim2", "abc", ColumnType.STRING),
+                            NullHandling.sqlCompatible()
+                            ? not(istrue(equality("dim1", "abc", ColumnType.STRING)))
+                            : not(equality("dim1", "abc", ColumnType.STRING))
+                        )
+                    )
+                )
+                .columns("dim1", "dim2", "v0")
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"def", "abc", "abc"},
+            new Object[]{"abc", NullHandling.defaultStringValue(), "abc"}
+        )
+    );
+  }
+
+  @Test
+  public void testDecomposeCaseWhenTwoArg()
+  {
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT\n"
+        + "  dim1, dim2, CASE WHEN dim1 = 'def' THEN dim2 END\n"
+        + "FROM druid.foo\n"
+        + "WHERE\n"
+        + "  CASE WHEN dim1 = 'def' THEN dim2 END = 'abc'",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .virtualColumns(
+                    expressionVirtualColumn(
+                        "v0",
+                        "case_searched((\"dim1\" == 'def'),\"dim2\",null)",
+                        ColumnType.STRING
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .filters(
+                    and(
+                        equality("dim1", "def", ColumnType.STRING),
+                        equality("dim2", "abc", ColumnType.STRING)
+                    )
+                )
+                .columns("dim1", "dim2", "v0")
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"def", "abc", "abc"}
+        )
+    );
+  }
+
+  @Test
   public void testGroupByCaseWhenOfTripleAnd()
   {
     // Cannot vectorize due to virtual columns.

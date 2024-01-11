@@ -16,26 +16,16 @@
  * limitations under the License.
  */
 
-@import '../../../variables';
+import React from 'react';
 
-.execution-submit-dialog {
-  &.#{$bp-ns}-dialog {
-    top: 5%;
-    width: 500px;
-  }
-}
+import { shallow } from '../../../utils/shallow-renderer';
 
-.#{$bp-ns}-overlay-backdrop.dragging-file {
-  &::after {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    right: 20px;
-    bottom: 20px;
-    border: 3px dashed cyan;
-    border-radius: 20px;
+import { ExecutionSubmitDialog } from './execution-submit-dialog';
 
-    pointer-events: none;
-    content: '';
-  }
-}
+describe('ExecutionSubmitDialog', () => {
+  it('matches snapshot', () => {
+    const comp = shallow(<ExecutionSubmitDialog onSubmit={() => {}} onClose={() => {}} />);
+
+    expect(comp).toMatchSnapshot();
+  });
+});
