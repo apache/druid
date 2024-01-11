@@ -58,27 +58,12 @@ The `ddSketch` aggregator operates over raw data and precomputed sketches.
 
 ### Post Aggregators
 
-Users can query for a set of quantiles using the `quantilesFromDDSketch` post-aggregator on the sketches created by the `ddSketch` aggregators.
+To compute approximate quantiles, use `quantilesFromDDSketch` to query for a set of quantiles or `quantileFromDDSketch` to query for a single quantile. Call these post-aggregators on the sketches created by the `ddSketch` aggregators.
+
 
 #### quantilesFromDDSketch
 
-|property|description|required?|
-|--------|-----------|---------|
-|type|Must be "quantilesFromDDSketch" |yes|
-|name|A String for the output (result) name of the calculation.|yes|
-|field|A computed ddSketch.|yes|
-|fractions|list of doubles from 0 to 1 of the quantiles to compute|yes|
-
-#### quantileFromDDSketch
-
-|property|description|required?|
-|--------|-----------|---------|
-|type|Must be "quantileFromDDSketch" |yes|
-|name|A String for the output (result) name of the calculation.|yes|
-|field|A computed ddSketch.|yes|
-|fraction|double from 0 to 1 of the quantile to compute|yes|
-
-
+Use `quantilesFromDDSketch` to fetch multiple quantiles.
 
 ```json
 {
@@ -89,7 +74,16 @@ Users can query for a set of quantiles using the `quantilesFromDDSketch` post-ag
 }
 ```
 
-Single quantiles may be fetched as well.
+|property|description|required?|
+|--------|-----------|---------|
+|type|Must be "quantilesFromDDSketch" |yes|
+|name|A String for the output (result) name of the calculation.|yes|
+|field|A computed ddSketch.|yes|
+|fractions|Array of doubles from 0 to 1 of the quantiles to compute|yes|
+
+#### quantileFromDDSketch
+
+Use `quantileFromDDSketch` to fetch a single quantile.
 
 ```json
 {
@@ -100,7 +94,16 @@ Single quantiles may be fetched as well.
 }
 ```
 
+|property|description|required?|
+|--------|-----------|---------|
+|type|Must be "quantileFromDDSketch" |yes|
+|name|A String for the output (result) name of the calculation.|yes|
+|field|A computed ddSketch.|yes|
+|fraction|A double from 0 to 1 of the quantile to compute|yes|
+
+
 ### Example
+
 As an example of a query with sketches pre-aggregated at ingestion time, one could set up the following aggregator at ingest:
 
 ```json
@@ -113,7 +116,7 @@ As an example of a query with sketches pre-aggregated at ingestion time, one cou
 }
 ```
 
-and make queries using the following aggregator + post-aggregator:
+Compute quantiles from the pre-aggregated sketches using the following aggregator and post-aggregator.
 
 ```json
 {
