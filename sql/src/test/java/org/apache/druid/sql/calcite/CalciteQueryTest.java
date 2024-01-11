@@ -3184,11 +3184,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
                 .virtualColumns(
-                    expressionVirtualColumn(
-                        "v0",
-                        "case_searched((\"dim1\" == 'def'),\"dim2\",null)",
-                        ColumnType.STRING
-                    )
+                    expressionVirtualColumn("v0", "'def'", ColumnType.STRING),
+                    expressionVirtualColumn("v1", "'abc'", ColumnType.STRING)
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(
@@ -3197,7 +3194,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         equality("dim2", "abc", ColumnType.STRING)
                     )
                 )
-                .columns("dim1", "dim2", "v0")
+                .columns("v0", "v1")
                 .build()
         ),
         ImmutableList.of(
@@ -11829,7 +11826,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .virtualColumns(expressionVirtualColumn("v0", "concat(\"dim1\",'x',\"dim2\")", ColumnType.STRING))
+                .virtualColumns(expressionVirtualColumn("v0", "'3x4'", ColumnType.STRING))
                 .filters(and(
                     equality("dim1", "3", ColumnType.STRING),
                     equality("dim2", "4", ColumnType.STRING)

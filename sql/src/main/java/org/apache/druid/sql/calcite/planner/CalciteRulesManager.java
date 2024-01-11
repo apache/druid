@@ -66,9 +66,7 @@ import org.apache.druid.sql.calcite.rule.SortCollapseRule;
 import org.apache.druid.sql.calcite.rule.logical.DruidLogicalRules;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -143,7 +141,6 @@ public class CalciteRulesManager
           CoreRules.FILTER_VALUES_MERGE,
           CoreRules.PROJECT_FILTER_VALUES_MERGE,
           CoreRules.PROJECT_VALUES_MERGE,
-          CoreRules.SORT_PROJECT_TRANSPOSE,
           CoreRules.AGGREGATE_VALUES
       );
 
@@ -277,7 +274,33 @@ public class CalciteRulesManager
     prePrograms.add(buildReductionProgram(plannerContext, isDruid));
     prePrograms.add(new LoggingProgram("Finished expression reduction program", isDebug));
 
+    if (isDruid) {
+      prePrograms.add(buildPreVolcanoManipulationProgram(plannerContext));
+      prePrograms.add(new LoggingProgram("Finished pre-Volcano manipulation program", isDebug));
+    }
+
     return Programs.sequence(prePrograms.toArray(new Program[0]));
+  }
+
+  /**
+   * Program to perform manipulations on the logical tree prior to starting the cost-based planner. Mainly this
+   * helps the cost-based planner finish faster, and helps the decoupled planner generate the same plans as the
+   * classic planner.
+   */
+  private Program buildPreVolcanoManipulationProgram(final PlannerContext plannerContext)
+  {
+    final HepProgramBuilder builder = HepProgram.builder();
+    builder.addMatchLimit(CalciteRulesManager.HEP_DEFAULT_MATCH_LIMIT);
+
+    // Apply FILTER_INTO_JOIN early, if using a join algorithm that requires subqueries anyway.
+    if (plannerContext.getJoinAlgorithm().requiresSubquery()) {
+      builder.addRuleInstance(CoreRules.FILTER_INTO_JOIN);
+    }
+
+    // Apply SORT_PROJECT_TRANSPOSE to match the expected order of "sort" and "sortProject" in PartialDruidQuery.
+    builder.addRuleInstance(CoreRules.SORT_PROJECT_TRANSPOSE);
+
+    return Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE);
   }
 
   /**
@@ -286,46 +309,48 @@ public class CalciteRulesManager
    */
   private Program buildReductionProgram(final PlannerContext plannerContext, final boolean isDruid)
   {
-    final List<RelOptRule> hepRules = new ArrayList<>();
+    final HepProgramBuilder builder = HepProgram.builder();
+    builder.addMatchLimit(CalciteRulesManager.HEP_DEFAULT_MATCH_LIMIT);
 
     if (isDruid) {
-      // Must run before REDUCTION_RULES, since otherwise ReduceExpressionsRule#pushPredicateIntoCase may
+      // COALESCE rules must run before REDUCTION_RULES, since otherwise ReduceExpressionsRule#pushPredicateIntoCase may
       // make it impossible to convert to COALESCE.
-      hepRules.add(new CaseToCoalesceRule());
-      hepRules.add(new CoalesceLookupRule());
+      builder.addRuleInstance(new CaseToCoalesceRule());
+      builder.addRuleInstance(new CoalesceLookupRule());
+    }
 
+    // Remaining rules run as a single group until fixpoint.
+    builder.addGroupBegin();
+
+    if (isDruid) {
       // Flatten calls to CONCAT, which happen easily with the || operator since it only accepts two arguments.
-      hepRules.add(new FlattenConcatRule());
+      builder.addRuleInstance(new FlattenConcatRule());
 
       // Decompose filters on COALESCE to promote more usage of indexes.
-      hepRules.add(new FilterDecomposeCoalesceRule());
+      builder.addRuleInstance(new FilterDecomposeCoalesceRule());
+
+      // Decompose filters on CONCAT to promote more usage of indexes.
+      builder.addRuleInstance(new FilterDecomposeConcatRule());
 
       // Include rule to split injective LOOKUP across a GROUP BY.
       if (plannerContext.isSplitLookup()) {
-        hepRules.add(new AggregatePullUpLookupRule(plannerContext));
+        builder.addRuleInstance(new AggregatePullUpLookupRule(plannerContext));
       }
 
       // Include rule to reduce certain LOOKUP expressions that appear in filters.
       if (plannerContext.isReverseLookup()) {
-        hepRules.add(new ReverseLookupRule(plannerContext));
+        builder.addRuleInstance(new ReverseLookupRule(plannerContext));
       }
     }
 
     // Calcite's builtin reduction rules.
-    hepRules.addAll(REDUCTION_RULES);
-
-    if (isDruid) {
-      // Decompose filters on CONCAT to promote more usage of indexes. Runs after REDUCTION_RULES because
-      // this rule benefits from reduction of effectively-literal calls to actual literals.
-      hepRules.add(new FilterDecomposeConcatRule());
+    for (final RelOptRule rule : REDUCTION_RULES) {
+      builder.addRuleInstance(rule);
     }
 
-    // Apply CoreRules#FILTER_INTO_JOIN early to avoid exploring less optimal plans.
-    if (isDruid && plannerContext.getJoinAlgorithm().requiresSubquery()) {
-      hepRules.add(CoreRules.FILTER_INTO_JOIN);
-    }
+    builder.addGroupEnd();
 
-    return buildHepProgram(hepRules);
+    return Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE);
   }
 
   private static class LoggingProgram implements Program
@@ -424,48 +449,6 @@ public class CalciteRulesManager
     rules.add(ProjectAggregatePruneUnusedCallRule.instance());
 
     return rules.build();
-  }
-
-  /**
-   * Build a {@link HepProgram} to apply rules mechanically as part of {@link #buildPreProgram}. Rules are applied
-   * one-by-one.
-   *
-   * @param rules rules to apply
-   */
-  private static Program buildHepProgram(final Collection<RelOptRule> rules)
-  {
-    final HepProgramBuilder builder = HepProgram.builder();
-    builder.addMatchLimit(CalciteRulesManager.HEP_DEFAULT_MATCH_LIMIT);
-    for (RelOptRule rule : rules) {
-      builder.addRuleInstance(rule);
-    }
-    return Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE);
-  }
-
-  /**
-   * Program that performs various lookup simplification and optimizations. Runs as a pre-Volcano program since
-   * these changes are always considered good ideas, regardless of computed cost.
-   */
-  @Nullable
-  private static Program buildLookupProgram(final PlannerContext plannerContext)
-  {
-    final List<RelOptRule> rules = new ArrayList<>();
-
-    if (plannerContext.isSplitLookup()) {
-      // Include rule to split injective LOOKUP across a GROUP BY.
-      rules.add(new AggregatePullUpLookupRule(plannerContext));
-    }
-
-    if (plannerContext.isReverseLookup()) {
-      // Include rule to reduce certain LOOKUP expressions that appear in filters.
-      rules.add(new ReverseLookupRule(plannerContext));
-    }
-
-    if (rules.isEmpty()) {
-      return null;
-    } else {
-      return buildHepProgram(rules);
-    }
   }
 
   /**

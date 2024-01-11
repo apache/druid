@@ -19,8 +19,8 @@
 
 package org.apache.druid.sql.calcite.rule;
 
-import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.LinkedHashMultiset;
 import com.google.common.collect.Multiset;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
@@ -162,7 +162,10 @@ public class FilterDecomposeConcatRule extends RelOptRule implements Substitutio
     // be unambiguously reversed.)
     final StringBuilder regexBuilder = new StringBuilder();
     final List<RexNode> nonLiterals = new ArrayList<>();
-    final Multiset<String> literalCounter = HashMultiset.create();
+
+    // Order is important in literalCounter, since we look for later literals only after the first occurrences of
+    // earlier literals. So, use LinkedHashMultiset to preserve order.
+    final Multiset<String> literalCounter = LinkedHashMultiset.create();
     boolean expectLiteral = false; // If true, next operand must be a literal.
     for (int i = 0; i < concatCall.getOperands().size(); i++) {
       final RexNode operand = concatCall.getOperands().get(i);
@@ -187,13 +190,19 @@ public class FilterDecomposeConcatRule extends RelOptRule implements Substitutio
     }
 
     // Verify, using literalCounter, that each literal appears in the matchValue the correct number of times.
+    int checkPos = 0;
     for (Multiset.Entry<String> entry : literalCounter.entrySet()) {
-      final int occurrences = countOccurrences(matchValue, entry.getElement());
+      final int occurrences = countOccurrences(matchValue.substring(checkPos), entry.getElement());
       if (occurrences > entry.getCount()) {
         // If occurrences > entry.getCount(), the match is ambiguous; consider concat(x, 'x', y) = '2x3x4'
         return null;
       } else if (occurrences < entry.getCount()) {
         return impossibleMatch(nonLiterals, rexBuilder);
+      } else {
+        // Literal N + 1 can be ignored if it appears before literal N, because it can't possibly match. Consider the
+        // case where [CONCAT(a, ' (', b, 'x', ')') = 'xxx (2x4)']. This is unambiguous, because 'x' only appears once
+        // after the first ' ('.
+        checkPos = matchValue.indexOf(entry.getElement()) + 1;
       }
     }
 
