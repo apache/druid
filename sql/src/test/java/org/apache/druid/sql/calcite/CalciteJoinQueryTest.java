@@ -861,8 +861,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Parameters(source = QueryContextForJoinProvider.class)
   public void testJoinUnionTablesOnLookup(Map<String, Object> queryContext)
   {
-    // MSQ does not support UNION ALL.
-    msqIncompatible();
     // Cannot vectorize JOIN operator.
     cannotVectorize();
 
@@ -3841,10 +3839,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Parameters(source = QueryContextForJoinProvider.class)
   public void testInnerJoinSubqueryWithSelectorFilter(Map<String, Object> queryContext)
   {
-    if (sortBasedJoin) {
-      // Cannot handle the [l1.k = 'abc'] condition.
-      msqIncompatible();
-    }
 
     // Cannot vectorize due to 'concat' expression.
     cannotVectorize();

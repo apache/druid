@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.aggregation.builtin;
 
 import org.apache.calcite.rel.core.AggregateCall;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
@@ -33,6 +34,10 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.SerializablePairLongDoubleComplexMetricSerde;
+import org.apache.druid.query.aggregation.SerializablePairLongFloatComplexMetricSerde;
+import org.apache.druid.query.aggregation.SerializablePairLongLongComplexMetricSerde;
+import org.apache.druid.query.aggregation.SerializablePairLongStringComplexMetricSerde;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
@@ -44,6 +49,7 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -100,7 +106,6 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
     }
 
     final String fieldName = EarliestLatestAnySqlAggregator.getColumnName(
-        plannerContext,
         virtualColumnRegistry,
         args.get(0),
         rexNodes.get(0)
@@ -109,11 +114,13 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
     final AggregatorFactory theAggFactory;
     switch (args.size()) {
       case 2:
+        if (isMetricPreAggregated(plannerContext, rexNodes.get(0), function.getName())) {
+          return null;
+        }
         theAggFactory = aggregatorType.createAggregatorFactory(
             aggregatorName,
             fieldName,
             EarliestLatestAnySqlAggregator.getColumnName(
-                plannerContext,
                 virtualColumnRegistry,
                 args.get(1),
                 rexNodes.get(1)
@@ -136,11 +143,13 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
           );
           return null;
         }
+        if (isMetricPreAggregated(plannerContext, rexNodes.get(0), function.getName())) {
+          return null;
+        }
         theAggFactory = aggregatorType.createAggregatorFactory(
             aggregatorName,
             fieldName,
             EarliestLatestAnySqlAggregator.getColumnName(
-                plannerContext,
                 virtualColumnRegistry,
                 args.get(1),
                 rexNodes.get(1)
@@ -163,6 +172,29 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
         Collections.singletonList(theAggFactory),
         finalizeAggregations ? new FinalizingFieldAccessPostAggregator(name, aggregatorName) : null
     );
+  }
+
+  private static boolean isMetricPreAggregated(PlannerContext plannerContext, RexNode rexNode, String byAggregator)
+  {
+    final RelDataType type = rexNode.getType();
+    if (type instanceof RowSignatures.ComplexSqlType) {
+      String complexColumnTypeName = ((RowSignatures.ComplexSqlType) type).getColumnType().getComplexTypeName();
+      if ((SerializablePairLongLongComplexMetricSerde.TYPE_NAME.equals(complexColumnTypeName)
+           || SerializablePairLongFloatComplexMetricSerde.TYPE_NAME.equals(complexColumnTypeName)
+           || SerializablePairLongDoubleComplexMetricSerde.TYPE_NAME.equals(complexColumnTypeName)
+           || SerializablePairLongStringComplexMetricSerde.TYPE_NAME.equals(complexColumnTypeName))) {
+        plannerContext.setPlanningError(
+            "Cannot call %s with an explicit 'timeExpr' column for pre-aggregated metric of type [%s]. Use %s instead "
+            + "to further rollup the complex column.",
+            byAggregator,
+            complexColumnTypeName,
+            byAggregator.substring(0, byAggregator.length() - 3)
+        );
+        return true;
+      }
+      return false;
+    }
+    return false;
   }
 
   private static class EarliestByLatestBySqlAggFunction extends SqlAggFunction

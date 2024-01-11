@@ -229,7 +229,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
                           );
     }
 
-    final String fieldName = getColumnName(plannerContext, virtualColumnRegistry, args.get(0), rexNodes.get(0));
+    final String fieldName = getColumnName(virtualColumnRegistry, args.get(0), rexNodes.get(0));
 
     if (!inputAccessor.getInputRowSignature().contains(ColumnHolder.TIME_COLUMN_NAME)
         && (aggregatorType == AggregatorType.LATEST || aggregatorType == AggregatorType.EARLIEST)) {
@@ -291,7 +291,6 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
   }
 
   static String getColumnName(
-      PlannerContext plannerContext,
       VirtualColumnRegistry virtualColumnRegistry,
       DruidExpression arg,
       RexNode rexNode

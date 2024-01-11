@@ -39,6 +39,24 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ *
+ * SELECT dim1, SUM(m1) FROM foo GROUP BY dim1
+ *
+ * {
+ *   dimensions: dim1
+ *   metrics: a0
+ *   aggregators: SumAggregatorFactory()
+ * }
+ *
+ * a 1
+ * a 3
+ * b 2
+ * a 5
+ * b 5
+ * a-> SumAggregator (1  + 3
+ * b -> SumAggregator (2
+ *
+ *
  * AggregatorFactory is a strategy (in the terms of Design Patterns) that represents column aggregation, e.g. min,
  * max, sum of metric columns, or cardinality of dimension columns (see {@link
  * org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory}).
