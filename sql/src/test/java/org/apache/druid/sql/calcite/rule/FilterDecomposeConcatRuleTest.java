@@ -260,6 +260,51 @@ public class FilterDecomposeConcatRuleTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void test_twoInputs_emptyDelimiter()
+  {
+    final RexNode call =
+        equals(
+            concat(inputRef(0), literal(""), inputRef(1)),
+            literal("23") // must be recognized as ambiguous
+        );
+
+    Assert.assertEquals(call, shuttle.apply(call));
+  }
+
+  @Test
+  public void test_twoInputs_ambiguousOverlappingDeliminters()
+  {
+    final RexNode call =
+        equals(
+            concat(inputRef(0), literal("--"), inputRef(1)),
+            literal("2---3") // must be recognized as ambiguous
+        );
+
+    Assert.assertEquals(call, shuttle.apply(call));
+  }
+
+  @Test
+  public void test_twoInputs_impossibleOverlappingDelimiters()
+  {
+    final RexNode call =
+        equals(
+            concat(inputRef(0), literal("--"), inputRef(1), literal("--")),
+            literal("2---3") // must be recognized as impossible
+        );
+
+    final RexLiteral unknown = rexBuilder.makeNullLiteral(typeFactory.createSqlType(SqlTypeName.BOOLEAN));
+    Assert.assertEquals(
+        NullHandling.sqlCompatible()
+        ? or(
+            and(isNull(inputRef(0)), unknown),
+            and(isNull(inputRef(1)), unknown)
+        )
+        : rexBuilder.makeLiteral(false),
+        shuttle.apply(call)
+    );
+  }
+
+  @Test
   public void test_twoInputs_backToBackLiterals()
   {
     final RexNode concatCall =

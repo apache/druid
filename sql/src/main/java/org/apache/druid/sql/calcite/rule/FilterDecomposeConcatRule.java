@@ -168,7 +168,7 @@ public class FilterDecomposeConcatRule extends RelOptRule implements Substitutio
       final RexNode operand = concatCall.getOperands().get(i);
       if (RexUtil.isLiteral(operand, true)) {
         final String operandValue = getAsString(operand);
-        if (operandValue == null) {
+        if (operandValue == null || operandValue.isEmpty()) {
           return null;
         }
 
@@ -279,7 +279,8 @@ public class FilterDecomposeConcatRule extends RelOptRule implements Substitutio
   }
 
   /**
-   * Count the number of occurrences of substring in string.
+   * Count the number of occurrences of substring in string. Considers overlapping occurrences as multiple occurrences;
+   * for example the string "--" is counted as appearing twice in "---".
    */
   private static int countOccurrences(final String string, final String substring)
   {

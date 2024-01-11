@@ -92,7 +92,7 @@ public class CalciteRulesManager
    * 3) {@link CoreRules#JOIN_COMMUTE}, {@link JoinPushThroughJoinRule#RIGHT}, {@link JoinPushThroughJoinRule#LEFT},
    * and {@link CoreRules#FILTER_INTO_JOIN}, which are part of {@link #FANCY_JOIN_RULES}.
    * 4) {@link CoreRules#PROJECT_FILTER_TRANSPOSE} because PartialDruidQuery would like to have the Project on top of the Filter -
-   * this rule could create a lot of non-usefull plans.
+   * this rule could create a lot of non-useful plans.
    */
   private static final List<RelOptRule> BASE_RULES =
       ImmutableList.of(
