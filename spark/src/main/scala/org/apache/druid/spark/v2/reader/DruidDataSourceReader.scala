@@ -56,6 +56,7 @@ class DruidDataSourceReader(
   private lazy val metadataClient =
     DruidDataSourceReader.createDruidMetaDataClient(conf)
   private lazy val druidClient = DruidDataSourceReader.createDruidClient(conf)
+  private lazy val readerConf = conf.dive(DruidConfigurationKeys.readerPrefix)
 
   private var filters: Array[Filter] = Array.empty
   private var druidColumnTypes: Option[Set[String]] = Option.empty
@@ -68,8 +69,9 @@ class DruidDataSourceReader(
         s"Must set ${DruidConfigurationKeys.tableKey}!")
       // TODO: Optionally accept a granularity so that if lowerBound to upperBound spans more than
       //  twice the granularity duration, we can send a list with two disjoint intervals and
-      //  minimize the load on the broker from having to merge large numbers of segments
-      val (lowerBound, upperBound) = FilterUtils.getTimeFilterBounds(filters)
+      //  minimize the load on the broker from having to merge large numbers of segment
+      val (lowerBound, upperBound) = FilterUtils
+        .getTimeFilterBounds(filters, readerConf.get(DruidConfigurationKeys.timestampColumnDefaultReaderKey))
       val columnMap = druidClient.getSchema(
         conf.getString(DruidConfigurationKeys.tableKey),
         Some(List[Interval](Intervals.utc(
@@ -89,46 +91,24 @@ class DruidDataSourceReader(
     if (schema.isEmpty) {
       readSchema()
     }
-    val readerConf = conf.dive(DruidConfigurationKeys.readerPrefix)
     val filter = FilterUtils.mapFilters(filters, schema.get).map(_.optimize())
     val useSparkConfForDeepStorage = readerConf.getBoolean(DruidConfigurationKeys.useSparkConfForDeepStorageDefaultKey)
     val useCompactSketches = readerConf.isPresent(DruidConfigurationKeys.useCompactSketchesKey)
     val useDefaultNullHandling = readerConf.getBoolean(DruidConfigurationKeys.useDefaultValueForNullDefaultKey)
 
-    // Allow passing hard-coded list of segments to load
-    if (readerConf.isPresent(DruidConfigurationKeys.segmentsKey)) {
-      val segments: JList[DataSegment] = MAPPER.readValue(
-        readerConf.getString(DruidConfigurationKeys.segmentsKey),
-        new TypeReference[JList[DataSegment]]() {}
-      )
-      segments.asScala
-        .map(segment =>
-          new DruidInputPartition(
-            segment,
-            schema.get,
-            filter,
-            druidColumnTypes,
-            conf,
-            useSparkConfForDeepStorage,
-            useCompactSketches,
-            useDefaultNullHandling
-          ): InputPartition[InternalRow]
-        ).asJava
-    } else {
-      getSegments
-        .map(segment =>
-          new DruidInputPartition(
-            segment,
-            schema.get,
-            filter,
-            druidColumnTypes,
-            conf,
-            useSparkConfForDeepStorage,
-            useCompactSketches,
-            useDefaultNullHandling
-          ): InputPartition[InternalRow]
-        ).asJava
-    }
+    getSegments
+      .map(segment =>
+        new DruidInputPartition(
+          segment,
+          schema.get,
+          filter,
+          druidColumnTypes,
+          conf,
+          useSparkConfForDeepStorage,
+          useCompactSketches,
+          useDefaultNullHandling
+        ): InputPartition[InternalRow]
+      ).asJava
   }
 
   override def pruneColumns(structType: StructType): Unit = {
@@ -155,73 +135,58 @@ class DruidDataSourceReader(
   override def pushedFilters(): Array[Filter] = filters
 
   private[reader] def getSegments: Seq[DataSegment] = {
-    require(conf.isPresent(DruidConfigurationKeys.tableKey),
-      s"Must set ${DruidConfigurationKeys.tableKey}!")
+    // Allow passing hard-coded list of segments to load
+    if (readerConf.isPresent(DruidConfigurationKeys.segmentsKey)) {
+      MAPPER.readValue(
+        readerConf.getString(DruidConfigurationKeys.segmentsKey), new TypeReference[JList[DataSegment]]() {}
+      ).asScala
+    } else {
+      require(conf.isPresent(DruidConfigurationKeys.tableKey),
+        s"Must set ${DruidConfigurationKeys.tableKey}!")
 
-    // Check filters for any bounds on __time
-    // Otherwise, we'd need to full scan the segments table
-    val (lowerTimeBound, upperTimeBound) = FilterUtils.getTimeFilterBounds(filters)
+      // Check filters for any bounds on __time
+      // Otherwise, we'd need to full scan the segments table
+      val (lowerTimeBound, upperTimeBound) = FilterUtils
+        .getTimeFilterBounds(filters, readerConf.get(DruidConfigurationKeys.timestampColumnDefaultReaderKey))
 
-    metadataClient.getSegmentPayloads(
-      conf.getString(DruidConfigurationKeys.tableKey),
-      lowerTimeBound,
-      upperTimeBound,
-      conf.getBoolean(DruidConfigurationKeys.allowIncompletePartitionsDefaultKey)
-    )
+      metadataClient.getSegmentPayloads(
+        conf.getString(DruidConfigurationKeys.tableKey),
+        lowerTimeBound,
+        upperTimeBound,
+        conf.getBoolean(DruidConfigurationKeys.allowIncompletePartitionsDefaultKey)
+      )
+    }
   }
 
   override def planBatchInputPartitions(): JList[InputPartition[ColumnarBatch]] = {
     if (schema.isEmpty) {
       readSchema()
     }
-    val readerConf = conf.dive(DruidConfigurationKeys.readerPrefix)
     val filter = FilterUtils.mapFilters(filters, schema.get).map(_.optimize())
     val useSparkConfForDeepStorage = readerConf.getBoolean(DruidConfigurationKeys.useSparkConfForDeepStorageDefaultKey)
     val useCompactSketches = readerConf.isPresent(DruidConfigurationKeys.useCompactSketchesKey)
     val useDefaultNullHandling = readerConf.getBoolean(DruidConfigurationKeys.useDefaultValueForNullDefaultKey)
     val batchSize = readerConf.getInt(DruidConfigurationKeys.batchSizeDefaultKey)
 
-    // Allow passing hard-coded list of segments to load
-    if (readerConf.isPresent(DruidConfigurationKeys.segmentsKey)) {
-      val segments: JList[DataSegment] = MAPPER.readValue(
-        readerConf.getString(DruidConfigurationKeys.segmentsKey),
-        new TypeReference[JList[DataSegment]]() {}
-      )
-      segments.asScala
-        .map(segment =>
-          new DruidColumnarInputPartition(
-            segment,
-            schema.get,
-            filter,
-            druidColumnTypes,
-            conf,
-            useSparkConfForDeepStorage,
-            useCompactSketches,
-            useDefaultNullHandling,
-            batchSize
-          ): InputPartition[ColumnarBatch]
-        ).asJava
-    } else {
-      getSegments
-        .map(segment =>
-          new DruidColumnarInputPartition(
-            segment,
-            schema.get,
-            filter,
-            druidColumnTypes,
-            conf,
-            useSparkConfForDeepStorage,
-            useCompactSketches,
-            useDefaultNullHandling,
-            batchSize
-          ): InputPartition[ColumnarBatch]
-        ).asJava
-    }
+    getSegments
+      .map(segment =>
+        new DruidColumnarInputPartition(
+          segment,
+          schema.get,
+          filter,
+          druidColumnTypes,
+          conf,
+          useSparkConfForDeepStorage,
+          useCompactSketches,
+          useDefaultNullHandling,
+          batchSize
+        ): InputPartition[ColumnarBatch]
+      ).asJava
   }
 
   override def enableBatchRead(): Boolean = {
     // Fail fast
-    if (!conf.dive(DruidConfigurationKeys.readerPrefix).getBoolean(DruidConfigurationKeys.vectorizeDefaultKey)) {
+    if (!readerConf.getBoolean(DruidConfigurationKeys.vectorizeDefaultKey)) {
       false
     } else {
       if (schema.isEmpty) {

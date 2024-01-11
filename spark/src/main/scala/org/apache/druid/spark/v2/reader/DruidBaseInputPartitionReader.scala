@@ -20,8 +20,8 @@
 package org.apache.druid.spark.v2.reader
 
 import com.fasterxml.jackson.core.`type`.TypeReference
-import org.apache.druid.java.util.common.{FileUtils, ISE, StringUtils}
-import org.apache.druid.segment.{QueryableIndex, Segment, SegmentLazyLoadFailCallback}
+import org.apache.druid.java.util.common.FileUtils
+import org.apache.druid.segment.{Segment, SegmentLazyLoadFailCallback}
 import org.apache.druid.segment.loading.SegmentLoader
 import org.apache.druid.spark.MAPPER
 import org.apache.druid.spark.configuration.{Configuration, DruidConfigurationKeys, SerializableHadoopConfiguration}

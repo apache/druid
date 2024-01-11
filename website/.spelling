@@ -1894,6 +1894,7 @@ protobuf
 Golang
 multiValueHandling
  - ../docs/operations/spark.md
+AggregatorFactoryRegistry
 SaveMode
 SaveModes
 partitioners
@@ -1918,6 +1919,9 @@ LoadSpecs
 ComplexTypeRegistry
 SegmentWriterRegistry
 SegmentReaderRegistry
+ShardSpec
+ShardSpecs
+ShardSpecRegistry
 SQLConnectorRegistry
 IllegalArgumentException
 keyId

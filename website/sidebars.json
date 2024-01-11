@@ -144,6 +144,7 @@
       "operations/metrics",
       "operations/alerts",
       "operations/other-hadoop",
+      "operations/spark",
       {
         "type": "subcategory",
         "label": "Misc",

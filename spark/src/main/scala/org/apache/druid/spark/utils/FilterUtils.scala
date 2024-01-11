@@ -226,34 +226,39 @@ object FilterUtils {
   private val emptyBoundSeq = Seq.empty[(Bound, Long)]
 
   /**
-    * Given an array of Spark filters, return upper and lower bounds on the value of the __time column if bounds
+    * Given an array of Spark filters, return upper and lower bounds on the value of TIMESTAMPCOLUMN if bounds
     * can be determined.
     *
-    * @param filters The array of filters to extract __time bounds from
-    * @return A tuple containing an optional lower and an optional upper bound on the __time column.
+    * @param filters The array of filters to extract time bounds from
+    * @param timestampColumn The name of the timestamp column to extract bounds from. Defaults to "__time"
+    * @return A tuple containing an optional lower and an optional upper bound on the timestamp column.
     */
-  def getTimeFilterBounds(filters: Array[Filter]): (Option[Long], Option[Long]) = {
+  def getTimeFilterBounds(filters: Array[Filter], timestampColumn: String = "__time"): (Option[Long], Option[Long]) = {
     val timeFilters = filters
-      .filter(_.references.contains("__time"))
-      .flatMap(FilterUtils.decomposeTimeFilters)
+      .filter(_.references.contains(timestampColumn))
+      .flatMap(FilterUtils.decomposeTimeFilters(_, timestampColumn))
       .partition(_._1 == FilterUtils.LOWER)
     (timeFilters._1.map(_._2).reduceOption(_ max _),
       timeFilters._2.map(_._2).reduceOption(_ min _))
   }
 
   /**
-    * Decompose a Spark Filter into a sequence of bounds on the __time field if possible.
+    * Decompose a Spark Filter into a sequence of bounds on TIMESTAMPCOLUMN if possible.
     *
     * @param filter The Spark filter to possibly extract time bounds from.
+    * @param timestampColumn The name of the column to decompose filters and extract bounds over. Defaults to "__time"
     * @return A sequnce of tuples containing either UPPER or LOWER bounds on the __time field, in
     *         epoch millis.
     */
-  private[spark] def decomposeTimeFilters(filter: Filter): Seq[(Bound, Long)] = { // scalastyle:ignore method.length
+  private[spark] def decomposeTimeFilters(
+                                           filter: Filter,
+                                           timestampColumn: String = "__time"
+                                         ): Seq[(Bound, Long)] = { // scalastyle:ignore method.length
     filter match {
       case And(left, right) =>
         val bounds = Seq(left, right)
-          .filter(_.references.contains("__time"))
-          .flatMap(decomposeTimeFilters)
+          .filter(_.references.contains(timestampColumn))
+          .flatMap(decomposeTimeFilters(_, timestampColumn))
           .partition(_._1 == LOWER)
         val optBounds = (bounds._1.map(_._2).reduceOption(_ max _ ),
           bounds._2.map(_._2).reduceOption(_ min _ ))
@@ -263,7 +268,7 @@ object FilterUtils {
         ).flatten
       case Or(left, right) =>
         val bounds = Seq(left, right)
-          .filter(_.references.contains("__time")).flatMap(decomposeTimeFilters)
+          .filter(_.references.contains("__time")).flatMap(decomposeTimeFilters(_, timestampColumn))
           .partition(_._1 == LOWER)
         val optBounds = (bounds._1.map(_._2).reduceOption(_ min _ ),
           bounds._2.map(_._2).reduceOption(_ max _ ))
@@ -272,7 +277,7 @@ object FilterUtils {
           optBounds._2.fold(Option.empty[(Bound, Long)])(bound => Some((UPPER, bound)))
         ).flatten
       case Not(condition) =>
-        if (condition.references.contains("__time")) {
+        if (condition.references.contains(timestampColumn)) {
           // Our quick and dirty bounds enum doesn't handle nots, so just return an unbounded interval
           Seq[(Bound, Long)](
             (LOWER, JodaUtils.MIN_INSTANT),
@@ -282,7 +287,7 @@ object FilterUtils {
           emptyBoundSeq
         }
       case EqualTo(field, value) =>
-        if (field == "__time") {
+        if (field == timestampColumn) {
           Seq(
             (LOWER, value.asInstanceOf[Long]),
             (UPPER, value.asInstanceOf[Long])
@@ -291,25 +296,25 @@ object FilterUtils {
           emptyBoundSeq
         }
       case LessThan(field, value) =>
-        if (field == "__time") {
+        if (field == timestampColumn) {
           Seq((UPPER, value.asInstanceOf[Long] - 1))
         } else {
           emptyBoundSeq
         }
       case LessThanOrEqual(field, value) =>
-        if (field == "__time") {
+        if (field == timestampColumn) {
           Seq((UPPER, value.asInstanceOf[Long]))
         } else {
           emptyBoundSeq
         }
       case GreaterThan(field, value) =>
-        if (field == "__time") {
+        if (field == timestampColumn) {
           Seq((LOWER, value.asInstanceOf[Long] + 1))
         } else {
           emptyBoundSeq
         }
       case GreaterThanOrEqual(field, value) =>
-        if (field == "__time") {
+        if (field == timestampColumn) {
           Seq((LOWER, value.asInstanceOf[Long]))
         } else {
           emptyBoundSeq
