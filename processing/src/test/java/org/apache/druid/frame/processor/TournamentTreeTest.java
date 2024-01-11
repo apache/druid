@@ -91,6 +91,57 @@ public class TournamentTreeTest
   }
 
   @Test
+  public void test_merge_eightLists()
+  {
+    final List<List<Integer>> lists = ImmutableList.of(
+        ImmutableList.of(0, 1, 1, 5),
+        ImmutableList.of(0, 4),
+        ImmutableList.of(1, 5, 5, 6, 9),
+        ImmutableList.of(1, 6, 7, 8),
+        ImmutableList.of(2, 2, 3, 5, 7),
+        ImmutableList.of(0, 2, 4, 8, 9),
+        ImmutableList.of(1, 2, 4, 6, 7, 7),
+        ImmutableList.of(1, 3, 6, 7, 7)
+    );
+
+    final List<Deque<Integer>> queues = new ArrayList<>();
+    for (final List<Integer> list : lists) {
+      final Deque<Integer> queue = new ArrayDeque<>();
+      queues.add(queue);
+      for (int i : list) {
+        queue.addLast(i);
+      }
+    }
+
+    final IntComparator intComparator = (a, b) -> {
+      final Integer itemA = queues.get(a).peek();
+      final Integer itemB = queues.get(b).peek();
+      return Ordering.natural().nullsLast().compare(itemA, itemB);
+    };
+
+    final TournamentTree tree = new TournamentTree(lists.size(), intComparator);
+
+    final List<Integer> intsRead = new ArrayList<>();
+    while (queues.get(tree.getMin()).peek() != null) {
+      intsRead.add(queues.get(tree.getMin()).poll());
+    }
+
+    final List<Integer> expected = new ArrayList<>();
+    expected.addAll(Arrays.asList(0, 0, 0));
+    expected.addAll(Arrays.asList(1, 1, 1, 1, 1, 1));
+    expected.addAll(Arrays.asList(2, 2, 2, 2));
+    expected.addAll(Arrays.asList(3, 3));
+    expected.addAll(Arrays.asList(4, 4, 4));
+    expected.addAll(Arrays.asList(5, 5, 5, 5));
+    expected.addAll(Arrays.asList(6, 6, 6, 6));
+    expected.addAll(Arrays.asList(7, 7, 7, 7, 7, 7));
+    expected.addAll(Arrays.asList(8, 8));
+    expected.addAll(Arrays.asList(9, 9));
+
+    Assert.assertEquals(expected, intsRead);
+  }
+
+  @Test
   public void test_merge_tenLists()
   {
     final List<List<Integer>> lists = ImmutableList.of(
