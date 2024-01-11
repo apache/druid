@@ -45,7 +45,7 @@ public class WindowFramedAggregateProcessorTest
   @Test
   public void testIsPassThruWhenRACReturnsSemanticInterface()
   {
-    final WindowFrame theFrame = WindowFrame.rows(true ? null : 0, false ? null : 0);
+    final WindowFrame theFrame = WindowFrame.rows(null, 0);
     final AggregatorFactory[] theAggs = {
         new LongMaxAggregatorFactory("cummMax", "intCol"),
         new DoubleSumAggregatorFactory("cummSum", "doubleCol")
@@ -76,7 +76,7 @@ public class WindowFramedAggregateProcessorTest
   @Test
   public void testDoesStuffWhenNoSemanticInterfacesAvailable()
   {
-    final WindowFrame theFrame = WindowFrame.rows(true ? null : 0, false ? null : 0);
+    final WindowFrame theFrame = WindowFrame.rows(null, 0);
     final AggregatorFactory[] theAggs = {
         new LongSumAggregatorFactory("sum", "intCol")
     };
