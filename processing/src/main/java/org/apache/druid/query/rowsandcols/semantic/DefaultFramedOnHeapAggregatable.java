@@ -127,28 +127,28 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
       AggregatorFactory[] aggFactories,
       WindowFrame frame)
   {
-    Iterable<AggRange> groupIterator = buildGroupIteratorFor(rac, frame);
+    Iterable<AggInterval> groupIterator = buildGroupIteratorFor(rac, frame);
     ResultPopulator resultRac = new ResultPopulator(aggFactories, rac.numRows());
     AggIntervalCursor aggCursor = new AggIntervalCursor(rac, aggFactories);
-    for (AggRange aggRange : groupIterator) {
-      aggCursor.moveTo(aggRange.inputRows);
-      resultRac.write(aggRange.outputRows, aggCursor);
+    for (AggInterval aggInterval : groupIterator) {
+      aggCursor.moveTo(aggInterval.inputRows);
+      resultRac.write(aggInterval.outputRows, aggCursor);
     }
     resultRac.appendTo(rac);
     return rac;
   }
 
-  public static Iterable<AggRange> buildGroupIteratorFor(AppendableRowsAndColumns rac, WindowFrame frame)
+  public static Iterable<AggInterval> buildGroupIteratorFor(AppendableRowsAndColumns rac, WindowFrame frame)
   {
     int[] groupBoundaries = ClusteredGroupPartitioner.fromRAC(rac).computeBoundaries(frame.getOrderByColNames());
     return new GroupIteratorForWindowFrame(rac, frame, groupBoundaries);
   }
 
-  static class GroupIteratorForWindowFrame implements Iterable<AggRange>
+  static class GroupIteratorForWindowFrame implements Iterable<AggInterval>
   {
     private final int[] groupBoundaries;
     private final int numRows;
-    private final int numRanges;
+    private final int numGroups;
     private final int lowerOffset;
     private final int upperOffset;
 
@@ -157,18 +157,18 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
       assert (frame.getPeerType() == PeerType.RANGE);
       this.groupBoundaries = groupBoundaries;
       numRows = rac.numRows();
-      numRanges = groupBoundaries.length - 1;
-      lowerOffset = frame.getLowerOffsetClamped(numRanges);
-      upperOffset = frame.getUpperOffsetClamped(numRanges) + 1;
+      numGroups = groupBoundaries.length - 1;
+      lowerOffset = frame.getLowerOffsetClamped(numGroups);
+      upperOffset = frame.getUpperOffsetClamped(numGroups) + 1;
     }
 
     @Override
-    public Iterator<AggRange> iterator()
+    public Iterator<AggInterval> iterator()
     {
-      return new Iterator<AggRange>()
+      return new Iterator<AggInterval>()
       {
         int currentRowIndex = 0;
-        int currentRangeIndex = 0;
+        int currentGroupIndex = 0;
 
         @Override
         public boolean hasNext()
@@ -177,43 +177,43 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
         }
 
         @Override
-        public AggRange next()
+        public AggInterval next()
         {
           if (!hasNext()) {
             throw new IllegalStateException();
           }
           // TODO: invert listing order at the end to get benefits of incremenental aggregations
-          AggRange r = new AggRange(
+          AggInterval r = new AggInterval(
               Interval.of(
-                  rangeToRowIndex(relativeRangeId(0)),
-                  rangeToRowIndex(relativeRangeId(1))
+                  groupToRowIndex(relativeGroupId(0)),
+                  groupToRowIndex(relativeGroupId(1))
               ),
               Interval.of(
-                  rangeToRowIndex(relativeRangeId(-lowerOffset)),
-                  rangeToRowIndex(relativeRangeId(upperOffset))
+                  groupToRowIndex(relativeGroupId(-lowerOffset)),
+                  groupToRowIndex(relativeGroupId(upperOffset))
               )
           );
 
-          currentRowIndex = rangeToRowIndex(currentRangeIndex + 1);
-          currentRangeIndex++;
+          currentRowIndex = groupToRowIndex(currentGroupIndex + 1);
+          currentGroupIndex++;
           return r;
         }
 
-        private int rangeToRowIndex(int rangeId)
+        private int groupToRowIndex(int groupId)
         {
-          return groupBoundaries[rangeId];
+          return groupBoundaries[groupId];
         }
 
-        private int relativeRangeId(int rangeOffset)
+        private int relativeGroupId(int groupOffset)
         {
-          int rangeId = currentRangeIndex + rangeOffset;
-          if (rangeId < 0) {
+          int groupId = currentGroupIndex + groupOffset;
+          if (groupId < 0) {
             return 0;
           }
-          if (rangeId >= numRanges) {
-            return numRanges;
+          if (groupId >= numGroups) {
+            return numGroups;
           }
-          return rangeId;
+          return groupId;
         }
       };
     }
@@ -271,17 +271,17 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
   }
 
   /**
-   * Represents an aggregation range.
+   * Represents an aggregation interval.
    *
    * Describes that the aggregation of {@link #inputRows} should be outputted to
    * all {@link #outputRows} specified.
    */
-  static class AggRange
+  static class AggInterval
   {
     final Interval outputRows;
     final Interval inputRows;
 
-    public AggRange(Interval outputRows, Interval inputRows)
+    public AggInterval(Interval outputRows, Interval inputRows)
     {
       this.outputRows = outputRows;
       this.inputRows = inputRows;
@@ -319,7 +319,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     private final AtomicInteger rowIdProvider;
     private final ColumnSelectorFactory columnSelectorFactory;
 
-    /** Current range the aggregators contain value for */
+    /** Current interval the aggregators contain value for */
     private Interval currentRows = new Interval(0, 0);
     private final Aggregator[] aggregators;
 
