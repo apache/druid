@@ -50,21 +50,14 @@ public class WindowFrame
     ROWS,
     RANGE;
 
-    public WindowFrame create(boolean b, int i, boolean c, int j, List<ColumnWithDirection> singletonList)
-    {
-      return this == PeerType.ROWS ? newWindowFrameRows(b, i, c, j, singletonList)
-          : newWindowFrameRange(b, i, c, j, singletonList);
-    }
     public static WindowFrame ROWScreate(boolean b, int i, boolean c, int j, List<ColumnWithDirection> singletonList)
     {
-      return newWindowFrameRows(b, i, c, j, singletonList);
+      return new WindowFrame.Rows(b?null:i, c?null:j);
     }
     public static WindowFrame RANGEcreate(boolean b, int i, boolean c, int j, List<ColumnWithDirection> singletonList)
     {
-      return newWindowFrameRange(b, i, c, j, singletonList);
+      return new WindowFrame.Groups(b?null:i, c?null:j, singletonList);
     }
-
-
   }
 
   // Will likely need to add the order by columns to also be able to deal with RANGE peer type.
@@ -74,58 +67,6 @@ public class WindowFrame
   private final boolean upperUnbounded;
   private final int upperOffset;
   private final List<ColumnWithDirection> orderBy;
-
-  private static WindowFrame newWindowFrameRange(boolean b, int i, boolean c, int j,
-      List<ColumnWithDirection> singletonList)
-  {
-
-    return new WindowFrame.Groups(b?null:i, c?null:j, singletonList);
-
-  }
-  private static WindowFrame newWindowFrameRows( boolean b, int i, boolean c, int j,
-      List<ColumnWithDirection> singletonList)
-  {
-    if(true) {
-      System.out.println("asd");
-    }else {
-      System.out.println("xxx");
-
-    }
-    if(1==2) {
-      System.out.println("asd2");
-    }else {
-      System.out.println("xxx2");
-
-    }
-    if(PeerType.ROWS == PeerType.ROWS) {
-      System.out.println("asd2");
-    }else {
-      System.out.println("xxx2");
-
-    }
-    if(PeerType.ROWS == PeerType.RANGE) {
-      System.out.println("asd2");
-    }else {
-      System.out.println("xxx2");
-
-    }
-    if(WindowFrame.PeerType.ROWS == PeerType.ROWS) {
-      System.out.println("asd2");
-    }else {
-      System.out.println("xxx2");
-
-    }
-    if(WindowFrame.PeerType.ROWS == PeerType.RANGE) {
-      System.out.println("asd2");
-    }else {
-      System.out.println("xxx2");
-
-    }
-
-    return new WindowFrame.Rows(b?null:i, c?null:j);
-//    return new WindowFrame(PeerType.ROWS, b, i, c, j, singletonList);
-
-  }
 
   public WindowFrame(
       PeerType peerType,
