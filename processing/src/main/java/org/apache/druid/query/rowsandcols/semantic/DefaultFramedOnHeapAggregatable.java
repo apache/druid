@@ -59,25 +59,24 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
   @Nonnull
   @Override
   public RowsAndColumns aggregateAll(
-      WindowFrame frame0,
+      WindowFrame frame,
       AggregatorFactory[] aggFactories
   )
   {
-    if (frame0.getAdapter(Unbounded.class) != null) {
+    if (frame.getAdapter(Unbounded.class) != null) {
       return computeUnboundedAggregates(aggFactories);
     }
 
-    WindowFrame.Rows rowsFrame = frame0.getAdapter(WindowFrame.Rows.class);
+    WindowFrame.Rows rowsFrame = frame.getAdapter(WindowFrame.Rows.class);
     if (rowsFrame != null) {
-      WindowFrame.Rows frame=rowsFrame;
-      if (frame.lowerOffset == null) {
-        return computeCumulativeAggregates(aggFactories, frame.upperOffset);
-      } else if (frame.upperOffset == null) {
-        return computeReverseCumulativeAggregates(aggFactories, frame.lowerOffset);
+      if (rowsFrame.lowerOffset == null) {
+        return computeCumulativeAggregates(aggFactories, rowsFrame.upperOffset);
+      } else if (rowsFrame.upperOffset == null) {
+        return computeReverseCumulativeAggregates(aggFactories, rowsFrame.lowerOffset);
       } else {
         final int numRows = rac.numRows();
-        int lowerOffset = frame.lowerOffset;
-        int upperOffset = frame.upperOffset;
+        int lowerOffset = rowsFrame.lowerOffset;
+        int upperOffset = rowsFrame.upperOffset;
 
         if (numRows < lowerOffset + upperOffset + 1) {
           // In this case, there are not enough rows to completely build up the full window aperture before it needs to
@@ -91,7 +90,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
         }
       }
     } else {
-      Groups groupFrame = frame0.getAdapter(WindowFrame.Groups.class);
+      Groups groupFrame = frame.getAdapter(WindowFrame.Groups.class);
       return computeGroupAggregates(aggFactories, groupFrame);
     }
   }

@@ -367,10 +367,10 @@ public class Windowing
 
     private Integer getBoundAsInteger(RexWindowBound bound)
     {
-      if(bound.isUnbounded()) {
+      if (bound.isUnbounded()) {
         return null;
       }
-      if(bound.isCurrentRow()) {
+      if (bound.isCurrentRow()) {
         return 0;
       }
       return getConstant(((RexInputRef) bound.getOffset()).getIndex());

@@ -39,17 +39,17 @@ import java.util.stream.Collectors;
 })
 public interface WindowFrame extends Adaptable
 {
-  public static WindowFrame unbounded()
+  static WindowFrame unbounded()
   {
     return new WindowFrame.Unbounded();
   }
 
-  public static Rows rows(Integer lowerOffset, Integer upperOffset)
+  static Rows rows(Integer lowerOffset, Integer upperOffset)
   {
     return new WindowFrame.Rows(lowerOffset, upperOffset);
   }
 
-  public static Groups groups(
+  static Groups groups(
       final Integer lowerOffset,
       final Integer upperOffset,
       final List<ColumnWithDirection> orderBy)
@@ -58,16 +58,9 @@ public interface WindowFrame extends Adaptable
 
   }
 
-  public static WindowFrame forOrderBy(ColumnWithDirection... orderBy)
+  static WindowFrame forOrderBy(ColumnWithDirection... orderBy)
   {
     return groups(null, 0, Lists.newArrayList(orderBy));
-  }
-
-  @Deprecated
-  @SuppressWarnings("unused")
-  public enum PeerType
-  {
-    ROWS, RANGE1
   }
 
   public static class Unbounded implements WindowFrame
