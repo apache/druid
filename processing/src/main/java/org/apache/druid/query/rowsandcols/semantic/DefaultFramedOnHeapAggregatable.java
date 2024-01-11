@@ -70,14 +70,14 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     WindowFrame.Rows rowsFrame = frame0.getAdapter(WindowFrame.Rows.class);
     if (rowsFrame != null) {
       WindowFrame.Rows frame=rowsFrame;
-      if (frame.isLowerUnbounded()) {
-        return computeCumulativeAggregates(aggFactories, frame.getUpperOffset());
-      } else if (frame.isUpperUnbounded()) {
-        return computeReverseCumulativeAggregates(aggFactories, frame.getLowerOffset());
+      if (frame.lowerOffset == null) {
+        return computeCumulativeAggregates(aggFactories, frame.upperOffset);
+      } else if (frame.upperOffset == null) {
+        return computeReverseCumulativeAggregates(aggFactories, frame.lowerOffset);
       } else {
         final int numRows = rac.numRows();
-        int lowerOffset = frame.getLowerOffset();
-        int upperOffset = frame.getUpperOffset();
+        int lowerOffset = frame.lowerOffset;
+        int upperOffset = frame.upperOffset;
 
         if (numRows < lowerOffset + upperOffset + 1) {
           // In this case, there are not enough rows to completely build up the full window aperture before it needs to
@@ -144,7 +144,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     return rac;
   }
 
-  public static Iterable<AggInterval> buildGroupIteratorFor(AppendableRowsAndColumns rac, WindowFrame frame)
+  public static Iterable<AggInterval> buildGroupIteratorFor(AppendableRowsAndColumns rac, WindowFrame.Groups frame)
   {
     int[] groupBoundaries = ClusteredGroupPartitioner.fromRAC(rac).computeBoundaries(frame.getOrderByColNames());
     return new GroupIteratorForWindowFrame(rac, frame, groupBoundaries);
@@ -160,7 +160,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     // upper exclusive
     private final int upperOffset;
 
-    public GroupIteratorForWindowFrame(RowsAndColumns rac, WindowFrame frame, int[] groupBoundaries)
+    public GroupIteratorForWindowFrame(RowsAndColumns rac, WindowFrame.Groups frame, int[] groupBoundaries)
     {
       this.groupBoundaries = groupBoundaries;
       numRows = rac.numRows();

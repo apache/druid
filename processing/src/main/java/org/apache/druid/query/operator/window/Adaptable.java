@@ -26,5 +26,13 @@ package org.apache.druid.query.operator.window;
  */
 public interface Adaptable
 {
-  public <T> T getAdapter(Class<T> clazz);
+
+  @SuppressWarnings("unchecked")
+  default <T> T getAdapter(Class<T> clazz)
+  {
+    if (clazz == getClass()) {
+      return (T) this;
+    }
+    return null;
+  }
 }
