@@ -360,6 +360,13 @@ public class Windowing
         return WindowFrame.unbounded();
       }
       boolean isRows = group.isRows;
+      if(true) {
+        System.out.println("Asd");
+      }else {
+        System.out.println("never");
+
+      }
+
       if (isRows) {
         PeerType peerType = isRows ? WindowFrame.PeerType.ROWS : WindowFrame.PeerType.RANGE;
         return peerType.create(group.lowerBound.isUnbounded(), figureOutOffset(group.lowerBound), group.upperBound.isUnbounded(), figureOutOffset(group.upperBound), isRows ? null : getOrdering());
