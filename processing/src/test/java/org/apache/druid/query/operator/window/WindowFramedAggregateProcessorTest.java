@@ -45,7 +45,7 @@ public class WindowFramedAggregateProcessorTest
   @Test
   public void testIsPassThruWhenRACReturnsSemanticInterface()
   {
-    final WindowFrame theFrame = WindowFrame.newWindowFrame(WindowFrame.PeerType.ROWS, true, 0, false, 0, null);
+    final WindowFrame theFrame = WindowFrame.PeerType.ROWS.create(true, 0, false, 0, null);
     final AggregatorFactory[] theAggs = {
         new LongMaxAggregatorFactory("cummMax", "intCol"),
         new DoubleSumAggregatorFactory("cummSum", "doubleCol")
@@ -76,7 +76,7 @@ public class WindowFramedAggregateProcessorTest
   @Test
   public void testDoesStuffWhenNoSemanticInterfacesAvailable()
   {
-    final WindowFrame theFrame = WindowFrame.newWindowFrame(WindowFrame.PeerType.ROWS, true, 0, false, 0, null);
+    final WindowFrame theFrame = WindowFrame.PeerType.ROWS.create(true, 0, false, 0, null);
     final AggregatorFactory[] theAggs = {
         new LongSumAggregatorFactory("sum", "intCol")
     };

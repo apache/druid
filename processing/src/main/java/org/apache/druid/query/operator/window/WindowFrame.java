@@ -40,7 +40,7 @@ public class WindowFrame
 {
   public static WindowFrame unbounded()
   {
-    return newWindowFrame(PeerType.ROWS, true, 0, true, 0, null);
+    return PeerType.ROWS.create(true, 0, true, 0, null);
   }
 
   @Deprecated
@@ -50,7 +50,7 @@ public class WindowFrame
     ROWS,
     RANGE;
 
-    WindowFrame create(boolean b, int i, boolean c, int j, List<ColumnWithDirection> singletonList)
+    public WindowFrame create(boolean b, int i, boolean c, int j, List<ColumnWithDirection> singletonList)
     {
       return this == PeerType.ROWS ? newWindowFrameRows(b, i, c, j, singletonList)
           : newWindowFrameRange(b, i, c, j, singletonList);
@@ -64,12 +64,6 @@ public class WindowFrame
   private final boolean upperUnbounded;
   private final int upperOffset;
   private final List<ColumnWithDirection> orderBy;
-
-  public static WindowFrame newWindowFrame(PeerType range, boolean b, int i, boolean c, int j,
-      List<ColumnWithDirection> singletonList)
-  {
-    return range.create(b, i, c, j, singletonList);
-  }
 
   private static WindowFrame newWindowFrameRange(boolean b, int i, boolean c, int j,
       List<ColumnWithDirection> singletonList)
@@ -209,7 +203,7 @@ public class WindowFrame
 
   public static WindowFrame forOrderBy(ColumnWithDirection... orderBy)
   {
-    return newWindowFrame(PeerType.RANGE, true, 0, false, 0, Lists.newArrayList(orderBy));
+    return PeerType.RANGE.create(true, 0, false, 0, Lists.newArrayList(orderBy));
   }
 
   public List<String> getOrderByColNames()
