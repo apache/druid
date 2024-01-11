@@ -165,7 +165,7 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
           metricFactory.makeColumnValueSelector(timeColumn),
           valueSelector,
           maxStringBytes,
-          StringFirstLastUtils.selectorNeedsFoldCheck(valueSelector, metricFactory.getColumnCapabilities(fieldName))
+          FirstLastUtils.selectorNeedsFoldCheck(valueSelector, metricFactory.getColumnCapabilities(fieldName), SerializablePairLongString.class)
       );
     }
   }
@@ -181,7 +181,7 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
           metricFactory.makeColumnValueSelector(timeColumn),
           valueSelector,
           maxStringBytes,
-          StringFirstLastUtils.selectorNeedsFoldCheck(valueSelector, metricFactory.getColumnCapabilities(fieldName))
+          FirstLastUtils.selectorNeedsFoldCheck(valueSelector, metricFactory.getColumnCapabilities(fieldName), SerializablePairLongString.class)
       );
     }
   }
@@ -245,7 +245,7 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
   @Override
   public AggregateCombiner makeAggregateCombiner()
   {
-    return new StringFirstAggregateCombiner();
+    return new GenericFirstAggregateCombiner(SerializablePairLongString.class);
   }
 
   @Override

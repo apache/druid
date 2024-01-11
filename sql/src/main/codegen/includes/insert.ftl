@@ -17,6 +17,63 @@
  * under the License.
  */
 
+/**
+ * Parses an INSERT statement. This function is copied from SqlInsert in core/src/main/codegen/templates/Parser.jj,
+ * with some changes to allow a custom error message if an OVERWRITE clause is present.
+ */
+SqlNode DruidSqlInsert() :
+{
+    final List<SqlLiteral> keywords = new ArrayList<SqlLiteral>();
+    final SqlNodeList keywordList;
+    final SqlIdentifier tableName;
+    SqlNode tableRef;
+    SqlNode source;
+    final SqlNodeList columnList;
+    final Span s;
+    final Pair<SqlNodeList, SqlNodeList> p;
+}
+{
+    (
+        <INSERT>
+    |
+        <UPSERT> { keywords.add(SqlInsertKeyword.UPSERT.symbol(getPos())); }
+    )
+    { s = span(); }
+    SqlInsertKeywords(keywords) {
+        keywordList = new SqlNodeList(keywords, s.addAll(keywords).pos());
+    }
+    <INTO> tableName = CompoundTableIdentifier()
+    ( tableRef = TableHints(tableName) | { tableRef = tableName; } )
+    [ LOOKAHEAD(5) tableRef = ExtendTable(tableRef) ]
+    (
+        LOOKAHEAD(2)
+        p = ParenthesizedCompoundIdentifierList() {
+            if (p.right.size() > 0) {
+                tableRef = extend(tableRef, p.right);
+            }
+            if (p.left.size() > 0) {
+                columnList = p.left;
+            } else {
+                columnList = null;
+            }
+        }
+    |   { columnList = null; }
+    )
+    (
+    <OVERWRITE>
+    {
+        throw org.apache.druid.sql.calcite.parser.DruidSqlParserUtils.problemParsing(
+            "An OVERWRITE clause is not allowed with INSERT statements. Use REPLACE statements if overwriting existing segments is required or remove the OVERWRITE clause."
+        );
+    }
+    |
+    source = OrderedQueryOrExpr(ExprContext.ACCEPT_QUERY) {
+        return new SqlInsert(s.end(source), keywordList, tableRef, source,
+            columnList);
+    }
+    )
+}
+
 // Using fully qualified name for Pair class, since Calcite also has a same class name being used in the Parser.jj
 SqlNode DruidSqlInsertEof() :
 {
@@ -25,7 +82,7 @@ SqlNode DruidSqlInsertEof() :
   SqlNodeList clusteredBy = null;
 }
 {
-  insertNode = SqlInsert()
+  insertNode = DruidSqlInsert()
   // PARTITIONED BY is necessary, but is kept optional in the grammar. It is asserted that it is not missing in the
   // DruidSqlInsert constructor so that we can return a custom error message.
   [

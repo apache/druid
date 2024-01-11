@@ -215,7 +215,11 @@ public class TombstoneHelper
           continue;
         }
 
-        if (Intervals.ETERNITY.getStart().equals(overlap.getStart())) {
+        if (Intervals.isEternity(overlap)) {
+          // Generate a tombstone interval covering eternity.
+          buckets = validateAndIncrementBuckets(buckets, maxBuckets);
+          retVal.add(overlap);
+        } else if (Intervals.ETERNITY.getStart().equals(overlap.getStart())) {
           // Generate a tombstone interval covering the negative eternity interval.
           buckets = validateAndIncrementBuckets(buckets, maxBuckets);
           retVal.add(new Interval(overlap.getStart(), replaceGranularity.bucketStart(overlap.getEnd())));

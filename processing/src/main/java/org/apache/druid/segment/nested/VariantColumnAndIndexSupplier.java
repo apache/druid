@@ -320,6 +320,9 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
     @Override
     public BitmapColumnIndex forValue(@Nonnull Object value, TypeSignature<ValueType> valueType)
     {
+      if (!valueType.isArray()) {
+        return new AllFalseBitmapColumnIndex(bitmapFactory, nullValueBitmap);
+      }
       final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(valueType), value);
       final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(
           eval,
@@ -371,15 +374,6 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
       final FrontCodedIntArrayIndexed dictionary = arrayDictionarySupplier.get();
       return new SimpleBitmapColumnIndex()
       {
-        @Override
-        public double estimateSelectivity(int totalRows)
-        {
-          final int id = dictionary.indexOf(ids) + arrayOffset;
-          if (id < 0) {
-            return 0.0;
-          }
-          return (double) getBitmap(id).size() / totalRows;
-        }
 
         @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
@@ -445,15 +439,6 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
 
       return new SimpleBitmapColumnIndex()
       {
-        @Override
-        public double estimateSelectivity(int totalRows)
-        {
-          final int elementId = getElementId();
-          if (elementId < 0) {
-            return 0.0;
-          }
-          return (double) getElementBitmap(elementId).size() / totalRows;
-        }
 
         @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)

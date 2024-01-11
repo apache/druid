@@ -32,7 +32,6 @@ import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.index.AllTrueBitmapColumnIndex;
@@ -77,7 +76,7 @@ public class LikeFilter implements Filter
     final ColumnIndexSupplier indexSupplier = selector.getIndexSupplier(dimension);
     if (indexSupplier == null) {
       // Treat this as a column full of nulls
-      return likeMatcher.matches(null)
+      return likeMatcher.matches(null).matches(false)
              ? new AllTrueBitmapColumnIndex(selector)
              : new AllUnknownBitmapColumnIndex(selector);
     }
@@ -164,12 +163,6 @@ public class LikeFilter implements Filter
         likeMatcher,
         filterTuning
     );
-  }
-
-  @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
-  {
-    return Filters.supportsSelectivityEstimation(this, dimension, columnSelector, indexSelector);
   }
 
   /**

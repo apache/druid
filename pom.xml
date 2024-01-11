@@ -66,7 +66,7 @@
         <connection>scm:git:ssh://git@github.com/apache/druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/apache/druid.git</developerConnection>
         <url>https://github.com/apache/druid.git</url>
-        <tag>0.19.0-SNAPSHOT</tag>
+        <tag>29.0.0-SNAPSHOT</tag>
     </scm>
 
     <properties>
@@ -76,24 +76,25 @@
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <aether.version>0.9.0.M2</aether.version>
         <apache.curator.version>5.5.0</apache.curator.version>
-        <apache.kafka.version>3.6.0</apache.kafka.version>
+        <apache.kafka.version>3.6.1</apache.kafka.version>
         <apache.ranger.version>2.4.0</apache.ranger.version>
-        <apache.ranger.gson.version>2.10.1</apache.ranger.gson.version>
+        <gson.version>2.10.1</gson.version>
         <scala.library.version>2.13.11</scala.library.version>
         <avatica.version>1.23.0</avatica.version>
         <avro.version>1.11.3</avro.version>
         <!-- When updating Calcite, also propagate updates to these files which we've copied and modified:
              default_config.fmpp
+             sql/src/main/codegen/includes/*
           -->
         <calcite.version>1.35.0</calcite.version>
         <confluent.version>6.2.12</confluent.version>
         <datasketches.version>4.2.0</datasketches.version>
         <datasketches.memory.version>2.2.0</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>
-        <dropwizard.metrics.version>4.2.19</dropwizard.metrics.version>
+        <dropwizard.metrics.version>4.2.22</dropwizard.metrics.version>
         <errorprone.version>2.20.0</errorprone.version>
         <fastutil.version>8.5.4</fastutil.version>
-        <guava.version>31.1-jre</guava.version>
+        <guava.version>32.0.1-jre</guava.version>
         <guice.version>4.1.0</guice.version>
         <hamcrest.version>1.3</hamcrest.version>
         <jetty.version>9.4.53.v20231009</jetty.version>
@@ -123,12 +124,12 @@
         <hibernate-validator.version>6.2.5.Final</hibernate-validator.version>
         <httpclient.version>4.5.13</httpclient.version>
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
-        <zookeeper.version>3.5.10</zookeeper.version>
+        <zookeeper.version>3.8.3</zookeeper.version>
         <checkerframework.version>2.5.7</checkerframework.version>
         <com.google.apis.client.version>2.2.0</com.google.apis.client.version>
         <com.google.http.client.apis.version>1.42.3</com.google.http.client.apis.version>
         <com.google.apis.compute.version>v1-rev20230606-2.0.0</com.google.apis.compute.version>
-        <com.google.apis.storage.version>v1-rev20230301-2.0.0</com.google.apis.storage.version>
+        <com.google.cloud.storage.version>2.29.1</com.google.cloud.storage.version>
         <jdk.strong.encapsulation.argLine><!-- empty placeholder --></jdk.strong.encapsulation.argLine>
         <jdk.security.manager.allow.argLine><!-- empty placeholder --></jdk.security.manager.allow.argLine>
         <repoOrgId>maven.org</repoOrgId>
@@ -363,30 +364,38 @@
                 <artifactId>json-smart</artifactId>
                 <version>2.4.11</version>
             </dependency>
+
+            <!-- transitive dependency of testng
+            this would be resolved by updating
+            testng to 7.8.0 -->
             <dependency>
-                <groupId>org.yaml</groupId>
-                <artifactId>snakeyaml</artifactId>
-                <version>1.33</version>
+                <groupId>org.apache.ant</groupId>
+                <artifactId>ant</artifactId>
+                <version>1.10.14</version>
             </dependency>
+            <!-- transitive dependency of kafka-clients and kubernetes client
+            this should get resolved with the update of above depdendencies -->
             <dependency>
-                <groupId>org.bouncycastle</groupId>
-                <artifactId>bcprov-jdk15on</artifactId>
-                <version>1.70</version>
+                <groupId>org.bitbucket.b_c</groupId>
+                <artifactId>jose4j</artifactId>
+                <version>0.9.3</version>
             </dependency>
+            <!-- transitive dependency of kafka-clientorg.apache.calcite:calcite-testkit
+            and kafka-protobuf-provider
+            this should get resolved with the update of above depdendencies -->
             <dependency>
-                <groupId>org.bouncycastle</groupId>
-                <artifactId>bcprov-ext-jdk15on</artifactId>
-                <version>1.70</version>
+                <groupId>org.jetbrains.kotlin</groupId>
+                <artifactId>kotlin-stdlib</artifactId>
+                <version>1.6.10</version>
             </dependency>
+            <!-- Transitive dependency of kubernetes-client-java in kubernetes-extension,
+            schema-repo in avro-extensions, and com.google.caliper:caliper in druid-server
+            and direct dependency of druid-ranger
+              -->
             <dependency>
-                <groupId>org.bouncycastle</groupId>
-                <artifactId>bcpkix-jdk15on</artifactId>
-                <version>1.70</version>
-            </dependency>
-            <dependency>
-                <groupId>org.bouncycastle</groupId>
-                <artifactId>bcutil-jdk15on</artifactId>
-                <version>1.70</version>
+                <groupId>com.google.code.gson</groupId>
+                <artifactId>gson</artifactId>
+                <version>${gson.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.zookeeper</groupId>
@@ -412,6 +421,14 @@
                     <exclusion>
                         <groupId>com.github.spotbugs</groupId>
                         <artifactId>spotbugs-annotations</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>ch.qos.logback</groupId>
+                        <artifactId>logback-classic</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>ch.qos.logback</groupId>
+                        <artifactId>logback-core</artifactId>
                     </exclusion>
                 </exclusions>
             </dependency>
@@ -550,7 +567,7 @@
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-compress</artifactId>
-                <version>1.23.0</version>
+                <version>1.24.0</version>
             </dependency>
             <dependency>
                 <groupId>org.tukaani</groupId>
@@ -1072,7 +1089,7 @@
             <dependency>
                 <groupId>com.github.docker-java</groupId>
                 <artifactId>docker-java-bom</artifactId>
-                <version>3.2.13</version>
+                <version>3.3.4</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
@@ -1685,7 +1702,9 @@
                             @{jacocoArgLine}
                             ${jdk.strong.encapsulation.argLine}
                             ${jdk.security.manager.allow.argLine}
-                            -Xmx1500m
+                            <!-- Bump up memory from 1.5 GB to 2 GB. This is particularly needed for JDK 17 where
+                            we have jfr profiler enabled which adds additional memory pressure. -->
+                            -Xmx2048m
                             -XX:MaxDirectMemorySize=2500m
                             -XX:+ExitOnOutOfMemoryError
                             -XX:+HeapDumpOnOutOfMemoryError
@@ -1818,7 +1837,7 @@
               <plugin>
                 <groupId>com.github.eirslett</groupId>
                 <artifactId>frontend-maven-plugin</artifactId>
-                <version>1.14.2</version>
+                <version>1.15.0</version>
               </plugin>
             </plugins>
         </pluginManagement>
@@ -2065,9 +2084,14 @@
                                 <exclude>**/test/resources/**/*</exclude> <!-- test data for "old" ITs. -->
                                 <exclude>**/docker/client_tls/*</exclude> <!-- generated files for "old" ITs. -->
                                 <exclude>resources/data/**/*</exclude> <!-- test data for "new" ITs. -->
-                                <exclude>**/derby.log</exclude>
                                 <exclude>**/jvm.config</exclude>
                                 <exclude>**/*.avsc</exclude>
+                                <exclude>**/*.png</exclude>
+                                <exclude>**/*.log</exclude>
+                                <exclude>**/*.jpg</exclude>
+                                <exclude>**/*.gif</exclude>
+                                <exclude>examples/quickstart/protobuf/metrics.desc</exclude>
+                                <exclude>examples/var/sv/.lock</exclude>
                                 <exclude>**/*.iml</exclude>
                                 <exclude>**/*.json</exclude>
                                 <exclude>**/*.parq</exclude>
@@ -2084,9 +2108,8 @@
                                 <exclude>.github/pull_request_template.md</exclude>
                                 <exclude>.github/dependabot.yml</exclude>
                                 <exclude>.github/workflows/codeql.yml</exclude>
-                                <exclude>.github/workflows/codeql-config.yml</exclude>
+                                <exclude>.github/config/codeql-config.yml</exclude>
                                 <exclude>git.version</exclude>
-                                <exclude>website/node_modules/**</exclude>
                                 <exclude>src/**/*.snap</exclude>
                                 <exclude>examples/conf/**</exclude>
                                 <exclude>.asf.yaml</exclude>
@@ -2132,12 +2155,6 @@
                     </plugin>
                 </plugins>
             </build>
-        </profile>
-        <profile>
-          <id>website-docs</id>
-          <modules>
-            <module>website</module>
-          </modules>
         </profile>
         <profile>
           <id>skip-static-checks</id>

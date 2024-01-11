@@ -131,12 +131,6 @@ public class IntervalDimFilter extends AbstractOptimizableDimFilter implements D
   }
 
   @Override
-  public DimFilter optimize()
-  {
-    return this;
-  }
-
-  @Override
   public Filter toFilter()
   {
     return convertedFilter.toFilter();

@@ -45,7 +45,7 @@ public abstract class DoubleOutLongsInFunctionVectorValueProcessor
   @Override
   public ExpressionType getOutputType()
   {
-    return ExpressionType.LONG;
+    return ExpressionType.DOUBLE;
   }
 
   @Override

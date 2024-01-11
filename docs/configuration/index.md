@@ -836,7 +836,7 @@ This section contains the configuration options for endpoints that are supported
 
 ## Master server
 
-This section contains the configuration options for the services that reside on Master servers (Coordinators and Overlords) in the suggested [three-server configuration](../design/processes.md#server-types).
+This section contains the configuration options for the services that reside on Master servers (Coordinators and Overlords) in the suggested [three-server configuration](../design/architecture.md#druid-servers).
 
 ### Coordinator
 
@@ -876,7 +876,7 @@ These Coordinator static configurations can be defined in the `coordinator/runti
 |`druid.coordinator.loadqueuepeon.repeatDelay`|The start and repeat delay for the `loadqueuepeon`, which manages the load and drop of segments.|`PT0.050S` (50 ms)|
 |`druid.coordinator.asOverlord.enabled`|Boolean value for whether this Coordinator service should act like an Overlord as well. This configuration allows users to simplify a Druid cluster by not having to deploy any standalone Overlord services. If set to true, then Overlord console is available at `http://coordinator-host:port/console.html` and be sure to set `druid.coordinator.asOverlord.overlordService` also.|false|
 |`druid.coordinator.asOverlord.overlordService`| Required, if `druid.coordinator.asOverlord.enabled` is `true`. This must be same value as `druid.service` on standalone Overlord services and `druid.selectors.indexing.serviceName` on Middle Managers.|NULL|
-|`druid.coordinator.centralizedTableSchema.enabled`|Boolean flag for enabling table schema building on the Coordinator.|false|
+|`druid.centralizedDatasourceSchema.enabled`|Boolean flag for enabling datasource schema building on the Coordinator.|false|
 
 ##### Metadata management
 
@@ -1393,7 +1393,7 @@ For GCE's properties, please refer to the [gce-extensions](../development/extens
 
 ## Data server
 
-This section contains the configuration options for the services that reside on Data servers (MiddleManagers/Peons and Historicals) in the suggested [three-server configuration](../design/processes.md#server-types).
+This section contains the configuration options for the services that reside on Data servers (MiddleManagers/Peons and Historicals) in the suggested [three-server configuration](../design/architecture.md#druid-servers).
 
 Configuration options for the [Indexer process](../design/indexer.md) are also provided here.
 
@@ -1722,7 +1722,7 @@ See [cache configuration](#cache-configuration) for how to configure cache setti
 
 ## Query server
 
-This section contains the configuration options for the processes that reside on Query servers (Brokers) in the suggested [three-server configuration](../design/processes.md#server-types).
+This section contains the configuration options for the services that reside on Query servers (Brokers) in the suggested [three-server configuration](../design/architecture.md#druid-servers).
 
 Configuration options for the experimental [Router process](../design/router.md) are also provided here.
 
@@ -1758,7 +1758,7 @@ Laning strategies allow you to control capacity utilization for heterogeneous qu
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.query.scheduler.numThreads`|Maximum number of concurrently-running queries. When this parameter is set lower than `druid.server.http.numThreads`, query requests beyond the limit are denied with HTTP 429 instead of waiting in the Jetty request queue. This has the effect of reserving the leftover Jetty threads for non-query requests.<br /><br />When this parameter is set equal to or higher than `druid.server.http.numThreads`, it has no effect.|Unbounded|
+|`druid.query.scheduler.numThreads`|Maximum number of concurrently-running queries. When this parameter is set lower than `druid.server.http.numThreads`, query requests beyond the limit are put into the Jetty request queue. This has the effect of reserving the leftover Jetty threads for non-query requests.<br /><br />When this parameter is set equal to or higher than `druid.server.http.numThreads`, it has no effect.|Unbounded|
 |`druid.query.scheduler.laning.strategy`|Query laning strategy to use to assign queries to a lane in order to control capacities for certain classes of queries.|`none`|
 |`druid.query.scheduler.prioritization.strategy`|Query prioritization strategy to automatically assign priorities.|`manual`|
 

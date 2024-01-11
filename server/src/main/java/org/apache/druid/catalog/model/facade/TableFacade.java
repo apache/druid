@@ -61,11 +61,7 @@ public class TableFacade extends ObjectFacade
 
   public static ColumnType druidType(ColumnSpec col)
   {
-    if (Columns.isTimeColumn(col.name())) {
-      return ColumnType.LONG;
-    }
-    final String sqlType = col.sqlType();
-    return sqlType == null ? null : Columns.druidType(sqlType);
+    return Columns.druidType(col);
   }
 
   public ObjectMapper jsonMapper()

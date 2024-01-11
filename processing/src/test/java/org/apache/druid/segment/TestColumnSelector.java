@@ -19,14 +19,12 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 public class TestColumnSelector implements ColumnSelector
@@ -44,12 +42,6 @@ public class TestColumnSelector implements ColumnSelector
   {
     capabilitiesMap.put(name, capability);
     return this;
-  }
-
-  @Override
-  public List<String> getColumnNames()
-  {
-    return Lists.newArrayList(holders.keySet());
   }
 
   @Nullable

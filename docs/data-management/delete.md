@@ -24,12 +24,12 @@ title: "Data deletion"
 
 ## By time range, manually
 
-Apache Druid stores data [partitioned by time chunk](../design/architecture.md#datasources-and-segments) and supports
+Apache Druid stores data [partitioned by time chunk](../design/storage.md) and supports
 deleting data for time chunks by dropping segments. This is a fast, metadata-only operation.
 
 Deletion by time range happens in two steps:
 
-1. Segments to be deleted must first be marked as ["unused"](../design/architecture.md#segment-lifecycle). This can
+1. Segments to be deleted must first be marked as ["unused"](../design/storage.md#segment-lifecycle). This can
    happen when a segment is dropped by a [drop rule](../operations/rule-configuration.md) or when you manually mark a
    segment unused through the Coordinator API or web console. This is a soft delete: the data is not available for
    querying, but the segment files remains in deep storage, and the segment records remains in the metadata store.
