@@ -155,6 +155,9 @@ public class WindowFrame
     return orderBy.stream().map(ColumnWithDirection::getColumn).collect(Collectors.toList());
   }
 
+  /**
+   * Calculates the applicable lower offset if the max number of rows is known.
+   */
   public int getLowerOffsetClamped(int maxRows)
   {
     if (lowerUnbounded) {
@@ -163,6 +166,9 @@ public class WindowFrame
     return Math.min(maxRows, lowerOffset);
   }
 
+  /**
+   * Calculates the applicable upper offset if the max number of rows is known.
+   */
   public int getUpperOffsetClamped(int maxRows)
   {
     if (upperUnbounded) {
