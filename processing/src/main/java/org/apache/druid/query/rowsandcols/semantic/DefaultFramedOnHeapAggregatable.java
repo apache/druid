@@ -334,11 +334,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
 
     public Object getValue(int aggIdx)
     {
-      if (false) {
-        return (aggregators[aggIdx].get());
-      } else {
-        return cloneAggValue(aggFactories[aggIdx], aggregators[aggIdx].get());
-      }
+      return cloneAggValue(aggFactories[aggIdx], aggregators[aggIdx].get());
     }
 
     /**
