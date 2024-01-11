@@ -45,7 +45,6 @@ import org.apache.druid.query.operator.OperatorFactory;
 import org.apache.druid.query.operator.window.ComposingProcessor;
 import org.apache.druid.query.operator.window.Processor;
 import org.apache.druid.query.operator.window.WindowFrame;
-import org.apache.druid.query.operator.window.WindowFrame.PeerType;
 import org.apache.druid.query.operator.window.WindowFramedAggregateProcessor;
 import org.apache.druid.query.operator.window.WindowOperatorFactory;
 import org.apache.druid.query.operator.window.ranking.WindowCumeDistProcessor;
@@ -361,24 +360,9 @@ public class Windowing
       }
       final boolean isRows = group.isRows;
       if (isRows) {
-        PeerType peerType;
-
-        if (true) {
-          peerType = WindowFrame.PeerType.ROWS;
-        } else {
-          peerType = WindowFrame.PeerType.RANGE;
-        }
-
-        return peerType.create(group.lowerBound.isUnbounded(), figureOutOffset(group.lowerBound), group.upperBound.isUnbounded(), figureOutOffset(group.upperBound), isRows ? null : getOrdering());
-
+        return WindowFrame.PeerType.ROWS.create(group.lowerBound.isUnbounded(), figureOutOffset(group.lowerBound), group.upperBound.isUnbounded(), figureOutOffset(group.upperBound), isRows ? null : getOrdering());
       } else {
-        PeerType peerType;
-        if (false) {
-          peerType = WindowFrame.PeerType.ROWS;
-        } else {
-          peerType = WindowFrame.PeerType.RANGE;
-        }
-        return peerType.create(group.lowerBound.isUnbounded(), figureOutOffset(group.lowerBound), group.upperBound.isUnbounded(), figureOutOffset(group.upperBound), isRows ? null : getOrdering());
+        return WindowFrame.PeerType.RANGE.create(group.lowerBound.isUnbounded(), figureOutOffset(group.lowerBound), group.upperBound.isUnbounded(), figureOutOffset(group.upperBound), isRows ? null : getOrdering());
       }
     }
 
