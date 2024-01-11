@@ -31,6 +31,11 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import java.io.IOException;
 import java.util.NoSuchElementException;
 
+/**
+ * A reader for the Delta Lake input source. It initializes an iterator {@link DeltaInputSourceIterator}
+ * for a subset of Delta records given by {@link FilteredColumnarBatch} and schema {@link InputRowSchema}.
+ *
+ */
 public class DeltaInputSourceReader implements InputSourceReader
 {
   private final io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch> filteredColumnarBatchCloseableIterator;

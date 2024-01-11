@@ -38,7 +38,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * TODO:
+ * Refer to extensions-contrib/druid-deltalake-extensions/src/test/resources/README.md to generate the
+ * sample Delta Table used in the unit tests.
  */
 public class DeltaTestUtil
 {

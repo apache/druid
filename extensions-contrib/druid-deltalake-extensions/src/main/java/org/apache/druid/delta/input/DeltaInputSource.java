@@ -57,9 +57,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * Inputsource to ingest data managed by the Delta Lake table format.
- * This inputsource talks to the configured catalog, executes any configured filters and retrieves the data file paths upto the latest snapshot associated with the iceberg table.
- * The data file paths are then provided to a native {@link SplittableInputSource} implementation depending on the warehouse source defined.
+ * Input source to ingest data from a Delta Lake.
+ * This input source reads the latest snapshot from a Delta table specified by {@code tablePath} parameter.
+ * Note: the kernel table API only supports reading from the latest snapshot.
  */
 public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
 {
@@ -78,7 +78,10 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
       @JsonProperty("deltaSplit") @Nullable DeltaSplit deltaSplit
   )
   {
-    this.tablePath = Preconditions.checkNotNull(tablePath, "tablePath cannot be null");
+    if (tablePath == null) {
+      throw InvalidInput.exception("tablePath cannot be null");
+    }
+    this.tablePath = tablePath;
     this.deltaSplit = deltaSplit;
   }
 
@@ -179,7 +182,6 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
         }
     );
 
-    // TODO: account for the split spec as well -- getSplitHintSpecOrDefault(splitHintSpec).split()
     return Streams.sequentialStreamFrom(deltaSplitIterator).map(InputSplit::new);
   }
 

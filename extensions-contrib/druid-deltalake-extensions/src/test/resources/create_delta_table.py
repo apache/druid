@@ -16,13 +16,11 @@
 # limitations under the License.
 
 import os
-import sys
 
+import argparse
 import delta
 import mimesis
 import pyspark
-
-from pyspark.sql import SparkSession
 
 
 def config_spark_with_delta_lake():
@@ -38,11 +36,12 @@ def config_spark_with_delta_lake():
     spark.sparkContext.setLogLevel("ERROR")
     return spark
 
-def create_dataset(i):
+
+def create_dataset(num_records):
     fake = mimesis.Generic()
     output = []
 
-    for _ in range(i):
+    for _ in range(num_records):
         data = {
             "name": fake.person.name(),
             "surname": fake.person.surname(),
@@ -58,32 +57,32 @@ def create_dataset(i):
 
 
 def main():
-    save_mode = "append"
-    save_path = os.path.join(os.getcwd(), "people-delta-table4")
-    num_records = 10
+    parser = argparse.ArgumentParser(description="Script to write a Delta Lake table.",
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    if len(sys.argv) > 1:
-        save_mode = sys.argv[1]
+    parser.add_argument('--save_mode', choices=('append', 'overwrite'), default="append",
+                        help="Specify write mode (append/overwrite)")
+    parser.add_argument('--save_path', default=os.path.join(os.getcwd(), "people-delta-table4"),
+                        help="Save path for Delta table")
+    parser.add_argument('--num_records', type=int, default=10,
+                        help="Specify number of Delta records to write")
 
-    if len(sys.argv) > 2:
-        save_path = sys.argv[2]
+    args = parser.parse_args()
 
-    if len(sys.argv) > 3:
-        num_records = sys.argv[3]
+    save_mode = args.save_mode
+    save_path = args.save_path
+    num_records = args.num_records
 
     spark = config_spark_with_delta_lake()
 
-    df = spark.createDataFrame(create_dataset(i=num_records))
-
-    df = df.select(
-        df.name, df.surname, df.birthday, df.email, df.country, df.state, df.city
-    )
+    df = spark.createDataFrame(create_dataset(num_records=num_records))
+    df = df.select(df.name, df.surname, df.birthday, df.email, df.country, df.state, df.city)
 
     df.write.format("delta").mode(save_mode).save(save_path)
 
     df.show()
 
-    print(f"Generated delta records to {save_path} in {save_mode} mode with {num_records} records.")
+    print(f"Generated Delta records to {save_path} in {save_mode} mode with {num_records} records.")
 
 
 if __name__ == "__main__":

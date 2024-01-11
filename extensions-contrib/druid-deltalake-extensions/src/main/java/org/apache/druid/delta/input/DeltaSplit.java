@@ -24,6 +24,15 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 
+/**
+ * An input split of a Delta table containing the following information:
+ * <li>
+ * {@code stateRow} represents the canonical json representation of the latest snapshot of the Delta table.
+ * </li>
+ * <li>
+ * {@code files} represents the list of files from the latest snapshot.
+ * </li>
+ */
 public class DeltaSplit
 {
   private final String stateRow;
@@ -32,7 +41,7 @@ public class DeltaSplit
   @JsonCreator
   public DeltaSplit(
       @JsonProperty("state") final String stateRow,
-      @JsonProperty("file") final List<String> files
+      @JsonProperty("files") final List<String> files
   )
   {
     this.stateRow = stateRow;

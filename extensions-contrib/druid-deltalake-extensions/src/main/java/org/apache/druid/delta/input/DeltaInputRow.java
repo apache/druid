@@ -52,6 +52,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Encodes the row and schema information from the Delta Lake.
+ */
 public class DeltaInputRow implements InputRow
 {
   private final io.delta.kernel.data.Row row;
@@ -59,7 +62,7 @@ public class DeltaInputRow implements InputRow
   private final Object2IntMap<String> fieldNameToOrdinal = new Object2IntOpenHashMap<>();
   private final InputRow delegateRow;
 
-  private static final ZoneId ZONE_ID = ZoneId.systemDefault(); // TODO: Timezone handling?
+  private static final ZoneId ZONE_ID = ZoneId.systemDefault();
 
   public DeltaInputRow(io.delta.kernel.data.Row row, InputRowSchema inputRowSchema)
   {
