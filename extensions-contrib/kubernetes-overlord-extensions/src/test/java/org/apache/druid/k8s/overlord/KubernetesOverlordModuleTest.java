@@ -104,9 +104,7 @@ public class KubernetesOverlordModuleTest
               binder.bind(TaskConfig.class).toInstance(taskConfig);
               binder.bind(DruidNode.class)
                     .annotatedWith(Self.class)
-                    .toInstance(
-                        new DruidNode("test-inject", null, false, null, null, true, false)
-                    );
+                    .toInstance(new DruidNode("test-inject", null, false, null, null, true, false));
               if (isWorkerTypeRemote) {
                 binder.bind(RemoteTaskRunnerFactory.class).toInstance(remoteTaskRunnerFactory);
               }
