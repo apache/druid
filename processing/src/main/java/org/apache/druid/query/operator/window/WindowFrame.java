@@ -48,7 +48,13 @@ public class WindowFrame
   public enum PeerType
   {
     ROWS,
-    RANGE
+    RANGE;
+
+    WindowFrame create(boolean b, int i, boolean c, int j, List<ColumnWithDirection> singletonList)
+    {
+      return this == PeerType.ROWS ? newWindowFrameRows(b, i, c, j, singletonList)
+          : newWindowFrameRange(b, i, c, j, singletonList);
+    }
   }
 
   // Will likely need to add the order by columns to also be able to deal with RANGE peer type.
@@ -62,8 +68,7 @@ public class WindowFrame
   public static WindowFrame newWindowFrame(PeerType range, boolean b, int i, boolean c, int j,
       List<ColumnWithDirection> singletonList)
   {
-    return range == PeerType.ROWS ? newWindowFrameRows(b, i, c, j, singletonList)
-        : newWindowFrameRange(b, i, c, j, singletonList);
+    return range.create(b, i, c, j, singletonList);
   }
 
   private static WindowFrame newWindowFrameRange(boolean b, int i, boolean c, int j,
