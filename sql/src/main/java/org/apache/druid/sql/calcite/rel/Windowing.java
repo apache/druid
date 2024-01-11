@@ -360,9 +360,9 @@ public class Windowing
       }
       final boolean isRows = group.isRows;
       if (isRows) {
-        return WindowFrame.PeerType.ROWScreate(group.lowerBound.isUnbounded(), figureOutOffset(group.lowerBound), group.upperBound.isUnbounded(), figureOutOffset(group.upperBound), isRows ? null : getOrdering());
+        return WindowFrame.rows1(group.lowerBound.isUnbounded(), figureOutOffset(group.lowerBound), group.upperBound.isUnbounded(), figureOutOffset(group.upperBound));
       } else {
-        return WindowFrame.PeerType.RANGEcreate(group.lowerBound.isUnbounded(), figureOutOffset(group.lowerBound), group.upperBound.isUnbounded(), figureOutOffset(group.upperBound), isRows ? null : getOrdering());
+        return WindowFrame.groups1(group.lowerBound.isUnbounded(), figureOutOffset(group.lowerBound), group.upperBound.isUnbounded(), figureOutOffset(group.upperBound), isRows ? null : getOrdering());
       }
     }
 

@@ -39,20 +39,20 @@ public class WindowFrame
 {
   public static WindowFrame unbounded()
   {
-    return PeerType.ROWScreate(true, 0, true, 0, null);
+    return WindowFrame.rows1(true, 0, true, 0);
   }
 
-  private static Rows rows1(boolean b, int i, boolean c, int j)
+  public static Rows rows1(boolean b, int i, boolean c, int j)
   {
     return rows(b ? null : i, c ? null : j);
   }
 
-  private static Rows rows(Integer lowerOffset, Integer upperOffset)
+  public static Rows rows(Integer lowerOffset, Integer upperOffset)
   {
     return new WindowFrame.Rows(lowerOffset, upperOffset);
   }
 
-  private static Groups groups1(boolean b, int i, boolean c, int j, List<ColumnWithDirection> singletonList)
+  public static Groups groups1(boolean b, int i, boolean c, int j, List<ColumnWithDirection> singletonList)
   {
     return groups(b ? null : i, c ? null : j, singletonList);
   }
@@ -70,17 +70,7 @@ public class WindowFrame
   @SuppressWarnings("unused")
   public enum PeerType
   {
-    ROWS, RANGE;
-
-    public static WindowFrame ROWScreate(boolean b, int i, boolean c, int j, List<ColumnWithDirection> singletonList)
-    {
-      return WindowFrame.rows1(b, i, c, j);
-    }
-
-    public static WindowFrame RANGEcreate(boolean b, int i, boolean c, int j, List<ColumnWithDirection> singletonList)
-    {
-      return WindowFrame.groups1(b, i, c, j, singletonList);
-    }
+    ROWS, RANGE
   }
 
   // Will likely need to add the order by columns to also be able to deal with
@@ -177,7 +167,7 @@ public class WindowFrame
 
   public static WindowFrame forOrderBy(ColumnWithDirection... orderBy)
   {
-    return PeerType.RANGEcreate(true, 0, false, 0, Lists.newArrayList(orderBy));
+    return WindowFrame.groups1(true, 0, false, 0, Lists.newArrayList(orderBy));
   }
 
   public List<String> getOrderByColNames()
