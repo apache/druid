@@ -360,11 +360,10 @@ public class Windowing
         return WindowFrame.unbounded();
       }
       boolean isRows = group.isRows;
-      if(true) {
+      if (true) {
         System.out.println("Asd");
-      }else {
+      } else {
         System.out.println("never");
-
       }
 
       if (isRows) {
