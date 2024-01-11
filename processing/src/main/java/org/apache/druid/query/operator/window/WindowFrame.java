@@ -40,7 +40,7 @@ public class WindowFrame
 {
   public static WindowFrame unbounded()
   {
-    return PeerType.ROWS.create(true, 0, true, 0, null);
+    return PeerType.ROWScreate(true, 0, true, 0, null);
   }
 
   @Deprecated
@@ -55,15 +55,13 @@ public class WindowFrame
       return this == PeerType.ROWS ? newWindowFrameRows(b, i, c, j, singletonList)
           : newWindowFrameRange(b, i, c, j, singletonList);
     }
-    public WindowFrame ROWScreate(boolean b, int i, boolean c, int j, List<ColumnWithDirection> singletonList)
+    public static WindowFrame ROWScreate(boolean b, int i, boolean c, int j, List<ColumnWithDirection> singletonList)
     {
-      return true ? newWindowFrameRows(b, i, c, j, singletonList)
-          : newWindowFrameRange(b, i, c, j, singletonList);
+      return newWindowFrameRows(b, i, c, j, singletonList);
     }
-    public WindowFrame RANGEcreate(boolean b, int i, boolean c, int j, List<ColumnWithDirection> singletonList)
+    public static WindowFrame RANGEcreate(boolean b, int i, boolean c, int j, List<ColumnWithDirection> singletonList)
     {
-      return false ? newWindowFrameRows(b, i, c, j, singletonList)
-          : newWindowFrameRange(b, i, c, j, singletonList);
+      return newWindowFrameRange(b, i, c, j, singletonList);
     }
 
 
@@ -215,7 +213,7 @@ public class WindowFrame
 
   public static WindowFrame forOrderBy(ColumnWithDirection... orderBy)
   {
-    return PeerType.RANGE.create(true, 0, false, 0, Lists.newArrayList(orderBy));
+    return PeerType.RANGEcreate(true, 0, false, 0, Lists.newArrayList(orderBy));
   }
 
   public List<String> getOrderByColNames()
