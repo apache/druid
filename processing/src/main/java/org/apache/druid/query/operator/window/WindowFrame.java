@@ -55,6 +55,18 @@ public class WindowFrame
       return this == PeerType.ROWS ? newWindowFrameRows(b, i, c, j, singletonList)
           : newWindowFrameRange(b, i, c, j, singletonList);
     }
+    public WindowFrame ROWScreate(boolean b, int i, boolean c, int j, List<ColumnWithDirection> singletonList)
+    {
+      return true ? newWindowFrameRows(b, i, c, j, singletonList)
+          : newWindowFrameRange(b, i, c, j, singletonList);
+    }
+    public WindowFrame RANGEcreate(boolean b, int i, boolean c, int j, List<ColumnWithDirection> singletonList)
+    {
+      return false ? newWindowFrameRows(b, i, c, j, singletonList)
+          : newWindowFrameRange(b, i, c, j, singletonList);
+    }
+
+
   }
 
   // Will likely need to add the order by columns to also be able to deal with RANGE peer type.
