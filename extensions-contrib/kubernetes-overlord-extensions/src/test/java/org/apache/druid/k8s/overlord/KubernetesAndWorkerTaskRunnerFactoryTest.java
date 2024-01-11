@@ -20,10 +20,8 @@
 
 package org.apache.druid.k8s.overlord;
 
-import com.google.inject.Provider;
-import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
-import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
-import org.apache.druid.k8s.overlord.runnerstrategy.KubernetesRunnerStrategy;
+import org.apache.druid.indexing.overlord.TaskRunnerFactory;
+import org.apache.druid.indexing.overlord.WorkerTaskRunner;
 import org.apache.druid.k8s.overlord.runnerstrategy.WorkerRunnerStrategy;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
@@ -38,63 +36,17 @@ public class KubernetesAndWorkerTaskRunnerFactoryTest extends EasyMockSupport
 {
 
   @Mock KubernetesTaskRunnerFactory kubernetesTaskRunnerFactory;
-  @Mock Provider<HttpRemoteTaskRunnerFactory> httpRemoteTaskRunnerFactoryProvider;
-  @Mock Provider<RemoteTaskRunnerFactory> remoteTaskRunnerFactoryProvider;
+  @Mock TaskRunnerFactory<? extends WorkerTaskRunner> taskRunnerFactory;
 
   @Test
-  public void test_useHttpTaskRunner_asDefault()
+  public void test_buildKubernetesTaskRunnerSuccessfully()
   {
     KubernetesAndWorkerTaskRunnerFactory factory = new KubernetesAndWorkerTaskRunnerFactory(
         kubernetesTaskRunnerFactory,
-        httpRemoteTaskRunnerFactoryProvider,
-        remoteTaskRunnerFactoryProvider,
-        new KubernetesAndWorkerTaskRunnerConfig(null, null),
+        taskRunnerFactory,
         new WorkerRunnerStrategy()
     );
-
-    HttpRemoteTaskRunnerFactory httpRemoteTaskRunnerFactory = EasyMock.createMock(HttpRemoteTaskRunnerFactory.class);
-    EasyMock.expect(httpRemoteTaskRunnerFactoryProvider.get()).andReturn(httpRemoteTaskRunnerFactory);
-    EasyMock.expect(httpRemoteTaskRunnerFactory.build()).andReturn(null);
-    EasyMock.expect(kubernetesTaskRunnerFactory.build()).andReturn(null);
-
-    replayAll();
-    factory.build();
-    verifyAll();
-  }
-
-  @Test
-  public void test_specifyRemoteTaskRunner()
-  {
-    KubernetesAndWorkerTaskRunnerFactory factory = new KubernetesAndWorkerTaskRunnerFactory(
-        kubernetesTaskRunnerFactory,
-        httpRemoteTaskRunnerFactoryProvider,
-        remoteTaskRunnerFactoryProvider,
-        new KubernetesAndWorkerTaskRunnerConfig(null, "remote"),
-        new WorkerRunnerStrategy()
-    );
-
-    RemoteTaskRunnerFactory remoteTaskRunnerFactory = EasyMock.createMock(RemoteTaskRunnerFactory.class);
-    EasyMock.expect(remoteTaskRunnerFactoryProvider.get()).andReturn(remoteTaskRunnerFactory);
-    EasyMock.expect(remoteTaskRunnerFactory.build()).andReturn(null);
-    EasyMock.expect(kubernetesTaskRunnerFactory.build()).andReturn(null);
-
-    replayAll();
-    factory.build();
-    verifyAll();
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void test_specifyIncorrectTaskRunner_shouldThrowException()
-  {
-    KubernetesAndWorkerTaskRunnerFactory factory = new KubernetesAndWorkerTaskRunnerFactory(
-        kubernetesTaskRunnerFactory,
-        httpRemoteTaskRunnerFactoryProvider,
-        remoteTaskRunnerFactoryProvider,
-        new KubernetesAndWorkerTaskRunnerConfig(null, "noop"),
-        new KubernetesRunnerStrategy()
-    );
-
-    EasyMock.expect(remoteTaskRunnerFactoryProvider.get().build()).andReturn(null);
+    EasyMock.expect(taskRunnerFactory.build()).andReturn(null);
     EasyMock.expect(kubernetesTaskRunnerFactory.build()).andReturn(null);
 
     replayAll();

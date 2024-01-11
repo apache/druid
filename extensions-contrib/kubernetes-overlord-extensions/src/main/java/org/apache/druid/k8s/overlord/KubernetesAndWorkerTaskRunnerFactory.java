@@ -20,11 +20,9 @@
 package org.apache.druid.k8s.overlord;
 
 import com.google.inject.Inject;
-import com.google.inject.Provider;
-import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
+import com.google.inject.name.Named;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
 import org.apache.druid.indexing.overlord.WorkerTaskRunner;
-import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 import org.apache.druid.k8s.overlord.runnerstrategy.RunnerStrategy;
 
 
@@ -33,13 +31,7 @@ public class KubernetesAndWorkerTaskRunnerFactory implements TaskRunnerFactory<K
   public static final String TYPE_NAME = "k8sAndWorker";
 
   private final KubernetesTaskRunnerFactory kubernetesTaskRunnerFactory;
-  private final Provider<HttpRemoteTaskRunnerFactory> httpRemoteTaskRunnerFactoryProvider;
-  /**
-   * In environments without Zookeeper, the standard RemoteTaskRunnerFactory may not function properly.
-   * Use provider to bind RemoteTaskRunnerFactory conditionally.
-   */
-  private final Provider<RemoteTaskRunnerFactory> remoteTaskRunnerFactoryProvider;
-  private final KubernetesAndWorkerTaskRunnerConfig kubernetesAndWorkerTaskRunnerConfig;
+  private final TaskRunnerFactory<? extends WorkerTaskRunner> taskRunnerFactory;
   private final RunnerStrategy runnerStrategy;
 
   private KubernetesAndWorkerTaskRunner runner;
@@ -47,16 +39,12 @@ public class KubernetesAndWorkerTaskRunnerFactory implements TaskRunnerFactory<K
   @Inject
   public KubernetesAndWorkerTaskRunnerFactory(
       KubernetesTaskRunnerFactory kubernetesTaskRunnerFactory,
-      Provider<HttpRemoteTaskRunnerFactory> httpRemoteTaskRunnerFactoryProvider,
-      Provider<RemoteTaskRunnerFactory> remoteTaskRunnerFactoryProvider,
-      KubernetesAndWorkerTaskRunnerConfig kubernetesAndWorkerTaskRunnerConfig,
+      @Named("taskRunnerFactory") TaskRunnerFactory<? extends WorkerTaskRunner> taskRunnerFactory,
       RunnerStrategy runnerStrategy
   )
   {
     this.kubernetesTaskRunnerFactory = kubernetesTaskRunnerFactory;
-    this.httpRemoteTaskRunnerFactoryProvider = httpRemoteTaskRunnerFactoryProvider;
-    this.remoteTaskRunnerFactoryProvider = remoteTaskRunnerFactoryProvider;
-    this.kubernetesAndWorkerTaskRunnerConfig = kubernetesAndWorkerTaskRunnerConfig;
+    this.taskRunnerFactory = taskRunnerFactory;
     this.runnerStrategy = runnerStrategy;
   }
 
@@ -65,17 +53,10 @@ public class KubernetesAndWorkerTaskRunnerFactory implements TaskRunnerFactory<K
   {
     runner = new KubernetesAndWorkerTaskRunner(
         kubernetesTaskRunnerFactory.build(),
-        getWorkerTaskRunner(),
+        taskRunnerFactory.build(),
         runnerStrategy
     );
     return runner;
-  }
-
-  private WorkerTaskRunner getWorkerTaskRunner()
-  {
-    String workerType = kubernetesAndWorkerTaskRunnerConfig.getWorkerType();
-    return HttpRemoteTaskRunnerFactory.TYPE_NAME.equals(workerType) ?
-           httpRemoteTaskRunnerFactoryProvider.get().build() : remoteTaskRunnerFactoryProvider.get().build();
   }
 
   @Override

@@ -21,10 +21,12 @@ package org.apache.druid.k8s.overlord;
 
 import com.google.inject.Binder;
 import com.google.inject.Inject;
+import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.multibindings.MapBinder;
+import com.google.inject.name.Named;
 import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.ConfigBuilder;
 import org.apache.druid.discovery.NodeRole;
@@ -37,8 +39,11 @@ import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.indexing.common.config.FileTaskLogsConfig;
 import org.apache.druid.indexing.common.tasklogs.FileTaskLogs;
+import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
+import org.apache.druid.indexing.overlord.WorkerTaskRunner;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
+import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
@@ -128,6 +133,26 @@ public class KubernetesOverlordModule implements DruidModule
     );
 
     return client;
+  }
+
+  /**
+   * Provides a TaskRunnerFactory instance suitable for environments without Zookeeper.
+   * In such environments, the standard RemoteTaskRunnerFactory may not be operational.
+   * Depending on the workerType defined in KubernetesAndWorkerTaskRunnerConfig,
+   * this method selects and returns an appropriate TaskRunnerFactory implementation.
+   */
+  @Provides
+  @LazySingleton
+  @Named("taskRunnerFactory")
+  TaskRunnerFactory<? extends WorkerTaskRunner> provideWorkerTaskRunner(
+      KubernetesAndWorkerTaskRunnerConfig runnerConfig,
+      Injector injector
+  )
+  {
+    String workerType = runnerConfig.getWorkerType();
+    return HttpRemoteTaskRunnerFactory.TYPE_NAME.equals(workerType)
+           ? injector.getInstance(HttpRemoteTaskRunnerFactory.class)
+           : injector.getInstance(RemoteTaskRunnerFactory.class);
   }
 
   private static class RunnerStrategyProvider implements Provider<RunnerStrategy>
