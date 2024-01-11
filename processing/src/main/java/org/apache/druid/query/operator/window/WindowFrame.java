@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "rows", value = WindowFrame.Rows.class),
@@ -43,24 +42,49 @@ public class WindowFrame
     return PeerType.ROWScreate(true, 0, true, 0, null);
   }
 
+  private static Rows rows1(boolean b, int i, boolean c, int j)
+  {
+    return new WindowFrame.Rows(b ? null : i, c ? null : j);
+  }
+
+  private static Rows rows(Integer lowerOffset, Integer upperOffset)
+  {
+    return new WindowFrame.Rows(lowerOffset, upperOffset);
+  }
+
+  private static Groups groups1(boolean b, int i, boolean c, int j, List<ColumnWithDirection> singletonList)
+  {
+    return new WindowFrame.Groups(b ? null : i, c ? null : j, singletonList);
+  }
+
+  private static Groups groups(
+      final Integer lowerOffset,
+      final Integer upperOffset,
+      final List<ColumnWithDirection> orderBy)
+  {
+    return new WindowFrame.Groups(lowerOffset, upperOffset, orderBy);
+
+  }
+
   @Deprecated
   @SuppressWarnings("unused")
   public enum PeerType
   {
-    ROWS,
-    RANGE;
+    ROWS, RANGE;
 
     public static WindowFrame ROWScreate(boolean b, int i, boolean c, int j, List<ColumnWithDirection> singletonList)
     {
-      return new WindowFrame.Rows(b?null:i, c?null:j);
+      return rows1(b, i, c, j);
     }
+
     public static WindowFrame RANGEcreate(boolean b, int i, boolean c, int j, List<ColumnWithDirection> singletonList)
     {
-      return new WindowFrame.Groups(b?null:i, c?null:j, singletonList);
+      return groups1(b, i, c, j, singletonList);
     }
   }
 
-  // Will likely need to add the order by columns to also be able to deal with RANGE peer type.
+  // Will likely need to add the order by columns to also be able to deal with
+  // RANGE peer type.
   private final PeerType peerType;
   private final boolean lowerUnbounded;
   private final int lowerOffset;
@@ -74,8 +98,7 @@ public class WindowFrame
       int lowerOffset,
       boolean upperUnbounded,
       int upperOffset,
-      List<ColumnWithDirection> orderBy
-  )
+      List<ColumnWithDirection> orderBy)
   {
     this.peerType = peerType;
     this.lowerUnbounded = lowerUnbounded;
@@ -126,11 +149,11 @@ public class WindowFrame
     }
     WindowFrame that = (WindowFrame) o;
     return lowerUnbounded == that.lowerUnbounded
-           && lowerOffset == that.lowerOffset
-           && upperUnbounded == that.upperUnbounded
-           && upperOffset == that.upperOffset
-           && peerType == that.peerType
-           && Objects.equals(orderBy, that.orderBy);
+        && lowerOffset == that.lowerOffset
+        && upperUnbounded == that.upperUnbounded
+        && upperOffset == that.upperOffset
+        && peerType == that.peerType
+        && Objects.equals(orderBy, that.orderBy);
   }
 
   @Override
@@ -143,13 +166,13 @@ public class WindowFrame
   public String toString()
   {
     return "WindowFrame{" +
-           "peerType=" + peerType +
-           ", lowerUnbounded=" + lowerUnbounded +
-           ", lowerOffset=" + lowerOffset +
-           ", upperUnbounded=" + upperUnbounded +
-           ", upperOffset=" + upperOffset +
-           ", orderBy=" + orderBy +
-           '}';
+        "peerType=" + peerType +
+        ", lowerUnbounded=" + lowerUnbounded +
+        ", lowerOffset=" + lowerOffset +
+        ", upperUnbounded=" + upperUnbounded +
+        ", upperOffset=" + upperOffset +
+        ", orderBy=" + orderBy +
+        '}';
   }
 
   public static WindowFrame forOrderBy(ColumnWithDirection... orderBy)
@@ -190,7 +213,7 @@ public class WindowFrame
   @Deprecated
   private static int coalesce(Integer upperOffset, int i)
   {
-    if(upperOffset==null) {
+    if (upperOffset == null) {
       return i;
     }
     return upperOffset;
