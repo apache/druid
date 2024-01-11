@@ -358,17 +358,19 @@ public class Windowing
       if (group.lowerBound.isUnbounded() && group.upperBound.isUnbounded()) {
         return WindowFrame.unbounded();
       }
-      final boolean isRows = group.isRows;
-      if (isRows) {
-        return WindowFrame.rows(group.lowerBound.isUnbounded() ? null : figureOutOffset(group.lowerBound), group.upperBound.isUnbounded() ? null : figureOutOffset(group.upperBound));
+      if (group.isRows) {
+        return WindowFrame.rows(getBoundAsInteger(group.lowerBound), getBoundAsInteger(group.upperBound));
       } else {
-        return WindowFrame.groups(group.lowerBound.isUnbounded() ? null : figureOutOffset(group.lowerBound), group.upperBound.isUnbounded() ? null : figureOutOffset(group.upperBound), isRows ? null : getOrdering());
+        return WindowFrame.groups(getBoundAsInteger(group.lowerBound), getBoundAsInteger(group.upperBound), getOrdering());
       }
     }
 
-    private int figureOutOffset(RexWindowBound bound)
+    private Integer getBoundAsInteger(RexWindowBound bound)
     {
-      if (bound.isUnbounded() || bound.isCurrentRow()) {
+      if(bound.isUnbounded()) {
+        return null;
+      }
+      if(bound.isCurrentRow()) {
         return 0;
       }
       return getConstant(((RexInputRef) bound.getOffset()).getIndex());

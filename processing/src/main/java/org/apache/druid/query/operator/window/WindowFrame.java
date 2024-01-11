@@ -218,7 +218,8 @@ public interface WindowFrame extends Adaptable
         return false;
       }
       Groups other = (Groups) obj;
-      return Objects.equals(lowerOffset, other.lowerOffset) && Objects.equals(orderBy, other.orderBy)
+      return Objects.equals(lowerOffset, other.lowerOffset)
+          && Objects.equals(orderBy, other.orderBy)
           && Objects.equals(upperOffset, other.upperOffset);
     }
 
