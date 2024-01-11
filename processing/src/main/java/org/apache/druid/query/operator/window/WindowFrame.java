@@ -44,7 +44,7 @@ public class WindowFrame
 
   private static Rows rows1(boolean b, int i, boolean c, int j)
   {
-    return new WindowFrame.Rows(b ? null : i, c ? null : j);
+    return rows(b ? null : i, c ? null : j);
   }
 
   private static Rows rows(Integer lowerOffset, Integer upperOffset)
@@ -54,7 +54,7 @@ public class WindowFrame
 
   private static Groups groups1(boolean b, int i, boolean c, int j, List<ColumnWithDirection> singletonList)
   {
-    return new WindowFrame.Groups(b ? null : i, c ? null : j, singletonList);
+    return groups(b ? null : i, c ? null : j, singletonList);
   }
 
   private static Groups groups(
@@ -74,12 +74,12 @@ public class WindowFrame
 
     public static WindowFrame ROWScreate(boolean b, int i, boolean c, int j, List<ColumnWithDirection> singletonList)
     {
-      return rows1(b, i, c, j);
+      return WindowFrame.rows1(b, i, c, j);
     }
 
     public static WindowFrame RANGEcreate(boolean b, int i, boolean c, int j, List<ColumnWithDirection> singletonList)
     {
-      return groups1(b, i, c, j, singletonList);
+      return WindowFrame.groups1(b, i, c, j, singletonList);
     }
   }
 
