@@ -715,6 +715,13 @@ rolled-up datasource `wikipedia_rollup` by grouping on hour, "countryName", and 
  to `true` to enable a compatibility mode where the timestampSpec is ignored.
 :::
 
+The [secondary partitioning method](native-batch.md#partitionsspec) determines the requisite number of concurrent worker tasks that run in parallel to complete ingestion with the Combining input source.
+Set this value in `maxNumConcurrentSubTasks` in `tuningConfig` based on the secondary partitioning method:
+- `range` or `single_dim` partitioning: greater than or equal to 1
+- `hashed` or `dynamic` partitioning: greater than or equal to 2
+
+For more information on the `maxNumConcurrentSubTasks` field, see [Implementation considerations](native-batch.md#implementation-considerations).
+
 ## SQL input source
 
 The SQL input source is used to read data directly from RDBMS.
@@ -1008,11 +1015,27 @@ This input source provides the following filters: `and`, `equals`, `interval`, a
 
 ## DeltaLake input source
 
-TODO: fill in details about the input source
+:::info To use the Delta Lake input source, add the druid-deltalake-extensions extension. :::
 
-The [secondary partitioning method](native-batch.md#partitionsspec) determines the requisite number of concurrent worker tasks that run in parallel to complete ingestion with the Combining input source.
-Set this value in `maxNumConcurrentSubTasks` in `tuningConfig` based on the secondary partitioning method:
-- `range` or `single_dim` partitioning: greater than or equal to 1
-- `hashed` or `dynamic` partitioning: greater than or equal to 2
+You can use the Delta input source to read data stored in a Delta Lake table. For a given table, the input source scans
+the latest snapshot from the configured table. Druid ingests the underlying delta files from the table.
 
-For more information on the `maxNumConcurrentSubTasks` field, see [Implementation considerations](native-batch.md#implementation-considerations).
+The following is a sample spec:
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "delta",
+        "tablePath": "/delta-table/directory"
+      },
+    }
+}
+```
+
+| Property|Description|Required|
+|---------|-----------|--------|
+| type|Set this value to `delta`.|yes|
+| tablePath|The location of the Delta table.|yes|
+
