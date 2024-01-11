@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.collections.CloseableStupidPool;
+import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.guice.NestedDataModule;
@@ -50,7 +51,7 @@ import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.ResultRow;
-import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
+import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngine;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.query.topn.TopNQueryEngine;
 import org.apache.druid.query.topn.TopNResultValue;
@@ -134,10 +135,11 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
         CloseableStupidPool<ByteBuffer> pool = new CloseableStupidPool<>(
             "GroupByQueryEngine-bufferPool",
             () -> ByteBuffer.allocate(50000)
-        )
+        );
+        ResourceHolder<ByteBuffer> processingBuffer = pool.take()
     ) {
 
-      final Sequence<ResultRow> rows = GroupByQueryEngineV2.process(
+      final Sequence<ResultRow> rows = GroupByQueryEngine.process(
           GroupByQuery.builder()
                       .setDataSource("test")
                       .setGranularity(Granularities.ALL)
@@ -148,9 +150,12 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                       .addOrderByColumn("billy")
                       .build(),
           new IncrementalIndexStorageAdapter(index),
-          pool,
+          processingBuffer.get(),
+          null,
           new GroupByQueryConfig(),
           new DruidProcessingConfig(),
+          null,
+          Intervals.ETERNITY,
           null
       );
 
@@ -192,10 +197,11 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
         CloseableStupidPool<ByteBuffer> pool = new CloseableStupidPool<>(
             "GroupByQueryEngine-bufferPool",
             () -> ByteBuffer.allocate(50000)
-        )
+        );
+        ResourceHolder<ByteBuffer> processingBuffer = pool.take();
     ) {
 
-      final Sequence<ResultRow> rows = GroupByQueryEngineV2.process(
+      final Sequence<ResultRow> rows = GroupByQueryEngine.process(
           GroupByQuery.builder()
                       .setDataSource("test")
                       .setGranularity(Granularities.ALL)
@@ -218,9 +224,12 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                       .addOrderByColumn("billy")
                       .build(),
           new IncrementalIndexStorageAdapter(index),
-          pool,
+          processingBuffer.get(),
+          null,
           new GroupByQueryConfig(),
           new DruidProcessingConfig(),
+          null,
+          Intervals.ETERNITY,
           null
       );
 
@@ -365,10 +374,11 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
         CloseableStupidPool<ByteBuffer> pool = new CloseableStupidPool<>(
             "GroupByQueryEngine-bufferPool",
             () -> ByteBuffer.allocate(50000)
-        )
+        );
+        ResourceHolder<ByteBuffer> processingBuffer = pool.take();
     ) {
 
-      final Sequence<ResultRow> rows = GroupByQueryEngineV2.process(
+      final Sequence<ResultRow> rows = GroupByQueryEngine.process(
           GroupByQuery.builder()
                       .setDataSource("test")
                       .setGranularity(Granularities.ALL)
@@ -379,9 +389,12 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                       .setDimFilter(DimFilters.dimEquals("sally", (String) null))
                       .build(),
           new IncrementalIndexStorageAdapter(index),
-          pool,
+          processingBuffer.get(),
+          null,
           new GroupByQueryConfig(),
           new DruidProcessingConfig(),
+          null,
+          Intervals.ETERNITY,
           null
       );
 
