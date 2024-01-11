@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.rowsandcols.semantic;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -149,7 +150,9 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     private final int[] groupBoundaries;
     private final int numRows;
     private final int numGroups;
+    // lower inclusive
     private final int lowerOffset;
+    // upper exclusive
     private final int upperOffset;
 
     public GroupIteratorForWindowFrame(RowsAndColumns rac, WindowFrame frame, int[] groupBoundaries)
@@ -159,7 +162,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
       numRows = rac.numRows();
       numGroups = groupBoundaries.length - 1;
       lowerOffset = frame.getLowerOffsetClamped(numGroups);
-      upperOffset = frame.getUpperOffsetClamped(numGroups) + 1;
+      upperOffset = Math.min(numGroups, frame.getUpperOffsetClamped(numGroups) + 1);
     }
 
     @Override
@@ -181,7 +184,6 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
           if (!hasNext()) {
             throw new IllegalStateException();
           }
-          // TODO: invert listing order at the end to get benefits of incremenental aggregations
           AggInterval r = new AggInterval(
               Interval.of(
                   groupToRowIndex(relativeGroupId(0)),
@@ -204,7 +206,11 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
 
         private int relativeGroupId(int groupOffset)
         {
-          int groupId = currentGroupIndex + groupOffset;
+          // invert iteration order at the end to get benefits of incremenental aggregations
+          // for example if we have [0 BEFORE 1 AFTER]: for say 3 groups the order will be 0,2,1 instead of 0,1,2
+          final int groupIndex = invertedOrderForLastK(currentGroupIndex, numGroups, upperOffset);
+
+          int groupId = groupIndex + groupOffset;
           if (groupId < 0) {
             return 0;
           }
@@ -217,6 +223,22 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     }
   }
 
+  /**
+   * Inverts order for the last K elements.
+   *
+   * For n=3, k=2 - it changes the iteration to 0,2,1
+   */
+  @VisibleForTesting
+  public static int invertedOrderForLastK(int x, int n, int k)
+  {
+    assert (k <= n);
+    if (k <= 1 || x + k < n) {
+      // we are in the non-interesting part
+      return x;
+    }
+    int i = x - (n - k);
+    return n - 1 - i;
+  }
 
   /**
    * Basic [a,b) interval; left inclusive/right exclusive.

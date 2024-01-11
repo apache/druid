@@ -569,7 +569,6 @@ public class FramedOnHeapAggregatableTest extends SemanticTestBase
     simpleWindowingTest(frame, c1Vals, c2Vals, resVals);
   }
 
-
   private void simpleWindowingTest(WindowFrame frame, int[] c1Vals, int[] c2Vals, int[] resVals)
   {
     Map<String, Column> map = new LinkedHashMap<>();
