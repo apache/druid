@@ -28,7 +28,7 @@ expectedOperators:
         - { "type": "last", "inputColumn": "a0", "outputColumn": "w2" }
         - { "type": "percentile", "outputColumn": "w3", "numBuckets": 3 }
         - type: "framedAgg"
-          frame: { type: "rows" }
+          frame: { type: "unbounded" }
           aggregations:
             - { "type": "longSum", "name": "w0", "fieldName": "a0" }
   - type: "window"

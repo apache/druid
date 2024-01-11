@@ -19,7 +19,7 @@ expectedOperators:
   - type: "window"
     processor:
       type: "framedAgg"
-      frame: { type: rows }
+      frame: { type: unbounded }
       aggregations:
         - { type: "longMin", name: "w0", fieldName: "l2" }
   - type: "naiveSort"

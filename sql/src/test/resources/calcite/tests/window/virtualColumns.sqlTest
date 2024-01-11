@@ -19,7 +19,7 @@ expectedOperators:
   - type: "window"
     processor:
       type: "framedAgg"
-      frame: { type: "rows" }
+      frame: { type: "unbounded" }
       aggregations:
         - { type: "doubleMin", name: "w0", fieldName: "_v0" }
         - { type: "longMin", name: "w1", fieldName: "v1" }

@@ -28,6 +28,8 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.query.operator.window.WindowFrame;
+import org.apache.druid.query.operator.window.WindowFrame.Groups;
+import org.apache.druid.query.operator.window.WindowFrame.Unbounded;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.ConstantObjectColumn;
 import org.apache.druid.query.rowsandcols.column.ObjectArrayColumn;
@@ -57,15 +59,17 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
   @Nonnull
   @Override
   public RowsAndColumns aggregateAll(
-      WindowFrame frame,
+      WindowFrame frame0,
       AggregatorFactory[] aggFactories
   )
   {
-    if (frame.isLowerUnbounded() && frame.isUpperUnbounded()) {
+    if (frame0.getAdapter(Unbounded.class) != null) {
       return computeUnboundedAggregates(aggFactories);
     }
 
-    if (frame.getPeerType() == WindowFrame.PeerType.ROWS) {
+    WindowFrame.Rows rowsFrame = frame0.getAdapter(WindowFrame.Rows.class);
+    if (rowsFrame != null) {
+      WindowFrame.Rows frame=rowsFrame;
       if (frame.isLowerUnbounded()) {
         return computeCumulativeAggregates(aggFactories, frame.getUpperOffset());
       } else if (frame.isUpperUnbounded()) {
@@ -87,7 +91,8 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
         }
       }
     } else {
-      return computeGroupAggregates(aggFactories, frame);
+      Groups groupFrame = frame0.getAdapter(WindowFrame.Groups.class);
+      return computeGroupAggregates(aggFactories, groupFrame);
     }
   }
 
@@ -126,7 +131,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
 
   private RowsAndColumns computeGroupAggregates(
       AggregatorFactory[] aggFactories,
-      WindowFrame frame)
+      WindowFrame.Groups frame)
   {
     Iterable<AggInterval> groupIterator = buildGroupIteratorFor(rac, frame);
     ResultPopulator resultRac = new ResultPopulator(aggFactories, rac.numRows());

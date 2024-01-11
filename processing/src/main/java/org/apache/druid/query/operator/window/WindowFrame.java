@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.druid.query.operator.ColumnWithDirection;
 import java.util.Collections;
@@ -32,14 +33,15 @@ import java.util.stream.Collectors;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "unbounded", value = WindowFrame.Unbounded.class),
     @JsonSubTypes.Type(name = "rows", value = WindowFrame.Rows.class),
     @JsonSubTypes.Type(name = "group", value = WindowFrame.Groups.class),
 })
-public class WindowFrame
+public class WindowFrame implements Adaptable
 {
   public static WindowFrame unbounded()
   {
-    return rows(null, null);
+    return new Unbounded();
   }
 
   public static Rows rows(Integer lowerOffset, Integer upperOffset)
@@ -60,7 +62,7 @@ public class WindowFrame
   @SuppressWarnings("unused")
   public enum PeerType
   {
-    ROWS, RANGE
+    ROWS, RANGE1
   }
 
   // Will likely need to add the order by columns to also be able to deal with
@@ -199,9 +201,8 @@ public class WindowFrame
     return upperOffset;
   }
 
-  static class Rows extends WindowFrame
+  public static class Rows extends WindowFrame
   {
-
     @JsonProperty
     public Integer lowerOffset;
     @JsonProperty
@@ -221,14 +222,23 @@ public class WindowFrame
     }
   }
 
-  static class Groups extends WindowFrame
+  public static class Unbounded extends WindowFrame
+  {
+    @JsonCreator
+    public Unbounded()
+    {
+      super(null, false, 0, false, 0, null);
+    }
+  }
+
+  public static class Groups extends WindowFrame
   {
     @JsonProperty
     private final Integer lowerOffset;
     @JsonProperty
     private final Integer upperOffset;
     @JsonProperty
-    private final List<ColumnWithDirection> orderBy;
+    private final ImmutableList<ColumnWithDirection> orderBy;
 
     @JsonCreator
     public Groups(
@@ -237,13 +247,22 @@ public class WindowFrame
         @JsonProperty("orderBy") List<ColumnWithDirection> orderBy)
     {
       super(
-          PeerType.RANGE, lowerOffset == null, coalesce(lowerOffset, 0), upperOffset == null,
+          null, lowerOffset == null, coalesce(lowerOffset, 0), upperOffset == null,
           coalesce(upperOffset, 0), orderBy
       );
       this.lowerOffset = lowerOffset;
       this.upperOffset = upperOffset;
-      this.orderBy = orderBy;
+      this.orderBy = ImmutableList.copyOf(orderBy);
     }
   }
 
+  @SuppressWarnings("unchecked")
+  @Override
+  public <T> T getAdapter(Class<T> clazz)
+  {
+    if (clazz == getClass()) {
+      return (T) this;
+    }
+    return null;
+  }
 }
