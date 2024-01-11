@@ -463,7 +463,9 @@ public class GroupingEngine
       throw new IAE("Should only have one interval, got[%s]", intervals);
     }
 
-    try (final ResourceHolder<ByteBuffer> bufferHolder = bufferPool.take()) {
+    final ResourceHolder<ByteBuffer> bufferHolder = bufferPool.take();
+
+    try {
       final String fudgeTimestampString = NullHandling.emptyToNullIfNeeded(
           query.context().getString(GroupingEngine.CTX_KEY_FUDGE_TIMESTAMP)
       );
@@ -508,6 +510,10 @@ public class GroupingEngine
       }
 
       return result.withBaggage(bufferHolder);
+    }
+    catch (Throwable e) {
+      bufferHolder.close();
+      throw e;
     }
   }
 
