@@ -28,30 +28,30 @@ package org.apache.druid.query.filter;
 @SuppressWarnings("unused")
 public interface DruidFloatPredicate
 {
-  DruidFloatPredicate ALWAYS_FALSE = input -> false;
+  DruidFloatPredicate ALWAYS_FALSE_WITH_NULL_UNKNOWN = input -> DruidPredicateMatch.FALSE;
 
-  DruidFloatPredicate ALWAYS_TRUE = input -> true;
+  DruidFloatPredicate ALWAYS_TRUE = input -> DruidPredicateMatch.TRUE;
 
   DruidFloatPredicate MATCH_NULL_ONLY = new DruidFloatPredicate()
   {
     @Override
-    public boolean applyFloat(float input)
+    public DruidPredicateMatch applyFloat(float input)
     {
-      return false;
+      return DruidPredicateMatch.FALSE;
     }
 
     @Override
-    public boolean applyNull()
+    public DruidPredicateMatch applyNull()
     {
-      return true;
+      return DruidPredicateMatch.TRUE;
     }
   };
 
 
-  boolean applyFloat(float input);
+  DruidPredicateMatch applyFloat(float input);
 
-  default boolean applyNull()
+  default DruidPredicateMatch applyNull()
   {
-    return false;
+    return DruidPredicateMatch.UNKNOWN;
   }
 }

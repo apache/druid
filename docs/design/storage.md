@@ -37,7 +37,7 @@ A datasource may have anywhere from just a few segments, up to hundreds of thous
     - Bitmap compression for bitmap indexes
     - Type-aware compression for all columns
 
-Periodically, segments are committed and published to [deep storage](#deep-storage), become immutable, and move from MiddleManagers to the Historical services. An entry about the segment is also written to the [metadata store](#metadata-storage). This entry is a self-describing bit of metadata about the segment, including things like the schema of the segment, its size, and its location on deep storage. These entries tell the Coordinator what data is available on the cluster.
+Periodically, segments are committed and published to [deep storage](deep-storage.md), become immutable, and move from MiddleManagers to the Historical services. An entry about the segment is also written to the [metadata store](metadata-storage.md). This entry is a self-describing bit of metadata about the segment, including things like the schema of the segment, its size, and its location on deep storage. These entries tell the Coordinator what data is available on the cluster.
 
 For details on the segment file format, see [segment files](segments.md).
 
@@ -94,7 +94,7 @@ The switch appears to happen instantaneously to a user, because Druid handles th
 
 Each segment has a lifecycle that involves the following three major areas:
 
-1. **Metadata store:** Segment metadata (a small JSON payload generally no more than a few KB) is stored in the [metadata store](../design/metadata-storage.md) once a segment is done being constructed. The act of inserting a record for a segment into the metadata store is called publishing. These metadata records have a boolean flag named `used`, which controls whether the segment is intended to be queryable or not. Segments created by realtime tasks will be
+1. **Metadata store:** Segment metadata (a small JSON payload generally no more than a few KB) is stored in the [metadata store](metadata-storage.md) once a segment is done being constructed. The act of inserting a record for a segment into the metadata store is called publishing. These metadata records have a boolean flag named `used`, which controls whether the segment is intended to be queryable or not. Segments created by realtime tasks will be
 available before they are published, since they are only published when the segment is complete and will not accept any additional rows of data.
 2. **Deep storage:** Segment data files are pushed to deep storage once a segment is done being constructed. This happens immediately before publishing metadata to the metadata store.
 3. **Availability for querying:** Segments are available for querying on some Druid data server, like a realtime task, directly from deep storage, or a Historical service.
@@ -114,7 +114,7 @@ Druid has an architectural separation between ingestion and querying, as describ
 
 On the ingestion side, Druid's primary [ingestion methods](../ingestion/index.md#ingestion-methods) are all pull-based and offer transactional guarantees. This means that you are guaranteed that ingestion using these methods will publish in an all-or-nothing manner:
 
-- Supervised "seekable-stream" ingestion methods like [Kafka](../development/extensions-core/kafka-ingestion.md) and [Kinesis](../development/extensions-core/kinesis-ingestion.md). With these methods, Druid commits stream offsets to its [metadata store](#metadata-storage) alongside segment metadata, in the same transaction. Note that ingestion of data that has not yet been published can be rolled back if ingestion tasks fail. In this case, partially-ingested data is
+- Supervised "seekable-stream" ingestion methods like [Kafka](../development/extensions-core/kafka-ingestion.md) and [Kinesis](../development/extensions-core/kinesis-ingestion.md). With these methods, Druid commits stream offsets to its [metadata store](metadata-storage.md) alongside segment metadata, in the same transaction. Note that ingestion of data that has not yet been published can be rolled back if ingestion tasks fail. In this case, partially-ingested data is
 discarded, and Druid will resume ingestion from the last committed set of stream offsets. This ensures exactly-once publishing behavior.
 - [Hadoop-based batch ingestion](../ingestion/hadoop.md). Each task publishes all segment metadata in a single transaction.
 - [Native batch ingestion](../ingestion/native-batch.md). In parallel mode, the supervisor task publishes all segment metadata in a single transaction after the subtasks are finished. In simple (single-task) mode, the single task publishes all segment metadata in a single transaction after it is complete.

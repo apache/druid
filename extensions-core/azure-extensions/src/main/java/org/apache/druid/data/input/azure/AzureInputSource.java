@@ -19,14 +19,14 @@
 
 package org.apache.druid.data.input.azure;
 
+import com.azure.storage.blob.models.BlobStorageException;
+import com.azure.storage.blob.specialized.BlockBlobClient;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
-import com.microsoft.azure.storage.StorageException;
-import com.microsoft.azure.storage.blob.CloudBlob;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.CloudObjectInputSource;
@@ -42,7 +42,6 @@ import org.apache.druid.storage.azure.AzureStorage;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -150,7 +149,7 @@ public class AzureInputSource extends CloudObjectInputSource
                     blob.getBlobLength()
                 );
               }
-              catch (URISyntaxException | StorageException e) {
+              catch (BlobStorageException e) {
                 throw new RuntimeException(e);
               }
             }
@@ -161,14 +160,14 @@ public class AzureInputSource extends CloudObjectInputSource
       public long getObjectSize(CloudObjectLocation location)
       {
         try {
-          final CloudBlob blobWithAttributes = storage.getBlockBlobReferenceWithAttributes(
+          final BlockBlobClient blobWithAttributes = storage.getBlockBlobReferenceWithAttributes(
               location.getBucket(),
               location.getPath()
           );
 
-          return blobWithAttributes.getProperties().getLength();
+          return blobWithAttributes.getProperties().getBlobSize();
         }
-        catch (URISyntaxException | StorageException e) {
+        catch (BlobStorageException e) {
           throw new RuntimeException(e);
         }
       }

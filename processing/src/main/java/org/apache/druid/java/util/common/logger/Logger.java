@@ -220,11 +220,6 @@ public class Logger
     logException(log::error, t, StringUtils.nonStrictFormat(message, formatArgs));
   }
 
-  public void assertionError(String message, Object... formatArgs)
-  {
-    log.error("ASSERTION_ERROR: " + message, formatArgs);
-  }
-
   public void debugSegments(@Nullable final Collection<DataSegment> segments, @Nullable String preamble)
   {
     if (log.isDebugEnabled()) {

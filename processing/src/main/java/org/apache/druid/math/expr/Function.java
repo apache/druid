@@ -22,6 +22,7 @@ package org.apache.druid.math.expr;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
@@ -1436,11 +1437,12 @@ public interface Function extends NamedFunction
     private static final BigDecimal MAX_FINITE_VALUE = BigDecimal.valueOf(Double.MAX_VALUE);
     private static final BigDecimal MIN_FINITE_VALUE = BigDecimal.valueOf(-1 * Double.MAX_VALUE);
     //CHECKSTYLE.ON: Regexp
+    public static final String NAME = "round";
 
     @Override
     public String name()
     {
-      return "round";
+      return NAME;
     }
 
     @Override
@@ -2184,7 +2186,10 @@ public interface Function extends NamedFunction
     }
   }
 
-  class NvlFunc implements Function
+  /**
+   * nvl is like coalesce, but accepts exactly two arguments.
+   */
+  class NvlFunc extends CoalesceFunc
   {
     @Override
     public String name()
@@ -2193,35 +2198,9 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
-    {
-      final ExprEval eval = args.get(0).eval(bindings);
-      return eval.value() == null ? args.get(1).eval(bindings) : eval;
-    }
-
-    @Override
     public void validateArguments(List<Expr> args)
     {
       validationHelperCheckArgumentCount(args, 2);
-    }
-
-    @Nullable
-    @Override
-    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
-    {
-      return ExpressionTypeConversion.conditional(inspector, args);
-    }
-
-    @Override
-    public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
-    {
-      return inspector.canVectorize(args);
-    }
-
-    @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
-    {
-      return VectorProcessors.nvl(inspector, args.get(0), args.get(1));
     }
   }
 
@@ -2535,6 +2514,54 @@ public interface Function extends NamedFunction
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
       return VectorProcessors.isNotNull(inspector, args.get(0));
+    }
+  }
+
+  class CoalesceFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "coalesce";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      for (int i = 0; i < args.size(); i++) {
+        final Expr arg = args.get(i);
+        final ExprEval<?> eval = arg.eval(bindings);
+        if (i == args.size() - 1 || eval.value() != null) {
+          return eval;
+        }
+      }
+
+      throw DruidException.defensive("Not reached, argument count must be at least 1");
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      validationHelperCheckMinArgumentCount(args, 1);
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionTypeConversion.conditional(inspector, args);
+    }
+
+    @Override
+    public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return args.size() == 2 && inspector.canVectorize(args);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorProcessors.nvl(inspector, args.get(0), args.get(1));
     }
   }
 

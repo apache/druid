@@ -51,12 +51,6 @@ public class AllFalseBitmapColumnIndex implements BitmapColumnIndex
   }
 
   @Override
-  public double estimateSelectivity(int totalRows)
-  {
-    return 0;
-  }
-
-  @Override
   public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
   {
     if (includeUnknown && unknownBitmap != null) {

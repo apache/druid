@@ -19,6 +19,8 @@
 
 package org.apache.druid.query.rowsandcols.semantic;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -26,7 +28,6 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.query.operator.window.WindowFrame;
-import org.apache.druid.query.operator.window.WindowFrame.PeerType;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.ConstantObjectColumn;
 import org.apache.druid.query.rowsandcols.column.ObjectArrayColumn;
@@ -48,9 +49,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
 {
   private final AppendableRowsAndColumns rac;
 
-  public DefaultFramedOnHeapAggregatable(
-      AppendableRowsAndColumns rac
-  )
+  public DefaultFramedOnHeapAggregatable(AppendableRowsAndColumns rac)
   {
     this.rac = rac;
   }
@@ -65,7 +64,6 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     if (frame.isLowerUnbounded() && frame.isUpperUnbounded()) {
       return computeUnboundedAggregates(aggFactories);
     }
-
 
     if (frame.getPeerType() == WindowFrame.PeerType.ROWS) {
       if (frame.isLowerUnbounded()) {
@@ -89,107 +87,157 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
         }
       }
     } else {
-      return computeRangeAggregates(aggFactories, frame);
+      return computeGroupAggregates(aggFactories, frame);
     }
   }
 
-  private RowsAndColumns computeRangeAggregates(
+  /**
+   * Handles population/creation of new RAC columns.
+   */
+  static class ResultPopulator
+  {
+
+    private final Object[][] results;
+    private final AggregatorFactory[] aggFactories;
+
+    public ResultPopulator(AggregatorFactory[] aggFactories, int numRows)
+    {
+      this.aggFactories = aggFactories;
+      results = new Object[aggFactories.length][numRows];
+    }
+
+    public void write(Interval outputRows, AggIntervalCursor aggCursor)
+    {
+      for (int col = 0; col < aggFactories.length; col++) {
+        Arrays.fill(results[col], outputRows.a, outputRows.b, aggCursor.getValue(col));
+      }
+    }
+
+    public void appendTo(AppendableRowsAndColumns rac)
+    {
+      for (int i = 0; i < aggFactories.length; ++i) {
+        rac.addColumn(
+            aggFactories[i].getName(),
+            new ObjectArrayColumn(results[i], aggFactories[i].getIntermediateType())
+        );
+      }
+    }
+  }
+
+  private RowsAndColumns computeGroupAggregates(
       AggregatorFactory[] aggFactories,
       WindowFrame frame)
   {
-    RangeIteratorForWindow iter = new RangeIteratorForWindow(rac, frame);
-
-    int numRows = rac.numRows();
-    Object[][] results = new Object[aggFactories.length][numRows];
-
-    AggIntervalCursor cell = new AggIntervalCursor(rac, aggFactories);
-
-    for (AggRange xRange : iter) {
-
-      cell.moveTo(xRange.inputRows);
-      // TODO: if(xRange.outputRows.a ==0 && xRange.outputRows.b == numRows) { return Const };
-
-      // note: would be better with results.setX()?
-      cell.setOutputs(results, xRange.outputRows);
+    Iterable<AggInterval> groupIterator = buildGroupIteratorFor(rac, frame);
+    ResultPopulator resultRac = new ResultPopulator(aggFactories, rac.numRows());
+    AggIntervalCursor aggCursor = new AggIntervalCursor(rac, aggFactories);
+    for (AggInterval aggInterval : groupIterator) {
+      aggCursor.moveTo(aggInterval.inputRows);
+      resultRac.write(aggInterval.outputRows, aggCursor);
     }
-    return makeReturnRAC(aggFactories, results);
+    resultRac.appendTo(rac);
+    return rac;
   }
 
-  static class RangeIteratorForWindow implements Iterable<AggRange>
+  public static Iterable<AggInterval> buildGroupIteratorFor(AppendableRowsAndColumns rac, WindowFrame frame)
   {
-    private final int[] rangeToRowId;
+    int[] groupBoundaries = ClusteredGroupPartitioner.fromRAC(rac).computeBoundaries(frame.getOrderByColNames());
+    return new GroupIteratorForWindowFrame(rac, frame, groupBoundaries);
+  }
+
+  static class GroupIteratorForWindowFrame implements Iterable<AggInterval>
+  {
+    private final int[] groupBoundaries;
     private final int numRows;
-    private final int numRanges;
+    private final int numGroups;
+    // lower inclusive
     private final int lowerOffset;
+    // upper exclusive
     private final int upperOffset;
 
-    public RangeIteratorForWindow(RowsAndColumns rac, WindowFrame frame)
+    public GroupIteratorForWindowFrame(RowsAndColumns rac, WindowFrame frame, int[] groupBoundaries)
     {
-      assert (frame.getPeerType() == PeerType.RANGE);
-      rangeToRowId = ClusteredGroupPartitioner.fromRAC(rac).computeBoundaries(frame.getOrderByColNames());
+      this.groupBoundaries = groupBoundaries;
       numRows = rac.numRows();
-      numRanges = rangeToRowId.length - 1;
-      lowerOffset = frame.getLowerOffsetClamped(numRanges);
-      upperOffset = frame.getUpperOffsetClamped(numRanges) + 1;
+      numGroups = groupBoundaries.length - 1;
+      lowerOffset = frame.getLowerOffsetClamped(numGroups);
+      upperOffset = Math.min(numGroups, frame.getUpperOffsetClamped(numGroups) + 1);
     }
 
     @Override
-    public Iterator<AggRange> iterator()
+    public Iterator<AggInterval> iterator()
     {
-      return new Iterator<AggRange>()
+      return new Iterator<AggInterval>()
       {
-        int currentRowIndex = 0;
-        int currentRangeIndex = 0;
+        int currentGroupIndex = 0;
 
         @Override
         public boolean hasNext()
         {
-          return currentRowIndex < numRows;
+          return currentGroupIndex < numGroups;
         }
 
         @Override
-        public AggRange next()
+        public AggInterval next()
         {
           if (!hasNext()) {
             throw new IllegalStateException();
           }
-          // TODO: invert listing order at the end to get benefits of incremenental aggregations
-          AggRange r = new AggRange(
+          AggInterval r = new AggInterval(
               Interval.of(
-                  rangeToRowIndex(relativeRangeId(0)),
-                  rangeToRowIndex(relativeRangeId(1))
+                  groupToRowIndex(relativeGroupId(0)),
+                  groupToRowIndex(relativeGroupId(1))
               ),
               Interval.of(
-                  rangeToRowIndex(relativeRangeId(-lowerOffset)),
-                  rangeToRowIndex(relativeRangeId(upperOffset))
+                  groupToRowIndex(relativeGroupId(-lowerOffset)),
+                  groupToRowIndex(relativeGroupId(upperOffset))
               )
           );
 
-          currentRowIndex = rangeToRowIndex(currentRangeIndex + 1);
-          currentRangeIndex++;
+          currentGroupIndex++;
           return r;
         }
 
-        private int rangeToRowIndex(int rangeId)
+        private int groupToRowIndex(int groupId)
         {
-          return rangeToRowId[rangeId];
+          return groupBoundaries[groupId];
         }
 
-        private int relativeRangeId(int rangeOffset)
+        private int relativeGroupId(int groupOffset)
         {
-          int rangeId = currentRangeIndex + rangeOffset;
-          if (rangeId < 0) {
+          // invert iteration order at the end to get benefits of incremenental aggregations
+          // for example if we have [0 BEFORE 1 AFTER]: for say 3 groups the order will be 0,2,1 instead of 0,1,2
+          final int groupIndex = invertedOrderForLastK(currentGroupIndex, numGroups, upperOffset);
+
+          int groupId = groupIndex + groupOffset;
+          if (groupId < 0) {
             return 0;
           }
-          if (rangeId >= numRanges) {
-            return numRanges;
+          if (groupId >= numGroups) {
+            return numGroups;
           }
-          return rangeId;
+          return groupId;
         }
       };
     }
   }
 
+  /**
+   * Inverts order for the last K elements.
+   *
+   * For n=3, k=2 - it changes the iteration to 0,2,1
+   */
+  @VisibleForTesting
+  public static int invertedOrderForLastK(int x, int n, int k)
+  {
+    Preconditions.checkState(k <= n);
+    if (k <= 1 || x + k < n) {
+      // we are in the non-interesting part
+      return x;
+    }
+    int i = x - (n - k);
+    return n - 1 - i;
+  }
 
   /**
    * Basic [a,b) interval; left inclusive/right exclusive.
@@ -242,50 +290,70 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
   }
 
   /**
-   * Represents an aggregation range.
+   * Represents an aggregation interval.
    *
    * Describes that the aggregation of {@link #inputRows} should be outputted to
    * all {@link #outputRows} specified.
    */
-  static class AggRange
+  static class AggInterval
   {
     final Interval outputRows;
     final Interval inputRows;
 
-    public AggRange(Interval outputRows, Interval inputRows)
+    public AggInterval(Interval outputRows, Interval inputRows)
     {
       this.outputRows = outputRows;
       this.inputRows = inputRows;
     }
   }
 
+  public static Object cloneAggValue(AggregatorFactory aggFactory, Object value)
+  {
+    if (value == null || value instanceof Number) {
+      // no need for the hussle
+      return value;
+    }
+    Object[] currentValue = new Object[1];
+    currentValue[0] = value;
+    final CumulativeColumnSelectorFactory combiningFactory = new CumulativeColumnSelectorFactory(
+        aggFactory,
+        currentValue,
+        0
+    );
+    Aggregator combiningAgg = aggFactory.getCombiningFactory().factorize(combiningFactory);
+
+    combiningAgg.aggregate();
+    return combiningAgg.get();
+  }
+
   /**
    * Handles computations of aggregates for an {@link Interval}.
+   *
+   * Provides aggregates computed for a given {@link Interval}.
+   * It could try to leverage earlier calculations internally if possible.
    */
   static class AggIntervalCursor
   {
     private AggregatorFactory[] aggFactories;
-    Interval currentRows = new Interval(0, 0);
     private final AtomicInteger rowIdProvider;
     private final ColumnSelectorFactory columnSelectorFactory;
+
+    /** Current interval the aggregators contain value for */
+    private Interval currentRows = new Interval(0, 0);
     private final Aggregator[] aggregators;
 
     AggIntervalCursor(AppendableRowsAndColumns rac, AggregatorFactory[] aggFactories)
     {
       this.aggFactories = aggFactories;
       aggregators = new Aggregator[aggFactories.length];
-
       rowIdProvider = new AtomicInteger(0);
       columnSelectorFactory = ColumnSelectorFactoryMaker.fromRAC(rac).make(rowIdProvider);
-
       newAggregators();
     }
 
-    private void newAggregators()
+    public Object getValue(int aggIdx)
     {
-      for (int i = 0; i < aggFactories.length; i++) {
-        aggregators[i] = aggFactories[i].factorize(columnSelectorFactory);
-      }
+      return cloneAggValue(aggFactories[aggIdx], aggregators[aggIdx].get());
     }
 
     /**
@@ -307,13 +375,10 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
       currentRows = newRows;
     }
 
-    public void setOutputs(Object[][] results, Interval outputRows)
+    private void newAggregators()
     {
-      for (int aggIdx = 0; aggIdx < aggFactories.length; aggIdx++) {
-        Object aggValue = aggregators[aggIdx].get();
-        for (int rowIdx = outputRows.a; rowIdx < outputRows.b; rowIdx++) {
-          results[aggIdx][rowIdx] = aggValue;
-        }
+      for (int i = 0; i < aggFactories.length; i++) {
+        aggregators[i] = aggFactories[i].factorize(columnSelectorFactory);
       }
     }
 
@@ -325,6 +390,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
       }
     }
   }
+
   private AppendableRowsAndColumns computeUnboundedAggregates(AggregatorFactory[] aggFactories)
   {
     Aggregator[] aggs = new Aggregator[aggFactories.length];

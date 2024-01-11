@@ -121,10 +121,10 @@ public class DoubleVectorValueMatcher implements VectorValueMatcherFactory
         for (int i = 0; i < mask.getSelectionSize(); i++) {
           final int rowNum = mask.getSelection()[i];
           if (hasNulls && nulls[rowNum]) {
-            if ((includeUnknown && predicateFactory.isNullInputUnknown()) || predicate.applyNull()) {
+            if (predicate.applyNull().matches(includeUnknown)) {
               selection[numRows++] = rowNum;
             }
-          } else if (predicate.applyDouble(vector[rowNum])) {
+          } else if (predicate.applyDouble(vector[rowNum]).matches(includeUnknown)) {
             selection[numRows++] = rowNum;
           }
         }

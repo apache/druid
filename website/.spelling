@@ -131,6 +131,7 @@ InputFormat
 InputSource
 InputSources
 Integer.MAX_VALUE
+IntelliJ
 ioConfig
 Istio
 JBOD
@@ -373,6 +374,7 @@ kubernetes
 kubexit
 k8s
 laning
+lastSegmentId
 lifecycle
 localhost
 log4j
@@ -501,6 +503,7 @@ Smoosh
 smoosh
 smooshed
 snapshotting
+sortOrder
 splittable
 ssl
 sslmode
@@ -2219,6 +2222,8 @@ CHARACTER_LENGTH
 CURRENT_DATE
 CURRENT_TIMESTAMP
 DATE_TRUNC
+DECODE_BASE64_COMPLEX
+DECODE_BASE64_UTF8
 DS_CDF
 DS_GET_QUANTILE
 DS_GET_QUANTILES
@@ -2361,6 +2366,8 @@ isLeader
 taskslots
 loadstatus
 sqlQueryId
+useAzureCredentialsChain
+DefaultAzureCredential
 LAST_VALUE
 markUnused
 markUsed
