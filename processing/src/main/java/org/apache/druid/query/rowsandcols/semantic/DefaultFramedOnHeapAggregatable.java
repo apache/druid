@@ -148,7 +148,6 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
   static class GroupIteratorForWindowFrame implements Iterable<AggInterval>
   {
     private final int[] groupBoundaries;
-    private final int numRows;
     private final int numGroups;
     // lower inclusive
     private final int lowerOffset;
@@ -158,7 +157,6 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     public GroupIteratorForWindowFrame(RowsAndColumns rac, WindowFrame frame, int[] groupBoundaries)
     {
       this.groupBoundaries = groupBoundaries;
-      numRows = rac.numRows();
       numGroups = groupBoundaries.length - 1;
       lowerOffset = frame.getLowerOffsetClamped(numGroups);
       upperOffset = Math.min(numGroups, frame.getUpperOffsetClamped(numGroups) + 1);
