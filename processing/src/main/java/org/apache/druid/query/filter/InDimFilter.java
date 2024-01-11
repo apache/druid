@@ -376,7 +376,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     final DimFilterToStringBuilder builder = new DimFilterToStringBuilder();
     return builder.appendDimension(dimension, extractionFn)
                   .append(" IN (")
-                  .append(Joiner.on(", ").join(Iterables.transform(values, StringUtils::nullToEmptyNonDruidDataString)))
+                  .append(Joiner.on(", ").join(Iterables.transform(values, String::valueOf)))
                   .append(")")
                   .appendFilterTuning(filterTuning)
                   .build();

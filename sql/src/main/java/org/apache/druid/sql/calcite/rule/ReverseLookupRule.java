@@ -403,12 +403,11 @@ public class ReverseLookupRule extends RelOptRule implements SubstitutionRule
           }
         }
 
-        return new ReverseLookupKey(
-            argument,
-            lookupName,
-            replaceMissingValueWith,
-            call.getKind() == SqlKind.NOT_EQUALS
-        );
+        final boolean multiValue =
+            call.getOperator().equals(MultiValueStringOperatorConversions.CONTAINS.calciteOperator())
+            || call.getOperator().equals(MultiValueStringOperatorConversions.OVERLAP.calciteOperator());
+        final boolean negate = call.getKind() == SqlKind.NOT_EQUALS;
+        return new ReverseLookupKey(argument, lookupName, replaceMissingValueWith, multiValue, negate);
       }
 
       @Override
@@ -502,6 +501,31 @@ public class ReverseLookupRule extends RelOptRule implements SubstitutionRule
       {
         if (reversedMatchValues.isEmpty()) {
           return rexBuilder.makeLiteral(reverseLookupKey.negate);
+        } else if (reverseLookupKey.multiValue) {
+          // Use MV_CONTAINS or MV_OVERLAP.
+          RexNode condition;
+          if (reversedMatchValues.size() == 1) {
+            condition = rexBuilder.makeCall(
+                MultiValueStringOperatorConversions.CONTAINS.calciteOperator(),
+                reverseLookupKey.arg,
+                Iterables.getOnlyElement(stringsToRexNodes(reversedMatchValues, rexBuilder))
+            );
+          } else {
+            condition = rexBuilder.makeCall(
+                MultiValueStringOperatorConversions.OVERLAP.calciteOperator(),
+                reverseLookupKey.arg,
+                rexBuilder.makeCall(
+                    SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR,
+                    stringsToRexNodes(reversedMatchValues, rexBuilder)
+                )
+            );
+          }
+
+          if (reverseLookupKey.negate) {
+            condition = rexBuilder.makeCall(SqlStdOperatorTable.NOT, condition);
+          }
+
+          return condition;
         } else {
           return SearchOperatorConversion.makeIn(
               reverseLookupKey.arg,
@@ -594,18 +618,21 @@ public class ReverseLookupRule extends RelOptRule implements SubstitutionRule
     private final RexNode arg;
     private final String lookupName;
     private final String replaceMissingValueWith;
+    private final boolean multiValue;
     private final boolean negate;
 
     private ReverseLookupKey(
         final RexNode arg,
         final String lookupName,
         final String replaceMissingValueWith,
+        final boolean multiValue,
         final boolean negate
     )
     {
       this.arg = arg;
       this.lookupName = lookupName;
       this.replaceMissingValueWith = replaceMissingValueWith;
+      this.multiValue = multiValue;
       this.negate = negate;
     }
 
@@ -619,7 +646,8 @@ public class ReverseLookupRule extends RelOptRule implements SubstitutionRule
         return false;
       }
       ReverseLookupKey that = (ReverseLookupKey) o;
-      return negate == that.negate
+      return multiValue == that.multiValue
+             && negate == that.negate
              && Objects.equals(arg, that.arg)
              && Objects.equals(lookupName, that.lookupName)
              && Objects.equals(replaceMissingValueWith, that.replaceMissingValueWith);
@@ -628,7 +656,7 @@ public class ReverseLookupRule extends RelOptRule implements SubstitutionRule
     @Override
     public int hashCode()
     {
-      return Objects.hash(arg, lookupName, replaceMissingValueWith, negate);
+      return Objects.hash(arg, lookupName, replaceMissingValueWith, multiValue, negate);
     }
   }
 }

@@ -87,23 +87,90 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
     testQuery(
         buildFilterTestSql("LOOKUP(dim1, 'lookyloo') = 'xabc'"),
         QUERY_CONTEXT,
-        buildFilterTestExpectedQuery(equality("dim1", "abc", ColumnType.STRING)),
+        buildFilterTestExpectedQueryConstantDimension("'xabc'", equality("dim1", "abc", ColumnType.STRING)),
         ImmutableList.of(new Object[]{"xabc", 1L})
     );
   }
 
   @Test
-  public void testFilterFunctionEquals()
+  public void testFilterLookupOfFunction()
   {
     cannotVectorize();
 
     testQuery(
-        buildFilterTestSql("LOOKUP('key:' || dim1, 'lookyloo') = 'xabc'"),
+        buildFilterTestSql("LOOKUP(LOWER(dim1), 'lookyloo') = 'xabc'"),
         QUERY_CONTEXT,
         buildFilterTestExpectedQuery(
-            expressionVirtualColumn("v0", "concat('key:',\"dim1\")", ColumnType.STRING),
+            expressionVirtualColumn("v0", "lower(\"dim1\")", ColumnType.STRING),
             equality("v0", "abc", ColumnType.STRING)
         ),
+        ImmutableList.of(new Object[]{"xabc", 1L})
+    );
+  }
+
+  @Test
+  public void testFilterFunctionOfLookup()
+  {
+    cannotVectorize();
+
+    testQuery(
+        buildFilterTestSql("LOWER(LOOKUP(dim1, 'lookyloo')) = 'xabc'"),
+        QUERY_CONTEXT,
+        buildFilterTestExpectedQuery(
+            expressionVirtualColumn("v0", "lower(lookup(\"dim1\",'lookyloo'))", ColumnType.STRING),
+            equality("v0", "xabc", ColumnType.STRING)
+        ),
+        ImmutableList.of(new Object[]{"xabc", 1L})
+    );
+  }
+
+  @Test
+  public void testFilterLookupOfConcat()
+  {
+    cannotVectorize();
+
+    testQuery(
+        buildFilterTestSql("LOOKUP(CONCAT(dim1, 'b', dim2), 'lookyloo') = 'xabc'"),
+        QUERY_CONTEXT,
+        buildFilterTestExpectedQuery(
+            and(
+                equality("dim1", "a", ColumnType.STRING),
+                equality("dim2", "c", ColumnType.STRING)
+            )
+        ),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testFilterConcatOfLookup()
+  {
+    cannotVectorize();
+
+    testQuery(
+        buildFilterTestSql("CONCAT(LOOKUP(dim1, 'lookyloo'), ' (', dim1, ')') = 'xabc (abc)'"),
+        QUERY_CONTEXT,
+        buildFilterTestExpectedQuery(
+            expressionVirtualColumn("v0", "lookup(\"dim1\",'lookyloo')", ColumnType.STRING),
+            and(
+                equality("v0", "xabc", ColumnType.STRING),
+                equality("dim1", "abc", ColumnType.STRING)
+            )
+        ),
+        ImmutableList.of(new Object[]{"xabc", 1L})
+    );
+  }
+
+  @Test
+  public void testFilterImpossibleLookupOfConcat()
+  {
+    cannotVectorize();
+
+    // No keys in the lookup table begin with 'key:', so this is always false.
+    testQuery(
+        buildFilterTestSql("LOOKUP('key:' || dim1, 'lookyloo') = 'xabc'"),
+        QUERY_CONTEXT,
+        buildFilterTestExpectedQueryAlwaysFalse(),
         ImmutableList.of()
     );
   }
@@ -116,7 +183,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
     testQuery(
         buildFilterTestSql("LOOKUP(LOOKUP(dim1, 'lookyloo'), 'lookyloo-chain') = 'zabc'"),
         QUERY_CONTEXT,
-        buildFilterTestExpectedQuery(equality("dim1", "abc", ColumnType.STRING)),
+        buildFilterTestExpectedQueryConstantDimension("'xabc'", equality("dim1", "abc", ColumnType.STRING)),
         ImmutableList.of(new Object[]{"xabc", 1L})
     );
   }
@@ -129,7 +196,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
     testQuery(
         buildFilterTestSql("'xabc' = LOOKUP(dim1, 'lookyloo')"),
         QUERY_CONTEXT,
-        buildFilterTestExpectedQuery(equality("dim1", "abc", ColumnType.STRING)),
+        buildFilterTestExpectedQueryConstantDimension("'xabc'", equality("dim1", "abc", ColumnType.STRING)),
         ImmutableList.of(new Object[]{"xabc", 1L})
     );
   }
@@ -155,7 +222,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
     testQuery(
         buildFilterTestSql("LOOKUP(dim1, 'lookyloo') IS NOT DISTINCT FROM 'xabc'"),
         QUERY_CONTEXT,
-        buildFilterTestExpectedQuery(equality("dim1", "abc", ColumnType.STRING)),
+        buildFilterTestExpectedQueryConstantDimension("'xabc'", equality("dim1", "abc", ColumnType.STRING)),
         ImmutableList.of(new Object[]{"xabc", 1L})
     );
   }
@@ -552,7 +619,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         buildFilterTestSql("MV_CONTAINS(LOOKUP(dim1, 'lookyloo121'), NULL)"),
         QUERY_CONTEXT,
         NullHandling.sqlCompatible()
-        ? buildFilterTestExpectedQuery(isNull("dim1"))
+        ? buildFilterTestExpectedQuery(expressionFilter("array_contains(\"dim1\",null)"))
         : buildFilterTestExpectedQueryAlwaysFalse(),
         ImmutableList.of()
     );
@@ -599,7 +666,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         QUERY_CONTEXT,
         buildFilterTestExpectedQuery(
             NullHandling.sqlCompatible()
-            ? or(isNull("dim1"), equality("dim1", "abc", ColumnType.STRING))
+            ? in("dim1", Arrays.asList(null, "abc"), null)
             : equality("dim1", "abc", ColumnType.STRING)
         ),
         ImmutableList.of(new Object[]{"xabc", 1L})
@@ -779,7 +846,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         buildFilterTestSql("LOOKUP(dim1, 'lookyloo121') IS NULL"),
         QUERY_CONTEXT,
         NullHandling.sqlCompatible()
-        ? buildFilterTestExpectedQuery(isNull("dim1"))
+        ? buildFilterTestExpectedQueryConstantDimension("null", isNull("dim1"))
         : buildFilterTestExpectedQueryAlwaysFalse(),
         ImmutableList.of()
     );
@@ -1048,7 +1115,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         buildFilterTestSql("COALESCE(LOOKUP(dim1, 'lookyloo121'), 'x6') = 'x6'"),
         QUERY_CONTEXT,
         NullHandling.sqlCompatible()
-        ? buildFilterTestExpectedQuery(isNull("dim1"))
+        ? buildFilterTestExpectedQueryConstantDimension("null", isNull("dim1"))
         : buildFilterTestExpectedQueryAlwaysFalse(),
         ImmutableList.of()
     );
@@ -1183,7 +1250,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
     testQuery(
         buildFilterTestSql("COALESCE(LOOKUP(dim1, 'lookyloo'), 'xyzzy') = 'x6'"),
         QUERY_CONTEXT,
-        buildFilterTestExpectedQuery(equality("dim1", "6", ColumnType.STRING)),
+        buildFilterTestExpectedQueryConstantDimension("'x6'", equality("dim1", "6", ColumnType.STRING)),
         Collections.emptyList()
     );
   }
@@ -1209,7 +1276,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
     testQuery(
         buildFilterTestSql("COALESCE(CAST(LOOKUP(dim1, 'lookyloo') AS VARCHAR), 'xyzzy') = 'x6'"),
         QUERY_CONTEXT,
-        buildFilterTestExpectedQuery(equality("dim1", "6", ColumnType.STRING)),
+        buildFilterTestExpectedQueryConstantDimension("'x6'", equality("dim1", "6", ColumnType.STRING)),
         Collections.emptyList()
     );
   }
@@ -1839,14 +1906,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
                                        : VirtualColumns.EMPTY)
                     .setGranularity(Granularities.ALL)
                     .setDimFilter(expectedFilter)
-                    .setDimensions(
-                        new ExtractionDimensionSpec(
-                            "dim1",
-                            "d0",
-                            ColumnType.STRING,
-                            EXTRACTION_FN
-                        )
-                    )
+                    .setDimensions(new ExtractionDimensionSpec("dim1", "d0", ColumnType.STRING, EXTRACTION_FN))
                     .setAggregatorSpecs(new CountAggregatorFactory("a0"))
                     .setContext(QUERY_CONTEXT)
                     .build()
@@ -1856,6 +1916,25 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   private List<Query<?>> buildFilterTestExpectedQuery(@Nullable final DimFilter expectedFilter)
   {
     return buildFilterTestExpectedQuery(null, expectedFilter);
+  }
+
+  private List<Query<?>> buildFilterTestExpectedQueryConstantDimension(
+      final String expectedConstantDimension,
+      @Nullable final DimFilter expectedFilter
+  )
+  {
+    return ImmutableList.of(
+        GroupByQuery.builder()
+                    .setDataSource(CalciteTests.DATASOURCE1)
+                    .setInterval(querySegmentSpec(Intervals.of("2000/3000")))
+                    .setVirtualColumns(expressionVirtualColumn("v0", expectedConstantDimension, ColumnType.STRING))
+                    .setGranularity(Granularities.ALL)
+                    .setDimFilter(expectedFilter)
+                    .setDimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING))
+                    .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                    .setContext(QUERY_CONTEXT)
+                    .build()
+    );
   }
 
   private List<Query<?>> buildFilterTestExpectedQueryAlwaysFalse()
