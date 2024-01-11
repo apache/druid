@@ -20,6 +20,7 @@
 package org.apache.druid.query.rowsandcols.semantic;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -27,7 +28,6 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.query.operator.window.WindowFrame;
-import org.apache.druid.query.operator.window.WindowFrame.PeerType;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.ConstantObjectColumn;
 import org.apache.druid.query.rowsandcols.column.ObjectArrayColumn;
@@ -157,7 +157,6 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
 
     public GroupIteratorForWindowFrame(RowsAndColumns rac, WindowFrame frame, int[] groupBoundaries)
     {
-      assert (frame.getPeerType() == PeerType.RANGE);
       this.groupBoundaries = groupBoundaries;
       numRows = rac.numRows();
       numGroups = groupBoundaries.length - 1;
@@ -231,7 +230,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
   @VisibleForTesting
   public static int invertedOrderForLastK(int x, int n, int k)
   {
-    assert (k <= n);
+    Preconditions.checkState(k <= n);
     if (k <= 1 || x + k < n) {
       // we are in the non-interesting part
       return x;
