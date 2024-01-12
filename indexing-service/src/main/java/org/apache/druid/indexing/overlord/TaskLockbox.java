@@ -1328,6 +1328,15 @@ public class TaskLockbox
       } else if (filteredPosses.size() > 1) {
         if (filteredPosses.stream()
                           .anyMatch(posse -> posse.getTaskLock().getGranularity() == LockGranularity.TIME_CHUNK)) {
+          // If all the task locks are appending, if one of them encapsulates the rest,
+          // return it even if there are multiple lock posse
+          if (filteredPosses.stream()
+                            .allMatch(lockPosse -> lockPosse.getTaskLock().getType().equals(TaskLockType.APPEND))) {
+            final TaskLockPosse appendPosse = findActiveEncapsulatingPosse(filteredPosses);
+            if (appendPosse != null) {
+              return ImmutableList.of(appendPosse);
+            }
+          }
           throw new ISE(
               "There are multiple timeChunk lockPosses for task[%s] and interval[%s]?",
               task.getId(),
@@ -1358,6 +1367,36 @@ public class TaskLockbox
     finally {
       giant.unlock();
     }
+  }
+
+  /**
+   * Find the active posse which encapsulates all the intervals of the active ones among the given posses
+   * @param posses List of posses
+   * @return One of the active posses in the list whose interval contains the intervals of the rest of them.
+   *         return null if there is no such active posse.
+   */
+  private TaskLockPosse findActiveEncapsulatingPosse(final List<TaskLockPosse> posses)
+  {
+    final List<TaskLockPosse> activePosses = posses.stream()
+                                                   .filter(posse -> !posse.getTaskLock().isRevoked())
+                                                   .collect(Collectors.toList());
+    if (activePosses.isEmpty()) {
+      return null;
+    }
+    TaskLockPosse thePosse = activePosses.get(0);
+    for (int i = 1; i < activePosses.size(); i++) {
+      final Interval theInterval = thePosse.getTaskLock().getInterval();
+      final TaskLockPosse posse = activePosses.get(i);
+      final Interval interval = posse.getTaskLock().getInterval();
+      if (theInterval.contains(interval)) {
+        // do nothing
+      } else if (interval.contains(theInterval)) {
+        thePosse = posse;
+      } else {
+        return null;
+      }
+    }
+    return thePosse;
   }
 
   @VisibleForTesting
