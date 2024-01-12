@@ -983,10 +983,73 @@ public class OverlordResourceTest
         authConfig
     );
 
-    final Map<String, Integer> response = (Map<String, Integer>) overlordResource
-        .killPendingSegments("allow", new Interval(DateTimes.MIN, DateTimes.nowUtc()).toString(), req)
-        .getEntity();
-    Assert.assertEquals(2, response.get("numDeleted").intValue());
+    Response resp = overlordResource
+        .killPendingSegments("allow", new Interval(DateTimes.MIN, DateTimes.nowUtc()).toString(), req);
+
+    Assert.assertEquals(200, resp.getStatus());
+    Assert.assertEquals(ImmutableMap.of("numDeleted", 2), resp.getEntity());
+  }
+
+  @Test
+  public void testKillPendingSegmentsThrowsDruidException()
+  {
+    expectAuthorizationTokenCheck();
+
+    EasyMock.expect(taskMaster.isLeader()).andReturn(true);
+    final String exceptionMsg = "Some exception msg";
+    EasyMock
+        .expect(
+            indexerMetadataStorageAdapter.deletePendingSegments(
+                EasyMock.eq("allow"),
+                EasyMock.anyObject(Interval.class)
+            )
+        )
+        .andThrow(new IllegalArgumentException(exceptionMsg))
+        .once();
+
+    EasyMock.replay(
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter,
+        authConfig
+    );
+
+    Response resp = overlordResource
+        .killPendingSegments("allow", new Interval(DateTimes.MIN, DateTimes.nowUtc()).toString(), req);
+
+    Assert.assertEquals(400, resp.getStatus());
+    Map<String, Object> respError = (Map) resp.getEntity();
+    Assert.assertTrue(respError.containsKey("error"));
+    Assert.assertEquals(exceptionMsg, respError.get("error"));
+  }
+
+  @Test
+  public void testKillPendingSegmentsToNonLeader()
+  {
+    expectAuthorizationTokenCheck();
+
+    EasyMock.expect(taskMaster.isLeader()).andReturn(false);
+
+    EasyMock.replay(
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter,
+        authConfig
+    );
+
+    Response resp = overlordResource
+        .killPendingSegments("allow", new Interval(DateTimes.MIN, DateTimes.nowUtc()).toString(), req);
+
+    Assert.assertEquals(503, resp.getStatus());
+    Map<String, Object> respError = (Map) resp.getEntity();
+    Assert.assertTrue(respError.containsKey("error"));
+    Assert.assertEquals("overlord is not the leader or not initialized yet", respError.get("error"));
   }
 
   @Test

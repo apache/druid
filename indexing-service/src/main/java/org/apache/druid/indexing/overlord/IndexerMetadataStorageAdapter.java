@@ -21,6 +21,7 @@ package org.apache.druid.indexing.overlord;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
@@ -58,11 +59,15 @@ public class IndexerMetadataStorageAdapter
         DateTimes.MAX
     );
 
-    Preconditions.checkArgument(
-        !deleteInterval.overlaps(activeTaskInterval),
-        "Cannot delete pendingSegments because there is at least one active task created at %s",
-        activeTaskInterval.getStart()
-    );
+    if (deleteInterval.overlaps(activeTaskInterval)) {
+      throw InvalidInput.exception(
+        "Cannot delete pendingSegments for datasource[%s] as there's at least one active task with interval[%s] "
+        + "that overlaps with the delete interval[%s]. Please retry when there are no active tasks.",
+        dataSource,
+        deleteInterval,
+        activeTaskInterval
+      );
+    }
 
     return indexerMetadataStorageCoordinator.deletePendingSegmentsCreatedInInterval(dataSource, deleteInterval);
   }

@@ -20,14 +20,18 @@
 package org.apache.druid.indexing.overlord;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
 import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -39,9 +43,6 @@ import java.util.List;
 
 public class IndexerMetadataStorageAdapterTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   private TaskStorageQueryAdapter taskStorageQueryAdapter;
   private IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
   private IndexerMetadataStorageAdapter indexerMetadataStorageAdapter;
@@ -125,8 +126,17 @@ public class IndexerMetadataStorageAdapterTest
         .andReturn(10);
     EasyMock.replay(taskStorageQueryAdapter, indexerMetadataStorageCoordinator);
 
-    expectedException.expect(CoreMatchers.instanceOf(IllegalArgumentException.class));
-    expectedException.expectMessage("Cannot delete pendingSegments because there is at least one active task created");
-    indexerMetadataStorageAdapter.deletePendingSegments("dataSource", deleteInterval);
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class, () ->
+            indexerMetadataStorageAdapter.deletePendingSegments("dataSource", deleteInterval)
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageIs(
+            "Cannot delete pendingSegments for datasource[dataSource] as there's at least one active task with"
+            + " interval[2017-01-01T00:00:00.000Z/2017-12-01T00:00:00.000Z] that overlaps with the delete"
+            + " interval[2017-11-01T00:00:00.000Z/146140482-04-24T15:36:27.903Z]. Please retry when there are no"
+            + " active tasks."
+        )
+    );
   }
 }
