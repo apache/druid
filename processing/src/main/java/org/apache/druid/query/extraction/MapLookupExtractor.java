@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.lookup.ImmutableLookupMap;
 import org.apache.druid.query.lookup.LookupExtractor;
 
 import javax.annotation.Nullable;
@@ -39,6 +40,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Lookup extractor backed by any kind of map.
+ *
+ * When the map is immutable, use {@link ImmutableLookupMap} instead.
+ */
 @JsonTypeName("map")
 public class MapLookupExtractor extends LookupExtractor
 {
@@ -62,21 +68,19 @@ public class MapLookupExtractor extends LookupExtractor
   /**
    * Estimate the heap footprint of a Map.
    *
-   * Important note: the implementation accepts any kind of Map, but estimates zero footprint for keys and values of
-   * types other than String.
+   * Important note: the implementation accepts any kind of map entries, but estimates zero footprint for keys and
+   * values of types other than String.
    */
-  public static <K, V> long estimateHeapFootprint(@Nullable final Map<K, V> map)
+  public static <K, V> long estimateHeapFootprint(final Iterable<Map.Entry<K, V>> entries)
   {
-    if (map == null) {
-      return 0;
-    }
-
-    final int numEntries = map.size();
+    int numEntries = 0;
     long numChars = 0;
 
-    for (Map.Entry<K, V> sEntry : map.entrySet()) {
+    for (Map.Entry<K, V> sEntry : entries) {
       final K key = sEntry.getKey();
       final V value = sEntry.getValue();
+
+      numEntries++;
 
       if (key instanceof String) {
         numChars += ((String) key).length();
@@ -195,7 +199,7 @@ public class MapLookupExtractor extends LookupExtractor
   @Override
   public long estimateHeapFootprint()
   {
-    return estimateHeapFootprint(map);
+    return estimateHeapFootprint(map.entrySet());
   }
 
   @Override

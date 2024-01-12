@@ -22,10 +22,11 @@ package org.apache.druid.server.lookup.namespace.cache;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.extraction.MapLookupExtractor;
+import org.apache.druid.query.lookup.ImmutableLookupMap;
+import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.server.lookup.namespace.NamespaceExtractionConfig;
 
 import java.lang.ref.WeakReference;
@@ -36,14 +37,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.Supplier;
 
 /**
  *
  */
 public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCacheManager
 {
-  private static final Logger LOG = new Logger(OnHeapNamespaceExtractionCacheManager.class);
-
   /**
    * Weak collection of caches is "the second level of defence". Normally all users of {@link #createCache()} must call
    * {@link CacheHandler#close()} on the returned CacheHandler instance manually. But if they don't do this for
@@ -105,12 +105,32 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
     if (caches.contains((WeakReference<Map<String, String>>) cache.id)) {
       throw new ISE("cache [%s] is already attached", cache.id);
     }
-    // this cache is not thread-safe, make sure nothing ever writes to it
-    Map<String, String> immutable = Collections.unmodifiableMap(cache.getCache());
+    // replace HashMap with ImmutableLookupMap
+    final ImmutableLookupMap immutable = new ImmutableLookupMap.Builder(cache.getCache()).build();
     WeakReference<Map<String, String>> cacheRef = new WeakReference<>(immutable);
     expungeCollectedCaches();
     caches.add(cacheRef);
     return new CacheHandler(this, immutable, cacheRef);
+  }
+
+  @Override
+  public LookupExtractor asLookupExtractor(
+      final CacheHandler cache,
+      final boolean isOneToOne,
+      final Supplier<byte[]> cacheKeySupplier
+  )
+  {
+    if (cache.getCache() instanceof ImmutableLookupMap) {
+      return ((ImmutableLookupMap) cache.getCache()).asLookupExtractor(isOneToOne, cacheKeySupplier);
+    } else {
+      return new MapLookupExtractor(cache.getCache(), isOneToOne) {
+        @Override
+        public byte[] getCacheKey()
+        {
+          return cacheKeySupplier.get();
+        }
+      };
+    }
   }
 
   @Override
@@ -140,7 +160,7 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
 
       if (cache != null) {
         numEntries += cache.size();
-        heapSizeInBytes += MapLookupExtractor.estimateHeapFootprint(cache);
+        heapSizeInBytes += MapLookupExtractor.estimateHeapFootprint(cache.entrySet());
       }
     }
 

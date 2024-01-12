@@ -95,6 +95,13 @@ public class NamespaceLookupIntrospectHandler implements LookupIntrospectHandler
 
   private Map<String, String> getLatest()
   {
-    return ((MapLookupExtractor) factory.get()).getMap();
+    final LookupExtractor lookup = factory.get();
+    if (lookup instanceof MapLookupExtractor) {
+      return ((MapLookupExtractor) lookup).getMap();
+    } else if (lookup instanceof ImmutableLookupMap.ImmutableLookupExtractor) {
+      return ((ImmutableLookupMap.ImmutableLookupExtractor) lookup).asMap();
+    } else {
+      throw new UnsupportedOperationException("Cannot introspect");
+    }
   }
 }

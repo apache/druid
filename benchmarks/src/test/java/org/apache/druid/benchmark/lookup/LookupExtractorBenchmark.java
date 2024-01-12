@@ -20,7 +20,9 @@
 package org.apache.druid.benchmark.lookup;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterators;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -58,7 +60,7 @@ public class LookupExtractorBenchmark
   /**
    * Type of lookup to benchmark. All are members of enum {@link LookupBenchmarkUtil.LookupType}.
    */
-  @Param({"hashmap", "guava", "fastutil"})
+  @Param({"reversible"})
   private String lookupType;
 
   /**
@@ -74,6 +76,7 @@ public class LookupExtractorBenchmark
   private int keysPerValue;
 
   private LookupExtractor lookup;
+  private String oneValue;
   private Set<String> oneThousandValues;
 
   @Setup(Level.Trial)
@@ -88,10 +91,13 @@ public class LookupExtractorBenchmark
 
     Preconditions.checkArgument(lookup.keySet().size() == numKeys);
 
+    // Values to unapply for the benchmark lookupUnapplyOne.
+    oneValue = LookupBenchmarkUtil.makeKeyOrValue(0);
+
     // Set of values to unapply for the benchmark lookupUnapplyOneThousand.
     oneThousandValues = new HashSet<>();
     for (int i = 0; i < 1000; i++) {
-      oneThousandValues.add(String.valueOf(i));
+      oneThousandValues.add(LookupBenchmarkUtil.makeKeyOrValue(i));
     }
   }
 
@@ -105,17 +111,23 @@ public class LookupExtractorBenchmark
 
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
-  @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void lookupUnapplyOne(Blackhole blackhole)
+  @OutputTimeUnit(TimeUnit.MILLISECONDS)
+  public void lookupUnapplyOne()
   {
-    blackhole.consume(lookup.unapplyAll(Collections.singleton("0")));
+    final int numKeys = Iterators.size(lookup.unapplyAll(Collections.singleton(oneValue)));
+    if (numKeys != keysPerValue) {
+      throw new ISE("Expected [%s] keys, got[%s]", keysPerValue, numKeys);
+    }
   }
 
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
-  @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void lookupUnapplyOneThousand(Blackhole blackhole)
+  @OutputTimeUnit(TimeUnit.MILLISECONDS)
+  public void lookupUnapplyOneThousand()
   {
-    blackhole.consume(lookup.unapplyAll(oneThousandValues));
+    final int numKeys = Iterators.size(lookup.unapplyAll(oneThousandValues));
+    if (numKeys != keysPerValue * 1000) {
+      throw new ISE("Expected 1 key, got[%s]", keysPerValue * 1000, numKeys);
+    }
   }
 }

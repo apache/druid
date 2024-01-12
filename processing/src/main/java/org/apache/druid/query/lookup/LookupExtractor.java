@@ -137,8 +137,8 @@ public abstract class LookupExtractor
 
   /**
    * Estimated heap footprint of this object. Not guaranteed to be accurate. For example, some implementations return
-   * zero even though they do use on-heap structures. However, the most common class, {@link MapLookupExtractor},
-   * does have a reasonable implementation.
+   * zero even though they do use on-heap structures. However, the most common classes, {@link MapLookupExtractor}
+   * and {@link ImmutableLookupMap}, do have reasonable implementations.
    *
    * This API is provided for best-effort memory management and monitoring.
    */

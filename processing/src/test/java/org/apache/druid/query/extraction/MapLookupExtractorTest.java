@@ -117,8 +117,8 @@ public class MapLookupExtractorTest
   public void testEstimateHeapFootprintStatic()
   {
     Assert.assertEquals(0L, MapLookupExtractor.estimateHeapFootprint(null));
-    Assert.assertEquals(0L, MapLookupExtractor.estimateHeapFootprint(Collections.emptyMap()));
-    Assert.assertEquals(388L, MapLookupExtractor.estimateHeapFootprint(ImmutableMap.copyOf(lookupMap)));
+    Assert.assertEquals(0L, MapLookupExtractor.estimateHeapFootprint(Collections.emptyMap().entrySet()));
+    Assert.assertEquals(388L, MapLookupExtractor.estimateHeapFootprint(ImmutableMap.copyOf(lookupMap).entrySet()));
   }
 
   @Test
@@ -127,7 +127,7 @@ public class MapLookupExtractorTest
     final Map<String, String> mapWithNullKeysAndNullValues = new HashMap<>();
     mapWithNullKeysAndNullValues.put("foo", "bar");
     mapWithNullKeysAndNullValues.put("foo2", null);
-    Assert.assertEquals(180L, MapLookupExtractor.estimateHeapFootprint(mapWithNullKeysAndNullValues));
+    Assert.assertEquals(180L, MapLookupExtractor.estimateHeapFootprint(mapWithNullKeysAndNullValues.entrySet()));
   }
 
   @Test
@@ -136,7 +136,7 @@ public class MapLookupExtractorTest
     final Map<Long, Object> mapWithNonStringKeysAndValues = new HashMap<>();
     mapWithNonStringKeysAndValues.put(3L, 1);
     mapWithNonStringKeysAndValues.put(4L, 3.2);
-    Assert.assertEquals(160L, MapLookupExtractor.estimateHeapFootprint(mapWithNonStringKeysAndValues));
+    Assert.assertEquals(160L, MapLookupExtractor.estimateHeapFootprint(mapWithNonStringKeysAndValues.entrySet()));
   }
 
   @Test
