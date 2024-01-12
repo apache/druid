@@ -63,14 +63,6 @@ public class LookupJoinableTest extends InitializedNullHandlingTest
 
     final LookupExtractor extractor = ImmutableLookupMap.fromMap(lookupMap)
                                                         .asLookupExtractor(false, () -> new byte[0]);
-
-//    Mockito.doReturn(SEARCH_VALUE_VALUE).when(extractor).apply(SEARCH_KEY_VALUE);
-//    Mockito.when(extractor.unapplyAll(Collections.singleton(SEARCH_VALUE_VALUE)))
-//           .thenAnswer(invocation -> Iterators.singletonIterator(SEARCH_KEY_VALUE));
-//    Mockito.when(extractor.unapplyAll(Collections.singleton(SEARCH_VALUE_UNKNOWN)))
-//           .thenAnswer(invocation -> Collections.emptyIterator());
-//    Mockito.doReturn(true).when(extractor).supportsAsMap();
-//    Mockito.doReturn(lookupMap).when(extractor).asMap();
     target = LookupJoinable.wrap(extractor);
   }
 
