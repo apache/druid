@@ -25,6 +25,7 @@ import com.google.common.collect.Maps;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 
@@ -65,9 +66,8 @@ public final class ImmutableLookupMap extends ForwardingMap<String, String>
    */
   private static final float LOAD_FACTOR = 0.6f;
 
-  private static final Comparator<Map.Entry<String, String>> VALUE_COMPARATOR =
-      Map.Entry.comparingByValue(Comparators.naturalNullsFirst());
-
+  private static final Comparator<Pair<String, String>> VALUE_COMPARATOR =
+      Comparator.comparing(pair -> pair.rhs, Comparators.naturalNullsFirst());
   /**
    * Key to index in {@link #keys} and {@link #values}.
    */
@@ -95,16 +95,18 @@ public final class ImmutableLookupMap extends ForwardingMap<String, String>
    */
   public static ImmutableLookupMap fromMap(final Map<String, String> srcMap)
   {
-    final List<Map.Entry<String, String>> entriesList = new ArrayList<>(srcMap.size());
-    entriesList.addAll(srcMap.entrySet());
+    final List<Pair<String, String>> entriesList = new ArrayList<>(srcMap.size());
+    for (final Entry<String, String> entry : srcMap.entrySet()) {
+      entriesList.add(Pair.of(entry.getKey(), entry.getValue()));
+    }
     entriesList.sort(VALUE_COMPARATOR);
 
     final List<String> keys = new ArrayList<>(entriesList.size());
     final List<String> values = new ArrayList<>(entriesList.size());
 
-    for (final Map.Entry<String, String> entry : entriesList) {
-      keys.add(entry.getKey());
-      values.add(entry.getValue());
+    for (final Pair<String, String> entry : entriesList) {
+      keys.add(entry.lhs);
+      values.add(entry.rhs);
     }
 
     entriesList.clear(); // save memory
