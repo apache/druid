@@ -86,7 +86,7 @@ public class LookupBenchmarkUtil
         for (final Pair<String, String> keyValuePair : keyValuePairs) {
           builder.put(keyValuePair.lhs, keyValuePair.rhs);
         }
-        return builder.build();
+        return builder.build().asLookupExtractor(false, () -> new byte[0]);
       }
     };
 
