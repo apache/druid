@@ -107,7 +107,7 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
       throw new ISE("cache [%s] is already attached", cache.id);
     }
     // replace Object2ObjectOpenHashMap with ImmutableLookupMap
-    final ImmutableLookupMap immutable = new ImmutableLookupMap.Builder(cache.getCache()).build();
+    final ImmutableLookupMap immutable = ImmutableLookupMap.fromMap(cache.getCache());
     WeakReference<Map<String, String>> cacheRef = new WeakReference<>(immutable);
     expungeCollectedCaches();
     caches.add(cacheRef);

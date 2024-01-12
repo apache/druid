@@ -38,6 +38,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -128,9 +129,9 @@ public class MapLookupExtractor extends LookupExtractor
         Iterators.filter(
             map.entrySet().iterator(),
             entry -> {
-              if (entry.getKey() == null && NullHandling.sqlCompatible()) {
-                // apply always maps null to null in SQL-compatible mode.
-                return values.contains(null);
+              if (NullHandling.sqlCompatible() && entry.getKey() == null) {
+                // Null keys are omitted in SQL-compatible mode.
+                return false;
               } else {
                 return values.contains(NullHandling.emptyToNullIfNeeded(entry.getValue()));
               }
@@ -173,27 +174,15 @@ public class MapLookupExtractor extends LookupExtractor
   }
 
   @Override
-  public boolean canIterate()
+  public boolean supportsAsMap()
   {
     return true;
   }
 
   @Override
-  public boolean canGetKeySet()
+  public Map<String, String> asMap()
   {
-    return true;
-  }
-
-  @Override
-  public Iterable<Map.Entry<String, String>> iterable()
-  {
-    return map.entrySet();
-  }
-
-  @Override
-  public Set<String> keySet()
-  {
-    return Collections.unmodifiableSet(map.keySet());
+    return Collections.unmodifiableMap(map);
   }
 
   @Override
@@ -214,13 +203,12 @@ public class MapLookupExtractor extends LookupExtractor
 
     MapLookupExtractor that = (MapLookupExtractor) o;
 
-    return map.equals(that.map);
+    return isOneToOne == that.isOneToOne && map.equals(that.map);
   }
 
   @Override
   public int hashCode()
   {
-    return map.hashCode();
+    return Objects.hash(isOneToOne, map);
   }
-
 }

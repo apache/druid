@@ -81,12 +81,11 @@ public class LookupBenchmarkUtil
       @Override
       public LookupExtractor build(Iterable<Pair<String, String>> keyValuePairs)
       {
-        final ImmutableLookupMap.Builder builder =
-            new ImmutableLookupMap.Builder();
+        final Map<String, String> map = new HashMap<>();
         for (final Pair<String, String> keyValuePair : keyValuePairs) {
-          builder.put(keyValuePair.lhs, keyValuePair.rhs);
+          map.put(keyValuePair.lhs, keyValuePair.rhs);
         }
-        return builder.build().asLookupExtractor(false, () -> new byte[0]);
+        return ImmutableLookupMap.fromMap(map).asLookupExtractor(false, () -> new byte[0]);
       }
     };
 

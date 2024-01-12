@@ -79,7 +79,8 @@ public abstract class LookupExtractor
    * @param value the value to apply the reverse lookup. {@link NullHandling#emptyToNullIfNeeded(String)} will have
    *              been applied to the value.
    *
-   * @return the list of keys that maps to the provided value.
+   * @return the list of keys that maps to the provided value. In SQL-compatible null handling mode, null keys
+   * are omitted.
    */
   protected abstract List<String> unapply(@Nullable String value);
 
@@ -90,7 +91,8 @@ public abstract class LookupExtractor
    *               been applied to each value.
    *
    * @return iterator of keys that map to to the provided set of values. May contain duplicate keys. Returns null if
-   * this lookup instance does not support reverse lookups.
+   * this lookup instance does not support reverse lookups. In SQL-compatible null handling mode, null keys are
+   * omitted.
    */
   @Nullable
   public Iterator<String> unapplyAll(Set<String> values)
@@ -99,28 +101,16 @@ public abstract class LookupExtractor
   }
 
   /**
-   * Returns true if this lookup extractor's {@link #iterable()} method will return a valid iterator.
+   * Returns whether this lookup extractor's {@link #asMap()} will return a valid map.
    */
-  public abstract boolean canIterate();
+  public abstract boolean supportsAsMap();
 
   /**
-   * Returns true if this lookup extractor's {@link #keySet()} method will return a valid set.
-   */
-  public abstract boolean canGetKeySet();
-
-  /**
-   * Returns an Iterable that iterates over the keys and values in this lookup extractor.
+   * Returns a Map view of this lookup extractor. The map may change along with the underlying lookup data.
    *
-   * @throws UnsupportedOperationException if {@link #canIterate()} returns false.
+   * @throws UnsupportedOperationException if {@link #supportsAsMap()} returns false.
    */
-  public abstract Iterable<Map.Entry<String, String>> iterable();
-
-  /**
-   * Returns a Set of all keys in this lookup extractor. The returned Set will not change.
-   *
-   * @throws UnsupportedOperationException if {@link #canGetKeySet()} returns false.
-   */
-  public abstract Set<String> keySet();
+  public abstract Map<String, String> asMap();
 
   /**
    * Create a cache key for use in results caching

@@ -56,28 +56,28 @@ public class LookylooModule implements DruidModule
         MapBinder.newMapBinder(binder, String.class, LookupExtractor.class);
 
     lookupBinder.addBinding(LookupEnabledTestExprMacroTable.LOOKYLOO).toInstance(
-        new ImmutableLookupMap.Builder(
+        ImmutableLookupMap.fromMap(
             ImmutableMap.<String, String>builder()
                         .put("a", "xa")
                         .put("abc", "xabc")
                         .put("nosuchkey", "mysteryvalue")
                         .put("6", "x6")
                         .build()
-        ).build().asLookupExtractor(false, () -> new byte[0])
+        ).asLookupExtractor(false, () -> new byte[0])
     );
 
     lookupBinder.addBinding(LOOKYLOO_CHAINED).toInstance(
-        new ImmutableLookupMap.Builder(
+        ImmutableLookupMap.fromMap(
             ImmutableMap.<String, String>builder()
                         .put("xa", "za")
                         .put("xabc", "zabc")
                         .put("x6", "z6")
                         .build()
-        ).build().asLookupExtractor(false, () -> new byte[0])
+        ).asLookupExtractor(false, () -> new byte[0])
     );
 
     lookupBinder.addBinding(LOOKYLOO_INJECTIVE).toInstance(
-        new ImmutableLookupMap.Builder(
+        ImmutableLookupMap.fromMap(
             ImmutableMap.<String, String>builder()
                         .put("", "x")
                         .put("10.1", "x10.1")
@@ -86,7 +86,7 @@ public class LookylooModule implements DruidModule
                         .put("def", "xdef")
                         .put("abc", "xabc")
                         .build()
-        ).build().asLookupExtractor(true, () -> new byte[0])
+        ).asLookupExtractor(true, () -> new byte[0])
     );
 
     binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);

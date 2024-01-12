@@ -89,7 +89,7 @@ public class LookupExtractorBenchmark
         numValues
     );
 
-    Preconditions.checkArgument(lookup.keySet().size() == numKeys);
+    Preconditions.checkArgument(lookup.asMap().size() == numKeys);
 
     // Values to unapply for the benchmark lookupUnapplyOne.
     oneValue = LookupBenchmarkUtil.makeKeyOrValue(0);
@@ -127,7 +127,7 @@ public class LookupExtractorBenchmark
   {
     final int numKeys = Iterators.size(lookup.unapplyAll(oneThousandValues));
     if (numKeys != keysPerValue * 1000) {
-      throw new ISE("Expected 1 key, got[%s]", keysPerValue * 1000, numKeys);
+      throw new ISE("Expected [%s] keys, got[%s]", keysPerValue * 1000, numKeys);
     }
   }
 }

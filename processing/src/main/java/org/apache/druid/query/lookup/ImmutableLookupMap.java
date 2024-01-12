@@ -25,7 +25,6 @@ import com.google.common.collect.Maps;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 
@@ -37,9 +36,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.Supplier;
-import java.util.stream.IntStream;
 
 /**
  * Similar to {@link MapLookupExtractor}, but immutable, and also reversible without iterating the entire map.
@@ -55,7 +52,7 @@ import java.util.stream.IntStream;
  * faster for {@link ImmutableLookupExtractor#unapply(String)}. It should be used whenever the map does not need to
  * be mutated.
  */
-public class ImmutableLookupMap extends ForwardingMap<String, String>
+public final class ImmutableLookupMap extends ForwardingMap<String, String>
 {
   /**
    * Default value for {@link #keyToEntry}.
@@ -92,6 +89,36 @@ public class ImmutableLookupMap extends ForwardingMap<String, String>
     this.asMap = Collections.unmodifiableMap(Maps.transformValues(keyToEntry, values::get));
   }
 
+  /**
+   * Create an {@link ImmutableLookupMap} from a particular map. The provided map will not be stored in the
+   * returned {@link ImmutableLookupMap}.
+   */
+  public static ImmutableLookupMap fromMap(final Map<String, String> srcMap)
+  {
+    final List<Map.Entry<String, String>> entriesList = new ArrayList<>(srcMap.size());
+    entriesList.addAll(srcMap.entrySet());
+    entriesList.sort(VALUE_COMPARATOR);
+
+    final List<String> keys = new ArrayList<>(entriesList.size());
+    final List<String> values = new ArrayList<>(entriesList.size());
+
+    for (final Map.Entry<String, String> entry : entriesList) {
+      keys.add(entry.getKey());
+      values.add(entry.getValue());
+    }
+
+    entriesList.clear(); // save memory
+
+    // Populate keyToEntries map.
+    final Object2IntMap<String> keyToEntry = new Object2IntOpenHashMap<>(keys.size(), LOAD_FACTOR);
+    keyToEntry.defaultReturnValue(NOT_FOUND);
+    for (int i = 0; i < keys.size(); i++) {
+      keyToEntry.put(keys.get(i), i);
+    }
+
+    return new ImmutableLookupMap(keyToEntry, keys, values);
+  }
+
   @Override
   protected Map<String, String> delegate()
   {
@@ -103,30 +130,12 @@ public class ImmutableLookupMap extends ForwardingMap<String, String>
     return new ImmutableLookupExtractor(isOneToOne, cacheKey);
   }
 
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    return super.equals(o);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return super.hashCode();
-  }
-
   public class ImmutableLookupExtractor extends LookupExtractor
   {
     private final boolean isOneToOne;
     private final Supplier<byte[]> cacheKeySupplier;
 
-    public ImmutableLookupExtractor(final boolean isOneToOne, final Supplier<byte[]> cacheKeySupplier)
+    private ImmutableLookupExtractor(final boolean isOneToOne, final Supplier<byte[]> cacheKeySupplier)
     {
       this.isOneToOne = isOneToOne;
       this.cacheKeySupplier = Preconditions.checkNotNull(cacheKeySupplier, "cacheKeySupplier");
@@ -138,12 +147,12 @@ public class ImmutableLookupMap extends ForwardingMap<String, String>
     {
       String keyEquivalent = NullHandling.nullToEmptyIfNeeded(key);
       if (keyEquivalent == null) {
-        // keyEquivalent is null only for SQL-cmpatible null mode
+        // keyEquivalent is null only for SQL-compatible null mode
         // Otherwise, null will be replaced with empty string in nullToEmptyIfNeeded above.
         return null;
       }
 
-      final int entryId = keyToEntry.getInt(key);
+      final int entryId = keyToEntry.getInt(keyEquivalent);
       if (entryId == NOT_FOUND) {
         return null;
       } else {
@@ -153,6 +162,61 @@ public class ImmutableLookupMap extends ForwardingMap<String, String>
 
     @Override
     protected List<String> unapply(@Nullable String value)
+    {
+      final List<String> unapplied = unapplyInternal(value, !NullHandling.sqlCompatible());
+
+      if (NullHandling.replaceWithDefault() && value == null) {
+        // Also check empty string, if the value was null.
+        final List<String> emptyStringUnapplied = unapplyInternal("", true);
+        if (!emptyStringUnapplied.isEmpty()) {
+          final List<String> combined = new ArrayList<>(unapplied.size() + emptyStringUnapplied.size());
+          combined.addAll(unapplied);
+          combined.addAll(emptyStringUnapplied);
+          return combined;
+        }
+      }
+
+      return unapplied;
+    }
+
+    @Override
+    public boolean supportsAsMap()
+    {
+      return true;
+    }
+
+    @Override
+    public Map<String, String> asMap()
+    {
+      return ImmutableLookupMap.this.asMap;
+    }
+
+    @Override
+    public boolean isOneToOne()
+    {
+      return isOneToOne;
+    }
+
+    @Override
+    public long estimateHeapFootprint()
+    {
+      return MapLookupExtractor.estimateHeapFootprint(asMap().entrySet());
+    }
+
+    @Override
+    public byte[] getCacheKey()
+    {
+      return cacheKeySupplier.get();
+    }
+
+    /**
+     * Unapply a single value, without null-handling-based transformation. Just look for entries in the map that
+     * have the provided value.
+     *
+     * @param value           value to search for
+     * @param includeNullKeys whether to include null keys in the returned list
+     */
+    private List<String> unapplyInternal(@Nullable final String value, boolean includeNullKeys)
     {
       final int index = Collections.binarySearch(values, value, Comparators.naturalNullsFirst());
       if (index < 0) {
@@ -171,200 +235,25 @@ public class ImmutableLookupMap extends ForwardingMap<String, String>
         maxIndex++;
       }
 
-      if (minIndex == maxIndex) {
+      if (minIndex + 1 == maxIndex) {
         // Only found one entry for this value.
-        return Collections.singletonList(keys.get(index));
+        final String key = keys.get(index);
+        if (key == null && !includeNullKeys) {
+          return Collections.emptyList();
+        } else {
+          return Collections.singletonList(keys.get(index));
+        }
       } else {
         // Found multiple entries.
         final List<String> retVal = new ArrayList<>(maxIndex - minIndex);
         for (int i = minIndex; i < maxIndex; i++) {
-          retVal.add(keys.get(i));
+          final String key = keys.get(i);
+          if (key != null || includeNullKeys) {
+            retVal.add(key);
+          }
         }
         return retVal;
       }
-    }
-
-    @Override
-    public boolean canIterate()
-    {
-      return true;
-    }
-
-    @Override
-    public boolean canGetKeySet()
-    {
-      return true;
-    }
-
-    @Override
-    public Iterable<Map.Entry<String, String>> iterable()
-    {
-      return () -> IntStream.range(0, keys.size())
-                            .<Map.Entry<String, String>>mapToObj(i -> new Entry(keys.get(i), values.get(i)))
-                            .iterator();
-    }
-
-    @Override
-    public Set<String> keySet()
-    {
-      return keyToEntry.keySet();
-    }
-
-    @Override
-    public boolean isOneToOne()
-    {
-      return isOneToOne;
-    }
-
-    @Override
-    public long estimateHeapFootprint()
-    {
-      return MapLookupExtractor.estimateHeapFootprint(iterable());
-    }
-
-    @Override
-    public byte[] getCacheKey()
-    {
-      return cacheKeySupplier.get();
-    }
-
-    public Map<String, String> asMap()
-    {
-      return ImmutableLookupMap.this.asMap;
-    }
-  }
-
-  /**
-   * Builder. Once done populating, call {@link #build()} to get a {@link LookupExtractor}.
-   */
-  public static class Builder
-  {
-    private Map<String, String> entries;
-    private boolean built = false;
-
-    /**
-     * Create a builder.
-     */
-    public Builder()
-    {
-      this.entries = new HashMap<>();
-    }
-
-    /**
-     * Create a builder starting from a particular map. The provided map will be modified if calls are made to
-     * {@link #put(String, String)} or {@link #putAll(Map)}.
-     */
-    public Builder(final Map<String, String> map)
-    {
-      this.entries = map;
-    }
-
-    public Builder put(final String key, final String value)
-    {
-      entries.put(key, value);
-      return this;
-    }
-
-    public Builder putAll(final Map<String, String> map)
-    {
-      entries.putAll(map);
-      return this;
-    }
-
-    /**
-     * Build the extractor. The returned extractor will not share the map that was passed to the constructor
-     * {@link #Builder(Map)}, if any.
-     */
-    public ImmutableLookupMap build()
-    {
-      if (built) {
-        throw new ISE("Already built");
-      } else {
-        built = true;
-      }
-
-      final List<Map.Entry<String, String>> entriesList = new ArrayList<>(entries.size());
-      entriesList.addAll(entries.entrySet());
-      entriesList.sort(VALUE_COMPARATOR);
-
-      entries = null; // save memory
-
-      final List<String> keys = new ArrayList<>();
-      final List<String> values = new ArrayList<>();
-
-      for (final Map.Entry<String, String> entry : entriesList) {
-        keys.add(entry.getKey());
-        values.add(entry.getValue());
-      }
-
-      entriesList.clear(); // save memory
-
-      // Populate keyToEntries map.
-      final Object2IntMap<String> keyToEntry = new Object2IntOpenHashMap<>(keys.size(), LOAD_FACTOR);
-      keyToEntry.defaultReturnValue(NOT_FOUND);
-      for (int i = 0; i < keys.size(); i++) {
-        keyToEntry.put(keys.get(i), i);
-      }
-
-      return new ImmutableLookupMap(keyToEntry, keys, values);
-    }
-  }
-
-  /**
-   * Implementation of {@link Map.Entry} for {@link ImmutableLookupExtractor#iterable()}.
-   */
-  private static final class Entry implements Map.Entry<String, String>
-  {
-    private final String key;
-    private final String value;
-
-    public Entry(String key, String value)
-    {
-      this.key = key;
-      this.value = value;
-    }
-
-    @Override
-    public String getKey()
-    {
-      return key;
-    }
-
-    @Override
-    public String getValue()
-    {
-      return value;
-    }
-
-    @Override
-    public String setValue(String value)
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      Entry entry = (Entry) o;
-      return Objects.equals(key, entry.key) && Objects.equals(value, entry.value);
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return Objects.hash(key, value);
-    }
-
-    @Override
-    public String toString()
-    {
-      return key + "=" + value;
     }
   }
 }

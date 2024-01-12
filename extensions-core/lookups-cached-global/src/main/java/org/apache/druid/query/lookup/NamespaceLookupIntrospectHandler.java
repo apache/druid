@@ -22,7 +22,6 @@ package org.apache.druid.query.lookup;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.utils.ServletResourceUtils;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.server.lookup.namespace.cache.CacheScheduler;
 
 import javax.ws.rs.GET;
@@ -95,13 +94,6 @@ public class NamespaceLookupIntrospectHandler implements LookupIntrospectHandler
 
   private Map<String, String> getLatest()
   {
-    final LookupExtractor lookup = factory.get();
-    if (lookup instanceof MapLookupExtractor) {
-      return ((MapLookupExtractor) lookup).getMap();
-    } else if (lookup instanceof ImmutableLookupMap.ImmutableLookupExtractor) {
-      return ((ImmutableLookupMap.ImmutableLookupExtractor) lookup).asMap();
-    } else {
-      throw new UnsupportedOperationException("Cannot introspect");
-    }
+    return factory.get().asMap();
   }
 }
