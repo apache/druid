@@ -944,7 +944,13 @@ public class OverlordResource
         return Response.ok().entity(ImmutableMap.of("numDeleted", numDeleted)).build();
       }
       catch (DruidException e) {
-        return Response.status(Response.Status.BAD_REQUEST)
+        return Response.status(e.getStatusCode())
+                       .entity(ImmutableMap.<String, Object>of("error", e.getMessage()))
+                       .build();
+      }
+      catch (Exception e) {
+        log.warn(e, "Failed to delete pending segments for datasource[%s] and interval[%s].", dataSource, deleteInterval);
+        return Response.status(Status.INTERNAL_SERVER_ERROR)
                        .entity(ImmutableMap.<String, Object>of("error", e.getMessage()))
                        .build();
       }
