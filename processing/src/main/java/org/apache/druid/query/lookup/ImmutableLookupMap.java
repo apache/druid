@@ -239,7 +239,7 @@ public class ImmutableLookupMap extends ForwardingMap<String, String>
    */
   public static class Builder
   {
-    private final Map<String, String> entries;
+    private Map<String, String> entries;
     private boolean built = false;
 
     /**
@@ -287,7 +287,7 @@ public class ImmutableLookupMap extends ForwardingMap<String, String>
       entriesList.addAll(entries.entrySet());
       entriesList.sort(VALUE_COMPARATOR);
 
-      entries.clear(); // save memory
+      entries = null; // save memory
 
       final List<String> keys = new ArrayList<>();
       final List<String> values = new ArrayList<>();
