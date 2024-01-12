@@ -333,7 +333,7 @@ public class CalciteRulesManager
       builder.addRuleInstance(new FilterDecomposeConcatRule());
 
       // Include rule to split injective LOOKUP across a GROUP BY.
-      if (plannerContext.isSplitLookup()) {
+      if (plannerContext.isPullUpLookup()) {
         builder.addRuleInstance(new AggregatePullUpLookupRule(plannerContext));
       }
 

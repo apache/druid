@@ -96,7 +96,7 @@ public class PlannerContext
   public static final boolean DEFAULT_SQL_USE_BOUNDS_AND_SELECTORS = NullHandling.replaceWithDefault();
 
   /**
-   * Context key for {@link PlannerContext#isSplitLookup()}.
+   * Context key for {@link PlannerContext#isPullUpLookup()}.
    */
   public static final String CTX_SQL_PULL_UP_LOOKUP = "sqlPullUpLookup";
   public static final boolean DEFAULT_SQL_PULL_UP_LOOKUP = true;
@@ -120,7 +120,7 @@ public class PlannerContext
   private final String sqlQueryId;
   private final boolean stringifyArrays;
   private final boolean useBoundsAndSelectors;
-  private final boolean splitLookup;
+  private final boolean pullUpLookup;
   private final boolean reverseLookup;
   private final CopyOnWriteArrayList<String> nativeQueryIds = new CopyOnWriteArrayList<>();
   private final PlannerHook hook;
@@ -148,7 +148,7 @@ public class PlannerContext
       final DateTime localNow,
       final boolean stringifyArrays,
       final boolean useBoundsAndSelectors,
-      final boolean splitLookup,
+      final boolean pullUpLookup,
       final boolean reverseLookup,
       final SqlEngine engine,
       final Map<String, Object> queryContext,
@@ -164,7 +164,7 @@ public class PlannerContext
     this.localNow = Preconditions.checkNotNull(localNow, "localNow");
     this.stringifyArrays = stringifyArrays;
     this.useBoundsAndSelectors = useBoundsAndSelectors;
-    this.splitLookup = splitLookup;
+    this.pullUpLookup = pullUpLookup;
     this.reverseLookup = reverseLookup;
     this.hook = hook == null ? NoOpPlannerHook.INSTANCE : hook;
 
@@ -188,14 +188,14 @@ public class PlannerContext
     final DateTimeZone timeZone;
     final boolean stringifyArrays;
     final boolean useBoundsAndSelectors;
-    final boolean splitLookup;
+    final boolean pullUpLookup;
     final boolean reverseLookup;
 
     final Object stringifyParam = queryContext.get(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS);
     final Object tsParam = queryContext.get(CTX_SQL_CURRENT_TIMESTAMP);
     final Object tzParam = queryContext.get(CTX_SQL_TIME_ZONE);
     final Object useBoundsAndSelectorsParam = queryContext.get(CTX_SQL_USE_BOUNDS_AND_SELECTORS);
-    final Object splitLookupParam = queryContext.get(CTX_SQL_PULL_UP_LOOKUP);
+    final Object pullUpLookupParam = queryContext.get(CTX_SQL_PULL_UP_LOOKUP);
     final Object reverseLookupParam = queryContext.get(CTX_SQL_REVERSE_LOOKUP);
 
     if (tsParam != null) {
@@ -222,10 +222,10 @@ public class PlannerContext
       useBoundsAndSelectors = DEFAULT_SQL_USE_BOUNDS_AND_SELECTORS;
     }
 
-    if (splitLookupParam != null) {
-      splitLookup = Numbers.parseBoolean(splitLookupParam);
+    if (pullUpLookupParam != null) {
+      pullUpLookup = Numbers.parseBoolean(pullUpLookupParam);
     } else {
-      splitLookup = DEFAULT_SQL_PULL_UP_LOOKUP;
+      pullUpLookup = DEFAULT_SQL_PULL_UP_LOOKUP;
     }
 
     if (reverseLookupParam != null) {
@@ -241,7 +241,7 @@ public class PlannerContext
         utcNow.withZone(timeZone),
         stringifyArrays,
         useBoundsAndSelectors,
-        splitLookup,
+        pullUpLookup,
         reverseLookup,
         engine,
         queryContext,
@@ -378,13 +378,12 @@ public class PlannerContext
   }
 
   /**
-   * Whether we should use {@link AggregatePullUpLookupRule} to split LOOKUP functions on injective lookups when they
-   * are dimensions in aggregations, and whether we should set the "optimize" flag on
-   * {@link RegisteredLookupExtractionFn}.
+   * Whether we should use {@link AggregatePullUpLookupRule} to pull LOOKUP functions on injective lookups up above
+   * a GROUP BY.
    */
-  public boolean isSplitLookup()
+  public boolean isPullUpLookup()
   {
-    return splitLookup;
+    return pullUpLookup;
   }
 
   /**
