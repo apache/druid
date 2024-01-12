@@ -339,7 +339,9 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     while (compactibleSegmentIterator.hasNext()) {
       List<DataSegment> segments = compactibleSegmentIterator.next();
 
-      if (segments.stream().noneMatch(DataSegment::hasData)) {
+      // Do not compact an interval which comprises of a single tombstone
+      // If there are multiple tombstones in the interval, we may still want to compact them
+      if (segments.size() == 1 && segments.get(0).isTombstone()) {
         continue;
       }
 
