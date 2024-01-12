@@ -143,11 +143,12 @@ public class SqlStatementResourceHelper
    * <ol>
    *   <li>{@link DataSourceMSQDestination} a single page is returned which adds all the counters of {@link SegmentGenerationProgressCounter.Snapshot}</li>
    *   <li>{@link TaskReportMSQDestination} a single page is returned which adds all the counters of {@link ChannelCounters}</li>
-   *   <li>{@link DurableStorageMSQDestination} a page is returned for each partition, worker which has generated output rows. The pages are populated in the following order:
+   *   <li>{@link DurableStorageMSQDestination} a page is returned for each worker, partition which has generated output rows. The pages are populated in the following order:
    *   <ul>
-   *     <li>For each partition from 0 to N</li>
    *     <li>For each worker from 0 to M</li>
-   *     <li>If num rows for that partition,worker combination is 0, create a page</li>
+   *     <li>If the counters for a worker is empty, create a page with {@code numRows=0} and {@code sizeInBytes=0} </li>
+   *     <li>For each partition from 0 to N</li>
+   *     <li>If {@code numRows != 0} for a (worker, partition) combination, create a page</li>
    *     so that we maintain the record ordering.
    *   </ul>
    * </ol>
