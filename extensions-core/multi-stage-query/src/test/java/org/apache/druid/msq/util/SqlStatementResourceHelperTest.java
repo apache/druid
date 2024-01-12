@@ -23,11 +23,13 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
+import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
+import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.indexing.report.MSQStagesReport;
 import org.apache.druid.msq.indexing.report.MSQStatusReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
@@ -46,9 +48,6 @@ import java.util.TreeMap;
 
 public class SqlStatementResourceHelperTest
 {
-
-  private static final Logger log = new Logger(SqlStatementResourceHelperTest.class);
-
   @Test
   public void testDistinctPartitionsOnEachWorker()
   {
@@ -243,26 +242,160 @@ public class SqlStatementResourceHelperTest
     validatePages(pages.get(), createValidationMap(worker0, worker1, worker2, worker3));
   }
 
+  @Test
+  public void testEmptyCountersForDurableStorageDestination()
+  {
+    CounterSnapshotsTree counterSnapshots = new CounterSnapshotsTree();
+    ChannelCounters worker0 = createChannelCounters(new int[0]);
+
+    counterSnapshots.put(0, 0, new CounterSnapshots(ImmutableMap.of()));
+
+    MSQTaskReportPayload payload = new MSQTaskReportPayload(
+        new MSQStatusReport(
+          TaskState.SUCCESS,
+          null,
+          new ArrayDeque<>(),
+          null,
+          0,
+          new HashMap<>(),
+          1,
+          2,
+          null
+        ),
+        MSQStagesReport.create(
+            MSQTaskReportTest.QUERY_DEFINITION,
+            ImmutableMap.of(),
+            ImmutableMap.of(),
+            ImmutableMap.of(0, 1),
+            ImmutableMap.of(0, 1)
+        ),
+        counterSnapshots,
+        null
+    );
+
+    Optional<List<PageInformation>> pages = SqlStatementResourceHelper.populatePageList(
+        payload,
+        DurableStorageMSQDestination.instance()
+    );
+    validatePages(pages.get(), createValidationMap(worker0));
+  }
+
+  @Test
+  public void testEmptyCountersForTaskReportDestination()
+  {
+    CounterSnapshotsTree counterSnapshots = new CounterSnapshotsTree();
+    counterSnapshots.put(0, 0, new CounterSnapshots(ImmutableMap.of()));
+
+    MSQTaskReportPayload payload = new MSQTaskReportPayload(
+        new MSQStatusReport(
+            TaskState.SUCCESS,
+            null,
+            new ArrayDeque<>(),
+            null,
+            0,
+            new HashMap<>(),
+            1,
+            2,
+            null
+        ),
+        MSQStagesReport.create(
+            MSQTaskReportTest.QUERY_DEFINITION,
+            ImmutableMap.of(),
+            ImmutableMap.of(),
+            ImmutableMap.of(0, 1),
+            ImmutableMap.of(0, 1)
+        ),
+        counterSnapshots,
+        null
+    );
+
+    Optional<List<PageInformation>> pages = SqlStatementResourceHelper.populatePageList(
+        payload,
+        TaskReportMSQDestination.instance()
+    );
+    Assert.assertTrue(pages.isPresent());
+    Assert.assertEquals(1, pages.get().size());
+    Assert.assertEquals(new PageInformation(0, 0L, 0L), pages.get().get(0));
+  }
+
+  @Test
+  public void testEmptyCountersForDataSourceDestination()
+  {
+    CounterSnapshotsTree counterSnapshots = new CounterSnapshotsTree();
+    counterSnapshots.put(0, 0, new CounterSnapshots(ImmutableMap.of()));
+
+    MSQTaskReportPayload payload = new MSQTaskReportPayload(
+        new MSQStatusReport(
+            TaskState.SUCCESS,
+            null,
+            new ArrayDeque<>(),
+            null,
+            0,
+            new HashMap<>(),
+            1,
+            2,
+            null
+        ),
+        MSQStagesReport.create(
+            MSQTaskReportTest.QUERY_DEFINITION,
+            ImmutableMap.of(),
+            ImmutableMap.of(),
+            ImmutableMap.of(0, 1),
+            ImmutableMap.of(0, 1)
+        ),
+        counterSnapshots,
+        null
+    );
+
+    Optional<List<PageInformation>> pages = SqlStatementResourceHelper.populatePageList(
+        payload,
+        new DataSourceMSQDestination(
+            "test",
+            Granularities.DAY,
+            null,
+            null
+        )
+    );
+    Assert.assertTrue(pages.isPresent());
+    Assert.assertEquals(1, pages.get().size());
+    Assert.assertEquals(new PageInformation(0, 0L, null), pages.get().get(0));
+  }
 
   private void validatePages(
-      List<PageInformation> pageList,
-      Map<Integer, Map<Integer, Pair<Long, Long>>> partitionToWorkerToRowsBytes
+      List<PageInformation> actualPageList,
+      Map<Integer, Map<Integer, Pair<Long, Long>>> expectedWorkerToPartitionToRowsBytes
   )
   {
     int currentPage = 0;
-    for (Map.Entry<Integer, Map<Integer, Pair<Long, Long>>> partitionWorker : partitionToWorkerToRowsBytes.entrySet()) {
-      for (Map.Entry<Integer, Pair<Long, Long>> workerRowsBytes : partitionWorker.getValue().entrySet()) {
-        PageInformation pageInformation = pageList.get(currentPage);
-        Assert.assertEquals(currentPage, pageInformation.getId());
-        Assert.assertEquals(workerRowsBytes.getValue().lhs, pageInformation.getNumRows());
-        Assert.assertEquals(workerRowsBytes.getValue().rhs, pageInformation.getSizeInBytes());
-        Assert.assertEquals(partitionWorker.getKey(), pageInformation.getPartition());
-        Assert.assertEquals(workerRowsBytes.getKey(), pageInformation.getWorker());
-        log.debug(pageInformation.toString());
+    for (Map.Entry<Integer, Map<Integer, Pair<Long, Long>>> workerPartition : expectedWorkerToPartitionToRowsBytes.entrySet()) {
+      if (workerPartition.getValue().isEmpty()) {
+        PageInformation actualPageInfo = actualPageList.get(currentPage);
+        Assert.assertEquals(currentPage, actualPageInfo.getId());
+        PageInformation expectedPageInfo = new PageInformation(
+            currentPage,
+            0L,
+            0L,
+            workerPartition.getKey(),
+            null
+        );
+        Assert.assertEquals(expectedPageInfo, actualPageInfo);
         currentPage++;
+      } else {
+        for (Map.Entry<Integer, Pair<Long, Long>> partitionRawBytes : workerPartition.getValue().entrySet()) {
+          PageInformation actualPageInfo = actualPageList.get(currentPage);
+          PageInformation expectedPageInfo = new PageInformation(
+              currentPage,
+              partitionRawBytes.getValue().lhs,
+              partitionRawBytes.getValue().rhs,
+              workerPartition.getKey(),
+              partitionRawBytes.getKey()
+          );
+          Assert.assertEquals(expectedPageInfo, actualPageInfo);
+          currentPage++;
+        }
       }
     }
-    Assert.assertEquals(currentPage, pageList.size());
+    Assert.assertEquals(currentPage, actualPageList.size());
   }
 
   private Map<Integer, Map<Integer, Pair<Long, Long>>> createValidationMap(
@@ -272,28 +405,34 @@ public class SqlStatementResourceHelperTest
     if (workers == null || workers.length == 0) {
       return new HashMap<>();
     } else {
-      Map<Integer, Map<Integer, Pair<Long, Long>>> partitionToWorkerToRowsBytes = new TreeMap<>();
+      Map<Integer, Map<Integer, Pair<Long, Long>>> workerToPartitionToRowsBytes = new TreeMap<>();
       for (int worker = 0; worker < workers.length; worker++) {
         ChannelCounters.Snapshot workerCounter = workers[worker].snapshot();
-        for (int partition = 0; workerCounter != null && partition < workerCounter.getRows().length; partition++) {
-          Map<Integer, Pair<Long, Long>> workerMap = partitionToWorkerToRowsBytes.computeIfAbsent(
-              partition,
+        if (workerCounter == null) {
+          workerToPartitionToRowsBytes.computeIfAbsent(
+              0,
+              k -> new TreeMap<>()
+          );
+          continue;
+        }
+        for (int partition = 0; partition < workerCounter.getRows().length; partition++) {
+          Map<Integer, Pair<Long, Long>> workerMap = workerToPartitionToRowsBytes.computeIfAbsent(
+              worker,
               k -> new TreeMap<>()
           );
 
           if (workerCounter.getRows()[partition] != 0) {
             workerMap.put(
-                worker,
+                partition,
                 new Pair<>(
                     workerCounter.getRows()[partition],
                     workerCounter.getBytes()[partition]
                 )
             );
           }
-
         }
       }
-      return partitionToWorkerToRowsBytes;
+      return workerToPartitionToRowsBytes;
     }
   }
 
