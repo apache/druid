@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.JacksonConfigManager;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskLocation;
@@ -1004,7 +1005,7 @@ public class OverlordResourceTest
                 EasyMock.anyObject(Interval.class)
             )
         )
-        .andThrow(new IllegalArgumentException(exceptionMsg))
+        .andThrow(InvalidInput.exception(exceptionMsg))
         .once();
 
     EasyMock.replay(

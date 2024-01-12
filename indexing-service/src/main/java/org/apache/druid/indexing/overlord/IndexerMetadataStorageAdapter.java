@@ -22,8 +22,9 @@ package org.apache.druid.indexing.overlord;
 import com.google.inject.Inject;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.TaskInfo;
+import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.DateTimes;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.util.Comparator;
@@ -46,26 +47,30 @@ public class IndexerMetadataStorageAdapter
 
   public int deletePendingSegments(String dataSource, Interval deleteInterval)
   {
-    // Check the given interval overlaps the interval(minCreatedDateOfActiveTasks, MAX)
-    final Optional<DateTime> minCreatedDateOfActiveTasks = taskStorageQueryAdapter
+    // Find the earliest active task created for the specified datasource; if one exists,
+    // check if its interval overlaps with the delete interval.
+    final Optional<TaskInfo<Task, TaskStatus>> earliestActiveTaskStatusInfo = taskStorageQueryAdapter
         .getActiveTaskInfo(dataSource)
         .stream()
-        .map(TaskInfo::getCreatedTime)
-        .min(Comparator.naturalOrder());
+        .min(Comparator.comparing(TaskInfo::getCreatedTime));
 
-    final Interval activeTaskInterval = new Interval(
-        minCreatedDateOfActiveTasks.orElse(DateTimes.MAX),
-        DateTimes.MAX
-    );
-
-    if (deleteInterval.overlaps(activeTaskInterval)) {
-      throw InvalidInput.exception(
-        "Cannot delete pendingSegments for datasource[%s] as there's at least one active task with interval[%s] "
-        + "that overlaps with the delete interval[%s]. Please retry when there are no active tasks.",
-        dataSource,
-        deleteInterval,
-        activeTaskInterval
+    if (earliestActiveTaskStatusInfo.isPresent()) {
+      final TaskInfo<Task, TaskStatus> theEarliestActiveTaskInfo = earliestActiveTaskStatusInfo.get();
+      final Interval activeTaskInterval = new Interval(
+          theEarliestActiveTaskInfo.getCreatedTime(),
+          DateTimes.MAX
       );
+
+      if (deleteInterval.overlaps(activeTaskInterval)) {
+        throw InvalidInput.exception(
+            "Cannot delete pendingSegments for datasource[%s] as there's at least one active task[%s] created at[%s] "
+            + "that overlaps with the delete interval[%s]. Please retry when there are no active tasks.",
+            dataSource,
+            theEarliestActiveTaskInfo.getId(),
+            activeTaskInterval.getStart(),
+            deleteInterval
+        );
+      }
     }
 
     return indexerMetadataStorageCoordinator.deletePendingSegmentsCreatedInInterval(dataSource, deleteInterval);
