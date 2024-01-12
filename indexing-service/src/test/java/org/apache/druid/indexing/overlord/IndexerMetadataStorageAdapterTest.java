@@ -28,16 +28,12 @@ import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
-import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.util.List;
 
@@ -128,8 +124,8 @@ public class IndexerMetadataStorageAdapterTest
 
     MatcherAssert.assertThat(
         Assert.assertThrows(
-            DruidException.class, () ->
-            indexerMetadataStorageAdapter.deletePendingSegments("dataSource", deleteInterval)
+            DruidException.class,
+            () -> indexerMetadataStorageAdapter.deletePendingSegments("dataSource", deleteInterval)
         ),
         DruidExceptionMatcher.invalidInput().expectMessageIs(
             "Cannot delete pendingSegments for datasource[dataSource] as there's at least one active task with"

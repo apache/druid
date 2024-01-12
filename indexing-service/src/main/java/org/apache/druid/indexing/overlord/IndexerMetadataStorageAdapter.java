@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.overlord;
 
-import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.TaskInfo;
