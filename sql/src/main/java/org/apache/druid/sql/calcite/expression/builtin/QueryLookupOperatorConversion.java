@@ -90,14 +90,14 @@ public class QueryLookupOperatorConversion implements SqlOperatorConversion
                     false,
                     replaceMissingValueWith,
                     null,
-                    // If SplitLookupRule is disabled, then enable optimization at the extractionFn level, since a
+                    // If LOOKUP pull-up is disabled, then enable optimization at the extractionFn level, since a
                     // similar optimization may be done by the native query toolchests. We'd like to ensure that if
                     // people upgrade to a version where this rule was added, and then disable the rule due to some
                     // problem with it, they still get any optimization that the native layer was able to do.
                     //
                     // Note that we don't check plannerContext.isReverseLookup(), because the native layer doesn't
                     // optimize filters on RegisteredLookupExtractionFn anyway.
-                    !plannerContext.isSplitLookup()
+                    !plannerContext.isPullUpLookup()
                 )
             );
           } else {
