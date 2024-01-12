@@ -57,6 +57,7 @@ import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
+import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.apache.druid.utils.Streams;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
@@ -1762,6 +1763,62 @@ public class NewestSegmentFirstPolicyTest
     );
 
     Assert.assertFalse(iterator.hasNext());
+  }
+
+  @Test
+  public void testSkipCompactionForIntervalsWithoutData()
+  {
+    final DataSegment tombstone2023 = new DataSegment(
+        DATA_SOURCE,
+        Intervals.of("2023/2024"),
+        "0",
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
+        TombstoneShardSpec.INSTANCE,
+        0,
+        1);
+    final DataSegment dataSegment2023 = new DataSegment(
+        DATA_SOURCE,
+        Intervals.of("2023/2024"),
+        "0",
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
+        new NumberedShardSpec(1, 0),
+        0,
+        100);
+    final DataSegment tombstone2024 = new DataSegment(
+        DATA_SOURCE,
+        Intervals.of("2024/2025"),
+        "0",
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
+        TombstoneShardSpec.INSTANCE,
+        0,
+        1);
+
+    CompactionSegmentIterator iterator = policy.reset(
+        ImmutableMap.of(DATA_SOURCE,
+                        createCompactionConfig(10000,
+                                               new Period("P0D"),
+                                               new UserCompactionTaskGranularityConfig(null, null, null)
+                        )
+        ),
+        ImmutableMap.of(
+            DATA_SOURCE,
+            SegmentTimeline.forSegments(ImmutableSet.of(tombstone2023, dataSegment2023, tombstone2024))
+        ),
+        Collections.emptyMap()
+    );
+
+    // Skips 2024/2025 since it has no data.
+    // Return all segments in 2023/2024 since at least one of them has data despite there being a tombstone.
+    Assert.assertEquals(
+        ImmutableList.of(tombstone2023, dataSegment2023),
+        iterator.next().getSegments()
+    );
   }
 
   private static void assertCompactSegmentIntervals(

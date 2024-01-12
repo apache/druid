@@ -339,6 +339,10 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     while (compactibleSegmentIterator.hasNext()) {
       List<DataSegment> segments = compactibleSegmentIterator.next();
 
+      if (segments.stream().noneMatch(DataSegment::hasData)) {
+        continue;
+      }
+
       final SegmentsToCompact candidates = SegmentsToCompact.from(segments);
       final Interval interval = candidates.getUmbrellaInterval();
 
