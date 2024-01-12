@@ -25,8 +25,8 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.MapLookupExtractor;
-import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.query.lookup.ImmutableLookupMap;
+import org.apache.druid.query.lookup.LookupExtractor;
 
 import java.util.HashMap;
 import java.util.Map;
