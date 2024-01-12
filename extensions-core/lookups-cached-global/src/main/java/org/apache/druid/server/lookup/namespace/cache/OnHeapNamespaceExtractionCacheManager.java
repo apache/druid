@@ -20,6 +20,7 @@
 package org.apache.druid.server.lookup.namespace.cache;
 
 import com.google.inject.Inject;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -31,7 +32,6 @@ import org.apache.druid.server.lookup.namespace.NamespaceExtractionConfig;
 
 import java.lang.ref.WeakReference;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -94,7 +94,8 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
   @Override
   public CacheHandler allocateCache()
   {
-    Map<String, String> cache = new HashMap<>();
+    // Object2ObjectOpenHashMap has a bit smaller footprint than HashMap
+    Map<String, String> cache = new Object2ObjectOpenHashMap<>();
     // untracked, but disposing will explode if we don't create a weak reference here
     return new CacheHandler(this, cache, new WeakReference<>(cache));
   }
@@ -105,7 +106,7 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
     if (caches.contains((WeakReference<Map<String, String>>) cache.id)) {
       throw new ISE("cache [%s] is already attached", cache.id);
     }
-    // replace HashMap with ImmutableLookupMap
+    // replace Object2ObjectOpenHashMap with ImmutableLookupMap
     final ImmutableLookupMap immutable = new ImmutableLookupMap.Builder(cache.getCache()).build();
     WeakReference<Map<String, String>> cacheRef = new WeakReference<>(immutable);
     expungeCollectedCaches();
