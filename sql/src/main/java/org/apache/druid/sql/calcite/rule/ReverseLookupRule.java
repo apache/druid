@@ -319,42 +319,9 @@ public class ReverseLookupRule extends RelOptRule implements SubstitutionRule
       @Override
       protected Pair<RexCall, List<RexNode>> getCollectibleComparison(RexNode expr)
       {
-        if (expr.isA(SqlKind.IS_NULL) && isLookupCall(((RexCall) expr).getOperands().get(0))) {
-          return Pair.of((RexCall) expr, Collections.emptyList());
-        }
-
-        if (!isBinaryComparison(expr)) {
-          return null;
-        }
-
-        final RexCall call = (RexCall) expr;
-
-        RexNode lookupCall = call.getOperands().get(0);
-        RexNode literal = call.getOperands().get(1);
-
-        // Possibly swap arguments.
-        if (literal instanceof RexCall && Calcites.isLiteral(lookupCall, true, true)) {
-          // MV_CONTAINS doesn't allow swapping of arguments, since they aren't commutative.
-          // See "isBinaryComparison" for the set of operators we might encounter here.
-          if (call.getOperator().equals(MultiValueStringOperatorConversions.CONTAINS.calciteOperator())) {
-            return null;
-          }
-
-          // Swap lookupCall, literal.
-          RexNode tmp = lookupCall;
-          lookupCall = literal;
-          literal = tmp;
-        }
-
-        lookupCall = RexUtil.removeNullabilityCast(rexBuilder.getTypeFactory(), lookupCall);
-        literal = RexUtil.removeNullabilityCast(rexBuilder.getTypeFactory(), literal);
-
-        // Check that the call is of the form: LOOKUP(...) <op> <literal>
-        if (isLookupCall(lookupCall) && Calcites.isLiteral(literal, true, true)) {
-          return Pair.of(
-              (RexCall) rexBuilder.makeCall(call.getOperator(), lookupCall, literal),
-              Collections.emptyList()
-          );
+        final RexCall asLookupComparison = getAsLookupComparison(expr);
+        if (asLookupComparison != null) {
+          return Pair.of(asLookupComparison, Collections.emptyList());
         } else {
           return null;
         }
@@ -452,7 +419,56 @@ public class ReverseLookupRule extends RelOptRule implements SubstitutionRule
       @Override
       protected RexNode makeAnd(List<RexNode> exprs)
       {
-        return rexBuilder.makeCall(SqlStdOperatorTable.AND, exprs);
+        throw new UnsupportedOperationException();
+      }
+
+
+      /**
+       * Return expr as a lookup comparison, where the lookup operator is the left-hand side, a literal is
+       * on the right-hand side, and the comparison is either {@link SqlStdOperatorTable#IS_NULL} or one of
+       * the operators recognized by {@link #isBinaryComparison(RexNode)}.
+       *
+       * Returns null if expr does not actually match the above pattern.
+       */
+      @Nullable
+      private RexCall getAsLookupComparison(final RexNode expr)
+      {
+        if (expr.isA(SqlKind.IS_NULL) && isLookupCall(((RexCall) expr).getOperands().get(0))) {
+          return (RexCall) expr;
+        }
+
+        if (!isBinaryComparison(expr)) {
+          return null;
+        }
+
+        final RexCall call = (RexCall) expr;
+
+        RexNode lookupCall = call.getOperands().get(0);
+        RexNode literal = call.getOperands().get(1);
+
+        // Possibly swap arguments.
+        if (literal instanceof RexCall && Calcites.isLiteral(lookupCall, true, true)) {
+          // MV_CONTAINS doesn't allow swapping of arguments, since they aren't commutative.
+          // See "isBinaryComparison" for the set of operators we might encounter here.
+          if (call.getOperator().equals(MultiValueStringOperatorConversions.CONTAINS.calciteOperator())) {
+            return null;
+          }
+
+          // Swap lookupCall, literal.
+          RexNode tmp = lookupCall;
+          lookupCall = literal;
+          literal = tmp;
+        }
+
+        lookupCall = RexUtil.removeNullabilityCast(rexBuilder.getTypeFactory(), lookupCall);
+        literal = RexUtil.removeNullabilityCast(rexBuilder.getTypeFactory(), literal);
+
+        // Check that the call is of the form: LOOKUP(...) <op> <literal>
+        if (isLookupCall(lookupCall) && Calcites.isLiteral(literal, true, true)) {
+          return (RexCall) rexBuilder.makeCall(call.getOperator(), lookupCall, literal);
+        } else {
+          return null;
+        }
       }
 
       /**

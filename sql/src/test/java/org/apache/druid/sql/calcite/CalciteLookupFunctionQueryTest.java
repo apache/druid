@@ -144,6 +144,30 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testFilterInLookupOfConcat()
+  {
+    cannotVectorize();
+
+    testQuery(
+        buildFilterTestSql("LOOKUP(CONCAT(dim1, 'a', dim2), 'lookyloo') IN ('xa', 'xabc')"),
+        QUERY_CONTEXT,
+        buildFilterTestExpectedQuery(
+            or(
+                and(
+                    equality("dim1", "", ColumnType.STRING),
+                    equality("dim2", "", ColumnType.STRING)
+                ),
+                and(
+                    equality("dim1", "", ColumnType.STRING),
+                    equality("dim2", "bc", ColumnType.STRING)
+                )
+            )
+        ),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
   public void testFilterConcatOfLookup()
   {
     cannotVectorize();
@@ -155,6 +179,29 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
             "'xabc'",
             equality("dim1", "abc", ColumnType.STRING)
         ),
+        ImmutableList.of(new Object[]{"xabc", 1L})
+    );
+  }
+
+  @Test
+  public void testFilterInConcatOfLookup()
+  {
+    cannotVectorize();
+
+    // One optimize call is needed for each "IN" value, because this expression is decomposed into a sequence of
+    // [(LOOKUP(dim1, 'lookyloo') = 'xabc' AND dim1 = 'abc') OR ...]. They can't be collected and combined.
+
+    final ImmutableMap<String, Object> queryContext =
+        ImmutableMap.<String, Object>builder()
+                    .putAll(QUERY_CONTEXT_DEFAULT)
+                    .put(PlannerContext.CTX_SQL_REVERSE_LOOKUP, true)
+                    .put(ReverseLookupRule.CTX_MAX_OPTIMIZE_COUNT, 2)
+                    .build();
+
+    testQuery(
+        buildFilterTestSql("CONCAT(LOOKUP(dim1, 'lookyloo'), ' (', dim1, ')') IN ('xa (a)', 'xabc (abc)')"),
+        queryContext,
+        buildFilterTestExpectedQuery(in("dim1", ImmutableList.of("a", "abc"), null)),
         ImmutableList.of(new Object[]{"xabc", 1L})
     );
   }
@@ -173,6 +220,42 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
             and(
                 equality("dim1", "a", ColumnType.STRING),
                 equality("dim2", "c", ColumnType.STRING)
+            )
+        ),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testFilterInConcatOfLookupOfConcat()
+  {
+    cannotVectorize();
+
+    // One optimize call is needed for each "IN" value, because this expression is decomposed into a sequence of
+    // [(LOOKUP(dim1, 'lookyloo') = 'xabc' AND dim1 = 'abc') OR ...]. They can't be collected and combined.
+
+    final ImmutableMap<String, Object> queryContext =
+        ImmutableMap.<String, Object>builder()
+                    .putAll(QUERY_CONTEXT_DEFAULT)
+                    .put(PlannerContext.CTX_SQL_REVERSE_LOOKUP, true)
+                    .put(ReverseLookupRule.CTX_MAX_OPTIMIZE_COUNT, 2)
+                    .build();
+
+    testQuery(
+        buildFilterTestSql(
+            "CONCAT(LOOKUP(CONCAT(dim1, 'a', dim2), 'lookyloo'), ' (', CONCAT(dim1, 'a', dim2), ')')\n"
+            + "IN ('xa (a)', 'xabc (abc)')"),
+        queryContext,
+        buildFilterTestExpectedQuery(
+            or(
+                and(
+                    equality("dim1", "", ColumnType.STRING),
+                    equality("dim2", "", ColumnType.STRING)
+                ),
+                and(
+                    equality("dim1", "", ColumnType.STRING),
+                    equality("dim2", "bc", ColumnType.STRING)
+                )
             )
         ),
         ImmutableList.of()
