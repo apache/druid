@@ -57,7 +57,7 @@ public abstract class MapBasedLookupExtractorTest
   /**
    * Subclasses implement this method to test the proper {@link LookupExtractor} implementation.
    */
-  protected abstract LookupExtractor makeLookupExtractor(final Map<String, String> map);
+  protected abstract LookupExtractor makeLookupExtractor(Map<String, String> map);
 
   @Test
   public void test_unapplyAll_simple()
