@@ -63,10 +63,12 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class SqlStatementResourceHelper
@@ -143,12 +145,13 @@ public class SqlStatementResourceHelper
    * <ol>
    *   <li>{@link DataSourceMSQDestination} a single page is returned which adds all the counters of {@link SegmentGenerationProgressCounter.Snapshot}</li>
    *   <li>{@link TaskReportMSQDestination} a single page is returned which adds all the counters of {@link ChannelCounters}</li>
-   *   <li>{@link DurableStorageMSQDestination} a page is returned for each worker, partition which has generated output rows. The pages are populated in the following order:
+   *   <li>{@link DurableStorageMSQDestination} a page is returned for each partition, worker which has generated output rows. The pages are populated in the following order:
    *   <ul>
-   *     <li>For each worker from 0 to M</li>
-   *     <li>If the counters for a worker is empty, create a page with {@code numRows=0} and {@code sizeInBytes=0} </li>
    *     <li>For each partition from 0 to N</li>
-   *     <li>If {@code numRows != 0} for a (worker, partition) combination, create a page</li>
+   *     <li>For each worker from 0 to M</li>
+   *     <li>If a worker's counter snapshot is empty, create a page for that worker with {@code numRows = 0}
+   *     and {@code sizeInBytes = 0}</li>
+   *     <li>If {@code numRows != 0} for a (partition, worker) combination, create a page</li>
    *     so that we maintain the record ordering.
    *   </ul>
    * </ol>
@@ -198,6 +201,57 @@ public class SqlStatementResourceHelper
   }
 
   private static Optional<List<PageInformation>> populatePagesForDurableStorageDestination(
+      MSQStagesReport.Stage finalStage,
+      Map<Integer, CounterSnapshots> workerCounters
+  )
+  {
+    // figure out number of partitions and number of workers
+    int totalPartitions = finalStage.getPartitionCount();
+    int totalWorkerCount = finalStage.getWorkerCount();
+
+    if (totalPartitions == -1) {
+      throw DruidException.defensive("Expected partition count to be set for stage[%d]", finalStage);
+    }
+    if (totalWorkerCount == -1) {
+      throw DruidException.defensive("Expected worker count to be set for stage[%d]", finalStage);
+    }
+
+    List<PageInformation> pages = new ArrayList<>();
+
+
+    Set<Integer> emptyWorkerCounters = new HashSet<>();
+
+    for (int partitionNumber = 0; partitionNumber < totalPartitions; partitionNumber++) {
+      for (int workerNumber = 0; workerNumber < totalWorkerCount; workerNumber++) {
+        CounterSnapshots workerCounter = workerCounters.get(workerNumber);
+        if ((workerCounter == null || workerCounter.isEmpty()) && !emptyWorkerCounters.contains(workerNumber)) {
+          pages.add(new PageInformation(pages.size(), 0L, 0L, workerNumber, null));
+          emptyWorkerCounters.add(workerNumber);
+          continue;
+        }
+
+        if (workerCounter != null && workerCounter.getMap() != null) {
+          QueryCounterSnapshot channelCounters = workerCounter.getMap().get("output");
+
+          if (channelCounters instanceof ChannelCounters.Snapshot) {
+            long rows = 0L;
+            long size = 0L;
+
+            if (((ChannelCounters.Snapshot) channelCounters).getRows().length > partitionNumber) {
+              rows += ((ChannelCounters.Snapshot) channelCounters).getRows()[partitionNumber];
+              size += ((ChannelCounters.Snapshot) channelCounters).getBytes()[partitionNumber];
+            }
+            if (rows != 0L) {
+              pages.add(new PageInformation(pages.size(), rows, size, workerNumber, partitionNumber));
+            }
+          }
+        }
+      }
+    }
+    return Optional.of(pages);
+  }
+
+  private static Optional<List<PageInformation>> populatePagesForDurableStorageDestinationOrderReversed(
       MSQStagesReport.Stage finalStage,
       Map<Integer, CounterSnapshots> workerCounters
   )

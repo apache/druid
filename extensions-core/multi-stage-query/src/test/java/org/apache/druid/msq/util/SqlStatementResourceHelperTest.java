@@ -40,6 +40,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -82,7 +83,7 @@ public class SqlStatementResourceHelperTest
         payload,
         DurableStorageMSQDestination.instance()
     );
-    validatePages(pages.get(), createValidationMap(worker0, worker1, worker2));
+    validatePages(pages.get(), getExpectedPageInformationList(worker0, worker1, worker2));
   }
 
   @Test
@@ -121,7 +122,7 @@ public class SqlStatementResourceHelperTest
         payload,
         DurableStorageMSQDestination.instance()
     );
-    validatePages(pages.get(), createValidationMap(worker0, worker1, worker2));
+    validatePages(pages.get(), getExpectedPageInformationList(worker0, worker1, worker2));
   }
 
 
@@ -159,7 +160,7 @@ public class SqlStatementResourceHelperTest
 
     Optional<List<PageInformation>> pages =
         SqlStatementResourceHelper.populatePageList(payload, DurableStorageMSQDestination.instance());
-    validatePages(pages.get(), createValidationMap(worker0, worker1, worker2, worker3));
+    validatePages(pages.get(), getExpectedPageInformationList(worker0, worker1, worker2, worker3));
   }
 
 
@@ -199,9 +200,8 @@ public class SqlStatementResourceHelperTest
         payload,
         DurableStorageMSQDestination.instance()
     );
-    validatePages(pages.get(), createValidationMap(worker0, worker1, worker2, worker3));
+    validatePages(pages.get(), getExpectedPageInformationList(worker0, worker1, worker2, worker3));
   }
-
 
   @Test
   public void testConsecutivePartitionsOnEachWorker()
@@ -239,7 +239,7 @@ public class SqlStatementResourceHelperTest
         payload,
         DurableStorageMSQDestination.instance()
     );
-    validatePages(pages.get(), createValidationMap(worker0, worker1, worker2, worker3));
+    validatePages(pages.get(), getExpectedPageInformationList(worker0, worker1, worker2, worker3));
   }
 
   @Test
@@ -277,7 +277,7 @@ public class SqlStatementResourceHelperTest
         payload,
         DurableStorageMSQDestination.instance()
     );
-    validatePages(pages.get(), createValidationMap(worker0));
+    validatePages(pages.get(), getExpectedPageInformationList(worker0));
   }
 
   @Test
@@ -361,69 +361,30 @@ public class SqlStatementResourceHelperTest
     Assert.assertEquals(new PageInformation(0, 0L, null), pages.get().get(0));
   }
 
-  private void validatePages(
-      List<PageInformation> actualPageList,
-      Map<Integer, Map<Integer, Pair<Long, Long>>> expectedWorkerToPartitionToRowsBytes
-  )
+  private void validatePages(List<PageInformation> actualPageList, List<PageInformation> expectedPageList)
   {
-    int currentPage = 0;
-    for (Map.Entry<Integer, Map<Integer, Pair<Long, Long>>> workerPartition : expectedWorkerToPartitionToRowsBytes.entrySet()) {
-      if (workerPartition.getValue().isEmpty()) {
-        PageInformation actualPageInfo = actualPageList.get(currentPage);
-        Assert.assertEquals(currentPage, actualPageInfo.getId());
-        PageInformation expectedPageInfo = new PageInformation(
-            currentPage,
-            0L,
-            0L,
-            workerPartition.getKey(),
-            null
-        );
-        Assert.assertEquals(expectedPageInfo, actualPageInfo);
-        currentPage++;
-      } else {
-        for (Map.Entry<Integer, Pair<Long, Long>> partitionRawBytes : workerPartition.getValue().entrySet()) {
-          PageInformation actualPageInfo = actualPageList.get(currentPage);
-          PageInformation expectedPageInfo = new PageInformation(
-              currentPage,
-              partitionRawBytes.getValue().lhs,
-              partitionRawBytes.getValue().rhs,
-              workerPartition.getKey(),
-              partitionRawBytes.getKey()
-          );
-          Assert.assertEquals(expectedPageInfo, actualPageInfo);
-          currentPage++;
-        }
-      }
-    }
-    Assert.assertEquals(currentPage, actualPageList.size());
+    Assert.assertEquals(expectedPageList.size(), actualPageList.size());
+    Assert.assertEquals(expectedPageList, actualPageList);
   }
 
-  private Map<Integer, Map<Integer, Pair<Long, Long>>> createValidationMap(
-      ChannelCounters... workers
-  )
+  private List<PageInformation> getExpectedPageInformationList(ChannelCounters... workerCounters)
   {
-    if (workers == null || workers.length == 0) {
-      return new HashMap<>();
+    List<PageInformation> pageInformationList = new ArrayList<>();
+    if (workerCounters == null || workerCounters.length == 0) {
+      return pageInformationList;
     } else {
-      Map<Integer, Map<Integer, Pair<Long, Long>>> workerToPartitionToRowsBytes = new TreeMap<>();
-      for (int worker = 0; worker < workers.length; worker++) {
-        ChannelCounters.Snapshot workerCounter = workers[worker].snapshot();
-        if (workerCounter == null) {
-          workerToPartitionToRowsBytes.computeIfAbsent(
-              0,
-              k -> new TreeMap<>()
-          );
-          continue;
-        }
-        for (int partition = 0; partition < workerCounter.getRows().length; partition++) {
-          Map<Integer, Pair<Long, Long>> workerMap = workerToPartitionToRowsBytes.computeIfAbsent(
-              worker,
+      Map<Integer, Map<Integer, Pair<Long, Long>>> partitionToWorkerToRowsBytes = new TreeMap<>();
+      for (int worker = 0; worker < workerCounters.length; worker++) {
+        ChannelCounters.Snapshot workerCounter = workerCounters[worker].snapshot();
+        for (int partition = 0; workerCounter != null && partition < workerCounter.getRows().length; partition++) {
+          Map<Integer, Pair<Long, Long>> workerMap = partitionToWorkerToRowsBytes.computeIfAbsent(
+              partition,
               k -> new TreeMap<>()
           );
 
           if (workerCounter.getRows()[partition] != 0) {
             workerMap.put(
-                partition,
+                worker,
                 new Pair<>(
                     workerCounter.getRows()[partition],
                     workerCounter.getBytes()[partition]
@@ -432,10 +393,38 @@ public class SqlStatementResourceHelperTest
           }
         }
       }
-      return workerToPartitionToRowsBytes;
+
+      // Add the empty worker counters first and then everything else from partitionToWorkerToRowsBytes
+      for (int worker = 0; worker < workerCounters.length; worker++) {
+        ChannelCounters.Snapshot workerCounter = workerCounters[worker].snapshot();
+        if (workerCounter == null) {
+          pageInformationList.add(
+              new PageInformation(
+                  pageInformationList.size(),
+                  0L,
+                  0L,
+                  worker,
+                  null
+              )
+          );
+        }
+      }
+      for (Map.Entry<Integer, Map<Integer, Pair<Long, Long>>> partitionToWorkerMap : partitionToWorkerToRowsBytes.entrySet()) {
+        for (Map.Entry<Integer, Pair<Long, Long>> workerToRowsBytesMap : partitionToWorkerMap.getValue().entrySet()) {
+          pageInformationList.add(
+              new PageInformation(
+                  pageInformationList.size(),
+                  workerToRowsBytesMap.getValue().lhs,
+                  workerToRowsBytesMap.getValue().rhs,
+                  workerToRowsBytesMap.getKey(),
+                  partitionToWorkerMap.getKey()
+              )
+          );
+        }
+      }
+      return pageInformationList;
     }
   }
-
 
   private ChannelCounters createChannelCounters(int[] partitions)
   {
