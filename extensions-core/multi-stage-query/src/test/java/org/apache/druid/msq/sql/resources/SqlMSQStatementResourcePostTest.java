@@ -473,25 +473,24 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
 
     Assert.assertEquals(ImmutableList.of(
         new PageInformation(0, 2L, 128L, 0, 0),
-        new PageInformation(1, 2L, 128L, 0, 2),
-        new PageInformation(2, 2L, 130L, 0, 4),
-        new PageInformation(3, 2L, 132L, 1, 1),
-        new PageInformation(4, 2L, 132L, 1, 3)
+        new PageInformation(1, 2L, 132L, 1, 1),
+        new PageInformation(2, 2L, 128L, 0, 2),
+        new PageInformation(3, 2L, 132L, 1, 3),
+        new PageInformation(4, 2L, 130L, 0, 4)
     ), sqlStatementResult.getResultSetInformation().getPages());
 
 
     List<List<Object>> rows = new ArrayList<>();
     rows.add(ImmutableList.of(1466985600000L, "Lsjbot"));
     rows.add(ImmutableList.of(1466985600000L, "Lsjbot"));
-    rows.add(ImmutableList.of(1466985600000L, "Lsjbot"));
-    rows.add(ImmutableList.of(1466985600000L, "Lsjbot"));
-    rows.add(ImmutableList.of(1466985600000L, "GiftBot"));
-    rows.add(ImmutableList.of(1466985600000L, "GiftBot"));
     rows.add(ImmutableList.of(1466985600000L, "Beau.bot"));
     rows.add(ImmutableList.of(1466985600000L, "Beau.bot"));
+    rows.add(ImmutableList.of(1466985600000L, "Lsjbot"));
+    rows.add(ImmutableList.of(1466985600000L, "Lsjbot"));
     rows.add(ImmutableList.of(1466985600000L, "TaxonBot"));
     rows.add(ImmutableList.of(1466985600000L, "TaxonBot"));
-
+    rows.add(ImmutableList.of(1466985600000L, "GiftBot"));
+    rows.add(ImmutableList.of(1466985600000L, "GiftBot"));
 
     Assert.assertEquals(rows, SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
         sqlStatementResult.getQueryId(),

@@ -251,52 +251,6 @@ public class SqlStatementResourceHelper
     return Optional.of(pages);
   }
 
-  private static Optional<List<PageInformation>> populatePagesForDurableStorageDestinationOrderReversed(
-      MSQStagesReport.Stage finalStage,
-      Map<Integer, CounterSnapshots> workerCounters
-  )
-  {
-    // figure out number of partitions and number of workers
-    int totalPartitions = finalStage.getPartitionCount();
-    int totalWorkerCount = finalStage.getWorkerCount();
-
-    if (totalPartitions == -1) {
-      throw DruidException.defensive("Expected partition count to be set for stage[%d]", finalStage);
-    }
-    if (totalWorkerCount == -1) {
-      throw DruidException.defensive("Expected worker count to be set for stage[%d]", finalStage);
-    }
-
-    List<PageInformation> pages = new ArrayList<>();
-
-    for (int workerNumber = 0; workerNumber < totalWorkerCount; workerNumber++) {
-      CounterSnapshots workerCounter = workerCounters.get(workerNumber);
-      if (workerCounter == null || workerCounter.isEmpty()) {
-        pages.add(new PageInformation(pages.size(), 0L, 0L, workerNumber, null));
-        continue;
-      }
-      for (int partitionNumber = 0; partitionNumber < totalPartitions; partitionNumber++) {
-        if (workerCounter.getMap() != null) {
-          QueryCounterSnapshot channelCounters = workerCounter.getMap().get("output");
-
-          if (channelCounters instanceof ChannelCounters.Snapshot) {
-            long rows = 0L;
-            long size = 0L;
-
-            if (((ChannelCounters.Snapshot) channelCounters).getRows().length > partitionNumber) {
-              rows += ((ChannelCounters.Snapshot) channelCounters).getRows()[partitionNumber];
-              size += ((ChannelCounters.Snapshot) channelCounters).getBytes()[partitionNumber];
-            }
-            if (rows != 0L) {
-              pages.add(new PageInformation(pages.size(), rows, size, workerNumber, partitionNumber));
-            }
-          }
-        }
-      }
-    }
-    return Optional.of(pages);
-  }
-
   public static Optional<SqlStatementResult> getExceptionPayload(
       String queryId,
       TaskStatusResponse taskResponse,
