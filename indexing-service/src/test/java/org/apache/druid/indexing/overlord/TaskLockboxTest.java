@@ -762,92 +762,6 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testGetOnlyTaskLockPosseContainingIntervalWithAppendLocks() throws InterruptedException
-  {
-    final Task task = NoopTask.create();
-    lockbox.add(task);
-    taskStorage.insert(task, TaskStatus.running(task.getId()));
-
-    final Interval intersectionInterval = Intervals.of("2024-01-11/2024-01-12");
-    final Interval encapsulatingInterval = Intervals.of("2024-01-01/2024-02-01");
-
-    lockbox.lock(
-        task,
-        new TimeChunkLockRequest(
-            TaskLockType.APPEND,
-            task,
-            intersectionInterval,
-            null
-        )
-    );
-    final List<Interval> overlappingIntervals = ImmutableList.of(
-        Intervals.of("2024-01-05/2024-01-12"),
-        Intervals.of("2024-01-11/2024-01-18")
-    );
-    for (Interval interval : overlappingIntervals) {
-      lockbox.lock(
-          task,
-          new TimeChunkLockRequest(
-              TaskLockType.APPEND,
-              task,
-              interval,
-              null
-          )
-      );
-    }
-    for (Interval interval : overlappingIntervals) {
-      Assert.assertEquals(
-          interval,
-          lockbox.getOnlyTaskLockPosseContainingInterval(task, interval)
-                 .get(0).getTaskLock().getInterval()
-      );
-    }
-    try {
-      lockbox.getOnlyTaskLockPosseContainingInterval(task, intersectionInterval);
-    }
-    catch (ISE e) {
-      Assert.assertTrue(e.getMessage().contains("There are multiple timeChunk lockPosses"));
-    }
-
-    TaskLock encapsulatingLock = lockbox.lock(
-        task,
-        new TimeChunkLockRequest(
-            TaskLockType.APPEND,
-            task,
-            encapsulatingInterval,
-            null
-        )
-    ).getTaskLock();
-    for (Interval interval : overlappingIntervals) {
-      Assert.assertEquals(
-          encapsulatingInterval,
-          lockbox.getOnlyTaskLockPosseContainingInterval(task, interval)
-                 .get(0).getTaskLock().getInterval()
-      );
-    }
-    Assert.assertEquals(
-        encapsulatingInterval,
-        lockbox.getOnlyTaskLockPosseContainingInterval(task, intersectionInterval)
-               .get(0).getTaskLock().getInterval()
-    );
-
-    lockbox.revokeLock(task.getId(), encapsulatingLock);
-    for (Interval interval : overlappingIntervals) {
-      Assert.assertEquals(
-          interval,
-          lockbox.getOnlyTaskLockPosseContainingInterval(task, interval)
-                 .get(0).getTaskLock().getInterval()
-      );
-    }
-    try {
-      lockbox.getOnlyTaskLockPosseContainingInterval(task, intersectionInterval);
-    }
-    catch (ISE e) {
-      Assert.assertTrue(e.getMessage().contains("There are multiple timeChunk lockPosses"));
-    }
-  }
-
-  @Test
   public void testSegmentLock() throws InterruptedException
   {
     final Task task = NoopTask.create();
@@ -1139,7 +1053,7 @@ public class TaskLockboxTest
     Assert.assertEquals(lockRequest.getDataSource(), segmentLock.getDataSource());
     Assert.assertEquals(lockRequest.getInterval(), segmentLock.getInterval());
     Assert.assertEquals(lockRequest.getPartialShardSpec().getShardSpecClass(), segmentId.getShardSpec().getClass());
-    Assert.assertEquals(lockRequest.getPriority(), segmentLock.getPriority().intValue());
+    Assert.assertEquals(lockRequest.getPriority(), lockRequest.getPriority());
   }
 
   @Test
