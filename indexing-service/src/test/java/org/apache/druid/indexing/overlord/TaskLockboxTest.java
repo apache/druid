@@ -1053,7 +1053,7 @@ public class TaskLockboxTest
     Assert.assertEquals(lockRequest.getDataSource(), segmentLock.getDataSource());
     Assert.assertEquals(lockRequest.getInterval(), segmentLock.getInterval());
     Assert.assertEquals(lockRequest.getPartialShardSpec().getShardSpecClass(), segmentId.getShardSpec().getClass());
-    Assert.assertEquals(lockRequest.getPriority(), lockRequest.getPriority());
+    Assert.assertEquals(lockRequest.getPriority(), segmentLock.getPriority().intValue());
   }
 
   @Test
