@@ -141,8 +141,8 @@ public class MSQLoadedSegmentTests extends MSQTestBase
         .setExpectedResultRows(ImmutableList.of(
             new Object[]{1L, ""},
             new Object[]{1L, "qwe"},
-            new Object[]{1L, "10.1"},
             new Object[]{1L, "tyu"},
+            new Object[]{1L, "10.1"},
             new Object[]{1L, "2"},
             new Object[]{1L, "1"},
             new Object[]{1L, "def"},

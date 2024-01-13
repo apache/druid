@@ -25,6 +25,7 @@ import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlIntervalQualifier;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.parser.SqlParserPos;
@@ -54,7 +55,6 @@ import org.apache.druid.sql.calcite.expression.builtin.RegexpReplaceOperatorConv
 import org.apache.druid.sql.calcite.expression.builtin.RepeatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ReverseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RightOperatorConversion;
-import org.apache.druid.sql.calcite.expression.builtin.RoundOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringFormatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StrposOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.SubstringOperatorConversion;
@@ -65,6 +65,7 @@ import org.apache.druid.sql.calcite.expression.builtin.TimeFormatOperatorConvers
 import org.apache.druid.sql.calcite.expression.builtin.TimeParseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeShiftOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TruncateOperatorConversion;
+import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -129,10 +130,17 @@ public class ExpressionsTest extends CalciteTestBase
 
   private ExpressionTestHelper testHelper;
 
+  final DruidOperatorTable operatorTable = new DruidOperatorTable(Collections.emptySet(), Collections.emptySet());
+
   @Before
   public void setUp()
   {
     testHelper = new ExpressionTestHelper(ROW_SIGNATURE, BINDINGS);
+  }
+
+  private SqlOperatorConversion getOperatorConversion(SqlFunction round)
+  {
+    return operatorTable.lookupOperatorConversion(round);
   }
 
   @Test
@@ -1151,7 +1159,7 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testRound()
   {
-    final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
+    final SqlOperator roundFunction = getOperatorConversion(SqlStdOperatorTable.ROUND).calciteOperator();
 
     testHelper.testExpression(
         roundFunction,
@@ -1256,7 +1264,8 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testRoundWithInvalidArgument()
   {
-    final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
+
+    final SqlOperator roundFunction = getOperatorConversion(SqlStdOperatorTable.ROUND).calciteOperator();
 
     if (!NullHandling.sqlCompatible()) {
       Throwable t = Assert.assertThrows(
@@ -1284,7 +1293,7 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testRoundWithInvalidSecondArgument()
   {
-    final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
+    final SqlOperator roundFunction = getOperatorConversion(SqlStdOperatorTable.ROUND).calciteOperator();
 
     Throwable t = Assert.assertThrows(
         DruidException.class,
@@ -1311,7 +1320,7 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testRoundWithNanShouldRoundTo0()
   {
-    final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
+    final SqlOperator roundFunction = getOperatorConversion(SqlStdOperatorTable.ROUND).calciteOperator();
 
     testHelper.testExpression(
         roundFunction,
@@ -1342,7 +1351,7 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testRoundWithInfinityShouldRoundTo0()
   {
-    final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
+    final SqlOperator roundFunction = getOperatorConversion(SqlStdOperatorTable.ROUND).calciteOperator();
 
     //CHECKSTYLE.OFF: Regexp
     testHelper.testExpression(

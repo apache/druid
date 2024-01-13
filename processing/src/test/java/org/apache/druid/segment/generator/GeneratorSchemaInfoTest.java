@@ -17,23 +17,29 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.expression.builtin;
+package org.apache.druid.segment.generator;
 
-import org.apache.calcite.sql.SqlFunction;
-import org.apache.calcite.sql.fun.SqlStdOperatorTable;
-import org.apache.druid.math.expr.Function;
-import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.timeline.DataSegment;
+import org.junit.Assert;
+import org.junit.Test;
 
-public class RoundOperatorConversion extends DirectOperatorConversion
+import java.util.Collections;
+
+public class GeneratorSchemaInfoTest
 {
-  public RoundOperatorConversion()
+  @Test
+  public void testMakeSegmentDescriptor()
   {
-    super(SqlStdOperatorTable.ROUND, Function.Round.NAME);
-  }
+    final GeneratorSchemaInfo schemaInfo = new GeneratorSchemaInfo(
+        Collections.emptyList(),
+        Collections.emptyList(),
+        Intervals.ETERNITY,
+        false
+    );
 
-  @Override
-  public SqlFunction calciteOperator()
-  {
-    return SqlStdOperatorTable.ROUND;
+    final DataSegment dataSegment = schemaInfo.makeSegmentDescriptor("foo");
+    Assert.assertEquals("foo", dataSegment.getDataSource());
+    Assert.assertEquals(Intervals.ETERNITY, dataSegment.getInterval());
   }
 }
