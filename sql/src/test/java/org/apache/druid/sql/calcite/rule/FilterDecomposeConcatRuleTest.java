@@ -305,6 +305,25 @@ public class FilterDecomposeConcatRuleTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void test_threeInputs_delimitersIgnoredWhenOutOfPosition()
+  {
+    final RexNode call =
+        equals(
+            concat(inputRef(0), literal(" ("), inputRef(1), literal("x"), inputRef(2), literal(")")),
+            literal("xxx (4x5)") // unambiguous, because 'x' before ' (' can be ignored
+        );
+
+    Assert.assertEquals(
+        and(
+            equals(inputRef(0), literal("xxx")),
+            equals(inputRef(1), literal("4")),
+            equals(inputRef(2), literal("5"))
+        ),
+        shuttle.apply(call)
+    );
+  }
+
+  @Test
   public void test_twoInputs_backToBackLiterals()
   {
     final RexNode concatCall =

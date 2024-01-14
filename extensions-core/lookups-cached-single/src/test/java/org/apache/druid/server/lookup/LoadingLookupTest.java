@@ -134,15 +134,15 @@ public class LoadingLookupTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testCanGetKeySet()
+  public void testSupportsAsMap()
   {
-    Assert.assertFalse(loadingLookup.canGetKeySet());
+    Assert.assertFalse(loadingLookup.supportsAsMap());
   }
 
   @Test
-  public void testKeySet()
+  public void testAsMap()
   {
     expectedException.expect(UnsupportedOperationException.class);
-    loadingLookup.keySet();
+    loadingLookup.asMap();
   }
 }
