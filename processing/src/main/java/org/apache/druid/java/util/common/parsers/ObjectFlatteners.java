@@ -19,8 +19,11 @@
 
 package org.apache.druid.java.util.common.parsers;
 
+import com.google.common.base.Suppliers;
+import com.google.common.collect.ForwardingSet;
 import com.google.common.collect.Iterables;
 import com.jayway.jsonpath.spi.json.JsonProvider;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.UOE;
@@ -37,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public class ObjectFlatteners
@@ -83,18 +87,54 @@ public class ObjectFlatteners
       @Override
       public Map<String, Object> flatten(final T obj)
       {
+        final Set<String> keys;
+
+        if (flattenSpec.isUseFieldDiscovery()) {
+          class KeySet extends ForwardingSet<String>
+          {
+            /**
+             * Lazy supplier, because the key set may be requested but then not have any methods called on it.
+             * For example, {@link org.apache.druid.data.input.impl.MapInputRowParser#parse(InputRowSchema, Map)}
+             * always requests the key set, but doesn't read from it unless some form of dimension discovery is active.
+             */
+            private final Supplier<Set<String>> delegateSupplier = Suppliers.memoize(
+                () -> {
+                  final Iterable<String> rootFields = flattenerMaker.discoverRootFields(obj);
+                  if (extractors.isEmpty() && rootFields instanceof Set) {
+                    return (Set<String>) rootFields;
+                  } else {
+                    final Set<String> theSet = new LinkedHashSet<>();
+                    Iterables.addAll(theSet, extractors.keySet());
+                    Iterables.addAll(theSet, rootFields);
+                    return theSet;
+                  }
+                }
+            );
+
+            @Override
+            protected Set<String> delegate()
+            {
+              return delegateSupplier.get();
+            }
+          }
+
+          keys = new KeySet();
+        } else {
+          keys = extractors.keySet();
+        }
+
         return new AbstractMap<String, Object>()
         {
           @Override
           public int size()
           {
-            return keySet().size();
+            return keys.size();
           }
 
           @Override
           public boolean isEmpty()
           {
-            return keySet().isEmpty();
+            return keys.isEmpty();
           }
 
           @Override
@@ -104,7 +144,7 @@ public class ObjectFlatteners
               return false;
             }
 
-            return keySet().contains(key.toString());
+            return keys.contains(key.toString());
           }
 
           @Override
@@ -152,18 +192,7 @@ public class ObjectFlatteners
           @Override
           public Set<String> keySet()
           {
-            if (flattenSpec.isUseFieldDiscovery()) {
-              final Iterable<String> rootFields = flattenerMaker.discoverRootFields(obj);
-              if (extractors.isEmpty() && rootFields instanceof Set) {
-                return (Set<String>) rootFields;
-              } else {
-                final Set<String> keys = new LinkedHashSet<>(extractors.keySet());
-                Iterables.addAll(keys, rootFields);
-                return keys;
-              }
-            } else {
-              return extractors.keySet();
-            }
+            return keys;
           }
 
           @Override
@@ -217,6 +246,7 @@ public class ObjectFlatteners
   public interface FlattenerMaker<T>
   {
     JsonProvider getJsonProvider();
+
     /**
      * List all "root" fields. If
      * {@link org.apache.druid.data.input.impl.DimensionsSpec#useSchemaDiscovery} is false, this
