@@ -148,7 +148,7 @@ public abstract class TextReader<T> extends IntermediateRowParsingReader<T>
     return builder.build();
   }
 
-  public static abstract class Strings extends TextReader<String>
+  public abstract static class Strings extends TextReader<String>
   {
     protected Strings(InputRowSchema inputRowSchema, InputEntity source)
     {
@@ -162,7 +162,7 @@ public abstract class TextReader<T> extends IntermediateRowParsingReader<T>
     }
   }
 
-  public static abstract class Bytes extends TextReader<byte[]>
+  public abstract static class Bytes extends TextReader<byte[]>
   {
     protected Bytes(InputRowSchema inputRowSchema, InputEntity source)
     {
