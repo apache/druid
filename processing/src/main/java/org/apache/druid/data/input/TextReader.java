@@ -141,6 +141,7 @@ public abstract class TextReader<T> extends IntermediateRowParsingReader<T>
       }
     }
 
+    ParserUtils.validateFields(columns);
     final RowSignature.Builder builder = RowSignature.builder();
     for (final String column : columns) {
       builder.add(column, null);
