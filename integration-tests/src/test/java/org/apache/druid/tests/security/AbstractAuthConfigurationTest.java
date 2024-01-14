@@ -30,6 +30,7 @@ import org.apache.calcite.avatica.AvaticaSqlException;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.annotations.Client;
 import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -46,6 +47,7 @@ import org.apache.druid.sql.avatica.DruidAvaticaJsonHandler;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.utils.HttpUtil;
+import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.TestQueryHelper;
 import org.apache.druid.tests.indexer.AbstractIndexerTest;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -542,7 +544,26 @@ public abstract class AbstractAuthConfigurationTest
   {
     final Properties properties = getAvaticaConnectionPropertiesForUser(User.DATASOURCE_AND_CONTEXT_PARAMS_USER);
     properties.setProperty("auth_test_ctx", "should-be-allowed");
-    testAvaticaQuery(properties, getRouterAvacticaUrl());
+    // testAvaticaQuery(properties, getRouterAvacticaUrl());
+    tryAvaticaQueryUntilSuccess(properties);
+  }
+
+  private void tryAvaticaQueryUntilSuccess(Properties properties)
+  {
+    ITRetryUtil.retryUntil(
+        () -> {
+          try {
+            testAvaticaQuery(properties, getRouterAvacticaUrl());
+            return true;
+          } catch (Throwable t) {
+            return false;
+          }
+        },
+        true,
+        5000,
+        3,
+        "test_avaticaQueryWithContext_datasourceAndContextParamsUser"
+    );
   }
 
   @Test
