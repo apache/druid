@@ -82,7 +82,7 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   {
     super.setupHttpClientsAndUsers();
 
-    // Add a delay to allow propagation of credentials
+    // Add a delay to allow propagation of credentials to all services
     try {
       Thread.sleep(5000);
     }
