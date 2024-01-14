@@ -910,11 +910,6 @@
                 <version>${fastutil.version}</version>
             </dependency>
             <dependency>
-                <groupId>it.unimi.dsi</groupId>
-                <artifactId>fastutil-extra</artifactId>
-                <version>${fastutil.version}</version>
-            </dependency>
-            <dependency>
                 <groupId>com.opencsv</groupId>
                 <artifactId>opencsv</artifactId>
                 <version>4.6</version>
