@@ -1,7 +1,8 @@
 package org.apache.druid.segment.metadata;
 
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.SchemaPayload;
-import org.apache.druid.segment.column.SchemaPayloadWithNumRows;
+import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.timeline.SegmentId;
 
 import java.util.Optional;
@@ -25,10 +26,10 @@ public class SegmentSchemaCache
   // if transaction failed revert stuff by storing in temporary structure
   private volatile ConcurrentMap<Long, SchemaPayload> finalizedSegmentSchema = new ConcurrentHashMap<>();
 
-  private ConcurrentMap<SegmentId, SchemaPayloadWithNumRows> realtimeSegmentSchemaMap = new ConcurrentHashMap<>();
+  private ConcurrentMap<SegmentId, SegmentSchemaMetadata> realtimeSegmentSchemaMap = new ConcurrentHashMap<>();
 
-  private ConcurrentMap<SegmentId, SchemaPayloadWithNumRows> inTransitSMQResults = new ConcurrentHashMap<>();
-  private volatile ConcurrentMap<SegmentId, SchemaPayloadWithNumRows> inTransitSMQPublishedResults = new ConcurrentHashMap<>();
+  private ConcurrentMap<SegmentId, SegmentSchemaMetadata> inTransitSMQResults = new ConcurrentHashMap<>();
+  private volatile ConcurrentMap<SegmentId, SegmentSchemaMetadata> inTransitSMQPublishedResults = new ConcurrentHashMap<>();
 
   public void updateFinalizedSegmentStatsReference(ConcurrentMap<SegmentId, SegmentStats> segmentStatsMap)
   {
@@ -47,14 +48,14 @@ public class SegmentSchemaCache
     finalizedSegmentSchema.put(schemaId, schemaPayload);
   }
 
-  public void addRealtimeSegmentSchema(SegmentId segmentId, SchemaPayloadWithNumRows schemaPayloadWithNumRows)
+  public void addRealtimeSegmentSchema(SegmentId segmentId, RowSignature rowSignature, long numRows)
   {
-    realtimeSegmentSchemaMap.put(segmentId, schemaPayloadWithNumRows);
+    realtimeSegmentSchemaMap.put(segmentId, new SegmentSchemaMetadata(new SchemaPayload(rowSignature), numRows));
   }
 
-  public void addInTransitSMQResult(SegmentId segmentId, SchemaPayloadWithNumRows schemaPayloadWithNumRows)
+  public void addInTransitSMQResult(SegmentId segmentId, RowSignature rowSignature, long numRows)
   {
-    inTransitSMQResults.put(segmentId, schemaPayloadWithNumRows);
+    inTransitSMQResults.put(segmentId, new SegmentSchemaMetadata(new SchemaPayload(rowSignature), numRows));
   }
 
   public void markInTransitSMQResultPublished(SegmentId segmentId)
@@ -71,8 +72,9 @@ public class SegmentSchemaCache
     inTransitSMQPublishedResults = new ConcurrentHashMap<>();
   }
 
-  public Optional<SchemaPayloadWithNumRows> getSchemaForSegment(SegmentId segmentId)
+  public Optional<SegmentSchemaMetadata> getSchemaForSegment(SegmentId segmentId)
   {
+    // check realtime
      if (!finalizedSegmentStats.containsKey(segmentId)) {
        return Optional.empty();
      }
@@ -84,7 +86,7 @@ public class SegmentSchemaCache
 
      long schemaId = segmentStats.getSchemaId();
 
-    return Optional.of(new SchemaPayloadWithNumRows(
+    return Optional.of(new SegmentSchemaMetadata(
         schemaId,
         segmentId.toString(),
         segmentStats.getNumRows(),

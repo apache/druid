@@ -30,6 +30,8 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
@@ -47,6 +49,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Coordinator-side cache of segment metadata that combines segments to build
@@ -57,8 +60,9 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
 {
   private static final EmittingLogger log = new EmittingLogger(CoordinatorSegmentMetadataCache.class);
 
-  private final boolean realtimeSegmentSchemaAnnouncement;
   private final ColumnTypeMergePolicy columnTypeMergePolicy;
+  private final SegmentSchemaCache segmentSchemaCache;
+  private final SegmentSchemaBackfillQueue segmentSchemaBackfillQueue;
 
   @Inject
   public CoordinatorSegmentMetadataCache(
@@ -68,13 +72,14 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       Escalator escalator,
       InternalQueryConfig internalQueryConfig,
       ServiceEmitter emitter,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+      SegmentSchemaCache segmentSchemaCache,
+      SegmentSchemaBackfillQueue segmentSchemaBackfillQueue
   )
   {
     super(queryLifecycleFactory, config, escalator, internalQueryConfig, emitter);
     this.columnTypeMergePolicy = config.getMetadataColumnTypeMergePolicy();
-    this.realtimeSegmentSchemaAnnouncement =
-        centralizedDatasourceSchemaConfig.isEnabled() && centralizedDatasourceSchemaConfig.announceRealtimeSegmentSchema();
+    this.segmentSchemaCache = segmentSchemaCache;
+    this.segmentSchemaBackfillQueue = segmentSchemaBackfillQueue;
     initServerViewTimelineCallback(serverView);
   }
 
@@ -122,13 +127,71 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
           @Override
           public ServerView.CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
           {
-            if (realtimeSegmentSchemaAnnouncement) {
-              updateSchemaForSegments(segmentSchemas);
-            }
+            updateSchemaForRealtimeSegments(segmentSchemas);
             return ServerView.CallbackAction.CONTINUE;
           }
         }
     );
+  }
+
+  @Override
+  protected void unmarkSegmentAsMutable(SegmentId segmentId)
+  {
+    synchronized (lock) {
+      mutableSegments.remove(segmentId);
+      segmentSchemaCache.segmentRemoved(segmentId);
+    }
+  }
+
+  @Override
+  protected void removeSegmentAction(SegmentId segmentId)
+  {
+    segmentSchemaCache.segmentRemoved(segmentId);
+  }
+
+  @Override
+  protected boolean smqAction(String dataSource, SegmentId segmentId, RowSignature rowSignature, SegmentAnalysis analysis)
+  {
+    AtomicBoolean added = new AtomicBoolean(false);
+    segmentMetadataInfo.compute(
+        dataSource,
+        (datasourceKey, dataSourceSegments) -> {
+          if (dataSourceSegments == null) {
+            // Datasource may have been removed or become unavailable while this refresh was ongoing.
+            log.warn(
+                "No segment map found with datasource [%s], skipping refresh of segment [%s]",
+                datasourceKey,
+                segmentId
+            );
+            return null;
+          } else {
+            dataSourceSegments.compute(
+                segmentId,
+                (segmentIdKey, segmentMetadata) -> {
+                  if (segmentMetadata == null) {
+                    log.warn("No segment [%s] found, skipping refresh", segmentId);
+                    return null;
+                  } else {
+                    long numRows = analysis.getNumRows();
+                    Map<String, AggregatorFactory> aggregators = analysis.getAggregators();
+                    segmentSchemaCache.addInTransitSMQResult(segmentId, rowSignature, numRows);
+                    segmentSchemaBackfillQueue.add(segmentId, rowSignature, numRows, aggregators);
+                    added.set(true);
+                    return segmentMetadata;
+                  }
+                }
+            );
+
+            if (dataSourceSegments.isEmpty()) {
+              return null;
+            } else {
+              return dataSourceSegments;
+            }
+          }
+        }
+    );
+
+    return added.get();
   }
 
   /**
@@ -142,12 +205,14 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   @Override
   public void refresh(final Set<SegmentId> segmentsToRefresh, final Set<String> dataSourcesToRebuild) throws IOException
   {
+    Set<SegmentId> segmentsToRefreshMinusRealtimeSegments = filterMutableSegments(segmentsToRefresh);
+    Set<SegmentId> segmentsToRefreshMinusCachedSegments = filterSegmentWithCachedSchema(segmentsToRefreshMinusRealtimeSegments);
     // Refresh the segments.
-    final Set<SegmentId> refreshed = refreshSegments(filterMutableSegments(segmentsToRefresh));
+    final Set<SegmentId> refreshed = refreshSegments(segmentsToRefreshMinusCachedSegments);
 
     synchronized (lock) {
       // Add missing segments back to the refresh list.
-      segmentsNeedingRefresh.addAll(Sets.difference(segmentsToRefresh, refreshed));
+      segmentsNeedingRefresh.addAll(Sets.difference(segmentsToRefreshMinusCachedSegments, refreshed));
 
       // Compute the list of datasources to rebuild tables for.
       dataSourcesToRebuild.addAll(dataSourcesNeedingRebuild);
@@ -177,11 +242,18 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
 
   private Set<SegmentId> filterMutableSegments(Set<SegmentId> segmentIds)
   {
-    if (realtimeSegmentSchemaAnnouncement) {
-      synchronized (lock) {
-        segmentIds.removeAll(mutableSegments);
-      }
+    synchronized (lock) {
+      segmentIds.removeAll(mutableSegments);
     }
+    return segmentIds;
+  }
+
+  private Set<SegmentId> filterSegmentWithCachedSchema(Set<SegmentId> segmentIds)
+  {
+    synchronized (lock) {
+      segmentIds.removeIf(segmentSchemaCache::isSchemaCached);
+    }
+
     return segmentIds;
   }
 
@@ -189,7 +261,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
    * Update schema for segments.
    */
   @VisibleForTesting
-  void updateSchemaForSegments(SegmentSchemas segmentSchemas)
+  void updateSchemaForRealtimeSegments(SegmentSchemas segmentSchemas)
   {
     List<SegmentSchemas.SegmentSchema> segmentSchemaList = segmentSchemas.getSegmentSchemaList();
 
@@ -208,45 +280,48 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
           dataSource,
           (dataSourceKey, segmentsMap) -> {
             if (segmentsMap == null) {
-              segmentsMap = new ConcurrentSkipListMap<>(SEGMENT_ORDER);
-            }
-            segmentsMap.compute(
-                segmentId,
-                (id, segmentMetadata) -> {
-                  if (segmentMetadata == null) {
-                    // By design, this case shouldn't arise since both segment and schema is announced in the same flow
-                    // and messages shouldn't be lost in the poll
-                    // also segment announcement should always precede schema announcement
-                    // and there shouldn't be any schema updated for removed segments
-                    log.makeAlert("Schema update [%s] for unknown segment [%s]", segmentSchema, segmentId).emit();
-                  } else {
-                    // We know this segment.
-                    Optional<RowSignature> rowSignature =
-                        mergeOrCreateRowSignature(
+              // Datasource may have been removed or become unavailable while this refresh was ongoing.
+              log.warn(
+                  "No segment map found with datasource [%s], skipping refresh of segment [%s]",
+                  dataSourceKey,
+                  segmentId
+              );
+              return null;
+            } else {
+              segmentsMap.compute(
+                  segmentId,
+                  (id, segmentMetadata) -> {
+                    if (segmentMetadata == null) {
+                      // By design, this case shouldn't arise since both segment and schema is announced in the same flow
+                      // and messages shouldn't be lost in the poll
+                      // also segment announcement should always precede schema announcement
+                      // and there shouldn't be any schema updated for removed segments
+                      log.makeAlert("Schema update [%s] for unknown segment [%s]", segmentSchema, segmentId).emit();
+                    } else {
+                      // We know this segment.
+                      Optional<RowSignature> rowSignature =
+                          mergeOrCreateRowSignature(
+                              segmentId,
+                              segmentMetadata.getRowSignature(),
+                              segmentSchema
+                          );
+                      if (rowSignature.isPresent()) {
+                        log.debug(
+                            "Segment [%s] signature [%s] after applying schema update.",
                             segmentId,
-                            segmentMetadata.getRowSignature(),
-                            segmentSchema
+                            rowSignature.get()
                         );
-                    if (rowSignature.isPresent()) {
-                      log.debug(
-                          "Segment [%s] signature [%s] after applying schema update.",
-                          segmentId,
-                          rowSignature.get()
-                      );
-                      // mark the datasource for rebuilding
-                      markDataSourceAsNeedRebuild(dataSource);
+                        // mark the datasource for rebuilding
+                        markDataSourceAsNeedRebuild(dataSource);
 
-                      segmentMetadata = AvailableSegmentMetadata
-                          .from(segmentMetadata)
-                          .withRowSignature(rowSignature.get())
-                          .withNumRows(segmentSchema.getNumRows())
-                          .build();
+                        segmentSchemaCache.addRealtimeSegmentSchema(segmentId, rowSignature.get(), segmentSchema.getNumRows());
+                      }
                     }
+                    return segmentMetadata;
                   }
-                  return segmentMetadata;
-                }
-            );
-            return segmentsMap;
+              );
+              return segmentsMap;
+            }
           }
       );
     }

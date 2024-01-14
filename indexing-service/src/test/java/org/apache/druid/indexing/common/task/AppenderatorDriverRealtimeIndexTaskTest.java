@@ -113,6 +113,7 @@ import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -130,6 +131,7 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
@@ -1508,9 +1510,9 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     )
     {
       @Override
-      public Set<DataSegment> commitSegments(Set<DataSegment> segments) throws IOException
+      public Set<DataSegment> commitSegments(Set<DataSegment> segments, Map<SegmentId, SegmentSchemaMetadata> segmentSchemaMetadataMap) throws IOException
       {
-        Set<DataSegment> result = super.commitSegments(segments);
+        Set<DataSegment> result = super.commitSegments(segments, segmentSchemaMetadataMap);
 
         Assert.assertFalse(
             "Segment latch not initialized, did you forget to call expectPublishSegments?",
@@ -1527,10 +1529,11 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
       public SegmentPublishResult commitSegmentsAndMetadata(
           Set<DataSegment> segments,
           DataSourceMetadata startMetadata,
-          DataSourceMetadata endMetadata
-      ) throws IOException
+          DataSourceMetadata endMetadata,
+          final Map<SegmentId, SegmentSchemaMetadata> segmentSchemaMetadataMap
+          ) throws IOException
       {
-        SegmentPublishResult result = super.commitSegmentsAndMetadata(segments, startMetadata, endMetadata);
+        SegmentPublishResult result = super.commitSegmentsAndMetadata(segments, startMetadata, endMetadata, segmentSchemaMetadataMap);
 
         Assert.assertNotNull(
             "Segment latch not initialized, did you forget to call expectPublishSegments?",

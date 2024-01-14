@@ -153,12 +153,13 @@ realtime schema publish flow
 the problem is that the api is generically written and tommorrow
 
 
-SchemaCache
+SchemaCache content
 - smqResult, smqPublishedResult (in-transit) (eventually empty)
 - realtime schema
 - schema polled from db
 
 
 BackFillQueue
-- publish certain schema
+- publish given schema
 - on success interact with SchemaCache to update smqResult and smqPublishedResult
+

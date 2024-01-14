@@ -216,6 +216,12 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
     }
   }
 
+  @Override
+  protected void removeSegmentAction(SegmentId segmentId)
+  {
+    // noop
+  }
+
   private Map<String, PhysicalDatasourceMetadata> queryDataSourceInformation(Set<String> dataSourcesToQuery)
   {
     Stopwatch stopwatch = Stopwatch.createStarted();

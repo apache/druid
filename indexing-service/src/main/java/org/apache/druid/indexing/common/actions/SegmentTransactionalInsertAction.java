@@ -34,6 +34,7 @@ import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.SegmentUtils;
+import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -61,6 +62,8 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
    * Set of segments to be inserted into metadata storage
    */
   private final Set<DataSegment> segments;
+
+  private final Map<String, SegmentSchemaMetadata> schemaMetadataMap;
 
   @Nullable
   private final DataSourceMetadata startMetadata;
@@ -101,7 +104,8 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       @JsonProperty("segments") @Nullable Set<DataSegment> segments,
       @JsonProperty("startMetadata") @Nullable DataSourceMetadata startMetadata,
       @JsonProperty("endMetadata") @Nullable DataSourceMetadata endMetadata,
-      @JsonProperty("dataSource") @Nullable String dataSource
+      @JsonProperty("dataSource") @Nullable String dataSource,
+      @JsonProperty("schemaMap") @Nullable Map<String, SegmentSchemaMetadata> schemaMetadataMap
   )
   {
     this.segmentsToBeOverwritten = segmentsToBeOverwritten;
@@ -109,6 +113,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
     this.startMetadata = startMetadata;
     this.endMetadata = endMetadata;
     this.dataSource = dataSource;
+    this.schemaMetadataMap = schemaMetadataMap;
   }
 
   @JsonProperty

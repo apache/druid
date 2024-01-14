@@ -1378,9 +1378,9 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         centralizedDatasourceSchemaConfig
     ) {
       @Override
-      void updateSchemaForSegments(SegmentSchemas segmentSchemas)
+      void updateSchemaForRealtimeSegments(SegmentSchemas segmentSchemas)
       {
-        super.updateSchemaForSegments(segmentSchemas);
+        super.updateSchemaForRealtimeSegments(segmentSchemas);
         schemaAddedLatch.countDown();
       }
     };

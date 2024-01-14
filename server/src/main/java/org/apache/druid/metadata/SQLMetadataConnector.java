@@ -841,7 +841,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     return makeDatasource(getConfig(), getValidationQuery());
   }
 
-  protected final <T> T inReadOnlyTransaction(
+  public final <T> T inReadOnlyTransaction(
       final TransactionCallback<T> callback
   )
   {

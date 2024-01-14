@@ -31,8 +31,10 @@ import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.ReplaceTaskLock;
+import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.joda.time.Interval;
 
@@ -139,7 +141,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public Set<DataSegment> commitSegments(Set<DataSegment> segments)
+  public Set<DataSegment> commitSegments(Set<DataSegment> segments, final Map<SegmentId, SegmentSchemaMetadata> segmentSchemaMetadataMap)
   {
     Set<DataSegment> added = new HashSet<>();
     for (final DataSegment segment : segments) {
@@ -194,8 +196,9 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   public SegmentPublishResult commitSegmentsAndMetadata(
       Set<DataSegment> segments,
       @Nullable DataSourceMetadata startMetadata,
-      @Nullable DataSourceMetadata endMetadata
-  )
+      @Nullable DataSourceMetadata endMetadata,
+      Map<SegmentId, SegmentSchemaMetadata> segmentSchemaMetadataMap
+      )
   {
     // Don't actually compare metadata, just do it!
     return SegmentPublishResult.ok(commitSegments(segments));

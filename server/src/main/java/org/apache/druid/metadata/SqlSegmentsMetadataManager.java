@@ -1084,13 +1084,13 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
         }
     );
 
-    Map<Integer, Pair<SchemaPayload, String>> schemaMap = new HashMap<>();
+    Map<Integer, SchemaPayload> schemaMap = new HashMap<>();
     connector.inReadOnlyTransaction(new TransactionCallback<Object>()
     {
       @Override
       public Object inTransaction(Handle handle, TransactionStatus status) throws Exception
       {
-        return handle.createQuery("SELECT id, fingerprint, payload FROM %s where created_date > %s")
+        return handle.createQuery(String.format("SELECT schema_id, payload FROM %s where created_date > %s", ))
             .map(new ResultSetMapper<Void>()
             {
               @Override
@@ -1099,7 +1099,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                 try {
                   schemaMap.put(
                       r.getInt("id"),
-                      Pair.of(jsonMapper.readValue(r.getBytes("payload"), SchemaPayload.class), r.getString("fingerprint"))
+                      jsonMapper.readValue(r.getBytes("payload"), SchemaPayload.class)
                   );
                 }
                 catch (IOException e) {
@@ -1110,6 +1110,9 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
             }).list();
       }
     });
+
+    schemaMap.forEach(segmentSchemaCache::addFinalizedSegmentSchema);
+    segmentSchemaCache.updateFinalizedSegmentStatsReference(segmentStats);
 
     Preconditions.checkNotNull(
         segments,

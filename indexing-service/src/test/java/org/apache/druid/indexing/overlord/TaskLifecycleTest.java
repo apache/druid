@@ -125,6 +125,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -151,6 +152,7 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
@@ -566,9 +568,9 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     return new TestIndexerMetadataStorageCoordinator()
     {
       @Override
-      public Set<DataSegment> commitSegments(Set<DataSegment> segments)
+      public Set<DataSegment> commitSegments(Set<DataSegment> segments, final Map<SegmentId, SegmentSchemaMetadata> segmentSchemaMetadataMap)
       {
-        Set<DataSegment> retVal = super.commitSegments(segments);
+        Set<DataSegment> retVal = super.commitSegments(segments, segmentSchemaMetadataMap);
         if (publishCountDown != null) {
           publishCountDown.countDown();
         }

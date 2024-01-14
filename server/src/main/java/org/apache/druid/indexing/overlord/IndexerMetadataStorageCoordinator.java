@@ -21,8 +21,10 @@ package org.apache.druid.indexing.overlord;
 
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.ReplaceTaskLock;
+import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.joda.time.Interval;
 
@@ -169,7 +171,7 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @return set of segments actually added
    */
-  Set<DataSegment> commitSegments(Set<DataSegment> segments) throws IOException;
+  Set<DataSegment> commitSegments(Set<DataSegment> segments, Map<SegmentId, SegmentSchemaMetadata> segmentSchemaMetadataMap) throws IOException;
 
   /**
    * Allocates pending segments for the given requests in the pending segments table.
@@ -277,8 +279,9 @@ public interface IndexerMetadataStorageCoordinator
   SegmentPublishResult commitSegmentsAndMetadata(
       Set<DataSegment> segments,
       @Nullable DataSourceMetadata startMetadata,
-      @Nullable DataSourceMetadata endMetadata
-  ) throws IOException;
+      @Nullable DataSourceMetadata endMetadata,
+      Map<SegmentId, SegmentSchemaMetadata> segmentSchemaMetadataMap
+      ) throws IOException;
 
   /**
    * Commits segments created by an APPEND task. This method also handles segment

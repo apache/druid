@@ -9,8 +9,8 @@ import java.util.Map;
 
 public class SchemaPayload
 {
-  RowSignature rowSignature;
-  Map<String, AggregatorFactory> aggregatorFactories;
+  private final RowSignature rowSignature;
+  private final Map<String, AggregatorFactory> aggregatorFactories;
 
   @JsonCreator
   public SchemaPayload(
