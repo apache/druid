@@ -93,6 +93,7 @@ public interface InputFormat
    * given a particular {@link InputRowSchema}. Note that {@link RowAdapters#standardRow()} always works, but the
    * one returned by this method may be more performant.
    */
+  @SuppressWarnings("unused") // inputRowSchema is currently unused, but may be used in the future for ColumnsFilter
   default RowAdapter<InputRow> createRowAdapter(InputRowSchema inputRowSchema)
   {
     return RowAdapters.standardRow();
