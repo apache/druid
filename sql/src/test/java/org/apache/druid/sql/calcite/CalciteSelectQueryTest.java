@@ -1098,10 +1098,10 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{"a", "xa"},
             new Object[]{"abc", "xabc"},
-            new Object[]{"nosuchkey", "mysteryvalue"},
-            new Object[]{"6", "x6"}
+            new Object[]{"6", "x6"},
+            new Object[]{"a", "xa"},
+            new Object[]{"nosuchkey", "mysteryvalue"}
         )
     );
   }
