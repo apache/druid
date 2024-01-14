@@ -985,11 +985,10 @@ public class OverlordResourceTest
         authConfig
     );
 
-    Response resp = overlordResource
+    Response response = overlordResource
         .killPendingSegments("allow", new Interval(DateTimes.MIN, DateTimes.nowUtc()).toString(), req);
-
-    Assert.assertEquals(200, resp.getStatus());
-    Assert.assertEquals(ImmutableMap.of("numDeleted", 2), resp.getEntity());
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("numDeleted", 2), response.getEntity());
   }
 
   @Test
@@ -1019,13 +1018,11 @@ public class OverlordResourceTest
         authConfig
     );
 
-    Response resp = overlordResource
+    Response response = overlordResource
         .killPendingSegments("allow", new Interval(DateTimes.MIN, DateTimes.nowUtc()).toString(), req);
 
-    Assert.assertEquals(400, resp.getStatus());
-    Map<String, Object> respError = (Map) resp.getEntity();
-    Assert.assertTrue(respError.containsKey("error"));
-    Assert.assertEquals(exceptionMsg, respError.get("error"));
+    Assert.assertEquals(400, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("error", exceptionMsg), response.getEntity());
   }
 
   @Test
@@ -1055,13 +1052,11 @@ public class OverlordResourceTest
         authConfig
     );
 
-    Response resp = overlordResource
+    Response response = overlordResource
         .killPendingSegments("allow", new Interval(DateTimes.MIN, DateTimes.nowUtc()).toString(), req);
 
-    Assert.assertEquals(500, resp.getStatus());
-    Map<String, Object> respError = (Map) resp.getEntity();
-    Assert.assertTrue(respError.containsKey("error"));
-    Assert.assertEquals(exceptionMsg, respError.get("error"));
+    Assert.assertEquals(500, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("error", exceptionMsg), response.getEntity());
   }
 
   @Test
@@ -1091,13 +1086,11 @@ public class OverlordResourceTest
         authConfig
     );
 
-    Response resp = overlordResource
+    Response response = overlordResource
         .killPendingSegments("allow", new Interval(DateTimes.MIN, DateTimes.nowUtc()).toString(), req);
 
-    Assert.assertEquals(500, resp.getStatus());
-    Map<String, Object> respError = (Map) resp.getEntity();
-    Assert.assertTrue(respError.containsKey("error"));
-    Assert.assertEquals(exceptionMsg, respError.get("error"));
+    Assert.assertEquals(500, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("error", exceptionMsg), response.getEntity());
   }
 
   @Test
@@ -1117,13 +1110,11 @@ public class OverlordResourceTest
         authConfig
     );
 
-    Response resp = overlordResource
+    Response response = overlordResource
         .killPendingSegments("allow", new Interval(DateTimes.MIN, DateTimes.nowUtc()).toString(), req);
 
-    Assert.assertEquals(503, resp.getStatus());
-    Map<String, Object> respError = (Map) resp.getEntity();
-    Assert.assertTrue(respError.containsKey("error"));
-    Assert.assertEquals("overlord is not the leader or not initialized yet", respError.get("error"));
+    Assert.assertEquals(503, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("error", "overlord is not the leader or not initialized yet"), response.getEntity());
   }
 
   @Test

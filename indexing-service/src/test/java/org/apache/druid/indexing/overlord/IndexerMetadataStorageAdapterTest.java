@@ -128,7 +128,7 @@ public class IndexerMetadataStorageAdapterTest
             () -> indexerMetadataStorageAdapter.deletePendingSegments("dataSource", deleteInterval)
         ),
         DruidExceptionMatcher.invalidInput().expectMessageIs(
-            "Cannot delete pendingSegments for datasource[dataSource] as there's at least one active task[id1]"
+            "Cannot delete pendingSegments for datasource[dataSource] as there is at least one active task[id1]"
             + " created at[2017-11-01T00:00:00.000Z] that overlaps with the delete "
             + "interval[2017-01-01T00:00:00.000Z/2017-12-01T00:00:00.000Z]. Please retry when there are no active tasks."
         )
@@ -174,7 +174,7 @@ public class IndexerMetadataStorageAdapterTest
             () -> indexerMetadataStorageAdapter.deletePendingSegments("dataSource", deleteInterval)
         ),
         DruidExceptionMatcher.invalidInput().expectMessageIs(
-            "Cannot delete pendingSegments for datasource[dataSource] as there's at least one active task[id2]"
+            "Cannot delete pendingSegments for datasource[dataSource] as there is at least one active task[id2]"
             + " created at[2017-11-01T00:00:00.000Z] that overlaps with the delete"
             + " interval[2017-01-01T00:00:00.000Z/2018-12-01T00:00:00.000Z]. Please retry when there are no active tasks."
         )

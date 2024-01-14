@@ -49,24 +49,24 @@ public class IndexerMetadataStorageAdapter
   {
     // Find the earliest active task created for the specified datasource; if one exists,
     // check if its interval overlaps with the delete interval.
-    final Optional<TaskInfo<Task, TaskStatus>> earliestActiveTaskStatusInfo = taskStorageQueryAdapter
+    final Optional<TaskInfo<Task, TaskStatus>> earliestActiveTaskOptional = taskStorageQueryAdapter
         .getActiveTaskInfo(dataSource)
         .stream()
         .min(Comparator.comparing(TaskInfo::getCreatedTime));
 
-    if (earliestActiveTaskStatusInfo.isPresent()) {
-      final TaskInfo<Task, TaskStatus> theEarliestActiveTaskInfo = earliestActiveTaskStatusInfo.get();
+    if (earliestActiveTaskOptional.isPresent()) {
+      final TaskInfo<Task, TaskStatus> earliestActiveTask = earliestActiveTaskOptional.get();
       final Interval activeTaskInterval = new Interval(
-          theEarliestActiveTaskInfo.getCreatedTime(),
+          earliestActiveTask.getCreatedTime(),
           DateTimes.MAX
       );
 
       if (deleteInterval.overlaps(activeTaskInterval)) {
         throw InvalidInput.exception(
-            "Cannot delete pendingSegments for datasource[%s] as there's at least one active task[%s] created at[%s] "
+            "Cannot delete pendingSegments for datasource[%s] as there is at least one active task[%s] created at[%s] "
             + "that overlaps with the delete interval[%s]. Please retry when there are no active tasks.",
             dataSource,
-            theEarliestActiveTaskInfo.getId(),
+            earliestActiveTask.getId(),
             activeTaskInterval.getStart(),
             deleteInterval
         );
