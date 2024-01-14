@@ -179,7 +179,7 @@ public abstract class FastLineIterator<T> implements CloseableIterator<T>
         limit += bytesRead;
       }
       catch (IOException e) {
-        throw new RuntimeException(e);
+        throw new IllegalStateException(e);
       }
     }
   }
