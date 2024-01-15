@@ -29,6 +29,8 @@ import org.apache.druid.math.expr.vector.VectorProcessors;
 import org.apache.druid.segment.column.TypeStrategy;
 
 import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
+
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -53,38 +55,38 @@ abstract class ConstantExpr<T> implements Expr
 
   @Nullable
   @Override
-  public ExpressionType getOutputType(InputBindingInspector inspector)
+  public final ExpressionType getOutputType(InputBindingInspector inspector)
   {
     // null isn't really a type, so don't claim anything
     return value == null ? null : outputType;
   }
 
   @Override
-  public boolean isLiteral()
+  public final boolean isLiteral()
   {
     return true;
   }
 
   @Override
-  public boolean isNullLiteral()
+  public final boolean isNullLiteral()
   {
     return value == null;
   }
 
   @Override
-  public Object getLiteralValue()
+  public final Object getLiteralValue()
   {
     return value;
   }
 
   @Override
-  public Expr visit(Shuttle shuttle)
+  public final Expr visit(Shuttle shuttle)
   {
     return shuttle.visit(this);
   }
 
   @Override
-  public BindingAnalysis analyzeInputs()
+  public final BindingAnalysis analyzeInputs()
   {
     return BindingAnalysis.EMTPY;
   }
@@ -100,6 +102,28 @@ abstract class ConstantExpr<T> implements Expr
   {
     return toString();
   }
+}
+
+/**
+ * FIXME: fill this in!
+ */
+abstract class CachedConstantExpr<T> extends ConstantExpr<T>
+{
+  private final ExprEval<T> eval;
+
+  protected CachedConstantExpr(@NotNull ExprEval<T> eval)
+  {
+    super(eval.type(), eval.value);
+    this.eval = eval;
+  }
+
+  @Override
+  public final ExprEval<T> eval(ObjectBinding bindings)
+  {
+    return eval;
+  }
+
+  protected abstract ExprEval<T> realEval();
 }
 
 /**
