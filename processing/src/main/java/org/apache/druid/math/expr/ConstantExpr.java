@@ -30,8 +30,6 @@ import org.apache.druid.math.expr.vector.VectorProcessors;
 import org.apache.druid.segment.column.TypeStrategy;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
-
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -42,9 +40,12 @@ import java.util.Objects;
  * {@link Expr.ObjectBinding}. {@link ConstantExpr} are terminal nodes of an expression tree, and have no children
  * {@link Expr}.
  */
+@Immutable
 abstract class ConstantExpr<T> implements Expr
 {
   final ExpressionType outputType;
+
+  @SuppressWarnings("Immutable")
   @Nullable
   final T value;
 
@@ -110,36 +111,39 @@ abstract class ConstantExpr<T> implements Expr
     return realEval();
   }
 
-  protected abstract ExprEval realEval();
+  protected abstract ExprEval<T> realEval();
 
 
-//  public Expr singleThreaded()
-//  {
-//    return new CachedConstantExpr(realEval());
-//  }
-//
-//  protected abstract @NotNull ExprEval realEval();
-
+  public Expr singleThreaded()
+  {
+    return this;
+  }
 }
 
 /**
  * FIXME: fill this in!
  */
 @Immutable
-abstract class CachedConstantExpr<T> extends ConstantExpr<T>
-{
-  private final ExprEval<T> eval;
+abstract class CacheableConstantExpr<T> extends ConstantExpr<T>{
 
-  protected CachedConstantExpr(@NotNull ExprEval<T> eval)
+  protected CacheableConstantExpr(ExpressionType outputType, T value)
   {
-    super(eval.type(), eval.value);
-    this.eval = eval;
+    super(outputType, value);
   }
 
   @Override
-  public final ExprEval<T> realEval()
+  @SuppressWarnings("Immutable")
+  public final ConstantExpr<T> singleThreaded()
   {
-    return eval;
+    final ExprEval<T> eval = realEval();
+    return new ConstantExpr<T>(eval.type(), eval.value)
+    {
+      @Override
+      public final ExprEval<T> realEval()
+      {
+        return eval;
+      }
+    };
   }
 }
 
@@ -196,14 +200,11 @@ class BigIntegerExpr extends ConstantExpr<BigInteger>
   }
 }
 
-class LongExpr extends ConstantExpr<Long>
+class LongExpr extends CacheableConstantExpr<Long>
 {
-  private final ExprEval expr;
-
   LongExpr(Long value)
   {
     super(ExpressionType.LONG, Preconditions.checkNotNull(value, "value"));
-    expr = ExprEval.ofLong(value);
   }
 
   @Override
@@ -215,7 +216,7 @@ class LongExpr extends ConstantExpr<Long>
   @Override
   public ExprEval realEval()
   {
-    return expr;
+    return ExprEval.ofLong(value);
   }
 
   @Override
@@ -282,14 +283,11 @@ class NullLongExpr extends ConstantExpr<Long>
   }
 }
 
-class DoubleExpr extends ConstantExpr<Double>
+class DoubleExpr extends CacheableConstantExpr<Double>
 {
-  private final ExprEval expr;
-
   DoubleExpr(Double value)
   {
     super(ExpressionType.DOUBLE, Preconditions.checkNotNull(value, "value"));
-    expr = ExprEval.ofDouble(value);
   }
 
   @Override
@@ -301,7 +299,7 @@ class DoubleExpr extends ConstantExpr<Double>
   @Override
   public ExprEval realEval()
   {
-    return expr;
+    return ExprEval.ofDouble(value);
   }
 
   @Override
@@ -368,14 +366,11 @@ class NullDoubleExpr extends ConstantExpr<Double>
   }
 }
 
-class StringExpr extends ConstantExpr<String>
+class StringExpr extends CacheableConstantExpr<String>
 {
-  private final ExprEval expr;
-
   StringExpr(@Nullable String value)
   {
     super(ExpressionType.STRING, NullHandling.emptyToNullIfNeeded(value));
-    expr = ExprEval.of(value);
   }
 
   @Override
@@ -387,7 +382,7 @@ class StringExpr extends ConstantExpr<String>
   @Override
   public ExprEval realEval()
   {
-    return expr;
+    return ExprEval.of(value);
   }
 
   @Override
@@ -512,20 +507,17 @@ class ArrayExpr extends ConstantExpr<Object[]>
   }
 }
 
-class ComplexExpr extends ConstantExpr<Object>
+class ComplexExpr extends CacheableConstantExpr<Object>
 {
-  private final ExprEval expr;
-
   protected ComplexExpr(ExpressionType outputType, @Nullable Object value)
   {
     super(outputType, value);
-    expr = ExprEval.ofComplex(outputType, value);
   }
 
   @Override
   public ExprEval realEval()
   {
-    return expr;
+    return ExprEval.ofComplex(outputType, value);
   }
 
   @Override
