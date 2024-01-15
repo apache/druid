@@ -17,19 +17,10 @@
  * under the License.
  */
 
-package org.apache.druid.msq.indexing.destination;
+package org.apache.druid.catalog.model.table.export;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.catalog.model.table.IngestDestination;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = DataSourceMSQDestination.TYPE, value = DataSourceMSQDestination.class),
-    @JsonSubTypes.Type(name = TaskReportMSQDestination.TYPE, value = TaskReportMSQDestination.class),
-    @JsonSubTypes.Type(name = ExportMSQDestination.TYPE, value = ExportMSQDestination.class),
-    @JsonSubTypes.Type(name = DurableStorageMSQDestination.TYPE, value = DurableStorageMSQDestination.class)
-})
-public interface MSQDestination
+public interface ExportDestination extends IngestDestination
 {
-  // No methods. Just a marker interface for deserialization.
 }

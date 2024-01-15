@@ -17,19 +17,24 @@
  * under the License.
  */
 
-package org.apache.druid.msq.indexing.destination;
+package org.apache.druid.catalog.model.table.export;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.junit.Assert;
+import org.junit.Test;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = DataSourceMSQDestination.TYPE, value = DataSourceMSQDestination.class),
-    @JsonSubTypes.Type(name = TaskReportMSQDestination.TYPE, value = TaskReportMSQDestination.class),
-    @JsonSubTypes.Type(name = ExportMSQDestination.TYPE, value = ExportMSQDestination.class),
-    @JsonSubTypes.Type(name = DurableStorageMSQDestination.TYPE, value = DurableStorageMSQDestination.class)
-})
-public interface MSQDestination
+import java.io.IOException;
+
+public class TableDestinationTest
 {
-  // No methods. Just a marker interface for deserialization.
+  @Test
+  public void testSerde() throws IOException
+  {
+    TableDestination exportDestination = new TableDestination("tableName");
+    ObjectMapper objectMapper = new DefaultObjectMapper();
+    byte[] bytes = objectMapper.writeValueAsBytes(exportDestination);
+    TableDestination newDest = objectMapper.readValue(bytes, TableDestination.class);
+    Assert.assertEquals(exportDestination, newDest);
+  }
 }

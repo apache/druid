@@ -95,4 +95,20 @@ public class DruidSqlUnparseTest
     druidSqlParser.setIdentifierMaxLength(20);
     return druidSqlParser;
   }
+
+  @Test
+  public void testUnparseExternalSqlIdentifier() throws ParseException
+  {
+    String sqlQuery = "REPLACE INTO EXTERN(s3(uri = s3url, user = user1)) AS CSV OVERWRITE ALL SELECT dim2 FROM foo PARTITIONED BY ALL";
+    String prettySqlQuery = "REPLACE INTO EXTERN(S3(URI =\"s3url\", USER =\"user1\"))\n"
+                            + "AS CSV\n"
+                            + "OVERWRITE ALL\n"
+                            + "SELECT \"dim2\"\n"
+                            + "    FROM \"foo\"\n"
+                            + "PARTITIONED BY ALL";
+    DruidSqlParserImpl druidSqlParser = createTestParser(sqlQuery);
+    DruidSqlReplace druidSqlReplace = (DruidSqlReplace) druidSqlParser.DruidSqlReplaceEof();
+    druidSqlReplace.unparse(sqlWriter, 0, 0);
+    assertEquals(prettySqlQuery, sqlWriter.toSqlString().getSql());
+  }
 }

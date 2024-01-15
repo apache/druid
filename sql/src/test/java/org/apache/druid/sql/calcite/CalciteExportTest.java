@@ -28,12 +28,11 @@ import org.junit.Test;
 
 public class CalciteExportTest extends CalciteIngestionDmlTest
 {
-
   @Test
-  public void name()
+  public void testReplaceIntoExtern()
   {
     testIngestionQuery()
-        .sql("REPLACE OVERWRITE TO EXTERNAL('{\"type\":\"hdfs\",\"uri\":\"hdfs://localhost:9090/outputdirectory/\"}') AS 'CSV' SELECT dim2 FROM foo")
+        .sql("REPLACE INTO EXTERN(s3(uri=\"s3://druid-data/exportdest/\",username=\"user1\")) AS CSV OVERWRITE ALL SELECT dim2 FROM foo PARTITIONED BY ALL")
         .expectQuery(
             Druids.newScanQueryBuilder()
                   .dataSource(
@@ -45,7 +44,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
                   .legacy(false)
                   .build()
         )
-        .expectResources(dataSourceRead("foo"), dataSourceWrite("extern"))
+        .expectResources(dataSourceRead("foo"))
         .expectTarget("extern", RowSignature.builder().add("dim2", ColumnType.STRING).build())
         .verify();
   }

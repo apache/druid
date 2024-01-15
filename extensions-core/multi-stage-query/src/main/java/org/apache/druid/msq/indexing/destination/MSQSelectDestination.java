@@ -31,6 +31,10 @@ public enum MSQSelectDestination
    */
   TASKREPORT("taskReport", false),
   /**
+   * Writes the results as rows to a location.
+   */
+  EXPORT("export", false),
+  /**
    * Writes the results as frame files to durable storage. Task report can be truncated to a preview.
    */
   DURABLESTORAGE("durableStorage", true);

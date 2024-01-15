@@ -19,17 +19,25 @@
 
 package org.apache.druid.msq.indexing.destination;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.catalog.model.table.export.S3ExportDestination;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.junit.Assert;
+import org.junit.Test;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = DataSourceMSQDestination.TYPE, value = DataSourceMSQDestination.class),
-    @JsonSubTypes.Type(name = TaskReportMSQDestination.TYPE, value = TaskReportMSQDestination.class),
-    @JsonSubTypes.Type(name = ExportMSQDestination.TYPE, value = ExportMSQDestination.class),
-    @JsonSubTypes.Type(name = DurableStorageMSQDestination.TYPE, value = DurableStorageMSQDestination.class)
-})
-public interface MSQDestination
+import java.io.IOException;
+
+public class ExportMSQDestinationTest
 {
-  // No methods. Just a marker interface for deserialization.
+
+  @Test
+  public void testSerde() throws IOException
+  {
+    ExportMSQDestination exportDestination = new ExportMSQDestination(new S3ExportDestination("hdfs://localhost:9090/outputdirectory/", null));
+    ObjectMapper objectMapper = new DefaultObjectMapper();
+    String s = objectMapper.writeValueAsString(exportDestination);
+
+    ExportMSQDestination newDest = objectMapper.readValue(s, ExportMSQDestination.class);
+    Assert.assertEquals(exportDestination, newDest);
+  }
 }

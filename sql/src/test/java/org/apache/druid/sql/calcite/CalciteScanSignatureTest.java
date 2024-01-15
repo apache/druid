@@ -26,6 +26,7 @@ import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.tools.ValidationException;
+import org.apache.druid.catalog.model.table.IngestDestination;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.QueryLifecycleFactory;
@@ -168,7 +169,7 @@ public class CalciteScanSignatureTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public QueryMaker buildQueryMakerForInsert(String targetDataSource, RelRoot relRoot, PlannerContext plannerContext)
+    public QueryMaker buildQueryMakerForInsert(IngestDestination targetDestination, RelRoot relRoot, PlannerContext plannerContext)
     {
       throw new UnsupportedOperationException();
     }

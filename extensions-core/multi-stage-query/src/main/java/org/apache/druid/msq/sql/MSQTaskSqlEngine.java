@@ -31,6 +31,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Pair;
+import org.apache.druid.catalog.model.table.IngestDestination;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.error.InvalidSqlInput;
@@ -153,7 +154,7 @@ public class MSQTaskSqlEngine implements SqlEngine
 
   @Override
   public QueryMaker buildQueryMakerForInsert(
-      final String targetDataSource,
+      final IngestDestination targetDestination,
       final RelRoot relRoot,
       final PlannerContext plannerContext
   )
@@ -161,7 +162,7 @@ public class MSQTaskSqlEngine implements SqlEngine
     validateInsert(relRoot.rel, relRoot.fields, plannerContext);
 
     return new MSQTaskQueryMaker(
-        targetDataSource,
+        targetDestination,
         overlordClient,
         plannerContext,
         jsonMapper,

@@ -25,6 +25,7 @@ import com.google.inject.Inject;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.druid.catalog.model.table.IngestDestination;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -133,7 +134,7 @@ public class NativeSqlEngine implements SqlEngine
 
   @Override
   public QueryMaker buildQueryMakerForInsert(
-      final String targetDataSource,
+      final IngestDestination targetDestination,
       final RelRoot relRoot,
       final PlannerContext plannerContext
   )

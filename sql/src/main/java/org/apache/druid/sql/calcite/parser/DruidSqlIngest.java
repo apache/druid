@@ -41,6 +41,8 @@ public abstract class DruidSqlIngest extends SqlInsert
 
   @Nullable
   protected final SqlNodeList clusteredBy;
+  @Nullable
+  private final String exportFileFormat;
 
   public DruidSqlIngest(
       SqlParserPos pos,
@@ -50,7 +52,8 @@ public abstract class DruidSqlIngest extends SqlInsert
       SqlNodeList columnList,
       @Nullable Granularity partitionedBy,
       @Nullable String partitionedByStringForUnparse,
-      @Nullable SqlNodeList clusteredBy
+      @Nullable SqlNodeList clusteredBy,
+      @Nullable String exportFileFormat
   )
   {
     super(pos, keywords, targetTable, source, columnList);
@@ -58,6 +61,7 @@ public abstract class DruidSqlIngest extends SqlInsert
     this.partitionedByStringForUnparse = partitionedByStringForUnparse;
     this.partitionedBy = partitionedBy;
     this.clusteredBy = clusteredBy;
+    this.exportFileFormat = exportFileFormat;
   }
 
   public Granularity getPartitionedBy()
@@ -69,5 +73,11 @@ public abstract class DruidSqlIngest extends SqlInsert
   public SqlNodeList getClusteredBy()
   {
     return clusteredBy;
+  }
+
+  @Nullable
+  public String getExportFileFormat()
+  {
+    return exportFileFormat;
   }
 }

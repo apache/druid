@@ -17,19 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.msq.indexing.destination;
+package org.apache.druid.catalog.model.table;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.catalog.model.table.export.S3ExportDestination;
+import org.apache.druid.catalog.model.table.export.TableDestination;
+import org.apache.druid.guice.annotations.UnstableApi;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@UnstableApi
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = IngestDestination.TYPE_PROPERTY)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = DataSourceMSQDestination.TYPE, value = DataSourceMSQDestination.class),
-    @JsonSubTypes.Type(name = TaskReportMSQDestination.TYPE, value = TaskReportMSQDestination.class),
-    @JsonSubTypes.Type(name = ExportMSQDestination.TYPE, value = ExportMSQDestination.class),
-    @JsonSubTypes.Type(name = DurableStorageMSQDestination.TYPE, value = DurableStorageMSQDestination.class)
+    @JsonSubTypes.Type(name = TableDestination.TYPE_KEY, value = TableDestination.class),
+    @JsonSubTypes.Type(name = S3ExportDestination.TYPE_KEY, value = S3ExportDestination.class)
 })
-public interface MSQDestination
+public interface IngestDestination
 {
-  // No methods. Just a marker interface for deserialization.
+  String TYPE_PROPERTY = "type";
+  String getDestinationName();
 }

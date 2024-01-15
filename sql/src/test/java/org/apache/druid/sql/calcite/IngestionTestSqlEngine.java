@@ -24,6 +24,7 @@ import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.catalog.model.table.IngestDestination;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.run.EngineFeature;
@@ -104,13 +105,13 @@ public class IngestionTestSqlEngine implements SqlEngine
   }
 
   @Override
-  public QueryMaker buildQueryMakerForInsert(String targetDataSource, RelRoot relRoot, PlannerContext plannerContext)
+  public QueryMaker buildQueryMakerForInsert(IngestDestination targetDestination, RelRoot relRoot, PlannerContext plannerContext)
   {
     final RowSignature signature = RowSignatures.fromRelDataType(
         relRoot.validatedRowType.getFieldNames(),
         relRoot.validatedRowType
     );
 
-    return new TestInsertQueryMaker(targetDataSource, signature);
+    return new TestInsertQueryMaker(targetDestination, signature);
   }
 }

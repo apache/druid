@@ -25,6 +25,9 @@ import com.google.common.base.Preconditions;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Pair;
+import org.apache.druid.catalog.model.table.IngestDestination;
+import org.apache.druid.catalog.model.table.export.ExportDestination;
+import org.apache.druid.catalog.model.table.export.TableDestination;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
@@ -39,6 +42,7 @@ import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
+import org.apache.druid.msq.indexing.destination.ExportMSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
@@ -80,7 +84,7 @@ public class MSQTaskQueryMaker implements QueryMaker
 
   private static final Granularity DEFAULT_SEGMENT_GRANULARITY = Granularities.ALL;
 
-  private final String targetDataSource;
+  private final IngestDestination targetDataSource;
   private final OverlordClient overlordClient;
   private final PlannerContext plannerContext;
   private final ObjectMapper jsonMapper;
@@ -88,7 +92,7 @@ public class MSQTaskQueryMaker implements QueryMaker
 
 
   MSQTaskQueryMaker(
-      @Nullable final String targetDataSource,
+      @Nullable final IngestDestination targetDataSource,
       final OverlordClient overlordClient,
       final PlannerContext plannerContext,
       final ObjectMapper jsonMapper,
@@ -203,7 +207,9 @@ public class MSQTaskQueryMaker implements QueryMaker
 
     final MSQDestination destination;
 
-    if (targetDataSource != null) {
+    if (targetDataSource instanceof ExportDestination) {
+      destination = new ExportMSQDestination((ExportDestination) targetDataSource);
+    } else if (targetDataSource instanceof TableDestination) {
       Granularity segmentGranularityObject;
       try {
         segmentGranularityObject = jsonMapper.readValue((String) segmentGranularity, Granularity.class);
@@ -227,7 +233,7 @@ public class MSQTaskQueryMaker implements QueryMaker
       );
 
       final DataSourceMSQDestination dataSourceMSQDestination = new DataSourceMSQDestination(
-          targetDataSource,
+          targetDataSource.getDestinationName(),
           segmentGranularityObject,
           segmentSortOrder,
           replaceTimeChunks

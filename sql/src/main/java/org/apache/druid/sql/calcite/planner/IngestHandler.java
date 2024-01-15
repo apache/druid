@@ -34,6 +34,8 @@ import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
+import org.apache.druid.catalog.model.table.IngestDestination;
+import org.apache.druid.catalog.model.table.export.TableDestination;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
@@ -42,6 +44,7 @@ import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.sql.calcite.parser.ExternalDestinationSqlIdentifier;
 import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
@@ -57,7 +60,7 @@ public abstract class IngestHandler extends QueryHandler
   private static final Pattern UNNAMED_COLUMN_PATTERN = Pattern.compile("^EXPR\\$\\d+$", Pattern.CASE_INSENSITIVE);
 
   protected final Granularity ingestionGranularity;
-  protected String targetDatasource;
+  protected IngestDestination targetDatasource;
 
   IngestHandler(
       HandlerContext handlerContext,
@@ -135,7 +138,6 @@ public abstract class IngestHandler extends QueryHandler
       );
     }
     targetDatasource = validateAndGetDataSourceForIngest();
-    resourceActions.add(new ResourceAction(new Resource(targetDatasource, ResourceType.DATASOURCE), Action.WRITE));
   }
 
   @Override
@@ -149,10 +151,12 @@ public abstract class IngestHandler extends QueryHandler
   }
 
   /**
-   * Extract target datasource from a {@link SqlInsert}, and also validate that the ingestion is of a form we support.
-   * Expects the target datasource to be either an unqualified name, or a name qualified by the default schema.
+   * Extract target destination from a {@link SqlInsert}, validates that the ingestion is of a form we support, and
+   * adds the resource action required (if the destination is a druid datasource).
+   * Expects the target datasource to be an unqualified name, a name qualified by the default schema or an external
+   * destination.
    */
-  private String validateAndGetDataSourceForIngest()
+  private IngestDestination validateAndGetDataSourceForIngest()
   {
     final SqlInsert insert = ingestNode();
     if (insert.isUpsert()) {
@@ -168,23 +172,31 @@ public abstract class IngestHandler extends QueryHandler
     }
 
     final SqlIdentifier tableIdentifier = (SqlIdentifier) insert.getTargetTable();
-    final String dataSource;
+    final IngestDestination dataSource;
 
     if (tableIdentifier.names.isEmpty()) {
       // I don't think this can happen, but include a branch for it just in case.
       throw DruidException.forPersona(DruidException.Persona.USER)
           .ofCategory(DruidException.Category.DEFENSIVE)
           .build("Operation [%s] requires a target table", operationName());
+    } else if (tableIdentifier instanceof ExternalDestinationSqlIdentifier) {
+      dataSource = ((ExternalDestinationSqlIdentifier) tableIdentifier).getExportDestination();
     } else if (tableIdentifier.names.size() == 1) {
       // Unqualified name.
-      dataSource = Iterables.getOnlyElement(tableIdentifier.names);
+      String tableName = Iterables.getOnlyElement(tableIdentifier.names);
+      IdUtils.validateId("table", tableName);
+      dataSource = new TableDestination(tableName);
+      resourceActions.add(new ResourceAction(new Resource(tableName, ResourceType.DATASOURCE), Action.WRITE));
     } else {
       // Qualified name.
       final String defaultSchemaName =
           Iterables.getOnlyElement(CalciteSchema.from(handlerContext.defaultSchema()).path(null));
 
       if (tableIdentifier.names.size() == 2 && defaultSchemaName.equals(tableIdentifier.names.get(0))) {
-        dataSource = tableIdentifier.names.get(1);
+        String tableName = tableIdentifier.names.get(1);
+        IdUtils.validateId("table", tableName);
+        dataSource = new TableDestination(tableName);
+        resourceActions.add(new ResourceAction(new Resource(tableName, ResourceType.DATASOURCE), Action.WRITE));
       } else {
         throw InvalidSqlInput.exception(
             "Table [%s] does not support operation [%s] because it is not a Druid datasource",
@@ -193,8 +205,6 @@ public abstract class IngestHandler extends QueryHandler
         );
       }
     }
-
-    IdUtils.validateId("table", dataSource);
 
     return dataSource;
   }

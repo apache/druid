@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.runtime.Hook;
+import org.apache.druid.catalog.model.table.IngestDestination;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.QueryResponse;
@@ -32,15 +33,15 @@ import org.apache.druid.sql.calcite.run.QueryMaker;
  */
 public class TestInsertQueryMaker implements QueryMaker
 {
-  private final String targetDataSource;
+  private final IngestDestination targetDestination;
   private final RowSignature signature;
 
   public TestInsertQueryMaker(
-      final String targetDataSource,
+      final IngestDestination targetDestination,
       final RowSignature signature
   )
   {
-    this.targetDataSource = targetDataSource;
+    this.targetDestination = targetDestination;
     this.signature = signature;
   }
 
@@ -54,7 +55,7 @@ public class TestInsertQueryMaker implements QueryMaker
 
     // 2) Return the dataSource and signature of the insert operation, so tests can confirm they are correct.
     return QueryResponse.withEmptyContext(
-        Sequences.simple(ImmutableList.of(new Object[]{targetDataSource, signature}))
+        Sequences.simple(ImmutableList.of(new Object[]{targetDestination.getDestinationName(), signature}))
     );
   }
 }

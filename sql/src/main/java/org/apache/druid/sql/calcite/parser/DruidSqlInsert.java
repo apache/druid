@@ -51,7 +51,8 @@ public class DruidSqlInsert extends DruidSqlIngest
       @Nonnull SqlInsert insertNode,
       @Nullable Granularity partitionedBy,
       @Nullable String partitionedByStringForUnparse,
-      @Nullable SqlNodeList clusteredBy
+      @Nullable SqlNodeList clusteredBy,
+      @Nullable String exportFileFormat
   )
   {
     super(
@@ -62,7 +63,8 @@ public class DruidSqlInsert extends DruidSqlIngest
         insertNode.getTargetColumnList(),
         partitionedBy,
         partitionedByStringForUnparse,
-        clusteredBy
+        clusteredBy,
+        exportFileFormat
     );
   }
 
