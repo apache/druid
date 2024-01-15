@@ -35,20 +35,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.BuiltInExprMacros;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
-import org.apache.druid.sql.calcite.aggregation.builtin.ArrayConcatSqlAggregator;
-import org.apache.druid.sql.calcite.aggregation.builtin.ArraySqlAggregator;
-import org.apache.druid.sql.calcite.aggregation.builtin.AvgSqlAggregator;
-import org.apache.druid.sql.calcite.aggregation.builtin.BitwiseSqlAggregator;
-import org.apache.druid.sql.calcite.aggregation.builtin.BuiltinApproxCountDistinctSqlAggregator;
-import org.apache.druid.sql.calcite.aggregation.builtin.EarliestLatestAnySqlAggregator;
-import org.apache.druid.sql.calcite.aggregation.builtin.EarliestLatestBySqlAggregator;
-import org.apache.druid.sql.calcite.aggregation.builtin.GroupingSqlAggregator;
-import org.apache.druid.sql.calcite.aggregation.builtin.LiteralSqlAggregator;
-import org.apache.druid.sql.calcite.aggregation.builtin.MaxSqlAggregator;
-import org.apache.druid.sql.calcite.aggregation.builtin.MinSqlAggregator;
-import org.apache.druid.sql.calcite.aggregation.builtin.StringSqlAggregator;
-import org.apache.druid.sql.calcite.aggregation.builtin.SumSqlAggregator;
-import org.apache.druid.sql.calcite.aggregation.builtin.SumZeroSqlAggregator;
+import org.apache.druid.sql.calcite.aggregation.builtin.*;
 import org.apache.druid.sql.calcite.expression.AliasedOperatorConversion;
 import org.apache.druid.sql.calcite.expression.BinaryOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
@@ -174,6 +161,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new BitwiseSqlAggregator(BitwiseSqlAggregator.Op.AND))
                    .add(new BitwiseSqlAggregator(BitwiseSqlAggregator.Op.OR))
                    .add(new BitwiseSqlAggregator(BitwiseSqlAggregator.Op.XOR))
+                   .add(new SingleValueSqlAggregator())
                    .build();
 
   // STRLEN has so many aliases.

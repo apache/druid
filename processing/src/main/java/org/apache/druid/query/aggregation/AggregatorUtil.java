@@ -153,6 +153,7 @@ public class AggregatorUtil
   public static final byte ARRAY_OF_DOUBLES_SKETCH_TO_BASE64_STRING_CACHE_TYPE_ID = 0x4C;
   public static final byte ARRAY_OF_DOUBLES_SKETCH_CONSTANT_SKETCH_CACHE_TYPE_ID = 0x4D;
   public static final byte ARRAY_OF_DOUBLES_SKETCH_TO_METRICS_SUM_ESTIMATE_CACHE_TYPE_ID = 0x4E;
+  public static final byte SINGLE_VALUE_CACHE_TYPE_ID = 0x4F;
 
   /**
    * Given a list of PostAggregators and the name of an output column, returns the minimal list of PostAggregators
@@ -400,7 +401,7 @@ public class AggregatorUtil
     return columnSelectorFactory.makeValueSelector(fieldName);
   }
 
-  public static Supplier<byte[]> getSimpleAggregatorCacheKeySupplier(
+  public static Supplier<byte[]>  getSimpleAggregatorCacheKeySupplier(
       byte aggregatorType,
       String fieldName,
       Supplier<Expr> fieldExpression
