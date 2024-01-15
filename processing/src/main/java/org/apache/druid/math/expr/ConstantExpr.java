@@ -103,6 +103,15 @@ abstract class ConstantExpr<T> implements Expr
     return toString();
   }
 
+  @Override
+  public final ExprEval eval(ObjectBinding bindings)
+  {
+    return realEval();
+  }
+
+  protected abstract ExprEval realEval();
+
+
 //  public Expr singleThreaded()
 //  {
 //    return new CachedConstantExpr(realEval());
@@ -126,7 +135,7 @@ abstract class CachedConstantExpr<T> extends ConstantExpr<T>
   }
 
   @Override
-  public final ExprEval<T> eval(ObjectBinding bindings)
+  public final ExprEval<T> realEval()
   {
     return eval;
   }
@@ -151,7 +160,7 @@ class BigIntegerExpr extends ConstantExpr<BigInteger>
   }
 
   @Override
-  public ExprEval eval(ObjectBinding bindings)
+  public ExprEval realEval()
   {
     // Eval succeeds if the BigInteger is in long range.
     // Callers that need to process out-of-long-range values, like UnaryMinusExpr, must use getLiteralValue().
@@ -202,7 +211,7 @@ class LongExpr extends ConstantExpr<Long>
   }
 
   @Override
-  public ExprEval eval(ObjectBinding bindings)
+  public ExprEval realEval()
   {
     return expr;
   }
@@ -241,7 +250,7 @@ class NullLongExpr extends ConstantExpr<Long>
   }
 
   @Override
-  public ExprEval eval(ObjectBinding bindings)
+  public ExprEval realEval()
   {
     return ExprEval.ofLong(null);
   }
@@ -288,7 +297,7 @@ class DoubleExpr extends ConstantExpr<Double>
   }
 
   @Override
-  public ExprEval eval(ObjectBinding bindings)
+  public ExprEval realEval()
   {
     return expr;
   }
@@ -327,7 +336,7 @@ class NullDoubleExpr extends ConstantExpr<Double>
   }
 
   @Override
-  public ExprEval eval(ObjectBinding bindings)
+  public ExprEval realEval()
   {
     return ExprEval.ofDouble(null);
   }
@@ -374,7 +383,7 @@ class StringExpr extends ConstantExpr<String>
   }
 
   @Override
-  public ExprEval eval(ObjectBinding bindings)
+  public ExprEval realEval()
   {
     return expr;
   }
@@ -421,7 +430,7 @@ class ArrayExpr extends ConstantExpr<Object[]>
   }
 
   @Override
-  public ExprEval eval(ObjectBinding bindings)
+  public ExprEval realEval()
   {
     return ExprEval.ofArray(outputType, value);
   }
@@ -512,7 +521,7 @@ class ComplexExpr extends ConstantExpr<Object>
   }
 
   @Override
-  public ExprEval eval(ObjectBinding bindings)
+  public ExprEval realEval()
   {
     return expr;
   }
