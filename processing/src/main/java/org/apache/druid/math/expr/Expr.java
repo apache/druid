@@ -763,7 +763,8 @@ public interface Expr extends Cacheable
    * FIXME
    * @return
    */
-  default Expr singleThreaded() {
+  default Expr singleThreaded()
+  {
     return this;
   }
 }

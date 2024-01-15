@@ -67,8 +67,8 @@ import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
 @Fork(value = 1)
-@Warmup(iterations = 3, time = 3)
-@Measurement(iterations = 10, time = 3)
+@Warmup(iterations = 3, time = 2)
+@Measurement(iterations = 3, time = 2)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 public class ExpressionSelectorBenchmark

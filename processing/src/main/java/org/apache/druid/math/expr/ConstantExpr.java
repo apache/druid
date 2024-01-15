@@ -126,7 +126,8 @@ abstract class ConstantExpr<T> implements Expr
  * FIXME: fill this in!
  */
 @Immutable
-abstract class CacheableConstantExpr<T> extends ConstantExpr<T>{
+abstract class CacheableConstantExpr<T> extends ConstantExpr<T>
+{
 
   protected CacheableConstantExpr(ExpressionType outputType, T value)
   {
@@ -141,7 +142,7 @@ abstract class CacheableConstantExpr<T> extends ConstantExpr<T>{
     return new ConstantExpr<T>(eval.type(), eval.value)
     {
       @Override
-      public final ExprEval<T> realEval()
+      public ExprEval<T> realEval()
       {
         return eval;
       }
