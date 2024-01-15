@@ -102,6 +102,14 @@ abstract class ConstantExpr<T> implements Expr
   {
     return toString();
   }
+
+//  public Expr singleThreaded()
+//  {
+//    return new CachedConstantExpr(realEval());
+//  }
+//
+//  protected abstract @NotNull ExprEval realEval();
+
 }
 
 /**
@@ -122,8 +130,6 @@ abstract class CachedConstantExpr<T> extends ConstantExpr<T>
   {
     return eval;
   }
-
-  protected abstract ExprEval<T> realEval();
 }
 
 /**
