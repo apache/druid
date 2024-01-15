@@ -20,6 +20,7 @@
 package org.apache.druid.math.expr;
 
 import com.google.common.base.Preconditions;
+import com.google.errorprone.annotations.Immutable;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
@@ -124,6 +125,7 @@ abstract class ConstantExpr<T> implements Expr
 /**
  * FIXME: fill this in!
  */
+@Immutable
 abstract class CachedConstantExpr<T> extends ConstantExpr<T>
 {
   private final ExprEval<T> eval;
