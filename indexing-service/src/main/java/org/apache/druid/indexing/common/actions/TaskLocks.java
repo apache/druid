@@ -151,6 +151,10 @@ public class TaskLocks
       Map<String, Object> taskContext
   )
   {
+    final boolean useConcurrentLocks = (boolean) taskContext.getOrDefault(Tasks.USE_CONCURRENT_LOCKS, false);
+    if (useConcurrentLocks) {
+      return TaskLockType.APPEND;
+    }
     final Object lockType = taskContext.get(Tasks.TASK_LOCK_TYPE);
     if (lockType == null) {
       final boolean useSharedLock = (boolean) taskContext.getOrDefault(Tasks.USE_SHARED_LOCK, false);

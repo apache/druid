@@ -484,6 +484,16 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       return TaskLockType.EXCLUSIVE;
     }
 
+    final boolean useConcurrentLocks = QueryContexts.getAsBoolean(
+        Tasks.USE_CONCURRENT_LOCKS,
+        getContextValue(Tasks.USE_CONCURRENT_LOCKS),
+        false
+    );
+    final IngestionMode ingestionMode = getIngestionMode();
+    if (useConcurrentLocks) {
+      return ingestionMode == IngestionMode.APPEND ? TaskLockType.APPEND : TaskLockType.REPLACE;
+    }
+
     final TaskLockType contextTaskLockType = QueryContexts.getAsEnum(
         Tasks.TASK_LOCK_TYPE,
         getContextValue(Tasks.TASK_LOCK_TYPE),
@@ -498,7 +508,6 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       lockType = contextTaskLockType;
     }
 
-    final IngestionMode ingestionMode = getIngestionMode();
     if ((lockType == TaskLockType.SHARED || lockType == TaskLockType.APPEND)
         && ingestionMode != IngestionMode.APPEND) {
       // Lock types SHARED and APPEND are allowed only in APPEND ingestion mode
