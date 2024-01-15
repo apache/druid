@@ -1530,7 +1530,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
           Set<DataSegment> segments,
           DataSourceMetadata startMetadata,
           DataSourceMetadata endMetadata,
-          final Map<SegmentId, SegmentSchemaMetadata> segmentSchemaMetadataMap
+          final Map<String, SegmentSchemaMetadata> segmentSchemaMetadataMap
           ) throws IOException
       {
         SegmentPublishResult result = super.commitSegmentsAndMetadata(segments, startMetadata, endMetadata, segmentSchemaMetadataMap);

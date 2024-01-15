@@ -83,10 +83,11 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   public static SegmentTransactionalInsertAction appendAction(
       Set<DataSegment> segments,
       @Nullable DataSourceMetadata startMetadata,
-      @Nullable DataSourceMetadata endMetadata
+      @Nullable DataSourceMetadata endMetadata,
+      Map<String, SegmentSchemaMetadata> schemaMetadataMap
   )
   {
-    return new SegmentTransactionalInsertAction(null, segments, startMetadata, endMetadata, null);
+    return new SegmentTransactionalInsertAction(null, segments, startMetadata, endMetadata, null, schemaMetadataMap);
   }
 
   public static SegmentTransactionalInsertAction commitMetadataOnlyAction(
@@ -206,7 +207,8 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
                   () -> toolbox.getIndexerMetadataStorageCoordinator().commitSegmentsAndMetadata(
                       segments,
                       startMetadata,
-                      endMetadata
+                      endMetadata,
+                      schemaMetadataMap
                   )
               )
               .onInvalidLocks(

@@ -320,7 +320,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       return Futures.immediateFuture(null);
 
     } else {
-      final List<SegmentIdWithShardSpec> waitingSegmentIdList = segmentsAndCommitMetadata.getSegmentWithSchemas().stream()
+      final List<SegmentIdWithShardSpec> waitingSegmentIdList = segmentsAndCommitMetadata.getSegments().stream()
                                                                                          .map(
                                                                                        SegmentIdWithShardSpec::fromDataSegment)
                                                                                          .collect(Collectors.toList());
@@ -329,7 +329,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       if (waitingSegmentIdList.isEmpty()) {
         return Futures.immediateFuture(
             new SegmentsAndCommitMetadata(
-                segmentsAndCommitMetadata.getSegmentWithSchemas(),
+                segmentsAndCommitMetadata.getSegments(),
                 ((AppenderatorDriverMetadata) metadata).getCallerMetadata()
             )
         );
@@ -362,7 +362,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
                     public void onSuccess(Object result)
                     {
                       if (numRemainingHandoffSegments.decrementAndGet() == 0) {
-                        List<DataSegment> segments = segmentsAndCommitMetadata.getSegmentWithSchemas();
+                        List<DataSegment> segments = segmentsAndCommitMetadata.getSegments();
                         log.info("Successfully handed off [%d] segments.", segments.size());
                         final long handoffTotalTime = System.currentTimeMillis() - handoffStartTime;
                         metrics.reportMaxSegmentHandoffTime(handoffTotalTime);

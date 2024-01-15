@@ -20,30 +20,34 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.segment.SegmentUtils;
+import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.DataSegmentWithSchema;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 public class SegmentsAndCommitMetadata
 {
-  private static final SegmentsAndCommitMetadata NIL = new SegmentsAndCommitMetadata(Collections.emptyList(), null);
+  private static final SegmentsAndCommitMetadata NIL = new SegmentsAndCommitMetadata(Collections.emptyList(), null, Collections.emptyMap());
 
   private final Object commitMetadata;
-  private final ImmutableList<DataSegmentWithSchema> segmentWithSchemas;
+  private final ImmutableList<DataSegment> segments;
+  private final ImmutableMap<String, SegmentSchemaMetadata> segmentSchema;
 
   public SegmentsAndCommitMetadata(
-      List<DataSegmentWithSchema> segmentWithSchemas,
-      @Nullable Object commitMetadata
+      List<DataSegment> segments,
+      @Nullable Object commitMetadata,
+      Map<String, SegmentSchemaMetadata> segmentSchema
   )
   {
-    this.segmentWithSchemas = ImmutableList.copyOf(segmentWithSchemas);
+    this.segments = ImmutableList.copyOf(segments);
     this.commitMetadata = commitMetadata;
+    this.segmentSchema = ImmutableMap.copyOf(segmentSchema);
   }
 
   @Nullable
@@ -54,11 +58,12 @@ public class SegmentsAndCommitMetadata
 
   public List<DataSegment> getSegments()
   {
-    return segmentWithSchemas.stream().map(DataSegmentWithSchema::getDataSegment).collect(Collectors.toList());
+    return segments;
   }
 
-  public List<DataSegmentWithSchema> getDataSegmentWithSchemas() {
-    return segmentWithSchemas;
+  public ImmutableMap<String, SegmentSchemaMetadata> getSegmentSchema()
+  {
+    return segmentSchema;
   }
 
   @Override
@@ -72,13 +77,13 @@ public class SegmentsAndCommitMetadata
     }
     SegmentsAndCommitMetadata that = (SegmentsAndCommitMetadata) o;
     return Objects.equals(commitMetadata, that.commitMetadata) &&
-           Objects.equals(segmentWithSchemas, that.segmentWithSchemas);
+           Objects.equals(segments, that.segments);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(commitMetadata, segmentWithSchemas);
+    return Objects.hash(commitMetadata, segments);
   }
 
   @Override
@@ -86,7 +91,7 @@ public class SegmentsAndCommitMetadata
   {
     return getClass().getSimpleName() + "{" +
            "commitMetadata=" + commitMetadata +
-           ", segments=" + SegmentUtils.commaSeparatedIdentifiers(getSegments()) +
+           ", segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
            '}';
   }
 

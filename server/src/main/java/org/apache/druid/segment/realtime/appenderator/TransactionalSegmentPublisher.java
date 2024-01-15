@@ -21,7 +21,6 @@ package org.apache.druid.segment.realtime.appenderator;
 
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.DataSegmentWithSchema;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -42,18 +41,18 @@ public interface TransactionalSegmentPublisher
    */
   SegmentPublishResult publishAnnotatedSegments(
       @Nullable Set<DataSegment> segmentsToBeOverwritten,
-      Set<DataSegmentWithSchema> segmentsToPublish,
+      Set<DataSegment> segmentsToPublish,
       @Nullable Object commitMetadata
   ) throws IOException;
 
   default SegmentPublishResult publishSegments(
       @Nullable Set<DataSegment> segmentsToBeOverwritten,
-      Set<DataSegmentWithSchema> segmentsToPublish,
-      Function<Set<DataSegmentWithSchema>, Set<DataSegmentWithSchema>> outputSegmentsAnnotateFunction,
+      Set<DataSegment> segmentsToPublish,
+      Function<Set<DataSegment>, Set<DataSegment>> outputSegmentsAnnotateFunction,
       @Nullable Object commitMetadata
   ) throws IOException
   {
-    final Function<Set<DataSegmentWithSchema>, Set<DataSegmentWithSchema>> annotateFunction = outputSegmentsAnnotateFunction
+    final Function<Set<DataSegment>, Set<DataSegment>> annotateFunction = outputSegmentsAnnotateFunction
         .andThen(SegmentPublisherHelper::annotateShardSpec);
     return publishAnnotatedSegments(
         segmentsToBeOverwritten,

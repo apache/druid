@@ -55,6 +55,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
@@ -65,6 +66,7 @@ import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.SchemaPayload;
 import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
@@ -78,7 +80,6 @@ import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.DataSegmentWithSchema;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.Interval;
 
@@ -771,7 +772,8 @@ public class AppenderatorImpl implements Appenderator
         // segments.
         persistAll(committer),
         (Function<Object, SegmentsAndCommitMetadata>) commitMetadata -> {
-          final List<DataSegmentWithSchema> dataSegments = new ArrayList<>();
+          final List<DataSegment> dataSegments = new ArrayList<>();
+          final Map<String, SegmentSchemaMetadata> segmentSchema = new HashMap<>();
 
           log.info("Preparing to push (stats): processed rows: [%d], sinks: [%d], fireHydrants (across sinks): [%d]",
                    rowIngestionMeters.getProcessed(), theSinks.size(), pushedHydrantsCount.get()
@@ -788,13 +790,14 @@ public class AppenderatorImpl implements Appenderator
               continue;
             }
 
-            final DataSegment dataSegment = mergeAndPush(
+            final Pair<DataSegment, SegmentSchemaMetadata> segmentAndSchema = mergeAndPush(
                 entry.getKey(),
                 entry.getValue(),
                 useUniquePath
             );
-            if (dataSegment != null) {
-              dataSegments.add(dataSegment);
+            if (segmentAndSchema != null) {
+              dataSegments.add(segmentAndSchema.lhs);
+              segmentSchema.put(segmentAndSchema.lhs.getId().toString(), segmentAndSchema.rhs);
             } else {
               log.warn("mergeAndPush[%s] returned null, skipping.", entry.getKey());
             }
@@ -802,7 +805,7 @@ public class AppenderatorImpl implements Appenderator
 
           log.info("Push complete...");
 
-          return new SegmentsAndCommitMetadata(dataSegments, commitMetadata);
+          return new SegmentsAndCommitMetadata(dataSegments, commitMetadata, segmentSchema);
         },
         pushExecutor
     );
@@ -831,7 +834,7 @@ public class AppenderatorImpl implements Appenderator
    * @return segment descriptor, or null if the sink is no longer valid
    */
   @Nullable
-  private DataSegment mergeAndPush(
+  private Pair<DataSegment, SegmentSchemaMetadata> mergeAndPush(
       final SegmentIdWithShardSpec identifier,
       final Sink sink,
       final boolean useUniquePath
@@ -875,7 +878,7 @@ public class AppenderatorImpl implements Appenderator
           );
         } else {
           log.info("Segment[%s] already pushed, skipping.", identifier);
-          return objectMapper.readValue(descriptorFile, DataSegment.class);
+          return Pair.of(objectMapper.readValue(descriptorFile, DataSegment.class), getSegmentSchema(mergedTarget));
         }
       }
 
@@ -995,7 +998,7 @@ public class AppenderatorImpl implements Appenderator
           objectMapper.writeValueAsString(segment.getLoadSpec())
       );
 
-      return segment;
+      return Pair.of(segment, getSegmentSchema(mergedFile));
     }
     catch (Exception e) {
       metrics.incrementFailedHandoffs();
@@ -1009,11 +1012,15 @@ public class AppenderatorImpl implements Appenderator
     final QueryableIndex queryableIndex = indexIO.loadIndex(segmentFile);
     final StorageAdapter storageAdapter = new QueryableIndexStorageAdapter(queryableIndex);
     final RowSignature rowSignature = storageAdapter.getRowSignature();
-    long numRows = storageAdapter.getNumRows();
-
-    // todo add aggregator factory here
-
-    return new SegmentSchemaMetadata(rowSignature);
+    final long numRows = storageAdapter.getNumRows();
+    final AggregatorFactory[] aggregatorFactories = storageAdapter.getMetadata().getAggregators();
+    Map<String, AggregatorFactory> aggregatorFactoryMap = new HashMap<>();
+    if (null != aggregatorFactories) {
+      for (AggregatorFactory aggregatorFactory : aggregatorFactories) {
+        aggregatorFactoryMap.put(aggregatorFactory.getName(), aggregatorFactory);
+      }
+    }
+    return new SegmentSchemaMetadata(new SchemaPayload(rowSignature, aggregatorFactoryMap), numRows);
   }
 
   @Override

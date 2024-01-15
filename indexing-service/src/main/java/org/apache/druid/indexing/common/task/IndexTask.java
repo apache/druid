@@ -978,7 +978,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         TombstoneHelper tombstoneHelper = new TombstoneHelper(toolbox.getTaskActionClient());
 
         List<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervals(
-            pushed.getSegmentWithSchemas(),
+            pushed.getSegments(),
             ingestionSchema.getDataSchema()
         );
         // now find the versions for the tombstone intervals
@@ -1011,7 +1011,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       // for awaitSegmentAvailabilityTimeoutMillis
       if (tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis() > 0 && published != null) {
         ingestionState = IngestionState.SEGMENT_AVAILABILITY_WAIT;
-        ArrayList<DataSegment> segmentsToWaitFor = new ArrayList<>(published.getSegmentWithSchemas());
+        ArrayList<DataSegment> segmentsToWaitFor = new ArrayList<>(published.getSegments());
         waitForSegmentAvailability(
             toolbox,
             segmentsToWaitFor,
@@ -1035,16 +1035,16 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
             buildSegmentsMeters.getUnparseable(),
             buildSegmentsMeters.getThrownAway()
         );
-        log.info("Published [%s] segments", published.getSegmentWithSchemas().size());
+        log.info("Published [%s] segments", published.getSegmentSchema().size());
 
         // publish metrics:
         emitMetric(toolbox.getEmitter(), "ingest/tombstones/count", tombStones.size());
         // segments count metric is documented to include tombstones
         emitMetric(toolbox.getEmitter(), "ingest/segments/count",
-                   published.getSegmentWithSchemas().size() + tombStones.size()
+                   published.getSegmentSchema().size() + tombStones.size()
         );
 
-        log.debugSegments(published.getSegmentWithSchemas(), "Published segments");
+        log.debugSegments(published.getSegments(), "Published segments");
 
         toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
         return TaskStatus.success(getId());
