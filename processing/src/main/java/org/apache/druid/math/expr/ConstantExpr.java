@@ -30,6 +30,7 @@ import org.apache.druid.math.expr.vector.VectorProcessors;
 import org.apache.druid.segment.column.TypeStrategy;
 
 import javax.annotation.Nullable;
+
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -114,6 +115,7 @@ abstract class ConstantExpr<T> implements Expr
   protected abstract ExprEval<T> realEval();
 
 
+  @Override
   public Expr singleThreaded()
   {
     return this;

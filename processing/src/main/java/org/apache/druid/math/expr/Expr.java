@@ -758,4 +758,12 @@ public interface Expr extends Cacheable
       return results;
     }
   }
+
+  /**
+   * FIXME
+   * @return
+   */
+  default Expr singleThreaded() {
+    return this;
+  }
 }
