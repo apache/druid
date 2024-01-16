@@ -17,23 +17,25 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.expression.builtin;
+package org.apache.druid.spectator.histogram;
 
-import org.apache.calcite.sql.SqlFunction;
-import org.apache.calcite.sql.fun.SqlStdOperatorTable;
-import org.apache.druid.math.expr.Function;
-import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
+import com.google.common.base.Supplier;
+import org.apache.druid.segment.column.ComplexColumn;
 
-public class RoundOperatorConversion extends DirectOperatorConversion
+public class SpectatorHistogramColumnPartSupplier implements Supplier<ComplexColumn>
 {
-  public RoundOperatorConversion()
+  private final SpectatorHistogramIndexed complexType;
+  private final String typeName;
+
+  public SpectatorHistogramColumnPartSupplier(final String typeName, final SpectatorHistogramIndexed complexType)
   {
-    super(SqlStdOperatorTable.ROUND, Function.Round.NAME);
+    this.complexType = complexType;
+    this.typeName = typeName;
   }
 
   @Override
-  public SqlFunction calciteOperator()
+  public ComplexColumn get()
   {
-    return SqlStdOperatorTable.ROUND;
+    return new SpectatorHistogramIndexBasedComplexColumn(typeName, complexType);
   }
 }

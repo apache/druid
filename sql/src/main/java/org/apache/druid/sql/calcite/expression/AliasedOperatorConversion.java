@@ -35,7 +35,6 @@ import javax.annotation.Nullable;
 public class AliasedOperatorConversion implements SqlOperatorConversion
 {
   private final SqlOperatorConversion baseConversion;
-  private final String name;
   private final SqlOperator operator;
 
   public AliasedOperatorConversion(final SqlOperatorConversion baseConversion, final String name)
@@ -47,7 +46,6 @@ public class AliasedOperatorConversion implements SqlOperatorConversion
     final SqlFunction baseFunction = (SqlFunction) baseConversion.calciteOperator();
 
     this.baseConversion = baseConversion;
-    this.name = name;
     this.operator = new SqlFunction(
         name,
         baseFunction.getKind(),

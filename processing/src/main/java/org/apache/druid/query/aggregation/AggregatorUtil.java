@@ -129,6 +129,11 @@ public class AggregatorUtil
   // TDigest sketch aggregators
   public static final byte TDIGEST_BUILD_SKETCH_CACHE_TYPE_ID = 0x38;
 
+  // Spectator histogram aggregators
+  public static final byte SPECTATOR_HISTOGRAM_CACHE_TYPE_ID = 0x39;
+  public static final byte SPECTATOR_HISTOGRAM_DISTRIBUTION_CACHE_TYPE_ID = 0x3A;
+  public static final byte SPECTATOR_HISTOGRAM_TIMER_CACHE_TYPE_ID = 0x3B;
+
   public static final byte MEAN_CACHE_TYPE_ID = 0x41;
 
   // ANY aggregator

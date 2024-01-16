@@ -98,7 +98,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
- * This class contains shared code between {@link GroupByMergingQueryRunnerV2} and {@link GroupByRowProcessor}.
+ * This class contains shared code between {@link GroupByMergingQueryRunner} and {@link GroupByRowProcessor}.
  */
 public class RowBasedGrouperHelper
 {
