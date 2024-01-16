@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
@@ -38,6 +39,7 @@ import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -102,17 +104,17 @@ public class DelimitedValueReader extends TextReader.Bytes
   public List<InputRow> parseInputRows(byte[] line) throws IOException, ParseException
   {
     if (useListBasedInputRows) {
-      final List<String> parsed = parser.parseLine(line);
+      final List<Object> parsed = readLineAsList(line);
       return Collections.singletonList(
           ListBasedInputRow.parse(
               inputRowSignature,
               getInputRowSchema().getTimestampSpec(),
               inputRowDimensions,
-              (List) parsed
+              parsed
           )
       );
     } else {
-      final Map<String, Object> zipped = parseLine(line);
+      final Map<String, Object> zipped = readLineAsMap(line);
       return Collections.singletonList(
           MapInputRowParser.parse(
               getInputRowSchema().getTimestampSpec(),
@@ -126,10 +128,16 @@ public class DelimitedValueReader extends TextReader.Bytes
   @Override
   public List<Map<String, Object>> toMap(byte[] intermediateRow) throws IOException
   {
-    return Collections.singletonList(parseLine(intermediateRow));
+    return Collections.singletonList(readLineAsMap(intermediateRow));
   }
 
-  private Map<String, Object> parseLine(byte[] line) throws IOException
+  private List<Object> readLineAsList(byte[] line) throws IOException
+  {
+    final List<String> parsed = parser.parseLine(line);
+    return new ArrayList<>(Lists.transform(parsed, multiValueFunction));
+  }
+
+  private Map<String, Object> readLineAsMap(byte[] line) throws IOException
   {
     final List<String> parsed = parser.parseLine(line);
     return Utils.zipMapPartial(
@@ -175,7 +183,7 @@ public class DelimitedValueReader extends TextReader.Bytes
     inputRowDimensions = MapInputRowParser.findDimensions(
         getInputRowSchema().getTimestampSpec(),
         getInputRowSchema().getDimensionsSpec(),
-        ImmutableSet.copyOf(columns)
+        ImmutableSet.copyOf(inputRowSignature.getColumnNames())
     );
   }
 }

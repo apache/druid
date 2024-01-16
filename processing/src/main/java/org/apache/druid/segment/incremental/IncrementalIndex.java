@@ -32,6 +32,7 @@ import com.google.common.primitives.Longs;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.ListBasedInputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -684,11 +685,13 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
       return ((MapBasedInputRow) inputRow).getEvent().toString();
     }
 
+    if (inputRow instanceof ListBasedInputRow) {
+      return ((ListBasedInputRow) inputRow).asMap().toString();
+    }
+
     if (inputRow instanceof TransformedInputRow) {
       InputRow innerRow = ((TransformedInputRow) inputRow).getBaseRow();
-      if (innerRow instanceof MapBasedInputRow) {
-        return ((MapBasedInputRow) innerRow).getEvent().toString();
-      }
+      return getSimplifiedEventStringFromRow(innerRow);
     }
 
     return inputRow.toString();

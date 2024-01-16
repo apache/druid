@@ -29,6 +29,7 @@ import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -144,6 +145,11 @@ public class ListBasedInputRow implements InputRow
     return timestamp.compareTo(o.getTimestamp());
   }
 
+  public Map<String, Object> asMap()
+  {
+    return Utils.zipMapPartial(signature.getColumnNames(), data);
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -168,9 +174,9 @@ public class ListBasedInputRow implements InputRow
   @Override
   public String toString()
   {
-    return "ListBasedInputRow{" +
+    return "{" +
            "timestamp=" + DateTimes.utc(getTimestampFromEpoch()) +
-           ", event=" + Utils.zipMapPartial(signature.getColumnNames(), data) +
+           ", event=" + asMap() +
            ", dimensions=" + dimensions +
            '}';
   }

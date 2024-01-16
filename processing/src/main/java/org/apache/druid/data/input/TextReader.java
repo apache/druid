@@ -20,12 +20,14 @@
 package org.apache.druid.data.input;
 
 import org.apache.druid.data.input.impl.FastLineIterator;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.CloseableIteratorWithMetadata;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.common.parsers.ParserUtils;
 import org.apache.druid.segment.column.RowSignature;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -174,6 +176,13 @@ public abstract class TextReader<T> extends IntermediateRowParsingReader<T>
     protected CloseableIterator<byte[]> makeSourceIterator(InputStream in)
     {
       return new FastLineIterator.Bytes(in);
+    }
+
+    @Override
+    protected String intermediateRowAsString(@Nullable byte[] row)
+    {
+      // Like String.valueOf, but for UTF-8 bytes. Keeps error messages consistent between String and Bytes.
+      return row == null ? "null" : StringUtils.fromUtf8(row);
     }
   }
 }
