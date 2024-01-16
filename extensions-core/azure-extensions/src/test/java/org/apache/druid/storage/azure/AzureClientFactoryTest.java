@@ -133,6 +133,7 @@ public class AzureClientFactoryTest
     EasyMock.expect(config.getKey()).andReturn("key").times(2);
     EasyMock.expect(config.getAccount()).andReturn(ACCOUNT).times(2);
     EasyMock.expect(config.getMaxTries()).andReturn(3);
+    EasyMock.expect(config.getBlobStorageEndpoint()).andReturn(AzureUtils.AZURE_STORAGE_HOST_ADDRESS);
     azureClientFactory = new AzureClientFactory(config);
     EasyMock.replay(config);
     azureClientFactory.getBlobServiceClient(null);

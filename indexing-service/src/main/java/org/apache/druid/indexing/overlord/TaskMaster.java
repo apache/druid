@@ -238,7 +238,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   }
 
   /**
-   * Returns true if it's the leader and its all services have been properly initialized.
+   * Returns true if it's the leader and all its services have been initialized.
    */
   public boolean isLeader()
   {

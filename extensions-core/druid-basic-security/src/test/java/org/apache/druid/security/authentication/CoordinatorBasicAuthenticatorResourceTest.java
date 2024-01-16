@@ -36,6 +36,7 @@ import org.apache.druid.security.basic.authentication.endpoint.CoordinatorBasicA
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentials;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
+import org.apache.druid.security.basic.authentication.validator.PasswordHashGenerator;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthValidator;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -354,10 +355,10 @@ public class CoordinatorBasicAuthenticatorResourceTest
     byte[] hash = credentials.getHash();
     int iterations = credentials.getIterations();
     Assert.assertEquals(BasicAuthUtils.SALT_LENGTH, salt.length);
-    Assert.assertEquals(BasicAuthUtils.KEY_LENGTH / 8, hash.length);
+    Assert.assertEquals(PasswordHashGenerator.KEY_LENGTH / 8, hash.length);
     Assert.assertEquals(BasicAuthUtils.DEFAULT_KEY_ITERATIONS, iterations);
 
-    byte[] recalculatedHash = BasicAuthUtils.hashPassword(
+    byte[] recalculatedHash = PasswordHashGenerator.computePasswordHash(
         "helloworld".toCharArray(),
         salt,
         iterations
@@ -377,10 +378,10 @@ public class CoordinatorBasicAuthenticatorResourceTest
     hash = cachedUserCredentials.getHash();
     iterations = cachedUserCredentials.getIterations();
     Assert.assertEquals(BasicAuthUtils.SALT_LENGTH, salt.length);
-    Assert.assertEquals(BasicAuthUtils.KEY_LENGTH / 8, hash.length);
+    Assert.assertEquals(PasswordHashGenerator.KEY_LENGTH / 8, hash.length);
     Assert.assertEquals(BasicAuthUtils.DEFAULT_KEY_ITERATIONS, iterations);
 
-    recalculatedHash = BasicAuthUtils.hashPassword(
+    recalculatedHash = PasswordHashGenerator.computePasswordHash(
         "helloworld".toCharArray(),
         salt,
         iterations

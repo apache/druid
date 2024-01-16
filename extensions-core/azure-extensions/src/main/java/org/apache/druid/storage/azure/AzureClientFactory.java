@@ -67,7 +67,7 @@ public class AzureClientFactory
   private BlobServiceClientBuilder getAuthenticatedBlobServiceClientBuilder()
   {
     BlobServiceClientBuilder clientBuilder = new BlobServiceClientBuilder()
-        .endpoint("https://" + config.getAccount() + ".blob.core.windows.net");
+        .endpoint("https://" + config.getAccount() + "." + config.getBlobStorageEndpoint());
 
     if (config.getKey() != null) {
       clientBuilder.credential(new StorageSharedKeyCredential(config.getAccount(), config.getKey()));
