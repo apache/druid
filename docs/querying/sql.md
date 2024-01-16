@@ -184,21 +184,21 @@ LIMIT 15
 
 |`channel`|`user`|`action`|`total_changes`|
 |---------|------|--------|---------------|
-|`#ar.wikipedia`|	156.202.189.223|added|0|
-|`#ar.wikipedia`|	156.202.189.223|deleted|30|
-|`#ar.wikipedia`|	156.202.76.160|added|0|
-|`#ar.wikipedia`|	156.202.76.160|deleted|0|
-|`#ar.wikipedia`|	156.212.124.165|added|451|
-|`#ar.wikipedia`|	156.212.124.165|deleted|0|
-|`#ar.wikipedia`|	160.166.147.167|added|1|
-|`#ar.wikipedia`|	160.166.147.167|deleted|0|
-|`#ar.wikipedia`|	185.99.32.50|added|1|
-|`#ar.wikipedia`|	185.99.32.50|deleted|0|
-|`#ar.wikipedia`|	197.18.109.148|added|0|
-|`#ar.wikipedia`|	197.18.109.148|deleted|24|
-|`#ar.wikipedia`|	2001:16A2:3C7:6C00:917E:AD28:FAD3:FD5C|added|1|
-|`#ar.wikipedia`|	2001:16A2:3C7:6C00:917E:AD28:FAD3:FD5C|deleted|0|
-|`#ar.wikipedia`|	41.108.33.83|	added|0|
+|`#ar.wikipedia`|156.202.189.223|added|0|
+|`#ar.wikipedia`|156.202.189.223|deleted|30|
+|`#ar.wikipedia`|156.202.76.160|added|0|
+|`#ar.wikipedia`|156.202.76.160|deleted|0|
+|`#ar.wikipedia`|156.212.124.165|added|451|
+|`#ar.wikipedia`|156.212.124.165|deleted|0|
+|`#ar.wikipedia`|160.166.147.167|added|1|
+|`#ar.wikipedia`|160.166.147.167|deleted|0|
+|`#ar.wikipedia`|185.99.32.50|added|1|
+|`#ar.wikipedia`|185.99.32.50|deleted|0|
+|`#ar.wikipedia`|197.18.109.148|added|0|
+|`#ar.wikipedia`|197.18.109.148|deleted|24|
+|`#ar.wikipedia`|2001:16A2:3C7:6C00:917E:AD28:FAD3:FD5C|added|1|
+|`#ar.wikipedia`|2001:16A2:3C7:6C00:917E:AD28:FAD3:FD5C|deleted|0|
+|`#ar.wikipedia`|41.108.33.83|added|0|
 
 </details>
 
