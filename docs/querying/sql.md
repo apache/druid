@@ -95,7 +95,7 @@ The PIVOT operator is an [experimental feature](../development/experimental-feat
 
 The PIVOT operator carries out an aggregation and transforms rows into columns in the output.
 
-The following is the general syntax for the PIVOT operator. Note that the PIVOT operator is enclosed in parentheses and forms part of the FORM clause of the query.
+The following is the general syntax for the PIVOT operator. Note that the PIVOT operator is enclosed in parentheses and forms part of the FROM clause of the query.
 
 ```sql
 PIVOT (aggregation_function(column_to_aggregate)
@@ -106,41 +106,41 @@ PIVOT (aggregation_function(column_to_aggregate)
 
 PIVOT syntax parameters:
 
-* `aggregation_function`: An aggregation function such as SUM, COUNT, MIN, MAX, or AVG.
+* `aggregation_function`: An aggregation function, such as SUM, COUNT, MIN, MAX, or AVG.
 * `column_to_aggregate`: The source column to be aggregated.
 * `column_with_values_to_pivot`: The column that contains values for the pivoted column names.
-* `pivoted_columnN`: The list of values to pivot into headings in the output.
+* `pivoted_columnN`: The list of values to pivot into headers in the output.
 
-The following example demonstrates how to transform `cityName` values into column headings `a_sum_deleted` and `b_sum_deleted`:
+The following example demonstrates how to transform `cityName` values into column headers `a_sum_deleted` and `b_sum_deleted`:
 
 ```sql
-SELECT user, a_sum_deleted, b_sum_deleted 
+SELECT user, channel, ba_sum_deleted, ny_sum_deleted
 FROM "wikipedia"
-PIVOT (SUM(deleted) AS "sum_deleted" FOR "cityName" IN ('Buenos Aires' AS b, 'Abu Dhabi' AS a))
-WHERE b_sum_deleted IS NOT NULL OR a_sum_deleted IS NOT NULL
+PIVOT (SUM(deleted) AS "sum_deleted" FOR "cityName" IN ( 'Buenos Aires' AS ba, 'New York' AS ny))
+WHERE ba_sum_deleted IS NOT NULL OR ny_sum_deleted IS NOT NULL
 LIMIT 15
 ```
 
 <details>
 <summary> View results </summary>
 
-| `user` | `a_sum_deleted` | `b_sum_deleted`|
-| ------ | --------------- | -------------- | 
-|181.230.118.178|	null|	0|
-|181.230.118.178|	null|	0|
-|190.123.145.147|	null|	0|
-|181.230.118.178|	null|	16|
-|181.230.118.178|	null|	0|
-|181.230.118.178|	null|	0|
-|181.230.118.178|	null|	0|
-|181.230.118.178|	null|	0|
-|181.230.118.178|	null|	0|
-|181.230.118.178|	null|	0|
-|190.192.179.192|	null|	0|
-|181.230.118.178|	null|	0|
-|181.230.118.178|	null|	0|
-|181.230.118.178|	null|	0|
-|86.98.150.78|	0|	null|
+|`user`|`channel`|`ba_sum_deleted`|`ny_sum_deleted`|
+|------|---------|----------------|----------------|
+|181.230.118.178|`#en.wikipedia`|0|null|
+|181.230.118.178|`#en.wikipedia`|0|null|
+|69.86.6.150|`#en.wikipedia`|null|1|
+|190.123.145.147|`#es.wikipedia`|0|null|
+|181.230.118.178|`#en.wikipedia`|16|null|
+|181.230.118.178|`#en.wikipedia`|0|null|
+|181.230.118.178|`#en.wikipedia`|0|null|
+|181.230.118.178|`#en.wikipedia`|0|null|
+|181.230.118.178|`#en.wikipedia`|0|null|
+|181.230.118.178|`#en.wikipedia`|0|null|
+|181.230.118.178|`#en.wikipedia`|0|null|
+|190.192.179.192|`#en.wikipedia`|0|null|
+|181.230.118.178|`#en.wikipedia`|0|null|
+|181.230.118.178|`#en.wikipedia`|0|null|
+|181.230.118.178|`#en.wikipedia`|0|null|
 
 </details>
 
@@ -153,7 +153,7 @@ The UNPIVOT operator is an [experimental feature](../development/experimental-fe
 The UNPIVOT operator transforms existing column values into rows.
 Note that UNPIVOT isn't the exact reverse operation of PIVOT. The PIVOT operator carries out an aggregation and merges rows as needed. UNPIVOT doesn't reproduce the original rows that have been merged.
 
-The following is the general syntax for the UNPIVOT operator. Note that the UNPIVOT operator is enclosed in parentheses and forms part of the FORM clause of the query.
+The following is the general syntax for the UNPIVOT operator. Note that the UNPIVOT operator is enclosed in parentheses and forms part of the FROM clause of the query.
 
 ```sql
 UNPIVOT (values_column 
