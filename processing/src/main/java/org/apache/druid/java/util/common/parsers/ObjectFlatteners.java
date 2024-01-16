@@ -90,7 +90,7 @@ public class ObjectFlatteners
         final Set<String> keys;
 
         if (flattenSpec.isUseFieldDiscovery()) {
-          class KeySet extends ForwardingSet<String>
+          class DiscoveredKeySet extends ForwardingSet<String>
           {
             /**
              * Lazy supplier, because the key set may be requested but then not have any methods called on it.
@@ -118,7 +118,7 @@ public class ObjectFlatteners
             }
           }
 
-          keys = new KeySet();
+          keys = new DiscoveredKeySet();
         } else {
           keys = extractors.keySet();
         }
