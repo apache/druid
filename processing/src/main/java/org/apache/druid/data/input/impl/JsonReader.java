@@ -25,7 +25,6 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Iterators;
 import org.apache.commons.io.IOUtils;
@@ -42,6 +41,7 @@ import org.apache.druid.java.util.common.parsers.ObjectFlatteners;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -89,7 +89,7 @@ public class JsonReader extends IntermediateRowParsingReader<InputEntity>
   }
 
   @Override
-  protected CloseableIterator<InputEntity> intermediateRowIterator() throws IOException
+  protected CloseableIterator<InputEntity> intermediateRowIterator()
   {
     return CloseableIterators.withEmptyBaggage(Iterators.singletonIterator(source));
   }
@@ -115,7 +115,7 @@ public class JsonReader extends IntermediateRowParsingReader<InputEntity>
       //convert Jackson's JsonParseException into druid's exception for further processing
       //JsonParseException will be thrown from MappingIterator#hasNext or MappingIterator#next when input json text is ill-formed
       if (e.getCause() instanceof JsonParseException) {
-        final String rowAsString = IOUtils.toString(entity.open(), Charsets.UTF_8);
+        final String rowAsString = IOUtils.toString(entity.open(), StandardCharsets.UTF_8);
         throw new ParseException(rowAsString, e, "Unable to parse row [%s]", rowAsString);
       }
 
@@ -124,7 +124,7 @@ public class JsonReader extends IntermediateRowParsingReader<InputEntity>
     }
 
     if (inputRows.isEmpty()) {
-      final String rowAsString = IOUtils.toString(entity.open(), Charsets.UTF_8);
+      final String rowAsString = IOUtils.toString(entity.open(), StandardCharsets.UTF_8);
       throw new ParseException(
           rowAsString,
           "Unable to parse [%s] as the intermediateRow resulted in empty input row",
@@ -148,7 +148,7 @@ public class JsonReader extends IntermediateRowParsingReader<InputEntity>
       //convert Jackson's JsonParseException into druid's exception for further processing
       //JsonParseException will be thrown from MappingIterator#hasNext or MappingIterator#next when input json text is ill-formed
       if (e.getCause() instanceof JsonParseException) {
-        final String rowAsString = IOUtils.toString(entity.open(), Charsets.UTF_8);
+        final String rowAsString = IOUtils.toString(entity.open(), StandardCharsets.UTF_8);
         throw new ParseException(rowAsString, e, "Unable to parse row [%s]", rowAsString);
       }
 
