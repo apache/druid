@@ -46,6 +46,15 @@ public class AzureAccountConfig
   @JsonProperty
   private String sharedAccessStorageToken;
 
+  @JsonProperty
+  private String managedIdentityClientId;
+
+  @JsonProperty
+  private Boolean useAzureCredentialsChain = Boolean.FALSE;
+
+  @JsonProperty
+  private String endpointSuffix = AzureUtils.DEFAULT_AZURE_ENDPOINT_SUFFIX;
+
   @SuppressWarnings("unused") // Used by Jackson deserialization?
   public void setProtocol(String protocol)
   {
@@ -67,6 +76,12 @@ public class AzureAccountConfig
   public void setKey(String key)
   {
     this.key = key;
+  }
+
+  @SuppressWarnings("unused") // Used by Jackson deserialization?
+  public void setEndpointSuffix(String endpointSuffix)
+  {
+    this.endpointSuffix = endpointSuffix;
   }
 
   public String getProtocol()
@@ -94,9 +109,35 @@ public class AzureAccountConfig
     return sharedAccessStorageToken;
   }
 
+  public Boolean getUseAzureCredentialsChain()
+  {
+    return useAzureCredentialsChain;
+  }
+
+  public String getManagedIdentityClientId()
+  {
+    return managedIdentityClientId;
+  }
+
+
   @SuppressWarnings("unused") // Used by Jackson deserialization?
   public void setSharedAccessStorageToken(String sharedAccessStorageToken)
   {
     this.sharedAccessStorageToken = sharedAccessStorageToken;
+  }
+
+  public void setUseAzureCredentialsChain(Boolean useAzureCredentialsChain)
+  {
+    this.useAzureCredentialsChain = useAzureCredentialsChain;
+  }
+
+  public String getEndpointSuffix()
+  {
+    return endpointSuffix;
+  }
+
+  public String getBlobStorageEndpoint()
+  {
+    return "blob." + endpointSuffix;
   }
 }

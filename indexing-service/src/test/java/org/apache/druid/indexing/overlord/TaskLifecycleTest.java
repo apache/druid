@@ -137,6 +137,7 @@ import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentKiller;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.NoopDataSegmentArchiver;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentTest;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
@@ -619,6 +620,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         .build();
 
     return new TaskToolboxFactory(
+        null,
         taskConfig,
         new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
         tac,
@@ -664,7 +666,8 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        "1"
+        "1",
+        CentralizedDatasourceSchemaConfig.create()
     );
   }
 

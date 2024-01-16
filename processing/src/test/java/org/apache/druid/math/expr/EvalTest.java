@@ -28,6 +28,8 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.column.TypeStrategiesTest;
+import org.apache.druid.segment.data.ComparableList;
+import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
@@ -1682,6 +1684,18 @@ public class EvalTest extends InitializedNullHandlingTest
         someOtherComplex,
         ExpressionType.UNKNOWN_COMPLEX,
         someOtherComplex
+    );
+
+    assertBestEffortOf(
+        ComparableStringArray.of("a", "b", "c"),
+        ExpressionType.STRING_ARRAY,
+        new Object[]{"a", "b", "c"}
+    );
+
+    assertBestEffortOf(
+        new ComparableList<>(Arrays.asList(1L, 2L)),
+        ExpressionType.LONG_ARRAY,
+        new Object[]{1L, 2L}
     );
   }
 

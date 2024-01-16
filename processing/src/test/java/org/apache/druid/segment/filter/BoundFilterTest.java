@@ -895,8 +895,7 @@ public class BoundFilterTest extends BaseFilterTest
                   .withIgnoredFields(
                       "longPredicateSupplier",
                       "floatPredicateSupplier",
-                      "doublePredicateSupplier",
-                      "isNullUnknown"
+                      "doublePredicateSupplier"
                   )
                   .verify();
   }

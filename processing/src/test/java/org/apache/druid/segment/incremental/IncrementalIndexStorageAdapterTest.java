@@ -20,12 +20,11 @@
 package org.apache.druid.segment.incremental;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.collections.CloseableStupidPool;
+import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.guice.NestedDataModule;
@@ -45,18 +44,18 @@ import org.apache.druid.query.filter.DimFilters;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.ResultRow;
-import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
+import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngine;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.query.topn.TopNQueryEngine;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.CloserRule;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
@@ -136,23 +135,29 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
         CloseableStupidPool<ByteBuffer> pool = new CloseableStupidPool<>(
             "GroupByQueryEngine-bufferPool",
             () -> ByteBuffer.allocate(50000)
-        )
+        );
+        ResourceHolder<ByteBuffer> processingBuffer = pool.take()
     ) {
-
-      final Sequence<ResultRow> rows = GroupByQueryEngineV2.process(
-          GroupByQuery.builder()
-                      .setDataSource("test")
-                      .setGranularity(Granularities.ALL)
-                      .setInterval(new Interval(DateTimes.EPOCH, DateTimes.nowUtc()))
-                      .addDimension("billy")
-                      .addDimension("sally")
-                      .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
-                      .addOrderByColumn("billy")
-                      .build(),
+      final GroupByQuery query = GroupByQuery.builder()
+                                             .setDataSource("test")
+                                             .setGranularity(Granularities.ALL)
+                                             .setInterval(new Interval(DateTimes.EPOCH, DateTimes.nowUtc()))
+                                             .addDimension("billy")
+                                             .addDimension("sally")
+                                             .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
+                                             .addOrderByColumn("billy")
+                                             .build();
+      final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
+      final Interval interval = Iterables.getOnlyElement(query.getIntervals());
+      final Sequence<ResultRow> rows = GroupByQueryEngine.process(
+          query,
           new IncrementalIndexStorageAdapter(index),
-          pool,
+          processingBuffer.get(),
+          null,
           new GroupByQueryConfig(),
           new DruidProcessingConfig(),
+          filter,
+          interval,
           null
       );
 
@@ -194,35 +199,41 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
         CloseableStupidPool<ByteBuffer> pool = new CloseableStupidPool<>(
             "GroupByQueryEngine-bufferPool",
             () -> ByteBuffer.allocate(50000)
-        )
+        );
+        ResourceHolder<ByteBuffer> processingBuffer = pool.take();
     ) {
-
-      final Sequence<ResultRow> rows = GroupByQueryEngineV2.process(
-          GroupByQuery.builder()
-                      .setDataSource("test")
-                      .setGranularity(Granularities.ALL)
-                      .setInterval(new Interval(DateTimes.EPOCH, DateTimes.nowUtc()))
-                      .addDimension("billy")
-                      .addDimension("sally")
-                      .addAggregator(
-                          new LongSumAggregatorFactory("cnt", "cnt")
-                      )
-                      .addAggregator(
-                          new JavaScriptAggregatorFactory(
-                              "fieldLength",
-                              Arrays.asList("sally", "billy"),
-                              "function(current, s, b) { return current + (s == null ? 0 : s.length) + (b == null ? 0 : b.length); }",
-                              "function() { return 0; }",
-                              "function(a,b) { return a + b; }",
-                              JavaScriptConfig.getEnabledInstance()
-                          )
-                      )
-                      .addOrderByColumn("billy")
-                      .build(),
+      final GroupByQuery query = GroupByQuery.builder()
+                                             .setDataSource("test")
+                                             .setGranularity(Granularities.ALL)
+                                             .setInterval(new Interval(DateTimes.EPOCH, DateTimes.nowUtc()))
+                                             .addDimension("billy")
+                                             .addDimension("sally")
+                                             .addAggregator(
+                                                 new LongSumAggregatorFactory("cnt", "cnt")
+                                             )
+                                             .addAggregator(
+                                                 new JavaScriptAggregatorFactory(
+                                                     "fieldLength",
+                                                     Arrays.asList("sally", "billy"),
+                                                     "function(current, s, b) { return current + (s == null ? 0 : s.length) + (b == null ? 0 : b.length); }",
+                                                     "function() { return 0; }",
+                                                     "function(a,b) { return a + b; }",
+                                                     JavaScriptConfig.getEnabledInstance()
+                                                 )
+                                             )
+                                             .addOrderByColumn("billy")
+                                             .build();
+      final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
+      final Interval interval = Iterables.getOnlyElement(query.getIntervals());
+      final Sequence<ResultRow> rows = GroupByQueryEngine.process(
+          query,
           new IncrementalIndexStorageAdapter(index),
-          pool,
+          processingBuffer.get(),
+          null,
           new GroupByQueryConfig(),
           new DruidProcessingConfig(),
+          filter,
+          interval,
           null
       );
 
@@ -367,23 +378,31 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
         CloseableStupidPool<ByteBuffer> pool = new CloseableStupidPool<>(
             "GroupByQueryEngine-bufferPool",
             () -> ByteBuffer.allocate(50000)
-        )
+        );
+        ResourceHolder<ByteBuffer> processingBuffer = pool.take();
     ) {
 
-      final Sequence<ResultRow> rows = GroupByQueryEngineV2.process(
-          GroupByQuery.builder()
-                      .setDataSource("test")
-                      .setGranularity(Granularities.ALL)
-                      .setInterval(new Interval(DateTimes.EPOCH, DateTimes.nowUtc()))
-                      .addDimension("billy")
-                      .addDimension("sally")
-                      .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
-                      .setDimFilter(DimFilters.dimEquals("sally", (String) null))
-                      .build(),
+      final GroupByQuery query = GroupByQuery.builder()
+                                             .setDataSource("test")
+                                             .setGranularity(Granularities.ALL)
+                                             .setInterval(new Interval(DateTimes.EPOCH, DateTimes.nowUtc()))
+                                             .addDimension("billy")
+                                             .addDimension("sally")
+                                             .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
+                                             .setDimFilter(DimFilters.dimEquals("sally", (String) null))
+                                             .build();
+      final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
+      final Interval interval = Iterables.getOnlyElement(query.getIntervals());
+
+      final Sequence<ResultRow> rows = GroupByQueryEngine.process(
+          query,
           new IncrementalIndexStorageAdapter(index),
-          pool,
+          processingBuffer.get(),
+          null,
           new GroupByQueryConfig(),
           new DruidProcessingConfig(),
+          filter,
+          interval,
           null
       );
 
@@ -640,12 +659,6 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
     }
 
     @Override
-    public double estimateSelectivity(ColumnIndexSelector indexSelector)
-    {
-      return 1;
-    }
-
-    @Override
     public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
     {
       return Filters.makeValueMatcher(
@@ -653,12 +666,6 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
           "billy",
           new DictionaryRaceTestFilterDruidPredicateFactory()
       );
-    }
-
-    @Override
-    public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
-    {
-      return true;
     }
 
     @Override
@@ -677,7 +684,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
     private class DictionaryRaceTestFilterDruidPredicateFactory implements DruidPredicateFactory
     {
       @Override
-      public Predicate<String> makeStringPredicate()
+      public DruidObjectPredicate<String> makeStringPredicate()
       {
         try {
           index.add(
@@ -692,7 +699,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
           throw new RuntimeException(isee);
         }
 
-        return Predicates.alwaysTrue();
+        return DruidObjectPredicate.alwaysTrue();
       }
 
       @Override

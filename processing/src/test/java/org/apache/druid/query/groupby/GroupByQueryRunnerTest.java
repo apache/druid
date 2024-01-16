@@ -9327,7 +9327,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
 
   @Test
-  public void testGroupByWithExtractionDimFilterNullDims()
+  public void testGroupByWithInjectiveLookupDimFilterNullDimsOptimized()
   {
     Map<String, String> extractionMap = new HashMap<>();
     extractionMap.put("", "EMPTY");
@@ -9340,6 +9340,40 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     } else {
       extractionMap.put("", "SHOULD_NOT_BE_USED");
       lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, "EMPTY", true, true);
+    }
+
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("null_column", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .setDimFilter(new ExtractionDimFilter("null_column", "EMPTY", lookupExtractionFn, null))
+        .build();
+    List<ResultRow> expectedResults = Arrays
+        .asList(
+            makeRow(query, "2011-04-01", "alias", null, "rows", 13L, "idx", 6619L),
+            makeRow(query, "2011-04-02", "alias", null, "rows", 13L, "idx", 5827L)
+        );
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "extraction-dim-filter");
+  }
+
+  @Test
+  public void testGroupByWithInjectiveLookupDimFilterNullDimsNotOptimized()
+  {
+    Map<String, String> extractionMap = new HashMap<>();
+    extractionMap.put("", "EMPTY");
+
+    MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
+    LookupExtractionFn lookupExtractionFn;
+    if (NullHandling.replaceWithDefault()) {
+      extractionMap.put("", "EMPTY");
+      lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, false);
+    } else {
+      extractionMap.put("", "SHOULD_NOT_BE_USED");
+      lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, "EMPTY", true, false);
     }
 
     GroupByQuery query = makeQueryBuilder()

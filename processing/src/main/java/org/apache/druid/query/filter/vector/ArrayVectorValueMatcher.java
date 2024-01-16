@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.filter.vector;
 
-import com.google.common.base.Predicate;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.TypeSignature;
@@ -61,7 +61,7 @@ public class ArrayVectorValueMatcher implements VectorValueMatcherFactory
   @Override
   public VectorValueMatcher makeMatcher(DruidPredicateFactory predicateFactory)
   {
-    final Predicate<Object[]> predicate = predicateFactory.makeArrayPredicate(columnType);
+    final DruidObjectPredicate<Object[]> predicate = predicateFactory.makeArrayPredicate(columnType);
     return new BaseVectorValueMatcher(selector)
     {
       final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
@@ -77,16 +77,12 @@ public class ArrayVectorValueMatcher implements VectorValueMatcherFactory
         for (int i = 0; i < mask.getSelectionSize(); i++) {
           final int rowNum = mask.getSelection()[i];
           Object o = vector[rowNum];
-          if (includeUnknown && o == null && predicateFactory.isNullInputUnknown()) {
+          if ((o == null || o instanceof Object[])) {
+            if (predicate.apply((Object[]) o).matches(includeUnknown)) {
+              selection[numRows++] = rowNum;
+            }
+          } else if (predicate.apply(new Object[]{o}).matches(includeUnknown)) {
             selection[numRows++] = rowNum;
-          } else if (o == null || o instanceof Object[]) {
-            if (predicate.apply((Object[]) o)) {
-              selection[numRows++] = rowNum;
-            }
-          } else {
-            if (predicate.apply(new Object[]{o})) {
-              selection[numRows++] = rowNum;
-            }
           }
         }
 

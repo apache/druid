@@ -936,10 +936,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
-    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Inconsistent metadata state. This can " +
-        "happen if you update input topic in a spec without changing the supervisor name. " +
-        "Stored state: [null], " +
-        "Target state: [ObjectMetadata{theObject={foo=bar}}]."), result1);
+    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Failed to update the metadata Store. The new start metadata is ahead of last commited end state."), result1);
 
     // Should only be tried once.
     Assert.assertEquals(1, metadataUpdateCounter.get());
@@ -1309,7 +1306,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
-  public void testRetrieveUnusedSegmentsUsingMultipleIntervalsInSingleBatchLimitAndOffsetInRange() throws IOException
+  public void testRetrieveUnusedSegmentsUsingMultipleIntervalsInSingleBatchLimitAndLastSegmentId() throws IOException
   {
     final List<DataSegment> segments = createAndGetUsedYearSegments(2034, 2133);
     markAllSegmentsUnused(new HashSet<>(segments));
@@ -1330,7 +1327,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
-  public void testRetrieveUnusedSegmentsUsingMultipleIntervalsLimitAndOffsetInRange() throws IOException
+  public void testRetrieveUnusedSegmentsUsingMultipleIntervalsLimitAndLastSegmentId() throws IOException
   {
     final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
     markAllSegmentsUnused(new HashSet<>(segments));
@@ -1351,7 +1348,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
-  public void testRetrieveUnusedSegmentsUsingMultipleIntervalsAndLimitOutOfRange() throws IOException
+  public void testRetrieveUnusedSegmentsUsingMultipleIntervals() throws IOException
   {
     final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
     markAllSegmentsUnused(new HashSet<>(segments));
@@ -2078,7 +2075,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
    * - verify that the id for segment5 is correct
    * - Later, after the above was dropped, another segment on same interval was created by the stream but this
    * time there was an integrity violation in the pending segments table because the
-   * {@link IndexerSQLMetadataStorageCoordinator#createNewSegment(Handle, String, Interval, PartialShardSpec, String)}
    * method returned a segment id that already existed in the pending segments table
    */
   @Test
@@ -2178,7 +2174,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_new_2", identifier4.toString());
     // Since all core partitions have been dropped
     Assert.assertEquals(0, identifier4.getShardSpec().getNumCorePartitions());
-
   }
 
   /**
@@ -3004,6 +2999,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     List<Pair<DataSegment, String>> resultForEternity =
         coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Collections.singletonList(Intervals.ETERNITY));
     Assert.assertEquals(resultForExactInterval, resultForEternity);
+
+    List<Pair<DataSegment, String>> resultForFirstHalfEternity =
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Collections.singletonList(firstHalfEternityRangeSegment.getInterval()));
+    Assert.assertEquals(resultForExactInterval, resultForFirstHalfEternity);
+
+    List<Pair<DataSegment, String>> resultForSecondHalfEternity =
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Collections.singletonList(secondHalfEternityRangeSegment.getInterval()));
+    Assert.assertEquals(resultForExactInterval, resultForSecondHalfEternity);
   }
 
   @Test
@@ -3019,6 +3022,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     List<Pair<DataSegment, String>> resultForEternity =
         coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Collections.singletonList(eternitySegment.getInterval()));
     Assert.assertEquals(3, resultForEternity.size());
+
+    List<Pair<DataSegment, String>> resultForFirstHalfEternity =
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Collections.singletonList(firstHalfEternityRangeSegment.getInterval()));
+    Assert.assertEquals(3, resultForFirstHalfEternity.size());
+
+    List<Pair<DataSegment, String>> resultForSecondHalfEternity =
+        coordinator.retrieveUsedSegmentsAndCreatedDates(defaultSegment.getDataSource(), Collections.singletonList(secondHalfEternityRangeSegment.getInterval()));
+    Assert.assertEquals(3, resultForSecondHalfEternity.size());
   }
 
   @Test

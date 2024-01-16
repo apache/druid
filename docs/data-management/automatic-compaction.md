@@ -121,12 +121,12 @@ The following properties are automatically set by the Coordinator:
 * `id`: Generated using the task type, datasource name, interval, and timestamp. The task ID is prefixed with `coordinator-issued`.
 * `context`: Set according to the user-provided `taskContext`.
 
-Compaction tasks typically fetch all [relevant segments](compaction.md#compaction-io-configuration) prior to launching any subtasks,
+Compaction tasks typically fetch all [relevant segments](manual-compaction.md#compaction-io-configuration) prior to launching any subtasks,
 _unless_ the following properties are all set to non-null values. It is strongly recommended to set them to non-null values to
 maximize performance and minimize disk usage of the `compact` tasks launched by auto-compaction:
 
-- [`granularitySpec`](compaction.md#compaction-granularity-spec), with non-null values for each of `segmentGranularity`, `queryGranularity`, and `rollup`
-- [`dimensionsSpec`](compaction.md#compaction-dimensions-spec)
+- [`granularitySpec`](manual-compaction.md#compaction-granularity-spec), with non-null values for each of `segmentGranularity`, `queryGranularity`, and `rollup`
+- [`dimensionsSpec`](manual-compaction.md#compaction-dimensions-spec)
 - `metricsSpec`
 
 For more details on each of the specs in an auto-compaction configuration, see [Automatic compaction dynamic configuration](../configuration/index.md#automatic-compaction-dynamic-configuration).
@@ -306,7 +306,8 @@ Set  `taskLockType` to `REPLACE` if you're replacing data. For example, if you u
 ## Learn more
 
 See the following topics for more information:
-* [Compaction](compaction.md) for an overview of compaction and how to set up manual compaction in Druid.
+* [Compaction](compaction.md) for an overview of compaction in Druid.
+* [Manual compaction](manual-compaction.md) for how to manually perform compaction tasks.
 * [Segment optimization](../operations/segment-optimization.md) for guidance on evaluating and optimizing Druid segment size.
 * [Coordinator process](../design/coordinator.md#automatic-compaction) for details on how the Coordinator plans compaction tasks.
 

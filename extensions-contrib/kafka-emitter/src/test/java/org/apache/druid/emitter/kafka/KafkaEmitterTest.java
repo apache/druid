@@ -106,7 +106,7 @@ public class KafkaEmitterTest
     ObjectMapper mapper = new ObjectMapper();
     mapper.registerModule(new JodaModule());
     final KafkaEmitter kafkaEmitter = new KafkaEmitter(
-        new KafkaEmitterConfig("", eventsType, "metrics", "alerts", requestTopic, "metadata", "test-cluster", null),
+        new KafkaEmitterConfig("", eventsType, "metrics", "alerts", requestTopic, "metadata", "test-cluster", null, null),
         mapper
     )
     {
@@ -139,6 +139,8 @@ public class KafkaEmitterTest
       kafkaEmitter.emit(event);
     }
     countDownSentEvents.await();
+
+    kafkaEmitter.close();
 
     Assert.assertEquals(0, kafkaEmitter.getMetricLostCount());
     Assert.assertEquals(0, kafkaEmitter.getAlertLostCount());

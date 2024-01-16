@@ -22,6 +22,7 @@ package org.apache.druid.client;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineLookup;
@@ -101,5 +102,15 @@ public interface TimelineServerView extends ServerView
      * @return continue or unregister
      */
     CallbackAction serverSegmentRemoved(DruidServerMetadata server, DataSegment segment);
+
+    /**
+     * Called when segment schema is announced.
+     * Schema flow HttpServerInventoryView -> CoordinatorServerView -> CoordinatorSegmentMetadataCache
+     * CoordinatorServerView simply delegates the schema information by invoking Timeline callback to metadata cache.
+     *
+     * @param segmentSchemas segment schema
+     * @return continue or unregister
+     */
+    CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas);
   }
 }

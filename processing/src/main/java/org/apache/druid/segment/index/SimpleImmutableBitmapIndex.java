@@ -36,12 +36,6 @@ public final class SimpleImmutableBitmapIndex extends SimpleBitmapColumnIndex
   }
 
   @Override
-  public double estimateSelectivity(int totalRows)
-  {
-    return Math.min(1, (double) bitmap.size() / totalRows);
-  }
-
-  @Override
   public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
   {
     return bitmapResultFactory.wrapDimensionValue(bitmap);
