@@ -100,6 +100,20 @@ public class AzureTaskLogs implements TaskLogs
   }
 
   @Override
+  public void pushTaskPayload(String taskid, File taskPayloadFile)
+  {
+    final String taskKey = getTaskPayloadKey(taskid);
+    log.info("Pushing task payload [%s] to location [%s]", taskPayloadFile, taskKey);
+    pushTaskFile(taskPayloadFile, taskKey);
+  }
+
+  @Override
+  public Optional<InputStream> streamTaskPayload(String taskid) throws IOException
+  {
+    return streamTaskFile(taskid, 0, getTaskPayloadKey(taskid));
+  }
+
+  @Override
   public Optional<InputStream> streamTaskLog(final String taskid, final long offset) throws IOException
   {
     return streamTaskFile(taskid, offset, getTaskLogKey(taskid));
@@ -164,6 +178,11 @@ public class AzureTaskLogs implements TaskLogs
   private String getTaskStatusKey(String taskid)
   {
     return StringUtils.format("%s/%s/status.json", config.getPrefix(), taskid);
+  }
+
+  private String getTaskPayloadKey(String taskid)
+  {
+    return StringUtils.format("%s/%s/task.json", config.getPrefix(), taskid);
   }
 
   @Override
