@@ -80,7 +80,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Extending AbstractBenchmark means only runs if explicitly called
+ * Benchmark for {@link OnheapIncrementalIndex} doing queries and adds simultaneously.
  */
 @State(Scope.Benchmark)
 @Fork(value = 1)
