@@ -121,19 +121,69 @@ public class GroupByQueryEngine
     );
 
     return cursors.flatMap(
-        cursor -> extracted(
-            query, storageAdapter, processingBuffer, fudgeTimestamp, querySpecificConfig, processingConfig, cursor
-        )
-    );
-  }
+        cursor -> new BaseSequence<>(
+            new BaseSequence.IteratorMaker<ResultRow, GroupByEngineIterator<?>>()
+            {
+              @Override
+              public GroupByEngineIterator<?> make()
+              {
+                final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
+                final ColumnSelectorPlus<GroupByColumnSelectorStrategy>[] selectorPlus = DimensionHandlerUtils
+                    .createColumnSelectorPluses(
+                        STRATEGY_FACTORY,
+                        query.getDimensions(),
+                        columnSelectorFactory
+                    );
+                GroupByColumnSelectorPlus[] dims = new GroupByColumnSelectorPlus[selectorPlus.length];
+                int curPos = 0;
+                for (int i = 0; i < dims.length; i++) {
+                  dims[i] = new GroupByColumnSelectorPlus(
+                      selectorPlus[i],
+                      curPos,
+                      query.getResultRowDimensionStart() + i
+                  );
+                  curPos += dims[i].getColumnSelectorStrategy().getGroupingKeySize();
+                }
 
-  private static BaseSequence<ResultRow, GroupByEngineIterator<?>> extracted(final GroupByQuery query,
-      final StorageAdapter storageAdapter, final ByteBuffer processingBuffer, final DateTime fudgeTimestamp,
-      final GroupByQueryConfig querySpecificConfig, final DruidProcessingConfig processingConfig, Cursor cursor)
-  {
-    return new BaseSequence<>(
-        new IteratorMakerImplementation(
-            querySpecificConfig, query, cursor, storageAdapter, processingBuffer, fudgeTimestamp, processingConfig
+                final int cardinalityForArrayAggregation = GroupingEngine.getCardinalityForArrayAggregation(
+                    querySpecificConfig,
+                    query,
+                    storageAdapter,
+                    processingBuffer
+                );
+
+                if (cardinalityForArrayAggregation >= 0) {
+                  return new ArrayAggregateIterator(
+                      query,
+                      querySpecificConfig,
+                      processingConfig,
+                      cursor,
+                      processingBuffer,
+                      fudgeTimestamp,
+                      dims,
+                      hasNoImplicitUnnestDimensions(columnSelectorFactory, query.getDimensions()),
+                      cardinalityForArrayAggregation
+                  );
+                } else {
+                  return new HashAggregateIterator(
+                      query,
+                      querySpecificConfig,
+                      processingConfig,
+                      cursor,
+                      processingBuffer,
+                      fudgeTimestamp,
+                      dims,
+                      hasNoImplicitUnnestDimensions(columnSelectorFactory, query.getDimensions())
+                  );
+                }
+              }
+
+              @Override
+              public void cleanup(GroupByEngineIterator<?> iterFromMake)
+              {
+                iterFromMake.close();
+              }
+            }
         )
     );
   }
@@ -187,91 +237,6 @@ public class GroupByQueryEngine
                          && !columnCapabilities.isArray()
                      );
             });
-  }
-
-  private static final class IteratorMakerImplementation
-      implements BaseSequence.IteratorMaker<ResultRow, GroupByEngineIterator<?>>
-  {
-    private final GroupByQueryConfig querySpecificConfig;
-    private final GroupByQuery query;
-    private final Cursor cursor;
-    private final StorageAdapter storageAdapter;
-    private final ByteBuffer processingBuffer;
-    private final DateTime fudgeTimestamp;
-    private final DruidProcessingConfig processingConfig;
-
-    private IteratorMakerImplementation(GroupByQueryConfig querySpecificConfig, GroupByQuery query, Cursor cursor,
-        StorageAdapter storageAdapter, ByteBuffer processingBuffer, DateTime fudgeTimestamp,
-        DruidProcessingConfig processingConfig)
-    {
-      this.querySpecificConfig = querySpecificConfig;
-      this.query = query;
-      this.cursor = cursor;
-      this.storageAdapter = storageAdapter;
-      this.processingBuffer = processingBuffer;
-      this.fudgeTimestamp = fudgeTimestamp;
-      this.processingConfig = processingConfig;
-    }
-
-    @Override
-    public GroupByEngineIterator<?> make()
-    {
-      final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
-      final ColumnSelectorPlus<GroupByColumnSelectorStrategy>[] selectorPlus = DimensionHandlerUtils
-          .createColumnSelectorPluses(
-              STRATEGY_FACTORY,
-              query.getDimensions(),
-              columnSelectorFactory
-          );
-      GroupByColumnSelectorPlus[] dims = new GroupByColumnSelectorPlus[selectorPlus.length];
-      int curPos = 0;
-      for (int i = 0; i < dims.length; i++) {
-        dims[i] = new GroupByColumnSelectorPlus(
-            selectorPlus[i],
-            curPos,
-            query.getResultRowDimensionStart() + i
-        );
-        curPos += dims[i].getColumnSelectorStrategy().getGroupingKeySize();
-      }
-
-      final int cardinalityForArrayAggregation = GroupingEngine.getCardinalityForArrayAggregation(
-          querySpecificConfig,
-          query,
-          storageAdapter,
-          processingBuffer
-      );
-
-      if (cardinalityForArrayAggregation >= 0) {
-        return new ArrayAggregateIterator(
-            query,
-            querySpecificConfig,
-            processingConfig,
-            cursor,
-            processingBuffer,
-            fudgeTimestamp,
-            dims,
-            hasNoImplicitUnnestDimensions(columnSelectorFactory, query.getDimensions()),
-            cardinalityForArrayAggregation
-        );
-      } else {
-        return new HashAggregateIterator(
-            query,
-            querySpecificConfig,
-            processingConfig,
-            cursor,
-            processingBuffer,
-            fudgeTimestamp,
-            dims,
-            hasNoImplicitUnnestDimensions(columnSelectorFactory, query.getDimensions())
-        );
-      }
-    }
-
-    @Override
-    public void cleanup(GroupByEngineIterator<?> iterFromMake)
-    {
-      iterFromMake.close();
-    }
   }
 
   private static class GroupByStrategyFactory implements ColumnSelectorStrategyFactory<GroupByColumnSelectorStrategy>
