@@ -105,6 +105,12 @@ public class FilteredDataSource implements DataSource
   }
 
   @Override
+  public boolean isCacheable(boolean isBroker)
+  {
+    return false;
+  }
+
+  @Override
   public boolean isGlobal()
   {
     return base.isGlobal();
