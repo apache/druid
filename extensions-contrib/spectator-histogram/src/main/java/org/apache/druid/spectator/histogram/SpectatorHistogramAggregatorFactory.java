@@ -32,6 +32,7 @@ import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nonnull;
@@ -54,6 +55,7 @@ public class SpectatorHistogramAggregatorFactory extends AggregatorFactory
   private final byte cacheTypeId;
 
   public static final String TYPE_NAME = "spectatorHistogram";
+  public static final ColumnType TYPE = ColumnType.ofComplex(TYPE_NAME);
 
   @JsonCreator
   public SpectatorHistogramAggregatorFactory(
@@ -148,17 +150,6 @@ public class SpectatorHistogramAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(
-        new SpectatorHistogramAggregatorFactory(
-            fieldName,
-            fieldName
-        )
-    );
-  }
-
-  @Override
   public Object deserialize(Object serializedHistogram)
   {
     return SpectatorHistogram.deserialize(serializedHistogram);
@@ -191,21 +182,15 @@ public class SpectatorHistogramAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getComplexTypeName()
+  public ColumnType getIntermediateType()
   {
-    return TYPE_NAME;
+    return TYPE;
   }
 
   @Override
-  public ValueType getType()
+  public ColumnType getResultType()
   {
-    return ValueType.COMPLEX;
-  }
-
-  @Override
-  public ValueType getFinalizedType()
-  {
-    return ValueType.COMPLEX;
+    return TYPE;
   }
 
   @Override
@@ -290,6 +275,7 @@ public class SpectatorHistogramAggregatorFactory extends AggregatorFactory
   public static class Timer extends SpectatorHistogramAggregatorFactory
   {
     public static final String TYPE_NAME = "spectatorHistogramTimer";
+    public static final ColumnType TYPE = ColumnType.ofComplex(TYPE_NAME);
 
     public Timer(
         @JsonProperty("name") final String name,
@@ -305,9 +291,15 @@ public class SpectatorHistogramAggregatorFactory extends AggregatorFactory
     }
 
     @Override
-    public String getComplexTypeName()
+    public ColumnType getIntermediateType()
     {
-      return TYPE_NAME;
+      return TYPE;
+    }
+
+    @Override
+    public ColumnType getResultType()
+    {
+      return TYPE;
     }
 
     @Override
@@ -315,23 +307,13 @@ public class SpectatorHistogramAggregatorFactory extends AggregatorFactory
     {
       return new SpectatorHistogramAggregatorFactory.Timer(getName(), getName());
     }
-
-    @Override
-    public List<AggregatorFactory> getRequiredColumns()
-    {
-      return Collections.singletonList(
-          new SpectatorHistogramAggregatorFactory.Timer(
-              getFieldName(),
-              getFieldName()
-          )
-      );
-    }
   }
 
   @JsonTypeName(SpectatorHistogramAggregatorFactory.Distribution.TYPE_NAME)
   public static class Distribution extends SpectatorHistogramAggregatorFactory
   {
     public static final String TYPE_NAME = "spectatorHistogramDistribution";
+    public static final ColumnType TYPE = ColumnType.ofComplex(TYPE_NAME);
 
     public Distribution(
         @JsonProperty("name") final String name,
@@ -347,26 +329,21 @@ public class SpectatorHistogramAggregatorFactory extends AggregatorFactory
     }
 
     @Override
-    public String getComplexTypeName()
+    public ColumnType getIntermediateType()
     {
-      return TYPE_NAME;
+      return TYPE;
+    }
+
+    @Override
+    public ColumnType getResultType()
+    {
+      return TYPE;
     }
 
     @Override
     public AggregatorFactory getCombiningFactory()
     {
       return new SpectatorHistogramAggregatorFactory.Distribution(getName(), getName());
-    }
-
-    @Override
-    public List<AggregatorFactory> getRequiredColumns()
-    {
-      return Collections.singletonList(
-          new SpectatorHistogramAggregatorFactory.Distribution(
-              getFieldName(),
-              getFieldName()
-          )
-      );
     }
   }
 }

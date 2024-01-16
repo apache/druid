@@ -91,9 +91,9 @@ public class SpectatorHistogramPercentilesPostAggregator implements PostAggregat
   }
 
   @Override
-  public Comparator<Double> getComparator()
+  public Comparator<Object> getComparator()
   {
-    return Doubles::compare;
+    return ColumnType.DOUBLE_ARRAY.getStrategy();
   }
 
   @Override
