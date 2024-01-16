@@ -355,18 +355,22 @@ public class Windowing
 
     public WindowFrame getWindowFrame()
     {
-      return new WindowFrame(
-          WindowFrame.PeerType.ROWS,
-          group.lowerBound.isUnbounded(),
-          figureOutOffset(group.lowerBound),
-          group.upperBound.isUnbounded(),
-          figureOutOffset(group.upperBound)
-      );
+      if (group.lowerBound.isUnbounded() && group.upperBound.isUnbounded()) {
+        return WindowFrame.unbounded();
+      }
+      if (group.isRows) {
+        return WindowFrame.rows(getBoundAsInteger(group.lowerBound), getBoundAsInteger(group.upperBound));
+      } else {
+        return WindowFrame.groups(getBoundAsInteger(group.lowerBound), getBoundAsInteger(group.upperBound), getOrdering());
+      }
     }
 
-    private int figureOutOffset(RexWindowBound bound)
+    private Integer getBoundAsInteger(RexWindowBound bound)
     {
-      if (bound.isUnbounded() || bound.isCurrentRow()) {
+      if (bound.isUnbounded()) {
+        return null;
+      }
+      if (bound.isCurrentRow()) {
         return 0;
       }
       return getConstant(((RexInputRef) bound.getOffset()).getIndex());

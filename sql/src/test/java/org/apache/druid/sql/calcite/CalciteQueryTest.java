@@ -96,6 +96,7 @@ import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec.Direction;
 import org.apache.druid.query.operator.ColumnWithDirection;
+import org.apache.druid.query.operator.window.WindowFrame;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQuery.ResultFormat;
@@ -15035,6 +15036,71 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .build()
         )
         .expectedResults(expectedResults)
+        .run();
+  }
+
+  @NotYetSupported(Modes.CANNOT_TRANSLATE)
+  @Test
+  public void testWindowingWithOrderBy()
+  {
+    skipVectorize();
+    msqIncompatible();
+    testBuilder()
+        .sql(
+            "SELECT\n"
+                + "  FLOOR(__time TO DAY) t,\n"
+                + "  SUM(cnt) c,\n"
+                + "  SUM(SUM(cnt)) OVER (ORDER BY FLOOR(__time TO DAY)) cc\n"
+                + "FROM foo\n"
+                + "GROUP BY FLOOR(__time TO DAY)"
+        )
+        .queryContext(
+            ImmutableMap.of(
+                PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
+                QueryContexts.ENABLE_DEBUG, true
+            )
+        )
+        .expectedQuery(
+            WindowOperatorQueryBuilder.builder()
+                .setDataSource(
+                    Druids.newTimeseriesQueryBuilder()
+                        .dataSource(CalciteTests.DATASOURCE1)
+                        .intervals(querySegmentSpec(Filtration.eternity()))
+                        .granularity(Granularities.DAY)
+                        .aggregators(
+                            new LongSumAggregatorFactory("a0", "cnt")
+                        )
+                        .context(OUTER_LIMIT_CONTEXT)
+                        .build()
+                )
+                .setSignature(
+                    RowSignature.builder()
+                        .add("d0", ColumnType.LONG)
+                        .add("a0", ColumnType.LONG)
+                        .add("w0", ColumnType.LONG)
+                        .build()
+                )
+                .setOperators(
+                    OperatorFactoryBuilders.naivePartitionOperator(),
+                    OperatorFactoryBuilders.windowOperators(
+                        OperatorFactoryBuilders.framedAggregateProcessor(
+                            WindowFrame.forOrderBy(ColumnWithDirection.ascending("d0")),
+                            new LongSumAggregatorFactory("w0", "a0")
+                        )
+                    )
+                )
+                .build()
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {946684800000L, 1L, 1L},
+                new Object[] {946771200000L, 1L, 2L},
+                new Object[] {946857600000L, 1L, 3L},
+                new Object[] {978307200000L, 1L, 4L},
+                new Object[] {978393600000L, 1L, 5L},
+                new Object[] {978480000000L, 1L, 6L}
+            )
+        )
         .run();
   }
 }

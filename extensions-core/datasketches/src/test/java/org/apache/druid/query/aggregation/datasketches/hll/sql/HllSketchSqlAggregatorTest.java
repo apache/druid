@@ -75,6 +75,7 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.sql.guice.SqlModule;
@@ -1155,6 +1156,29 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
             new Object[]{1.0D, 5L}
         )
     );
+  }
+
+  @Test
+  public void testHllWithOrderedWindowing()
+  {
+    testBuilder()
+        .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
+        .sql(
+            "SELECT dim1,coalesce(cast(l1 as integer),-999),"
+                + " HLL_SKETCH_ESTIMATE( DS_HLL(dim1) OVER ( ORDER BY l1 ), true)"
+                + " FROM druid.foo"
+                + " WHERE length(dim1)>0"
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {"1", -999, 3.0D},
+                new Object[] {"def", -999, 3.0D},
+                new Object[] {"abc", -999, 3.0D},
+                new Object[] {"2", 0, 4.0D},
+                new Object[] {"10.1", 325323, 5.0D}
+            )
+        )
+        .run();
   }
 
   /**
