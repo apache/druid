@@ -421,9 +421,11 @@ class OvershadowableManager<T extends Overshadowable<T>>
     final RootPartitionRange lowFence = new RootPartitionRange(partitionId, partitionId);
     final RootPartitionRange highFence = new RootPartitionRange(Short.MAX_VALUE, Short.MAX_VALUE);
     if (lowFence.compareTo(highFence) > 0) {
-      throw new ISE("PartitionId[%d] must be in the range [0, 32767].", Short.toUnsignedInt(partitionId));
+      throw new ISE("PartitionId[%d] must be in the range [0, 32767]. "
+                    + "Try compacting the interval to reduce the segment count.", Short.toUnsignedInt(partitionId));
+    } else {
+      return stateMap.subMap(lowFence, false, highFence, false).entrySet().iterator();
     }
-    return stateMap.subMap(lowFence, false, highFence, false).entrySet().iterator();
   }
 
   /**
