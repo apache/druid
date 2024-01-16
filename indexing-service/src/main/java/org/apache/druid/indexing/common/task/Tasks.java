@@ -49,6 +49,7 @@ public class Tasks
   public static final boolean DEFAULT_STORE_COMPACTION_STATE = false;
   public static final boolean DEFAULT_USE_MAX_MEMORY_ESTIMATES = false;
   public static final TaskLockType DEFAULT_TASK_LOCK_TYPE = TaskLockType.EXCLUSIVE;
+  public static final boolean DEFAULT_USE_CONCURRENT_LOCKS = false;
 
   public static final String PRIORITY_KEY = "priority";
   public static final String LOCK_TIMEOUT_KEY = "taskLockTimeout";

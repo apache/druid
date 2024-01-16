@@ -151,7 +151,10 @@ public class TaskLocks
       Map<String, Object> taskContext
   )
   {
-    final boolean useConcurrentLocks = (boolean) taskContext.getOrDefault(Tasks.USE_CONCURRENT_LOCKS, false);
+    final boolean useConcurrentLocks = (boolean) taskContext.getOrDefault(
+        Tasks.USE_CONCURRENT_LOCKS,
+        Tasks.DEFAULT_USE_CONCURRENT_LOCKS
+    );
     if (useConcurrentLocks) {
       return TaskLockType.APPEND;
     }

@@ -487,7 +487,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     final boolean useConcurrentLocks = QueryContexts.getAsBoolean(
         Tasks.USE_CONCURRENT_LOCKS,
         getContextValue(Tasks.USE_CONCURRENT_LOCKS),
-        false
+        Tasks.DEFAULT_USE_CONCURRENT_LOCKS
     );
     final IngestionMode ingestionMode = getIngestionMode();
     if (useConcurrentLocks) {
