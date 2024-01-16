@@ -111,7 +111,7 @@ PIVOT syntax parameters:
 * `column_with_values_to_pivot`: The column that contains values for the pivoted column names.
 * `pivoted_columnN`: The list of values to pivot into headers in the output.
 
-The following example demonstrates how to transform `cityName` values into column headers `a_sum_deleted` and `b_sum_deleted`:
+The following example demonstrates how to transform `cityName` values into column headers `ba_sum_deleted` and `ny_sum_deleted`:
 
 ```sql
 SELECT user, channel, ba_sum_deleted, ny_sum_deleted
