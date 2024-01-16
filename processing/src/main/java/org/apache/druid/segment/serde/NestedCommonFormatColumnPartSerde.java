@@ -308,6 +308,10 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
       ColumnType logicalType = simpleType == null ? ColumnType.NESTED_DATA : simpleType;
       builder.setType(logicalType);
       builder.setNestedCommonFormatColumnSupplier(supplier);
+      // nested columns only have a null value index
+      if (hasNulls) {
+        builder.setIndexSupplier(supplier, false, false);
+      }
       builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, hasNulls, enforceLogicalType));
     }
   }
