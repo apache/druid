@@ -111,12 +111,6 @@ abstract class UnaryExpr implements Expr
   {
     return StringUtils.format("%s%s", op, expr);
   }
-
-  @Override
-  public Expr singleThreaded()
-  {
-    throw new RuntimeException("Unimplemented!");
-  }
 }
 
 @SuppressWarnings("ClassName")

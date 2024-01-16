@@ -273,12 +273,6 @@ class FunctionExpr implements Expr
   {
     return Objects.hash(args, name);
   }
-
-  @Override
-  public Expr singleThreaded()
-  {
-    throw new RuntimeException("Unimplemented!");
-  }
 }
 
 /**
