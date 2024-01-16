@@ -760,15 +760,21 @@ public interface Expr extends Cacheable
   }
 
   /**
-   * FIXME
+   * Returns a possibly less safe version of this expression.
    *
-   * @return
+   * For top level expressions use {@link Expr#makeSingleThreaded(Expr)} to
+   * obtain the single-threaded version of the expression tree.
    */
   default Expr singleThreaded()
   {
     return this;
   }
 
+  /**
+   * Returns the single-threaded version of the given expression tree.
+   *
+   * Nested expressions in the subtree are also optimized.
+   */
   static Expr makeSingleThreaded(Expr expr)
   {
     return expr.visit(Expr::singleThreaded);
