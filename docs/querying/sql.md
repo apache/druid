@@ -57,8 +57,8 @@ Druid SQL supports SELECT queries with the following structure:
 [ WITH tableName [ ( column1, column2, ... ) ] AS ( query ) ]
 SELECT [ ALL | DISTINCT ] { * | exprs }
 FROM { <table> | (<subquery>) | <o1> [ INNER | LEFT ] JOIN <o2> ON condition }
-[PIVOT (aggregation_function(column_to_aggregate) FOR [column_with_values_to_pivot] IN ( [pivoted_column1], [pivoted_column2] ...))]
-[UNPIVOT (values_column FOR names_column IN (unpivoted_column1 [, unpivoted_column2 ... ] ))]
+[PIVOT (aggregation_function(column_to_aggregate) FOR [column_with_values_to_pivot] IN (pivoted_column1 [, pivoted_column2 ...]))]
+[UNPIVOT (values_column FOR names_column IN (unpivoted_column1 [, unpivoted_column2 ... ]))]
 [ CROSS JOIN UNNEST(source_expression) as table_alias_name(column_alias_name) ]
 [ WHERE expr ]
 [ GROUP BY [ exprs | GROUPING SETS ( (exprs), ... ) | ROLLUP (exprs) | CUBE (exprs) ] ]
@@ -100,7 +100,7 @@ The following is the general syntax for the PIVOT operator. Note that the PIVOT 
 ```sql
 PIVOT (aggregation_function(column_to_aggregate)
   FOR [column_with_values_to_pivot]
-  IN ( [pivoted_column1], [pivoted_column2] ...)
+  IN (pivoted_column1 [, pivoted_column2 ...])
 )
 ```
 
@@ -158,7 +158,7 @@ The following is the general syntax for the UNPIVOT operator. Note that the UNPI
 ```sql
 UNPIVOT (values_column 
   FOR names_column
-  IN (unpivoted_column1 [, unpivoted_column2 ... ] )
+  IN (unpivoted_column1 [, unpivoted_column2 ... ])
 )
 ```
 
