@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.impl;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 
 import java.util.ArrayList;
@@ -35,29 +36,32 @@ public class DelimitedBytes
   public static final int UNKNOWN_FIELD_COUNT = -1;
 
   /**
-   * Split UTF-8 bytes by a particular delimiter.
+   * Split UTF-8 bytes by a particular delimiter. When {@link NullHandling#sqlCompatible()}, empty parts are
+   * returned as nulls. When {@link NullHandling#replaceWithDefault()}, empty parts are returned as empty strings.
    *
-   * @param bytes     utf-8 bytes
-   * @param delimiter the delimiter
-   * @param numFields expected number of fields, or {@link #UNKNOWN_FIELD_COUNT}
+   * @param bytes         utf-8 bytes
+   * @param delimiter     the delimiter
+   * @param numFieldsHint expected number of fields, or {@link #UNKNOWN_FIELD_COUNT}
    */
-  public static List<String> split(final byte[] bytes, final byte delimiter, final int numFields)
+  public static List<String> split(final byte[] bytes, final byte delimiter, final int numFieldsHint)
   {
-    final List<String> out = numFields == UNKNOWN_FIELD_COUNT ? new ArrayList<>() : new ArrayList<>(numFields);
+    final List<String> out = numFieldsHint == UNKNOWN_FIELD_COUNT ? new ArrayList<>() : new ArrayList<>(numFieldsHint);
 
     int start = 0;
     int position = 0;
 
     while (position < bytes.length) {
       if (bytes[position] == delimiter) {
-        out.add(StringUtils.fromUtf8(bytes, start, position - start));
+        final String s = StringUtils.fromUtf8(bytes, start, position - start);
+        out.add(s.isEmpty() && NullHandling.sqlCompatible() ? null : s);
         start = position + 1;
       }
 
       position++;
     }
 
-    out.add(StringUtils.fromUtf8(bytes, start, position - start));
+    final String s = StringUtils.fromUtf8(bytes, start, position - start);
+    out.add(s.isEmpty() && NullHandling.sqlCompatible() ? null : s);
     return out;
   }
 }
