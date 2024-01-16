@@ -123,7 +123,7 @@ abstract class ConstantExpr<T> implements Expr
 }
 
 /**
- * FIXME: fill this in!
+ * Constant expressions for which the evaluator can be cached.
  */
 @Immutable
 abstract class CacheableConstantExpr<T> extends ConstantExpr<T>
