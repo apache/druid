@@ -66,6 +66,33 @@ public class JsonInputFormatTest
   }
 
   @Test
+  public void testWithLineSplittable() throws IOException
+  {
+    final JsonInputFormat format = new JsonInputFormat(
+        new JSONPathSpec(
+            true,
+            ImmutableList.of(
+                new JSONPathFieldSpec(JSONPathFieldType.ROOT, "root_baz", "baz"),
+                new JSONPathFieldSpec(JSONPathFieldType.ROOT, "root_baz2", "baz2"),
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg", "$.o.mg"),
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg2", "$.o.mg2"),
+                new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg", ".o.mg"),
+                new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2"),
+                new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree_omg", null, Arrays.asList("o", "mg")),
+                new JSONPathFieldSpec(JSONPathFieldType.TREE, "tree_omg2", null, Arrays.asList("o", "mg2"))
+            )
+        ),
+        ImmutableMap.of(Feature.ALLOW_COMMENTS.name(), true, Feature.ALLOW_UNQUOTED_FIELD_NAMES.name(), false),
+        true,
+        false,
+        false
+    );
+
+    Assert.assertTrue(format.isLineSplittable());
+    Assert.assertFalse(format.withLineSplittable(false).isLineSplittable());
+  }
+
+  @Test
   public void testEquals()
   {
     EqualsVerifier.forClass(JsonInputFormat.class)

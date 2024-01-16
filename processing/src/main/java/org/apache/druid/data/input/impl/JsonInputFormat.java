@@ -122,6 +122,11 @@ public class JsonInputFormat extends NestedInputFormat
     return featureSpec;
   }
 
+  boolean isLineSplittable()
+  {
+    return lineSplittable;
+  }
+
   @JsonProperty // No @JsonInclude, since default is variable, so we can't assume false is default
   public boolean isKeepNullColumns()
   {
