@@ -173,6 +173,12 @@ public class ExprMacroTable
     {
       return StringUtils.format("(%s %s)", name, getArgs());
     }
+
+    @Override
+    public Expr singleThreaded()
+    {
+      throw new RuntimeException("Unimplemented!");
+    }
   }
 
   /**
@@ -250,6 +256,12 @@ public class ExprMacroTable
     public String toString()
     {
       return StringUtils.format("(%s %s)", name, getArgs());
+    }
+
+    @Override
+    public Expr singleThreaded()
+    {
+      throw new RuntimeException("Unimplemented!");
     }
   }
 

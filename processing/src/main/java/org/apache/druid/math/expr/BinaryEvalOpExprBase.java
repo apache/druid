@@ -109,6 +109,12 @@ abstract class BinaryOpExprBase implements Expr
   {
     return Objects.hash(op, left, right);
   }
+
+  @Override
+  public Expr singleThreaded()
+  {
+    throw new RuntimeException("Unimplemented!");
+  }
 }
 
 /**
