@@ -242,6 +242,11 @@ public class SqlStatementResourceHelperTest
     validatePages(pages.get(), getExpectedPageInformationList(worker0, worker1, worker2, worker3));
   }
 
+  /**
+   * Durable storage destination applies only to SELECT queries and unlike ingest queries, emtpy worker counters will not
+   * be reported in this case. See {@link #testEmptyCountersForTaskReportDestination()} and {@link #testEmptyCountersForDataSourceDestination()}
+   * to see the difference.
+   */
   @Test
   public void testEmptyCountersForDurableStorageDestination()
   {
@@ -394,21 +399,7 @@ public class SqlStatementResourceHelperTest
         }
       }
 
-      // Add the empty worker counters first and then everything else from partitionToWorkerToRowsBytes
-      for (int worker = 0; worker < workerCounters.length; worker++) {
-        ChannelCounters.Snapshot workerCounter = workerCounters[worker].snapshot();
-        if (workerCounter == null) {
-          pageInformationList.add(
-              new PageInformation(
-                  pageInformationList.size(),
-                  0L,
-                  0L,
-                  worker,
-                  null
-              )
-          );
-        }
-      }
+      // Construct the pages based on the order of partitionToWorkerMap.
       for (Map.Entry<Integer, Map<Integer, Pair<Long, Long>>> partitionToWorkerMap : partitionToWorkerToRowsBytes.entrySet()) {
         for (Map.Entry<Integer, Pair<Long, Long>> workerToRowsBytesMap : partitionToWorkerMap.getValue().entrySet()) {
           pageInformationList.add(

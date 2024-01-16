@@ -149,9 +149,7 @@ public class SqlStatementResourceHelper
    *   <ul>
    *     <li>For each partition from 0 to N</li>
    *     <li>For each worker from 0 to M</li>
-   *     <li>If a worker's counter snapshot is empty, create a page for that worker with {@code numRows = 0}
-   *     and {@code sizeInBytes = 0}</li>
-   *     <li>If {@code numRows != 0} for a (partition, worker) combination, create a page</li>
+   *     <li>If num rows for that partition,worker combination is 0, create a page</li>
    *     so that we maintain the record ordering.
    *   </ul>
    * </ol>
@@ -217,18 +215,9 @@ public class SqlStatementResourceHelper
     }
 
     List<PageInformation> pages = new ArrayList<>();
-
-
-    Set<Integer> emptyWorkerCounters = new HashSet<>();
-
     for (int partitionNumber = 0; partitionNumber < totalPartitions; partitionNumber++) {
       for (int workerNumber = 0; workerNumber < totalWorkerCount; workerNumber++) {
         CounterSnapshots workerCounter = workerCounters.get(workerNumber);
-        if ((workerCounter == null || workerCounter.isEmpty()) && !emptyWorkerCounters.contains(workerNumber)) {
-          pages.add(new PageInformation(pages.size(), 0L, 0L, workerNumber, null));
-          emptyWorkerCounters.add(workerNumber);
-          continue;
-        }
 
         if (workerCounter != null && workerCounter.getMap() != null) {
           QueryCounterSnapshot channelCounters = workerCounter.getMap().get("output");
