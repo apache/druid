@@ -142,7 +142,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
   public static Iterable<AggInterval> buildGroupIteratorFor(AppendableRowsAndColumns rac, WindowFrame frame)
   {
     int[] groupBoundaries = ClusteredGroupPartitioner.fromRAC(rac).computeBoundaries(frame.getOrderByColNames());
-    return new GroupIteratorForWindowFrame(rac, frame, groupBoundaries);
+    return new GroupIteratorForWindowFrame(frame, groupBoundaries);
   }
 
   static class GroupIteratorForWindowFrame implements Iterable<AggInterval>
@@ -154,7 +154,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     // upper exclusive
     private final int upperOffset;
 
-    public GroupIteratorForWindowFrame(RowsAndColumns rac, WindowFrame frame, int[] groupBoundaries)
+    public GroupIteratorForWindowFrame(WindowFrame frame, int[] groupBoundaries)
     {
       this.groupBoundaries = groupBoundaries;
       numGroups = groupBoundaries.length - 1;
