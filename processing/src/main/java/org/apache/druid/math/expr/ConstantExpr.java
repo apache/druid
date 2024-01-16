@@ -114,39 +114,53 @@ abstract class ConstantExpr<T> implements Expr
 
   protected abstract ExprEval<T> realEval();
 
-
-  @Override
-  public Expr singleThreaded()
-  {
-    return this;
-  }
-}
-
-/**
- * Constant expressions for which the evaluator can be cached.
- */
-@Immutable
-abstract class CacheableConstantExpr<T> extends ConstantExpr<T>
-{
-
-  protected CacheableConstantExpr(ExpressionType outputType, T value)
-  {
-    super(outputType, value);
-  }
-
   @Override
   @SuppressWarnings("Immutable")
-  public final ConstantExpr<T> singleThreaded()
+  public final Expr singleThreaded()
   {
-    final ExprEval<T> eval = realEval();
-    return new ConstantExpr<T>(eval.type(), eval.value)
+    return new ExprEvalBasedConstantExpr<T>(realEval());
+  }
+
+  /**
+   * Constant expression based on a concreate ExprEval.
+   */
+  private static final class ExprEvalBasedConstantExpr<T> extends ConstantExpr<T>
+  {
+    private final ExprEval<T> eval;
+
+    private ExprEvalBasedConstantExpr(ExprEval<T> eval)
     {
-      @Override
-      public ExprEval<T> realEval()
-      {
-        return eval;
+      super(eval.type(), eval.value);
+      this.eval = eval;
+    }
+
+    @Override
+    public ExprEval<T> realEval()
+    {
+      return eval;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(eval);
+    }
+
+    @Override
+    public boolean equals(Object obj)
+    {
+      if (this == obj) {
+        return true;
       }
-    };
+      if (obj == null) {
+        return false;
+      }
+      if (getClass() != obj.getClass()) {
+        return false;
+      }
+      ExprEvalBasedConstantExpr<?> other = (ExprEvalBasedConstantExpr<?>) obj;
+      return Objects.equals(eval, other.eval);
+    }
   }
 }
 
@@ -203,7 +217,7 @@ class BigIntegerExpr extends ConstantExpr<BigInteger>
   }
 }
 
-class LongExpr extends CacheableConstantExpr<Long>
+class LongExpr extends ConstantExpr<Long>
 {
   LongExpr(Long value)
   {
@@ -286,7 +300,7 @@ class NullLongExpr extends ConstantExpr<Long>
   }
 }
 
-class DoubleExpr extends CacheableConstantExpr<Double>
+class DoubleExpr extends ConstantExpr<Double>
 {
   DoubleExpr(Double value)
   {
@@ -369,7 +383,7 @@ class NullDoubleExpr extends ConstantExpr<Double>
   }
 }
 
-class StringExpr extends CacheableConstantExpr<String>
+class StringExpr extends ConstantExpr<String>
 {
   StringExpr(@Nullable String value)
   {
@@ -421,7 +435,7 @@ class StringExpr extends CacheableConstantExpr<String>
   }
 }
 
-class ArrayExpr extends CacheableConstantExpr<Object[]>
+class ArrayExpr extends ConstantExpr<Object[]>
 {
   public ArrayExpr(ExpressionType outputType, @Nullable Object[] value)
   {
@@ -510,7 +524,7 @@ class ArrayExpr extends CacheableConstantExpr<Object[]>
   }
 }
 
-class ComplexExpr extends CacheableConstantExpr<Object>
+class ComplexExpr extends ConstantExpr<Object>
 {
   protected ComplexExpr(ExpressionType outputType, @Nullable Object value)
   {
