@@ -94,10 +94,8 @@ public class JsonNodeReader extends IntermediateRowParsingReader<JsonNode>
   @Override
   protected CloseableIterator<JsonNode> intermediateRowIterator() throws IOException
   {
-    final String sourceString = IOUtils.toString(source.open(), StringUtils.UTF8_STRING);
     final List<JsonNode> jsonNodes = new ArrayList<>();
-    try {
-      JsonParser parser = jsonFactory.createParser(sourceString);
+    try (final JsonParser parser = jsonFactory.createParser(source.open())) {
       final MappingIterator<JsonNode> delegate = mapper.readValues(parser, JsonNode.class);
       while (delegate.hasNext()) {
         jsonNodes.add(delegate.next());
@@ -107,9 +105,10 @@ public class JsonNodeReader extends IntermediateRowParsingReader<JsonNode>
       //convert Jackson's JsonParseException into druid's exception for further processing
       //JsonParseException will be thrown from MappingIterator#hasNext or MappingIterator#next when input json text is ill-formed
       if (e.getCause() instanceof JsonParseException) {
+        final String rowAsString = IOUtils.toString(source.open(), StringUtils.UTF8_STRING);
         jsonNodes.add(
             new ParseExceptionMarkerJsonNode(
-                new ParseException(sourceString, e, "Unable to parse row [%s]", sourceString)
+                new ParseException(rowAsString, e, "Unable to parse row [%s]", rowAsString)
             )
         );
       } else {
@@ -117,13 +116,14 @@ public class JsonNodeReader extends IntermediateRowParsingReader<JsonNode>
       }
     }
 
-    if (CollectionUtils.isNullOrEmpty(jsonNodes)) {
+    if (jsonNodes.isEmpty()) {
+      final String rowAsString = IOUtils.toString(source.open(), StringUtils.UTF8_STRING);
       jsonNodes.add(
           new ParseExceptionMarkerJsonNode(
               new ParseException(
-                  sourceString,
+                  rowAsString,
                   "Unable to parse [%s] as the intermediateRow resulted in empty input row",
-                  sourceString
+                  rowAsString
               )
           )
       );

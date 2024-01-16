@@ -31,9 +31,13 @@ public class ByteEntity implements InputEntity
 {
   private final ByteBuffer buffer;
 
+  /**
+   * Create a new entity. The buffer is not duplicated, so it is important to ensure that its position and limit
+   * are not modified after this entity is created.
+   */
   public ByteEntity(ByteBuffer buffer)
   {
-    this.buffer = buffer.duplicate();
+    this.buffer = buffer;
   }
 
   public ByteEntity(byte[] bytes)
@@ -41,6 +45,11 @@ public class ByteEntity implements InputEntity
     this(ByteBuffer.wrap(bytes));
   }
 
+  /**
+   * Return the buffer backing this entity. Calling code must not modify the mark, position, or limit of this buffer.
+   * If you need to modify them, call {@link ByteBuffer#duplicate()} or {@link ByteBuffer#asReadOnlyBuffer()} and
+   * modify the copy.
+   */
   public ByteBuffer getBuffer()
   {
     return buffer;
@@ -56,6 +65,6 @@ public class ByteEntity implements InputEntity
   @Override
   public InputStream open()
   {
-    return new ByteBufferInputStream(buffer);
+    return new ByteBufferInputStream(buffer.duplicate());
   }
 }

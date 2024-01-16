@@ -24,15 +24,22 @@ import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
+import org.apache.druid.data.input.impl.JsonLineReader;
+import org.apache.druid.data.input.impl.JsonNodeReader;
+import org.apache.druid.data.input.impl.JsonReader;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.druid.segment.RowAdapter;
+import org.apache.druid.segment.RowAdapters;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -40,6 +47,7 @@ import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
+import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
@@ -52,25 +60,86 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.AverageTime)
-@Warmup(iterations = 10)
-@Measurement(iterations = 25)
+@Warmup(iterations = 3)
+@Measurement(iterations = 5)
 @Fork(value = 1)
-public class JsonLineReaderBenchmark
+public class JsonInputFormatBenchmark
 {
+  enum ReaderType
+  {
+    READER(JsonReader.class) {
+      @Override
+      public JsonInputFormat createFormat(JSONPathSpec flattenSpec)
+      {
+        return new JsonInputFormat(flattenSpec, null, null, false, false).withLineSplittable(false);
+      }
+    },
+    LINE_READER(JsonLineReader.class) {
+      @Override
+      public JsonInputFormat createFormat(JSONPathSpec flattenSpec)
+      {
+        return new JsonInputFormat(flattenSpec, null, null, null, null).withLineSplittable(true);
+      }
+    },
+    NODE_READER(JsonNodeReader.class) {
+      @Override
+      public JsonInputFormat createFormat(JSONPathSpec flattenSpec)
+      {
+        return new JsonInputFormat(flattenSpec, null, null, false, true).withLineSplittable(false);
+      }
+    };
+
+    private final Class<? extends InputEntityReader> clazz;
+
+    ReaderType(Class<? extends InputEntityReader> clazz)
+    {
+      this.clazz = clazz;
+    }
+
+    public abstract JsonInputFormat createFormat(JSONPathSpec flattenSpec);
+  }
+
   private static final int NUM_EVENTS = 1000;
 
+  private static final List<String> FIELDS_TO_READ =
+      ImmutableList.of(
+          "stack",
+          "_cluster_",
+          "_id_",
+          "_offset_",
+          "type",
+          "version",
+          "_kafka_timestamp_",
+          "_partition_",
+          "ec2_instance_id",
+          "name",
+          "_topic",
+          "root_type",
+          "path_app",
+          "jq_app"
+      );
+
+  ReaderType readerType;
   InputEntityReader reader;
   JsonInputFormat format;
+  List<Function<Row, Object>> fieldFunctions;
   byte[] data;
+
+  @Param({"reader", "node_reader", "line_reader"})
+  private String readerTypeString;
 
   @Setup(Level.Invocation)
   public void prepareReader()
   {
     ByteEntity source = new ByteEntity(data);
+
     reader = format.createReader(
             new InputRowSchema(
                     new TimestampSpec("timestamp", "iso", null),
@@ -80,6 +149,15 @@ public class JsonLineReaderBenchmark
             source,
             null
     );
+
+    if (reader.getClass() != readerType.clazz) {
+      throw new ISE(
+          "Expected class[%s] for readerType[%s], got[%s]",
+          readerType.clazz,
+          readerTypeString,
+          reader.getClass()
+      );
+    }
   }
 
   @Setup
@@ -123,29 +201,31 @@ public class JsonLineReaderBenchmark
   @Setup
   public void prepareFormat()
   {
-    format = new JsonInputFormat(
-            new JSONPathSpec(
-                    true,
-                    ImmutableList.of(
-                            new JSONPathFieldSpec(JSONPathFieldType.ROOT, "root_baz", "baz"),
-                            new JSONPathFieldSpec(JSONPathFieldType.ROOT, "root_baz2", "baz2"),
-                            new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg", "$.o.mg"),
-                            new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg2", "$.o.mg2"),
-                            new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg", ".o.mg"),
-                            new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2")
-                    )
-            ),
-            null,
-            null,
-            null,
-            null
+    readerType = ReaderType.valueOf(StringUtils.toUpperCase(readerTypeString));
+    format = readerType.createFormat(
+        new JSONPathSpec(
+            true,
+            ImmutableList.of(
+                new JSONPathFieldSpec(JSONPathFieldType.ROOT, "root_type", "type"),
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_app", "$.metadata.application"),
+                new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_app", ".metadata.application")
+            )
+        )
     );
+
+    // Replace with format.rowAdapter if https://github.com/apache/druid/pull/15681 is merged
+    final RowAdapter<Row> rowAdapter = RowAdapters.standardRow();
+    fieldFunctions = new ArrayList<>(FIELDS_TO_READ.size());
+
+    for (final String field : FIELDS_TO_READ) {
+      fieldFunctions.add(rowAdapter.columnFunction(field));
+    }
   }
 
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void baseline(final Blackhole blackhole) throws IOException
+  public void parse(final Blackhole blackhole) throws IOException
   {
     int counted = 0;
     try (CloseableIterator<InputRow> iterator = reader.read()) {
@@ -153,8 +233,32 @@ public class JsonLineReaderBenchmark
         final InputRow row = iterator.next();
         if (row != null) {
           counted += 1;
+          blackhole.consume(row);
         }
-        blackhole.consume(row);
+      }
+    }
+
+    if (counted != NUM_EVENTS) {
+      throw new RuntimeException("invalid number of loops, counted = " + counted);
+    }
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public void parseAndRead(final Blackhole blackhole) throws IOException
+  {
+    int counted = 0;
+    try (CloseableIterator<InputRow> iterator = reader.read()) {
+      while (iterator.hasNext()) {
+        final InputRow row = iterator.next();
+        if (row != null) {
+          for (Function<Row, Object> fieldFunction : fieldFunctions) {
+            blackhole.consume(fieldFunction.apply(row));
+          }
+
+          counted += 1;
+        }
       }
     }
 
@@ -166,7 +270,7 @@ public class JsonLineReaderBenchmark
   public static void main(String[] args) throws RunnerException
   {
     Options opt = new OptionsBuilder()
-        .include(JsonLineReaderBenchmark.class.getSimpleName())
+        .include(JsonInputFormatBenchmark.class.getSimpleName())
         .build();
 
     new Runner(opt).run();
