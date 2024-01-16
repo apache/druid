@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.parser;
 
 import com.google.common.collect.Iterables;
 import org.apache.calcite.sql.SqlIdentifier;
+import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.druid.catalog.model.table.export.ExportDestination;
@@ -66,5 +67,11 @@ public class ExternalDestinationSqlIdentifier extends SqlIdentifier
     }
     writer.endFunCall(frame);
     writer.endFunCall(externFrame);
+  }
+
+  @Override
+  public SqlNode clone(SqlParserPos pos)
+  {
+    return new ExternalDestinationSqlIdentifier(Iterables.getOnlyElement(names), pos, exportDestination, propertiesForUnparse);
   }
 }
