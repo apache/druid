@@ -30,6 +30,7 @@ import org.apache.druid.math.expr.vector.VectorProcessors;
 import org.apache.druid.segment.column.TypeStrategy;
 
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.NotThreadSafe;
 
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
@@ -115,7 +116,6 @@ abstract class ConstantExpr<T> implements Expr
   protected abstract ExprEval<T> realEval();
 
   @Override
-  @SuppressWarnings("Immutable")
   public final Expr singleThreaded()
   {
     return new ExprEvalBasedConstantExpr<T>(realEval());
@@ -123,7 +123,11 @@ abstract class ConstantExpr<T> implements Expr
 
   /**
    * Constant expression based on a concreate ExprEval.
+   *
+   * Not multi-thread safe.
    */
+  @NotThreadSafe
+  @SuppressWarnings("Immutable")
   private static final class ExprEvalBasedConstantExpr<T> extends ConstantExpr<T>
   {
     private final ExprEval<T> eval;
