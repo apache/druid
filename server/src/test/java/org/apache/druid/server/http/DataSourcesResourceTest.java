@@ -35,6 +35,7 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.SegmentLoadInfo;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.SegmentsMetadataManager;
@@ -611,19 +612,9 @@ public class DataSourcesResourceTest
     EasyMock.replay(overlordClient, server);
     DataSourcesResource dataSourcesResource =
         new DataSourcesResource(inventoryView, null, null, overlordClient, null, null, auditManager);
-    try {
-      Response response =
-          dataSourcesResource.markAsUnusedAllSegmentsOrKillUnusedSegmentsInInterval("datasource", "true", "???", request);
-      // 400 (Bad Request) or an IllegalArgumentException is expected.
-      Assert.assertEquals(400, response.getStatus());
-      Assert.assertNotNull(response.getEntity());
-      Assert.assertTrue(response.getEntity().toString().contains("java.lang.IllegalArgumentException"));
-    }
-    catch (IllegalArgumentException ignore) {
-      // expected
-    }
-
-    EasyMock.verify(overlordClient, server);
+    DruidExceptionMatcher.invalidInput().assertThrowsAndMatches(
+        () -> dataSourcesResource.markAsUnusedAllSegmentsOrKillUnusedSegmentsInInterval("datasource", "true", "???", request)
+    );
   }
 
   @Test
