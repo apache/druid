@@ -421,7 +421,7 @@ class StringExpr extends CacheableConstantExpr<String>
   }
 }
 
-class ArrayExpr extends ConstantExpr<Object[]>
+class ArrayExpr extends CacheableConstantExpr<Object[]>
 {
   public ArrayExpr(ExpressionType outputType, @Nullable Object[] value)
   {
