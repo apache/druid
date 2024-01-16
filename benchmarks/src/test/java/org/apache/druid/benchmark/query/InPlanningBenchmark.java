@@ -124,7 +124,7 @@ public class InPlanningBenchmark
   @Param({"500000"})
   private int rowsPerSegment;
 
-  @Param({"1000000"})
+  @Param({"2147483647"})
   private int inSubQueryThreshold;
 
   @Param({
@@ -134,7 +134,7 @@ public class InPlanningBenchmark
   private String schema;
 
   @Param({
-      "1", "10", "100", "1000", "10000", "100000"
+      "1", "10", "100", "1000", "10000", "100000", "1000000"
   })
   private Integer inClauseExprCount;
   private SqlEngine engine;
