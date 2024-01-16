@@ -110,7 +110,9 @@ public class AggregatorsModule extends SimpleModule
       @JsonSubTypes.Type(name = "stringAny", value = StringAnyAggregatorFactory.class),
       @JsonSubTypes.Type(name = "grouping", value = GroupingAggregatorFactory.class),
       @JsonSubTypes.Type(name = "expression", value = ExpressionLambdaAggregatorFactory.class),
-      @JsonSubTypes.Type(name = "singleValue", value = SingleValueAggregatorFactory.class)
+      @JsonSubTypes.Type(name = "singleValueLong", value = SingleValueLongAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "singleValueFloat", value = SingleValueFloatAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "singleValueDouble", value = SingleValueDoubleAggregatorFactory.class)
   })
   public interface AggregatorFactoryMixin
   {

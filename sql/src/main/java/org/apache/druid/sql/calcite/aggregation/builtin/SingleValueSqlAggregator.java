@@ -24,8 +24,7 @@ import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.SingleValueAggregatorFactory;
+import org.apache.druid.query.aggregation.*;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -70,6 +69,17 @@ public class SingleValueSqlAggregator extends SimpleSqlAggregator {
               aggregateCall.getAggregation().getName()
       );
     }
-    return new SingleValueAggregatorFactory(name, fieldName);
+    switch (aggregationType.getType()) {
+      case LONG:
+        return new SingleValueLongAggregatorFactory(name, fieldName);
+      case FLOAT:
+        return new SingleValueFloatAggregatorFactory(name, fieldName);
+      case DOUBLE:
+        return new SingleValueDoubleAggregatorFactory(name, fieldName);
+      default:
+        // This error refers to the Druid type. But, we're in SQL validation.
+        // It should refer to the SQL type.
+        throw SimpleSqlAggregator.badTypeException(fieldName, "SINGLE_VALUE", aggregationType);
+    }
   }
 }

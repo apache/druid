@@ -21,19 +21,20 @@ package org.apache.druid.query.aggregation;
 
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
 /**
  */
-public class SingleValueBufferAggregator implements BufferAggregator
+public class SingleValueFloatBufferAggregator implements BufferAggregator
 {
 
-  final BaseLongColumnValueSelector selector;
+  final BaseFloatColumnValueSelector selector;
   boolean aggregateInvoked;
 
-  SingleValueBufferAggregator(BaseLongColumnValueSelector selector)
+  SingleValueFloatBufferAggregator(BaseFloatColumnValueSelector selector)
   {
     this.selector = selector;
     this.aggregateInvoked = false;
@@ -42,42 +43,42 @@ public class SingleValueBufferAggregator implements BufferAggregator
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    buf.putLong(position, selector.getLong());
+    buf.putLong(position, 0L);
   }
 
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
     if (aggregateInvoked){
-      throw new ISE("Aggregatge invoked for second time");
+      throw new ISE("Aggregate invoked for second time");
     }
-    buf.putLong(position, selector.getLong());
+    buf.putFloat(position, selector.getFloat());
     aggregateInvoked = true;
   }
 
   @Override
   public Object get(ByteBuffer buf, int position)
   {
-    return buf.getLong(position);
+    return buf.getFloat(position);
   }
 
   @Override
   public float getFloat(ByteBuffer buf, int position)
   {
-    return (float) buf.getLong(position);
+    return buf.getFloat(position);
   }
 
   @Override
   public double getDouble(ByteBuffer buf, int position)
   {
-    return (double) buf.getLong(position);
+    return buf.getFloat(position);
   }
 
 
   @Override
   public long getLong(ByteBuffer buf, int position)
   {
-    return buf.getLong(position);
+    return (long) buf.getFloat(position);
   }
 
   @Override
@@ -90,5 +91,13 @@ public class SingleValueBufferAggregator implements BufferAggregator
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
     // nothing to inspect
+  }
+
+  @Override
+  public String toString() {
+    return "SingleValueFloatBufferAggregator{" +
+            "selector=" + selector +
+            ", aggregateInvoked=" + aggregateInvoked +
+            '}';
   }
 }

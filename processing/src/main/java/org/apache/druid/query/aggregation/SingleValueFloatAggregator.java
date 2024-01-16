@@ -21,20 +21,16 @@ package org.apache.druid.query.aggregation;
 
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
-import org.apache.druid.segment.ColumnValueSelector;
-
-import javax.annotation.Nullable;
-import java.util.Comparator;
 
 /**
  */
-public class  SingleValueAggregator implements Aggregator
+public class SingleValueFloatAggregator implements Aggregator
 {
   final BaseLongColumnValueSelector valueSelector;
 
   Long value;
 
-  public SingleValueAggregator(BaseLongColumnValueSelector valueSelector)
+  public SingleValueFloatAggregator(BaseLongColumnValueSelector valueSelector)
   {
     this.valueSelector = valueSelector;
     this.value = valueSelector.getLong();
@@ -75,5 +71,13 @@ public class  SingleValueAggregator implements Aggregator
   public void close()
   {
     // no resources to cleanup
+  }
+
+  @Override
+  public String toString() {
+    return "SingleValueAggregator{" +
+            "valueSelector=" + valueSelector +
+            ", value=" + value +
+            '}';
   }
 }
