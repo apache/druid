@@ -34,11 +34,11 @@ import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.dimension.ListFilteredDimensionSpec;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.ColumnInspector;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
@@ -183,7 +183,10 @@ public class ListFilteredVirtualColumn implements VirtualColumn
 
   @Nullable
   @Override
-  public ColumnIndexSupplier getIndexSupplier(String columnName, ColumnSelector columnSelector)
+  public ColumnIndexSupplier getIndexSupplier(
+      String columnName,
+      ColumnIndexSelector indexSelector
+  )
   {
     if (delegate.getExtractionFn() != null) {
       return NoIndexesColumnIndexSupplier.getInstance();
@@ -194,13 +197,7 @@ public class ListFilteredVirtualColumn implements VirtualColumn
       @Override
       public <T> T as(Class<T> clazz)
       {
-
-        final ColumnHolder holder = columnSelector.getColumnHolder(delegate.getDimension());
-        if (holder == null) {
-          return null;
-        }
-
-        ColumnIndexSupplier indexSupplier = holder.getIndexSupplier();
+        ColumnIndexSupplier indexSupplier = indexSelector.getIndexSupplier(delegate.getDimension());
         if (indexSupplier == null) {
           return null;
         }
@@ -229,7 +226,7 @@ public class ListFilteredVirtualColumn implements VirtualColumn
         }
 
         // someday maybe we can have a better way to get row count..
-        final ColumnHolder time = columnSelector.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME);
+        final ColumnHolder time = indexSelector.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME);
         final int numRows = time.getLength();
         final Supplier<ImmutableBitmap> nullValueBitmapSupplier = Suppliers.memoize(
             () -> underlyingIndex.getBitmapFactory().complement(

@@ -28,13 +28,13 @@ import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.query.cache.CacheKeyBuilder;
-import org.apache.druid.segment.ColumnSelector;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedValueIndex;
 import org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier;
+import org.apache.druid.segment.virtual.ExpressionSelectors;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -194,7 +194,10 @@ public interface Expr extends Cacheable
   }
 
   @Nullable
-  default ColumnIndexSupplier asColumnIndexSupplier(ColumnSelector columnSelector, @Nullable ColumnType outputType)
+  default ColumnIndexSupplier asColumnIndexSupplier(
+      ColumnIndexSelector columnIndexSelector,
+      @Nullable ColumnType outputType
+  )
   {
     final Expr.BindingAnalysis details = analyzeInputs();
     if (details.getRequiredBindings().size() == 1) {
@@ -202,13 +205,7 @@ public interface Expr extends Cacheable
       // map over the values of the index.
       final String column = Iterables.getOnlyElement(details.getRequiredBindings());
 
-      final ColumnHolder holder = columnSelector.getColumnHolder(column);
-      if (holder == null) {
-        // column doesn't exist, no index supplier
-        return null;
-      }
-      final ColumnCapabilities capabilities = holder.getCapabilities();
-      final ColumnIndexSupplier delegateIndexSupplier = holder.getIndexSupplier();
+      final ColumnIndexSupplier delegateIndexSupplier = columnIndexSelector.getIndexSupplier(column);
       if (delegateIndexSupplier == null) {
         return null;
       }
@@ -216,6 +213,12 @@ public interface Expr extends Cacheable
           DictionaryEncodedValueIndex.class
       );
 
+      final ColumnCapabilities capabilities = columnIndexSelector.getColumnCapabilities(column);
+      if (!ExpressionSelectors.canMapOverDictionary(details, capabilities)) {
+        // for mvds, expression might need to evaluate entire row, but we don't have those handy, so fall back to
+        // not using indexes
+        return NoIndexesColumnIndexSupplier.getInstance();
+      }
       final ExpressionType inputType = ExpressionType.fromColumnTypeStrict(capabilities);
       final ColumnType outType;
       if (outputType == null) {
@@ -512,8 +515,8 @@ public interface Expr extends Cacheable
    * @see Parser#applyUnappliedBindings
    * @see Parser#applyUnapplied
    * @see Parser#liftApplyLambda
-   * @see org.apache.druid.segment.virtual.ExpressionSelectors#makeDimensionSelector
-   * @see org.apache.druid.segment.virtual.ExpressionSelectors#makeColumnValueSelector
+   * @see ExpressionSelectors#makeDimensionSelector
+   * @see ExpressionSelectors#makeColumnValueSelector
    */
   @SuppressWarnings("JavadocReference")
   class BindingAnalysis

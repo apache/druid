@@ -38,11 +38,12 @@ import java.util.concurrent.TimeoutException;
 public class AzureUtils
 {
 
+  public static final String DEFAULT_AZURE_ENDPOINT_SUFFIX = "core.windows.net";
   @VisibleForTesting
   static final String AZURE_STORAGE_HOST_ADDRESS = "blob.core.windows.net";
 
   // The azure storage hadoop access pattern is:
-  // wasb[s]://<containername>@<accountname>.blob.core.windows.net/<path>
+  // wasb[s]://<containername>@<accountname>.blob.<endpointSuffix>/<path>
   // (from https://docs.microsoft.com/en-us/azure/hdinsight/hdinsight-hadoop-use-blob-storage)
   static final String AZURE_STORAGE_HADOOP_PROTOCOL = "wasbs";
 
@@ -88,14 +89,14 @@ public class AzureUtils
    * @return a String representing the blob path component of the uri with any leading 'blob.core.windows.net/' string
    * removed characters removed.
    */
-  public static String maybeRemoveAzurePathPrefix(String blobPath)
+  public static String maybeRemoveAzurePathPrefix(String blobPath, String blobStorageEndpointSuffix)
   {
-    boolean blobPathIsHadoop = blobPath.contains(AZURE_STORAGE_HOST_ADDRESS);
+    boolean blobPathIsHadoop = blobPath.contains(blobStorageEndpointSuffix);
 
     if (blobPathIsHadoop) {
       // Remove azure's hadoop prefix to match realtime ingestion path
       return blobPath.substring(
-          blobPath.indexOf(AZURE_STORAGE_HOST_ADDRESS) + AZURE_STORAGE_HOST_ADDRESS.length() + 1);
+          blobPath.indexOf(blobStorageEndpointSuffix) + blobStorageEndpointSuffix.length() + 1);
     } else {
       return blobPath;
     }

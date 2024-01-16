@@ -64,8 +64,10 @@ import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -100,7 +102,9 @@ public class StreamAppenderatorTester implements AutoCloseable
       final File basePersistDirectory,
       final boolean enablePushFailure,
       final RowIngestionMeters rowIngestionMeters,
-      final boolean skipBytesInMemoryOverheadCheck
+      final boolean skipBytesInMemoryOverheadCheck,
+      final DataSegmentAnnouncer announcer,
+      final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     objectMapper = new DefaultObjectMapper();
@@ -211,6 +215,7 @@ public class StreamAppenderatorTester implements AutoCloseable
         throw new UnsupportedOperationException();
       }
     };
+
     if (delayInMilli <= 0) {
       appenderator = Appenderators.createRealtime(
           null,
@@ -239,7 +244,7 @@ public class StreamAppenderatorTester implements AutoCloseable
                   )
               )
           ),
-          new NoopDataSegmentAnnouncer(),
+          announcer,
           emitter,
           new ForwardingQueryProcessingPool(queryExecutor),
           NoopJoinableFactory.INSTANCE,
@@ -248,7 +253,8 @@ public class StreamAppenderatorTester implements AutoCloseable
           new CachePopulatorStats(),
           rowIngestionMeters,
           new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-          true
+          true,
+          centralizedDatasourceSchemaConfig
       );
     } else {
       SegmentLoaderConfig segmentLoaderConfig = new SegmentLoaderConfig()
@@ -295,7 +301,8 @@ public class StreamAppenderatorTester implements AutoCloseable
           new CachePopulatorStats(),
           rowIngestionMeters,
           new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-          true
+          true,
+          centralizedDatasourceSchemaConfig
       );
     }
   }
@@ -410,7 +417,27 @@ public class StreamAppenderatorTester implements AutoCloseable
           Preconditions.checkNotNull(basePersistDirectory, "basePersistDirectory"),
           enablePushFailure,
           rowIngestionMeters == null ? new SimpleRowIngestionMeters() : rowIngestionMeters,
-          skipBytesInMemoryOverheadCheck
+          skipBytesInMemoryOverheadCheck,
+          new NoopDataSegmentAnnouncer(),
+          CentralizedDatasourceSchemaConfig.create()
+      );
+    }
+
+    public StreamAppenderatorTester build(
+        DataSegmentAnnouncer dataSegmentAnnouncer,
+        CentralizedDatasourceSchemaConfig config
+    )
+    {
+      return new StreamAppenderatorTester(
+          delayInMilli,
+          maxRowsInMemory,
+          maxSizeInBytes,
+          Preconditions.checkNotNull(basePersistDirectory, "basePersistDirectory"),
+          enablePushFailure,
+          rowIngestionMeters == null ? new SimpleRowIngestionMeters() : rowIngestionMeters,
+          skipBytesInMemoryOverheadCheck,
+          dataSegmentAnnouncer,
+          config
       );
     }
   }

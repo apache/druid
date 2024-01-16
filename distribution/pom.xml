@@ -450,6 +450,8 @@
                                         <argument>org.apache.druid.extensions.contrib:opentelemetry-emitter</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-iceberg-extensions</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-spectator-histogram</argument>
                                     </arguments>
                                 </configuration>
                             </execution>

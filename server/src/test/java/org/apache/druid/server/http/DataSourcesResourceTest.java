@@ -605,7 +605,7 @@ public class DataSourcesResourceTest
   }
 
   @Test
-  public void testMarkAsUnusedAllSegmentsInDataSource()
+  public void testMarkAsUnusedAllSegmentsInDataSourceBadRequest()
   {
     OverlordClient overlordClient = EasyMock.createStrictMock(OverlordClient.class);
     EasyMock.replay(overlordClient, server);
@@ -624,6 +624,22 @@ public class DataSourcesResourceTest
     }
 
     EasyMock.verify(overlordClient, server);
+  }
+
+  @Test
+  public void testMarkAsUnusedAllSegmentsInDataSource()
+  {
+    prepareRequestForAudit();
+
+    OverlordClient overlordClient = EasyMock.createStrictMock(OverlordClient.class);
+    EasyMock.replay(overlordClient, server);
+    DataSourcesResource dataSourcesResource =
+        new DataSourcesResource(inventoryView, segmentsMetadataManager, null, overlordClient, null, null, auditManager);
+    Response response = dataSourcesResource
+        .markAsUnusedAllSegmentsOrKillUnusedSegmentsInInterval("datasource", null, null, request);
+    Assert.assertEquals(200, response.getStatus());
+
+    EasyMock.verify(request);
   }
 
   @Test
