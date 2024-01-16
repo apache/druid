@@ -28,8 +28,10 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.input.stage.StageInputSpec;
+import org.apache.druid.msq.kernel.HashShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
+import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.querykit.DataSourcePlan;
 import org.apache.druid.msq.querykit.QueryKit;
@@ -141,6 +143,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
       shuffleSpecFactoryPostAggregation = null;
     }
 
+
     queryDefBuilder.add(
         StageDefinition.builder(firstStageNumber)
                        .inputs(dataSourcePlan.getInputSpecs())
@@ -151,6 +154,28 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
                        .processorFactory(new GroupByPreShuffleFrameProcessorFactory(queryToRun))
     );
 
+    // note to self:
+    // the result signature might change if I add the window shuffle spec
+    // say the output signature was d0, d1
+    // But shuffle spec for window was d1
+    // example query
+    // select m1,m2,
+    // SUM(m2) OVER(PARTITION BY m1) summ1
+    // from foo
+    // GROUP BY m2, m1
+
+    // create the shufflespec from the column in the context
+    final ShuffleSpec nextShuffleWindowSpec;
+    if (originalQuery.getContext().containsKey("shuffleCol")) {
+      final ClusterBy windowClusterBy = (ClusterBy) originalQuery.getContext().get("shuffleCol");
+      nextShuffleWindowSpec = new HashShuffleSpec(
+          windowClusterBy,
+          maxWorkerCount
+      );
+    } else {
+      nextShuffleWindowSpec = null;
+    }
+
     queryDefBuilder.add(
         StageDefinition.builder(firstStageNumber + 1)
                        .inputs(new StageInputSpec(firstStageNumber))
@@ -159,7 +184,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
                        .shuffleSpec(
                            shuffleSpecFactoryPostAggregation != null
                            ? shuffleSpecFactoryPostAggregation.build(resultClusterBy, false)
-                           : null
+                           : nextShuffleWindowSpec
                        )
                        .processorFactory(new GroupByPostShuffleFrameProcessorFactory(queryToRun))
     );
@@ -171,7 +196,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
                          .inputs(new StageInputSpec(firstStageNumber + 1))
                          .signature(resultSignature)
                          .maxWorkerCount(1)
-                         .shuffleSpec(null) // no shuffling should be required after a limit processor.
+                         .shuffleSpec(nextShuffleWindowSpec) // no shuffling should be required after a limit processor.
                          .processorFactory(
                              new OffsetLimitFrameProcessorFactory(
                                  limitSpec.getOffset(),

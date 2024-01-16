@@ -21,6 +21,7 @@ package org.apache.druid.query.rowsandcols;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.DoubleArrayColumn;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
@@ -31,6 +32,7 @@ import org.apache.druid.segment.column.RowSignature;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -80,6 +82,35 @@ public class MapOfColumnsRowsAndColumns implements RowsAndColumns
         (Map<String, Column>) map,
         map.values().iterator().next().toAccessor().numRows()
     );
+  }
+
+  public static MapOfColumnsRowsAndColumns fromResultRow(ArrayList<ResultRow> objs, RowSignature signature)
+  {
+    final Builder bob = builder();
+    if (!objs.isEmpty()) {
+      Object[][] columnOriented = new Object[objs.get(0).length()][objs.size()];
+      for (int i = 0; i < objs.size(); ++i) {
+        for (int j = 0; j < objs.get(i).length(); ++j) {
+          columnOriented[j][i] = objs.get(i).get(j);
+        }
+      }
+      for (int i = 0; i < signature.size(); ++i) {
+        final ColumnType type = signature.getColumnType(i).orElse(null);
+
+        // If the column is String type, we likely got String objects instead of utf8 bytes, so convert to utf8Bytes
+        // to align with expectations.
+        if (ColumnType.STRING.equals(type)) {
+          for (int j = 0; j < columnOriented[i].length; j++) {
+            if (columnOriented[i][j] instanceof String) {
+              columnOriented[i][j] = ByteBuffer.wrap(((String) columnOriented[i][j]).getBytes(StandardCharsets.UTF_8));
+            }
+          }
+        }
+
+        bob.add(signature.getColumnName(i), columnOriented[i], type);
+      }
+    }
+    return bob.build();
   }
 
   public static MapOfColumnsRowsAndColumns fromRowObjects(Object[][] objs, RowSignature signature)

@@ -20,6 +20,7 @@
 package org.apache.druid.msq.querykit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
@@ -75,6 +76,13 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
     // add this shuffle spec to the last stage of the inner query
 
     final QueryDefinitionBuilder queryDefBuilder = QueryDefinition.builder().queryId(queryId);
+    if (nextShuffleSpec != null) {
+      final ClusterBy windowClusterBy = nextShuffleSpec.clusterBy();
+      originalQuery = (WindowOperatorQuery) originalQuery.withOverriddenContext(ImmutableMap.of(
+          DataSourcePlan.NEXT_SHUFFLE_COL,
+          windowClusterBy
+      ));
+    }
     final DataSourcePlan dataSourcePlan = DataSourcePlan.forDataSource(
         queryKit,
         queryId,

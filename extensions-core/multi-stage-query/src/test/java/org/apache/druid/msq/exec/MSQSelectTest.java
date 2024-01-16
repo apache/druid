@@ -877,6 +877,9 @@ public class MSQSelectTest extends MSQTestBase
                 + ",SUM(m1) OVER(PARTITION BY m2) as summ1\n"
                 + "from foo\n"
                 + "GROUP BY m1,m2")
+        /**
+         *
+         */
         .setExpectedMSQSpec(MSQSpec.builder()
                                    .query(query)
                                    .columnMappings(

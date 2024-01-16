@@ -88,6 +88,7 @@ public class DataSourcePlan
    * of subqueries.
    */
   private static final Map<String, Object> CONTEXT_MAP_NO_SEGMENT_GRANULARITY = new HashMap<>();
+  public static final String NEXT_SHUFFLE_COL = "shuffleCol";
 
   private static final Logger log = new Logger(DataSourcePlan.class);
 
@@ -209,7 +210,8 @@ public class DataSourcePlan
           (QueryDataSource) dataSource,
           maxWorkerCount,
           minStageNumber,
-          broadcast
+          broadcast,
+          queryContext
       );
     } else if (dataSource instanceof UnionDataSource) {
       return forUnion(
@@ -423,15 +425,27 @@ public class DataSourcePlan
       final QueryDataSource dataSource,
       final int maxWorkerCount,
       final int minStageNumber,
-      final boolean broadcast
+      final boolean broadcast,
+      @Nullable final QueryContext parentContext
   )
   {
+    // check if parentContext has a window operator
+    final Map<String, Object> windowShuffleMap = new HashMap<>();
+    if (parentContext != null) {
+      if (parentContext.containsKey(NEXT_SHUFFLE_COL)) {
+        windowShuffleMap.put(NEXT_SHUFFLE_COL, parentContext.get(NEXT_SHUFFLE_COL));
+      }
+    }
     final QueryDefinition subQueryDef = queryKit.makeQueryDefinition(
         queryId,
-
         // Subqueries ignore SQL_INSERT_SEGMENT_GRANULARITY, even if set in the context. It's only used for the
         // outermost query, and setting it for the subquery makes us erroneously add bucketing where it doesn't belong.
-        dataSource.getQuery().withOverriddenContext(CONTEXT_MAP_NO_SEGMENT_GRANULARITY),
+        windowShuffleMap.isEmpty()
+        ? dataSource.getQuery()
+                    .withOverriddenContext(CONTEXT_MAP_NO_SEGMENT_GRANULARITY)
+        : dataSource.getQuery()
+                    .withOverriddenContext(CONTEXT_MAP_NO_SEGMENT_GRANULARITY)
+                    .withOverriddenContext(windowShuffleMap),
         queryKit,
         ShuffleSpecFactories.globalSortWithMaxPartitionCount(maxWorkerCount),
         maxWorkerCount,
@@ -687,7 +701,8 @@ public class DataSourcePlan
         (QueryDataSource) dataSource.getLeft(),
         maxWorkerCount,
         Math.max(minStageNumber, subQueryDefBuilder.getNextStageNumber()),
-        false
+        false,
+        null
     );
     leftPlan.getSubQueryDefBuilder().ifPresent(subQueryDefBuilder::addAll);
 
@@ -700,7 +715,8 @@ public class DataSourcePlan
         (QueryDataSource) dataSource.getRight(),
         maxWorkerCount,
         Math.max(minStageNumber, subQueryDefBuilder.getNextStageNumber()),
-        false
+        false,
+        null
     );
     rightPlan.getSubQueryDefBuilder().ifPresent(subQueryDefBuilder::addAll);
 
