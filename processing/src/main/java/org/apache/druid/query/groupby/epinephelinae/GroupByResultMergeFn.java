@@ -36,11 +36,11 @@ import java.util.function.BinaryOperator;
  * Used by
  * {@link org.apache.druid.query.groupby.GroupingEngine#mergeResults}.
  */
-public class GroupByBinaryFnV2 implements BinaryOperator<ResultRow>
+public class GroupByResultMergeFn implements BinaryOperator<ResultRow>
 {
   private final GroupByQuery query;
 
-  public GroupByBinaryFnV2(GroupByQuery query)
+  public GroupByResultMergeFn(GroupByQuery query)
   {
     this.query = query;
   }

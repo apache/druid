@@ -17,38 +17,44 @@
  * under the License.
  */
 
-package org.apache.druid.query;
+package org.apache.druid.spectator.histogram;
 
-import org.apache.druid.java.util.emitter.core.Emitter;
-import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.segment.data.ObjectStrategy;
 
-public class CachingEmitter implements Emitter
+import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
+
+public class SpectatorHistogramObjectStrategy implements ObjectStrategy<SpectatorHistogram>
 {
-  private Event lastEmittedEvent;
+  private static final byte[] EMPTY_BYTES = null;
 
-  public Event getLastEmittedEvent()
+  @Override
+  public Class<SpectatorHistogram> getClazz()
   {
-    return lastEmittedEvent;
+    return SpectatorHistogram.class;
   }
 
   @Override
-  public void start()
+  public SpectatorHistogram fromByteBuffer(ByteBuffer readOnlyBuffer, int numBytes)
   {
+    if (numBytes == 0) {
+      return null;
+    }
+    return SpectatorHistogram.fromByteBuffer(readOnlyBuffer);
   }
 
   @Override
-  public void emit(Event event)
+  public byte[] toBytes(@Nullable SpectatorHistogram val)
   {
-    lastEmittedEvent = event;
+    if (val == null) {
+      return EMPTY_BYTES;
+    }
+    return val.toBytes();
   }
 
   @Override
-  public void flush()
+  public int compare(SpectatorHistogram o1, SpectatorHistogram o2)
   {
-  }
-
-  @Override
-  public void close()
-  {
+    return SpectatorHistogramAggregatorFactory.COMPARATOR.compare(o1, o2);
   }
 }

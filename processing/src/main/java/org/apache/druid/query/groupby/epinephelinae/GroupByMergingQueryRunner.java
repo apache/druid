@@ -73,7 +73,7 @@ import java.util.concurrent.TimeoutException;
  * using a buffer provided by {@code mergeBufferPool} and a parallel executor provided by {@code exec}. Outputs a
  * fully aggregated stream of {@link ResultRow} objects. Does not apply post-aggregators.
  *
- * The input {@code queryables} are expected to come from a {@link GroupByQueryEngineV2}. This code runs on data
+ * The input {@code queryables} are expected to come from a {@link GroupByQueryEngine}. This code runs on data
  * servers, like Historicals.
  *
  * This class has some resemblance to {@link GroupByRowProcessor}. See the javadoc of that class for a discussion of
@@ -82,9 +82,9 @@ import java.util.concurrent.TimeoutException;
  * Used by
  * {@link org.apache.druid.query.groupby.GroupingEngine#mergeRunners(QueryProcessingPool, Iterable)}
  */
-public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
+public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
 {
-  private static final Logger log = new Logger(GroupByMergingQueryRunnerV2.class);
+  private static final Logger log = new Logger(GroupByMergingQueryRunner.class);
   private static final String CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION = "mergeRunnersUsingChainedExecution";
 
   private final GroupByQueryConfig config;
@@ -98,7 +98,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
   private final String processingTmpDir;
   private final int mergeBufferSize;
 
-  public GroupByMergingQueryRunnerV2(
+  public GroupByMergingQueryRunner(
       GroupByQueryConfig config,
       DruidProcessingConfig processingConfig,
       QueryProcessingPool queryProcessingPool,
