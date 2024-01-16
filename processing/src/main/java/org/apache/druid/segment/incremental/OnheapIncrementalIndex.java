@@ -119,12 +119,12 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   private final boolean useMaxMemoryEstimates;
 
   /**
-   * Aggregator name -> column selector factor for that aggregator.
+   * Aggregator name -> column selector factory for that aggregator.
    */
   @Nullable
   private Map<String, ColumnSelectorFactory> selectors;
   /**
-   * Aggregator name -> column selector factor for the combining version of that aggregator. Only set when
+   * Aggregator name -> column selector factory for the combining version of that aggregator. Only set when
    * {@link #preserveExistingMetrics} is true.
    */
   @Nullable
