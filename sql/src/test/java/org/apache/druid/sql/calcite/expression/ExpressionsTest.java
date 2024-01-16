@@ -25,6 +25,7 @@ import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlIntervalQualifier;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.parser.SqlParserPos;
@@ -54,7 +55,6 @@ import org.apache.druid.sql.calcite.expression.builtin.RegexpReplaceOperatorConv
 import org.apache.druid.sql.calcite.expression.builtin.RepeatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ReverseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RightOperatorConversion;
-import org.apache.druid.sql.calcite.expression.builtin.RoundOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringFormatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StrposOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.SubstringOperatorConversion;
@@ -65,6 +65,7 @@ import org.apache.druid.sql.calcite.expression.builtin.TimeFormatOperatorConvers
 import org.apache.druid.sql.calcite.expression.builtin.TimeParseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeShiftOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TruncateOperatorConversion;
+import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -99,41 +100,47 @@ public class ExpressionsTest extends CalciteTestBase
       .add("newliney", ColumnType.STRING)
       .add("tstr", ColumnType.STRING)
       .add("dstr", ColumnType.STRING)
+      .add("timezone", ColumnType.STRING)
       .build();
 
   private static final Map<String, Object> BINDINGS = ImmutableMap.<String, Object>builder()
-                                                                  .put(
-                                                                      "t",
-                                                                      DateTimes.of("2000-02-03T04:05:06").getMillis()
-                                                                  )
-                                                                  .put("a", 10)
-                                                                  .put("b", 25)
-                                                                  .put("p", 3)
-                                                                  .put("x", 2.25)
-                                                                  .put("y", 3.0)
-                                                                  .put("z", -2.25)
-                                                                  .put("o", 0)
-                                                                  .put("nan", Double.NaN)
-                                                                  .put("inf", Double.POSITIVE_INFINITY)
-                                                                  .put("-inf", Double.NEGATIVE_INFINITY)
-                                                                  .put("fnan", Float.NaN)
-                                                                  .put("finf", Float.POSITIVE_INFINITY)
-                                                                  .put("-finf", Float.NEGATIVE_INFINITY)
-                                                                  .put("s", "foo")
-                                                                  .put("hexstr", "EF")
-                                                                  .put("intstr", "-100")
-                                                                  .put("spacey", "  hey there  ")
-                                                                  .put("newliney", "beep\nboop")
-                                                                  .put("tstr", "2000-02-03 04:05:06")
-                                                                  .put("dstr", "2000-02-03")
-                                                                  .build();
+      .put("t", DateTimes.of("2000-02-03T04:05:06").getMillis())
+      .put("a", 10)
+      .put("b", 25)
+      .put("p", 3)
+      .put("x", 2.25)
+      .put("y", 3.0)
+      .put("z", -2.25)
+      .put("o", 0)
+      .put("nan", Double.NaN)
+      .put("inf", Double.POSITIVE_INFINITY)
+      .put("-inf", Double.NEGATIVE_INFINITY)
+      .put("fnan", Float.NaN)
+      .put("finf", Float.POSITIVE_INFINITY)
+      .put("-finf", Float.NEGATIVE_INFINITY)
+      .put("s", "foo")
+      .put("hexstr", "EF")
+      .put("intstr", "-100")
+      .put("spacey", "  hey there  ")
+      .put("newliney", "beep\nboop")
+      .put("tstr", "2000-02-03 04:05:06")
+      .put("dstr", "2000-02-03")
+      .put("timezone", "America/Los_Angeles")
+      .build();
 
   private ExpressionTestHelper testHelper;
+
+  final DruidOperatorTable operatorTable = new DruidOperatorTable(Collections.emptySet(), Collections.emptySet());
 
   @Before
   public void setUp()
   {
     testHelper = new ExpressionTestHelper(ROW_SIGNATURE, BINDINGS);
+  }
+
+  private SqlOperatorConversion getOperatorConversion(SqlFunction round)
+  {
+    return operatorTable.lookupOperatorConversion(round);
   }
 
   @Test
@@ -1152,7 +1159,7 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testRound()
   {
-    final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
+    final SqlOperator roundFunction = getOperatorConversion(SqlStdOperatorTable.ROUND).calciteOperator();
 
     testHelper.testExpression(
         roundFunction,
@@ -1257,7 +1264,8 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testRoundWithInvalidArgument()
   {
-    final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
+
+    final SqlOperator roundFunction = getOperatorConversion(SqlStdOperatorTable.ROUND).calciteOperator();
 
     if (!NullHandling.sqlCompatible()) {
       Throwable t = Assert.assertThrows(
@@ -1285,7 +1293,7 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testRoundWithInvalidSecondArgument()
   {
-    final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
+    final SqlOperator roundFunction = getOperatorConversion(SqlStdOperatorTable.ROUND).calciteOperator();
 
     Throwable t = Assert.assertThrows(
         DruidException.class,
@@ -1312,7 +1320,7 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testRoundWithNanShouldRoundTo0()
   {
-    final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
+    final SqlOperator roundFunction = getOperatorConversion(SqlStdOperatorTable.ROUND).calciteOperator();
 
     testHelper.testExpression(
         roundFunction,
@@ -1343,7 +1351,7 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testRoundWithInfinityShouldRoundTo0()
   {
-    final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
+    final SqlOperator roundFunction = getOperatorConversion(SqlStdOperatorTable.ROUND).calciteOperator();
 
     //CHECKSTYLE.OFF: Regexp
     testHelper.testExpression(
@@ -1842,6 +1850,17 @@ public class ExpressionsTest extends CalciteTestBase
             testHelper.makeLiteral("America/Los_Angeles")
         ),
         makeExpression(ColumnType.LONG, "timestamp_extract(\"t\",'DAY','America/Los_Angeles')"),
+        2L
+    );
+
+    testHelper.testExpressionString(
+        new TimeExtractOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("t"),
+            testHelper.makeLiteral("DAY"),
+            testHelper.makeInputRef("timezone")
+        ),
+        makeExpression(ColumnType.LONG, "timestamp_extract(\"t\",'DAY',\"timezone\")"),
         2L
     );
   }

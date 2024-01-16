@@ -180,18 +180,14 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         "SELECT created_date, payload FROM %1$s WHERE dataSource = :dataSource AND used = true"
     );
 
-    boolean hasEternityInterval = false;
-    for (Interval interval : intervals) {
-      if (Intervals.isEternity(interval)) {
-        hasEternityInterval = true;
-        break;
-      }
-    }
+    final boolean compareIntervalEndpointsAsString = intervals.stream()
+                                                              .allMatch(Intervals::canCompareEndpointsAsStrings);
+    final SqlSegmentsMetadataQuery.IntervalMode intervalMode = SqlSegmentsMetadataQuery.IntervalMode.OVERLAPS;
 
     SqlSegmentsMetadataQuery.appendConditionForIntervalsAndMatchMode(
         queryBuilder,
-        hasEternityInterval ? Collections.emptyList() : intervals,
-        SqlSegmentsMetadataQuery.IntervalMode.OVERLAPS,
+        compareIntervalEndpointsAsString ? intervals : Collections.emptyList(),
+        intervalMode,
         connector
     );
 
@@ -202,9 +198,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               .createQuery(queryString)
               .bind("dataSource", dataSource);
 
-          SqlSegmentsMetadataQuery.bindQueryIntervals(query, intervals);
+          if (compareIntervalEndpointsAsString) {
+            SqlSegmentsMetadataQuery.bindQueryIntervals(query, intervals);
+          }
 
-          return query
+          final List<Pair<DataSegment, String>> segmentsWithCreatedDates = query
               .map((int index, ResultSet r, StatementContext ctx) ->
                        new Pair<>(
                            JacksonUtils.readValue(jsonMapper, r.getBytes("payload"), DataSegment.class),
@@ -212,6 +210,21 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                        )
               )
               .list();
+
+          if (intervals.isEmpty() || compareIntervalEndpointsAsString) {
+            return segmentsWithCreatedDates;
+          } else {
+            return segmentsWithCreatedDates
+                .stream()
+                .filter(pair -> {
+                  for (Interval interval : intervals) {
+                    if (intervalMode.apply(interval, pair.lhs.getInterval())) {
+                      return true;
+                    }
+                  }
+                  return false;
+                }).collect(Collectors.toList());
+          }
         }
     );
   }
@@ -2391,16 +2404,35 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     final boolean startMetadataMatchesExisting;
+    int startMetadataGreaterThanExisting = 0;
 
     if (oldCommitMetadataFromDb == null) {
       startMetadataMatchesExisting = startMetadata.isValidStart();
+      startMetadataGreaterThanExisting = 1;
     } else {
       // Checking against the last committed metadata.
+      // If the new start sequence number is greater than the end sequence number of last commit compareTo() function will return 1,
+      // 0 in all other cases. It might be because multiple tasks are publishing the sequence at around same time.
+      if (startMetadata instanceof Comparable) {
+        startMetadataGreaterThanExisting = ((Comparable) startMetadata.asStartMetadata()).compareTo(oldCommitMetadataFromDb.asStartMetadata());
+      }
+
       // Converting the last one into start metadata for checking since only the same type of metadata can be matched.
       // Even though kafka/kinesis indexing services use different sequenceNumber types for representing
       // start and end sequenceNumbers, the below conversion is fine because the new start sequenceNumbers are supposed
       // to be same with end sequenceNumbers of the last commit.
       startMetadataMatchesExisting = startMetadata.asStartMetadata().matches(oldCommitMetadataFromDb.asStartMetadata());
+    }
+
+    if (startMetadataGreaterThanExisting == 1 && !startMetadataMatchesExisting) {
+      // Offset stored in StartMetadata is Greater than the last commited metadata,
+      // Then retry multiple task might be trying to publish the segment for same partitions.
+      log.info("Failed to update the metadata Store. The new start metadata: [%s] is ahead of last commited end state: [%s].",
+          startMetadata,
+          oldCommitMetadataFromDb);
+      return new DataStoreMetadataUpdateResult(true, false,
+          "Failed to update the metadata Store. The new start metadata is ahead of last commited end state."
+      );
     }
 
     if (!startMetadataMatchesExisting) {

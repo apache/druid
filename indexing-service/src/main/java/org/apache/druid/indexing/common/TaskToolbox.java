@@ -55,6 +55,8 @@ import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.DataSegmentMover;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.SegmentCacheManager;
+import org.apache.druid.segment.loading.SegmentLoaderConfig;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
@@ -78,6 +80,7 @@ import java.util.Collection;
  */
 public class TaskToolbox
 {
+  private final SegmentLoaderConfig segmentLoaderConfig;
   private final TaskConfig config;
   private final DruidNode taskExecutorNode;
   private final TaskActionClient taskActionClient;
@@ -128,8 +131,10 @@ public class TaskToolbox
 
   private final TaskLogPusher taskLogPusher;
   private final String attemptId;
+  private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
   public TaskToolbox(
+      SegmentLoaderConfig segmentLoaderConfig,
       TaskConfig config,
       DruidNode taskExecutorNode,
       TaskActionClient taskActionClient,
@@ -168,9 +173,11 @@ public class TaskToolbox
       ParallelIndexSupervisorTaskClientProvider supervisorTaskClientProvider,
       ShuffleClient shuffleClient,
       TaskLogPusher taskLogPusher,
-      String attemptId
+      String attemptId,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
+    this.segmentLoaderConfig = segmentLoaderConfig;
     this.config = config;
     this.taskExecutorNode = taskExecutorNode;
     this.taskActionClient = taskActionClient;
@@ -211,6 +218,12 @@ public class TaskToolbox
     this.shuffleClient = shuffleClient;
     this.taskLogPusher = taskLogPusher;
     this.attemptId = attemptId;
+    this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
+  }
+
+  public SegmentLoaderConfig getSegmentLoaderConfig()
+  {
+    return segmentLoaderConfig;
   }
 
   public TaskConfig getConfig()
@@ -478,6 +491,11 @@ public class TaskToolbox
     return createAdjustedRuntimeInfo(JvmUtils.getRuntimeInfo(), appenderatorsManager);
   }
 
+  public CentralizedDatasourceSchemaConfig getCentralizedTableSchemaConfig()
+  {
+    return centralizedDatasourceSchemaConfig;
+  }
+
   /**
    * Create {@link AdjustedRuntimeInfo} based on the given {@link RuntimeInfo} and {@link AppenderatorsManager}. This
    * is a way to allow code to properly apportion the amount of processors and heap available to the entire JVM.
@@ -504,6 +522,7 @@ public class TaskToolbox
 
   public static class Builder
   {
+    private SegmentLoaderConfig segmentLoaderConfig;
     private TaskConfig config;
     private DruidNode taskExecutorNode;
     private TaskActionClient taskActionClient;
@@ -543,6 +562,7 @@ public class TaskToolbox
     private ShuffleClient shuffleClient;
     private TaskLogPusher taskLogPusher;
     private String attemptId;
+    private CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
     public Builder()
     {
@@ -550,6 +570,7 @@ public class TaskToolbox
 
     public Builder(TaskToolbox other)
     {
+      this.segmentLoaderConfig = other.segmentLoaderConfig;
       this.config = other.config;
       this.taskExecutorNode = other.taskExecutorNode;
       this.taskActionClient = other.taskActionClient;
@@ -587,6 +608,13 @@ public class TaskToolbox
       this.intermediaryDataManager = other.intermediaryDataManager;
       this.supervisorTaskClientProvider = other.supervisorTaskClientProvider;
       this.shuffleClient = other.shuffleClient;
+      this.centralizedDatasourceSchemaConfig = other.centralizedDatasourceSchemaConfig;
+    }
+
+    public Builder config(final SegmentLoaderConfig segmentLoaderConfig)
+    {
+      this.segmentLoaderConfig = segmentLoaderConfig;
+      return this;
     }
 
     public Builder config(final TaskConfig config)
@@ -823,9 +851,16 @@ public class TaskToolbox
       return this;
     }
 
+    public Builder centralizedTableSchemaConfig(final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig)
+    {
+      this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
+      return this;
+    }
+
     public TaskToolbox build()
     {
       return new TaskToolbox(
+          segmentLoaderConfig,
           config,
           taskExecutorNode,
           taskActionClient,
@@ -864,7 +899,8 @@ public class TaskToolbox
           supervisorTaskClientProvider,
           shuffleClient,
           taskLogPusher,
-          attemptId
+          attemptId,
+          centralizedDatasourceSchemaConfig
       );
     }
   }

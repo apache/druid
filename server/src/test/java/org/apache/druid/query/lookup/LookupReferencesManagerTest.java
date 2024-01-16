@@ -416,6 +416,7 @@ public class LookupReferencesManagerTest
     EasyMock.expect(lookupExtractorFactory1.destroy()).andReturn(true).once();
 
     LookupExtractorFactory lookupExtractorFactory2 = EasyMock.createNiceMock(LookupExtractorFactory.class);
+    EasyMock.expect(lookupExtractorFactory2.isInitialized()).andReturn(true).once();
     EasyMock.expect(lookupExtractorFactory2.start()).andReturn(true).once();
 
     EasyMock.replay(lookupExtractorFactory1, lookupExtractorFactory2);
@@ -482,6 +483,35 @@ public class LookupReferencesManagerTest
     EasyMock.verify(lookupExtractorFactory1, lookupExtractorFactory2);
   }
 
+  @Test
+  public void testAddingNewContainerImmediatelyWithoutWaiting() throws Exception
+  {
+    LookupExtractorFactory lookupExtractorFactory1 = EasyMock.createNiceMock(LookupExtractorFactory.class);
+    EasyMock.expect(lookupExtractorFactory1.start()).andReturn(true).once();
+    EasyMock.expect(lookupExtractorFactory1.isInitialized()).andReturn(false).anyTimes();
+    EasyMock.replay(lookupExtractorFactory1);
+    Map<String, Object> lookupMap = new HashMap<>();
+    String strResult = mapper.writeValueAsString(lookupMap);
+    Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
+    EasyMock.expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
+    EasyMock.replay(config);
+    EasyMock.expect(druidLeaderClient.makeRequest(
+                HttpMethod.GET,
+                "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
+            ))
+            .andReturn(request);
+    StringFullResponseHolder responseHolder = new StringFullResponseHolder(
+        newEmptyResponse(HttpResponseStatus.OK),
+        StandardCharsets.UTF_8
+    ).addChunk(strResult);
+    EasyMock.expect(druidLeaderClient.go(request)).andReturn(responseHolder);
+    EasyMock.replay(druidLeaderClient);
+    lookupReferencesManager.start();
+    lookupReferencesManager.add("testName", new LookupExtractorFactoryContainer("1", lookupExtractorFactory1));
+    lookupReferencesManager.handlePendingNotices();
+    Assert.assertTrue(lookupReferencesManager.get("testName").isPresent());
+    EasyMock.verify(lookupExtractorFactory1);
+  }
   @Test
   public void testRemoveNonExisting() throws Exception
   {

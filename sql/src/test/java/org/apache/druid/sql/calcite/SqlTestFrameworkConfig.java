@@ -117,6 +117,7 @@ public @interface SqlTestFrameworkConfig
     private SqlTestFramework createFramework(SqlTestFrameworkConfig config)
     {
       SqlTestFramework.Builder builder = new SqlTestFramework.Builder(testHost)
+          .catalogResolver(testHost.createCatalogResolver())
           .minTopNThreshold(config.minTopNThreshold())
           .mergeBufferCount(config.numMergeBuffers());
       return builder.build();

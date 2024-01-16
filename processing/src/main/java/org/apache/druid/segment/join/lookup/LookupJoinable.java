@@ -38,6 +38,7 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -99,8 +100,8 @@ public class LookupJoinable implements Joinable
   @Override
   public ColumnValuesWithUniqueFlag getMatchableColumnValues(String columnName, boolean includeNull, int maxNumValues)
   {
-    if (LookupColumnSelectorFactory.KEY_COLUMN.equals(columnName) && extractor.canGetKeySet()) {
-      final Set<String> keys = extractor.keySet();
+    if (LookupColumnSelectorFactory.KEY_COLUMN.equals(columnName) && extractor.supportsAsMap()) {
+      final Set<String> keys = extractor.asMap().keySet();
 
       final Set<String> nonMatchingValues;
 
@@ -165,7 +166,12 @@ public class LookupJoinable implements Joinable
       } else {
         // Lookup extractor unapply only provides a list of strings, so we can't respect
         // maxCorrelationSetSize easily. This should be handled eventually.
-        correlatedValues = InDimFilter.ValuesSet.copyOf(extractor.unapply(searchColumnValue));
+        final Iterator<String> unapplied = extractor.unapplyAll(Collections.singleton(searchColumnValue));
+        if (unapplied != null) {
+          correlatedValues = InDimFilter.ValuesSet.copyOf(unapplied);
+        } else {
+          return Optional.empty();
+        }
       }
     }
     return Optional.of(correlatedValues);

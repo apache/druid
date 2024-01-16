@@ -253,12 +253,6 @@ public class BoundDimFilter extends AbstractOptimizableDimFilter implements DimF
   }
 
   @Override
-  public DimFilter optimize()
-  {
-    return this;
-  }
-
-  @Override
   public Filter toFilter()
   {
     return new BoundFilter(this);
@@ -440,7 +434,7 @@ public class BoundDimFilter extends AbstractOptimizableDimFilter implements DimF
       }
 
       if (matchesNothing) {
-        return DruidLongPredicate.ALWAYS_FALSE;
+        return DruidLongPredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
       } else {
         final RangeFilter.RangeType rangeType = RangeFilter.RangeType.of(
             hasLowerLongBound,
@@ -497,7 +491,7 @@ public class BoundDimFilter extends AbstractOptimizableDimFilter implements DimF
 
 
       if (matchesNothing) {
-        return DruidFloatPredicate.ALWAYS_FALSE;
+        return DruidFloatPredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
       } else {
 
         final RangeFilter.RangeType rangeType = RangeFilter.RangeType.of(
@@ -559,7 +553,7 @@ public class BoundDimFilter extends AbstractOptimizableDimFilter implements DimF
       }
 
       if (matchesNothing) {
-        return DruidDoublePredicate.ALWAYS_FALSE;
+        return DruidDoublePredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
       } else {
         final RangeFilter.RangeType rangeType = RangeFilter.RangeType.of(
             hasLowerBound,

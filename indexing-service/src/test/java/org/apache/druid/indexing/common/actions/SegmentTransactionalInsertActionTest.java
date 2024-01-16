@@ -151,11 +151,7 @@ public class SegmentTransactionalInsertActionTest
     );
 
     Assert.assertEquals(
-        SegmentPublishResult.fail(
-          "java.lang.RuntimeException: Inconsistent metadata state. " +
-          "This can happen if you update input topic in a spec without changing the supervisor name. " +
-          "Stored state: [null], Target state: [ObjectMetadata{theObject=[1]}]."
-        ),
+        SegmentPublishResult.fail("java.lang.RuntimeException: Failed to update the metadata Store. The new start metadata is ahead of last commited end state."),
         result
     );
   }

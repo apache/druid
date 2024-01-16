@@ -21,7 +21,6 @@ package org.apache.druid.segment.filter;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.search.Bound;
@@ -30,7 +29,9 @@ import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.query.filter.DruidPredicateMatch;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -147,14 +148,14 @@ public class SpatialFilter implements Filter
     }
 
     @Override
-    public Predicate<String> makeStringPredicate()
+    public DruidObjectPredicate<String> makeStringPredicate()
     {
       return input -> {
         if (input == null) {
-          return false;
+          return DruidPredicateMatch.UNKNOWN;
         }
         final float[] coordinate = SpatialDimensionRowTransformer.decode(input);
-        return bound.contains(coordinate);
+        return DruidPredicateMatch.of(bound.contains(coordinate));
       };
     }
 
@@ -162,21 +163,21 @@ public class SpatialFilter implements Filter
     public DruidLongPredicate makeLongPredicate()
     {
       // SpatialFilter does not currently support longs
-      return DruidLongPredicate.ALWAYS_FALSE;
+      return DruidLongPredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
     }
 
     @Override
     public DruidFloatPredicate makeFloatPredicate()
     {
       // SpatialFilter does not currently support floats
-      return DruidFloatPredicate.ALWAYS_FALSE;
+      return DruidFloatPredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
     }
 
     @Override
     public DruidDoublePredicate makeDoublePredicate()
     {
       // SpatialFilter does not currently support doubles
-      return DruidDoublePredicate.ALWAYS_FALSE;
+      return DruidDoublePredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
     }
 
     @Override

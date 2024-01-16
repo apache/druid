@@ -22,11 +22,14 @@ package org.apache.druid.query.lookup;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.collect.Iterators;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -42,7 +45,8 @@ public abstract class LookupExtractor
    *
    * @param key The value to apply the lookup to.
    *
-   * @return The lookup, or null when key is `null` or cannot have the lookup applied to it and should be treated as missing.
+   * @return The value for this key, or null when key is `null` in {@link NullHandling#sqlCompatible()} mode, or when
+   * key cannot have the lookup applied to it and should be treated as missing.
    */
   @Nullable
   public abstract String apply(@Nullable String key);
@@ -68,62 +72,45 @@ public abstract class LookupExtractor
   }
 
   /**
-   * Provide the reverse mapping from a given value to a list of keys
+   * Reverse lookup from a given value. Used by the default implementation of {@link #unapplyAll(Set)}.
+   * Otherwise unused. Implementations that override {@link #unapplyAll(Set)} may throw
+   * {@link UnsupportedOperationException} from this method.
    *
-   * @param value the value to apply the reverse lookup
+   * @param value the value to apply the reverse lookup. {@link NullHandling#emptyToNullIfNeeded(String)} will have
+   *              been applied to the value.
    *
-   * @return the list of keys that maps to value or empty list.
-   * Note that for the case of a none existing value in the lookup we have to cases either return an empty list OR list with null element.
-   * returning an empty list implies that user want to ignore such a lookup value.
-   * In the other hand returning a list with the null element implies user want to map the none existing value to the key null.
-   * Null value maps to empty list.
+   * @return the list of keys that maps to the provided value. In SQL-compatible null handling mode, null keys
+   * are omitted.
    */
-
-  public abstract List<String> unapply(@Nullable String value);
+  protected abstract List<String> unapply(@Nullable String value);
 
   /**
-   * @param values Iterable of values for which will perform reverse lookup
+   * Reverse lookup from a given set of values.
    *
-   * @return Returns {@link Map} whose keys are the contents of {@code values} and whose values are computed on demand using the reverse lookup function {@link #unapply(String)}
-   * or empty map if {@code values} is `null`
-   * User can override this method if there is a better way to perform bulk reverse lookup
+   * @param values set of values to reverse lookup. {@link NullHandling#emptyToNullIfNeeded(String)} will have
+   *               been applied to each value.
+   *
+   * @return iterator of keys that map to to the provided set of values. May contain duplicate keys. Returns null if
+   * this lookup instance does not support reverse lookups. In SQL-compatible null handling mode, null keys are
+   * omitted.
    */
-
-  public Map<String, List<String>> unapplyAll(Iterable<String> values)
+  @Nullable
+  public Iterator<String> unapplyAll(Set<String> values)
   {
-    if (values == null) {
-      return Collections.emptyMap();
-    }
-    Map<String, List<String>> map = new HashMap<>();
-    for (String value : values) {
-      map.put(value, unapply(value));
-    }
-    return map;
+    return Iterators.concat(Iterators.transform(values.iterator(), value -> unapply(value).iterator()));
   }
 
   /**
-   * Returns true if this lookup extractor's {@link #iterable()} method will return a valid iterator.
+   * Returns whether this lookup extractor's {@link #asMap()} will return a valid map.
    */
-  public abstract boolean canIterate();
+  public abstract boolean supportsAsMap();
 
   /**
-   * Returns true if this lookup extractor's {@link #keySet()} method will return a valid set.
-   */
-  public abstract boolean canGetKeySet();
-
-  /**
-   * Returns an Iterable that iterates over the keys and values in this lookup extractor.
+   * Returns a Map view of this lookup extractor. The map may change along with the underlying lookup data.
    *
-   * @throws UnsupportedOperationException if {@link #canIterate()} returns false.
+   * @throws UnsupportedOperationException if {@link #supportsAsMap()} returns false.
    */
-  public abstract Iterable<Map.Entry<String, String>> iterable();
-
-  /**
-   * Returns a Set of all keys in this lookup extractor. The returned Set will not change.
-   *
-   * @throws UnsupportedOperationException if {@link #canGetKeySet()} returns false.
-   */
-  public abstract Set<String> keySet();
+  public abstract Map<String, String> asMap();
 
   /**
    * Create a cache key for use in results caching
@@ -140,8 +127,8 @@ public abstract class LookupExtractor
 
   /**
    * Estimated heap footprint of this object. Not guaranteed to be accurate. For example, some implementations return
-   * zero even though they do use on-heap structures. However, the most common class, {@link MapLookupExtractor},
-   * does have a reasonable implementation.
+   * zero even though they do use on-heap structures. However, the most common classes, {@link MapLookupExtractor}
+   * and {@link ImmutableLookupMap}, do have reasonable implementations.
    *
    * This API is provided for best-effort memory management and monitoring.
    */
