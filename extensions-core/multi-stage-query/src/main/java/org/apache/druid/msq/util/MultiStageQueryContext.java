@@ -380,6 +380,13 @@ public class MultiStageQueryContext
    */
   public static TaskLockType validateAndGetTaskLockType(QueryContext queryContext, boolean isReplaceQuery)
   {
+    final boolean useConcurrentLocks = queryContext.getBoolean(
+        Tasks.USE_CONCURRENT_LOCKS,
+        Tasks.DEFAULT_USE_CONCURRENT_LOCKS
+    );
+    if (useConcurrentLocks) {
+      return isReplaceQuery ? TaskLockType.REPLACE : TaskLockType.APPEND;
+    }
     final TaskLockType taskLockType = QueryContexts.getAsEnum(
         Tasks.TASK_LOCK_TYPE,
         queryContext.getString(Tasks.TASK_LOCK_TYPE, null),
