@@ -121,7 +121,7 @@ public class OnheapIncrementalIndexBenchmark
     for (int i = 0; i < dimensionCount; i++) {
       String dimName = StringUtils.format("Dim_%d", i);
       dimensionList.add(dimName);
-      builder.put(dimName, new Integer(rowID).longValue());
+      builder.put(dimName, Integer.valueOf(rowID).longValue());
     }
     return new MapBasedInputRow(timestamp, dimensionList, builder.build());
   }

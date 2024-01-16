@@ -574,7 +574,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
                         }
                     );
                     for (Double result : results) {
-                      final Integer maxValueExpected = someoneRan.get() + addThreads;
+                      final int maxValueExpected = someoneRan.get() + addThreads;
                       if (maxValueExpected > 0) {
                         // Eventually consistent, but should be somewhere in that range
                         // Actual result is validated after all writes are guaranteed done.
