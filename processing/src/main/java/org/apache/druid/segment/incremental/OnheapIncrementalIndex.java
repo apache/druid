@@ -21,12 +21,11 @@ package org.apache.druid.segment.incremental;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Supplier;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
-import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -42,6 +41,7 @@ import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
@@ -118,10 +118,17 @@ public class OnheapIncrementalIndex extends IncrementalIndex
    */
   private final boolean useMaxMemoryEstimates;
 
+  /**
+   * Aggregator name -> column selector factor for that aggregator.
+   */
   @Nullable
-  private volatile Map<String, ColumnSelectorFactory> selectors;
+  private Map<String, ColumnSelectorFactory> selectors;
+  /**
+   * Aggregator name -> column selector factor for the combining version of that aggregator. Only set when
+   * {@link #preserveExistingMetrics} is true.
+   */
   @Nullable
-  private volatile Map<String, ColumnSelectorFactory> combiningAggSelectors;
+  private Map<String, ColumnSelectorFactory> combiningAggSelectors;
   @Nullable
   private String outOfRowsReason = null;
 
@@ -190,34 +197,49 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   @Override
   protected void initAggs(
       final AggregatorFactory[] metrics,
-      final Supplier<InputRow> rowSupplier
+      final InputRowHolder inputRowHolder
   )
   {
+    // All non-complex aggregators share a column selector factory. Helps with value reuse.
+    ColumnSelectorFactory nonComplexColumnSelectorFactory = null;
     selectors = new HashMap<>();
     combiningAggSelectors = new HashMap<>();
     for (AggregatorFactory agg : metrics) {
-      selectors.put(
-          agg.getName(),
-          new CachingColumnSelectorFactory(makeColumnSelectorFactory(agg, rowSupplier))
-      );
-      if (preserveExistingMetrics) {
-        AggregatorFactory combiningAgg = agg.getCombiningFactory();
-        combiningAggSelectors.put(
-            combiningAgg.getName(),
-            new CachingColumnSelectorFactory(
-                makeColumnSelectorFactory(combiningAgg, rowSupplier)
-            )
-        );
+      final ColumnSelectorFactory factory;
+      if (agg.getIntermediateType().is(ValueType.COMPLEX)) {
+        factory = new CachingColumnSelectorFactory(makeColumnSelectorFactory(agg, inputRowHolder));
+      } else {
+        if (nonComplexColumnSelectorFactory == null) {
+          nonComplexColumnSelectorFactory =
+              new CachingColumnSelectorFactory(makeColumnSelectorFactory(null, inputRowHolder));
+        }
+        factory = nonComplexColumnSelectorFactory;
+      }
+      selectors.put(agg.getName(), factory);
+    }
+
+    if (preserveExistingMetrics) {
+      for (AggregatorFactory agg : metrics) {
+        final AggregatorFactory combiningAgg = agg.getCombiningFactory();
+        final ColumnSelectorFactory factory;
+        if (combiningAgg.getIntermediateType().is(ValueType.COMPLEX)) {
+          factory = new CachingColumnSelectorFactory(makeColumnSelectorFactory(combiningAgg, inputRowHolder));
+        } else {
+          if (nonComplexColumnSelectorFactory == null) {
+            nonComplexColumnSelectorFactory =
+                new CachingColumnSelectorFactory(makeColumnSelectorFactory(null, inputRowHolder));
+          }
+          factory = nonComplexColumnSelectorFactory;
+        }
+        combiningAggSelectors.put(combiningAgg.getName(), factory);
       }
     }
   }
 
   @Override
   protected AddToFactsResult addToFacts(
-      InputRow row,
       IncrementalIndexRow key,
-      ThreadLocal<InputRow> rowContainer,
-      Supplier<InputRow> rowSupplier,
+      InputRowHolder inputRowHolder,
       boolean skipMaxRowsInMemoryCheck
   ) throws IndexSizeExceededException
   {
@@ -230,7 +252,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     final AtomicLong totalSizeInBytes = getBytesInMemory();
     if (IncrementalIndexRow.EMPTY_ROW_INDEX != priorIndex) {
       aggs = concurrentGet(priorIndex);
-      long aggSizeDelta = doAggregate(metrics, aggs, rowContainer, row, parseExceptionMessages);
+      long aggSizeDelta = doAggregate(metrics, aggs, inputRowHolder, parseExceptionMessages);
       totalSizeInBytes.addAndGet(useMaxMemoryEstimates ? 0 : aggSizeDelta);
     } else {
       if (preserveExistingMetrics) {
@@ -238,8 +260,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       } else {
         aggs = new Aggregator[metrics.length];
       }
-      long aggSizeForRow = factorizeAggs(metrics, aggs, rowContainer, row);
-      aggSizeForRow += doAggregate(metrics, aggs, rowContainer, row, parseExceptionMessages);
+      long aggSizeForRow = factorizeAggs(metrics, aggs);
+      aggSizeForRow += doAggregate(metrics, aggs, inputRowHolder, parseExceptionMessages);
 
       final int rowIndex = indexIncrement.getAndIncrement();
       concurrentSet(rowIndex, aggs);
@@ -258,15 +280,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       if (IncrementalIndexRow.EMPTY_ROW_INDEX == prev) {
         numEntries.incrementAndGet();
       } else {
-        // this should never happen. Previously, this would happen in a race condition involving multiple write threads
-        // for GroupBy v1 strategy, but it is no more, so this code needs the concurrency model reworked in the future
-        parseExceptionMessages.clear();
-        aggs = concurrentGet(prev);
-        aggSizeForRow = doAggregate(metrics, aggs, rowContainer, row, parseExceptionMessages);
-
-        // Free up the misfire
-        concurrentRemove(rowIndex);
-        // This is expected to occur ~80% of the time in the worst scenarios
+        throw DruidException.defensive("Encountered existing fact entry for new key, possible concurrent add?");
       }
 
       // For a new key, row size = key size + aggregator size + overhead
@@ -295,13 +309,10 @@ public class OnheapIncrementalIndex extends IncrementalIndex
    */
   private long factorizeAggs(
       AggregatorFactory[] metrics,
-      Aggregator[] aggs,
-      ThreadLocal<InputRow> rowContainer,
-      InputRow row
+      Aggregator[] aggs
   )
   {
     long totalInitialSizeBytes = 0L;
-    rowContainer.set(row);
     final long aggReferenceSize = Long.BYTES;
     for (int i = 0; i < metrics.length; i++) {
       final AggregatorFactory agg = metrics[i];
@@ -328,7 +339,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex
         }
       }
     }
-    rowContainer.set(null);
     return totalInitialSizeBytes;
   }
 
@@ -342,42 +352,44 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   private long doAggregate(
       AggregatorFactory[] metrics,
       Aggregator[] aggs,
-      ThreadLocal<InputRow> rowContainer,
-      InputRow row,
+      InputRowHolder inputRowHolder,
       List<String> parseExceptionsHolder
   )
   {
-    rowContainer.set(row);
     long totalIncrementalBytes = 0L;
     for (int i = 0; i < metrics.length; i++) {
       final Aggregator agg;
-      if (preserveExistingMetrics && row instanceof MapBasedRow && ((MapBasedRow) row).getEvent().containsKey(metrics[i].getName())) {
+      if (preserveExistingMetrics
+          && inputRowHolder.getRow() instanceof MapBasedRow
+          && ((MapBasedRow) inputRowHolder.getRow()).getEvent().containsKey(metrics[i].getName())) {
         agg = aggs[i + metrics.length];
       } else {
         agg = aggs[i];
       }
-      synchronized (agg) {
-        try {
-          if (useMaxMemoryEstimates) {
-            agg.aggregate();
-          } else {
-            totalIncrementalBytes += agg.aggregateWithSize();
-          }
+      try {
+        if (useMaxMemoryEstimates) {
+          agg.aggregate();
+        } else {
+          totalIncrementalBytes += agg.aggregateWithSize();
         }
-        catch (ParseException e) {
-          // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
-          if (preserveExistingMetrics) {
-            log.warn(e, "Failing ingestion as preserveExistingMetrics is enabled but selector of aggregator[%s] recieved incompatible type.", metrics[i].getName());
-            throw e;
-          } else {
-            log.debug(e, "Encountered parse error, skipping aggregator[%s].", metrics[i].getName());
-            parseExceptionsHolder.add(e.getMessage());
-          }
+      }
+      catch (ParseException e) {
+        // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
+        if (preserveExistingMetrics) {
+          log.warn(
+              e,
+              "Failing ingestion as preserveExistingMetrics is enabled but selector of aggregator[%s] received "
+              + "incompatible type.",
+              metrics[i].getName()
+          );
+          throw e;
+        } else {
+          log.debug(e, "Encountered parse error, skipping aggregator[%s].", metrics[i].getName());
+          parseExceptionsHolder.add(e.getMessage());
         }
       }
     }
 
-    rowContainer.set(null);
     return totalIncrementalBytes;
   }
 
@@ -407,11 +419,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   protected void concurrentSet(int offset, Aggregator[] value)
   {
     aggregators.put(offset, value);
-  }
-
-  protected void concurrentRemove(int offset)
-  {
-    aggregators.remove(offset);
   }
 
   @Override
