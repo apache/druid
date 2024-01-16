@@ -79,7 +79,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
- * Benchmark that tests planning for SQL queries with IN operator.
+ * Benchmark that tests various SQL queries.
  */
 @State(Scope.Benchmark)
 @Fork(value = 1)
@@ -257,6 +257,28 @@ public class InPlanningBenchmark
         "inSubQueryThreshold", inSubQueryThreshold, "useCache", false
     );
     StringBuilder sqlBuilder = new StringBuilder().append("explain plan for select long1 from foo where long1 in (");
+    IntStream.range(1, inClauseExprCount - 1).forEach(i -> sqlBuilder.append(i).append(","));
+    sqlBuilder.append(inClauseExprCount).append(")");
+    final String sql = sqlBuilder.toString();
+
+    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, context)) {
+      final PlannerResult plannerResult = planner.plan();
+      final Sequence<Object[]> resultSequence = plannerResult.run().getResults();
+      final Object[] lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);
+      blackhole.consume(lastRow);
+    }
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MILLISECONDS)
+  public void queryEqualOrInSql(Blackhole blackhole)
+  {
+    final Map<String, Object> context = ImmutableMap.of(
+        "inSubQueryThreshold", inSubQueryThreshold, "useCache", false
+    );
+    StringBuilder sqlBuilder = new StringBuilder().append(
+        "explain plan for select string1  from foo where string1 = '7' or long1 in (");
     IntStream.range(1, inClauseExprCount - 1).forEach(i -> sqlBuilder.append(i).append(","));
     sqlBuilder.append(inClauseExprCount).append(")");
     final String sql = sqlBuilder.toString();
