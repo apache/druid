@@ -195,7 +195,7 @@ public class ExpressionSelectors
       Expr expression
   )
   {
-    ExpressionPlan plan = ExpressionPlanner.plan(columnSelectorFactory, expression.singleThreaded());
+    ExpressionPlan plan = ExpressionPlanner.plan(columnSelectorFactory, Expr.makeSingleThreaded(expression));
     final RowIdSupplier rowIdSupplier = columnSelectorFactory.getRowIdSupplier();
 
     if (plan.is(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR)) {

@@ -761,10 +761,16 @@ public interface Expr extends Cacheable
 
   /**
    * FIXME
+   *
    * @return
    */
   default Expr singleThreaded()
   {
     return this;
+  }
+
+  static Expr makeSingleThreaded(Expr expr)
+  {
+    return expr.visit(Expr::singleThreaded);
   }
 }
