@@ -31,6 +31,7 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.plan.hep.HepProgram;
 import org.apache.calcite.plan.hep.HepProgramBuilder;
 import org.apache.calcite.plan.volcano.AbstractConverter;
+import org.apache.calcite.plan.volcano.VolcanoPlanner;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.metadata.DefaultRelMetadataProvider;
@@ -47,6 +48,7 @@ import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.sql.calcite.external.ExternalTableScanRule;
+import org.apache.druid.sql.calcite.rule.AggregatePullUpLookupRule;
 import org.apache.druid.sql.calcite.rule.CaseToCoalesceRule;
 import org.apache.druid.sql.calcite.rule.CoalesceLookupRule;
 import org.apache.druid.sql.calcite.rule.DruidLogicalValuesRule;
@@ -55,8 +57,11 @@ import org.apache.druid.sql.calcite.rule.DruidRules;
 import org.apache.druid.sql.calcite.rule.DruidTableScanRule;
 import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
 import org.apache.druid.sql.calcite.rule.FilterDecomposeCoalesceRule;
+import org.apache.druid.sql.calcite.rule.FilterDecomposeConcatRule;
 import org.apache.druid.sql.calcite.rule.FilterJoinExcludePushToChildRule;
+import org.apache.druid.sql.calcite.rule.FlattenConcatRule;
 import org.apache.druid.sql.calcite.rule.ProjectAggregatePruneUnusedCallRule;
+import org.apache.druid.sql.calcite.rule.ReverseLookupRule;
 import org.apache.druid.sql.calcite.rule.SortCollapseRule;
 import org.apache.druid.sql.calcite.rule.logical.DruidLogicalRules;
 import org.apache.druid.sql.calcite.run.EngineFeature;
@@ -88,7 +93,7 @@ public class CalciteRulesManager
    * 3) {@link CoreRules#JOIN_COMMUTE}, {@link JoinPushThroughJoinRule#RIGHT}, {@link JoinPushThroughJoinRule#LEFT},
    * and {@link CoreRules#FILTER_INTO_JOIN}, which are part of {@link #FANCY_JOIN_RULES}.
    * 4) {@link CoreRules#PROJECT_FILTER_TRANSPOSE} because PartialDruidQuery would like to have the Project on top of the Filter -
-   *    this rule could create a lot of non-usefull plans.
+   * this rule could create a lot of non-useful plans.
    */
   private static final List<RelOptRule> BASE_RULES =
       ImmutableList.of(
@@ -136,7 +141,6 @@ public class CalciteRulesManager
           CoreRules.FILTER_VALUES_MERGE,
           CoreRules.PROJECT_FILTER_VALUES_MERGE,
           CoreRules.PROJECT_VALUES_MERGE,
-          CoreRules.SORT_PROJECT_TRANSPOSE,
           CoreRules.AGGREGATE_VALUES
       );
 
@@ -228,6 +232,37 @@ public class CalciteRulesManager
   public List<Program> programs(final PlannerContext plannerContext)
   {
     final boolean isDebug = plannerContext.queryContext().isDebug();
+    final Program druidPreProgram = buildPreProgram(plannerContext, true);
+    final Program bindablePreProgram = buildPreProgram(plannerContext, false);
+
+    return ImmutableList.of(
+        Programs.sequence(
+            druidPreProgram,
+            Programs.ofRules(druidConventionRuleSet(plannerContext)),
+            new LoggingProgram("After Druid volcano planner program", isDebug)
+        ),
+        Programs.sequence(
+            bindablePreProgram,
+            Programs.ofRules(bindableConventionRuleSet(plannerContext)),
+            new LoggingProgram("After bindable volcano planner program", isDebug)
+        ),
+        Programs.sequence(
+            druidPreProgram,
+            Programs.ofRules(logicalConventionRuleSet(plannerContext)),
+            new LoggingProgram("After logical volcano planner program", isDebug)
+        )
+    );
+  }
+
+  /**
+   * Build the program that runs prior to the cost-based {@link VolcanoPlanner}.
+   *
+   * @param plannerContext planner context
+   * @param isDruid        whether this is a Druid program
+   */
+  private Program buildPreProgram(final PlannerContext plannerContext, final boolean isDruid)
+  {
+    final boolean isDebug = plannerContext.queryContext().isDebug();
 
     // Program that pre-processes the tree before letting the full-on VolcanoPlanner loose.
     final List<Program> prePrograms = new ArrayList<>();
@@ -236,42 +271,86 @@ public class CalciteRulesManager
     prePrograms.add(new LoggingProgram("Finished subquery program", isDebug));
     prePrograms.add(DecorrelateAndTrimFieldsProgram.INSTANCE);
     prePrograms.add(new LoggingProgram("Finished decorrelate and trim fields program", isDebug));
-    prePrograms.add(buildCoalesceProgram());
-    prePrograms.add(new LoggingProgram("Finished coalesce program", isDebug));
-    prePrograms.add(buildReductionProgram(plannerContext));
+    prePrograms.add(buildReductionProgram(plannerContext, isDruid));
     prePrograms.add(new LoggingProgram("Finished expression reduction program", isDebug));
 
-    final Program preProgram = Programs.sequence(prePrograms.toArray(new Program[0]));
+    if (isDruid) {
+      prePrograms.add(buildPreVolcanoManipulationProgram(plannerContext));
+      prePrograms.add(new LoggingProgram("Finished pre-Volcano manipulation program", isDebug));
+    }
 
-    return ImmutableList.of(
-        Programs.sequence(
-            preProgram,
-            Programs.ofRules(druidConventionRuleSet(plannerContext)),
-            new LoggingProgram("After Druid volcano planner program", isDebug)
-        ),
-        Programs.sequence(
-            preProgram,
-            Programs.ofRules(bindableConventionRuleSet(plannerContext)),
-            new LoggingProgram("After bindable volcano planner program", isDebug)
-        ),
-        Programs.sequence(
-            preProgram,
-            Programs.ofRules(logicalConventionRuleSet(plannerContext)),
-            new LoggingProgram("After logical volcano planner program", isDebug)
-        )
-    );
+    return Programs.sequence(prePrograms.toArray(new Program[0]));
   }
 
-  private Program buildReductionProgram(final PlannerContext plannerContext)
+  /**
+   * Program to perform manipulations on the logical tree prior to starting the cost-based planner. Mainly this
+   * helps the cost-based planner finish faster, and helps the decoupled planner generate the same plans as the
+   * classic planner.
+   */
+  private Program buildPreVolcanoManipulationProgram(final PlannerContext plannerContext)
   {
-    List<RelOptRule> hepRules = new ArrayList<RelOptRule>(REDUCTION_RULES);
-    // Apply CoreRules#FILTER_INTO_JOIN early to avoid exploring less optimal plans.
+    final HepProgramBuilder builder = HepProgram.builder();
+    builder.addMatchLimit(CalciteRulesManager.HEP_DEFAULT_MATCH_LIMIT);
+
+    // Apply FILTER_INTO_JOIN early, if using a join algorithm that requires subqueries anyway.
     if (plannerContext.getJoinAlgorithm().requiresSubquery()) {
-      hepRules.add(CoreRules.FILTER_INTO_JOIN);
+      builder.addRuleInstance(CoreRules.FILTER_INTO_JOIN);
     }
-    return buildHepProgram(
-        hepRules
-    );
+
+    // Apply SORT_PROJECT_TRANSPOSE to match the expected order of "sort" and "sortProject" in PartialDruidQuery.
+    builder.addRuleInstance(CoreRules.SORT_PROJECT_TRANSPOSE);
+
+    return Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE);
+  }
+
+  /**
+   * Builds an expression reduction program using {@link #REDUCTION_RULES} (built-in to Calcite) plus some
+   * Druid-specific rules.
+   */
+  private Program buildReductionProgram(final PlannerContext plannerContext, final boolean isDruid)
+  {
+    final HepProgramBuilder builder = HepProgram.builder();
+    builder.addMatchLimit(CalciteRulesManager.HEP_DEFAULT_MATCH_LIMIT);
+
+    if (isDruid) {
+      // COALESCE rules must run before REDUCTION_RULES, since otherwise ReduceExpressionsRule#pushPredicateIntoCase may
+      // make it impossible to convert to COALESCE.
+      builder.addRuleInstance(new CaseToCoalesceRule());
+      builder.addRuleInstance(new CoalesceLookupRule());
+    }
+
+    // Remaining rules run as a single group until fixpoint.
+    builder.addGroupBegin();
+
+    if (isDruid) {
+      // Flatten calls to CONCAT, which happen easily with the || operator since it only accepts two arguments.
+      builder.addRuleInstance(new FlattenConcatRule());
+
+      // Decompose filters on COALESCE to promote more usage of indexes.
+      builder.addRuleInstance(new FilterDecomposeCoalesceRule());
+
+      // Decompose filters on CONCAT to promote more usage of indexes.
+      builder.addRuleInstance(new FilterDecomposeConcatRule());
+
+      // Include rule to split injective LOOKUP across a GROUP BY.
+      if (plannerContext.isPullUpLookup()) {
+        builder.addRuleInstance(new AggregatePullUpLookupRule(plannerContext));
+      }
+
+      // Include rule to reduce certain LOOKUP expressions that appear in filters.
+      if (plannerContext.isReverseLookup()) {
+        builder.addRuleInstance(new ReverseLookupRule(plannerContext));
+      }
+    }
+
+    // Calcite's builtin reduction rules.
+    for (final RelOptRule rule : REDUCTION_RULES) {
+      builder.addRuleInstance(rule);
+    }
+
+    builder.addGroupEnd();
+
+    return Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE);
   }
 
   private static class LoggingProgram implements Program
@@ -370,30 +449,6 @@ public class CalciteRulesManager
     rules.add(ProjectAggregatePruneUnusedCallRule.instance());
 
     return rules.build();
-  }
-
-  private static Program buildHepProgram(final Iterable<? extends RelOptRule> rules)
-  {
-    final HepProgramBuilder builder = HepProgram.builder();
-    builder.addMatchLimit(CalciteRulesManager.HEP_DEFAULT_MATCH_LIMIT);
-    for (RelOptRule rule : rules) {
-      builder.addRuleInstance(rule);
-    }
-    return Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE);
-  }
-
-  /**
-   * Program that performs various manipulations related to COALESCE.
-   */
-  private static Program buildCoalesceProgram()
-  {
-    return buildHepProgram(
-        ImmutableList.of(
-            new CaseToCoalesceRule(),
-            new CoalesceLookupRule(),
-            new FilterDecomposeCoalesceRule()
-        )
-    );
   }
 
   /**

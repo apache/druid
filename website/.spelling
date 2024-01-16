@@ -430,6 +430,7 @@ pluggable
 podSpec
 postgres
 postgresql
+pre-aggregate
 pre-aggregated
 pre-aggregates
 pre-aggregating
@@ -948,6 +949,7 @@ prometheus
 Pushgateway
 flushPeriod
 postAggregator
+postAggregators
 quantileFromTDigestSketch
 quantilesFromTDigestSketch
 tDigestSketch
@@ -2376,3 +2378,10 @@ aggregateMultipleValues
 appRegistrationClientId
 appRegistrationClientSecret
 tenantId
+SpectatorHistogram
+PercentileBuckets
+spectatorHistogram
+spectatorHistogramTimer
+spectatorHistogramDistribution
+percentileSpectatorHistogram
+percentilesSpectatorHistogram

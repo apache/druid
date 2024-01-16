@@ -49,6 +49,7 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
@@ -61,6 +62,7 @@ import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -68,6 +70,7 @@ import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.plumber.Sink;
@@ -91,6 +94,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -161,6 +165,9 @@ public class StreamAppenderator implements Appenderator
   private final ConcurrentHashMap<SegmentId, Set<SegmentIdWithShardSpec>>
       baseSegmentToUpgradedVersions = new ConcurrentHashMap<>();
 
+  private final SinkSchemaAnnouncer sinkSchemaAnnouncer;
+  private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
+
   private volatile ListeningExecutorService persistExecutor = null;
   private volatile ListeningExecutorService pushExecutor = null;
   // use intermediate executor so that deadlock conditions can be prevented
@@ -200,7 +207,8 @@ public class StreamAppenderator implements Appenderator
       Cache cache,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     this.segmentLoaderConfig = segmentLoaderConfig;
@@ -229,6 +237,8 @@ public class StreamAppenderator implements Appenderator
     maxBytesTuningConfig = tuningConfig.getMaxBytesInMemoryOrDefault();
     skipBytesInMemoryOverheadCheck = tuningConfig.isSkipBytesInMemoryOverheadCheck();
     this.useMaxMemoryEstimates = useMaxMemoryEstimates;
+    this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
+    this.sinkSchemaAnnouncer = new SinkSchemaAnnouncer();
 
     this.exec = Executors.newScheduledThreadPool(
         1,
@@ -264,6 +274,7 @@ public class StreamAppenderator implements Appenderator
     final Object retVal = bootstrapSinksFromDisk();
     initializeExecutors();
     resetNextFlush();
+    sinkSchemaAnnouncer.start();
     return retVal;
   }
 
@@ -1004,6 +1015,8 @@ public class StreamAppenderator implements Appenderator
 
     // Only unlock if executors actually shut down.
     unlockBasePersistDirectory();
+
+    sinkSchemaAnnouncer.stop();
   }
 
   /**
@@ -1051,6 +1064,14 @@ public class StreamAppenderator implements Appenderator
       Thread.currentThread().interrupt();
       throw new ISE("Failed to shutdown executors during close()");
     }
+
+    sinkSchemaAnnouncer.stop();
+  }
+
+  @VisibleForTesting
+  SinkSchemaAnnouncer getSinkSchemaAnnouncer()
+  {
+    return sinkSchemaAnnouncer;
   }
 
   /**
@@ -1630,5 +1651,76 @@ public class StreamAppenderator implements Appenderator
     }
     // Rough estimate of memory footprint of empty Sink based on actual heap dumps
     return ROUGH_OVERHEAD_PER_SINK;
+  }
+
+  /**
+   * This inner class periodically computes absolute and delta schema for all the {@link StreamAppenderator#sinks}
+   * and announces them.
+   */
+  @VisibleForTesting
+  class SinkSchemaAnnouncer
+  {
+    private static final long SCHEMA_PUBLISH_DELAY_MILLIS = 0;
+    private static final long SCHEMA_PUBLISH_PERIOD_MILLIS = 60_000;
+
+    private final DataSegmentAnnouncer announcer;
+    private final ScheduledExecutorService scheduledExecutorService;
+    private final String taskId;
+    // This structure is accessed only by a single thread (Sink-Schema-Announcer-0), hence it is not thread safe.
+    private Map<SegmentId, Pair<RowSignature, Integer>> previousSinkSignatureMap = new HashMap<>();
+
+    SinkSchemaAnnouncer()
+    {
+      this.announcer = StreamAppenderator.this.segmentAnnouncer;
+      this.taskId = StreamAppenderator.this.myId;
+      boolean enabled = centralizedDatasourceSchemaConfig.isEnabled()
+                     && centralizedDatasourceSchemaConfig.announceRealtimeSegmentSchema();
+      this.scheduledExecutorService = enabled ? ScheduledExecutors.fixed(1, "Sink-Schema-Announcer-%d") : null;
+    }
+
+    private void start()
+    {
+      if (scheduledExecutorService != null) {
+        scheduledExecutorService.scheduleAtFixedRate(
+            this::computeAndAnnounce,
+            SCHEMA_PUBLISH_DELAY_MILLIS,
+            SCHEMA_PUBLISH_PERIOD_MILLIS,
+            TimeUnit.MILLISECONDS
+        );
+      }
+    }
+
+    private void stop()
+    {
+      if (scheduledExecutorService != null) {
+        announcer.removeSegmentSchemasForTask(taskId);
+        scheduledExecutorService.shutdown();
+      }
+    }
+
+    @VisibleForTesting
+    void computeAndAnnounce()
+    {
+      Map<SegmentId, Pair<RowSignature, Integer>> currentSinkSignatureMap = new HashMap<>();
+      for (Map.Entry<SegmentIdWithShardSpec, Sink> sinkEntry : StreamAppenderator.this.sinks.entrySet()) {
+        SegmentIdWithShardSpec segmentIdWithShardSpec = sinkEntry.getKey();
+        Sink sink = sinkEntry.getValue();
+        currentSinkSignatureMap.put(segmentIdWithShardSpec.asSegmentId(), Pair.of(sink.getSignature(), sink.getNumRows()));
+      }
+
+      Optional<SegmentSchemas> sinksSchema = SinkSchemaUtil.computeAbsoluteSchema(currentSinkSignatureMap);
+      Optional<SegmentSchemas> sinksSchemaChange = SinkSchemaUtil.computeSchemaChange(previousSinkSignatureMap, currentSinkSignatureMap);
+
+      // update previous reference
+      previousSinkSignatureMap = currentSinkSignatureMap;
+
+      // announce schema
+      sinksSchema.ifPresent(
+          segmentsSchema -> announcer.announceSegmentSchemas(
+              taskId,
+              segmentsSchema,
+              sinksSchemaChange.orElse(null)
+          ));
+    }
   }
 }

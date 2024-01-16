@@ -72,10 +72,6 @@ export interface Field<M> {
   hide?: Functor<M, boolean>;
   hideInMore?: Functor<M, boolean>;
   valueAdjustment?: (value: any) => any;
-  /**
-   * An optional callback to transform the value before it is set on the input
-   */
-  adjustValue?: (value: any) => any;
   adjustment?: (model: Partial<M>, oldModel: Partial<M>) => Partial<M>;
   issueWithValue?: (value: any) => string | undefined;
 
@@ -382,14 +378,12 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     const disabled = AutoForm.evaluateFunctor(field.disabled, model, false);
     const intent = required && modelValue == null ? AutoForm.REQUIRED_INTENT : undefined;
 
-    const adjustedValue = field.adjustValue ? field.adjustValue(shownValue) : shownValue;
-
     return (
       <ButtonGroup large={large}>
         <Button
           intent={intent}
           disabled={disabled}
-          active={adjustedValue === false}
+          active={shownValue === false}
           onClick={() => {
             this.fieldChange(field, false);
             if (onFinalize) onFinalize();
@@ -400,7 +394,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         <Button
           intent={intent}
           disabled={disabled}
-          active={adjustedValue === true}
+          active={shownValue === true}
           onClick={() => {
             this.fieldChange(field, true);
             if (onFinalize) onFinalize();
