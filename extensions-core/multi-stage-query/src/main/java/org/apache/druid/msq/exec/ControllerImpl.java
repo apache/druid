@@ -69,7 +69,7 @@ import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.LockReleaseAction;
 import org.apache.druid.indexing.common.actions.MarkSegmentsAsUnusedAction;
-import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
+import org.apache.druid.indexing.common.actions.RetrieveSegmentsToReplaceAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalAppendAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
@@ -79,7 +79,6 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.batch.TooManyBucketsException;
 import org.apache.druid.indexing.common.task.batch.parallel.TombstoneHelper;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
-import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -1234,12 +1233,9 @@ public class ControllerImpl implements Controller
       // any segment created after the lock was acquired for its interval will not be considered.
       final Collection<DataSegment> publishedUsedSegments;
       try {
-        publishedUsedSegments = context.taskActionClient().submit(new RetrieveUsedSegmentsAction(
+        publishedUsedSegments = context.taskActionClient().submit(new RetrieveSegmentsToReplaceAction(
             dataSource,
-            null,
-            intervals,
-            Segments.ONLY_VISIBLE,
-            true
+            intervals
         ));
       }
       catch (IOException e) {

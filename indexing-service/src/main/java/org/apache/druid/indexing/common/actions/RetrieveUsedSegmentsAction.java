@@ -83,7 +83,7 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
       // When JSON object is deserialized, this parameter is optional for backward compatibility.
       // Otherwise, it shouldn't be considered optional.
       @JsonProperty("visibility") @Nullable Segments visibility,
-      @Nullable @JsonProperty("replace") Boolean replace
+      @JsonProperty("replace") @Nullable Boolean replace
   )
   {
     this.dataSource = dataSource;
