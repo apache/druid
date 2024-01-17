@@ -23,9 +23,10 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.LockListAction;
-import org.apache.druid.indexing.common.actions.RetrieveSegmentsToReplaceAction;
+import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.batch.TooManyBucketsException;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -306,9 +307,12 @@ public class TombstoneHelper
     List<Interval> condensedInputIntervals = JodaUtils.condenseIntervals(inputIntervals);
     if (!condensedInputIntervals.isEmpty()) {
       Collection<DataSegment> usedSegmentsInInputInterval =
-          taskActionClient.submit(new RetrieveSegmentsToReplaceAction(
+          taskActionClient.submit(new RetrieveUsedSegmentsAction(
               dataSource,
-              condensedInputIntervals
+              null,
+              condensedInputIntervals,
+              Segments.ONLY_VISIBLE,
+              true
           ));
       for (DataSegment usedSegment : usedSegmentsInInputInterval) {
         for (Interval condensedInputInterval : condensedInputIntervals) {

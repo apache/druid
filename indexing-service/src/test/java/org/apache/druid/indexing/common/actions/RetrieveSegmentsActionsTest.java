@@ -96,7 +96,7 @@ public class RetrieveSegmentsActionsTest
   public void testRetrieveUsedSegmentsAction()
   {
     final RetrieveUsedSegmentsAction action =
-        new RetrieveUsedSegmentsAction(task.getDataSource(), INTERVAL, null, Segments.ONLY_VISIBLE);
+        new RetrieveUsedSegmentsAction(task.getDataSource(), INTERVAL, null, Segments.ONLY_VISIBLE, null);
     final Set<DataSegment> resultSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
     Assert.assertEquals(expectedUsedSegments, resultSegments);
   }

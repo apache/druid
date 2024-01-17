@@ -52,7 +52,7 @@ import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.RetrieveSegmentsToReplaceAction;
+import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIOConfig;
@@ -60,6 +60,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIngesti
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.indexing.input.DruidInputSource;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -427,7 +428,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       throws IOException
   {
     return ImmutableList.copyOf(
-        taskActionClient.submit(new RetrieveSegmentsToReplaceAction(getDataSource(), intervals))
+        taskActionClient.submit(new RetrieveUsedSegmentsAction(getDataSource(), null, intervals, Segments.ONLY_VISIBLE, true))
     );
   }
 
@@ -1162,7 +1163,9 @@ public class CompactionTask extends AbstractBatchIndexTask
     List<DataSegment> findSegments(TaskActionClient actionClient) throws IOException
     {
       return new ArrayList<>(
-          actionClient.submit(new RetrieveSegmentsToReplaceAction(dataSource, ImmutableList.of(interval)))
+          actionClient.submit(
+              new RetrieveUsedSegmentsAction(dataSource, null, ImmutableList.of(interval), Segments.ONLY_VISIBLE, true)
+          )
       );
     }
 

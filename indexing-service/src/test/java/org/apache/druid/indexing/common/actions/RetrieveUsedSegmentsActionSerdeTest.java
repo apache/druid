@@ -42,7 +42,7 @@ public class RetrieveUsedSegmentsActionSerdeTest
     Interval interval = Intervals.of("2014/2015");
 
     RetrieveUsedSegmentsAction expected =
-        new RetrieveUsedSegmentsAction("dataSource", interval, null, Segments.ONLY_VISIBLE);
+        new RetrieveUsedSegmentsAction("dataSource", interval, null, Segments.ONLY_VISIBLE, false);
 
     RetrieveUsedSegmentsAction actual =
         MAPPER.readValue(MAPPER.writeValueAsString(expected), RetrieveUsedSegmentsAction.class);
@@ -58,7 +58,8 @@ public class RetrieveUsedSegmentsActionSerdeTest
         "dataSource",
         null,
         intervals,
-        Segments.ONLY_VISIBLE
+        Segments.ONLY_VISIBLE,
+        false
     );
 
     RetrieveUsedSegmentsAction actual =
@@ -74,8 +75,28 @@ public class RetrieveUsedSegmentsActionSerdeTest
     RetrieveUsedSegmentsAction actual = (RetrieveUsedSegmentsAction) MAPPER.readValue(jsonStr, TaskAction.class);
 
     Assert.assertEquals(
-        new RetrieveUsedSegmentsAction("test", Intervals.of("2014/2015"), null, Segments.ONLY_VISIBLE),
+        new RetrieveUsedSegmentsAction("test", Intervals.of("2014/2015"), null, Segments.ONLY_VISIBLE, false),
         actual
     );
   }
+
+  @Test
+  public void testWithReplace() throws Exception
+  {
+    List<Interval> intervals = ImmutableList.of(Intervals.of("2014/2015"), Intervals.of("2016/2017"));
+    RetrieveUsedSegmentsAction expected = new RetrieveUsedSegmentsAction(
+        "dataSource",
+        null,
+        intervals,
+        Segments.ONLY_VISIBLE,
+        true
+    );
+
+    RetrieveUsedSegmentsAction actual =
+        MAPPER.readValue(MAPPER.writeValueAsString(expected), RetrieveUsedSegmentsAction.class);
+    Assert.assertEquals(intervals, actual.getIntervals());
+    Assert.assertTrue(actual.getReplace());
+    Assert.assertEquals(expected, actual);
+  }
+
 }
