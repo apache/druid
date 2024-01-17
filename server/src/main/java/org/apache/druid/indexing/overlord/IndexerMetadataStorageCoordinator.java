@@ -447,6 +447,7 @@ public interface IndexerMetadataStorageCoordinator
   /**
    * Clean entries in upgrade segments table after the corresponding replace task has ended
    * @param taskId - task id with the replace locks
+   * @return number of deleted entries from the metadata store
    */
-  void cleanUpgradeSegmentsTableForTask(String taskId);
+  int deleteUpgradeSegmentsForTask(String taskId);
 }

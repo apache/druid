@@ -2280,8 +2280,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    *
    * @return Map from append Segment ID to REPLACE lock version
    */
-  @VisibleForTesting
-  Map<String, String> getAppendSegmentsCommittedDuringTask(
+  private Map<String, String> getAppendSegmentsCommittedDuringTask(
       Handle handle,
       String taskId
   )
@@ -2709,9 +2708,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public void cleanUpgradeSegmentsTableForTask(final String taskId)
+  public int deleteUpgradeSegmentsForTask(final String taskId)
   {
-    connector.getDBI().inTransaction(
+    return connector.getDBI().inTransaction(
         (handle, status) -> handle
             .createStatement(
                 StringUtils.format(

@@ -19,37 +19,17 @@
 
 package org.apache.druid.indexing.common.actions;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import org.apache.druid.indexing.common.task.Task;
-
-public class CleanMetadataAction implements TaskAction<Void>
+public class CleanupMetadataResult
 {
-  @Override
-  public TypeReference<Void> getReturnTypeReference()
+  private final int deletedUpgradeSegmentEntries;
+
+  public CleanupMetadataResult(int deletedUpgradeSegmentEntries)
   {
-    return new TypeReference<Void>()
-    {
-    };
+    this.deletedUpgradeSegmentEntries = deletedUpgradeSegmentEntries;
   }
 
-  @Override
-  public Void perform(Task task, TaskActionToolbox toolbox)
+  public int getDeletedUpgradeSegmentEntries()
   {
-    toolbox.getIndexerMetadataStorageCoordinator()
-           .cleanUpgradeSegmentsTableForTask(task.getId());
-    return null;
-  }
-
-  @Override
-  public boolean isAudited()
-  {
-    return false;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "CleanMetadataAction{" +
-           '}';
+    return deletedUpgradeSegmentEntries;
   }
 }

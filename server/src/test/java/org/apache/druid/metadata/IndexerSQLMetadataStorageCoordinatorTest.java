@@ -1003,56 +1003,13 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     insertIntoUpgradeSegmentsTable(
         ImmutableMap.of(segmentToClean0, replaceLockToClean, segmentToClean1, replaceLockToClean)
     );
-    Assert.assertEquals(
-        ImmutableMap.of(
-            segmentToClean0.getId().toString(),
-            replaceLockToClean.getVersion(),
-            segmentToClean1.getId().toString(),
-            replaceLockToClean.getVersion()
-        ),
-        derbyConnector.retryWithHandle(
-            handle -> coordinator.getAppendSegmentsCommittedDuringTask(handle, taskToClean)
-        )
-    );
 
-    final String taskToLeave = "taskToLeave";
-    final ReplaceTaskLock replaceLockToLeave = new ReplaceTaskLock(
-        taskToLeave,
-        Intervals.of("2023-02-01/2023-03-01"),
-        "2023-03-01"
-    );
-    DataSegment segmentToLeave = createSegment(
-        Intervals.of("2023-02-01/2023-03-01"),
-        "2023-03-01",
-        new NumberedShardSpec(0, 0)
-    );
-    insertIntoUpgradeSegmentsTable(ImmutableMap.of(segmentToLeave, replaceLockToLeave));
-    Assert.assertEquals(
-        ImmutableMap.of(
-            segmentToLeave.getId().toString(),
-            replaceLockToLeave.getVersion()
-        ),
-        derbyConnector.retryWithHandle(
-            handle -> coordinator.getAppendSegmentsCommittedDuringTask(handle, taskToLeave)
-        )
-    );
-
-    coordinator.cleanUpgradeSegmentsTableForTask(taskToClean);
-    Assert.assertTrue(
-        derbyConnector.retryWithHandle(
-            handle -> coordinator.getAppendSegmentsCommittedDuringTask(handle, taskToClean)
-        ).isEmpty()
-    );
-    Assert.assertEquals(
-        ImmutableMap.of(
-            segmentToLeave.getId().toString(),
-            replaceLockToLeave.getVersion()
-        ),
-        derbyConnector.retryWithHandle(
-            handle -> coordinator.getAppendSegmentsCommittedDuringTask(handle, taskToLeave)
-        )
-    );
-
+    // Unrelated task should not result in clean up
+    Assert.assertEquals(0, coordinator.deleteUpgradeSegmentsForTask("someRandomTask"));
+    // The two segment entries are deleted
+    Assert.assertEquals(2, coordinator.deleteUpgradeSegmentsForTask(taskToClean));
+    // Nothing further to delete
+    Assert.assertEquals(0, coordinator.deleteUpgradeSegmentsForTask(taskToClean));
   }
 
   @Test

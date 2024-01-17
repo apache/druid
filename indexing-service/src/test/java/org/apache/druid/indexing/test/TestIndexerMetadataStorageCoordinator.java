@@ -278,7 +278,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public void cleanUpgradeSegmentsTableForTask(final String taskId)
+  public int deleteUpgradeSegmentsForTask(final String taskId)
   {
     throw new UnsupportedOperationException();
   }
