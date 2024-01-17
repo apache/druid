@@ -29,7 +29,6 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.CleanupMetadataAction;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.UpdateLocationAction;
@@ -230,10 +229,6 @@ public abstract class AbstractTask implements Task
     } else {
       log.debug("No task status file exists to push");
     }
-
-    toolbox.getTaskActionClient()
-           .submit(new CleanupMetadataAction());
-    log.debug("Cleaned metadata entries for task[%s]", id);
   }
 
   @Override

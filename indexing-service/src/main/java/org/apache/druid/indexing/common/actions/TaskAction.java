@@ -52,7 +52,6 @@ import java.util.concurrent.Future;
     @JsonSubTypes.Type(name = "surrogateAction", value = SurrogateAction.class),
     @JsonSubTypes.Type(name = "updateStatus", value = UpdateStatusAction.class),
     @JsonSubTypes.Type(name = "updateLocation", value = UpdateLocationAction.class),
-    @JsonSubTypes.Type(name = "cleanMetadata", value = CleanupMetadataAction.class)
 })
 public interface TaskAction<RetType>
 {
