@@ -32,7 +32,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public interface EtagProvider
 {
@@ -53,21 +52,6 @@ public interface EtagProvider
     public String getEtagFor(Query<?> query)
     {
       return null;
-    }
-  }
-
-  class AlwaysNewEtagProvider implements EtagProvider
-  {
-    AtomicInteger etagSerial = new AtomicInteger();
-
-    @Override
-    public String getEtagFor(Query<?> query)
-    {
-      if (query.getDataSource().isCacheable(true)) {
-        return "TEST_ETAG-" + etagSerial.incrementAndGet();
-      } else {
-        return null;
-      }
     }
   }
 
