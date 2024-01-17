@@ -60,6 +60,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 
 /**
@@ -68,10 +69,10 @@ import static org.mockito.ArgumentMatchers.anyString;
 @RunWith(MockitoJUnitRunner.class)
 public class KillUnusedSegmentsTest
 {
-  private static final int MAX_SEGMENTS_TO_KILL = 10;
-  private static final Duration COORDINATOR_KILL_PERIOD = Duration.standardMinutes(2);
+  private static final Duration INDEXING_PERIOD = Duration.standardSeconds(1);
+  private static final Duration COORDINATOR_KILL_PERIOD = Duration.standardSeconds(1);
   private static final Duration DURATION_TO_RETAIN = Duration.standardDays(1);
-  private static final Duration INDEXING_PERIOD = Duration.standardMinutes(1);
+  private static final int MAX_SEGMENTS_TO_KILL = 10;
   private static final String DATASOURCE = "DS1";
 
   @Mock
@@ -158,6 +159,14 @@ public class KillUnusedSegmentsTest
         overlordClient,
         config
     );
+    while (target.canDutyRun()) {
+      try {
+        Thread.sleep(1000);
+      }
+      catch (InterruptedException e) {
+        // ignore
+      }
+    }
   }
 
   @Test
@@ -174,7 +183,7 @@ public class KillUnusedSegmentsTest
     mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);
     target.run(params);
     Mockito.verify(overlordClient, Mockito.never())
-           .runKillTask(anyString(), anyString(), any(Interval.class));
+           .runKillTask(anyString(), anyString(), any(Interval.class), anyInt(), any(DateTime.class));
   }
 
   @Test
@@ -192,7 +201,7 @@ public class KillUnusedSegmentsTest
     mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);
     target.run(params);
     Mockito.verify(overlordClient, Mockito.never())
-           .runKillTask(anyString(), anyString(), any(Interval.class));
+           .runKillTask(anyString(), anyString(), any(Interval.class), anyInt(), any(DateTime.class));
   }
 
   @Test
@@ -369,41 +378,18 @@ public class KillUnusedSegmentsTest
             ArgumentMatchers.anyString(),
             ArgumentMatchers.anyString(),
             ArgumentMatchers.any(Interval.class),
-            ArgumentMatchers.anyInt());
+            ArgumentMatchers.anyInt(),
+            ArgumentMatchers.any(DateTime.class)
+        );
     target.runInternal(params);
 
     Mockito.verify(overlordClient, Mockito.times(1)).runKillTask(
         ArgumentMatchers.anyString(),
         ArgumentMatchers.eq(DATASOURCE),
         ArgumentMatchers.eq(expectedKillInterval),
-        ArgumentMatchers.eq(limit)
+        ArgumentMatchers.eq(limit),
+        ArgumentMatchers.any()
     );
-  }
-
-  private void runAndVerifyKillIntervals(List<Interval> expectedKillIntervals)
-  {
-    int limit = config.getCoordinatorKillMaxSegments();
-    Mockito.doReturn(Futures.immediateFuture("ok"))
-        .when(overlordClient)
-        .runKillTask(
-            ArgumentMatchers.anyString(),
-            ArgumentMatchers.anyString(),
-            ArgumentMatchers.any(Interval.class),
-            ArgumentMatchers.anyInt());
-    for (int i = 0; i < expectedKillIntervals.size(); i++) {
-      target.run(params);
-      verifyState(ImmutableMap.of(DATASOURCE, yearOldSegment.getInterval().getEnd()));
-      verifyStats(9, 1, 10);
-    }
-
-    for (Interval expectedKillInterval : expectedKillIntervals) {
-      Mockito.verify(overlordClient, Mockito.times(1)).runKillTask(
-          ArgumentMatchers.anyString(),
-          ArgumentMatchers.eq(DATASOURCE),
-          ArgumentMatchers.eq(expectedKillInterval),
-          ArgumentMatchers.eq(limit)
-      );
-    }
   }
 
   private void verifyStats(int availableSlots, int submittedTasks, int maxSlots)
@@ -430,7 +416,8 @@ public class KillUnusedSegmentsTest
         ArgumentMatchers.anyString(),
         ArgumentMatchers.anyString(),
         ArgumentMatchers.any(Interval.class),
-        ArgumentMatchers.anyInt()
+        ArgumentMatchers.anyInt(),
+        ArgumentMatchers.any(DateTime.class)
     );
   }
 

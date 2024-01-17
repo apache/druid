@@ -34,6 +34,7 @@ import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.PartialShardSpec;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -119,6 +120,29 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
       @Nullable Integer limit
   )
   {
+    // todo clean up?
+    synchronized (unusedSegments) {
+      Stream<DataSegment> resultStream = unusedSegments.stream();
+
+      resultStream = resultStream.filter(ds -> !nuked.contains(ds));
+
+      if (limit != null) {
+        resultStream = resultStream.limit(limit);
+      }
+
+      return ImmutableList.copyOf(resultStream.iterator());
+    }
+  }
+
+  @Override
+  public List<DataSegment> retrieveUnusedSegmentsForInterval(
+      String dataSource,
+      Interval interval,
+      @Nullable Integer limit,
+      @Nullable DateTime maxUsedFlagLastUpdatedTime
+  )
+  {
+    // todo clean up?
     synchronized (unusedSegments) {
       Stream<DataSegment> resultStream = unusedSegments.stream();
 

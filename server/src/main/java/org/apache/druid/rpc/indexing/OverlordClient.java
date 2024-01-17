@@ -34,6 +34,7 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.rpc.ServiceRetryPolicy;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -72,21 +73,28 @@ public interface OverlordClient
   ListenableFuture<Void> runTask(String taskId, Object taskObject);
 
   /**
-   * Run a "kill" task for a particular datasource and interval. Shortcut to {@link #runTask(String, Object)}.
-   *
-   * The kill task deletes all unused segment records from deep storage and the metadata store. The task runs
-   * asynchronously after the API call returns. The resolved future is the ID of the task, which can be used to
-   * monitor its progress through the {@link #taskStatus(String)} API.
-   *
-   * @param idPrefix   Descriptive prefix to include at the start of task IDs
-   * @param dataSource Datasource to kill
-   * @param interval   Interval to kill
-   *
-   * @return future with task ID
+   * Shortcut to {@link #runKillTask(String, String, Interval, Integer, DateTime)}.
+   * Note that this method is deprecated and newer implementations must use {@link #runKillTask(String, String, Interval, Integer, DateTime)}.
    */
+  @Deprecated
   default ListenableFuture<String> runKillTask(String idPrefix, String dataSource, Interval interval)
   {
-    return runKillTask(idPrefix, dataSource, interval, null);
+    return runKillTask(idPrefix, dataSource, interval, null, null);
+  }
+
+  /**
+   * Shortcut to {@link #runKillTask(String, String, Interval, Integer, DateTime)}.
+   * Note that this method is deprecated and newer implementations must use {@link #runKillTask(String, String, Interval, Integer, DateTime)}.
+   */
+  @Deprecated
+  default ListenableFuture<String> runKillTask(
+      String idPrefix,
+      String dataSource,
+      Interval interval,
+      @Nullable Integer maxSegmentsToKill
+  )
+  {
+    return runKillTask(idPrefix, dataSource, interval, maxSegmentsToKill, null);
   }
 
   /**
@@ -98,8 +106,14 @@ public interface OverlordClient
    *
    * @param idPrefix   Descriptive prefix to include at the start of task IDs
    * @param dataSource Datasource to kill
-   * @param interval   Interval to kill
+   * @param interval   Umbrella interval to be considered by the kill task. Note that unused segments falling in this
+   *                   widened umbrella interval may have different {@code used_status_last_updated} time, so the kill task
+   *                   should also filter by {@code maxUsedFlagLastUpdatedTime}
    * @param maxSegmentsToKill  The maximum number of segments to kill
+   * @param maxUsedFlagLastUpdatedTime The maximum {@code used_status_last_updated} time. Any unused segment in {@code interval}
+   *                                   with {@code used_status_last_updated} no later than this time will be included in the
+   *                                   kill task. Segments without {@code used_status_last_updated} time (due to an upgrade
+   *                                   from legacy Druid) will have {@code maxUsedFlagLastUpdatedTime} ignored
    *
    * @return future with task ID
    */
@@ -107,8 +121,9 @@ public interface OverlordClient
       String idPrefix,
       String dataSource,
       Interval interval,
-      @Nullable Integer maxSegmentsToKill
-  )
+      @Nullable Integer maxSegmentsToKill,
+      @Nullable DateTime maxUsedFlagLastUpdatedTime
+      )
   {
     final String taskId = IdUtils.newTaskId(idPrefix, ClientKillUnusedSegmentsTaskQuery.TYPE, dataSource, interval);
     final ClientTaskQuery taskQuery = new ClientKillUnusedSegmentsTaskQuery(
@@ -117,7 +132,8 @@ public interface OverlordClient
         interval,
         false,
         null,
-        maxSegmentsToKill
+        maxSegmentsToKill,
+        maxUsedFlagLastUpdatedTime
     );
     return FutureUtils.transform(runTask(taskId, taskQuery), ignored -> taskId);
   }

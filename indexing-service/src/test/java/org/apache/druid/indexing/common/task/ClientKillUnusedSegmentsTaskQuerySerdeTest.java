@@ -25,6 +25,7 @@ import org.apache.druid.client.indexing.ClientKillUnusedSegmentsTaskQuery;
 import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
+import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -53,7 +54,8 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
         Intervals.of("2020-01-01/P1D"),
         false,
         99,
-        5
+        5,
+        DateTime.now()
     );
     final byte[] json = objectMapper.writeValueAsBytes(taskQuery);
     final KillUnusedSegmentsTask fromJson = (KillUnusedSegmentsTask) objectMapper.readValue(json, Task.class);
@@ -63,7 +65,7 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
     Assert.assertEquals(taskQuery.getMarkAsUnused(), fromJson.isMarkAsUnused());
     Assert.assertEquals(taskQuery.getBatchSize(), Integer.valueOf(fromJson.getBatchSize()));
     Assert.assertEquals(taskQuery.getLimit(), fromJson.getLimit());
-
+    Assert.assertEquals(taskQuery.getMaxUsedFlagLastUpdatedTime(), fromJson.getMaxUsedFlagLastUpdatedTime());
   }
 
   @Test
@@ -75,6 +77,7 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
             Intervals.of("2020-01-01/P1D"),
             true,
             null,
+            null,
             null
     );
     final byte[] json = objectMapper.writeValueAsBytes(taskQuery);
@@ -85,6 +88,7 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
     Assert.assertEquals(taskQuery.getMarkAsUnused(), fromJson.isMarkAsUnused());
     Assert.assertEquals(100, fromJson.getBatchSize());
     Assert.assertNull(taskQuery.getLimit());
+    Assert.assertNull(taskQuery.getMaxUsedFlagLastUpdatedTime());
   }
 
   @Test
@@ -97,6 +101,7 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
         null,
         true,
         99,
+        null,
         null
     );
     final byte[] json = objectMapper.writeValueAsBytes(task);
@@ -110,5 +115,33 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
     Assert.assertEquals(task.isMarkAsUnused(), taskQuery.getMarkAsUnused());
     Assert.assertEquals(Integer.valueOf(task.getBatchSize()), taskQuery.getBatchSize());
     Assert.assertNull(task.getLimit());
+    Assert.assertNull(task.getMaxUsedFlagLastUpdatedTime());
+  }
+
+  @Test
+  public void testKillUnusedSegmentsTaskWithNonNullValuesToClientKillUnusedSegmentsTaskQuery() throws IOException
+  {
+    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTask(
+        null,
+        "datasource",
+        Intervals.of("2020-01-01/P1D"),
+        null,
+        null,
+        99,
+        100,
+        DateTime.now()
+    );
+    final byte[] json = objectMapper.writeValueAsBytes(task);
+    final ClientKillUnusedSegmentsTaskQuery taskQuery = (ClientKillUnusedSegmentsTaskQuery) objectMapper.readValue(
+        json,
+        ClientTaskQuery.class
+    );
+    Assert.assertEquals(task.getId(), taskQuery.getId());
+    Assert.assertEquals(task.getDataSource(), taskQuery.getDataSource());
+    Assert.assertEquals(task.getInterval(), taskQuery.getInterval());
+    Assert.assertNull(taskQuery.getMarkAsUnused());
+    Assert.assertEquals(Integer.valueOf(task.getBatchSize()), taskQuery.getBatchSize());
+    Assert.assertEquals(task.getLimit(), taskQuery.getLimit());
+    Assert.assertEquals(task.getMaxUsedFlagLastUpdatedTime(), taskQuery.getMaxUsedFlagLastUpdatedTime());
   }
 }

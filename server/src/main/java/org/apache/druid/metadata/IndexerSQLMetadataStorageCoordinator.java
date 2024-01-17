@@ -242,17 +242,37 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       @Nullable Integer limit
   )
   {
+    return retrieveUnusedSegmentsForInterval(dataSource, interval, limit, null);
+  }
+
+  @Override
+  public List<DataSegment> retrieveUnusedSegmentsForInterval(
+      String dataSource,
+      Interval interval,
+      @Nullable Integer limit,
+      @Nullable DateTime maxUsedFlagLastUpdatedTime
+  )
+  {
     final List<DataSegment> matchingSegments = connector.inReadOnlyTransaction(
         (handle, status) -> {
           try (final CloseableIterator<DataSegment> iterator =
                    SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
-                       .retrieveUnusedSegments(dataSource, Collections.singletonList(interval), limit, null, null)) {
+                                           .retrieveUnusedSegments(
+                                               dataSource,
+                                               Collections.singletonList(interval),
+                                               limit,
+                                               null,
+                                               null,
+                                               maxUsedFlagLastUpdatedTime
+                                           )
+          ) {
             return ImmutableList.copyOf(iterator);
           }
         }
     );
 
-    log.info("Found %,d unused segments for %s for interval %s.", matchingSegments.size(), dataSource, interval);
+    log.info("Found [%,d] unused segments for datasource[%s] in interval[%s] for maxUsedFlagLastUpdatedTime[%s].",
+             matchingSegments.size(), dataSource, interval, maxUsedFlagLastUpdatedTime);
     return matchingSegments;
   }
 

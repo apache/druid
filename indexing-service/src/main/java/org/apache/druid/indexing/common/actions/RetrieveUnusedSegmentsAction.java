@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.timeline.DataSegment;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -42,16 +43,21 @@ public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment
   @JsonIgnore
   private final Integer limit;
 
+  @JsonIgnore
+  private final DateTime maxUsedFlagLastUpdatedTime;
+
   @JsonCreator
   public RetrieveUnusedSegmentsAction(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
-      @JsonProperty("limit") @Nullable Integer limit
+      @JsonProperty("limit") @Nullable Integer limit,
+      @JsonProperty("maxUsedFlagLastUpdatedTime") @Nullable DateTime maxUsedFlagLastUpdatedTime
   )
   {
     this.dataSource = dataSource;
     this.interval = interval;
     this.limit = limit;
+    this.maxUsedFlagLastUpdatedTime = maxUsedFlagLastUpdatedTime;
   }
 
   @JsonProperty
@@ -73,6 +79,13 @@ public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment
     return limit;
   }
 
+  @Nullable
+  @JsonProperty
+  public DateTime getMaxUsedFlagLastUpdatedTime()
+  {
+    return maxUsedFlagLastUpdatedTime;
+  }
+
   @Override
   public TypeReference<List<DataSegment>> getReturnTypeReference()
   {
@@ -83,7 +96,7 @@ public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment
   public List<DataSegment> perform(Task task, TaskActionToolbox toolbox)
   {
     return toolbox.getIndexerMetadataStorageCoordinator()
-        .retrieveUnusedSegmentsForInterval(dataSource, interval, limit);
+        .retrieveUnusedSegmentsForInterval(dataSource, interval, limit, maxUsedFlagLastUpdatedTime);
   }
 
   @Override
@@ -99,6 +112,7 @@ public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment
            "dataSource='" + dataSource + '\'' +
            ", interval=" + interval +
            ", limit=" + limit +
+           ", maxUsedFlagLastUpdatedTime=" + maxUsedFlagLastUpdatedTime +
            '}';
   }
 }

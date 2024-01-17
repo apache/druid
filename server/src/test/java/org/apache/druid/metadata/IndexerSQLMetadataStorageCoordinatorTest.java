@@ -1238,6 +1238,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
         null,
         null,
+        null,
         null
     );
     Assert.assertEquals(segments.size(), actualUnusedSegments.size());
@@ -1252,6 +1253,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegments(
         ImmutableList.of(),
+        null,
         null,
         null,
         null
@@ -1274,6 +1276,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableList.of(),
         null,
         lastSegmentId,
+        null,
         null
     );
     Assert.assertEquals(expectedSegmentsAscOrder.size(), actualUnusedSegments.size());
@@ -1283,7 +1286,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableList.of(),
         null,
         lastSegmentId,
-        SortOrder.ASC
+        SortOrder.ASC,
+        null
     );
     Assert.assertEquals(expectedSegmentsAscOrder.size(), actualUnusedSegments.size());
     Assert.assertEquals(expectedSegmentsAscOrder, actualUnusedSegments);
@@ -1297,7 +1301,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableList.of(),
         null,
         lastSegmentId,
-        SortOrder.DESC
+        SortOrder.DESC,
+        null
     );
     Assert.assertEquals(expectedSegmentsDescOrder.size(), actualUnusedSegments.size());
     Assert.assertEquals(expectedSegmentsDescOrder, actualUnusedSegments);
@@ -1312,6 +1317,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegments(
         segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
         segments.size(),
+        null,
         null,
         null
     );
@@ -1329,6 +1335,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegments(
         segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
         requestedLimit,
+        null,
         null,
         null
     );
@@ -1348,6 +1355,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
         requestedLimit,
         lastSegmentId,
+        null,
         null
     );
     Assert.assertEquals(segments.size() - 5, actualUnusedSegments.size());
@@ -1369,6 +1377,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
         requestedLimit,
         lastSegmentId,
+        null,
         null
     );
     Assert.assertEquals(requestedLimit - 4, actualUnusedSegments.size());
@@ -1387,6 +1396,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegments(
         segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
         segments.size() + 1,
+        null,
         null,
         null
     );
@@ -1408,9 +1418,82 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableList.of(outOfRangeInterval),
         null,
         null,
-        null
+        null,
+         null
     );
     Assert.assertEquals(0, actualUnusedSegments.size());
+  }
+
+  @Test
+  public void testRetrieveUnusedSegmentsWithMaxUsedFlagLastUpdatedTime() throws IOException
+  {
+    final List<DataSegment> segments = createAndGetUsedYearSegments(1905, 1910);
+    markAllSegmentsUnused(new HashSet<>(segments));
+
+    final Interval interval = Intervals.of("1905/1920");
+
+    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegments(
+        ImmutableList.of(interval),
+        null,
+        null,
+        null,
+        DateTime.now()
+    );
+    Assert.assertEquals(5, actualUnusedSegments.size());
+
+    final ImmutableList<DataSegment> actualUnusedSegments2 = retrieveUnusedSegments(
+        ImmutableList.of(interval),
+        null,
+        null,
+        null,
+        DateTime.now().minusHours(1)
+    );
+    Assert.assertEquals(0, actualUnusedSegments2.size());
+  }
+
+  @Test
+  public void testRetrieveUnusedSegmentsWithMaxUsedFlagLastUpdatedTime2() throws IOException, InterruptedException
+  {
+    final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 1950);
+    final List<DataSegment> evenYearSegments = new ArrayList<>();
+    final List<DataSegment> oddYearSegments = new ArrayList<>();
+
+    for (int i = 0; i < segments.size(); i++) {
+      DataSegment dataSegment = segments.get(i);
+      if (i % 2 == 0) {
+        evenYearSegments.add(dataSegment);
+      } else {
+        oddYearSegments.add(dataSegment);
+      }
+    }
+
+    markAllSegmentsUnused(new HashSet<>(oddYearSegments));
+    final DateTime maxUsedFlagLastUpdatedTime1 = DateTime.now();
+
+    Thread.sleep(1500);
+
+    markAllSegmentsUnused(new HashSet<>(evenYearSegments));
+    final DateTime maxUsedFlagLastUpdatedTime2 = DateTime.now();
+
+    final Interval interval = Intervals.of("1900/1950");
+
+    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegments(
+        ImmutableList.of(interval),
+        null,
+        null,
+        null,
+        maxUsedFlagLastUpdatedTime1
+    );
+    Assert.assertEquals(oddYearSegments.size(), actualUnusedSegments.size());
+
+    final ImmutableList<DataSegment> actualUnusedSegments2 = retrieveUnusedSegments(
+        ImmutableList.of(interval),
+        null,
+        null,
+        null,
+        maxUsedFlagLastUpdatedTime2
+    );
+    Assert.assertEquals(segments.size(), actualUnusedSegments2.size());
   }
 
   @Test
@@ -2208,7 +2291,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   /**
-   * Slightly different that the above test but that involves reverted compaction
+   * Slightly different from the above test that involves reverted compaction
    * 1) used segments of version = A, id = 0, 1, 2
    * 2) overwrote segments of version = B, id = 0 <= compaction
    * 3) marked segments unused for version = A, id = 0, 1, 2 <= overshadowing
@@ -3205,7 +3288,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       final List<Interval> intervals,
       final Integer limit,
       final String lastSegmentId,
-      final SortOrder sortOrder
+      final SortOrder sortOrder,
+      final DateTime maxUsedFlagLastUpdatedTime
   )
   {
     return derbyConnector.inReadOnlyTransaction(
@@ -3217,7 +3301,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
                            derbyConnectorRule.metadataTablesConfigSupplier().get(),
                            mapper
                        )
-                       .retrieveUnusedSegments(DS.WIKI, intervals, limit, lastSegmentId, sortOrder)) {
+                       .retrieveUnusedSegments(DS.WIKI, intervals, limit, lastSegmentId, sortOrder, maxUsedFlagLastUpdatedTime)) {
             return ImmutableList.copyOf(iterator);
           }
         }

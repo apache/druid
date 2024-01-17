@@ -919,6 +919,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             null,
             false,
             null,
+            null,
             null
         );
 
@@ -1010,7 +1011,8 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             null,
             false,
             null,
-            maxSegmentsToKill
+            maxSegmentsToKill,
+            null
         );
 
     final TaskStatus status = runTask(killUnusedSegmentsTask);

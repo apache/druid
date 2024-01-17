@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.PreparedBatch;
@@ -117,7 +118,16 @@ public class SqlSegmentsMetadataQuery
       final Collection<Interval> intervals
   )
   {
-    return retrieveSegments(dataSource, intervals, IntervalMode.OVERLAPS, true, null, null, null);
+    return retrieveSegments(
+        dataSource,
+        intervals,
+        IntervalMode.OVERLAPS,
+        true,
+        null,
+        null,
+        null,
+        null
+    );
   }
 
   /**
@@ -135,6 +145,10 @@ public class SqlSegmentsMetadataQuery
    *                      lexigraphically if sortOrder is DESC.
    * @param sortOrder     Specifies the order with which to return the matching segments by start time, end time.
    *                      A null value indicates that order does not matter.
+   * @param maxUsedFlagLastUpdatedTime The maximum {@code used_status_last_updated} time. Any unused segment in {@code intervals}
+   *                                   with {@code used_status_last_updated} no later than this time will be included in the
+   *                                   iterator. Segments without {@code used_status_last_updated} time (due to an upgrade
+   *                                   from legacy Druid) will have {@code maxUsedFlagLastUpdatedTime} ignored
 
    * Returns a closeable iterator. You should close it when you are done.
    */
@@ -143,10 +157,20 @@ public class SqlSegmentsMetadataQuery
       final Collection<Interval> intervals,
       @Nullable final Integer limit,
       @Nullable final String lastSegmentId,
-      @Nullable final SortOrder sortOrder
-  )
+      @Nullable final SortOrder sortOrder,
+      @Nullable final DateTime maxUsedFlagLastUpdatedTime
+      )
   {
-    return retrieveSegments(dataSource, intervals, IntervalMode.CONTAINS, false, limit, lastSegmentId, sortOrder);
+    return retrieveSegments(
+        dataSource,
+        intervals,
+        IntervalMode.CONTAINS,
+        false,
+        limit,
+        lastSegmentId,
+        sortOrder,
+        maxUsedFlagLastUpdatedTime
+    );
   }
 
   /**
@@ -239,6 +263,7 @@ public class SqlSegmentsMetadataQuery
                   Collections.singletonList(interval),
                   IntervalMode.CONTAINS,
                   true,
+                  null,
                   null,
                   null,
                   null
@@ -379,12 +404,13 @@ public class SqlSegmentsMetadataQuery
       final boolean used,
       @Nullable final Integer limit,
       @Nullable final String lastSegmentId,
-      @Nullable final SortOrder sortOrder
+      @Nullable final SortOrder sortOrder,
+      @Nullable final DateTime maxUsedFlagLastUpdatedTime
   )
   {
     if (intervals.isEmpty() || intervals.size() <= MAX_INTERVALS_PER_BATCH) {
       return CloseableIterators.withEmptyBaggage(
-          retrieveSegmentsInIntervalsBatch(dataSource, intervals, matchMode, used, limit, lastSegmentId, sortOrder)
+          retrieveSegmentsInIntervalsBatch(dataSource, intervals, matchMode, used, limit, lastSegmentId, sortOrder, maxUsedFlagLastUpdatedTime)
       );
     } else {
       final List<List<Interval>> intervalsLists = Lists.partition(new ArrayList<>(intervals), MAX_INTERVALS_PER_BATCH);
@@ -399,7 +425,8 @@ public class SqlSegmentsMetadataQuery
             used,
             limitPerBatch,
             lastSegmentId,
-            sortOrder
+            sortOrder,
+            maxUsedFlagLastUpdatedTime
         );
         if (limitPerBatch != null) {
           // If limit is provided, we need to shrink the limit for subsequent batches or circuit break if
@@ -425,7 +452,8 @@ public class SqlSegmentsMetadataQuery
       final boolean used,
       @Nullable final Integer limit,
       @Nullable final String lastSegmentId,
-      @Nullable final SortOrder sortOrder
+      @Nullable final SortOrder sortOrder,
+      @Nullable final DateTime maxUsedFlagLastUpdatedTime
   )
   {
     // Check if the intervals all support comparing as strings. If so, bake them into the SQL.
@@ -436,6 +464,11 @@ public class SqlSegmentsMetadataQuery
 
     if (compareAsString) {
       appendConditionForIntervalsAndMatchMode(sb, intervals, matchMode, connector);
+    }
+
+    // Add the used_status_last_updated time filter only for unused segments when maxUsedFlagLastUpdatedTime is non-null.
+    if (!used && maxUsedFlagLastUpdatedTime != null) {
+      sb.append(" AND (used_status_last_updated IS NOT NULL AND used_status_last_updated <= :used_status_last_updated)");
     }
 
     if (lastSegmentId != null) {
@@ -462,16 +495,23 @@ public class SqlSegmentsMetadataQuery
         .setFetchSize(connector.getStreamingFetchSize())
         .bind("used", used)
         .bind("dataSource", dataSource);
+
+    if (!used && maxUsedFlagLastUpdatedTime != null) {
+      sql.bind("used_status_last_updated", maxUsedFlagLastUpdatedTime.toString());
+    }
+
     if (lastSegmentId != null) {
       sql.bind("id", lastSegmentId);
     }
-    if (null != limit) {
+
+    if (limit != null) {
       sql.setMaxRows(limit);
     }
 
     if (compareAsString) {
       bindQueryIntervals(sql, intervals);
     }
+    log.info("Finally generated sql[%s]", sb.toString());
 
     final ResultIterator<DataSegment> resultIterator =
         sql.map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class))
