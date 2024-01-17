@@ -142,7 +142,8 @@ public interface IndexerMetadataStorageCoordinator
       String dataSource,
       Interval interval,
       @Nullable Integer limit
-  ) {
+  )
+  {
     return retrieveUnusedSegmentsForInterval(dataSource, interval, limit, null);
   }
 

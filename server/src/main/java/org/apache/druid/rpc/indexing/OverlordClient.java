@@ -123,7 +123,7 @@ public interface OverlordClient
       Interval interval,
       @Nullable Integer maxSegmentsToKill,
       @Nullable DateTime maxUsedFlagLastUpdatedTime
-      )
+  )
   {
     final String taskId = IdUtils.newTaskId(idPrefix, ClientKillUnusedSegmentsTaskQuery.TYPE, dataSource, interval);
     final ClientTaskQuery taskQuery = new ClientKillUnusedSegmentsTaskQuery(

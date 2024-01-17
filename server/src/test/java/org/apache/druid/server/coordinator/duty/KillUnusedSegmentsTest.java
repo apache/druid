@@ -373,14 +373,13 @@ public class KillUnusedSegmentsTest
   {
     int limit = config.getCoordinatorKillMaxSegments();
     Mockito.doReturn(Futures.immediateFuture("ok"))
-        .when(overlordClient)
-        .runKillTask(
-            ArgumentMatchers.anyString(),
-            ArgumentMatchers.anyString(),
-            ArgumentMatchers.any(Interval.class),
-            ArgumentMatchers.anyInt(),
-            ArgumentMatchers.any(DateTime.class)
-        );
+           .when(overlordClient)
+           .runKillTask(
+               ArgumentMatchers.anyString(),
+               ArgumentMatchers.anyString(),
+               ArgumentMatchers.any(Interval.class),
+               ArgumentMatchers.anyInt(),
+               ArgumentMatchers.any(DateTime.class));
     target.runInternal(params);
 
     Mockito.verify(overlordClient, Mockito.times(1)).runKillTask(

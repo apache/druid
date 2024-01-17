@@ -159,7 +159,7 @@ public class SqlSegmentsMetadataQuery
       @Nullable final String lastSegmentId,
       @Nullable final SortOrder sortOrder,
       @Nullable final DateTime maxUsedFlagLastUpdatedTime
-      )
+  )
   {
     return retrieveSegments(
         dataSource,

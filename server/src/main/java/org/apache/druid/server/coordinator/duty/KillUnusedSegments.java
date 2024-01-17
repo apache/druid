@@ -300,7 +300,8 @@ public class KillUnusedSegments implements CoordinatorDuty
   }
 
   @VisibleForTesting
-  boolean canDutyRun() {
+  boolean canDutyRun()
+  {
     return !DateTimes.nowUtc().isBefore(lastKillTime.plus(period));
   }
 

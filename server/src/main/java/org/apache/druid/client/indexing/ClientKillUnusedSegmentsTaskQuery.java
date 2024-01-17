@@ -52,7 +52,7 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
       @JsonProperty("interval") Interval interval,
       @JsonProperty("markAsUnused") @Deprecated Boolean markAsUnused,
       @JsonProperty("batchSize") Integer batchSize,
-      @JsonProperty("limit") @Nullable  Integer limit,
+      @JsonProperty("limit") @Nullable Integer limit,
       @JsonProperty("maxUsedFlagLastUpdatedTime") @Nullable DateTime maxUsedFlagLastUpdatedTime
   )
   {
