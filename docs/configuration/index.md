@@ -510,7 +510,7 @@ These properties specify the JDBC connection and other configuration around the 
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.metadata.storage.type`|The type of metadata storage to use. Choose from `mysql`, `postgresql`, or `derby`.|`derby`|
+|`druid.metadata.storage.type`|The type of metadata storage to use. One of `mysql`, `postgresql`, or `derby`.|`derby`|
 |`druid.metadata.storage.connector.connectURI`|The JDBC URI for the database to connect to|none|
 |`druid.metadata.storage.connector.user`|The username to connect with.|none|
 |`druid.metadata.storage.connector.password`|The [Password Provider](../operations/password-provider.md) or String password used to connect with.|none|
@@ -533,7 +533,7 @@ The configurations concern how to push and pull [Segments](../design/segments.md
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.storage.type`|The type of deep storage to use. Choose from `local`, `noop`, `s3`, `hdfs`, `c*`.|local|
+|`druid.storage.type`|The type of deep storage to use. One of `local`, `noop`, `s3`, `hdfs`, `c*`.|local|
 
 #### Local deep storage
 
@@ -1101,7 +1101,7 @@ These Overlord static configurations can be defined in the `overlord/runtime.pro
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.indexer.runner.type`|Indicates whether tasks should be run locally using `local` or in a distributed environment using `remote`. The recommended option is `httpRemote`, which is similar to `remote` but uses HTTP to interact with Middle Managers instead of ZooKeeper.|`httpRemote`|
-|`druid.indexer.storage.type`|Indicates whether incoming tasks should be stored locally (in heap) or in metadata storage. Choose from `local` or `metadata`. `local` is mainly for internal testing while `metadata` is recommended in production because storing incoming tasks in metadata storage allows for tasks to be resumed if the Overlord should fail.|`local`|
+|`druid.indexer.storage.type`|Indicates whether incoming tasks should be stored locally (in heap) or in metadata storage. One of `local` or `metadata`. `local` is mainly for internal testing while `metadata` is recommended in production because storing incoming tasks in metadata storage allows for tasks to be resumed if the Overlord should fail.|`local`|
 |`druid.indexer.storage.recentlyFinishedThreshold`|Duration of time to store task results. Default is 24 hours. If you have hundreds of tasks running in a day, consider increasing this threshold.|`PT24H`|
 |`druid.indexer.tasklock.forceTimeChunkLock`|_**Setting this to false is still experimental**_<br/> If set, all tasks are enforced to use time chunk lock. If not set, each task automatically chooses a lock type to use. This configuration can be overwritten by setting `forceTimeChunkLock` in the [task context](../ingestion/tasks.md#context). See [Task Locking & Priority](../ingestion/tasks.md#context) for more details about locking in tasks.|true|
 |`druid.indexer.tasklock.batchSegmentAllocation`| If set to true, Druid performs segment allocate actions in batches to improve throughput and reduce the average `task/action/run/time`. See [batching `segmentAllocate` actions](../ingestion/tasks.md#batching-segmentallocate-actions) for details.|true|
@@ -1133,7 +1133,7 @@ If autoscaling is enabled, you can set these additional configs:
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.indexer.autoscale.strategy`|Sets the strategy to run when autoscaling is required. Choose from `noop`, `ec2` or `gce`.|`noop`|
+|`druid.indexer.autoscale.strategy`|Sets the strategy to run when autoscaling is required. One of `noop`, `ec2` or `gce`.|`noop`|
 |`druid.indexer.autoscale.doAutoscale`|If set to true, autoscaling will be enabled.|false|
 |`druid.indexer.autoscale.provisionPeriod`|How often to check whether or not new MiddleManagers should be added.|`PT1M`|
 |`druid.indexer.autoscale.terminatePeriod`|How often to check when MiddleManagers should be removed.|`PT5M`|
@@ -1159,7 +1159,7 @@ If autoscaling is enabled, you can set these additional configs:
 |`druid.supervisor.idleConfig.enabled`|If `true`, supervisor can become idle if there is no data on input stream/topic for some time.|false|
 |`druid.supervisor.idleConfig.inactiveAfterMillis`|Supervisor is marked as idle if all existing data has been read from input topic and no new data has been published for `inactiveAfterMillis` milliseconds.|`600_000`|
 
-The `druid.supervisor.idleConfig.*` specified in the Overlord runtime properties defines the default behavior for the entire cluster. See [Idle Configuration in Kafka Supervisor IOConfig](../development/extensions-core/kinesis-ingestion.md#io-configuration) to override it for an individual supervisor.
+The `druid.supervisor.idleConfig.*` specification in the Overlord runtime properties defines the default behavior for the entire cluster. See [Idle Configuration in Kafka Supervisor IOConfig](../development/extensions-core/kinesis-ingestion.md#io-configuration) to override it for an individual supervisor.
 
 #### Overlord dynamic configuration
 
@@ -1483,7 +1483,7 @@ Additional Peon configs include:
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.peon.mode`|Choose from `local` and `remote`. Setting this property to `local` means you intend to run the Peon as a standalone process which is not recommended.|`remote`|
+|`druid.peon.mode`|One of `local` or `remote`. Setting this property to `local` means you intend to run the Peon as a standalone process which is not recommended.|`remote`|
 |`druid.indexer.task.baseDir`|Base temporary working directory.|`System.getProperty("java.io.tmpdir")`|
 |`druid.indexer.task.baseTaskDir`|Base temporary working directory for tasks.|`${druid.indexer.task.baseDir}/persistent/task`|
 |`druid.indexer.task.batchProcessingMode`| Batch ingestion tasks have three operating modes to control construction and tracking for intermediary segments: `OPEN_SEGMENTS`, `CLOSED_SEGMENTS`, and `CLOSED_SEGMENT_SINKS`. `OPEN_SEGMENTS` uses the streaming ingestion code path and performs a `mmap` on intermediary segments to build a timeline to make these segments available to realtime queries. Batch ingestion doesn't require intermediary segments, so the default mode, `CLOSED_SEGMENTS`, eliminates `mmap` of intermediary segments. `CLOSED_SEGMENTS` mode still tracks the entire set of segments in heap. The `CLOSED_SEGMENTS_SINKS` mode is the most aggressive configuration and should have the smallest memory footprint. It eliminates in-memory tracking and `mmap` of intermediary segments produced during segment creation. `CLOSED_SEGMENTS_SINKS` mode isn't as well tested as other modes so is currently considered experimental. You can use `OPEN_SEGMENTS` mode if problems occur with the 2 newer modes. |`CLOSED_SEGMENTS`|

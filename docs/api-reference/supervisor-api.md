@@ -2213,24 +2213,22 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ### Create or update a supervisor
 
-Creates a new supervisor or updates an existing one for the same datasource with a new schema and configuration.
+Creates a new supervisor spec or updates an existing one with new configuration and schema information. When updating a supervisor spec, the datasource must remain the same as the previous supervisor.
 
-You can define a supervisor spec for [Apache Kafka](../development/extensions-core/kinesis-ingestion.md#supervisor-spec) or [Amazon Kinesis](../development/extensions-core/kinesis-ingestion.md#supervisor-spec) streaming ingestion methods. Once created, the supervisor persists in the metadata database.
+You can define a supervisor spec for [Apache Kafka](../development/extensions-core/kinesis-ingestion.md#supervisor-spec) or [Amazon Kinesis](../development/extensions-core/kinesis-ingestion.md#supervisor-spec) streaming ingestion methods.
 
 The following table lists the properties of a supervisor spec:
 
 |Property|Type|Description|Required|
 |--------|----|-----------|--------|
-|`type`|String|The supervisor type. Choose from `kafka` or `kinesis`.|Yes|
+|`type`|String|The supervisor type. One of`kafka` or `kinesis`.|Yes|
 |`spec`|Object|The container object for the supervisor configuration.|Yes|
 |`ioConfig`|Object|The I/O configuration object to define the connection and I/O-related settings for the supervisor and indexing task.|Yes|
 |`dataSchema`|Object|The schema for the indexing task to use during ingestion. See [`dataSchema`](../ingestion/ingestion-spec.md#dataschema) for more information.|Yes|
 |`tuningConfig`|Object|The tuning configuration object to define performance-related settings for the supervisor and indexing tasks.|No|
 
-When you call this endpoint on an existing supervisor for the same datasource, the running supervisor signals its tasks to stop reading and begin publishing, exiting itself. Druid then uses the provided configuration from the request body to create a new supervisor. Druid submits a new schema while retaining existing publishing tasks and starts new tasks at the previous task offsets.
-In this way, configuration changes can be applied without requiring any pause in ingestion.
-
-You can achieve seamless schema migrations by submitting the new schema using the `/druid/indexer/v1/supervisor` endpoint.
+When you call this endpoint on an existing supervisor, the running supervisor signals its tasks to stop reading and begin publishing, exiting itself. Druid then uses the provided configuration from the request body to create a new supervisor. Druid submits a new schema while retaining existing publishing tasks and starts new tasks at the previous task offsets.
+This way, you can apply configuration changes without a pause in ingestion.
 
 #### URL
 
@@ -2399,7 +2397,7 @@ Content-Length: 1359
 ### Suspend a running supervisor
 
 Suspends a single running supervisor. Returns the updated supervisor spec, where the `suspended` property is set to `true`. The suspended supervisor continues to emit logs and metrics.
-Indexing tasks remain suspended until the supervisor is resumed.
+Indexing tasks remain suspended until you [resume the supervisor](#resume-a-supervisor).
 
 #### URL
 <code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/:supervisorId/suspend</code>
@@ -3247,13 +3245,13 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 The supervisor must be running for this endpoint to be available.
 
-Resets the specified supervisor. This endpoint clears all stored offsets in Kafka or sequence numbers in Kinesis, prompting the supervisor to resume data reading. The supervisor will start from the earliest or latest available position, depending on the platform (offsets in Kafka or sequence numbers in Kinesis). 
+Resets the specified supervisor. This endpoint clears all stored offsets in Kafka or sequence numbers in Kinesis, prompting the supervisor to resume data reading. The supervisor restarts from the earliest or latest available position, depending on the platform: offsets in Kafka or sequence numbers in Kinesis.
 After clearing all stored offsets in Kafka or sequence numbers in Kinesis, the supervisor kills and recreates active tasks,
 so that tasks begin reading from valid positions.
 
 Use this endpoint to recover from a stopped state due to missing offsets in Kafka or sequence numbers in Kinesis. Use this endpoint with caution as it may result in skipped messages and lead to data loss or duplicate data.
 
-The indexing service keeps track of the latest persisted offsets in Kafka or sequence numbers in Kinesis to provide exactly-once ingestion guarantees across tasks. Subsequent tasks must start reading from where the previous task completed for the generated segments to be accepted. If the messages at the expected starting offsets in Kafka or sequence numbers in Kinesis are no longer available (typically because the message retention period has elapsed or the topic was removed and re-created) the supervisor will refuse to start and in flight tasks will fail. This endpoint enables you to recover from this condition.
+The indexing service keeps track of the latest persisted offsets in Kafka or sequence numbers in Kinesis to provide exactly-once ingestion guarantees across tasks. Subsequent tasks must start reading from where the previous task completed for Druid to accept the generated segments. If the messages at the expected starting offsets in Kafka or sequence numbers in Kinesis are no longer available, the supervisor refuses to start and in-flight tasks fail. Possible causes for missing messages include the message retention period elapsing or the topic being removed and re-created. Use the `reset` endpoint to recover from this condition.
 
 #### URL
 
@@ -3328,7 +3326,7 @@ If there are no stored offsets, the specified offsets are set in the metadata st
 After resetting stored offsets, the supervisor kills and recreates any active tasks pertaining to the specified partitions,
 so that tasks begin reading specified offsets. For partitions that are not specified in this operation, the supervisor resumes from the last stored offset.
 
-Use this endpoint with caution as it may result in skipped messages, leading to data loss or duplicate data.
+Use this endpoint with caution. It can cause skipped messages, leading to data loss or duplicate data.
 
 #### URL
 
@@ -3374,8 +3372,7 @@ The following table defines the fields within the `partitions` object in the res
 
 #### Sample request
 
-The following example shows how to reset offsets for a Kafka supervisor with the name `social_media`. Let's say the supervisor is reading
-from a Kafka topic `ads_media_stream` and has the stored offsets: `{"0": 0, "1": 10, "2": 20, "3": 40}`.
+The following example shows how to reset offsets for a Kafka supervisor with the name `social_media`. For example, the supervisor is reading from a Kafka topic `ads_media_stream` and has the stored offsets: `{"0": 0, "1": 10, "2": 20, "3": 40}`.
 
 <Tabs>
 
@@ -3410,8 +3407,8 @@ Content-Type: application/json
 }
 ```
 
-The above operation will reset offsets only for partitions `0` and `2` to 100 and 650 respectively. After a successful reset,
-when the supervisor's tasks restart, they will resume reading from `{"0": 100, "1": 10, "2": 650, "3": 40}`.
+The example operation resets offsets only for partitions `0` and `2` to 100 and 650 respectively. After a successful reset,
+when the supervisor's tasks restart, they resume reading from `{"0": 100, "1": 10, "2": 650, "3": 40}`.
 
 </TabItem>
 </Tabs>

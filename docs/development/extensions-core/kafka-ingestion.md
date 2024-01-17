@@ -52,7 +52,7 @@ The following table outlines the high-level configuration options for the Kafka 
 
 |Property|Type|Description|Required|
 |--------|----|-----------|--------|
-|`type`|String|The supervisor type; this should always be `kafka`.|Yes|
+|`type`|String|The supervisor type; must be `kafka`.|Yes|
 |`spec`|Object|The container object for the supervisor configuration.|Yes|
 |`ioConfig`|Object|The I/O configuration object to define the connection and I/O-related settings for the supervisor and indexing tasks.|Yes|
 |`dataSchema`|Object|The schema for the indexing task to use during ingestion. See [`dataSchema`](../../ingestion/ingestion-spec.md#dataschema) for more information.|Yes|
@@ -288,15 +288,14 @@ If you enable multi-topic ingestion for a datasource, downgrading to a version o
 28.0.0 will cause the ingestion for that datasource to fail.
 :::
 
-To ingest data from multiple topics, you set `topicPattern` instead of `topic in the supervisor `ioConfig` object`.
+To ingest data from multiple topics, you set `topicPattern` instead of `topic` in the supervisor `ioConfig` object.
 You can pass multiple topics as a regex pattern as the value for `topicPattern` in `ioConfig`. For example, to
 ingest data from clicks and impressions, set `topicPattern` to `clicks|impressions` in `ioCofig`.
 Similarly, you can use `metrics-.*` as the value for `topicPattern` if you want to ingest from all the topics that
-start with `metrics-`. If new topics are added to the cluster that match the regex, Druid automatically starts
-ingesting from those new topics. A topic name that only matches partially such as `my-metrics-12` will not be
-included for ingestion.
+start with `metrics-`. If you add a new topic that matches the regex to the cluster, Druid automatically starts
+ingesting from those new topics. Topic names that match partially, such as `my-metrics-12`, are not included for ingestion.
 
-When ingesting data from multiple topics, partitions are assigned based on the hashcode of the topic name and the
+When ingesting data from multiple topics, Druid assigns partitions based on the hashcode of the topic name and the
 ID of the partition within that topic. The partition assignment might not be uniform across all the tasks. It's also
 assumed that partitions across individual topics have similar load. It is recommended that you have a higher number of
 partitions for a high load topic and a lower number of partitions for a low load topic. Assuming that you want to
@@ -310,7 +309,7 @@ The following table outlines the configuration options for `tuningConfig`:
 
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
-|`type`|String|The indexing task type. This should always be `kafka`.|Yes||
+|`type`|String|The indexing task type; must be `kafka`.|Yes||
 |`maxRowsInMemory`|Integer|The number of rows to aggregate before persisting. This number represents the post-aggregation rows. It is not equivalent to the number of input events, but the resulting number of aggregated rows. Druid uses `maxRowsInMemory` to manage the required JVM heap size. The maximum heap memory usage for indexing scales is `maxRowsInMemory * (2 + maxPendingPersists)`. Normally, you do not need to set this, but depending on the nature of data, if rows are short in terms of bytes, you may not want to store a million rows in memory and this value should be set.|No|150000|
 |`maxBytesInMemory`|Long|The number of bytes to aggregate in heap memory before persisting. This is based on a rough estimate of memory usage and not actual usage. Normally, this is computed internally. The maximum heap memory usage for indexing is `maxBytesInMemory * (2 + maxPendingPersists)`.|No|One-sixth of max JVM memory|
 |`skipBytesInMemoryOverheadCheck`|Boolean|The calculation of `maxBytesInMemory` takes into account overhead objects created during ingestion and each intermediate persist. To exclude the bytes of these overhead objects from the `maxBytesInMemory` check, set `skipBytesInMemoryOverheadCheck` to `true`.|No|`false`|
@@ -343,9 +342,9 @@ The following table outlines the configuration options for `indexSpec`:
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
 |`bitmap`|Object|Compression format for bitmap indexes. Druid supports roaring and concise bitmap types.|No|Roaring|
-|`dimensionCompression`|String|Compression format for dimension columns. Choose from `LZ4`, `LZF`, `ZSTD` or `uncompressed`.|No|`LZ4`|
-|`metricCompression`|String|Compression format for primitive type metric columns. Choose from `LZ4`, `LZF`, `ZSTD`, `uncompressed` or `none`.|No|`LZ4`|
-|`longEncoding`|String|Encoding format for metric and dimension columns with type long. Choose from `auto` or `longs`. `auto` encodes the values using offset or lookup table depending on column cardinality, and store them with variable size. `longs` stores the value as is with 8 bytes each.|No|`longs`|
+|`dimensionCompression`|String|Compression format for dimension columns. One of `LZ4`, `LZF`, `ZSTD` or `uncompressed`.|No|`LZ4`|
+|`metricCompression`|String|Compression format for primitive type metric columns. One of `LZ4`, `LZF`, `ZSTD`, `uncompressed` or `none`.|No|`LZ4`|
+|`longEncoding`|String|Encoding format for metric and dimension columns with type long. One of `auto` or `longs`. `auto` encodes the values using offset or lookup table depending on column cardinality, and store them with variable size. `longs` stores the value as is with 8 bytes each.|No|`longs`|
 
 ## Deployment notes on Kafka partitions and Druid segments
 

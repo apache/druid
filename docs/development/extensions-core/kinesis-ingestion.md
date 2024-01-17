@@ -43,7 +43,7 @@ The following table outlines the high-level configuration options for the Kinesi
 
 |Property|Type|Description|Required|
 |--------|----|-----------|--------|
-|`type`|String|The supervisor type; this should always be `kinesis`.|Yes|
+|`type`|String|The supervisor type; must be `kinesis`.|Yes|
 |`spec`|Object|The container object for the supervisor configuration.|Yes|
 |`ioConfig`|Object|The [I/O configuration](#supervisor-io-configuration) object for configuring Kinesis connection and I/O-related settings for the supervisor and indexing tasks.|Yes|
 |`dataSchema`|Object|The schema used by the Kinesis indexing task during ingestion. See [`dataSchema`](../../ingestion/ingestion-spec.md#dataschema) for more information.|Yes|
@@ -195,7 +195,7 @@ The following table outlines the configuration options for `tuningConfig`:
 
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
-|`type`|String|The indexing task type. This should always be `kinesis`.|Yes||
+|`type`|String|The indexing task type; must be `kinesis`.|Yes||
 |`maxRowsInMemory`|Integer|The number of rows to aggregate before persisting. This number represents the post-aggregation rows. It is not equivalent to the number of input events, but the resulting number of aggregated rows. Druid uses `maxRowsInMemory` to manage the required JVM heap size. The maximum heap memory usage for indexing scales is `maxRowsInMemory * (2 + maxPendingPersists)`.|No|100000|
 |`maxBytesInMemory`|Long| The number of bytes to aggregate in heap memory before persisting. This is based on a rough estimate of memory usage and not actual usage. Normally, this is computed internally. The maximum heap memory usage for indexing is `maxBytesInMemory * (2 + maxPendingPersists)`.|No|One-sixth of max JVM memory|
 |`skipBytesInMemoryOverheadCheck`|Boolean|The calculation of `maxBytesInMemory` takes into account overhead objects created during ingestion and each intermediate persist. To exclude the bytes of these overhead objects from the `maxBytesInMemory` check, set `skipBytesInMemoryOverheadCheck` to `true`.|No|`false`|
@@ -234,9 +234,9 @@ The following table outlines the configuration options for `indexSpec`:
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
 |`bitmap`|Object|Compression format for bitmap indexes. Druid supports roaring and concise bitmap types.|No|Roaring|
-|`dimensionCompression`|String|Compression format for dimension columns. Choose from `LZ4`, `LZF`, or `uncompressed`.|No|`LZ4`|
-|`metricCompression`|String|Compression format for primitive type metric columns. Choose from `LZ4`, `LZF`, `uncompressed`, or `none`.|No|`LZ4`|
-|`longEncoding`|String|Encoding format for metric and dimension columns with type long. Choose from `auto` or `longs`. `auto` encodes the values using sequence number or lookup table depending on column cardinality and stores them with variable sizes. `longs` stores the value as is with 8 bytes each.|No|`longs`|
+|`dimensionCompression`|String|Compression format for dimension columns. One of `LZ4`, `LZF`, or `uncompressed`.|No|`LZ4`|
+|`metricCompression`|String|Compression format for primitive type metric columns. One of `LZ4`, `LZF`, `uncompressed`, or `none`.|No|`LZ4`|
+|`longEncoding`|String|Encoding format for metric and dimension columns with type long. One of `auto` or `longs`. `auto` encodes the values using sequence number or lookup table depending on column cardinality and stores them with variable sizes. `longs` stores the value as is with 8 bytes each.|No|`longs`|
 
 ## AWS authentication
 
