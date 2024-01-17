@@ -38,6 +38,7 @@ import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.SegmentLoadDropHandler;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
+import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
@@ -110,7 +111,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
 
   private final Object lock = new Object();
 
-  private final DruidCoordinatorConfig config;
+  private final HttpLoadQueuePeonConfig config;
 
   private final ObjectMapper jsonMapper;
   private final HttpClient httpClient;
@@ -126,7 +127,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       String baseUrl,
       ObjectMapper jsonMapper,
       HttpClient httpClient,
-      DruidCoordinatorConfig config,
+      HttpLoadQueuePeonConfig config,
       ScheduledExecutorService processingExecutor,
       ExecutorService callBackExecutor
   )
@@ -144,7 +145,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
           new URL(baseUrl),
           StringUtils.nonStrictFormat(
               "druid-internal/v1/segments/changeRequests?timeout=%d",
-              config.getHttpLoadQueuePeonHostTimeout().getMillis()
+              config.getHostTimeout().getMillis()
           )
       );
     }
@@ -160,7 +161,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       return;
     }
 
-    final int batchSize = config.getHttpLoadQueuePeonBatchSize();
+    final int batchSize = config.getBatchSize();
 
     final List<DataSegmentChangeRequest> newRequests = new ArrayList<>(batchSize);
 
@@ -194,7 +195,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
           serverId,
           segmentsToLoad.size(),
           segmentsToDrop.size(),
-          config.getHttpLoadQueuePeonBatchSize()
+          config.getBatchSize()
       );
       mainLoopInProgress.set(false);
       return;
@@ -209,7 +210,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
               .addHeader(HttpHeaders.Names.CONTENT_TYPE, MediaType.APPLICATION_JSON)
               .setContent(requestBodyWriter.writeValueAsBytes(newRequests)),
           responseHandler,
-          new Duration(config.getHttpLoadQueuePeonHostTimeout().getMillis() + 5000)
+          new Duration(config.getHostTimeout().getMillis() + 5000)
       );
 
       Futures.addCallback(
@@ -345,7 +346,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
 
       ScheduledExecutors.scheduleAtFixedRate(
           processingExecutor,
-          config.getHttpLoadQueuePeonRepeatDelay(),
+          config.getRepeatDelay(),
           () -> {
             if (!stopped) {
               doSegmentManagement();
@@ -516,7 +517,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   {
     return holder.isRequestSentToServer()
            && currentTimeMillis - holder.getFirstRequestMillis()
-              > config.getLoadTimeoutDelay().getMillis();
+              > config.getLoadTimeout().getMillis();
   }
 
   private void onRequestFailed(SegmentHolder holder, String failureCause)

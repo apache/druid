@@ -32,8 +32,8 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
-import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.config.KillUnusedSegmentsConfig;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
@@ -71,7 +71,6 @@ public class KillUnusedSegmentsTest
   private static final int MAX_SEGMENTS_TO_KILL = 10;
   private static final Duration COORDINATOR_KILL_PERIOD = Duration.standardMinutes(2);
   private static final Duration DURATION_TO_RETAIN = Duration.standardDays(1);
-  private static final Duration INDEXING_PERIOD = Duration.standardMinutes(1);
   private static final String DATASOURCE = "DS1";
 
   @Mock
@@ -79,7 +78,7 @@ public class KillUnusedSegmentsTest
   @Mock
   private OverlordClient overlordClient;
   @Mock(answer = Answers.RETURNS_DEEP_STUBS)
-  private DruidCoordinatorConfig config;
+  private KillUnusedSegmentsConfig config;
 
   @Mock
   private CoordinatorRunStats stats;
@@ -102,11 +101,10 @@ public class KillUnusedSegmentsTest
   {
     Mockito.doReturn(coordinatorDynamicConfig).when(params).getCoordinatorDynamicConfig();
     Mockito.doReturn(stats).when(params).getCoordinatorStats();
-    Mockito.doReturn(COORDINATOR_KILL_PERIOD).when(config).getCoordinatorKillPeriod();
-    Mockito.doReturn(DURATION_TO_RETAIN).when(config).getCoordinatorKillDurationToRetain();
-    Mockito.doReturn(INDEXING_PERIOD).when(config).getCoordinatorIndexingPeriod();
-    Mockito.doReturn(MAX_SEGMENTS_TO_KILL).when(config).getCoordinatorKillMaxSegments();
-    Mockito.doReturn(Duration.parse("PT3154000000S")).when(config).getCoordinatorKillBufferPeriod();
+    Mockito.doReturn(COORDINATOR_KILL_PERIOD).when(config).getCleanupPeriod();
+    Mockito.doReturn(DURATION_TO_RETAIN).when(config).getDurationToRetain();
+    Mockito.doReturn(MAX_SEGMENTS_TO_KILL).when(config).getMaxSegments();
+    Mockito.doReturn(Duration.parse("PT3154000000S")).when(config).getBufferPeriod();
 
     Mockito.doReturn(Collections.singleton(DATASOURCE))
            .when(coordinatorDynamicConfig).getSpecificDataSourcesToKillUnusedSegmentsIn();
@@ -153,11 +151,7 @@ public class KillUnusedSegmentsTest
       return unusedIntervals.size() <= limit ? unusedIntervals : unusedIntervals.subList(0, limit);
     });
 
-    target = new KillUnusedSegments(
-        segmentsMetadataManager,
-        overlordClient,
-        config
-    );
+    target = new KillUnusedSegments(segmentsMetadataManager, overlordClient, config);
   }
 
   @Test
@@ -181,7 +175,7 @@ public class KillUnusedSegmentsTest
   public void testRunWithSpecificDatasourceAndNoIntervalShouldNotKillAnySegments()
   {
     Mockito.doReturn(Duration.standardDays(400))
-           .when(config).getCoordinatorKillDurationToRetain();
+           .when(config).getDurationToRetain();
     target = new KillUnusedSegments(
         segmentsMetadataManager,
         overlordClient,
@@ -214,12 +208,8 @@ public class KillUnusedSegmentsTest
   {
     // Duration to retain = -1 day, reinit target for config to take effect
     Mockito.doReturn(DURATION_TO_RETAIN.negated())
-           .when(config).getCoordinatorKillDurationToRetain();
-    target = new KillUnusedSegments(
-        segmentsMetadataManager,
-        overlordClient,
-        config
-    );
+           .when(config).getDurationToRetain();
+    target = new KillUnusedSegments(segmentsMetadataManager, overlordClient, config);
 
     // Segments upto 1 day in the future are killed
     Interval expectedKillInterval = new Interval(
@@ -236,12 +226,8 @@ public class KillUnusedSegmentsTest
   public void testIgnoreDurationToRetain()
   {
     Mockito.doReturn(true)
-           .when(config).getCoordinatorKillIgnoreDurationToRetain();
-    target = new KillUnusedSegments(
-        segmentsMetadataManager,
-        overlordClient,
-        config
-    );
+           .when(config).isIgnoreDurationToRetain();
+    target = new KillUnusedSegments(segmentsMetadataManager, overlordClient, config);
 
     // All future and past unused segments are killed
     Interval expectedKillInterval = new Interval(
@@ -258,12 +244,8 @@ public class KillUnusedSegmentsTest
   public void testMaxSegmentsToKill()
   {
     Mockito.doReturn(1)
-           .when(config).getCoordinatorKillMaxSegments();
-    target = new KillUnusedSegments(
-        segmentsMetadataManager,
-        overlordClient,
-        config
-    );
+           .when(config).getMaxSegments();
+    target = new KillUnusedSegments(segmentsMetadataManager, overlordClient, config);
 
     mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);
     // Only 1 unused segment is killed
@@ -276,14 +258,10 @@ public class KillUnusedSegmentsTest
   public void testMultipleRuns()
   {
     Mockito.doReturn(true)
-        .when(config).getCoordinatorKillIgnoreDurationToRetain();
+        .when(config).isIgnoreDurationToRetain();
     Mockito.doReturn(2)
-        .when(config).getCoordinatorKillMaxSegments();
-    target = new KillUnusedSegments(
-        segmentsMetadataManager,
-        overlordClient,
-        config
-    );
+        .when(config).getMaxSegments();
+    target = new KillUnusedSegments(segmentsMetadataManager, overlordClient, config);
 
     mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);
     runAndVerifyKillInterval(new Interval(
@@ -362,7 +340,7 @@ public class KillUnusedSegmentsTest
 
   private void runAndVerifyKillInterval(Interval expectedKillInterval)
   {
-    int limit = config.getCoordinatorKillMaxSegments();
+    int limit = config.getMaxSegments();
     Mockito.doReturn(Futures.immediateFuture("ok"))
         .when(overlordClient)
         .runKillTask(
@@ -382,7 +360,7 @@ public class KillUnusedSegmentsTest
 
   private void runAndVerifyKillIntervals(List<Interval> expectedKillIntervals)
   {
-    int limit = config.getCoordinatorKillMaxSegments();
+    int limit = config.getMaxSegments();
     Mockito.doReturn(Futures.immediateFuture("ok"))
         .when(overlordClient)
         .runKillTask(

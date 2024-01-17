@@ -19,148 +19,122 @@
 
 package org.apache.druid.server.coordinator;
 
+import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
+import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
+import org.apache.druid.server.coordinator.config.CoordinatorKillConfigs;
+import org.apache.druid.server.coordinator.config.CoordinatorPeriodConfig;
+import org.apache.druid.server.coordinator.config.CoordinatorRunConfig;
+import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
+import org.apache.druid.server.coordinator.config.KillUnusedSegmentsConfig;
+import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
 import org.joda.time.Duration;
-import org.skife.config.Config;
-import org.skife.config.Default;
 
 /**
+ * Contains all static configs for the Coordinator.
  */
-public abstract class DruidCoordinatorConfig
+public class DruidCoordinatorConfig
 {
-  @Config("druid.coordinator.startDelay")
-  @Default("PT300s")
-  public abstract Duration getCoordinatorStartDelay();
+  private final CoordinatorRunConfig runConfig;
+  private final CoordinatorPeriodConfig periodConfig;
+  private final CoordinatorKillConfigs killConfigs;
+  private final BalancerStrategyFactory balancerStrategyFactory;
+  private final HttpLoadQueuePeonConfig httpLoadQueuePeonConfig;
 
-  @Config("druid.coordinator.period")
-  @Default("PT60s")
-  public abstract Duration getCoordinatorPeriod();
-
-  @Config("druid.coordinator.period.indexingPeriod")
-  @Default("PT1800s")
-  public abstract Duration getCoordinatorIndexingPeriod();
-
-  @Config("druid.coordinator.period.metadataStoreManagementPeriod")
-  @Default("PT1H")
-  public abstract Duration getCoordinatorMetadataStoreManagementPeriod();
-
-  @Config("druid.coordinator.kill.on")
-  @Default("false")
-  public abstract boolean isKillUnusedSegmentsEnabled();
-
-  @Config("druid.coordinator.kill.period")
-  @Default("P1D")
-  public abstract Duration getCoordinatorKillPeriod();
-
-  @Config("druid.coordinator.kill.durationToRetain")
-  @Default("P90D")
-  public abstract Duration getCoordinatorKillDurationToRetain();
-
-  @Config("druid.coordinator.kill.ignoreDurationToRetain")
-  @Default("false")
-  public abstract boolean getCoordinatorKillIgnoreDurationToRetain();
-
-  @Config("druid.coordinator.kill.bufferPeriod")
-  @Default("P30D")
-  public abstract Duration getCoordinatorKillBufferPeriod();
-
-  @Config("druid.coordinator.kill.maxSegments")
-  @Default("100")
-  public abstract int getCoordinatorKillMaxSegments();
-
-  @Config("druid.coordinator.kill.pendingSegments.on")
-  @Default("true")
-  public abstract boolean isKillPendingSegmentsEnabled();
-
-  @Config("druid.coordinator.kill.supervisor.on")
-  @Default("true")
-  public abstract boolean isSupervisorKillEnabled();
-
-  @Config("druid.coordinator.kill.supervisor.period")
-  @Default("P1D")
-  public abstract Duration getCoordinatorSupervisorKillPeriod();
-
-  @Config("druid.coordinator.kill.supervisor.durationToRetain")
-  @Default("P90D")
-  public abstract Duration getCoordinatorSupervisorKillDurationToRetain();
-
-  @Config("druid.coordinator.kill.audit.on")
-  @Default("true")
-  public abstract boolean isAuditKillEnabled();
-
-  @Config("druid.coordinator.kill.audit.period")
-  @Default("P1D")
-  public abstract Duration getCoordinatorAuditKillPeriod();
-
-  @Config("druid.coordinator.kill.audit.durationToRetain")
-  @Default("P90D")
-  public abstract Duration getCoordinatorAuditKillDurationToRetain();
-
-  @Config("druid.coordinator.kill.compaction.on")
-  @Default("false")
-  public abstract boolean isCompactionKillEnabled();
-
-  @Config("druid.coordinator.kill.compaction.period")
-  @Default("P1D")
-  public abstract Duration getCoordinatorCompactionKillPeriod();
-
-  @Config("druid.coordinator.kill.rule.on")
-  @Default("true")
-  public abstract boolean isRuleKillEnabled();
-
-  @Config("druid.coordinator.kill.rule.period")
-  @Default("P1D")
-  public abstract Duration getCoordinatorRuleKillPeriod();
-
-  @Config("druid.coordinator.kill.rule.durationToRetain")
-  @Default("P90D")
-  public abstract Duration getCoordinatorRuleKillDurationToRetain();
-
-  @Config("druid.coordinator.kill.datasource.on")
-  @Default("true")
-  public abstract boolean isDatasourceKillEnabled();
-
-  @Config("druid.coordinator.kill.datasource.period")
-  @Default("P1D")
-  public abstract Duration getCoordinatorDatasourceKillPeriod();
-
-  @Config("druid.coordinator.kill.datasource.durationToRetain")
-  @Default("P90D")
-  public abstract Duration getCoordinatorDatasourceKillDurationToRetain();
-
-  @Config("druid.coordinator.load.timeout")
-  public Duration getLoadTimeoutDelay()
+  @Inject
+  public DruidCoordinatorConfig(
+      CoordinatorRunConfig runConfig,
+      CoordinatorPeriodConfig periodConfig,
+      CoordinatorKillConfigs killConfigs,
+      BalancerStrategyFactory balancerStrategyFactory,
+      HttpLoadQueuePeonConfig httpLoadQueuePeonConfig
+  )
   {
-    return new Duration(15 * 60 * 1000);
+    this.killConfigs = killConfigs;
+    this.runConfig = runConfig;
+    this.periodConfig = periodConfig;
+    this.balancerStrategyFactory = balancerStrategyFactory;
+    this.httpLoadQueuePeonConfig = httpLoadQueuePeonConfig;
+
+    validateKillConfigs();
   }
 
-  @Config("druid.coordinator.loadqueuepeon.type")
-  public String getLoadQueuePeonType()
+  public Duration getCoordinatorStartDelay()
   {
-    return "http";
+    return runConfig.getStartDelay();
   }
 
-  @Config("druid.coordinator.curator.loadqueuepeon.numCallbackThreads")
-  public int getNumCuratorCallBackThreads()
+  public Duration getCoordinatorPeriod()
   {
-    return 2;
+    return runConfig.getPeriod();
   }
 
-  @Config("druid.coordinator.loadqueuepeon.http.repeatDelay")
-  public Duration getHttpLoadQueuePeonRepeatDelay()
+  public Duration getCoordinatorIndexingPeriod()
   {
-    return Duration.millis(60000);
+    return periodConfig.getIndexingPeriod();
   }
 
-  @Config("druid.coordinator.loadqueuepeon.http.hostTimeout")
-  public Duration getHttpLoadQueuePeonHostTimeout()
+  public Duration getCoordinatorMetadataStoreManagementPeriod()
   {
-    return Duration.millis(300000);
+    return periodConfig.getMetadataStoreManagementPeriod();
   }
 
-  @Config("druid.coordinator.loadqueuepeon.http.batchSize")
-  public int getHttpLoadQueuePeonBatchSize()
+  public CoordinatorKillConfigs getKillConfigs()
   {
-    return 1;
+    return killConfigs;
+  }
+
+  public BalancerStrategyFactory getBalancerStrategyFactory()
+  {
+    return balancerStrategyFactory;
+  }
+
+  public HttpLoadQueuePeonConfig getHttpLoadQueuePeonConfig()
+  {
+    return httpLoadQueuePeonConfig;
+  }
+
+  private void validateKillConfigs()
+  {
+    validateKillConfig(killConfigs.audit(), "audit");
+    validateKillConfig(killConfigs.compaction(), "compaction");
+    validateKillConfig(killConfigs.datasource(), "datasource");
+    validateKillConfig(killConfigs.rules(), "rule");
+    validateKillConfig(killConfigs.supervisors(), "supervisor");
+
+    final KillUnusedSegmentsConfig killUnusedConfig = killConfigs.unusedSegments();
+    Preconditions.checkArgument(
+        killUnusedConfig.getCleanupPeriod().getMillis() >= getCoordinatorIndexingPeriod().getMillis(),
+        "[druid.coordinator.kill.period] must be greater than or equal to [druid.coordinator.period.indexingPeriod]"
+    );
+  }
+
+  private void validateKillConfig(MetadataCleanupConfig config, String propertyPrefix)
+  {
+    if (!config.isCleanupEnabled()) {
+      // Do not perform validation if cleanup is disabled
+      return;
+    }
+
+    final Duration metadataManagementPeriod = getCoordinatorMetadataStoreManagementPeriod();
+    final Duration period = config.getCleanupPeriod();
+    Preconditions.checkArgument(
+        period != null && period.getMillis() >= metadataManagementPeriod.getMillis(),
+        "[druid.coordinator.kill.%s.period] must be greater than [druid.coordinator.period.metadataStoreManagementPeriod]",
+        propertyPrefix
+    );
+
+    final Duration retainDuration = config.getDurationToRetain();
+    Preconditions.checkArgument(
+        retainDuration != null && retainDuration.getMillis() >= 0,
+        "[druid.coordinator.kill.%s.durationToRetain] must be 0 milliseconds or higher",
+        propertyPrefix
+    );
+    Preconditions.checkArgument(
+        retainDuration.getMillis() < System.currentTimeMillis(),
+        "[druid.coordinator.kill.%s.durationToRetain] cannot be greater than current time in milliseconds",
+        propertyPrefix
+    );
   }
 
 }

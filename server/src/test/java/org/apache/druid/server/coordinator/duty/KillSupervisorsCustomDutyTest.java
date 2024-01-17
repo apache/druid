@@ -60,7 +60,7 @@ public class KillSupervisorsCustomDutyTest
   {
     final IllegalArgumentException exception = Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> killSupervisors = new KillSupervisorsCustomDuty(null, mockMetadataSupervisorManager, coordinatorConfig)
+        () -> killSupervisors = new KillSupervisorsCustomDuty(null, mockMetadataSupervisorManager)
     );
     Assert.assertEquals(
         "[KillSupervisorsCustomDuty.durationToRetain] must be 0 milliseconds or higher",
@@ -75,8 +75,7 @@ public class KillSupervisorsCustomDutyTest
         IllegalArgumentException.class,
         () -> killSupervisors = new KillSupervisorsCustomDuty(
             new Duration("PT-1S"),
-            mockMetadataSupervisorManager,
-            coordinatorConfig
+            mockMetadataSupervisorManager
         )
     );
     Assert.assertEquals(
@@ -90,8 +89,7 @@ public class KillSupervisorsCustomDutyTest
   {
     killSupervisors = new KillSupervisorsCustomDuty(
         new Duration("PT1S"),
-        mockMetadataSupervisorManager,
-        coordinatorConfig
+        mockMetadataSupervisorManager
     );
     Assert.assertNotNull(killSupervisors);
   }
@@ -103,8 +101,7 @@ public class KillSupervisorsCustomDutyTest
     Mockito.when(mockDruidCoordinatorRuntimeParams.getCoordinatorStats()).thenReturn(runStats);
     killSupervisors = new KillSupervisorsCustomDuty(
         new Duration("PT1S"),
-        mockMetadataSupervisorManager,
-        coordinatorConfig
+        mockMetadataSupervisorManager
     );
     killSupervisors.run(mockDruidCoordinatorRuntimeParams);
     Mockito.verify(mockMetadataSupervisorManager).removeTerminatedSupervisorsOlderThan(ArgumentMatchers.anyLong());

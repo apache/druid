@@ -31,8 +31,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.rpc.indexing.OverlordClient;
-import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.config.KillUnusedSegmentsConfig;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.utils.CollectionUtils;
@@ -82,17 +82,13 @@ public class KillUnusedSegments implements CoordinatorDuty
   public KillUnusedSegments(
       SegmentsMetadataManager segmentsMetadataManager,
       OverlordClient overlordClient,
-      DruidCoordinatorConfig config
+      KillUnusedSegmentsConfig killConfig
   )
   {
-    this.period = config.getCoordinatorKillPeriod().getMillis();
-    Preconditions.checkArgument(
-        this.period >= config.getCoordinatorIndexingPeriod().getMillis(),
-        "coordinator kill period must be greater than or equal to druid.coordinator.period.indexingPeriod"
-    );
+    this.period = killConfig.getCleanupPeriod().getMillis();
 
-    this.ignoreRetainDuration = config.getCoordinatorKillIgnoreDurationToRetain();
-    this.retainDuration = config.getCoordinatorKillDurationToRetain().getMillis();
+    this.ignoreRetainDuration = killConfig.isIgnoreDurationToRetain();
+    this.retainDuration = killConfig.getDurationToRetain().getMillis();
     if (this.ignoreRetainDuration) {
       log.debug(
           "druid.coordinator.kill.durationToRetain [%s] will be ignored when discovering segments to kill "
@@ -100,9 +96,9 @@ public class KillUnusedSegments implements CoordinatorDuty
           this.retainDuration
       );
     }
-    this.bufferPeriod = config.getCoordinatorKillBufferPeriod().getMillis();
+    this.bufferPeriod = killConfig.getBufferPeriod().getMillis();
 
-    this.maxSegmentsToKill = config.getCoordinatorKillMaxSegments();
+    this.maxSegmentsToKill = killConfig.getMaxSegments();
     Preconditions.checkArgument(this.maxSegmentsToKill > 0, "coordinator kill maxSegments must be > 0");
 
     datasourceToLastKillIntervalEnd = new ConcurrentHashMap<>();

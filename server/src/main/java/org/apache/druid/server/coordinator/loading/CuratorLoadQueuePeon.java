@@ -28,7 +28,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordination.SegmentChangeRequestNoop;
 import org.apache.druid.server.coordinator.DruidCoordinator;
-import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
+import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
@@ -72,7 +72,6 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
    * with loading or dropping segments.
    */
   private final ExecutorService callBackExecutor;
-  private final DruidCoordinatorConfig config;
 
   private final AtomicLong queuedSize = new AtomicLong(0);
   private final CoordinatorRunStats stats = new CoordinatorRunStats();
@@ -115,8 +114,7 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
       String basePath,
       ObjectMapper jsonMapper,
       ScheduledExecutorService processingExecutor,
-      ExecutorService callbackExecutor,
-      DruidCoordinatorConfig config
+      ExecutorService callbackExecutor
   )
   {
     this.curator = curator;
@@ -124,7 +122,6 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
     this.jsonMapper = jsonMapper;
     this.callBackExecutor = callbackExecutor;
     this.processingExecutor = processingExecutor;
-    this.config = config;
   }
 
   @JsonProperty
@@ -309,7 +306,7 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
               failAssign(segmentHolder, false, e);
             }
           },
-          config.getLoadTimeoutDelay().getMillis(),
+          HttpLoadQueuePeonConfig.DEFAULT_LOAD_TIMEOUT.getMillis(),
           TimeUnit.MILLISECONDS
       );
     }

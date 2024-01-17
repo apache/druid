@@ -38,11 +38,9 @@ import org.apache.druid.server.coordination.DataSegmentChangeHandler;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.SegmentChangeRequestDrop;
 import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
-import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.joda.time.Duration;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -88,11 +86,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
         LOAD_QUEUE_PATH,
         jsonMapper,
         Execs.scheduledSingleThreaded("test_load_queue_peon_scheduled-%d"),
-        Execs.singleThreaded("test_load_queue_peon-%d"),
-        new TestDruidCoordinatorConfig.Builder()
-            .withCoordinatorKillMaxSegments(10)
-            .withCoordinatorKillIgnoreDurationToRetain(false)
-            .build()
+        Execs.singleThreaded("test_load_queue_peon-%d")
     );
 
     loadQueuePeon.start();
@@ -277,13 +271,8 @@ public class LoadQueuePeonTest extends CuratorTestBase
         // This will fail inside SegmentChangeProcessor.run()
         null,
         Execs.scheduledSingleThreaded("test_load_queue_peon_scheduled-%d"),
-        Execs.singleThreaded("test_load_queue_peon-%d"),
+        Execs.singleThreaded("test_load_queue_peon-%d")
         // set time-out to 1 ms so that LoadQueuePeon will fail the assignment quickly
-        new TestDruidCoordinatorConfig.Builder()
-            .withLoadTimeoutDelay(new Duration(1))
-            .withCoordinatorKillMaxSegments(10)
-            .withCoordinatorKillIgnoreDurationToRetain(false)
-            .build()
     );
 
     loadQueuePeon.start();
@@ -318,15 +307,10 @@ public class LoadQueuePeonTest extends CuratorTestBase
         LOAD_QUEUE_PATH,
         jsonMapper,
         Execs.scheduledSingleThreaded("test_load_queue_peon_scheduled-%d"),
-        Execs.singleThreaded("test_load_queue_peon-%d"),
+        Execs.singleThreaded("test_load_queue_peon-%d")
         // The timeout here was set to 1ms, when this test was acting flakey.  A cursory glance makes me wonder if
         // there's a race where the timeout actually happens before other code can run.  1ms timeout seems aggressive.
         // 100ms is a great price to pay if it removes the flakeyness
-        new TestDruidCoordinatorConfig.Builder()
-            .withLoadTimeoutDelay(new Duration(100))
-            .withCoordinatorKillMaxSegments(10)
-            .withCoordinatorKillIgnoreDurationToRetain(false)
-            .build()
     );
 
     loadQueuePeon.start();

@@ -42,7 +42,6 @@ import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.MetadataManager;
-import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
 import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategyConfig;
 import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategyFactory;
@@ -51,6 +50,10 @@ import org.apache.druid.server.coordinator.balancer.DiskNormalizedCostBalancerSt
 import org.apache.druid.server.coordinator.balancer.RandomBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.compact.CompactionSegmentSearchPolicy;
 import org.apache.druid.server.coordinator.compact.NewestSegmentFirstPolicy;
+import org.apache.druid.server.coordinator.config.CoordinatorKillConfigs;
+import org.apache.druid.server.coordinator.config.CoordinatorPeriodConfig;
+import org.apache.druid.server.coordinator.config.CoordinatorRunConfig;
+import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
@@ -181,7 +184,8 @@ public class CoordinatorSimulationBuilder
         serverInventoryView,
         dynamicConfig,
         loadImmediately,
-        autoSyncInventory
+        autoSyncInventory,
+        balancerStrategy
     );
 
     if (segments != null) {
@@ -205,47 +209,12 @@ public class CoordinatorSimulationBuilder
         new ServiceAnnouncer.Noop(),
         null,
         new CoordinatorCustomDutyGroups(Collections.emptySet()),
-        createBalancerStrategy(env),
         env.lookupCoordinatorManager,
         env.leaderSelector,
         COMPACTION_SEGMENT_SEARCH_POLICY
     );
 
     return new SimulationImpl(coordinator, env);
-  }
-
-  private BalancerStrategyFactory createBalancerStrategy(Environment env)
-  {
-    if (balancerStrategy == null) {
-      return new CostBalancerStrategyFactory();
-    }
-
-    switch (balancerStrategy) {
-      case "cost":
-        return new CostBalancerStrategyFactory();
-      case "cachingCost":
-        return buildCachingCostBalancerStrategy(env);
-      case "diskNormalized":
-        return new DiskNormalizedCostBalancerStrategyFactory();
-      case "random":
-        return new RandomBalancerStrategyFactory();
-      default:
-        throw new IAE("Unknown balancer stratgy: " + balancerStrategy);
-    }
-  }
-
-  private BalancerStrategyFactory buildCachingCostBalancerStrategy(Environment env)
-  {
-    try {
-      return new CachingCostBalancerStrategyFactory(
-          env.coordinatorInventoryView,
-          env.lifecycle,
-          new CachingCostBalancerStrategyConfig()
-      );
-    }
-    catch (Exception e) {
-      throw new ISE(e, "Error building balancer strategy");
-    }
   }
 
   /**
@@ -452,21 +421,13 @@ public class CoordinatorSimulationBuilder
         TestServerInventoryView clusterInventory,
         CoordinatorDynamicConfig dynamicConfig,
         boolean loadImmediately,
-        boolean autoSyncInventory
+        boolean autoSyncInventory,
+        String balancerStrategy
     )
     {
       this.inventory = clusterInventory;
       this.loadImmediately = loadImmediately;
       this.autoSyncInventory = autoSyncInventory;
-
-      this.coordinatorConfig = new TestDruidCoordinatorConfig.Builder()
-          .withCoordinatorStartDelay(new Duration(1L))
-          .withCoordinatorPeriod(Duration.standardMinutes(1))
-          .withCoordinatorKillPeriod(Duration.millis(100))
-          .withLoadQueuePeonType("http")
-          .withCoordinatorKillIgnoreDurationToRetain(false)
-          .build();
-
       this.executorFactory = new ExecutorFactory(loadImmediately);
       this.coordinatorInventoryView = autoSyncInventory
                                       ? clusterInventory
@@ -477,14 +438,19 @@ public class CoordinatorSimulationBuilder
           executorFactory.create(1, ExecutorFactory.HISTORICAL_LOADER)
       );
 
+      this.coordinatorConfig = new DruidCoordinatorConfig(
+          new CoordinatorRunConfig(new Duration(1L), Duration.standardMinutes(1)),
+          new CoordinatorPeriodConfig(null, null),
+          CoordinatorKillConfigs.STANDARD,
+          createBalancerStrategy(balancerStrategy),
+          new HttpLoadQueuePeonConfig(null, null, null)
+      );
       this.loadQueueTaskMaster = new LoadQueueTaskMaster(
-          null,
           OBJECT_MAPPER,
           executorFactory.create(1, ExecutorFactory.LOAD_QUEUE_EXECUTOR),
           executorFactory.create(1, ExecutorFactory.LOAD_CALLBACK_EXECUTOR),
-          coordinatorConfig,
-          httpClient,
-          null
+          coordinatorConfig.getHttpLoadQueuePeonConfig(),
+          httpClient
       );
       this.loadQueueManager =
           new SegmentLoadQueueManager(coordinatorInventoryView, loadQueueTaskMaster);
@@ -549,6 +515,40 @@ public class CoordinatorSimulationBuilder
       ).andReturn(new AtomicReference<>(CoordinatorCompactionConfig.empty())).anyTimes();
 
       return jacksonConfigManager;
+    }
+
+    private BalancerStrategyFactory createBalancerStrategy(String strategyName)
+    {
+      if (strategyName == null) {
+        return new CostBalancerStrategyFactory();
+      }
+
+      switch (strategyName) {
+        case "cost":
+          return new CostBalancerStrategyFactory();
+        case "cachingCost":
+          return buildCachingCostBalancerStrategy();
+        case "diskNormalized":
+          return new DiskNormalizedCostBalancerStrategyFactory();
+        case "random":
+          return new RandomBalancerStrategyFactory();
+        default:
+          throw new IAE("Unknown balancer stratgy: " + strategyName);
+      }
+    }
+
+    private BalancerStrategyFactory buildCachingCostBalancerStrategy()
+    {
+      try {
+        return new CachingCostBalancerStrategyFactory(
+            this.coordinatorInventoryView,
+            this.lifecycle,
+            new CachingCostBalancerStrategyConfig()
+        );
+      }
+      catch (Exception e) {
+        throw new ISE(e, "Error building balancer strategy");
+      }
     }
   }
 

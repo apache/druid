@@ -58,7 +58,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
-import org.joda.time.Duration;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -131,13 +130,6 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     curator.create().creatingParentsIfNeeded().forPath(DESTINATION_LOAD_PATH);
 
     final ObjectMapper objectMapper = new DefaultObjectMapper();
-    DruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
-        .withCoordinatorStartDelay(new Duration(COORDINATOR_START_DELAY))
-        .withCoordinatorPeriod(new Duration(COORDINATOR_PERIOD))
-        .withCoordinatorKillPeriod(new Duration(COORDINATOR_PERIOD))
-        .withCoordinatorKillMaxSegments(10)
-        .withCoordinatorKillIgnoreDurationToRetain(false)
-        .build();
     sourceLoadQueueChildrenCache = new PathChildrenCache(
         curator,
         SOURCE_LOAD_PATH,
@@ -157,16 +149,14 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         SOURCE_LOAD_PATH,
         objectMapper,
         peonExec,
-        callbackExec,
-        druidCoordinatorConfig
+        callbackExec
     );
     destinationLoadQueuePeon = new CuratorLoadQueuePeon(
         curator,
         DESTINATION_LOAD_PATH,
         objectMapper,
         peonExec,
-        callbackExec,
-        druidCoordinatorConfig
+        callbackExec
     );
   }
 

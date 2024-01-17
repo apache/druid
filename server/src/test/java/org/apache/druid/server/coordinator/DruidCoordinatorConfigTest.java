@@ -19,67 +19,429 @@
 
 package org.apache.druid.server.coordinator;
 
-import org.apache.druid.java.util.common.config.Config;
+import com.google.common.collect.ImmutableList;
+import com.google.inject.Injector;
+import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.guice.JsonConfigProvider;
+import org.apache.druid.guice.JsonConfigurator;
+import org.apache.druid.server.coordinator.config.CoordinatorKillConfigs;
+import org.apache.druid.server.coordinator.config.CoordinatorPeriodConfig;
+import org.apache.druid.server.coordinator.config.CoordinatorRunConfig;
+import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
+import org.apache.druid.server.coordinator.config.KillUnusedSegmentsConfig;
+import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
 import org.joda.time.Duration;
+import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
-import org.skife.config.ConfigurationObjectFactory;
 
 import java.util.Properties;
 
 /**
+ *
  */
 public class DruidCoordinatorConfigTest
 {
+
   @Test
-  public void testDeserialization()
+  public void testCoordinatorRunConfigDefaultValues()
   {
-    ConfigurationObjectFactory factory = Config.createFactory(new Properties());
+    final Properties props = new Properties();
+    final CoordinatorRunConfig config = deserializeFrom(props, "druid.coordinator", CoordinatorRunConfig.class);
 
-    //with defaults
-    DruidCoordinatorConfig config = factory.build(DruidCoordinatorConfig.class);
+    Assert.assertEquals(Duration.standardMinutes(1), config.getPeriod());
+    Assert.assertEquals(Duration.standardMinutes(5), config.getStartDelay());
+  }
 
-    Assert.assertEquals(new Duration("PT300s"), config.getCoordinatorStartDelay());
-    Assert.assertEquals(new Duration("PT60s"), config.getCoordinatorPeriod());
-    Assert.assertEquals(new Duration("PT1800s"), config.getCoordinatorIndexingPeriod());
-    Assert.assertEquals(86400000, config.getCoordinatorKillPeriod().getMillis());
-    Assert.assertEquals(7776000000L, config.getCoordinatorKillDurationToRetain().getMillis());
-    Assert.assertEquals(100, config.getCoordinatorKillMaxSegments());
-    Assert.assertEquals(new Duration(15 * 60 * 1000), config.getLoadTimeoutDelay());
-    Assert.assertFalse(config.getCoordinatorKillIgnoreDurationToRetain());
-    Assert.assertEquals("http", config.getLoadQueuePeonType());
+  @Test
+  public void testCoordinatorRunConfigOverrideValues()
+  {
+    final Properties props = new Properties();
+    props.setProperty("druid.coordinator.startDelay", "PT10M");
+    props.setProperty("druid.coordinator.period", "PT30S");
+    final CoordinatorRunConfig config = deserializeFrom(props, "druid.coordinator", CoordinatorRunConfig.class);
 
-    //with non-defaults
-    Properties props = new Properties();
-    props.setProperty("druid.coordinator.startDelay", "PT1s");
-    props.setProperty("druid.coordinator.period", "PT1s");
-    props.setProperty("druid.coordinator.period.indexingPeriod", "PT1s");
-    props.setProperty("druid.coordinator.kill.on", "true");
-    props.setProperty("druid.coordinator.kill.period", "PT1s");
-    props.setProperty("druid.coordinator.kill.durationToRetain", "PT1s");
-    props.setProperty("druid.coordinator.kill.maxSegments", "10000");
-    props.setProperty("druid.coordinator.kill.pendingSegments.on", "true");
-    props.setProperty("druid.coordinator.load.timeout", "PT1s");
-    props.setProperty("druid.coordinator.loadqueuepeon.repeatDelay", "PT0.100s");
-    props.setProperty("druid.coordinator.kill.ignoreDurationToRetain", "true");
+    Assert.assertEquals(Duration.standardSeconds(30), config.getPeriod());
+    Assert.assertEquals(Duration.standardMinutes(10), config.getStartDelay());
+  }
 
-    factory = Config.createFactory(props);
-    config = factory.build(DruidCoordinatorConfig.class);
+  @Test
+  public void testCoordinatorPeriodConfigDefaultValues()
+  {
+    final Properties props = new Properties();
+    final CoordinatorPeriodConfig config
+        = deserializeFrom(props, "druid.coordinator.period", CoordinatorPeriodConfig.class);
 
-    Assert.assertEquals(new Duration("PT1s"), config.getCoordinatorStartDelay());
-    Assert.assertEquals(new Duration("PT1s"), config.getCoordinatorPeriod());
-    Assert.assertEquals(new Duration("PT1s"), config.getCoordinatorIndexingPeriod());
-    Assert.assertEquals(new Duration("PT1s"), config.getCoordinatorKillPeriod());
-    Assert.assertEquals(new Duration("PT1s"), config.getCoordinatorKillDurationToRetain());
-    Assert.assertEquals(10000, config.getCoordinatorKillMaxSegments());
-    Assert.assertEquals(new Duration("PT1s"), config.getLoadTimeoutDelay());
-    Assert.assertTrue(config.getCoordinatorKillIgnoreDurationToRetain());
+    Assert.assertEquals(Duration.standardMinutes(30), config.getIndexingPeriod());
+    Assert.assertEquals(Duration.standardMinutes(60), config.getMetadataStoreManagementPeriod());
+  }
 
-    // Test negative druid.coordinator.kill.durationToRetain now that it is valid.
-    props = new Properties();
-    props.setProperty("druid.coordinator.kill.durationToRetain", "PT-1s");
-    factory = Config.createFactory(props);
-    config = factory.build(DruidCoordinatorConfig.class);
-    Assert.assertEquals(new Duration("PT-1s"), config.getCoordinatorKillDurationToRetain());
+  @Test
+  public void testCoordinatorPeriodConfigOverrideValues()
+  {
+    final Properties props = new Properties();
+    props.setProperty("druid.coordinator.period.indexingPeriod", "PT1M");
+    props.setProperty("druid.coordinator.period.metadataStoreManagementPeriod", "PT3M");
+    final CoordinatorPeriodConfig config
+        = deserializeFrom(props, "druid.coordinator.period", CoordinatorPeriodConfig.class);
+
+    Assert.assertEquals(Duration.standardMinutes(1), config.getIndexingPeriod());
+    Assert.assertEquals(Duration.standardMinutes(3), config.getMetadataStoreManagementPeriod());
+  }
+
+  @Test
+  public void testLoadQueuePeonConfigDefaultValues()
+  {
+    final Properties props = new Properties();
+    final HttpLoadQueuePeonConfig config
+        = deserializeFrom(props, "druid.coordinator.loadqueuepeon.http", HttpLoadQueuePeonConfig.class);
+
+    Assert.assertEquals(Duration.standardMinutes(1), config.getRepeatDelay());
+    Assert.assertEquals(Duration.standardMinutes(5), config.getHostTimeout());
+    Assert.assertEquals(Duration.standardMinutes(15), config.getLoadTimeout());
+    Assert.assertEquals(1, config.getBatchSize());
+  }
+
+  @Test
+  public void testLoadQueuePeonConfigOverrideValues()
+  {
+    final Properties props = new Properties();
+    props.setProperty("druid.coordinator.loadqueuepeon.http.repeatDelay", "PT20M");
+    props.setProperty("druid.coordinator.loadqueuepeon.http.hostTimeout", "PT10M");
+    props.setProperty("druid.coordinator.loadqueuepeon.http.batchSize", "100");
+
+    final HttpLoadQueuePeonConfig config
+        = deserializeFrom(props, "druid.coordinator.loadqueuepeon.http", HttpLoadQueuePeonConfig.class);
+
+    Assert.assertEquals(Duration.standardMinutes(20), config.getRepeatDelay());
+    Assert.assertEquals(Duration.standardMinutes(10), config.getHostTimeout());
+    Assert.assertEquals(Duration.standardMinutes(15), config.getLoadTimeout());
+    Assert.assertEquals(100, config.getBatchSize());
+  }
+
+  @Test
+  public void testMetadataCleanupConfigDefaultValues()
+  {
+    final MetadataCleanupConfig config = new MetadataCleanupConfig(null, null, null);
+
+    Assert.assertTrue(config.isCleanupEnabled());
+    Assert.assertEquals(Duration.standardDays(1), config.getCleanupPeriod());
+    Assert.assertEquals(Duration.standardDays(90), config.getDurationToRetain());
+  }
+
+  @Test
+  public void testMetadataCleanupConfigOverrideValues()
+  {
+    final MetadataCleanupConfig config = new MetadataCleanupConfig(
+        false,
+        Period.parse("PT5H").toStandardDuration(),
+        Period.parse("P1D").toStandardDuration()
+    );
+
+    Assert.assertFalse(config.isCleanupEnabled());
+    Assert.assertEquals(Duration.standardHours(5), config.getCleanupPeriod());
+    Assert.assertEquals(Duration.standardHours(24), config.getDurationToRetain());
+  }
+
+  @Test
+  public void testKillUnusedSegmentsConfigDefaultValues()
+  {
+    final KillUnusedSegmentsConfig config = new KillUnusedSegmentsConfig(null, null, null, null, null, null);
+
+    Assert.assertFalse(config.isCleanupEnabled());
+    Assert.assertFalse(config.isIgnoreDurationToRetain());
+    Assert.assertEquals(Duration.standardDays(1), config.getCleanupPeriod());
+    Assert.assertEquals(Duration.standardDays(30), config.getBufferPeriod());
+    Assert.assertEquals(Duration.standardDays(90), config.getDurationToRetain());
+    Assert.assertEquals(100, config.getMaxSegments());
+  }
+
+  @Test
+  public void testKillUnusedSegmentsConfigOverrideValues()
+  {
+    final KillUnusedSegmentsConfig config = new KillUnusedSegmentsConfig(
+        true,
+        Period.parse("PT30M").toStandardDuration(),
+        Period.parse("PT12H").toStandardDuration(),
+        true,
+        Period.parse("PT60M").toStandardDuration(),
+        500
+    );
+
+    Assert.assertTrue(config.isCleanupEnabled());
+    Assert.assertTrue(config.isIgnoreDurationToRetain());
+    Assert.assertEquals(Duration.standardMinutes(30), config.getCleanupPeriod());
+    Assert.assertEquals(Duration.standardMinutes(60), config.getBufferPeriod());
+    Assert.assertEquals(Duration.standardHours(12), config.getDurationToRetain());
+    Assert.assertEquals(500, config.getMaxSegments());
+  }
+
+  @Test
+  public void testCoordinatorKillConfigDefaultValues()
+  {
+    final CoordinatorKillConfigs killConfigs
+        = deserializeFrom(new Properties(), "druid.coordinator.kill", CoordinatorKillConfigs.class);
+
+    Assert.assertEquals(MetadataCleanupConfig.STANDARD, killConfigs.audit());
+    Assert.assertEquals(MetadataCleanupConfig.STANDARD, killConfigs.supervisors());
+    Assert.assertEquals(MetadataCleanupConfig.STANDARD, killConfigs.compaction());
+    Assert.assertEquals(MetadataCleanupConfig.STANDARD, killConfigs.datasource());
+    Assert.assertEquals(MetadataCleanupConfig.STANDARD, killConfigs.rules());
+    Assert.assertEquals(MetadataCleanupConfig.STANDARD, killConfigs.pendingSegments());
+  }
+
+  @Test
+  public void testCoordinatorKillConfigOverrideValues()
+  {
+    final Properties props = new Properties();
+    props.setProperty("druid.coordinator.kill.audit.on", "false");
+    props.setProperty("druid.coordinator.kill.audit.period", "PT10H");
+    props.setProperty("druid.coordinator.kill.audit.durationToRetain", "PT20H");
+
+    props.setProperty("druid.coordinator.kill.compaction.on", "false");
+    props.setProperty("druid.coordinator.kill.compaction.period", "PT20H");
+    props.setProperty("druid.coordinator.kill.compaction.durationToRetain", "PT30H");
+
+    props.setProperty("druid.coordinator.kill.datasource.on", "false");
+    props.setProperty("druid.coordinator.kill.datasource.period", "PT5H");
+    props.setProperty("druid.coordinator.kill.datasource.durationToRetain", "PT10H");
+
+    props.setProperty("druid.coordinator.kill.rule.on", "false");
+    props.setProperty("druid.coordinator.kill.rule.period", "PT11H");
+    props.setProperty("druid.coordinator.kill.rule.durationToRetain", "PT12H");
+
+    props.setProperty("druid.coordinator.kill.supervisor.on", "false");
+    props.setProperty("druid.coordinator.kill.supervisor.period", "PT1H");
+    props.setProperty("druid.coordinator.kill.supervisor.durationToRetain", "PT2H");
+
+    props.setProperty("druid.coordinator.kill.pendingSegments.on", "false");
+
+    final CoordinatorKillConfigs killConfigs
+        = deserializeFrom(props, "druid.coordinator.kill", CoordinatorKillConfigs.class);
+
+    Assert.assertEquals(
+        new MetadataCleanupConfig(false, Duration.standardHours(10), Duration.standardHours(20)),
+        killConfigs.audit()
+    );
+    Assert.assertEquals(
+        new MetadataCleanupConfig(false, Duration.standardHours(20), Duration.standardHours(30)),
+        killConfigs.compaction()
+    );
+    Assert.assertEquals(
+        new MetadataCleanupConfig(false, Duration.standardHours(5), Duration.standardHours(10)),
+        killConfigs.datasource()
+    );
+    Assert.assertEquals(
+        new MetadataCleanupConfig(false, Duration.standardHours(11), Duration.standardHours(12)),
+        killConfigs.rules()
+    );
+    Assert.assertEquals(
+        new MetadataCleanupConfig(false, Duration.standardHours(1), Duration.standardHours(2)),
+        killConfigs.supervisors()
+    );
+    Assert.assertFalse(killConfigs.pendingSegments().isCleanupEnabled());
+  }
+
+  @Test
+  public void testCoordinatorConfigFailsWhenCleanupPeriodIsInvalid()
+  {
+    // Validation fails when cleanup period is less than metadata store management period
+    final MetadataCleanupConfig cleanupConfig
+        = new MetadataCleanupConfig(true, Duration.standardMinutes(30), null);
+    final Duration metadataStoreManagementPeriod = Duration.standardHours(1);
+
+    verifyCoordinatorConfigFailsWith(
+        killConfig().audit(cleanupConfig).build(),
+        metadataStoreManagementPeriod,
+        "[druid.coordinator.kill.audit.period] must be greater than"
+        + " [druid.coordinator.period.metadataStoreManagementPeriod]"
+    );
+    verifyCoordinatorConfigFailsWith(
+        killConfig().compaction(cleanupConfig).build(),
+        metadataStoreManagementPeriod,
+        "[druid.coordinator.kill.compaction.period] must be greater than"
+        + " [druid.coordinator.period.metadataStoreManagementPeriod]"
+    );
+    verifyCoordinatorConfigFailsWith(
+        killConfig().datasource(cleanupConfig).build(),
+        metadataStoreManagementPeriod,
+        "[druid.coordinator.kill.datasource.period] must be greater than"
+        + " [druid.coordinator.period.metadataStoreManagementPeriod]"
+    );
+    verifyCoordinatorConfigFailsWith(
+        killConfig().rules(cleanupConfig).build(),
+        metadataStoreManagementPeriod,
+        "[druid.coordinator.kill.rule.period] must be greater than"
+        + " [druid.coordinator.period.metadataStoreManagementPeriod]"
+    );
+    verifyCoordinatorConfigFailsWith(
+        killConfig().supervisors(cleanupConfig).build(),
+        metadataStoreManagementPeriod,
+        "[druid.coordinator.kill.supervisor.period] must be greater than"
+        + " [druid.coordinator.period.metadataStoreManagementPeriod]"
+    );
+  }
+
+  @Test
+  public void testCoordinatorConfigFailsWhenRetainDurationIsNegative()
+  {
+    final MetadataCleanupConfig cleanupConfig
+        = new MetadataCleanupConfig(true, null, Duration.standardDays(1).negated());
+    verifyCoordinatorConfigFailsWith(
+        killConfig().audit(cleanupConfig).build(),
+        null,
+        "[druid.coordinator.kill.audit.durationToRetain] must be 0 milliseconds or higher"
+    );
+    verifyCoordinatorConfigFailsWith(
+        killConfig().compaction(cleanupConfig).build(),
+        null,
+        "[druid.coordinator.kill.compaction.durationToRetain] must be 0 milliseconds or higher"
+    );
+    verifyCoordinatorConfigFailsWith(
+        killConfig().datasource(cleanupConfig).build(),
+        null,
+        "[druid.coordinator.kill.datasource.durationToRetain] must be 0 milliseconds or higher"
+    );
+    verifyCoordinatorConfigFailsWith(
+        killConfig().rules(cleanupConfig).build(),
+        null,
+        "[druid.coordinator.kill.rule.durationToRetain] must be 0 milliseconds or higher"
+    );
+    verifyCoordinatorConfigFailsWith(
+        killConfig().supervisors(cleanupConfig).build(),
+        null,
+        "[druid.coordinator.kill.supervisor.durationToRetain] must be 0 milliseconds or higher"
+    );
+  }
+
+  @Test
+  public void testCoordinatorConfigFailsWhenRetainDurationIsHigherThanCurrentTime()
+  {
+    final Duration futureDuration = Duration.millis(System.currentTimeMillis()).plus(10_000);
+    final MetadataCleanupConfig cleanupConfig = new MetadataCleanupConfig(true, null, futureDuration);
+    verifyCoordinatorConfigFailsWith(
+        killConfig().audit(cleanupConfig).build(),
+        null,
+        "[druid.coordinator.kill.audit.durationToRetain] cannot be greater than current time in milliseconds"
+    );
+    verifyCoordinatorConfigFailsWith(
+        killConfig().compaction(cleanupConfig).build(),
+        null,
+        "[druid.coordinator.kill.compaction.durationToRetain] cannot be greater than current time in milliseconds"
+    );
+    verifyCoordinatorConfigFailsWith(
+        killConfig().datasource(cleanupConfig).build(),
+        null,
+        "[druid.coordinator.kill.datasource.durationToRetain] cannot be greater than current time in milliseconds"
+    );
+    verifyCoordinatorConfigFailsWith(
+        killConfig().rules(cleanupConfig).build(),
+        null,
+        "[druid.coordinator.kill.rule.durationToRetain] cannot be greater than current time in milliseconds"
+    );
+    verifyCoordinatorConfigFailsWith(
+        killConfig().supervisors(cleanupConfig).build(),
+        null,
+        "[druid.coordinator.kill.supervisor.durationToRetain] cannot be greater than current time in milliseconds"
+    );
+  }
+
+  private KillConfigBuilder killConfig()
+  {
+    return new KillConfigBuilder();
+  }
+
+  private void verifyCoordinatorConfigFailsWith(
+      CoordinatorKillConfigs killConfig,
+      Duration metadataStoreManagementPeriod,
+      String expectedMessage
+  )
+  {
+    IllegalArgumentException exception = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> new DruidCoordinatorConfig(
+            new CoordinatorRunConfig(null, null),
+            new CoordinatorPeriodConfig(metadataStoreManagementPeriod, null),
+            killConfig,
+            null,
+            null
+        )
+    );
+    Assert.assertEquals(expectedMessage, exception.getMessage());
+  }
+
+  private Injector createInjector(String propertyPrefix, Class<?> clazz)
+  {
+    return GuiceInjectors.makeStartupInjectorWithModules(
+        ImmutableList.of(
+            binder -> JsonConfigProvider.bind(binder, propertyPrefix, clazz)
+        )
+    );
+  }
+
+  private <T> T deserializeFrom(Properties props, String propertyPrefix, Class<T> type)
+  {
+    final Injector injector = createInjector(propertyPrefix, type);
+    final JsonConfigProvider<T> provider = JsonConfigProvider.of(propertyPrefix, type);
+    provider.inject(props, injector.getInstance(JsonConfigurator.class));
+    return provider.get();
+  }
+
+  private static class KillConfigBuilder
+  {
+    MetadataCleanupConfig audit;
+    MetadataCleanupConfig compaction;
+    MetadataCleanupConfig datasource;
+    MetadataCleanupConfig rules;
+    MetadataCleanupConfig supervisors;
+    MetadataCleanupConfig pendingSegments;
+
+    KillConfigBuilder audit(MetadataCleanupConfig config)
+    {
+      this.audit = config;
+      return this;
+    }
+
+    KillConfigBuilder compaction(MetadataCleanupConfig config)
+    {
+      this.compaction = config;
+      return this;
+    }
+
+    KillConfigBuilder datasource(MetadataCleanupConfig config)
+    {
+      this.datasource = config;
+      return this;
+    }
+
+    KillConfigBuilder rules(MetadataCleanupConfig config)
+    {
+      this.rules = config;
+      return this;
+    }
+
+    KillConfigBuilder supervisors(MetadataCleanupConfig config)
+    {
+      this.supervisors = config;
+      return this;
+    }
+
+    CoordinatorKillConfigs build()
+    {
+      return new CoordinatorKillConfigs(
+          pendingSegments,
+          supervisors,
+          audit,
+          datasource,
+          rules,
+          compaction,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+      );
+    }
   }
 }
