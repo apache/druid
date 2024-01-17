@@ -289,8 +289,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   @Rule(order = 1)
   public ExpectedException expectedException = ExpectedException.none();
 
-  @ClassRule
-  public static TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @Rule(order = 2)
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   public boolean cannotVectorize = false;
   public boolean skipVectorize = false;
@@ -309,13 +309,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public BaseCalciteQueryTest(@Nullable final SqlEngine engine)
   {
     this.engine0 = engine;
-    try {
-      baseComponentSupplier = new StandardComponentSupplier(
-          temporaryFolder.newFolder()
-      );
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
   }
 
   static {
@@ -639,7 +632,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   @ClassRule
   public static SqlTestFrameworkConfig.ClassRule queryFrameworkClassRule = new SqlTestFrameworkConfig.ClassRule();
 
-  @Rule
+  @Rule(order = 3)
   public SqlTestFrameworkConfig.MethodRule queryFrameworkRule = queryFrameworkClassRule.methodRule(this);
 
   public SqlTestFramework queryFramework()
@@ -674,6 +667,13 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   @Override
   public void gatherProperties(Properties properties)
   {
+    try {
+      baseComponentSupplier = new StandardComponentSupplier(
+          temporaryFolder.newFolder()
+      );
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
     baseComponentSupplier.gatherProperties(properties);
   }
 
