@@ -24,14 +24,14 @@
     &.dimension {
       background: rgba($green3, 0.3);
 
-      &.long {
-        background: rgba($blue3, 0.3);
-      }
-      &.float {
-        background: rgba($blue3, 0.3);
-      }
+      &.long,
+      &.float,
       &.double {
         background: rgba($blue3, 0.3);
+      }
+
+      &.array {
+        background: rgba($orange4, 0.3);
       }
     }
 
@@ -44,14 +44,14 @@
     &.dimension {
       background: rgba($green3, 0.12);
 
-      &.long {
-        background: rgba($blue3, 0.1);
-      }
-      &.float {
-        background: rgba($blue3, 0.1);
-      }
+      &.long,
+      &.float,
       &.double {
         background: rgba($blue3, 0.1);
+      }
+
+      &.array {
+        background: rgba($orange4, 0.1);
       }
     }
 

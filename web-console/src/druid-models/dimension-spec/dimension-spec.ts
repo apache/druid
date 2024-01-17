@@ -85,8 +85,25 @@ export function getDimensionSpecName(dimensionSpec: string | DimensionSpec): str
   return typeof dimensionSpec === 'string' ? dimensionSpec : dimensionSpec.name;
 }
 
-export function getDimensionSpecType(dimensionSpec: string | DimensionSpec): string {
-  return typeof dimensionSpec === 'string' ? 'string' : dimensionSpec.type;
+export function getDimensionSpecColumnType(dimensionSpec: string | DimensionSpec): string {
+  if (typeof dimensionSpec === 'string') return 'string';
+  if (dimensionSpec.type !== 'auto') return dimensionSpec.type;
+  return dimensionSpec.castToType ?? 'auto';
+}
+
+export function getDimensionSpecUserType(dimensionSpec: string | DimensionSpec): string {
+  if (typeof dimensionSpec === 'string') return 'string';
+  if (dimensionSpec.type !== 'auto') return dimensionSpec.type;
+  return dimensionSpec.castToType ?? 'auto';
+}
+
+export function getDimensionSpecClassType(
+  dimensionSpec: string | DimensionSpec,
+): string | undefined {
+  if (typeof dimensionSpec === 'string') return 'string';
+  if (dimensionSpec.type !== 'auto') return dimensionSpec.type;
+  if (String(dimensionSpec.castToType).startsWith('ARRAY')) return 'array';
+  return dimensionSpec.castToType?.toLowerCase();
 }
 
 export function inflateDimensionSpec(dimensionSpec: string | DimensionSpec): DimensionSpec {
@@ -97,26 +114,26 @@ export function inflateDimensionSpec(dimensionSpec: string | DimensionSpec): Dim
 
 export function getDimensionSpecs(
   sampleResponse: SampleResponse,
-  typeHints: Record<string, string>,
+  columnTypeHints: Record<string, string>,
   guessNumericStringsAsNumbers: boolean,
   hasRollup: boolean,
 ): (string | DimensionSpec)[] {
   return filterMap(getHeaderNamesFromSampleResponse(sampleResponse, 'ignore'), h => {
-    const dimensionType =
-      typeHints[h] ||
+    const columnType =
+      columnTypeHints[h] ||
       guessColumnTypeFromSampleResponse(sampleResponse, h, guessNumericStringsAsNumbers);
-    if (dimensionType === 'string') return h;
-    if (dimensionType.startsWith('ARRAY')) {
+    if (columnType === 'string') return h;
+    if (columnType.startsWith('ARRAY')) {
       return {
         type: 'auto',
         name: h,
-        castToType: dimensionType.toUpperCase(),
+        castToType: columnType.toUpperCase(),
       };
     }
 
     if (hasRollup) return;
     return {
-      type: dimensionType === 'COMPLEX<json>' ? 'json' : dimensionType,
+      type: columnType === 'COMPLEX<json>' ? 'json' : columnType,
       name: h,
     };
   });

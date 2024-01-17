@@ -46,9 +46,9 @@ import {
 import type { SampleResponse } from '../../utils/sampler';
 import type { DimensionsSpec } from '../dimension-spec/dimension-spec';
 import {
+  getDimensionSpecColumnType,
   getDimensionSpecName,
   getDimensionSpecs,
-  getDimensionSpecType,
 } from '../dimension-spec/dimension-spec';
 import type { IndexSpec } from '../index-spec/index-spec';
 import { summarizeIndexSpec } from '../index-spec/index-spec';
@@ -2401,10 +2401,6 @@ function checkArray(array: any[], checkFn: (x: any) => boolean): boolean {
   return array.every(as => checkFn(as) || (Array.isArray(as) && as.every(checkFn)));
 }
 
-function isStringOrNull(x: any): boolean {
-  return x == null || typeof x === 'string';
-}
-
 function isIntegerOrNull(x: any): boolean {
   return x == null || (typeof x === 'number' && Number.isInteger(x));
 }
@@ -2452,11 +2448,7 @@ export function guessColumnTypeFromInput(
       }
     }
 
-    if (checkArray(definedValues, isStringOrNull)) {
-      return 'ARRAY<string>';
-    }
-
-    return 'string';
+    return 'ARRAY<string>';
   }
 
   // If we see any JSON objects in the input assume COMPLEX<json>
@@ -2498,11 +2490,12 @@ export function inputFormatOutputsNumericStrings(inputFormat: InputFormat | unde
   return oneOf(inputFormat?.type, 'csv', 'tsv', 'regex');
 }
 
-function getTypeHintsFromSpec(spec: Partial<IngestionSpec>): Record<string, string> {
-  const typeHints: Record<string, string> = {};
+function getColumnTypeHintsFromSpec(spec: Partial<IngestionSpec>): Record<string, string> {
+  const columnTypeHints: Record<string, string> = {};
   const currentDimensions = deepGet(spec, 'spec.dataSchema.dimensionsSpec.dimensions') || [];
   for (const currentDimension of currentDimensions) {
-    typeHints[getDimensionSpecName(currentDimension)] = getDimensionSpecType(currentDimension);
+    columnTypeHints[getDimensionSpecName(currentDimension)] =
+      getDimensionSpecColumnType(currentDimension);
   }
 
   const currentMetrics = deepGet(spec, 'spec.dataSchema.metricsSpec') || [];
@@ -2510,11 +2503,11 @@ function getTypeHintsFromSpec(spec: Partial<IngestionSpec>): Record<string, stri
     const singleFieldName = getMetricSpecSingleFieldName(currentMetric);
     const metricOutputType = getMetricSpecOutputType(currentMetric);
     if (singleFieldName && metricOutputType) {
-      typeHints[singleFieldName] = metricOutputType;
+      columnTypeHints[singleFieldName] = metricOutputType;
     }
   }
 
-  return typeHints;
+  return columnTypeHints;
 }
 
 export function updateSchemaWithSample(
@@ -2524,7 +2517,7 @@ export function updateSchemaWithSample(
   rollup: boolean,
   forcePartitionInitialization = false,
 ): Partial<IngestionSpec> {
-  const typeHints = getTypeHintsFromSpec(spec);
+  const columnTypeHints = getColumnTypeHintsFromSpec(spec);
   const guessNumericStringsAsNumbers = inputFormatOutputsNumericStrings(
     deepGet(spec, 'spec.ioConfig.inputFormat'),
   );
@@ -2553,7 +2546,7 @@ export function updateSchemaWithSample(
       newSpec = deepSet(
         newSpec,
         'spec.dataSchema.dimensionsSpec.dimensions',
-        getDimensionSpecs(sampleResponse, typeHints, guessNumericStringsAsNumbers, rollup),
+        getDimensionSpecs(sampleResponse, columnTypeHints, guessNumericStringsAsNumbers, rollup),
       );
       break;
   }
@@ -2561,7 +2554,7 @@ export function updateSchemaWithSample(
   if (rollup) {
     newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec.queryGranularity', 'hour');
 
-    const metrics = getMetricSpecs(sampleResponse, typeHints, guessNumericStringsAsNumbers);
+    const metrics = getMetricSpecs(sampleResponse, columnTypeHints, guessNumericStringsAsNumbers);
     if (metrics) {
       newSpec = deepSet(newSpec, 'spec.dataSchema.metricsSpec', metrics);
     }
