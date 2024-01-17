@@ -467,7 +467,8 @@ public class SqlSegmentsMetadataQuery
     }
 
     // Add the used_status_last_updated time filter only for unused segments when maxUsedFlagLastUpdatedTime is non-null.
-    if (!used && maxUsedFlagLastUpdatedTime != null) {
+    final boolean addMaxUsedLastUpdatedTimeFilter = !used && maxUsedFlagLastUpdatedTime != null;
+    if (addMaxUsedLastUpdatedTimeFilter) {
       sb.append(" AND (used_status_last_updated IS NOT NULL AND used_status_last_updated <= :used_status_last_updated)");
     }
 
@@ -496,7 +497,7 @@ public class SqlSegmentsMetadataQuery
         .bind("used", used)
         .bind("dataSource", dataSource);
 
-    if (!used && maxUsedFlagLastUpdatedTime != null) {
+    if (addMaxUsedLastUpdatedTimeFilter) {
       sql.bind("used_status_last_updated", maxUsedFlagLastUpdatedTime.toString());
     }
 

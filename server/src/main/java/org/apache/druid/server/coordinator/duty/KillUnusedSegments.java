@@ -137,8 +137,8 @@ public class KillUnusedSegments implements CoordinatorDuty
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
     if (!canDutyRun()) {
-      log.info(
-          "Skipping KillUnusedSegments until period[%s] have elapsed after last kill time[%s].",
+      log.debug(
+          "Skipping KillUnusedSegments until period[%s] have elapsed after lastKillTime[%s].",
           Duration.ofMillis(period),
           lastKillTime
       );
@@ -207,7 +207,7 @@ public class KillUnusedSegments implements CoordinatorDuty
     if (0 < availableKillTaskSlots && !CollectionUtils.isNullOrEmpty(dataSourcesToKill)) {
       for (String dataSource : dataSourcesToKill) {
         if (submittedTasks >= availableKillTaskSlots) {
-          log.info(StringUtils.format(
+          log.debug(StringUtils.format(
               "Submitted [%d] kill tasks and reached kill task slot limit [%d]. Will resume "
               + "on the next coordinator cycle.", submittedTasks, availableKillTaskSlots));
           break;
@@ -243,7 +243,7 @@ public class KillUnusedSegments implements CoordinatorDuty
       }
     }
 
-    if (!log.isDebugEnabled()) {
+    if (log.isDebugEnabled()) {
       log.debug(
           "Submitted [%d] kill tasks for [%d] datasources.%s",
           submittedTasks,
