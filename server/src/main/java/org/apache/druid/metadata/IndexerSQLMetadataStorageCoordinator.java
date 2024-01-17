@@ -2707,6 +2707,22 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     );
   }
 
+  @Override
+  public int deleteUpgradeSegmentsForTask(final String taskId)
+  {
+    return connector.getDBI().inTransaction(
+        (handle, status) -> handle
+            .createStatement(
+                StringUtils.format(
+                    "DELETE FROM %s WHERE task_id = :task_id",
+                    dbTables.getUpgradeSegmentsTable()
+                )
+            )
+            .bind("task_id", taskId)
+            .execute()
+    );
+  }
+
   private static class PendingSegmentsRecord
   {
     private final String sequenceName;

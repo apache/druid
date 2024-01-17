@@ -1919,6 +1919,36 @@ public class TaskLockboxTest
     Assert.assertTrue(testLockbox.getAllLocks().isEmpty());
   }
 
+  @Test
+  public void testUpgradeSegmentsCleanupOnUnlock()
+  {
+    final Task replaceTask = NoopTask.create();
+    final Task appendTask = NoopTask.create();
+    final IndexerSQLMetadataStorageCoordinator coordinator
+        = EasyMock.createMock(IndexerSQLMetadataStorageCoordinator.class);
+    // Only the replaceTask should attempt a delete on the upgradeSegments table
+    EasyMock.expect(coordinator.deleteUpgradeSegmentsForTask(replaceTask.getId())).andReturn(0).once();
+    EasyMock.replay(coordinator);
+
+    final TaskLockbox taskLockbox = new TaskLockbox(taskStorage, coordinator);
+
+    taskLockbox.add(replaceTask);
+    taskLockbox.tryLock(
+        replaceTask,
+        new TimeChunkLockRequest(TaskLockType.REPLACE, replaceTask, Intervals.of("2024/2025"), "v0")
+    );
+
+    taskLockbox.add(appendTask);
+    taskLockbox.tryLock(
+        appendTask,
+        new TimeChunkLockRequest(TaskLockType.APPEND, appendTask, Intervals.of("2024/2025"), "v0")
+    );
+
+    taskLockbox.remove(replaceTask);
+    taskLockbox.remove(appendTask);
+
+    EasyMock.verify(coordinator);
+  }
 
   private class TaskLockboxValidator
   {
