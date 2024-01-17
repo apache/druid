@@ -30,7 +30,7 @@
     <parent>
         <artifactId>druid</artifactId>
         <groupId>org.apache.druid</groupId>
-        <version>28.0.0-SNAPSHOT</version>
+        <version>29.0.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -450,6 +450,8 @@
                                         <argument>org.apache.druid.extensions.contrib:opentelemetry-emitter</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-iceberg-extensions</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-spectator-histogram</argument>
                                     </arguments>
                                 </configuration>
                             </execution>

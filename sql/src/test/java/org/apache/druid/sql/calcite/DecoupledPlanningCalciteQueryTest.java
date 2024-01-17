@@ -22,16 +22,24 @@ package org.apache.druid.sql.calcite;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
+<<<<<<< HEAD
 import org.junit.Ignore;
+=======
+import org.junit.Rule;
+>>>>>>> apache/master
 
 public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
 {
+
+  @Rule(order = 0)
+  public NotYetSupportedProcessor decoupledIgnoreProcessor = new NotYetSupportedProcessor();
+
   private static final ImmutableMap<String, Object> CONTEXT_OVERRIDES = ImmutableMap.of(
       PlannerConfig.CTX_NATIVE_QUERY_SQL_PLANNING_MODE, PlannerConfig.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED,
-      QueryContexts.ENABLE_DEBUG, true
-  );
+      QueryContexts.ENABLE_DEBUG, true);
 
   @Override
   protected QueryTestBuilder testBuilder()
@@ -49,6 +57,7 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
         .cannotVectorize(cannotVectorize)
         .skipVectorize(skipVectorize);
   }
+<<<<<<< HEAD
 
 
   @Override
@@ -273,4 +282,6 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
   {
 
   }
+=======
+>>>>>>> apache/master
 }

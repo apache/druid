@@ -29,8 +29,7 @@ To use this Apache Druid extension, [include](../../configuration/extensions.md#
 
 This extension exposes [Druid metrics](https://druid.apache.org/docs/latest/operations/metrics.html) for collection by a Prometheus server (https://prometheus.io/).
 
-Emitter is enabled by setting `druid.emitter=prometheus` [configs](https://druid.apache.org/docs/latest/configuration/index.html#enabling-metrics) or include `prometheus` in the composing emitter list. 
-
+Emitter is enabled by setting `druid.emitter=prometheus` [configs](https://druid.apache.org/docs/latest/configuration/index.html#enabling-metrics) or include `prometheus` in the composing emitter list.
 
 ## Configuration
 
@@ -47,6 +46,8 @@ All the configuration parameters for the Prometheus emitter are under `druid.emi
 | `druid.emitter.prometheus.pushGatewayAddress` | Pushgateway address. Required if using `pushgateway` strategy.                                                                                                                                                                         | no        | none                                 |
 | `druid.emitter.prometheus.flushPeriod`        | Emit metrics to Pushgateway every `flushPeriod` seconds. Required if `pushgateway` strategy is used.                                                                                                                                   | no        | 15                                   |
 | `druid.emitter.prometheus.extraLabels`        | JSON key-value pairs for additional labels on all metrics. Keys (label names) must match the regex `[a-zA-Z_:][a-zA-Z0-9_:]*`. Example: `{"cluster_name": "druid_cluster1", "env": "staging"}`.                                        | no        | none                                 |
+| `druid.emitter.prometheus.deletePushGatewayMetricsOnShutdown` | Flag to delete metrics from Pushgateway on task shutdown. Works only if `pushgateway` strategy is used. This feature allows to delete a stale metrics from batch executed tasks. Otherwise, the Pushgateway will store these stale metrics indefinitely as there is [no time to live mechanism](https://github.com/prometheus/pushgateway/issues/117), using the memory to hold data that was already scraped by Prometheus. | no | false |
+| `druid.emitter.prometheus.waitForShutdownDelay` | Time in milliseconds to wait for peon tasks to delete metrics from the Pushgateway on shutdown (e.g. 60_000). Applicable only when `pushgateway` strategy is used and `deletePushGatewayMetricsOnShutdown` is set to true. There is no guarantee that a peon task will delete metrics from the gateway if the configured delay is more than the [Peon's `druid.indexer.task.gracefulShutdownTimeout`](https://druid.apache.org/docs/latest/configuration/#additional-peon-configuration) value. For best results, set this value is 1.2 times the configured Prometheus `scrape_interval` of Pushgateway to ensure that  Druid scrapes the metrics before cleanup. | no | none |
 
 ### Ports for colocated Druid processes
 
@@ -107,8 +108,8 @@ For metrics which are emitted from multiple services with different dimensions, 
 the service name. For example:
 
 ```json
-"coordinator-segment/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
-"historical-segment/count" : { "dimensions" : ["dataSource", "tier", "priority"], "type" : "gauge" }
+"druid/coordinator-segment/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
+"druid/historical-segment/count" : { "dimensions" : ["dataSource", "tier", "priority"], "type" : "gauge" }
 ```
- 
+
 For most use cases, the default mapping is sufficient.

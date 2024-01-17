@@ -78,7 +78,6 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
 
   private final PartialSegmentMergeIOConfig ioConfig;
   private final int numAttempts;
-  private final String supervisorTaskId;
   private final String subtaskSpecId;
 
   PartialSegmentMergeTask(
@@ -101,7 +100,8 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
         taskResource,
         dataSchema,
         tuningConfig,
-        context
+        context,
+        supervisorTaskId
     );
 
     Preconditions.checkArgument(
@@ -111,19 +111,12 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
     this.subtaskSpecId = subtaskSpecId;
     this.ioConfig = ioConfig;
     this.numAttempts = numAttempts;
-    this.supervisorTaskId = supervisorTaskId;
   }
 
   @JsonProperty
   public int getNumAttempts()
   {
     return numAttempts;
-  }
-
-  @JsonProperty
-  public String getSupervisorTaskId()
-  {
-    return supervisorTaskId;
   }
 
   @JsonProperty
@@ -151,7 +144,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
     }
 
     final List<TaskLock> locks = toolbox.getTaskActionClient().submit(
-        new SurrogateAction<>(supervisorTaskId, new LockListAction())
+        new SurrogateAction<>(getSupervisorTaskId(), new LockListAction())
     );
     final Map<Interval, String> intervalToVersion = Maps.newHashMapWithExpectedSize(locks.size());
     locks.forEach(lock -> {
@@ -179,7 +172,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
     LOG.info("Fetch took [%s] seconds", fetchTime);
 
     final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientProvider().build(
-        supervisorTaskId,
+        getSupervisorTaskId(),
         getTuningConfig().getChatHandlerTimeout(),
         getTuningConfig().getChatHandlerNumRetries()
     );
@@ -225,7 +218,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
         );
         FileUtils.mkdirp(partitionDir);
         for (PartitionLocation location : entryPerBucketId.getValue()) {
-          final File unzippedDir = toolbox.getShuffleClient().fetchSegmentFile(partitionDir, supervisorTaskId, location);
+          final File unzippedDir = toolbox.getShuffleClient().fetchSegmentFile(partitionDir, getSupervisorTaskId(), location);
           intervalToUnzippedFiles.computeIfAbsent(interval, k -> new Int2ObjectOpenHashMap<>())
               .computeIfAbsent(bucketId, k -> new ArrayList<>())
               .add(unzippedDir);

@@ -17,7 +17,7 @@
 # under the License.
 #
 
-ARG JDK_VERSION=11
+ARG JDK_VERSION=17
 
 # The platform is explicitly specified as x64 to build the Druid distribution.
 # This is because it's not able to build the distribution on arm64 due to dependency problem of web-console. See: https://github.com/apache/druid/issues/13012
@@ -49,17 +49,8 @@ RUN --mount=type=cache,target=/root/.m2 VERSION=$(mvn -B -q org.apache.maven.plu
  && tar -zxf ./distribution/target/apache-druid-${VERSION}-bin.tar.gz -C /opt \
  && mv /opt/apache-druid-${VERSION} /opt/druid
 
-FROM busybox:1.34.1-glibc as busybox
-
-FROM gcr.io/distroless/java$JDK_VERSION-debian11
-LABEL maintainer="Apache Druid Developers <dev@druid.apache.org>"
-
-COPY --from=busybox /bin/busybox /busybox/busybox
-RUN ["/busybox/busybox", "--install", "/bin"]
-
-# Predefined builtin arg, see: https://docs.docker.com/engine/reference/builder/#automatic-platform-args-in-the-global-scope
+FROM alpine:3 as bash-static
 ARG TARGETARCH
-
 #
 # Download bash-static binary to execute scripts that require bash.
 # Although bash-static supports multiple platforms, but there's no need for us to support all those platform, amd64 and arm64 are enough.
@@ -73,11 +64,23 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
       echo "Unsupported architecture ($TARGETARCH)" && exit 1; \
     fi; \
     echo "Downloading bash-static from ${BASH_URL}" \
-    && wget ${BASH_URL} -O /bin/bash \
-    && chmod 755 /bin/bash
+    && wget ${BASH_URL} -O /bin/bash
+
+FROM busybox:1.35.0-glibc as busybox
+
+FROM gcr.io/distroless/java$JDK_VERSION-debian12
+LABEL maintainer="Apache Druid Developers <dev@druid.apache.org>"
+
+COPY --from=busybox /bin/busybox /busybox/busybox
+RUN ["/busybox/busybox", "--install", "/bin"]
+
 
 RUN addgroup -S -g 1000 druid \
  && adduser -S -u 1000 -D -H -h /opt/druid -s /bin/sh -g '' -G druid druid
+
+
+COPY --from=bash-static /bin/bash /bin/bash
+RUN chmod 755 /bin/bash
 
 COPY --chown=druid:druid --from=builder /opt /opt
 COPY distribution/docker/druid.sh /druid.sh

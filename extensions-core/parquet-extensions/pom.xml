@@ -27,13 +27,13 @@
   <parent>
     <artifactId>druid</artifactId>
     <groupId>org.apache.druid</groupId>
-    <version>28.0.0-SNAPSHOT</version>
+    <version>29.0.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
   <properties>
-    <parquet.version>1.12.0</parquet.version>
+    <parquet.version>1.13.1</parquet.version>
   </properties>
   <dependencies>
     <dependency>
@@ -161,6 +161,11 @@
       <groupId>org.apache.avro</groupId>
       <artifactId>avro</artifactId>
       <version>${avro.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.github.rvesse</groupId>
+      <artifactId>airline</artifactId>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>junit</groupId>

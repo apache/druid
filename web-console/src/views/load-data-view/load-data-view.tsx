@@ -3159,6 +3159,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 name: 'spec.ioConfig.appendToExisting',
                 label: 'Append to existing',
                 type: 'boolean',
+                defined: s => !isStreamingSpec(s),
                 defaultValue: false,
                 // appendToExisting can only be set on 'dynamic' portioning.
                 // We chose to show it always and instead have a specific message, separate from this form, to notify the user of the issue.
@@ -3172,6 +3173,23 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             ]}
             model={spec}
             onChange={this.updateSpec}
+          />
+          <Switch
+            label="Allow concurrent tasks (experimental)"
+            checked={typeof deepGet(spec, 'context.taskLockType') === 'string'}
+            onChange={() => {
+              this.updateSpec(
+                typeof deepGet(spec, 'context.taskLockType') === 'string'
+                  ? deepDelete(spec, 'context.taskLockType')
+                  : deepSet(
+                      spec,
+                      'context.taskLockType',
+                      isStreamingSpec(spec) || deepGet(spec, 'spec.ioConfig.appendToExisting')
+                        ? 'APPEND'
+                        : 'REPLACE',
+                    ),
+              );
+            }}
           />
         </div>
         <div className="other">

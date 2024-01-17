@@ -59,10 +59,10 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.sql.guice.SqlModule;
 import org.apache.druid.timeline.DataSegment;
@@ -278,7 +278,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
 
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
-            1L
+            1.0
         }
     );
 
@@ -334,11 +334,11 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .setAggregatorSpecs(
                             NullHandling.replaceWithDefault()
                             ? Arrays.asList(
-                                new LongSumAggregatorFactory("_a0:sum", "a0"),
+                                new DoubleSumAggregatorFactory("_a0:sum", "a0"),
                                 new CountAggregatorFactory("_a0:count")
                             )
                             : Arrays.asList(
-                                new LongSumAggregatorFactory("_a0:sum", "a0"),
+                                new DoubleSumAggregatorFactory("_a0:sum", "a0"),
                                 new FilteredAggregatorFactory(
                                     new CountAggregatorFactory("_a0:count"),
                                     notNull("a0")

@@ -32,11 +32,10 @@ import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
-import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
 import org.apache.druid.segment.index.AllTrueBitmapColumnIndex;
+import org.apache.druid.segment.index.AllUnknownBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.semantic.LexicographicalRangeIndexes;
 import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
@@ -77,9 +76,9 @@ public class LikeFilter implements Filter
     final ColumnIndexSupplier indexSupplier = selector.getIndexSupplier(dimension);
     if (indexSupplier == null) {
       // Treat this as a column full of nulls
-      return likeMatcher.matches(null)
+      return likeMatcher.matches(null).matches(false)
              ? new AllTrueBitmapColumnIndex(selector)
-             : new AllFalseBitmapColumnIndex(selector);
+             : new AllUnknownBitmapColumnIndex(selector);
     }
     if (isSimpleEquals()) {
       StringValueSetIndexes valueIndexes = indexSupplier.as(StringValueSetIndexes.class);
@@ -164,12 +163,6 @@ public class LikeFilter implements Filter
         likeMatcher,
         filterTuning
     );
-  }
-
-  @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
-  {
-    return Filters.supportsSelectivityEstimation(this, dimension, columnSelector, indexSelector);
   }
 
   /**

@@ -43,6 +43,7 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.topn.DimensionTopNMetricSpec;
 import org.apache.druid.query.topn.InvertedTopNMetricSpec;
 import org.apache.druid.query.topn.TopNQueryBuilder;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -366,17 +367,17 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .granularity(Granularities.ALL)
                 .aggregators(aggregators(new CountAggregatorFactory("a0")))
                 .postAggregators(
-                    expressionPostAgg("p0", "'foo'"),
-                    expressionPostAgg("p1", "'xfoo'"),
-                    expressionPostAgg("p2", "'foo'"),
-                    expressionPostAgg("p3", "' foo'"),
-                    expressionPostAgg("p4", "'foo'"),
-                    expressionPostAgg("p5", "'foo'"),
-                    expressionPostAgg("p6", "'foo'"),
-                    expressionPostAgg("p7", "'foo '"),
-                    expressionPostAgg("p8", "'foox'"),
-                    expressionPostAgg("p9", "' foo'"),
-                    expressionPostAgg("p10", "'xfoo'")
+                    expressionPostAgg("p0", "'foo'", ColumnType.STRING),
+                    expressionPostAgg("p1", "'xfoo'", ColumnType.STRING),
+                    expressionPostAgg("p2", "'foo'", ColumnType.STRING),
+                    expressionPostAgg("p3", "' foo'", ColumnType.STRING),
+                    expressionPostAgg("p4", "'foo'", ColumnType.STRING),
+                    expressionPostAgg("p5", "'foo'", ColumnType.STRING),
+                    expressionPostAgg("p6", "'foo'", ColumnType.STRING),
+                    expressionPostAgg("p7", "'foo '", ColumnType.STRING),
+                    expressionPostAgg("p8", "'foox'", ColumnType.STRING),
+                    expressionPostAgg("p9", "' foo'", ColumnType.STRING),
+                    expressionPostAgg("p10", "'xfoo'", ColumnType.STRING)
                 )
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
@@ -407,12 +408,12 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .granularity(Granularities.ALL)
                 .aggregators(aggregators(new CountAggregatorFactory("a0")))
                 .postAggregators(
-                    expressionPostAgg("p0", "'xxfoo'"),
-                    expressionPostAgg("p1", "'fo'"),
-                    expressionPostAgg("p2", "'  foo'"),
-                    expressionPostAgg("p3", "'fooxx'"),
-                    expressionPostAgg("p4", "'fo'"),
-                    expressionPostAgg("p5", "'foo  '")
+                    expressionPostAgg("p0", "'xxfoo'", ColumnType.STRING),
+                    expressionPostAgg("p1", "'fo'", ColumnType.STRING),
+                    expressionPostAgg("p2", "'  foo'", ColumnType.STRING),
+                    expressionPostAgg("p3", "'fooxx'", ColumnType.STRING),
+                    expressionPostAgg("p4", "'fo'", ColumnType.STRING),
+                    expressionPostAgg("p5", "'foo  '", ColumnType.STRING)
                 )
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
@@ -623,10 +624,17 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         "SELECT distinct dim1 FROM druid.foo WHERE substring(substring(dim1, 2), 1, 1) = 'e' OR dim2 = 'a'",
         ImmutableList.of(
             GroupByQuery.builder()
-                .setDataSource(CalciteTests.DATASOURCE1)
-                .setInterval(querySegmentSpec(Filtration.eternity()))
-                .setGranularity(Granularities.ALL)
-                .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
+                        .setVirtualColumns(
+                            NullHandling.replaceWithDefault()
+                            ? VirtualColumns.EMPTY
+                            : VirtualColumns.create(
+                                expressionVirtualColumn("v0", "substring(substring(\"dim1\", 1, -1), 0, 1)", ColumnType.STRING)
+                            )
+                        )
                 .setDimFilter(
                     or(
                         NullHandling.replaceWithDefault()
@@ -638,7 +646,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                                 new SubstringDimExtractionFn(0, 1)
                             )
                         )
-                        : expressionFilter("(substring(substring(\"dim1\", 1, -1), 0, 1) == 'e')"),
+                        : equality("v0", "e", ColumnType.STRING),
                         equality("dim2", "a", ColumnType.STRING)
                     )
                 )
@@ -1005,7 +1013,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                                    new DoubleSumAggregatorFactory("a1", "m2")
                                ))
                                .postAggregators(
-                                   expressionPostAgg("p0", "(exp(\"a0\") + 10)")
+                                   expressionPostAgg("p0", "(exp(\"a0\") + 10)", ColumnType.DOUBLE)
                                )
                                .context(QUERY_CONTEXT_DEFAULT)
                                .build()),
@@ -1030,7 +1038,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 new DoubleSumAggregatorFactory("a1", "m2")
             ))
             .postAggregators(
-                expressionPostAgg("p0", "(exp(\"a0\") + 10)")
+                expressionPostAgg("p0", "(exp(\"a0\") + 10)", ColumnType.DOUBLE)
             )
             .context(QUERY_CONTEXT_DEFAULT)
             .build()),
@@ -1090,10 +1098,10 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{"a", "xa"},
             new Object[]{"abc", "xabc"},
-            new Object[]{"nosuchkey", "mysteryvalue"},
-            new Object[]{"6", "x6"}
+            new Object[]{"6", "x6"},
+            new Object[]{"a", "xa"},
+            new Object[]{"nosuchkey", "mysteryvalue"}
         )
     );
   }

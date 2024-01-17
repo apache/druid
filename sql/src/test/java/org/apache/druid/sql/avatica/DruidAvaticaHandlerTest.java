@@ -63,6 +63,7 @@ import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.RequestLogLine;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.log.TestRequestLogger;
@@ -88,7 +89,6 @@ import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
-import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.guice.SqlModule;
 import org.eclipse.jetty.server.Server;
 import org.joda.time.DateTime;
@@ -581,7 +581,13 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             ),
             row(
                 Pair.of("TABLE_CAT", "druid"),
-                Pair.of("TABLE_NAME", "wikipedia"),
+                Pair.of("TABLE_NAME", CalciteTests.WIKIPEDIA),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
+            ),
+            row(
+                Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.WIKIPEDIA_FIRST_LAST),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
             )
@@ -661,7 +667,13 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             ),
             row(
                 Pair.of("TABLE_CAT", "druid"),
-                Pair.of("TABLE_NAME", "wikipedia"),
+                Pair.of("TABLE_NAME", CalciteTests.WIKIPEDIA),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
+            ),
+            row(
+                Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.WIKIPEDIA_FIRST_LAST),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
             )

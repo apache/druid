@@ -35,6 +35,8 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.SegmentLoaderConfig;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
@@ -43,6 +45,7 @@ import org.apache.druid.timeline.VersionedIntervalTimeline;
 public class Appenderators
 {
   public static Appenderator createRealtime(
+      SegmentLoaderConfig segmentLoaderConfig,
       String id,
       DataSchema schema,
       AppenderatorConfig config,
@@ -61,10 +64,12 @@ public class Appenderators
       CachePopulatorStats cachePopulatorStats,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     return new StreamAppenderator(
+        segmentLoaderConfig,
         id,
         schema,
         config,
@@ -91,7 +96,8 @@ public class Appenderators
         cache,
         rowIngestionMeters,
         parseExceptionHandler,
-        useMaxMemoryEstimates
+        useMaxMemoryEstimates,
+        centralizedDatasourceSchemaConfig
     );
   }
 

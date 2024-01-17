@@ -37,6 +37,7 @@ public class TestMetadataStorageTablesConfig extends MetadataStorageTablesConfig
         null,
         null,
         null,
+        null,
         null
     );
   }

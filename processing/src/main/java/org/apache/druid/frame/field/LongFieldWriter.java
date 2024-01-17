@@ -23,63 +23,55 @@ import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 
 /**
- * Wraps a {@link BaseLongColumnValueSelector} and writes individual values into rframe rows.
+ * Wraps a {@link BaseLongColumnValueSelector} and writes individual values into frame rows.
  *
- * See {@link LongFieldReader} for format details.
+ * @see NumericFieldWriter for the details of the byte-format that it writes as
  */
-public class LongFieldWriter implements FieldWriter
+public class LongFieldWriter extends NumericFieldWriter
 {
-  public static final int SIZE = Long.BYTES + Byte.BYTES;
-  public static final byte NULL_BYTE = 0x00;
-  public static final byte NOT_NULL_BYTE = 0x01;
-
   private final BaseLongColumnValueSelector selector;
+
+  public static LongFieldWriter forPrimitive(final BaseLongColumnValueSelector selector)
+  {
+    return new LongFieldWriter(selector, false);
+  }
+
+  static LongFieldWriter forArray(final BaseLongColumnValueSelector selector)
+  {
+    return new LongFieldWriter(selector, true);
+  }
+
 
   // Different from the values in NullHandling, since we want to be able to sort as bytes, and we want
   // nulls to come before non-nulls.
-  public LongFieldWriter(final BaseLongColumnValueSelector selector)
+  private LongFieldWriter(final BaseLongColumnValueSelector selector, final boolean forArray)
   {
+    super(selector, forArray);
     this.selector = selector;
   }
 
   @Override
-  public long writeTo(final WritableMemory memory, final long position, final long maxSize)
+  public int getNumericSizeBytes()
   {
-    if (maxSize < SIZE) {
-      return -1;
-    }
-
-    if (selector.isNull()) {
-      memory.putByte(position, NULL_BYTE);
-      memory.putLong(position + Byte.BYTES, transform(0));
-    } else {
-      memory.putByte(position, NOT_NULL_BYTE);
-      memory.putLong(position + Byte.BYTES, transform(selector.getLong()));
-    }
-
-    return SIZE;
+    return Long.BYTES;
   }
 
   @Override
-  public void close()
+  public void writeSelectorToMemory(WritableMemory memory, long position)
   {
-    // Nothing to do.
+    writeToMemory(memory, position, selector.getLong());
   }
 
-  /**
-   * Transforms a long into a form where it can be compared as unsigned bytes without decoding.
-   */
-  public static long transform(final long n)
+  @Override
+  public void writeNullToMemory(WritableMemory memory, long position)
   {
-    // Must flip the first (sign) bit so comparison-as-bytes works.
-    return Long.reverseBytes(n ^ Long.MIN_VALUE);
+    writeToMemory(memory, position, 0);
+
   }
 
-  /**
-   * Reverse the {@link #transform(long)} function.
-   */
-  public static long detransform(final long bits)
+  private void writeToMemory(WritableMemory memory, long position, long value)
   {
-    return Long.reverseBytes(bits) ^ Long.MIN_VALUE;
+    memory.putLong(position, TransformUtils.transformFromLong(value));
   }
+
 }

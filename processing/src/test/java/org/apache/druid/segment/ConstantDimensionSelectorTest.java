@@ -22,11 +22,17 @@ package org.apache.druid.segment;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.extraction.StringFormatExtractionFn;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
+import org.apache.druid.query.filter.DruidObjectPredicate;
+import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.query.filter.DruidPredicateMatch;
+import org.apache.druid.query.filter.StringPredicateDruidPredicateFactory;
+import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.data.IndexedInts;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class ConstantDimensionSelectorTest
+public class ConstantDimensionSelectorTest extends InitializedNullHandlingTest
 {
   private final DimensionSelector NULL_SELECTOR = DimensionSelector.constant(null);
   private final DimensionSelector CONST_SELECTOR = DimensionSelector.constant("billy");
@@ -87,5 +93,21 @@ public class ConstantDimensionSelectorTest
     Assert.assertEquals(-1, CONST_EXTRACTION_SELECTOR.idLookup().lookupId(""));
     Assert.assertEquals(0, CONST_EXTRACTION_SELECTOR.idLookup().lookupId("billy"));
     Assert.assertEquals(-1, CONST_EXTRACTION_SELECTOR.idLookup().lookupId("bob"));
+  }
+
+  @Test
+  public void testValueMatcherPredicates()
+  {
+    DruidPredicateFactory nullUnkown = StringPredicateDruidPredicateFactory.of(
+        value -> value == null ? DruidPredicateMatch.UNKNOWN : DruidPredicateMatch.TRUE
+    );
+    ValueMatcher matcher = NULL_SELECTOR.makeValueMatcher(nullUnkown);
+    Assert.assertFalse(matcher.matches(false));
+    Assert.assertTrue(matcher.matches(true));
+
+    DruidPredicateFactory notUnknown = StringPredicateDruidPredicateFactory.of(DruidObjectPredicate.notNull());
+    matcher = NULL_SELECTOR.makeValueMatcher(notUnknown);
+    Assert.assertFalse(matcher.matches(false));
+    Assert.assertFalse(matcher.matches(true));
   }
 }

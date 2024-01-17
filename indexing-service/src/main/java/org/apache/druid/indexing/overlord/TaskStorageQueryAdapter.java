@@ -28,6 +28,7 @@ import org.apache.druid.indexing.common.actions.SegmentInsertAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.metadata.TaskLookup;
 import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
@@ -47,17 +48,28 @@ public class TaskStorageQueryAdapter
 {
   private final TaskStorage storage;
   private final TaskLockbox taskLockbox;
+  private final Optional<TaskQueue> taskQueue;
 
   @Inject
-  public TaskStorageQueryAdapter(TaskStorage storage, TaskLockbox taskLockbox)
+  public TaskStorageQueryAdapter(TaskStorage storage, TaskLockbox taskLockbox, TaskMaster taskMaster)
   {
     this.storage = storage;
     this.taskLockbox = taskLockbox;
+    this.taskQueue = taskMaster.getTaskQueue();
   }
 
   public List<Task> getActiveTasks()
   {
     return storage.getActiveTasks();
+  }
+
+  /**
+   * @param lockFilterPolicies Requests for conflicing lock intervals for various datasources
+   * @return Map from datasource to intervals locked by tasks that have a conflicting lock type that cannot be revoked
+   */
+  public Map<String, List<Interval>> getLockedIntervals(List<LockFilterPolicy> lockFilterPolicies)
+  {
+    return taskLockbox.getLockedIntervals(lockFilterPolicies);
   }
 
   /**
@@ -94,6 +106,12 @@ public class TaskStorageQueryAdapter
 
   public Optional<Task> getTask(final String taskid)
   {
+    if (taskQueue.isPresent()) {
+      Optional<Task> activeTask = taskQueue.get().getActiveTask(taskid);
+      if (activeTask.isPresent()) {
+        return activeTask;
+      }
+    }
     return storage.getTask(taskid);
   }
 

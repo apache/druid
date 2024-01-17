@@ -20,7 +20,6 @@
 package org.apache.druid.segment.index;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import it.unimi.dsi.fastutil.ints.IntIntImmutablePair;
 import it.unimi.dsi.fastutil.ints.IntIntPair;
 import it.unimi.dsi.fastutil.ints.IntIterator;
@@ -28,6 +27,8 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.filter.DruidObjectPredicate;
+import org.apache.druid.query.filter.DruidPredicateMatch;
 import org.apache.druid.segment.IntListUtils;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
@@ -82,7 +83,7 @@ public final class IndexedUtf8LexicographicalRangeIndexes<TDictionary extends In
     if (ColumnIndexSupplier.skipComputingRangeIndexes(columnConfig, numRows, end - start)) {
       return null;
     }
-    return new SimpleImmutableBitmapIterableIndex()
+    return new SimpleImmutableBitmapDelegatingIterableIndex()
     {
       @Override
       public Iterable<ImmutableBitmap> getBitmapIterable()
@@ -106,6 +107,16 @@ public final class IndexedUtf8LexicographicalRangeIndexes<TDictionary extends In
           }
         };
       }
+
+      @Nullable
+      @Override
+      protected ImmutableBitmap getUnknownsBitmap()
+      {
+        if (NullHandling.isNullOrEquivalent(dictionary.get(0))) {
+          return bitmaps.get(0);
+        }
+        return null;
+      }
     };
   }
 
@@ -116,16 +127,19 @@ public final class IndexedUtf8LexicographicalRangeIndexes<TDictionary extends In
       boolean startStrict,
       @Nullable String endValue,
       boolean endStrict,
-      Predicate<String> matcher
+      DruidObjectPredicate<String> matcher
   )
   {
-    return new SimpleImmutableBitmapIterableIndex()
+    final IntIntPair range = getRange(startValue, startStrict, endValue, endStrict);
+    final int start = range.leftInt(), end = range.rightInt();
+    if (ColumnIndexSupplier.skipComputingRangeIndexes(columnConfig, numRows, end - start)) {
+      return null;
+    }
+    return new SimpleImmutableBitmapDelegatingIterableIndex()
     {
       @Override
       public Iterable<ImmutableBitmap> getBitmapIterable()
       {
-        final IntIntPair range = getRange(startValue, startStrict, endValue, endStrict);
-        final int start = range.leftInt(), end = range.rightInt();
         return () -> new Iterator<ImmutableBitmap>()
         {
           int currIndex = start;
@@ -137,7 +151,7 @@ public final class IndexedUtf8LexicographicalRangeIndexes<TDictionary extends In
 
           private int findNext()
           {
-            while (currIndex < end && !applyMatcher(dictionary.get(currIndex))) {
+            while (currIndex < end && !applyMatcher(dictionary.get(currIndex)).matches(false)) {
               currIndex++;
             }
 
@@ -169,7 +183,17 @@ public final class IndexedUtf8LexicographicalRangeIndexes<TDictionary extends In
         };
       }
 
-      private boolean applyMatcher(@Nullable final ByteBuffer valueUtf8)
+      @Nullable
+      @Override
+      protected ImmutableBitmap getUnknownsBitmap()
+      {
+        if (NullHandling.isNullOrEquivalent(dictionary.get(0))) {
+          return bitmaps.get(0);
+        }
+        return null;
+      }
+
+      private DruidPredicateMatch applyMatcher(@Nullable final ByteBuffer valueUtf8)
       {
         if (valueUtf8 == null) {
           return matcher.apply(null);

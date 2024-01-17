@@ -63,7 +63,6 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
 
   private final int numAttempts;
   private final ParallelIndexIngestionSpec ingestionSchema;
-  private final String supervisorTaskId;
   private final String subtaskSpecId;
   @Nullable
   private final Map<Interval, Integer> intervalToNumShardsOverride;
@@ -96,7 +95,6 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
     this.subtaskSpecId = subtaskSpecId;
     this.numAttempts = numAttempts;
     this.ingestionSchema = ingestionSchema;
-    this.supervisorTaskId = supervisorTaskId;
     this.intervalToNumShardsOverride = intervalToNumShardsOverride;
   }
 
@@ -110,12 +108,6 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
   public ParallelIndexIngestionSpec getIngestionSchema()
   {
     return ingestionSchema;
-  }
-
-  @JsonProperty
-  public String getSupervisorTaskId()
-  {
-    return supervisorTaskId;
   }
 
   @JsonProperty
@@ -158,7 +150,7 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
     return tryTimeChunkLock(
-        new SurrogateTaskActionClient(supervisorTaskId, taskActionClient),
+        new SurrogateTaskActionClient(getSupervisorTaskId(), taskActionClient),
         getIngestionSchema().getDataSchema().getGranularitySpec().inputIntervals()
     );
   }
@@ -175,7 +167,7 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
         getDataSource(),
         getSubtaskSpecId(),
         granularitySpec,
-        new SupervisorTaskAccess(supervisorTaskId, taskClient),
+        new SupervisorTaskAccess(getSupervisorTaskId(), taskClient),
         createHashPartitionAnalysisFromPartitionsSpec(
             granularitySpec,
             partitionsSpec,

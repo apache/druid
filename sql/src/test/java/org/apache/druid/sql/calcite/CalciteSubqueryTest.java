@@ -34,6 +34,7 @@ import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
@@ -50,6 +51,7 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.topn.DimensionTopNMetricSpec;
 import org.apache.druid.query.topn.TopNQueryBuilder;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -57,7 +59,6 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -227,7 +228,6 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Ignore("Merge buffers exceed the prescribed limit when the results are materialized as frames")
   @Test
   public void testTwoExactCountDistincts()
   {
@@ -344,10 +344,17 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(
+                      NullHandling.replaceWithDefault()
+                      ? VirtualColumns.EMPTY
+                      : VirtualColumns.create(
+                          expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING)
+                      )
+                  )
                   .filters(
                       NullHandling.replaceWithDefault()
                       ? not(selector("dim1", "z", new SubstringDimExtractionFn(0, 1)))
-                      : expressionFilter("(substring(\"dim1\", 0, 1) != 'z')")
+                      : not(equality("v0", "z", ColumnType.STRING))
                   )
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
@@ -497,7 +504,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                         ))
                                         .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
                                         .setPostAggregatorSpecs(
-                                            ImmutableList.of(expressionPostAgg("p0", "'abc'"))
+                                            expressionPostAgg("p0", "'abc'", ColumnType.STRING)
                                         )
                                         .setHavingSpec(having(equality("a0", 1L, ColumnType.LONG)))
                                         .setContext(QUERY_CONTEXT_DEFAULT)
@@ -560,14 +567,14 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                             aggregators(
                                 new LongMaxAggregatorFactory("_a0", "a0"),
                                 new LongMinAggregatorFactory("_a1", "a0"),
-                                new LongSumAggregatorFactory("_a2:sum", "a0"),
+                                new DoubleSumAggregatorFactory("_a2:sum", "a0"),
                                 new CountAggregatorFactory("_a2:count"),
                                 new LongMaxAggregatorFactory("_a3", "d0"),
                                 new CountAggregatorFactory("_a4")
                             ) : aggregators(
                                 new LongMaxAggregatorFactory("_a0", "a0"),
                                 new LongMinAggregatorFactory("_a1", "a0"),
-                                new LongSumAggregatorFactory("_a2:sum", "a0"),
+                                new DoubleSumAggregatorFactory("_a2:sum", "a0"),
                                 new FilteredAggregatorFactory(
                                     new CountAggregatorFactory("_a2:count"),
                                     notNull("a0")
@@ -577,22 +584,20 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                             )
                         )
                         .setPostAggregatorSpecs(
-                            ImmutableList.of(
-                                new ArithmeticPostAggregator(
-                                    "_a2",
-                                    "quotient",
-                                    ImmutableList.of(
-                                        new FieldAccessPostAggregator(null, "_a2:sum"),
-                                        new FieldAccessPostAggregator(null, "_a2:count")
-                                    )
-                                ),
-                                expressionPostAgg("p0", "timestamp_extract(\"_a3\",'EPOCH','UTC')")
-                            )
+                            new ArithmeticPostAggregator(
+                                "_a2",
+                                "quotient",
+                                ImmutableList.of(
+                                    new FieldAccessPostAggregator(null, "_a2:sum"),
+                                    new FieldAccessPostAggregator(null, "_a2:count")
+                                )
+                            ),
+                            expressionPostAgg("p0", "timestamp_extract(\"_a3\",'EPOCH','UTC')", ColumnType.LONG)
                         )
                         .setContext(queryContext)
                         .build()
         ),
-        ImmutableList.of(new Object[]{1L, 1L, 1L, 978480000L, 6L})
+        ImmutableList.of(new Object[]{1L, 1L, 1.0, 978480000L, 6L})
     );
   }
 

@@ -44,6 +44,7 @@ import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.SqlStatementFactory;
@@ -153,6 +154,11 @@ public class SqlTestFramework
         ObjectMapper objectMapper,
         Injector injector
     );
+
+    default CatalogResolver createCatalogResolver()
+    {
+      return CatalogResolver.NULL_RESOLVER;
+    }
 
     /**
      * Configure the JSON mapper.
@@ -418,7 +424,8 @@ public class SqlTestFramework
           plannerConfig,
           viewManager,
           componentSupplier.createSchemaManager(),
-          framework.authorizerMapper
+          framework.authorizerMapper,
+          framework.builder.catalogResolver
       );
 
       this.plannerFactory = new PlannerFactory(

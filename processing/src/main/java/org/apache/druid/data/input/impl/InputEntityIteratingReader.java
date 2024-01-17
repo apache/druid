@@ -28,13 +28,13 @@ import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputStats;
-import org.apache.druid.java.util.common.CloseableIterators;
+import org.apache.druid.data.input.impl.systemfield.SystemFieldDecoratorFactory;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * InputSourceReader iterating multiple {@link InputEntity}s. This class could be used for
@@ -45,28 +45,21 @@ public class InputEntityIteratingReader implements InputSourceReader
   private final InputRowSchema inputRowSchema;
   private final InputFormat inputFormat;
   private final CloseableIterator<InputEntity> sourceIterator;
+  private final SystemFieldDecoratorFactory systemFieldDecoratorFactory;
   private final File temporaryDirectory;
 
   public InputEntityIteratingReader(
       InputRowSchema inputRowSchema,
       InputFormat inputFormat,
-      Iterator<? extends InputEntity> sourceIterator,
-      File temporaryDirectory
-  )
-  {
-    this(inputRowSchema, inputFormat, CloseableIterators.withEmptyBaggage(sourceIterator), temporaryDirectory);
-  }
-
-  public InputEntityIteratingReader(
-      InputRowSchema inputRowSchema,
-      InputFormat inputFormat,
-      CloseableIterator<? extends InputEntity> sourceCloseableIterator,
+      CloseableIterator<? extends InputEntity> sourceIterator,
+      SystemFieldDecoratorFactory systemFieldDecoratorFactory,
       File temporaryDirectory
   )
   {
     this.inputRowSchema = inputRowSchema;
     this.inputFormat = inputFormat;
-    this.sourceIterator = (CloseableIterator<InputEntity>) sourceCloseableIterator;
+    this.sourceIterator = (CloseableIterator<InputEntity>) sourceIterator;
+    this.systemFieldDecoratorFactory = systemFieldDecoratorFactory;
     this.temporaryDirectory = temporaryDirectory;
   }
 
@@ -75,10 +68,11 @@ public class InputEntityIteratingReader implements InputSourceReader
   {
     return createIterator(entity -> {
       // InputEntityReader is stateful and so a new one should be created per entity.
+      final Function<InputRow, InputRow> systemFieldDecorator = systemFieldDecoratorFactory.decorator(entity);
       try {
         final InputEntity entityToRead = inputStats == null ? entity : new BytesCountingInputEntity(entity, inputStats);
         final InputEntityReader reader = inputFormat.createReader(inputRowSchema, entityToRead, temporaryDirectory);
-        return reader.read();
+        return reader.read().map(systemFieldDecorator);
       }
       catch (IOException e) {
         throw new RuntimeException(entity.getUri() != null ?
@@ -93,9 +87,17 @@ public class InputEntityIteratingReader implements InputSourceReader
   {
     return createIterator(entity -> {
       // InputEntityReader is stateful and so a new one should be created per entity.
+      final Function<InputRow, InputRow> systemFieldDecorator = systemFieldDecoratorFactory.decorator(entity);
       try {
         final InputEntityReader reader = inputFormat.createReader(inputRowSchema, entity, temporaryDirectory);
-        return reader.sample();
+        return reader.sample()
+            .map(i -> InputRowListPlusRawValues.ofList(i.getRawValuesList(),
+                i.getInputRows() == null
+                    ? null
+                    : i.getInputRows().stream().map(
+                        systemFieldDecorator).collect(Collectors.toList()),
+                i.getParseException()
+            ));
       }
       catch (IOException e) {
         throw new RuntimeException(e);

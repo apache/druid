@@ -29,6 +29,7 @@ APIs
 apache.org
 AvroStorage
 ARN
+ASC
 autokill
 AWS
 AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
@@ -43,6 +44,7 @@ Base64
 Base64-encoded
 ByteBuffer
 bottlenecked
+cartesian
 concat
 CIDR
 CORS
@@ -115,6 +117,7 @@ IcebergInputSource
 IETF
 IP
 IPv4
+IPv6
 IS_AGGREGATOR
 IS_BROADCAST
 IS_JOINABLE
@@ -128,6 +131,7 @@ InputFormat
 InputSource
 InputSources
 Integer.MAX_VALUE
+IntelliJ
 ioConfig
 Istio
 JBOD
@@ -244,6 +248,7 @@ aggregators
 ambari
 analytics
 arrayElement
+arrayContainsElement
 assumeNewlineDelimited
 assumeRoleArn
 assumeRoleExternalId
@@ -276,6 +281,7 @@ codebase
 codec
 colocated
 colocation
+colocating
 compactable
 compactionTask
 config
@@ -357,6 +363,7 @@ json_keys
 json_object
 json_paths
 json_query
+json_query_array
 json_value
 karlkfi
 kerberos
@@ -367,6 +374,7 @@ kubernetes
 kubexit
 k8s
 laning
+lastSegmentId
 lifecycle
 localhost
 log4j
@@ -422,6 +430,7 @@ pluggable
 podSpec
 postgres
 postgresql
+pre-aggregate
 pre-aggregated
 pre-aggregates
 pre-aggregating
@@ -429,7 +438,7 @@ pre-aggregation
 pre-computation
 pre-compute
 pre-computing
-pre-configured
+preconfigured
 pre-existing
 pre-filtered
 pre-filtering
@@ -495,6 +504,7 @@ Smoosh
 smoosh
 smooshed
 snapshotting
+sortOrder
 splittable
 ssl
 sslmode
@@ -503,6 +513,7 @@ stdout
 storages
 stringDictionaryEncoding
 stringified
+sub-conditions
 subarray
 subnet
 subqueries
@@ -515,6 +526,7 @@ supervisorTaskId
 SVG
 symlink
 syntaxes
+systemFields
 tiering
 timeseries
 Timeseries
@@ -780,12 +792,20 @@ Minio
 multi-server
 BasicDataSource
 LeaderLatch
+2.x
+28.x 
 3.5.x
 3.4.x
 AllowAll
 AuthenticationResult
 AuthorizationLoadingLookupTest
+booleans
+EOF
+IE11
+InsufficientResourceException
 HttpClient
+JsonConfigurator
+KIP-297
 allowAll
 authenticatorChain
 defaultUser
@@ -796,8 +816,18 @@ c3.2xlarge
 defaultManualBrokerService
 maxPriority
 minPriority
+NUMBER_FEATURES
+NUMBER_OF_CONTRIBUTORS
+PreparedStatement
+pre-upgrade
+QueryCapacityExceededException
+QueryTimeoutException
+QueryUnsupportedException
+ResultSet
 runtime.properties
+SqlParseException
 timeBoundary
+ValidationException
 0x0
 0x9
 2GB
@@ -919,6 +949,7 @@ prometheus
 Pushgateway
 flushPeriod
 postAggregator
+postAggregators
 quantileFromTDigestSketch
 quantilesFromTDigestSketch
 tDigestSketch
@@ -942,6 +973,7 @@ AccessKey
 accessKey
 aliyun-oss
 json
+Oshi
 OSS
 oss
 secretKey
@@ -1130,6 +1162,7 @@ simpleJson
 dimensionSpec
 flattenSpec
 binaryAsString
+replaceMissingValueWith
 sslFactory
 sslMode
 Proto
@@ -1278,6 +1311,7 @@ numShards
 IngestSegment
 IngestSegmentFirehose
 maxSizes
+snapshotTime
 windowPeriod
 2012-01-01T00
 2012-01-03T00
@@ -1482,10 +1516,20 @@ getExponent
 hypot
 ipv4_match
 ipv4_parse
-isnull
 ipv4_stringify
+ipv6_match
+
+# IPv6 Address Example Sections
+75e9
+efa4
+29c6
+85f6
+232c
+
+isnull
 java.lang.Math
 java.lang.String
+JNA
 log10
 log1p
 lpad
@@ -2180,6 +2224,8 @@ CHARACTER_LENGTH
 CURRENT_DATE
 CURRENT_TIMESTAMP
 DATE_TRUNC
+DECODE_BASE64_COMPLEX
+DECODE_BASE64_UTF8
 DS_CDF
 DS_GET_QUANTILE
 DS_GET_QUANTILES
@@ -2322,3 +2368,19 @@ isLeader
 taskslots
 loadstatus
 sqlQueryId
+useAzureCredentialsChain
+DefaultAzureCredential
+LAST_VALUE
+markUnused
+markUsed
+segmentId
+aggregateMultipleValues
+
+- ../docs/development/extensions-contrib/spectator-histogram.md
+SpectatorHistogram
+PercentileBuckets
+spectatorHistogram
+spectatorHistogramTimer
+spectatorHistogramDistribution
+percentileSpectatorHistogram
+percentilesSpectatorHistogram

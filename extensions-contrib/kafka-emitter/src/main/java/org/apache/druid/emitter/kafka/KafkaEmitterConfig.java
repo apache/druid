@@ -26,6 +26,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.metadata.DynamicConfigProvider;
+import org.apache.druid.metadata.MapStringDynamicConfigProvider;
 import org.apache.kafka.clients.producer.ProducerConfig;
 
 import javax.annotation.Nullable;
@@ -73,6 +75,8 @@ public class KafkaEmitterConfig
   private final String clusterName;
   @JsonProperty("producer.config")
   private final Map<String, String> kafkaProducerConfig;
+  @JsonProperty("producer.hiddenProperties")
+  private final DynamicConfigProvider<String> kafkaProducerSecrets;
 
   @JsonCreator
   public KafkaEmitterConfig(
@@ -83,7 +87,8 @@ public class KafkaEmitterConfig
       @Nullable @JsonProperty("request.topic") String requestTopic,
       @Nullable @JsonProperty("segmentMetadata.topic") String segmentMetadataTopic,
       @JsonProperty("clusterName") String clusterName,
-      @JsonProperty("producer.config") @Nullable Map<String, String> kafkaProducerConfig
+      @JsonProperty("producer.config") @Nullable Map<String, String> kafkaProducerConfig,
+      @JsonProperty("producer.hiddenProperties") @Nullable DynamicConfigProvider<String> kafkaProducerSecrets
   )
   {
     this.bootstrapServers = Preconditions.checkNotNull(bootstrapServers, "druid.emitter.kafka.bootstrap.servers can not be null");
@@ -94,6 +99,7 @@ public class KafkaEmitterConfig
     this.segmentMetadataTopic = this.eventTypes.contains(EventType.SEGMENT_METADATA) ? Preconditions.checkNotNull(segmentMetadataTopic, "druid.emitter.kafka.segmentMetadata.topic can not be null") : null;
     this.clusterName = clusterName;
     this.kafkaProducerConfig = kafkaProducerConfig == null ? ImmutableMap.of() : kafkaProducerConfig;
+    this.kafkaProducerSecrets = kafkaProducerSecrets == null ? new MapStringDynamicConfigProvider(ImmutableMap.of()) : kafkaProducerSecrets;
   }
 
   private Set<EventType> maybeUpdateEventTypes(Set<EventType> eventTypes, String requestTopic)
@@ -159,6 +165,12 @@ public class KafkaEmitterConfig
     return kafkaProducerConfig;
   }
 
+  @JsonProperty
+  public DynamicConfigProvider<String> getKafkaProducerSecrets()
+  {
+    return kafkaProducerSecrets;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -198,7 +210,10 @@ public class KafkaEmitterConfig
     if (getClusterName() != null ? !getClusterName().equals(that.getClusterName()) : that.getClusterName() != null) {
       return false;
     }
-    return getKafkaProducerConfig().equals(that.getKafkaProducerConfig());
+    if (!getKafkaProducerConfig().equals(that.getKafkaProducerConfig())) {
+      return false;
+    }
+    return getKafkaProducerSecrets().getConfig().equals(that.getKafkaProducerSecrets().getConfig());
   }
 
   @Override
@@ -212,6 +227,7 @@ public class KafkaEmitterConfig
     result = 31 * result + (getSegmentMetadataTopic() != null ? getSegmentMetadataTopic().hashCode() : 0);
     result = 31 * result + (getClusterName() != null ? getClusterName().hashCode() : 0);
     result = 31 * result + getKafkaProducerConfig().hashCode();
+    result = 31 * result + getKafkaProducerSecrets().getConfig().hashCode();
     return result;
   }
 
@@ -226,7 +242,8 @@ public class KafkaEmitterConfig
            ", request.topic='" + requestTopic + '\'' +
            ", segmentMetadata.topic='" + segmentMetadataTopic + '\'' +
            ", clusterName='" + clusterName + '\'' +
-           ", Producer.config=" + kafkaProducerConfig +
+           ", producer.config=" + kafkaProducerConfig + '\'' +
+           ", producer.hiddenProperties=" + kafkaProducerSecrets +
            '}';
   }
 }

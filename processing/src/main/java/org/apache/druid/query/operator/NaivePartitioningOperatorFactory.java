@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class NaivePartitioningOperatorFactory implements OperatorFactory
 {
@@ -64,5 +65,24 @@ public class NaivePartitioningOperatorFactory implements OperatorFactory
     return "NaivePartitioningOperatorFactory{" +
            "partitionColumns=" + partitionColumns +
            '}';
+  }
+
+  @Override
+  public final int hashCode()
+  {
+    return Objects.hash(partitionColumns);
+  }
+
+  @Override
+  public final boolean equals(Object obj)
+  {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null || obj.getClass() != getClass()) {
+      return false;
+    }
+    NaivePartitioningOperatorFactory other = (NaivePartitioningOperatorFactory) obj;
+    return Objects.equals(partitionColumns, other.partitionColumns);
   }
 }

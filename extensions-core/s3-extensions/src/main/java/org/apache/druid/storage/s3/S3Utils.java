@@ -73,6 +73,10 @@ public class S3Utils
       if (e == null) {
         return false;
       } else if (e instanceof IOException) {
+        if (e.getCause() != null) {
+          // Recurse with the underlying cause to see if it's retriable.
+          return apply(e.getCause());
+        }
         return true;
       } else if (e instanceof SdkClientException
                  && e.getMessage().contains("Data read has a different length than the expected")) {

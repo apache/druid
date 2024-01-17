@@ -45,7 +45,7 @@ import java.util.Set;
 public class LookupEnabledTestExprMacroTable extends ExprMacroTable
 {
   public static final ExprMacroTable INSTANCE = new LookupEnabledTestExprMacroTable();
-  private static final String LOOKYLOO = "lookyloo";
+  public static final String LOOKYLOO = "lookyloo";
 
   private LookupEnabledTestExprMacroTable()
   {
@@ -58,7 +58,14 @@ public class LookupEnabledTestExprMacroTable extends ExprMacroTable
         Iterables.concat(
             TestExprMacroTable.INSTANCE.getMacros(),
             Collections.singletonList(
-                new LookupExprMacro(createTestLookupProvider(theLookup))
+                new LookupExprMacro(
+                    createTestLookupProvider(
+                        ImmutableMap.of(
+                            LOOKYLOO,
+                            new MapLookupExtractor(theLookup, false)
+                        )
+                    )
+                )
             )
         )
     );
@@ -68,44 +75,8 @@ public class LookupEnabledTestExprMacroTable extends ExprMacroTable
    * Returns a {@link LookupExtractorFactoryContainerProvider} that has one lookup, "lookyloo". Public so other tests
    * can use this helper method directly.
    */
-  public static LookupExtractorFactoryContainerProvider createTestLookupProvider(final Map<String, String> theLookup)
+  public static LookupExtractorFactoryContainerProvider createTestLookupProvider(final Map<String, LookupExtractor> lookups)
   {
-    final LookupExtractorFactoryContainer container = new LookupExtractorFactoryContainer(
-        "v0",
-        new LookupExtractorFactory()
-        {
-          @Override
-          public boolean start()
-          {
-            throw new UnsupportedOperationException();
-          }
-
-          @Override
-          public boolean close()
-          {
-            throw new UnsupportedOperationException();
-          }
-
-          @Override
-          public boolean replaces(@Nullable final LookupExtractorFactory other)
-          {
-            throw new UnsupportedOperationException();
-          }
-
-          @Override
-          public LookupIntrospectHandler getIntrospectHandler()
-          {
-            throw new UnsupportedOperationException();
-          }
-
-          @Override
-          public LookupExtractor get()
-          {
-            return new MapLookupExtractor(theLookup, false);
-          }
-        }
-    );
-
     return new LookupExtractorFactoryContainerProvider()
     {
       @Override
@@ -117,12 +88,66 @@ public class LookupEnabledTestExprMacroTable extends ExprMacroTable
       @Override
       public Optional<LookupExtractorFactoryContainer> get(String lookupName)
       {
-        if (LOOKYLOO.equals(lookupName)) {
-          return Optional.of(container);
+        final LookupExtractor theLookup = lookups.get(lookupName);
+        if (theLookup != null) {
+          return Optional.of(new TestLookupContainer(theLookup));
         } else {
           return Optional.empty();
         }
       }
     };
+  }
+
+  public static class TestLookupContainer extends LookupExtractorFactoryContainer
+  {
+    public TestLookupContainer(final LookupExtractor theLookup)
+    {
+      super(
+          "v0",
+          new LookupExtractorFactory()
+          {
+            @Override
+            public boolean start()
+            {
+              throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public boolean close()
+            {
+              throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public boolean replaces(@Nullable final LookupExtractorFactory other)
+            {
+              throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public LookupIntrospectHandler getIntrospectHandler()
+            {
+              throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public void awaitInitialization()
+            {
+            }
+
+            @Override
+            public boolean isInitialized()
+            {
+              return true;
+            }
+
+            @Override
+            public LookupExtractor get()
+            {
+              return theLookup;
+            }
+          }
+      );
+    }
   }
 }

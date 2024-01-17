@@ -34,7 +34,7 @@ sidebar_label: "Key concepts"
 The `druid-multi-stage-query` extension adds a multi-stage query (MSQ) task engine that executes SQL statements as batch
 tasks in the indexing service, which execute on [Middle Managers](../design/architecture.md#druid-services).
 [INSERT](reference.md#insert) and [REPLACE](reference.md#replace) tasks publish
-[segments](../design/architecture.md#datasources-and-segments) just like [all other forms of batch
+[segments](../design/storage.md) just like [all other forms of batch
 ingestion](../ingestion/index.md#batch). Each query occupies at least two task slots while running: one controller task,
 and at least one worker task. As an experimental feature, the MSQ task engine also supports running SELECT queries as
 batch tasks. The behavior and result format of plain SELECT (without INSERT or REPLACE) is subject to change.
@@ -192,17 +192,12 @@ To perform ingestion with rollup:
 2. Set [`finalizeAggregations: false`](reference.md#context-parameters) in your context. This causes aggregation
    functions to write their internal state to the generated segments, instead of the finalized end result, and enables
    further aggregation at query time.
-3. Wrap all multi-value strings in `MV_TO_ARRAY(...)` and set [`groupByEnableMultiValueUnnesting:
-   false`](reference.md#context-parameters) in your context. This ensures that multi-value strings are left alone and
-   remain lists, instead of being [automatically unnested](../querying/sql-data-types.md#multi-value-strings) by the
-   `GROUP BY` operator.
+3. See [ARRAY types](../querying/arrays.md#sql-based-ingestion-with-rollup) for information about ingesting `ARRAY` columns
+4. See [multi-value dimensions](../querying/multi-value-dimensions.md#sql-based-ingestion-with-rollup) for information to ingest multi-value VARCHAR columns
 
 When you do all of these things, Druid understands that you intend to do an ingestion with rollup, and it writes
 rollup-related metadata into the generated segments. Other applications can then use [`segmentMetadata`
 queries](../querying/segmentmetadataquery.md) to retrieve rollup-related information.
-
-If you see the error "Encountered multi-value dimension `x` that cannot be processed with
-groupByEnableMultiValueUnnesting set to false", then wrap that column in `MV_TO_ARRAY(x) AS x`.
 
 The following [aggregation functions](../querying/sql-aggregations.md) are supported for rollup at ingestion time:
 `COUNT` (but switch to `SUM` at query time), `SUM`, `MIN`, `MAX`, `EARLIEST` and `EARLIEST_BY` ([string only](known-issues.md#select-statement)),

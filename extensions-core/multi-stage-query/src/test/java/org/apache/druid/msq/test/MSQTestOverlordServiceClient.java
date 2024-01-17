@@ -25,6 +25,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Injector;
+import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
@@ -43,6 +44,7 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class MSQTestOverlordServiceClient extends NoopOverlordClient
@@ -51,10 +53,11 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
   private final ObjectMapper objectMapper;
   private final TaskActionClient taskActionClient;
   private final WorkerMemoryParameters workerMemoryParameters;
-  private Map<String, Controller> inMemoryControllers = new HashMap<>();
-  private Map<String, Map<String, TaskReport>> reports = new HashMap<>();
-  private Map<String, MSQControllerTask> inMemoryControllerTask = new HashMap<>();
-  private Map<String, TaskStatus> inMemoryTaskStatus = new HashMap<>();
+  private final List<ImmutableSegmentLoadInfo> loadedSegmentMetadata;
+  private final Map<String, Controller> inMemoryControllers = new HashMap<>();
+  private final Map<String, Map<String, TaskReport>> reports = new HashMap<>();
+  private final Map<String, MSQControllerTask> inMemoryControllerTask = new HashMap<>();
+  private final Map<String, TaskStatus> inMemoryTaskStatus = new HashMap<>();
 
   public static final DateTime CREATED_TIME = DateTimes.of("2023-05-31T12:00Z");
   public static final DateTime QUEUE_INSERTION_TIME = DateTimes.of("2023-05-31T12:01Z");
@@ -65,13 +68,15 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
       ObjectMapper objectMapper,
       Injector injector,
       TaskActionClient taskActionClient,
-      WorkerMemoryParameters workerMemoryParameters
+      WorkerMemoryParameters workerMemoryParameters,
+      List<ImmutableSegmentLoadInfo> loadedSegmentMetadata
   )
   {
     this.objectMapper = objectMapper;
     this.injector = injector;
     this.taskActionClient = taskActionClient;
     this.workerMemoryParameters = workerMemoryParameters;
+    this.loadedSegmentMetadata = loadedSegmentMetadata;
   }
 
   @Override
@@ -84,7 +89,8 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
           objectMapper,
           injector,
           taskActionClient,
-          workerMemoryParameters
+          workerMemoryParameters,
+          loadedSegmentMetadata
       );
 
       MSQControllerTask cTask = objectMapper.convertValue(taskObject, MSQControllerTask.class);
