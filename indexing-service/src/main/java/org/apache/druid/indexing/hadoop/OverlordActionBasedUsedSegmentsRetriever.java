@@ -23,7 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import org.apache.druid.indexer.path.UsedSegmentsRetriever;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
+import org.apache.druid.indexing.common.actions.RetrieveSegmentsToReplaceAction;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -53,6 +53,6 @@ public class OverlordActionBasedUsedSegmentsRetriever implements UsedSegmentsRet
   {
     return toolbox
         .getTaskActionClient()
-        .submit(new RetrieveUsedSegmentsAction(dataSource, null, intervals, visibility));
+        .submit(new RetrieveSegmentsToReplaceAction(dataSource, intervals));
   }
 }
