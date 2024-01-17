@@ -561,7 +561,7 @@ public class SqlTestFramework
   private final AuthorizerMapper authorizerMapper = CalciteTests.TEST_AUTHORIZER_MAPPER;
   private final SqlEngine engine;
 
-  private SqlTestFramework(Builder builder) throws Exception
+  private SqlTestFramework(Builder builder)
   {
     this.builder = builder;
     this.componentSupplier = builder.componentSupplier;
