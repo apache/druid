@@ -178,6 +178,13 @@ public class AzureStorage
     blobBatchClient.deleteBlobs(Lists.newArrayList(paths), DeleteSnapshotsOptionType.ONLY);
   }
 
+  public void batchDeleteFiles(String containerName, Iterable<String> paths)
+      throws BlobBatchStorageException
+  {
+
+    batchDeleteFiles(containerName, paths, null);
+  }
+
   public List<String> listDir(final String containerName, final String virtualDirPath, final Integer maxAttempts)
       throws BlobStorageException
   {
