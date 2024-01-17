@@ -37,7 +37,6 @@ import org.apache.druid.server.coordination.DataSegmentChangeHandler;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.SegmentLoadDropHandler;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
-import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
@@ -511,7 +510,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
    * A request is considered to have timed out if the time elapsed since it was
    * first sent to the server is greater than the configured load timeout.
    *
-   * @see DruidCoordinatorConfig#getLoadTimeoutDelay()
+   * @see HttpLoadQueuePeonConfig#getLoadTimeout()
    */
   private boolean hasRequestTimedOut(SegmentHolder holder, long currentTimeMillis)
   {
