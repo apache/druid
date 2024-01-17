@@ -1161,6 +1161,29 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
     );
   }
 
+  @Test
+  public void testHllWithOrderedWindowing()
+  {
+    testBuilder()
+        .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
+        .sql(
+            "SELECT dim1,coalesce(cast(l1 as integer),-999),"
+                + " HLL_SKETCH_ESTIMATE( DS_HLL(dim1) OVER ( ORDER BY l1 ), true)"
+                + " FROM druid.foo"
+                + " WHERE length(dim1)>0"
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {"1", -999, 3.0D},
+                new Object[] {"def", -999, 3.0D},
+                new Object[] {"abc", -999, 3.0D},
+                new Object[] {"2", 0, 4.0D},
+                new Object[] {"10.1", 325323, 5.0D}
+            )
+        )
+        .run();
+  }
+
   @SqlTestFrameworkConfig(resultCache = ResultCacheMode.ENABLED)
   @Test
   public void testResultCacheWithWindowing()
