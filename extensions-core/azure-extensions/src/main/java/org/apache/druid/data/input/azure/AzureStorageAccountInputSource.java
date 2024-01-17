@@ -158,7 +158,7 @@ public class AzureStorageAccountInputSource extends CloudObjectInputSource
       public Iterator<LocationWithSize> getDescriptorIteratorForPrefixes(List<URI> prefixes)
       {
         return Iterators.transform(
-            azureCloudBlobIterableFactory.create(prefixes, inputDataConfig.getMaxListingLength(), new AzureStorage(azureIngestClientFactory, azureAccountConfig.getAccount())).iterator(),
+            azureCloudBlobIterableFactory.create(prefixes, inputDataConfig.getMaxListingLength(), new AzureStorage(azureIngestClientFactory, null)).iterator(),
             blob -> {
               try {
                 return new LocationWithSize(

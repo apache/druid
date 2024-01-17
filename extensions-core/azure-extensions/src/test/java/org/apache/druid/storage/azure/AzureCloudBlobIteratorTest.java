@@ -115,8 +115,8 @@ public class AzureCloudBlobIteratorTest extends EasyMockSupport
     }
     verifyAll();
     List<CloudBlobHolder> expectedBlobItems = ImmutableList.of(
-        new CloudBlobHolder(blobItem, CONTAINER, null),
-        new CloudBlobHolder(blobItem2, CONTAINER, null)
+        new CloudBlobHolder(blobItem, CONTAINER, DEFAULT_STORAGE_ACCOUNT),
+        new CloudBlobHolder(blobItem2, CONTAINER, DEFAULT_STORAGE_ACCOUNT)
     );
     Assert.assertEquals(expectedBlobItems.size(), actualBlobItems.size());
     Assert.assertEquals(
