@@ -211,7 +211,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
                     null,
                     false,
                     1,
-                4,
+                    4,
                     null
             );
 
@@ -226,8 +226,13 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     Assert.assertEquals(new KillTaskReport.Stats(4, 4, 0), getReportedStats());
   }
 
+  /**
+   * Test kill functionality of multiple unused segments in a wide interval with different {@code used_status_last_updated}
+   * timestamps. A kill task submitted with null {@code maxUsedFlagLastUpdatedTime} will kill all the unused segments in the kill
+   * interval.
+   */
   @Test
-  public void testKillBatchSizeMultipleUnusedSegments() throws Exception
+  public void testKillMultipleUnusedSegmentsWithNullMaxUsedFlagLastUpdatedTime() throws Exception
   {
     final String version = DateTimes.nowUtc().toString();
     final DataSegment segment1 = newSegment(Intervals.of("2019-01-01/2019-02-01"), version);
@@ -256,105 +261,6 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         )
     );
 
-    final DateTime maxUsedFlagLastUpdatedTime1 = DateTimes.nowUtc();
-
-    // Delay for 1s
-    Thread.sleep(1000);
-
-    // now mark the third segment as unused
-    Assert.assertEquals(
-        1,
-        getSegmentsMetadataManager().markAsUnusedSegmentsInInterval(
-            DATA_SOURCE,
-            segment3.getInterval()
-        )
-    );
-
-    final DateTime maxUsedFlagLastUpdatedTime2 = DateTimes.nowUtc();
-
-
-    final List<Interval> segmentIntervals = segments.stream()
-                                                    .map(DataSegment::getInterval)
-                                                    .collect(Collectors.toList());
-
-    final Interval umbrellaInterval = JodaUtils.umbrellaInterval(segmentIntervals);
-
-
-    final KillUnusedSegmentsTask task =
-        new KillUnusedSegmentsTask(
-            null,
-            DATA_SOURCE,
-            umbrellaInterval,
-            null,
-            false,
-            1,
-            10,
-            maxUsedFlagLastUpdatedTime1
-        );
-
-    Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task).get().getStatusCode());
-
-    final List<DataSegment> unusedSegments =
-        getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(DATA_SOURCE, umbrellaInterval);
-
-    Assert.assertEquals(ImmutableList.of(segment3), unusedSegments);
-    Assert.assertEquals(new KillTaskReport.Stats(2, 3, 0), getReportedStats());
-
-    final KillUnusedSegmentsTask task2 =
-        new KillUnusedSegmentsTask(
-            null,
-            DATA_SOURCE,
-            umbrellaInterval,
-            null,
-            false,
-            1,
-            10,
-            maxUsedFlagLastUpdatedTime2
-        );
-
-    Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task2).get().getStatusCode());
-
-    final List<DataSegment> unusedSegments2 =
-        getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(DATA_SOURCE, umbrellaInterval);
-
-    Assert.assertEquals(ImmutableList.of(), unusedSegments2);
-    Assert.assertEquals(new KillTaskReport.Stats(1, 2, 0), getReportedStats());
-  }
-
-  @Test
-  public void testKillBatchSizeMultipleUnusedSegmentsWithNullMax() throws Exception
-  {
-    final String version = DateTimes.nowUtc().toString();
-    final DataSegment segment1 = newSegment(Intervals.of("2019-01-01/2019-02-01"), version);
-    final DataSegment segment2 = newSegment(Intervals.of("2019-02-01/2019-03-01"), version);
-    final DataSegment segment3 = newSegment(Intervals.of("2019-03-01/2019-04-01"), version);
-    final DataSegment segment4 = newSegment(Intervals.of("2019-04-01/2019-05-01"), version);
-
-    final Set<DataSegment> segments = ImmutableSet.of(segment1, segment2, segment3, segment4);
-    final Set<DataSegment> announced = getMetadataStorageCoordinator().commitSegments(segments);
-
-    Assert.assertEquals(segments, announced);
-
-    Assert.assertEquals(
-        1,
-        getSegmentsMetadataManager().markAsUnusedSegmentsInInterval(
-            DATA_SOURCE,
-            segment1.getInterval()
-        )
-    );
-
-    Assert.assertEquals(
-        1,
-        getSegmentsMetadataManager().markAsUnusedSegmentsInInterval(
-            DATA_SOURCE,
-            segment4.getInterval()
-        )
-    );
-
-    // Delay for 1s
-    Thread.sleep(1000);
-
-    // now mark the third segment as unused
     Assert.assertEquals(
         1,
         getSegmentsMetadataManager().markAsUnusedSegmentsInInterval(
@@ -391,8 +297,20 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     Assert.assertEquals(new KillTaskReport.Stats(3, 4, 0), getReportedStats());
   }
 
+  /**
+   * Test kill functionality of multiple unused segments in a wide interval with different {@code used_status_last_updated}
+   * timestamps. Consider:
+   * <li> {@code segment1}, {@code segment2} and {@code segment3} have t1, t2 and t3 {@code used_status_last_updated} timestamps
+   * respectively, where  t1 < t2 < t3 </li>
+   * <li> {@code segment4} is a used segment and therefore shouldn't be killed </li>
+   *
+   * <p>
+   * A kill task submitted with t2 as the {@code maxUsedFlagLastUpdatedTime} should only kill {@code segment1} and {@code segment2}
+   * After that, a kill task submitted with t3 as the {@code maxUsedFlagLastUpdatedTime} should kill {@code segment3}.
+   * </p>
+   */
   @Test
-  public void testKillBatchSizeMultipleUnusedSegments2() throws Exception
+  public void testKillMultipleUnusedSegmentsWithDifferentMaxUsedFlagLastUpdatedTime() throws Exception
   {
     final String version = DateTimes.nowUtc().toString();
     final DataSegment segment1 = newSegment(Intervals.of("2019-01-01/2019-02-01"), version);
@@ -405,6 +323,113 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     Assert.assertEquals(segments, announced);
 
+    Assert.assertEquals(
+        1,
+        getSegmentsMetadataManager().markAsUnusedSegmentsInInterval(
+            DATA_SOURCE,
+            segment1.getInterval()
+        )
+    );
+
+    Assert.assertEquals(
+        1,
+        getSegmentsMetadataManager().markAsUnusedSegmentsInInterval(
+            DATA_SOURCE,
+            segment4.getInterval()
+        )
+    );
+
+    // Capture the last updated time cutoff
+    final DateTime maxUsedFlagLastUpdatedTime1 = DateTimes.nowUtc();
+
+    // Delay for 1s, mark the segments as unused and then capture the last updated time cutoff again
+    Thread.sleep(1000);
+
+    // now mark the third segment as unused
+    Assert.assertEquals(
+        1,
+        getSegmentsMetadataManager().markAsUnusedSegmentsInInterval(
+            DATA_SOURCE,
+            segment3.getInterval()
+        )
+    );
+
+    final DateTime maxUsedFlagLastUpdatedTime2 = DateTimes.nowUtc();
+
+
+    final List<Interval> segmentIntervals = segments.stream()
+                                                    .map(DataSegment::getInterval)
+                                                    .collect(Collectors.toList());
+
+    final Interval umbrellaInterval = JodaUtils.umbrellaInterval(segmentIntervals);
+
+    final KillUnusedSegmentsTask task1 =
+        new KillUnusedSegmentsTask(
+            null,
+            DATA_SOURCE,
+            umbrellaInterval,
+            null,
+            false,
+            1,
+            10,
+            maxUsedFlagLastUpdatedTime1
+        );
+
+    Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task1).get().getStatusCode());
+
+    final List<DataSegment> unusedSegments =
+        getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(DATA_SOURCE, umbrellaInterval);
+
+    Assert.assertEquals(ImmutableList.of(segment3), unusedSegments);
+    Assert.assertEquals(new KillTaskReport.Stats(2, 3, 0), getReportedStats());
+
+    final KillUnusedSegmentsTask task2 =
+        new KillUnusedSegmentsTask(
+            null,
+            DATA_SOURCE,
+            umbrellaInterval,
+            null,
+            false,
+            1,
+            10,
+            maxUsedFlagLastUpdatedTime2
+        );
+
+    Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task2).get().getStatusCode());
+
+    final List<DataSegment> unusedSegments2 =
+        getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(DATA_SOURCE, umbrellaInterval);
+
+    Assert.assertEquals(ImmutableList.of(), unusedSegments2);
+    Assert.assertEquals(new KillTaskReport.Stats(1, 2, 0), getReportedStats());
+  }
+
+  /**
+   * Similar to {@link #testKillMultipleUnusedSegmentsWithDifferentMaxUsedFlagLastUpdatedTime()}, but with a different setup.
+   *
+   * Tests kill functionality of multiple unused segments in a wide interval with different {@code used_status_last_updated}
+   * timestamps. Consider:
+   * <li> {@code segment1} and {@code segment4} have t1 {@code used_status_last_updated} timestamp
+   * <li> {@code segment2} and {@code segment3} have t2 {@code used_status_last_updated} timestamp, where t1 < t2 </li>
+   *
+   * <p>
+   * A kill task submitted with t1 as the {@code maxUsedFlagLastUpdatedTime} should only kill {@code segment1} and {@code segment4}
+   * After that, a kill task submitted with t2 as the {@code maxUsedFlagLastUpdatedTime} should kill {@code segment2} and {@code segment3}.
+   * </p>
+   */
+  @Test
+  public void testKillMultipleUnusedSegmentsWithDifferentMaxUsedFlagLastUpdatedTime2() throws Exception
+  {
+    final String version = DateTimes.nowUtc().toString();
+    final DataSegment segment1 = newSegment(Intervals.of("2019-01-01/2019-02-01"), version);
+    final DataSegment segment2 = newSegment(Intervals.of("2019-02-01/2019-03-01"), version);
+    final DataSegment segment3 = newSegment(Intervals.of("2019-03-01/2019-04-01"), version);
+    final DataSegment segment4 = newSegment(Intervals.of("2019-04-01/2019-05-01"), version);
+
+    final Set<DataSegment> segments = ImmutableSet.of(segment1, segment2, segment3, segment4);
+    final Set<DataSegment> announced = getMetadataStorageCoordinator().commitSegments(segments);
+
+    Assert.assertEquals(segments, announced);
 
     Assert.assertEquals(
         2,
@@ -418,10 +443,9 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
     final DateTime maxUsedFlagLastUpdatedTime1 = DateTimes.nowUtc();
 
-    // Delay for 1s
+    // Delay for 1s, mark the segments as unused and then capture the last updated time cutoff again
     Thread.sleep(1000);
 
-    // now mark the third segment as unused
     Assert.assertEquals(
         2,
         getSegmentsMetadataManager().markSegmentsAsUnused(
@@ -442,7 +466,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     final Interval umbrellaInterval = JodaUtils.umbrellaInterval(segmentIntervals);
 
 
-    final KillUnusedSegmentsTask task =
+    final KillUnusedSegmentsTask task1 =
         new KillUnusedSegmentsTask(
             null,
             DATA_SOURCE,
@@ -454,7 +478,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
             maxUsedFlagLastUpdatedTime1
         );
 
-    Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task).get().getStatusCode());
+    Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task1).get().getStatusCode());
 
     final List<DataSegment> unusedSegments =
         getMetadataStorageCoordinator().retrieveUnusedSegmentsForInterval(DATA_SOURCE, umbrellaInterval);
