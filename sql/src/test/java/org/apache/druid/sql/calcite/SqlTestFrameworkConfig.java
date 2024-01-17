@@ -107,6 +107,9 @@ public @interface SqlTestFrameworkConfig
     {
       config = description.getAnnotation(SqlTestFrameworkConfig.class);
       if (config == null) {
+        config = description.getTestClass().getAnnotation(SqlTestFrameworkConfig.class);
+      }
+      if (config == null) {
         config = defaultConfig();
       }
       return base;
