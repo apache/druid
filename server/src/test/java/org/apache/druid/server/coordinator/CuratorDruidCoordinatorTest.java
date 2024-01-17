@@ -58,6 +58,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
+import org.joda.time.Duration;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -149,14 +150,16 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         SOURCE_LOAD_PATH,
         objectMapper,
         peonExec,
-        callbackExec
+        callbackExec,
+        Duration.standardMinutes(15)
     );
     destinationLoadQueuePeon = new CuratorLoadQueuePeon(
         curator,
         DESTINATION_LOAD_PATH,
         objectMapper,
         peonExec,
-        callbackExec
+        callbackExec,
+        Duration.standardMinutes(15)
     );
   }
 

@@ -28,7 +28,7 @@ import java.util.Objects;
 
 public class MetadataCleanupConfig
 {
-  public static MetadataCleanupConfig STANDARD = new MetadataCleanupConfig(null, null, null);
+  public static final MetadataCleanupConfig STANDARD = new MetadataCleanupConfig(null, null, null);
 
   @JsonProperty("on")
   private final boolean cleanupEnabled;

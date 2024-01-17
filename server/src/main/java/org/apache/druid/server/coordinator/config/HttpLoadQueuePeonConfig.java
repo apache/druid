@@ -26,7 +26,7 @@ import org.joda.time.Duration;
 
 public class HttpLoadQueuePeonConfig
 {
-  public static final Duration DEFAULT_LOAD_TIMEOUT = Duration.standardMinutes(15);
+  private static final Duration DEFAULT_LOAD_TIMEOUT = Duration.standardMinutes(15);
 
   @JsonProperty
   private final Duration hostTimeout;

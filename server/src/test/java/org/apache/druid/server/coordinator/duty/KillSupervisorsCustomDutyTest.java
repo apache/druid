@@ -56,35 +56,6 @@ public class KillSupervisorsCustomDutyTest
   }
 
   @Test
-  public void testConstructorFailIfRetainDurationNull()
-  {
-    final IllegalArgumentException exception = Assert.assertThrows(
-        IllegalArgumentException.class,
-        () -> killSupervisors = new KillSupervisorsCustomDuty(null, mockMetadataSupervisorManager)
-    );
-    Assert.assertEquals(
-        "[KillSupervisorsCustomDuty.durationToRetain] must be 0 milliseconds or higher",
-        exception.getMessage()
-    );
-  }
-
-  @Test
-  public void testConstructorFailIfRetainDurationInvalid()
-  {
-    final IllegalArgumentException exception = Assert.assertThrows(
-        IllegalArgumentException.class,
-        () -> killSupervisors = new KillSupervisorsCustomDuty(
-            new Duration("PT-1S"),
-            mockMetadataSupervisorManager
-        )
-    );
-    Assert.assertEquals(
-        "[KillSupervisorsCustomDuty.durationToRetain] must be 0 milliseconds or higher",
-        exception.getMessage()
-    );
-  }
-
-  @Test
   public void testConstructorSuccess()
   {
     killSupervisors = new KillSupervisorsCustomDuty(

@@ -346,6 +346,14 @@ public class DruidCoordinatorConfigTest
     );
   }
 
+  @Test
+  public void testSomeBasicStuff()
+  {
+    Duration millis = Duration.millis(1);
+    Duration days = Duration.standardDays(1);
+    System.out.println(millis.getMillis() + ", " + days);
+  }
+
   private KillConfigBuilder killConfig()
   {
     return new KillConfigBuilder();

@@ -90,6 +90,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class DruidCoordinatorTest extends CuratorTestBase
 {
   private static final String LOADPATH = "/druid/loadqueue/localhost:1234";
+  private static final Duration LOAD_TIMEOUT = Duration.standardMinutes(15);
   private static final long COORDINATOR_START_DELAY = 1;
   private static final long COORDINATOR_PERIOD = 100;
 
@@ -163,7 +164,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         LOADPATH,
         objectMapper,
         Execs.scheduledSingleThreaded("coordinator_test_load_queue_peon_scheduled-%d"),
-        Execs.singleThreaded("coordinator_test_load_queue_peon-%d")
+        Execs.singleThreaded("coordinator_test_load_queue_peon-%d"),
+        LOAD_TIMEOUT
     );
     loadQueuePeon.start();
     druidNode = new DruidNode("hey", "what", false, 1234, null, true, false);
@@ -353,7 +355,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         loadPathCold,
         objectMapper,
         Execs.scheduledSingleThreaded("coordinator_test_load_queue_peon_cold_scheduled-%d"),
-        Execs.singleThreaded("coordinator_test_load_queue_peon_cold-%d")
+        Execs.singleThreaded("coordinator_test_load_queue_peon_cold-%d"),
+        LOAD_TIMEOUT
     );
     final PathChildrenCache pathChildrenCacheCold = new PathChildrenCache(
         curator,
@@ -451,7 +454,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         loadPathCold,
         objectMapper,
         Execs.scheduledSingleThreaded("coordinator_test_load_queue_peon_cold_scheduled-%d"),
-        Execs.singleThreaded("coordinator_test_load_queue_peon_cold-%d")
+        Execs.singleThreaded("coordinator_test_load_queue_peon_cold-%d"),
+        LOAD_TIMEOUT
     );
 
     final LoadQueuePeon loadQueuePeonBroker1 = new CuratorLoadQueuePeon(
@@ -459,7 +463,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         loadPathBroker1,
         objectMapper,
         Execs.scheduledSingleThreaded("coordinator_test_load_queue_peon_broker1_scheduled-%d"),
-        Execs.singleThreaded("coordinator_test_load_queue_peon_broker1-%d")
+        Execs.singleThreaded("coordinator_test_load_queue_peon_broker1-%d"),
+        LOAD_TIMEOUT
     );
 
     final LoadQueuePeon loadQueuePeonBroker2 = new CuratorLoadQueuePeon(
@@ -467,7 +472,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         loadPathBroker2,
         objectMapper,
         Execs.scheduledSingleThreaded("coordinator_test_load_queue_peon_broker2_scheduled-%d"),
-        Execs.singleThreaded("coordinator_test_load_queue_peon_broker2-%d")
+        Execs.singleThreaded("coordinator_test_load_queue_peon_broker2-%d"),
+        LOAD_TIMEOUT
     );
 
     final LoadQueuePeon loadQueuePeonPoenServer = new CuratorLoadQueuePeon(
@@ -475,7 +481,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         loadPathPeon,
         objectMapper,
         Execs.scheduledSingleThreaded("coordinator_test_load_queue_peon_peon_scheduled-%d"),
-        Execs.singleThreaded("coordinator_test_load_queue_peon_peon-%d")
+        Execs.singleThreaded("coordinator_test_load_queue_peon_peon-%d"),
+        LOAD_TIMEOUT
     );
     final PathChildrenCache pathChildrenCacheCold = new PathChildrenCache(
         curator,
