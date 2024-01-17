@@ -46,5 +46,11 @@ public class CalcitePlannerModule implements Module
     binder.bind(PlannerFactory.class).in(LazySingleton.class);
     binder.bind(DruidOperatorTable.class).in(LazySingleton.class);
     Multibinder.newSetBinder(binder, ExtensionCalciteRuleProvider.class);
+
+    // Catalog resolver: the planner's interface into the (optional) catalog.
+    // This is the default no-op binding used unless the catalog is enabled.
+    binder.bind(CatalogResolver.class)
+        .to(CatalogResolver.NullCatalogResolver.class)
+        .in(LazySingleton.class);
   }
 }

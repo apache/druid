@@ -19,6 +19,8 @@
 
 package org.apache.druid.sql.calcite.planner;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.calcite.interpreter.BindableRel;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
@@ -33,11 +35,14 @@ public class PlannerCaptureHook implements PlannerHook
   private RelRoot relRoot;
   private SqlInsert insertNode;
   private SqlNode sqlNode;
+  private DruidRel<?> druidRel;
+  private Object execPlan;
 
   @Override
   public void captureSql(String sql)
   {
-    // Not used at present. Add a field to capture this if you need it.
+    this.druidRel = druidRel;
+    this.execPlan = druidRel.dryRun();
   }
 
   @Override
@@ -89,5 +94,31 @@ public class PlannerCaptureHook implements PlannerHook
   public SqlNode getSqlNode()
   {
     return sqlNode;
+  }
+
+  public DruidRel<?> druidRel()
+  {
+    return druidRel;
+  }
+
+  public Object execPlan()
+  {
+    return execPlan;
+  }
+
+  public String visualizePlan(ObjectMapper objectMapper)
+  {
+    // Whatever the plan is: convert it to pretty-printed JSON.
+    if (execPlan == null) {
+      return "null";
+    }
+    try {
+      return objectMapper
+          .writerWithDefaultPrettyPrinter()
+          .writeValueAsString(execPlan);
+    }
+    catch (JsonProcessingException e) {
+      throw new RuntimeException("JSON conversion failed", e);
+    }
   }
 }

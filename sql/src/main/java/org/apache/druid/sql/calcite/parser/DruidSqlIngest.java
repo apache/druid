@@ -23,7 +23,6 @@ import org.apache.calcite.sql.SqlInsert;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.parser.SqlParserPos;
-import org.apache.druid.java.util.common.granularity.Granularity;
 
 import javax.annotation.Nullable;
 
@@ -34,10 +33,8 @@ import javax.annotation.Nullable;
  */
 public abstract class DruidSqlIngest extends SqlInsert
 {
-  protected final Granularity partitionedBy;
-
-  // Used in the unparse function to generate the original query since we convert the string to an enum
-  protected final String partitionedByStringForUnparse;
+  @Nullable
+  protected final SqlNode partitionedBy;
 
   @Nullable
   protected final SqlNodeList clusteredBy;
@@ -48,19 +45,17 @@ public abstract class DruidSqlIngest extends SqlInsert
       SqlNode targetTable,
       SqlNode source,
       SqlNodeList columnList,
-      @Nullable Granularity partitionedBy,
-      @Nullable String partitionedByStringForUnparse,
+      @Nullable SqlNode partitionedBy,
       @Nullable SqlNodeList clusteredBy
   )
   {
     super(pos, keywords, targetTable, source, columnList);
 
-    this.partitionedByStringForUnparse = partitionedByStringForUnparse;
     this.partitionedBy = partitionedBy;
     this.clusteredBy = clusteredBy;
   }
 
-  public Granularity getPartitionedBy()
+  public SqlNode getPartitionedBy()
   {
     return partitionedBy;
   }

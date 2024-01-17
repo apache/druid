@@ -19,29 +19,19 @@
 
 package org.apache.druid.sql.calcite.planner;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.google.common.collect.Iterables;
-import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.SqlExplain;
 import org.apache.calcite.sql.SqlIdentifier;
-import org.apache.calcite.sql.SqlInsert;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOrderBy;
+import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.tools.ValidationException;
-import org.apache.calcite.util.Pair;
-import org.apache.druid.common.utils.IdUtils;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.server.security.Action;
-import org.apache.druid.server.security.Resource;
-import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
@@ -50,25 +40,20 @@ import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 
 import java.util.List;
-import java.util.regex.Pattern;
 
 public abstract class IngestHandler extends QueryHandler
 {
-  private static final Pattern UNNAMED_COLUMN_PATTERN = Pattern.compile("^EXPR\\$\\d+$", Pattern.CASE_INSENSITIVE);
-
-  protected final Granularity ingestionGranularity;
+  protected Granularity ingestionGranularity;
   protected String targetDatasource;
+  private SqlNode validatedQueryNode;
+  private RelDataType targetType;
 
   IngestHandler(
-      HandlerContext handlerContext,
-      DruidSqlIngest ingestNode,
-      SqlNode queryNode,
-      SqlExplain explain
+      final HandlerContext handlerContext,
+      final SqlExplain explain
   )
   {
-    super(handlerContext, queryNode, explain);
-    this.ingestionGranularity = ingestNode.getPartitionedBy();
-    handlerContext.hook().captureInsert(ingestNode);
+    super(handlerContext, explain);
   }
 
   protected static SqlNode convertQuery(DruidSqlIngest sqlNode)
@@ -106,25 +91,6 @@ public abstract class IngestHandler extends QueryHandler
   @Override
   public void validate()
   {
-    if (ingestNode().getPartitionedBy() == null) {
-      throw InvalidSqlInput.exception(
-          "Operation [%s] requires a PARTITIONED BY to be explicitly defined, but none was found.",
-          operationName()
-      );
-    }
-    try {
-      PlannerContext plannerContext = handlerContext.plannerContext();
-      if (ingestionGranularity != null) {
-        plannerContext.queryContextMap().put(
-            DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
-            plannerContext.getJsonMapper().writeValueAsString(ingestionGranularity)
-        );
-      }
-    }
-    catch (JsonProcessingException e) {
-      throw InvalidSqlInput.exception(e, "Invalid partition granularity [%s]", ingestionGranularity);
-    }
-    super.validate();
     // Check if CTX_SQL_OUTER_LIMIT is specified and fail the query if it is. CTX_SQL_OUTER_LIMIT being provided causes
     // the number of rows inserted to be limited which is likely to be confusing and unintended.
     if (handlerContext.queryContextMap().get(PlannerContext.CTX_SQL_OUTER_LIMIT) != null) {
@@ -134,8 +100,21 @@ public abstract class IngestHandler extends QueryHandler
           operationName()
       );
     }
-    targetDatasource = validateAndGetDataSourceForIngest();
-    resourceActions.add(new ResourceAction(new Resource(targetDatasource, ResourceType.DATASOURCE), Action.WRITE));
+    DruidSqlIngest ingestNode = ingestNode();
+    DruidSqlIngest validatedNode = (DruidSqlIngest) validate(ingestNode);
+    validatedQueryNode = validatedNode.getSource();
+    CalcitePlanner planner = handlerContext.planner();
+    final SqlValidator validator = planner.getValidator();
+    targetType = validator.getValidatedNodeType(validatedNode);
+    ingestionGranularity = DruidSqlParserUtils.convertSqlNodeToGranularity(ingestNode());
+    final SqlIdentifier tableIdentifier = (SqlIdentifier) ingestNode().getTargetTable();
+    targetDatasource = tableIdentifier.names.get(tableIdentifier.names.size() - 1);
+  }
+
+  @Override
+  protected SqlNode validatedQueryNode()
+  {
+    return validatedQueryNode;
   }
 
   @Override
@@ -148,57 +127,6 @@ public abstract class IngestHandler extends QueryHandler
     );
   }
 
-  /**
-   * Extract target datasource from a {@link SqlInsert}, and also validate that the ingestion is of a form we support.
-   * Expects the target datasource to be either an unqualified name, or a name qualified by the default schema.
-   */
-  private String validateAndGetDataSourceForIngest()
-  {
-    final SqlInsert insert = ingestNode();
-    if (insert.isUpsert()) {
-      throw InvalidSqlInput.exception("UPSERT is not supported.");
-    }
-
-    if (insert.getTargetColumnList() != null) {
-      throw InvalidSqlInput.exception(
-          "Operation [%s] cannot be run with a target column list, given [%s (%s)]",
-          operationName(),
-          insert.getTargetTable(), insert.getTargetColumnList()
-      );
-    }
-
-    final SqlIdentifier tableIdentifier = (SqlIdentifier) insert.getTargetTable();
-    final String dataSource;
-
-    if (tableIdentifier.names.isEmpty()) {
-      // I don't think this can happen, but include a branch for it just in case.
-      throw DruidException.forPersona(DruidException.Persona.USER)
-          .ofCategory(DruidException.Category.DEFENSIVE)
-          .build("Operation [%s] requires a target table", operationName());
-    } else if (tableIdentifier.names.size() == 1) {
-      // Unqualified name.
-      dataSource = Iterables.getOnlyElement(tableIdentifier.names);
-    } else {
-      // Qualified name.
-      final String defaultSchemaName =
-          Iterables.getOnlyElement(CalciteSchema.from(handlerContext.defaultSchema()).path(null));
-
-      if (tableIdentifier.names.size() == 2 && defaultSchemaName.equals(tableIdentifier.names.get(0))) {
-        dataSource = tableIdentifier.names.get(1);
-      } else {
-        throw InvalidSqlInput.exception(
-            "Table [%s] does not support operation [%s] because it is not a Druid datasource",
-            tableIdentifier,
-            operationName()
-        );
-      }
-    }
-
-    IdUtils.validateId("table", dataSource);
-
-    return dataSource;
-  }
-
   @Override
   protected PlannerResult planForDruid() throws ValidationException
   {
@@ -208,26 +136,14 @@ public abstract class IngestHandler extends QueryHandler
   @Override
   protected QueryMaker buildQueryMaker(final RelRoot rootQueryRel) throws ValidationException
   {
-    validateColumnsForIngestion(rootQueryRel);
+    final SqlIdentifier tableIdentifier = (SqlIdentifier) ingestNode().getTargetTable();
+    String targetDatasource = tableIdentifier.names.get(tableIdentifier.names.size() - 1);
     return handlerContext.engine().buildQueryMakerForInsert(
         targetDatasource,
         rootQueryRel,
-        handlerContext.plannerContext()
+        handlerContext.plannerContext(),
+        targetType
     );
-  }
-
-  private void validateColumnsForIngestion(RelRoot rootQueryRel)
-  {
-    // Check that there are no unnamed columns in the insert.
-    for (Pair<Integer, String> field : rootQueryRel.fields) {
-      if (UNNAMED_COLUMN_PATTERN.matcher(field.right).matches()) {
-        throw InvalidSqlInput.exception(
-            "Insertion requires columns to be named, but at least one of the columns was unnamed.  This is usually "
-            + "the result of applying a function without having an AS clause, please ensure that all function calls"
-            + "are named with an AS clause as in \"func(X) as myColumn\"."
-        );
-      }
-    }
   }
 
   /**
@@ -235,21 +151,18 @@ public abstract class IngestHandler extends QueryHandler
    */
   protected static class InsertHandler extends IngestHandler
   {
+
     private final DruidSqlInsert sqlNode;
 
     public InsertHandler(
         SqlStatementHandler.HandlerContext handlerContext,
-        DruidSqlInsert sqlNode,
+        DruidSqlInsert insertNode,
         SqlExplain explain
     )
     {
-      super(
-          handlerContext,
-          sqlNode,
-          convertQuery(sqlNode),
-          explain
-      );
-      this.sqlNode = sqlNode;
+      super(handlerContext, explain);
+      this.sqlNode = insertNode;
+      handlerContext.hook().captureInsert(insertNode);
     }
 
     @Override
@@ -274,7 +187,7 @@ public abstract class IngestHandler extends QueryHandler
     public ExplainAttributes explainAttributes()
     {
       return new ExplainAttributes(
-          DruidSqlInsert.OPERATOR.getName(),
+          DruidSqlIngestOperator.INSERT_OPERATOR.getName(),
           targetDatasource,
           ingestionGranularity,
           DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(sqlNode.getClusteredBy(), rootQueryRel.fields),
@@ -297,12 +210,7 @@ public abstract class IngestHandler extends QueryHandler
         SqlExplain explain
     )
     {
-      super(
-          handlerContext,
-          sqlNode,
-          convertQuery(sqlNode),
-          explain
-      );
+      super(handlerContext, explain);
       this.sqlNode = sqlNode;
     }
 
@@ -348,7 +256,7 @@ public abstract class IngestHandler extends QueryHandler
     public ExplainAttributes explainAttributes()
     {
       return new ExplainAttributes(
-          DruidSqlReplace.OPERATOR.getName(),
+          DruidSqlIngestOperator.REPLACE_OPERATOR.getName(),
           targetDatasource,
           ingestionGranularity,
           DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(sqlNode.getClusteredBy(), rootQueryRel.fields),

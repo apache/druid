@@ -44,11 +44,17 @@ import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexExecutor;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.sql.SqlFunctionCategory;
+import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOperatorTable;
+import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
+import org.apache.calcite.sql.util.ChainedSqlOperatorTable;
 import org.apache.calcite.sql.util.SqlOperatorTables;
+import org.apache.calcite.sql.validate.SqlNameMatcher;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql2rel.RelDecorrelator;
 import org.apache.calcite.sql2rel.SqlRexConvertletTable;
@@ -62,6 +68,7 @@ import org.apache.calcite.util.Pair;
 
 import javax.annotation.Nullable;
 import java.io.Reader;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
@@ -86,6 +93,7 @@ public class CalcitePlanner implements Planner, ViewExpander
   private final @Nullable RelOptCostFactory costFactory;
   private final Context context;
   private final CalciteConnectionConfig connectionConfig;
+  private final DruidSqlValidator.ValidatorContext validatorContext;
   private final RelDataTypeSystem typeSystem;
 
   /**
@@ -118,11 +126,11 @@ public class CalcitePlanner implements Planner, ViewExpander
    * {@link org.apache.calcite.tools.Frameworks#getPlanner} instead.
    */
   @SuppressWarnings("method.invocation.invalid")
-  public CalcitePlanner(FrameworkConfig config)
+  public CalcitePlanner(FrameworkConfig config, DruidSqlValidator.ValidatorContext validatorContext)
   {
     this.costFactory = config.getCostFactory();
+    this.validatorContext = validatorContext;
     this.defaultSchema = config.getDefaultSchema();
-    this.operatorTable = config.getOperatorTable();
     this.programs = config.getPrograms();
     this.parserConfig = config.getParserConfig();
     this.sqlToRelConverterConfig = config.getSqlToRelConverterConfig();
@@ -133,6 +141,41 @@ public class CalcitePlanner implements Planner, ViewExpander
     this.context = config.getContext();
     this.connectionConfig = connConfig(context);
     this.typeSystem = config.getTypeSystem();
+
+    // With the catalog, schemas can provide functions.
+    // Add the necessary indirection. The type factory used here
+    // is the Druid one, since the per-query one is not yet available
+    // here. Nor are built-in function associated with per-query types.
+    this.operatorTable = new ChainedSqlOperatorTable(
+        Arrays.asList(
+            config.getOperatorTable(),
+            new DruidCatalogReader(
+                CalciteSchema.from(rootSchema(defaultSchema)),
+                CalciteSchema.from(defaultSchema).path(null),
+                DruidTypeSystem.TYPE_FACTORY,
+                connectionConfig
+            )
+        )
+    )
+    {
+      @Override
+      public void lookupOperatorOverloads(final SqlIdentifier opName,
+                                          SqlFunctionCategory category,
+                                          SqlSyntax syntax,
+                                          List<SqlOperator> operatorList,
+                                          SqlNameMatcher nameMatcher
+      )
+      {
+        // Workaround for a Calcite bug. Built-in operators have no name: opName
+        // is null. The "standard" operator table special-cases null names. The
+        // chained one just goes ahead and dereferences the (null) opName. This
+        // hack makes the chained version work like the base version.
+        if (opName == null) {
+          return;
+        }
+        super.lookupOperatorOverloads(opName, category, syntax, operatorList, nameMatcher);
+      }
+    };
     reset();
   }
 
@@ -207,7 +250,7 @@ public class CalcitePlanner implements Planner, ViewExpander
         planner.addRelTraitDef(RelCollationTraitDef.INSTANCE);
       }
     } else {
-      for (RelTraitDef def : this.traitDefs) {
+      for (RelTraitDef<?> def : this.traitDefs) {
         planner.addRelTraitDef(def);
       }
     }
@@ -240,7 +283,11 @@ public class CalcitePlanner implements Planner, ViewExpander
       validatedSqlNode = validator.validate(sqlNode);
     }
     catch (RuntimeException e) {
-      throw new ValidationException(e);
+      // Change from Calcite: pass the message explicitly to avoid messages like:
+      // foo.bar.MyException: The real message here
+      // By passing the message, get get the simpler form:
+      // The real message here
+      throw new ValidationException(e.getMessage(), e);
     }
     state = CalcitePlanner.State.STATE_4_VALIDATED;
     return validatedSqlNode;
@@ -279,13 +326,21 @@ public class CalcitePlanner implements Planner, ViewExpander
     return rel(sql).rel;
   }
 
+  /**
+   * Convert the given node to a relational operator. Converts the give node
+   * rather than the one given by {@link #validatedSqlNode}. This is a change
+   * from the original Calcite code. (Though, oddly, Calcite accepted an argument
+   * and didn't use it.) We use the passed-in argument because Druid ignores the
+   * INSERT node: using just the SELECT within the INSERT. The {@code validatedQueryNode}
+   * points to the (unwanted) INSERT, the passed in node is the actual query.
+   */
   @Override
   public RelRoot rel(SqlNode sql)
   {
     ensure(CalcitePlanner.State.STATE_4_VALIDATED);
     SqlNode validatedSqlNode = Objects.requireNonNull(
-        this.validatedSqlNode,
-        "validatedSqlNode is null. Need to call #validate() first"
+        sql,
+        "sql is null. Need to call #validate() first"
     );
     final RexBuilder rexBuilder = createRexBuilder();
     final RelOptCluster cluster = RelOptCluster.create(
@@ -295,8 +350,8 @@ public class CalcitePlanner implements Planner, ViewExpander
     final SqlToRelConverter.Config config =
         sqlToRelConverterConfig.withTrimUnusedFields(false);
     final SqlToRelConverter sqlToRelConverter =
-        new SqlToRelConverter(this, validator,
-                              createCatalogReader(), cluster, convertletTable, config
+        new DruidSqlToRelConverter(this, validator,
+            createCatalogReader(), cluster, convertletTable, config
         );
     RelRoot root =
         sqlToRelConverter.convertQuery(validatedSqlNode, false, true);
@@ -408,7 +463,8 @@ public class CalcitePlanner implements Planner, ViewExpander
         catalogReader,
         getTypeFactory(),
         validatorConfig,
-        context.unwrapOrThrow(PlannerContext.class)
+        context.unwrapOrThrow(PlannerContext.class),
+        validatorContext
     );
   }
 

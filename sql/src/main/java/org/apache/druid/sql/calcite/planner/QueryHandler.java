@@ -93,27 +93,24 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
 {
   static final EmittingLogger log = new EmittingLogger(QueryHandler.class);
 
-  protected SqlNode queryNode;
   protected SqlExplain explain;
-  protected SqlNode validatedQueryNode;
   private boolean isPrepared;
   protected RelRoot rootQueryRel;
   private PrepareResult prepareResult;
   protected RexBuilder rexBuilder;
 
-  public QueryHandler(SqlStatementHandler.HandlerContext handlerContext, SqlNode sqlNode, SqlExplain explain)
+  public QueryHandler(SqlStatementHandler.HandlerContext handlerContext, SqlExplain explain)
   {
     super(handlerContext);
-    this.queryNode = sqlNode;
     this.explain = explain;
   }
 
-  @Override
-  public void validate()
+  protected SqlNode validate(SqlNode root)
   {
     CalcitePlanner planner = handlerContext.planner();
+    SqlNode validatedQueryNode;
     try {
-      validatedQueryNode = planner.validate(rewriteParameters());
+      validatedQueryNode = planner.validate(rewriteParameters(root));
     }
     catch (ValidationException e) {
       throw DruidPlanner.translateException(e);
@@ -126,9 +123,12 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     );
     validatedQueryNode.accept(resourceCollectorShuttle);
     resourceActions = resourceCollectorShuttle.getResourceActions();
+    return validatedQueryNode;
   }
 
-  private SqlNode rewriteParameters()
+  protected abstract SqlNode validatedQueryNode();
+
+  private SqlNode rewriteParameters(SqlNode original)
   {
     // Uses {@link SqlParameterizerShuttle} to rewrite {@link SqlNode} to swap out any
     // {@link org.apache.calcite.sql.SqlDynamicParam} early for their {@link SqlLiteral}
@@ -140,9 +140,9 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     // contains parameters, but no values were provided.
     PlannerContext plannerContext = handlerContext.plannerContext();
     if (plannerContext.getParameters().isEmpty()) {
-      return queryNode;
+      return original;
     } else {
-      return queryNode.accept(new SqlParameterizerShuttle(plannerContext));
+      return original.accept(new SqlParameterizerShuttle(plannerContext));
     }
   }
 
@@ -153,6 +153,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       return;
     }
     isPrepared = true;
+    SqlNode validatedQueryNode = validatedQueryNode();
     rootQueryRel = handlerContext.planner().rel(validatedQueryNode);
     handlerContext.hook().captureQueryRel(rootQueryRel);
     final RelDataTypeFactory typeFactory = rootQueryRel.rel.getCluster().getTypeFactory();
@@ -337,12 +338,12 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
         final Enumerator<?> enumerator = enumerable.enumerator();
         return QueryResponse.withEmptyContext(
             Sequences.withBaggage(new BaseSequence<>(
-                new BaseSequence.IteratorMaker<Object[], QueryHandler.EnumeratorIterator<Object[]>>()
+                new BaseSequence.IteratorMaker<Object[], Iterator<Object[]>>()
                 {
                   @Override
-                  public QueryHandler.EnumeratorIterator<Object[]> make()
+                  public Iterator<Object[]> make()
                   {
-                    return new QueryHandler.EnumeratorIterator<>(new Iterator<Object[]>()
+                    return new Iterator<Object[]>()
                     {
                       @Override
                       public boolean hasNext()
@@ -355,11 +356,11 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
                       {
                         return (Object[]) enumerator.current();
                       }
-                    });
+                    };
                   }
 
                   @Override
-                  public void cleanup(QueryHandler.EnumeratorIterator<Object[]> iterFromMake)
+                  public void cleanup(Iterator<Object[]> iterFromMake)
                   {
 
                   }
@@ -401,7 +402,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
           .map(ResourceAction::getResource)
           .sorted(Comparator.comparing(Resource::getName))
           .collect(Collectors.toList());
-      resourcesString = plannerContext.getJsonMapper().writeValueAsString(resources);
+      resourcesString = plannerContext.getPlannerToolbox().jsonMapper().writeValueAsString(resources);
     }
     catch (JsonProcessingException jpe) {
       // this should never happen, we create the Resources here, not a user
@@ -699,74 +700,6 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
                               "Query could not be planned. A possible reason is [%s]",
                               errorMessage
                           );
-    }
-  }
-
-  public static class SelectHandler extends QueryHandler
-  {
-    public SelectHandler(
-        HandlerContext handlerContext,
-        SqlNode sqlNode,
-        SqlExplain explain
-    )
-    {
-      super(handlerContext, sqlNode, explain);
-    }
-
-    @Override
-    public void validate()
-    {
-      if (!handlerContext.plannerContext().featureAvailable(EngineFeature.CAN_SELECT)) {
-        throw InvalidSqlInput.exception("Cannot execute SELECT with SQL engine [%s]", handlerContext.engine().name());
-      }
-      super.validate();
-    }
-
-    @Override
-    protected RelDataType returnedRowType()
-    {
-      final RelDataTypeFactory typeFactory = rootQueryRel.rel.getCluster().getTypeFactory();
-      return handlerContext.engine().resultTypeForSelect(
-          typeFactory,
-          rootQueryRel.validatedRowType
-      );
-    }
-
-    @Override
-    protected PlannerResult planForDruid() throws ValidationException
-    {
-      return planWithDruidConvention();
-    }
-
-    @Override
-    protected QueryMaker buildQueryMaker(final RelRoot rootQueryRel) throws ValidationException
-    {
-      return handlerContext.engine().buildQueryMakerForSelect(
-          rootQueryRel,
-          handlerContext.plannerContext()
-      );
-    }
-  }
-
-  private static class EnumeratorIterator<T> implements Iterator<T>
-  {
-    private final Iterator<T> it;
-
-    EnumeratorIterator(Iterator<T> it)
-    {
-      this.it = it;
-    }
-
-    @Override
-    public boolean hasNext()
-    {
-      return it.hasNext();
-    }
-
-    @Override
-    public T next()
-    {
-      return it.next();
     }
   }
 }
