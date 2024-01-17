@@ -120,7 +120,6 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
       @Nullable Integer limit
   )
   {
-    // todo clean up?
     synchronized (unusedSegments) {
       Stream<DataSegment> resultStream = unusedSegments.stream();
 
@@ -142,7 +141,6 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
       @Nullable DateTime maxUsedFlagLastUpdatedTime
   )
   {
-    // todo clean up?
     synchronized (unusedSegments) {
       Stream<DataSegment> resultStream = unusedSegments.stream();
 

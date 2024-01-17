@@ -271,7 +271,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         }
     );
 
-    log.info("Found [%,d] unused segments for datasource[%s] in interval[%s] for maxUsedFlagLastUpdatedTime[%s].",
+    log.info("Found [%,d] unused segments for datasource[%s] in interval[%s] with maxUsedFlagLastUpdatedTime[%s].",
              matchingSegments.size(), dataSource, interval, maxUsedFlagLastUpdatedTime);
     return matchingSegments;
   }

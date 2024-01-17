@@ -511,7 +511,6 @@ public class SqlSegmentsMetadataQuery
     if (compareAsString) {
       bindQueryIntervals(sql, intervals);
     }
-    log.info("Finally generated sql[%s]", sb.toString());
 
     final ResultIterator<DataSegment> resultIterator =
         sql.map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class))
