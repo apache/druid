@@ -88,5 +88,30 @@ public class AzureStorageTest
 
     Assert.assertEquals(ImmutableList.of(BLOB_NAME), azureStorage.listDir(CONTAINER, "", null));
   }
+
+  @Test
+  public void testListBlobsWithPrefixInContainerSegmented() throws BlobStorageException
+  {
+    String storageAccountCustom = "customStorageAccount";
+    BlobItem blobItem = new BlobItem().setName(BLOB_NAME).setProperties(new BlobItemProperties().setContentLength(10L));
+    SettableSupplier<PagedResponse<BlobItem>> supplier = new SettableSupplier<>();
+    supplier.set(new TestPagedResponse<>(ImmutableList.of(blobItem)));
+    PagedIterable<BlobItem> pagedIterable = new PagedIterable<>(supplier);
+    Mockito.doReturn(pagedIterable).when(blobContainerClient).listBlobs(
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any()
+    );
+    Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(CONTAINER);
+    Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(3, storageAccountCustom);
+
+    PagedIterable<BlobItem> returnedIterator = azureStorage.listBlobsWithPrefixInContainerSegmented(
+        storageAccountCustom,
+        CONTAINER,
+        "",
+        1,
+        3
+    );
+    Assert.assertEquals(returnedIterator, pagedIterable);
+  }
 }
 

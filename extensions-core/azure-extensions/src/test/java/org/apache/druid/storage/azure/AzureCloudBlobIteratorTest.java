@@ -134,6 +134,53 @@ public class AzureCloudBlobIteratorTest extends EasyMockSupport
   }
 
   @Test
+  public void test_next_prefixesWithMultipleBlobsAndOneDirectory_returnsExpectedBlobs() throws Exception
+  {
+    List<URI> prefixes = ImmutableList.of(
+        new URI(StringUtils.format("azure://%s/dir1", CONTAINER))
+    );
+
+    BlobItem blobItem = new BlobItem().setName("blobName").setProperties(new BlobItemProperties().setContentLength(10L));
+    BlobItem blobItem2 = new BlobItem().setName("blobName2").setProperties(new BlobItemProperties().setContentLength(10L));
+    SettableSupplier<PagedResponse<BlobItem>> supplier = new SettableSupplier<>();
+    supplier.set(new TestPagedResponse<>(ImmutableList.of(blobItem, blobItem2)));
+    PagedIterable<BlobItem> pagedIterable = new PagedIterable<>(supplier);
+    EasyMock.expect(storage.listBlobsWithPrefixInContainerSegmented(DEFAULT_STORAGE_ACCOUNT, CONTAINER, "dir1", MAX_LISTING_LENGTH, MAX_TRIES))
+        .andReturn(pagedIterable);
+
+
+    replayAll();
+    azureCloudBlobIterator = new AzureCloudBlobIterator(
+        storage,
+        config,
+        prefixes,
+        MAX_LISTING_LENGTH
+    );
+    List<CloudBlobHolder> actualBlobItems = new ArrayList<>();
+    while (azureCloudBlobIterator.hasNext()) {
+      actualBlobItems.add(azureCloudBlobIterator.next());
+    }
+    verifyAll();
+    List<CloudBlobHolder> expectedBlobItems = ImmutableList.of(
+        new CloudBlobHolder(blobItem, CONTAINER, DEFAULT_STORAGE_ACCOUNT),
+        new CloudBlobHolder(blobItem2, CONTAINER, DEFAULT_STORAGE_ACCOUNT)
+    );
+    Assert.assertEquals(expectedBlobItems.size(), actualBlobItems.size());
+    Assert.assertEquals(
+        expectedBlobItems.stream().map(CloudBlobHolder::getName).collect(Collectors.toSet()),
+        actualBlobItems.stream().map(CloudBlobHolder::getName).collect(Collectors.toSet())
+    );
+    Assert.assertEquals(
+        expectedBlobItems.stream().map(CloudBlobHolder::getStorageAccount).collect(Collectors.toSet()),
+        actualBlobItems.stream().map(CloudBlobHolder::getStorageAccount).collect(Collectors.toSet())
+    );
+    Assert.assertEquals(
+        expectedBlobItems.stream().map(CloudBlobHolder::getContainerName).collect(Collectors.toSet()),
+        actualBlobItems.stream().map(CloudBlobHolder::getContainerName).collect(Collectors.toSet())
+    );
+  }
+
+  @Test
   public void test_next_prefixesWithMultipleBlobsAndSomeDirectories_returnsExpectedBlobs_azureStorage() throws Exception
   {
     List<URI> prefixes = ImmutableList.of(
