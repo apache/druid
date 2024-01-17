@@ -107,19 +107,9 @@ public @interface SqlTestFrameworkConfig
     {
       config = description.getAnnotation(SqlTestFrameworkConfig.class);
       if (config == null) {
-        config = description.getTestClass().getAnnotation(SqlTestFrameworkConfig.class);
-      }
-      if (config == null) {
         config = defaultConfig();
       }
-      return new Statement()
-      {
-        @Override
-        public void evaluate() throws Throwable
-        {
-          base.evaluate();
-        }
-      };
+      return base;
     }
 
     public SqlTestFramework get()

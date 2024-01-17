@@ -128,6 +128,9 @@ public class SqlTestFramework
    */
   public interface QueryComponentSupplier
   {
+
+    void beforeNewFrameworkCreateHook() throws Exception;
+
     /**
      * Gather properties to be used within tests. Particularly useful when choosing
      * among aggregator implementations: avoids the need to copy/paste code to select
@@ -174,8 +177,6 @@ public class SqlTestFramework
     JoinableFactoryWrapper createJoinableFactoryWrapper(LookupExtractorFactoryContainerProvider lookupProvider);
 
     void finalizeTestFramework(SqlTestFramework sqlTestFramework);
-
-    void beforeNewFrameworkCreateHook() throws Exception;
   }
 
   public interface PlannerComponentSupplier
