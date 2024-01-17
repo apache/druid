@@ -149,7 +149,9 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
             long totalLags = lagStats.getTotalLag();
             lagMetricsQueue.offer(totalLags > 0 ? totalLags : 0L);
           }
-          log.debug("Current lags [%s] for dataSource [%s].", new ArrayList<>(lagMetricsQueue), dataSource);
+          if (log.isDebugEnabled()) {
+            log.debug("Current lags [%s] for dataSource [%s].", new ArrayList<>(lagMetricsQueue), dataSource);
+          }
         } else {
           log.warn("[%s] supervisor is suspended, skipping lag collection", dataSource);
         }

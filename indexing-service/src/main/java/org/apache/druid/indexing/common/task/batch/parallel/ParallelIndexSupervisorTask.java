@@ -752,7 +752,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         );
 
         // This is for potential debugging in case we suspect bad estimation of cardinalities etc,
-        LOG.debug("intervalToNumShards: %s", intervalToNumShards.toString());
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("intervalToNumShards: %s", intervalToNumShards.toString());
+        }
 
       } else {
         intervalToNumShards = CollectionUtils.mapValues(

@@ -538,10 +538,12 @@ public class DruidCoordinator
     if (getCompactSegmentsDutyFromCustomGroups().isEmpty()) {
       duties.add(compactSegments);
     }
-    log.debug(
-        "Initialized indexing service duties [%s].",
-        duties.stream().map(duty -> duty.getClass().getName()).collect(Collectors.toList())
-    );
+    if (log.isDebugEnabled()) {
+      log.debug(
+          "Initialized indexing service duties [%s].",
+          duties.stream().map(duty -> duty.getClass().getName()).collect(Collectors.toList())
+      );
+    }
     return ImmutableList.copyOf(duties);
   }
 

@@ -90,7 +90,9 @@ public class DruidSqlParserUtils
       throw e;
     }
     catch (Exception e) {
-      log.debug(e, StringUtils.format("Unable to convert %s to a valid granularity.", sqlNode.toString()));
+      if (log.isDebugEnabled()) {
+        log.debug(e, StringUtils.format("Unable to convert %s to a valid granularity.", sqlNode.toString()));
+      }
       throw new ParseException(e.getMessage());
     }
   }

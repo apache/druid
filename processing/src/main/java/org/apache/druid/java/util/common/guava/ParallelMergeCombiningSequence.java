@@ -475,20 +475,22 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
 
       final int computedNumParallelTasks = Math.max(computedOptimalParallelism, 1);
 
-      LOG.debug(
-          "Computed parallel tasks: [%s]; ForkJoinPool details - sequence parallelism: [%s] "
-          + "active threads: [%s] running threads: [%s] queued submissions: [%s] queued tasks: [%s] "
-          + "pool parallelism: [%s] pool size: [%s] steal count: [%s]",
-          computedNumParallelTasks,
-          parallelism,
-          getPool().getActiveThreadCount(),
-          runningThreadCount,
-          submissionCount,
-          getPool().getQueuedTaskCount(),
-          getPool().getParallelism(),
-          getPool().getPoolSize(),
-          getPool().getStealCount()
-      );
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(
+            "Computed parallel tasks: [%s]; ForkJoinPool details - sequence parallelism: [%s] "
+                + "active threads: [%s] running threads: [%s] queued submissions: [%s] queued tasks: [%s] "
+                + "pool parallelism: [%s] pool size: [%s] steal count: [%s]",
+            computedNumParallelTasks,
+            parallelism,
+            getPool().getActiveThreadCount(),
+            runningThreadCount,
+            submissionCount,
+            getPool().getQueuedTaskCount(),
+            getPool().getParallelism(),
+            getPool().getPoolSize(),
+            getPool().getStealCount()
+        );
+      }
 
       return computedNumParallelTasks;
     }
@@ -632,15 +634,17 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
               (nextYieldAfter + (recursionDepth * yieldAfter)) / (recursionDepth + 1);
           final int adjustedNextYieldAfter = (int) Math.ceil(cumulativeMovingAverage);
 
-          LOG.debug(
-              "task recursion %s yielded %s results ran for %s millis (%s nanos), %s cpu nanos, next task yielding every %s operations",
-              recursionDepth,
-              yieldAfter,
-              TimeUnit.MILLISECONDS.convert(elapsedNanos, TimeUnit.NANOSECONDS),
-              elapsedNanos,
-              elapsedCpuNanos,
-              adjustedNextYieldAfter
-          );
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(
+                    "task recursion %s yielded %s results ran for %s millis (%s nanos), %s cpu nanos, next task yielding every %s operations",
+                    recursionDepth,
+                    yieldAfter,
+                    TimeUnit.MILLISECONDS.convert(elapsedNanos, TimeUnit.NANOSECONDS),
+                    elapsedNanos,
+                    elapsedCpuNanos,
+                    adjustedNextYieldAfter
+            );
+          }
           getPool().execute(new MergeCombineAction<>(
               pQueue,
               outputQueue,
