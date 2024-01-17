@@ -71,12 +71,14 @@ import org.apache.druid.indexing.seekablestream.supervisor.TaskReportData;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.LagBasedAutoScalerConfig;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.AlertBuilder;
+import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -86,7 +88,6 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.FireDepartment;
-import org.apache.druid.server.metrics.ExceptionCapturingServiceEmitter;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
@@ -97,8 +98,6 @@ import org.easymock.CaptureType;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.easymock.IAnswer;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
 import org.junit.After;
@@ -153,7 +152,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   private SeekableStreamIndexTaskClient<String, String> taskClient;
   private TaskQueue taskQueue;
   private RowIngestionMetersFactory rowIngestionMetersFactory;
-  private ExceptionCapturingServiceEmitter serviceEmitter;
+  private StubServiceEmitter serviceEmitter;
   private SupervisorStateManagerConfig supervisorConfig;
 
   public KinesisSupervisorTest()
@@ -215,7 +214,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null
     );
     rowIngestionMetersFactory = new TestUtils().getRowIngestionMetersFactory();
-    serviceEmitter = new ExceptionCapturingServiceEmitter();
+    serviceEmitter = new StubServiceEmitter("KinesisSupervisorTest", "localhost");
     EmittingLogger.registerEmitter(serviceEmitter);
     supervisorConfig = new SupervisorStateManagerConfig();
   }
@@ -3317,9 +3316,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     verifyAll();
 
-    Assert.assertNull(serviceEmitter.getStackTrace(), serviceEmitter.getStackTrace());
-    Assert.assertNull(serviceEmitter.getExceptionMessage(), serviceEmitter.getExceptionMessage());
-    Assert.assertNull(serviceEmitter.getExceptionClass());
+    Assert.assertTrue(serviceEmitter.getAlerts().isEmpty());
   }
 
   @Test(timeout = 60_000L)
@@ -3443,20 +3440,19 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     verifyAll();
 
-    while (serviceEmitter.getStackTrace() == null) {
+    while (serviceEmitter.getAlerts().isEmpty()) {
       Thread.sleep(100);
     }
 
-    MatcherAssert.assertThat(
-        serviceEmitter.getStackTrace(),
-        CoreMatchers.startsWith("org.apache.druid.java.util.common.ISE: Cannot find taskGroup")
+    final AlertEvent alert = serviceEmitter.getAlerts().get(0);
+    Assert.assertEquals(
+        "SeekableStreamSupervisor[testDS] failed to handle notice",
+        alert.getDescription()
     );
-
     Assert.assertEquals(
         "Cannot find taskGroup [0] among all activelyReadingTaskGroups [{}]",
-        serviceEmitter.getExceptionMessage()
+        alert.getDataMap().get(AlertBuilder.EXCEPTION_MESSAGE_KEY)
     );
-    Assert.assertEquals(ISE.class.getName(), serviceEmitter.getExceptionClass());
   }
 
   @Test

@@ -22,14 +22,14 @@ package org.apache.druid.query.search;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.query.CachingEmitter;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.DefaultQueryMetricsTest;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ListFilteredDimensionSpec;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -38,7 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class DefaultSearchQueryMetricsTest
+public class DefaultSearchQueryMetricsTest extends InitializedNullHandlingTest
 {
 
   /**
@@ -47,8 +47,7 @@ public class DefaultSearchQueryMetricsTest
   @Test
   public void testDefaultSearchQueryMetricsQuery()
   {
-    CachingEmitter cachingEmitter = new CachingEmitter();
-    ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
+    final StubServiceEmitter serviceEmitter = new StubServiceEmitter("", "");
     SearchQuery query = Druids
         .newSearchQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -67,7 +66,7 @@ public class DefaultSearchQueryMetricsTest
     queryMetrics.query(query);
 
     queryMetrics.reportQueryTime(0).emit(serviceEmitter);
-    Map<String, Object> actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
+    Map<String, Object> actualEvent = serviceEmitter.getEvents().get(0).toMap();
     Assert.assertEquals(13, actualEvent.size());
     Assert.assertTrue(actualEvent.containsKey("feed"));
     Assert.assertTrue(actualEvent.containsKey("timestamp"));
@@ -101,9 +100,7 @@ public class DefaultSearchQueryMetricsTest
         .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
         .build();
 
-    CachingEmitter cachingEmitter = new CachingEmitter();
-    ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
     SearchQueryMetrics queryMetrics = DefaultSearchQueryMetricsFactory.instance().makeMetrics(query);
-    DefaultQueryMetricsTest.testQueryMetricsDefaultMetricNamesAndUnits(cachingEmitter, serviceEmitter, queryMetrics);
+    DefaultQueryMetricsTest.testQueryMetricsDefaultMetricNamesAndUnits(queryMetrics);
   }
 }
