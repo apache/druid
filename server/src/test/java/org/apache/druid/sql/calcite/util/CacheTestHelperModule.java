@@ -97,7 +97,6 @@ public class CacheTestHelperModule extends AbstractModule
   }
 
   @Provides
-  @EtagProvider.Annotation
   EtagProvider etagProvider()
   {
     return etagProvider;

@@ -19,7 +19,6 @@
 
 package org.apache.druid.server;
 
-import com.google.inject.BindingAnnotation;
 import com.google.inject.Key;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.Query;
@@ -27,22 +26,11 @@ import org.apache.druid.query.TableDataSource;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
 import java.nio.charset.StandardCharsets;
 
 public interface EtagProvider
 {
-  Key<EtagProvider> KEY = Key.get(EtagProvider.class, EtagProvider.Annotation.class);
-
-  @Retention(RetentionPolicy.RUNTIME)
-  @Target({ElementType.METHOD})
-  @BindingAnnotation
-  @interface Annotation
-  {
-  }
+  Key<EtagProvider> KEY = Key.get(EtagProvider.class);
 
   String getEtagFor(Query<?> query);
 
