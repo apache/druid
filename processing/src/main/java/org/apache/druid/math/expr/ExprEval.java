@@ -36,6 +36,7 @@ import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.segment.nested.StructuredData;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
@@ -729,32 +730,20 @@ public abstract class ExprEval<T>
     return value;
   }
 
-  void cacheStringValue(@Nullable String value)
-  {
-    stringValue = value;
-    stringValueCached = true;
-  }
-
-  @Nullable
-  String getCachedStringValue()
-  {
-    return stringValue;
-  }
-
-  boolean isStringValueCached()
-  {
-    return stringValueCached;
-  }
-
   @Nullable
   public String asString()
   {
     if (!stringValueCached) {
-      stringValue = Evals.asString(value);
+      stringValue = computeStringValue();
       stringValueCached = true;
     }
 
     return stringValue;
+  }
+
+  protected String computeStringValue()
+  {
+    return Evals.asString(value);
   }
 
   /**
@@ -1216,20 +1205,15 @@ public abstract class ExprEval<T>
     }
 
     @Override
-    @Nullable
-    public String asString()
+    protected String computeStringValue()
     {
-      if (!isStringValueCached()) {
-        if (value == null) {
-          cacheStringValue(null);
-        } else if (value.length == 1) {
-          cacheStringValue(Evals.asString(value[0]));
-        } else {
-          cacheStringValue(Arrays.deepToString(value));
-        }
+      if (value == null) {
+        return null;
+      } else if (value.length == 1) {
+        return Evals.asString(value[0]);
+      } else {
+        return Arrays.deepToString(value);
       }
-
-      return getCachedStringValue();
     }
 
     @Override
@@ -1582,5 +1566,16 @@ public abstract class ExprEval<T>
   public static Types.InvalidCastException invalidCast(ExpressionType fromType, ExpressionType toType)
   {
     return new Types.InvalidCastException(fromType, toType);
+  }
+
+  public void immutable()
+  {
+    // call some methods which may populate cache as a sideeffect
+    asString();
+    asInt();
+    asLong();
+    asBoolean();
+    asDouble();
+    asArray();
   }
 }

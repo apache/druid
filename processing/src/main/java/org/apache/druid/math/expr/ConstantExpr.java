@@ -50,11 +50,15 @@ abstract class ConstantExpr<T> implements Expr
   @SuppressWarnings("Immutable")
   @Nullable
   final T value;
+  @SuppressWarnings("Immutable")
+  final ExprEval exprEval;
 
   protected ConstantExpr(ExpressionType outputType, @Nullable T value)
   {
     this.outputType = outputType;
     this.value = value;
+    this.exprEval = realEval();
+    exprEval.immutable();
   }
 
   @Nullable
@@ -114,12 +118,6 @@ abstract class ConstantExpr<T> implements Expr
   }
 
   protected abstract ExprEval<T> realEval();
-
-  @Override
-  public final Expr singleThreaded()
-  {
-    return new ExprEvalBasedConstantExpr<T>(realEval());
-  }
 
   /**
    * Constant expression based on a concreate ExprEval.
