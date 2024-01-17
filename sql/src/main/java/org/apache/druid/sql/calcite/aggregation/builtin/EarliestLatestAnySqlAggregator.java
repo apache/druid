@@ -359,7 +359,9 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
     @Override
     public <R> R accept(SqlVisitor<R> visitor)
     {
-
+      // We overridde the "accept()" method, because the __time column's presence is determined when Calcite is converting
+      // the identifiers to the fully qualified column names with prefixes. This is where the validation exception can
+      // trigger
       try {
         return super.accept(visitor);
       }

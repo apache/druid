@@ -39,6 +39,7 @@ import org.apache.druid.query.aggregation.SerializablePairLongFloatComplexMetric
 import org.apache.druid.query.aggregation.SerializablePairLongLongComplexMetricSerde;
 import org.apache.druid.query.aggregation.SerializablePairLongStringComplexMetricSerde;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -63,7 +64,9 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
   private final EarliestLatestAnySqlAggregator.AggregatorType aggregatorType;
   private final SqlAggFunction function;
 
-  private EarliestLatestBySqlAggregator(final EarliestLatestAnySqlAggregator.AggregatorType aggregatorType)
+  private EarliestLatestBySqlAggregator(
+      final EarliestLatestAnySqlAggregator.AggregatorType aggregatorType
+  )
   {
     this.aggregatorType = aggregatorType;
     this.function = new EarliestByLatestBySqlAggFunction(aggregatorType);
@@ -114,7 +117,12 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
     final AggregatorFactory theAggFactory;
     switch (args.size()) {
       case 2:
-        if (isMetricPreAggregated(plannerContext, rexNodes.get(0), function.getName())) {
+        if (passedExplicitTimeColumnToPreAggregatedMetric(
+            plannerContext,
+            args.get(1),
+            rexNodes.get(0),
+            function.getName()
+        )) {
           return null;
         }
         theAggFactory = aggregatorType.createAggregatorFactory(
@@ -143,7 +151,12 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
           );
           return null;
         }
-        if (isMetricPreAggregated(plannerContext, rexNodes.get(0), function.getName())) {
+        if (passedExplicitTimeColumnToPreAggregatedMetric(
+            plannerContext,
+            args.get(1),
+            rexNodes.get(0),
+            function.getName()
+        )) {
           return null;
         }
         theAggFactory = aggregatorType.createAggregatorFactory(
@@ -174,25 +187,63 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
     );
   }
 
-  private static boolean isMetricPreAggregated(PlannerContext plannerContext, RexNode rexNode, String byAggregator)
+  /**
+   * Returns true if we have passed a time column to a pre-aggregated first/last metric. It is used to detect calls of
+   * type EARLIEST_BY(firstPreAggregated, customTimestampExpr). This is disallowed, and the caller should instead do
+   * EARLIEST(firstPreAggregated) to further rollup the column. The time information will get ignored in the native
+   * layer, therefore the SQL prevents the users from making such calls.
+   * This also sets a planning error with the appropriate message, and the caller should either error out or refuse
+   * aggregation if this is true.
+   */
+  private static boolean passedExplicitTimeColumnToPreAggregatedMetric(
+      PlannerContext plannerContext,
+      DruidExpression timeColumnDruidExpression,
+      RexNode metricRexNode,
+      String aggregatorName
+  )
   {
-    final RelDataType type = rexNode.getType();
+    if (isTimeArgModified(timeColumnDruidExpression) && isMetricPreAggregated(metricRexNode)) {
+      final RelDataType type = metricRexNode.getType();
+      String complexColumnTypeName = ((RowSignatures.ComplexSqlType) type).getColumnType().getComplexTypeName();
+      plannerContext.setPlanningError(
+          "Cannot call %s with an explicit 'timeExpr' column for pre-aggregated metric of type [%s]. Use %s instead "
+          + "to further rollup the complex column.",
+          aggregatorName,
+          complexColumnTypeName,
+          aggregatorName.substring(0, aggregatorName.length() - 3)
+      );
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Checks whether the given DruidExpression refers a direct column named __time. It's not the perfect check to
+   * figure out if EARLIEST/LATEST or EARLIEST_BY/LATEST_BY have been used, because this would return true if
+   * EARLIEST_BY(metric, __time) has been used, which is incorrect. However, it's impossible to figure out which call
+   * has been made, since EARLIEST gets rewritten to EARLIEST_BY multiple times within Calcite, using the same
+   * function call as EARLIEST_BY's - which means that we can't add a boolean flag within the SQL function, that
+   * distinguises between the EARLIEST that has been rewritten, and the EARLIEST_BY which hasn't been rewritten, because
+   * Calcite loses that information
+   */
+  private static boolean isTimeArgModified(DruidExpression druidExpression)
+  {
+    return !DruidExpression.ofColumn(ColumnType.LONG, ColumnHolder.TIME_COLUMN_NAME).equals(druidExpression);
+  }
+
+  /**
+   * Returns true if the metric passed to the function has already been pre aggregated using one of the first/last
+   * aggregators.
+   */
+  private static boolean isMetricPreAggregated(RexNode metricRexNode)
+  {
+    final RelDataType type = metricRexNode.getType();
     if (type instanceof RowSignatures.ComplexSqlType) {
       String complexColumnTypeName = ((RowSignatures.ComplexSqlType) type).getColumnType().getComplexTypeName();
-      if ((SerializablePairLongLongComplexMetricSerde.TYPE_NAME.equals(complexColumnTypeName)
-           || SerializablePairLongFloatComplexMetricSerde.TYPE_NAME.equals(complexColumnTypeName)
-           || SerializablePairLongDoubleComplexMetricSerde.TYPE_NAME.equals(complexColumnTypeName)
-           || SerializablePairLongStringComplexMetricSerde.TYPE_NAME.equals(complexColumnTypeName))) {
-        plannerContext.setPlanningError(
-            "Cannot call %s with an explicit 'timeExpr' column for pre-aggregated metric of type [%s]. Use %s instead "
-            + "to further rollup the complex column.",
-            byAggregator,
-            complexColumnTypeName,
-            byAggregator.substring(0, byAggregator.length() - 3)
-        );
-        return true;
-      }
-      return false;
+      return SerializablePairLongLongComplexMetricSerde.TYPE_NAME.equals(complexColumnTypeName)
+             || SerializablePairLongFloatComplexMetricSerde.TYPE_NAME.equals(complexColumnTypeName)
+             || SerializablePairLongDoubleComplexMetricSerde.TYPE_NAME.equals(complexColumnTypeName)
+             || SerializablePairLongStringComplexMetricSerde.TYPE_NAME.equals(complexColumnTypeName);
     }
     return false;
   }
