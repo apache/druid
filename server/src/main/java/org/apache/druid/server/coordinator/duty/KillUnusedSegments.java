@@ -176,7 +176,7 @@ public class KillUnusedSegments implements CoordinatorDuty
         dataSourcesToKill = segmentsMetadataManager.retrieveAllDataSourceNames();
       }
 
-      log.info("Killing unused segments for datasources[%s]", dataSourcesToKill);
+      log.debug("Killing unused segments for datasources[%s]", dataSourcesToKill);
       lastKillTime = DateTimes.nowUtc();
       taskStats.submittedTasks = killUnusedSegments(dataSourcesToKill, availableKillTaskSlots);
     }
@@ -203,7 +203,6 @@ public class KillUnusedSegments implements CoordinatorDuty
       int availableKillTaskSlots
   )
   {
-    log.info("Hmm availableKillTaskSlots[%d] and dataSourcesToKill[%s]", availableKillTaskSlots, dataSourcesToKill);
     int submittedTasks = 0;
     if (0 < availableKillTaskSlots && !CollectionUtils.isNullOrEmpty(dataSourcesToKill)) {
       for (String dataSource : dataSourcesToKill) {
@@ -215,14 +214,12 @@ public class KillUnusedSegments implements CoordinatorDuty
         }
         final DateTime maxUsedFlagLastUpdatedTime = DateTimes.nowUtc().minus(bufferPeriod);
         final Interval intervalToKill = findIntervalForKill(dataSource, maxUsedFlagLastUpdatedTime);
-        log.info("IntervalToKill[%s]", intervalToKill);
         if (intervalToKill == null) {
           datasourceToLastKillIntervalEnd.remove(dataSource);
           continue;
         }
 
         try {
-          log.info("GRRRR for datasource[%s], intervalToKill[%s], maxUsedFlagLastUpdatedTime[%s]", dataSource, intervalToKill, maxUsedFlagLastUpdatedTime);
           FutureUtils.getUnchecked(
               overlordClient.runKillTask(
                   TASK_ID_PREFIX,
@@ -237,7 +234,7 @@ public class KillUnusedSegments implements CoordinatorDuty
           datasourceToLastKillIntervalEnd.put(dataSource, intervalToKill.getEnd());
         }
         catch (Exception ex) {
-          log.error(ex, "Failed to submit kill task for dataSource[%s]", dataSource);
+          log.error(ex, "Failed to submit kill task for dataSource[%s] in interval[%s]", dataSource, intervalToKill);
           if (Thread.currentThread().isInterrupted()) {
             log.warn("Skipping kill task scheduling because thread is interrupted.");
             break;
@@ -247,7 +244,7 @@ public class KillUnusedSegments implements CoordinatorDuty
     }
 
     if (!log.isDebugEnabled()) {
-      log.info(
+      log.debug(
           "Submitted [%d] kill tasks for [%d] datasources.%s",
           submittedTasks,
           dataSourcesToKill.size(),
