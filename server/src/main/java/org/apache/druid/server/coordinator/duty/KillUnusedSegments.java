@@ -136,7 +136,7 @@ public class KillUnusedSegments implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    if (canDutyRun()) {
+    if (!canDutyRun()) {
       log.info(
           "Skipping KillUnusedSegments until period[%s] have elapsed after last kill time[%s].",
           Duration.ofMillis(period),
