@@ -664,7 +664,7 @@ public class DruidQuery
 
       projection = Projection.preAggregation(sortProject, plannerContext, rowSignature, virtualColumnRegistry);
     } else {
-      projection = Projection.postAggregation(sortProject, plannerContext, rowSignature, "p");
+      projection = Projection.postAggregation(sortProject, plannerContext, rowSignature, "s");
     }
 
     return Sorting.create(orderBys, offsetLimit, projection);

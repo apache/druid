@@ -14732,11 +14732,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .setDataSource(CalciteTests.DATASOURCE1)
                 .setInterval(querySegmentSpec(Filtration.eternity()))
                 .setGranularity(Granularities.ALL)
-                .setVirtualColumns(
-                    expressionVirtualColumn("v0", "'abc'", ColumnType.STRING))
                 .setDimFilter(equality("dim2", "abc", ColumnType.STRING))
                 .setDimensions(
-                    dimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)))
+                    dimensions(new DefaultDimensionSpec("dim2", "d0", ColumnType.STRING)))
                 .setAggregatorSpecs(
                     aggregators(
                         new StringLastAggregatorFactory("a0", "dim3", "__time", 1024),
