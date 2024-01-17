@@ -121,7 +121,70 @@ public class AzureCloudBlobIteratorTest extends EasyMockSupport
     Assert.assertEquals(expectedBlobItems.size(), actualBlobItems.size());
     Assert.assertEquals(
         expectedBlobItems.stream().map(CloudBlobHolder::getName).collect(Collectors.toSet()),
-        actualBlobItems.stream().map(CloudBlobHolder::getName).collect(Collectors.toSet()));
+        actualBlobItems.stream().map(CloudBlobHolder::getName).collect(Collectors.toSet())
+    );
+    Assert.assertEquals(
+        expectedBlobItems.stream().map(CloudBlobHolder::getStorageAccount).collect(Collectors.toSet()),
+        actualBlobItems.stream().map(CloudBlobHolder::getStorageAccount).collect(Collectors.toSet())
+    );
+    Assert.assertEquals(
+        expectedBlobItems.stream().map(CloudBlobHolder::getContainerName).collect(Collectors.toSet()),
+        actualBlobItems.stream().map(CloudBlobHolder::getContainerName).collect(Collectors.toSet())
+    );
+  }
+
+  @Test
+  public void test_next_prefixesWithMultipleBlobsAndSomeDirectories_returnsExpectedBlobs_azureStorage() throws Exception
+  {
+    List<URI> prefixes = ImmutableList.of(
+        new URI(StringUtils.format("azureStorage://%s/%s/dir1", STORAGE_ACCOUNT, CONTAINER)),
+        new URI(StringUtils.format("azureStorage://%s/%s/dir2", STORAGE_ACCOUNT, CONTAINER))
+    );
+
+    BlobItem blobItem = new BlobItem().setName("blobName").setProperties(new BlobItemProperties().setContentLength(10L));
+    SettableSupplier<PagedResponse<BlobItem>> supplier = new SettableSupplier<>();
+    supplier.set(new TestPagedResponse<>(ImmutableList.of(blobItem)));
+    PagedIterable<BlobItem> pagedIterable = new PagedIterable<>(supplier);
+    EasyMock.expect(storage.listBlobsWithPrefixInContainerSegmented(STORAGE_ACCOUNT, CONTAINER, "dir1", MAX_LISTING_LENGTH, MAX_TRIES))
+        .andReturn(pagedIterable);
+
+    BlobItem blobPrefixItem = new BlobItem().setIsPrefix(true).setName("subdir").setProperties(new BlobItemProperties());
+    BlobItem blobItem2 = new BlobItem().setName("blobName2").setProperties(new BlobItemProperties().setContentLength(10L));
+    SettableSupplier<PagedResponse<BlobItem>> supplier2 = new SettableSupplier<>();
+    supplier2.set(new TestPagedResponse<>(ImmutableList.of(blobPrefixItem, blobItem2)));
+    PagedIterable<BlobItem> pagedIterable2 = new PagedIterable<>(supplier2);
+    EasyMock.expect(storage.listBlobsWithPrefixInContainerSegmented(STORAGE_ACCOUNT, CONTAINER, "dir2", MAX_LISTING_LENGTH, MAX_TRIES))
+        .andReturn(pagedIterable2);
+
+    replayAll();
+    azureCloudBlobIterator = new AzureCloudBlobIterator(
+        storage,
+        config,
+        prefixes,
+        MAX_LISTING_LENGTH
+    );
+    List<CloudBlobHolder> actualBlobItems = new ArrayList<>();
+    while (azureCloudBlobIterator.hasNext()) {
+      actualBlobItems.add(azureCloudBlobIterator.next());
+    }
+    verifyAll();
+    List<CloudBlobHolder> expectedBlobItems = ImmutableList.of(
+        new CloudBlobHolder(blobItem, CONTAINER, STORAGE_ACCOUNT),
+        new CloudBlobHolder(blobItem2, CONTAINER, STORAGE_ACCOUNT)
+    );
+    Assert.assertEquals(expectedBlobItems.size(), actualBlobItems.size());
+    Assert.assertEquals(
+        expectedBlobItems.stream().map(CloudBlobHolder::getName).collect(Collectors.toSet()),
+        actualBlobItems.stream().map(CloudBlobHolder::getName).collect(Collectors.toSet())
+    );
+    Assert.assertEquals(
+        expectedBlobItems.stream().map(CloudBlobHolder::getStorageAccount).collect(Collectors.toSet()),
+        actualBlobItems.stream().map(CloudBlobHolder::getStorageAccount).collect(Collectors.toSet())
+    );
+    Assert.assertEquals(
+        expectedBlobItems.stream().map(CloudBlobHolder::getContainerName).collect(Collectors.toSet()),
+        actualBlobItems.stream().map(CloudBlobHolder::getContainerName).collect(Collectors.toSet())
+    );
   }
 
   @Test
@@ -153,12 +216,21 @@ public class AzureCloudBlobIteratorTest extends EasyMockSupport
     }
     verifyAll();
     List<CloudBlobHolder> expectedBlobItems = ImmutableList.of(
-        new CloudBlobHolder(blobItem, CONTAINER, STORAGE_ACCOUNT)
+        new CloudBlobHolder(blobItem, CONTAINER, DEFAULT_STORAGE_ACCOUNT)
     );
     Assert.assertEquals(expectedBlobItems.size(), actualBlobItems.size());
     Assert.assertEquals(
         expectedBlobItems.stream().map(CloudBlobHolder::getName).collect(Collectors.toSet()),
-        actualBlobItems.stream().map(CloudBlobHolder::getName).collect(Collectors.toSet()));
+        actualBlobItems.stream().map(CloudBlobHolder::getName).collect(Collectors.toSet())
+    );
+    Assert.assertEquals(
+        expectedBlobItems.stream().map(CloudBlobHolder::getStorageAccount).collect(Collectors.toSet()),
+        actualBlobItems.stream().map(CloudBlobHolder::getStorageAccount).collect(Collectors.toSet())
+    );
+    Assert.assertEquals(
+        expectedBlobItems.stream().map(CloudBlobHolder::getContainerName).collect(Collectors.toSet()),
+        actualBlobItems.stream().map(CloudBlobHolder::getContainerName).collect(Collectors.toSet())
+    );
   }
 
   @Test(expected = NoSuchElementException.class)
