@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import java.io.File;
 import java.io.IOException;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * InputSourceReader iterating multiple {@link InputEntity}s. This class could be used for
@@ -86,9 +87,17 @@ public class InputEntityIteratingReader implements InputSourceReader
   {
     return createIterator(entity -> {
       // InputEntityReader is stateful and so a new one should be created per entity.
+      final Function<InputRow, InputRow> systemFieldDecorator = systemFieldDecoratorFactory.decorator(entity);
       try {
         final InputEntityReader reader = inputFormat.createReader(inputRowSchema, entity, temporaryDirectory);
-        return reader.sample();
+        return reader.sample()
+            .map(i -> InputRowListPlusRawValues.ofList(i.getRawValuesList(),
+                i.getInputRows() == null
+                    ? null
+                    : i.getInputRows().stream().map(
+                        systemFieldDecorator).collect(Collectors.toList()),
+                i.getParseException()
+            ));
       }
       catch (IOException e) {
         throw new RuntimeException(e);

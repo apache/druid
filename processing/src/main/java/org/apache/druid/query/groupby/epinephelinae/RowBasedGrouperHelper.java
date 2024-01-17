@@ -98,7 +98,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
- * This class contains shared code between {@link GroupByMergingQueryRunnerV2} and {@link GroupByRowProcessor}.
+ * This class contains shared code between {@link GroupByMergingQueryRunner} and {@link GroupByRowProcessor}.
  */
 public class RowBasedGrouperHelper
 {
@@ -1921,8 +1921,7 @@ public class RowBasedGrouperHelper
         } else {
           keyBuffer.put(NullHandling.IS_NOT_NULL_BYTE);
         }
-        delegate.putToKeyBuffer(key, idx);
-        return true;
+        return delegate.putToKeyBuffer(key, idx);
       }
 
       @Override

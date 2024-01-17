@@ -92,12 +92,12 @@ public class KafkaEmitter implements Emitter
     this.invalidLost = new AtomicLong(0L);
   }
 
-  private Callback setProducerCallback(AtomicLong lostCouter)
+  private Callback setProducerCallback(AtomicLong lostCounter)
   {
     return (recordMetadata, e) -> {
       if (e != null) {
         log.debug("Event send failed [%s]", e.getMessage());
-        lostCouter.incrementAndGet();
+        lostCounter.incrementAndGet();
       }
     };
   }
@@ -115,6 +115,7 @@ public class KafkaEmitter implements Emitter
       props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
       props.put(ProducerConfig.RETRIES_CONFIG, DEFAULT_RETRIES);
       props.putAll(config.getKafkaProducerConfig());
+      props.putAll(config.getKafkaProducerSecrets().getConfig());
 
       return new KafkaProducer<>(props);
     }
@@ -181,6 +182,10 @@ public class KafkaEmitter implements Emitter
       }
     }
     catch (Throwable e) {
+      if (e instanceof InterruptedException && e.getMessage() == null) {
+        log.info("Normal exit.");
+        return;
+      }
       log.warn(e, "Exception while getting record from queue or producer send, Events would not be emitted anymore.");
     }
   }

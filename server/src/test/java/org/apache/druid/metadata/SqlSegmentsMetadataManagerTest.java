@@ -56,7 +56,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-
 public class SqlSegmentsMetadataManagerTest
 {
   private static DataSegment createSegment(
@@ -283,11 +282,11 @@ public class SqlSegmentsMetadataManagerTest
     Assert.assertTrue(sqlSegmentsMetadataManager.getLatestDatabasePoll() instanceof SqlSegmentsMetadataManager.PeriodicDatabasePoll);
     dataSourcesSnapshot = sqlSegmentsMetadataManager.getDataSourcesSnapshot();
     Assert.assertEquals(
-        ImmutableList.of("wikipedia3", "wikipedia", "wikipedia2"),
+        ImmutableSet.of("wikipedia2", "wikipedia3", "wikipedia"),
         dataSourcesSnapshot.getDataSourcesWithAllUsedSegments()
                            .stream()
                            .map(ImmutableDruidDataSource::getName)
-                           .collect(Collectors.toList())
+                           .collect(Collectors.toSet())
     );
   }
 

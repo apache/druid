@@ -607,7 +607,6 @@ public class GroupByBenchmark
                 .withRollup(withRollup)
                 .build()
         )
-        .setConcurrentEventAdd(true)
         .setMaxRowCount(rowsPerSegment)
         .build();
   }

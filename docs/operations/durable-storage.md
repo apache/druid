@@ -25,7 +25,7 @@ sidebar_label: "Durable storage"
 
 You can use durable storage to improve querying from deep storage and SQL-based ingestion.
 
-> Note that only S3 is supported as a durable storage location.
+> Note that S3, Azure and Google are all supported as durable storage locations.
 
 Durable storage for queries from deep storage provides a location where you can write the results of deep storage queries to. Durable storage for SQL-based ingestion is used to temporarily house intermediate files, which can improve reliability.
 

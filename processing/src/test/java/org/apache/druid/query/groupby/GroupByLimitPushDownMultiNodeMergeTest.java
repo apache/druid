@@ -157,7 +157,6 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
                 .withRollup(withRollup)
                 .build()
         )
-        .setConcurrentEventAdd(true)
         .setMaxRowCount(1000)
         .build();
   }

@@ -391,7 +391,6 @@ public class GroupByTypeInterfaceBenchmark
   {
     return new OnheapIncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(schemaInfo.getAggsArray())
-        .setConcurrentEventAdd(true)
         .setMaxRowCount(rowsPerSegment)
         .build();
   }

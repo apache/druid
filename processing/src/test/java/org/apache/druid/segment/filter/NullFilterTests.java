@@ -23,6 +23,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Range;
+import com.google.common.collect.TreeRangeSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -41,6 +43,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.Closeable;
 import java.util.Arrays;
+import java.util.Collections;
 
 @RunWith(Enclosed.class)
 public class NullFilterTests
@@ -227,6 +230,42 @@ public class NullFilterTests
             NotDimFilter.of(NullFilter.forColumn("vl0")),
             ImmutableList.of("0", "1", "2", "3", "4", "5")
         );
+
+        assertFilterMatches(NullFilter.forColumn("vf0-add-sub"), ImmutableList.of());
+        assertFilterMatches(
+            NotDimFilter.of(NullFilter.forColumn("vf0-add-sub")),
+            ImmutableList.of("0", "1", "2", "3", "4", "5")
+        );
+
+        assertFilterMatches(NullFilter.forColumn("vd0-add-sub"), ImmutableList.of());
+        assertFilterMatches(
+            NotDimFilter.of(NullFilter.forColumn("vd0-add-sub")),
+            ImmutableList.of("0", "1", "2", "3", "4", "5")
+        );
+
+        assertFilterMatches(NullFilter.forColumn("vl0-add-sub"), ImmutableList.of());
+        assertFilterMatches(
+            NotDimFilter.of(NullFilter.forColumn("vl0-add-sub")),
+            ImmutableList.of("0", "1", "2", "3", "4", "5")
+        );
+
+        assertFilterMatches(NullFilter.forColumn("double-vf0-add-sub"), ImmutableList.of());
+        assertFilterMatches(
+            NotDimFilter.of(NullFilter.forColumn("double-vf0-add-sub")),
+            ImmutableList.of("0", "1", "2", "3", "4", "5")
+        );
+
+        assertFilterMatches(NullFilter.forColumn("double-vd0-add-sub"), ImmutableList.of());
+        assertFilterMatches(
+            NotDimFilter.of(NullFilter.forColumn("double-vd0-add-sub")),
+            ImmutableList.of("0", "1", "2", "3", "4", "5")
+        );
+
+        assertFilterMatches(NullFilter.forColumn("double-vl0-add-sub"), ImmutableList.of());
+        assertFilterMatches(
+            NotDimFilter.of(NullFilter.forColumn("double-vl0-add-sub")),
+            ImmutableList.of("0", "1", "2", "3", "4", "5")
+        );
       } else {
         assertFilterMatches(NullFilter.forColumn("vf0"), ImmutableList.of("4"));
         assertFilterMatches(NotDimFilter.of(NullFilter.forColumn("vf0")), ImmutableList.of("0", "1", "2", "3", "5"));
@@ -236,6 +275,28 @@ public class NullFilterTests
 
         assertFilterMatches(NullFilter.forColumn("vl0"), ImmutableList.of("3"));
         assertFilterMatches(NotDimFilter.of(NullFilter.forColumn("vl0")), ImmutableList.of("0", "1", "2", "4", "5"));
+
+        if (NullHandling.sqlCompatible()) {
+          // these fail in default value mode that cannot be tested as numeric default values becuase of type
+          // mismatch for subtract operation
+          assertFilterMatches(NullFilter.forColumn("vf0-add-sub"), ImmutableList.of("4"));
+          assertFilterMatches(NotDimFilter.of(NullFilter.forColumn("vf0-add-sub")), ImmutableList.of("0", "1", "2", "3", "5"));
+
+          assertFilterMatches(NullFilter.forColumn("vd0-add-sub"), ImmutableList.of("2"));
+          assertFilterMatches(NotDimFilter.of(NullFilter.forColumn("vd0-add-sub")), ImmutableList.of("0", "1", "3", "4", "5"));
+
+          assertFilterMatches(NullFilter.forColumn("vl0-add-sub"), ImmutableList.of("3"));
+          assertFilterMatches(NotDimFilter.of(NullFilter.forColumn("vl0-add-sub")), ImmutableList.of("0", "1", "2", "4", "5"));
+
+          assertFilterMatches(NullFilter.forColumn("double-vf0-add-sub"), ImmutableList.of("4"));
+          assertFilterMatches(NotDimFilter.of(NullFilter.forColumn("double-vf0-add-sub")), ImmutableList.of("0", "1", "2", "3", "5"));
+
+          assertFilterMatches(NullFilter.forColumn("double-vd0-add-sub"), ImmutableList.of("2"));
+          assertFilterMatches(NotDimFilter.of(NullFilter.forColumn("double-vd0-add-sub")), ImmutableList.of("0", "1", "3", "4", "5"));
+
+          assertFilterMatches(NullFilter.forColumn("vl0-add-sub"), ImmutableList.of("3"));
+          assertFilterMatches(NotDimFilter.of(NullFilter.forColumn("double-vl0-add-sub")), ImmutableList.of("0", "1", "2", "4", "5"));
+        }
       }
     }
 
@@ -311,6 +372,19 @@ public class NullFilterTests
   public static class NullFilterNonParameterizedTest
   {
     @Test
+    public void testGetDimensionRangeSet()
+    {
+      final NullFilter filter = new NullFilter("x", null);
+
+      Assert.assertEquals(
+          TreeRangeSet.create(Collections.singleton(Range.lessThan(""))),
+          filter.getDimensionRangeSet("x")
+      );
+
+      Assert.assertNull(filter.getDimensionRangeSet("y"));
+    }
+
+    @Test
     public void testSerde() throws JsonProcessingException
     {
       ObjectMapper mapper = new DefaultObjectMapper();
@@ -336,7 +410,7 @@ public class NullFilterTests
     {
       EqualsVerifier.forClass(NullFilter.class).usingGetClass()
                     .withNonnullFields("column")
-                    .withIgnoredFields("cachedOptimizedFilter")
+                    .withIgnoredFields("optimizedFilterIncludeUnknown", "optimizedFilterNoIncludeUnknown")
                     .verify();
     }
   }

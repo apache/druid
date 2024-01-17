@@ -101,17 +101,6 @@ public class OrFilter implements BooleanFilter
       }
 
       @Override
-      public double estimateSelectivity(int totalRows)
-      {
-        // Estimate selectivity with attribute value independence assumption
-        double selectivity = 0;
-        for (final Filter filter : filters) {
-          selectivity += filter.estimateSelectivity(selector);
-        }
-        return Math.min(selectivity, 1.);
-      }
-
-      @Override
       public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
       {
         return bitmapResultFactory.union(

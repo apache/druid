@@ -155,7 +155,6 @@ public class GroupByQueryRunnerFactoryTest
   {
     IncrementalIndex incrementalIndex = new OnheapIncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(new CountAggregatorFactory("count"))
-        .setConcurrentEventAdd(true)
         .setMaxRowCount(5000)
         .build();
 

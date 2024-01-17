@@ -169,6 +169,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
   private IngestionState ingestionState;
 
+  private boolean shouldCleanup;
+
   @MonotonicNonNull
   private ParseExceptionHandler determinePartitionsParseExceptionHandler;
 
@@ -206,7 +208,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         null,
         ingestionSchema,
         context,
-        -1
+        -1,
+        true
     );
   }
 
@@ -218,7 +221,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       @Nullable String baseSequenceName,
       IndexIngestionSpec ingestionSchema,
       Map<String, Object> context,
-      int maxAllowedLockCount
+      int maxAllowedLockCount,
+      boolean shouldCleanup
   )
   {
     super(
@@ -233,6 +237,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     this.baseSequenceName = baseSequenceName == null ? getId() : baseSequenceName;
     this.ingestionSchema = ingestionSchema;
     this.ingestionState = IngestionState.NOT_STARTED;
+    this.shouldCleanup = shouldCleanup;
   }
 
   @Override
@@ -1078,6 +1083,14 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   private static InputFormat getInputFormat(IndexIngestionSpec ingestionSchema)
   {
     return ingestionSchema.getIOConfig().getNonNullInputFormat();
+  }
+
+  @Override
+  public void cleanUp(TaskToolbox toolbox, @Nullable TaskStatus taskStatus) throws Exception
+  {
+    if (shouldCleanup) {
+      super.cleanUp(toolbox, taskStatus);
+    }
   }
 
   public static class IndexIngestionSpec extends IngestionSpec<IndexIOConfig, IndexTuningConfig>

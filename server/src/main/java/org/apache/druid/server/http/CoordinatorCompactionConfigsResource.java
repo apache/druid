@@ -35,14 +35,13 @@ import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfigHistory;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
+import org.apache.druid.server.security.AuthorizationUtils;
 import org.joda.time.Interval;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
-import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
-import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -95,8 +94,6 @@ public class CoordinatorCompactionConfigsResource
       @QueryParam("ratio") Double compactionTaskSlotRatio,
       @QueryParam("max") Integer maxCompactionTaskSlots,
       @QueryParam("useAutoScaleSlots") Boolean useAutoScaleSlots,
-      @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
-      @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
       @Context HttpServletRequest req
   )
   {
@@ -107,15 +104,13 @@ public class CoordinatorCompactionConfigsResource
             maxCompactionTaskSlots,
             useAutoScaleSlots
         );
-    return updateConfigHelper(operator, new AuditInfo(author, comment, req.getRemoteAddr()));
+    return updateConfigHelper(operator, AuthorizationUtils.buildAuditInfo(req));
   }
 
   @POST
   @Consumes(MediaType.APPLICATION_JSON)
   public Response addOrUpdateCompactionConfig(
       final DataSourceCompactionConfig newConfig,
-      @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
-      @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
       @Context HttpServletRequest req
   )
   {
@@ -132,7 +127,7 @@ public class CoordinatorCompactionConfigsResource
     };
     return updateConfigHelper(
         callable,
-        new AuditInfo(author, comment, req.getRemoteAddr())
+        AuthorizationUtils.buildAuditInfo(req)
     );
   }
 
@@ -183,7 +178,7 @@ public class CoordinatorCompactionConfigsResource
       DataSourceCompactionConfigHistory history = new DataSourceCompactionConfigHistory(dataSource);
       for (AuditEntry audit : auditEntries) {
         CoordinatorCompactionConfig coordinatorCompactionConfig = configManager.convertBytesToCompactionConfig(
-            audit.getPayload().getBytes(StandardCharsets.UTF_8)
+            audit.getPayload().serialized().getBytes(StandardCharsets.UTF_8)
         );
         history.add(coordinatorCompactionConfig, audit.getAuditInfo(), audit.getAuditTime());
       }
@@ -201,8 +196,6 @@ public class CoordinatorCompactionConfigsResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response deleteCompactionConfig(
       @PathParam("dataSource") String dataSource,
-      @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
-      @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
       @Context HttpServletRequest req
   )
   {
@@ -219,7 +212,7 @@ public class CoordinatorCompactionConfigsResource
 
       return CoordinatorCompactionConfig.from(current, ImmutableList.copyOf(configs.values()));
     };
-    return updateConfigHelper(callable, new AuditInfo(author, comment, req.getRemoteAddr()));
+    return updateConfigHelper(callable, AuthorizationUtils.buildAuditInfo(req));
   }
 
   private Response updateConfigHelper(

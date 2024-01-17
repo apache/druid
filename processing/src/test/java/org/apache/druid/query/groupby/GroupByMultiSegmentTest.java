@@ -131,7 +131,6 @@ public class GroupByMultiSegmentTest extends InitializedNullHandlingTest
                 .withRollup(withRollup)
                 .build()
         )
-        .setConcurrentEventAdd(true)
         .setMaxRowCount(1000)
         .build();
   }

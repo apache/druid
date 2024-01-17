@@ -55,7 +55,7 @@ public class DelimitedInputFormatTest extends BaseExternTableTest
             DelimitedFormatDefn.DELIMITER_FIELD, "|"
             )
          )
-        .column("a", Columns.VARCHAR)
+        .column("a", Columns.STRING)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
     resolved.validate();
@@ -78,8 +78,8 @@ public class DelimitedInputFormatTest extends BaseExternTableTest
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(new InlineInputSource("a\n")))
         .inputFormat(formatToMap(format))
-        .column("a", Columns.VARCHAR)
-        .column("b", Columns.BIGINT)
+        .column("a", Columns.STRING)
+        .column("b", Columns.LONG)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
     resolved.validate();

@@ -119,7 +119,8 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
                 rexNodes.get(1)
             ),
             outputType,
-            null
+            null,
+            true
         );
         break;
       case 3:
@@ -145,7 +146,8 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
                 rexNodes.get(1)
             ),
             outputType,
-            maxStringBytes
+            maxStringBytes,
+            true
         );
         break;
       default:
