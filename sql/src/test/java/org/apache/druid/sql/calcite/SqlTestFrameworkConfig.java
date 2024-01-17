@@ -41,7 +41,7 @@ import java.util.Map;
  * to the annotation. These rules also cache the previously created frameworks.
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.METHOD, ElementType.TYPE})
+@Target({ElementType.METHOD})
 public @interface SqlTestFrameworkConfig
 {
   int numMergeBuffers() default 0;
@@ -106,9 +106,6 @@ public @interface SqlTestFrameworkConfig
     public Statement apply(Statement base, Description description)
     {
       config = description.getAnnotation(SqlTestFrameworkConfig.class);
-      if (config == null) {
-        config = description.getTestClass().getAnnotation(SqlTestFrameworkConfig.class);
-      }
       if (config == null) {
         config = defaultConfig();
       }
