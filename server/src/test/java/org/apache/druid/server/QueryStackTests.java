@@ -391,14 +391,12 @@ public class QueryStackTests
 
   public static Injector injector()
   {
+
+    final LookupExtractorFactoryContainerProvider lookupProvider;
+    lookupProvider = LookupEnabledTestExprMacroTable.createTestLookupProvider(Collections.emptyMap());
+
     return injectorBuilder()
-        .addModule(
-            binder -> binder.bind(LookupExtractorFactoryContainerProvider.class)
-                .toInstance(
-                    LookupEnabledTestExprMacroTable
-                        .createTestLookupProvider(Collections.emptyMap())
-                )
-        )
+        .addModule(binder -> binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupProvider))
         .build();
   }
 }

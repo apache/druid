@@ -61,7 +61,7 @@ public interface EtagProvider
         return "ETP-" + new String(baos.toByteArray(), StandardCharsets.UTF_8);
       }
       catch (IOException e) {
-        throw DruidException.defensive().build("Unexpected IOException", e);
+        throw DruidException.defensive().build(e, "Unexpected IOException");
       }
     }
   }
