@@ -45,7 +45,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
                   .build()
         )
         .expectResources(dataSourceRead("foo"))
-        .expectTarget("extern", RowSignature.builder().add("dim2", ColumnType.STRING).build())
+        .expectTarget("s3", RowSignature.builder().add("dim2", ColumnType.STRING).build())
         .verify();
   }
 }

@@ -74,4 +74,11 @@ public class ExternalDestinationSqlIdentifier extends SqlIdentifier
   {
     return new ExternalDestinationSqlIdentifier(Iterables.getOnlyElement(names), pos, exportDestination, propertiesForUnparse);
   }
+
+  @Override
+  @Deprecated
+  public Object clone()
+  {
+    throw new UnsupportedOperationException("Function is deprecated, please use clone(SqlNode) instead.");
+  }
 }

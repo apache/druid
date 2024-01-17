@@ -83,7 +83,7 @@ public interface SqlEngine
   /**
    * Create a {@link QueryMaker} for an INSERT ... SELECT query.
    *
-   * @param targetDestination destination for the INSERT portion of the query
+   * @param destination      destination for the INSERT portion of the query
    * @param relRoot          planned and validated rel for the SELECT portion of the query
    * @param plannerContext   context for this query
    *
@@ -93,7 +93,7 @@ public interface SqlEngine
    */
   @SuppressWarnings("RedundantThrows")
   QueryMaker buildQueryMakerForInsert(
-      IngestDestination targetDestination,
+      IngestDestination destination,
       RelRoot relRoot,
       PlannerContext plannerContext
   ) throws ValidationException;

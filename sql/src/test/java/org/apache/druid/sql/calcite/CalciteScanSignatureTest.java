@@ -169,7 +169,7 @@ public class CalciteScanSignatureTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public QueryMaker buildQueryMakerForInsert(IngestDestination targetDestination, RelRoot relRoot, PlannerContext plannerContext)
+    public QueryMaker buildQueryMakerForInsert(IngestDestination destination, RelRoot relRoot, PlannerContext plannerContext)
     {
       throw new UnsupportedOperationException();
     }

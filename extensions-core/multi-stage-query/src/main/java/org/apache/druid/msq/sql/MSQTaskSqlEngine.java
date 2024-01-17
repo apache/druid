@@ -154,7 +154,7 @@ public class MSQTaskSqlEngine implements SqlEngine
 
   @Override
   public QueryMaker buildQueryMakerForInsert(
-      final IngestDestination targetDestination,
+      final IngestDestination destination,
       final RelRoot relRoot,
       final PlannerContext plannerContext
   )
@@ -162,7 +162,7 @@ public class MSQTaskSqlEngine implements SqlEngine
     validateInsert(relRoot.rel, relRoot.fields, plannerContext);
 
     return new MSQTaskQueryMaker(
-        targetDestination,
+        destination,
         overlordClient,
         plannerContext,
         jsonMapper,

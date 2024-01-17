@@ -110,7 +110,7 @@ public class ViewSqlEngine implements SqlEngine
   }
 
   @Override
-  public QueryMaker buildQueryMakerForInsert(IngestDestination targetDestination, RelRoot relRoot, PlannerContext plannerContext)
+  public QueryMaker buildQueryMakerForInsert(IngestDestination destination, RelRoot relRoot, PlannerContext plannerContext)
   {
     // Can't have views of INSERT or REPLACE statements.
     throw new UnsupportedOperationException();

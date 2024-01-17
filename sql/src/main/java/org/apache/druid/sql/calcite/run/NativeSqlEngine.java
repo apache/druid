@@ -134,7 +134,7 @@ public class NativeSqlEngine implements SqlEngine
 
   @Override
   public QueryMaker buildQueryMakerForInsert(
-      final IngestDestination targetDestination,
+      final IngestDestination destination,
       final RelRoot relRoot,
       final PlannerContext plannerContext
   )
