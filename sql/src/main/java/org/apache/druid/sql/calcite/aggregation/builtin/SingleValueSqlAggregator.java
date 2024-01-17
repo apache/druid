@@ -22,7 +22,7 @@ package org.apache.druid.sql.calcite.aggregation.builtin;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
-import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.*;
 import org.apache.druid.segment.column.ColumnType;
@@ -64,7 +64,7 @@ public class SingleValueSqlAggregator extends SimpleSqlAggregator {
   )
   {
     if (aggregateCall.getArgList().size() > 1){
-      throw new IAE(
+      throw DruidException.defensive(
               "More than one argument not allowed for [%s] aggregator",
               aggregateCall.getAggregation().getName()
       );

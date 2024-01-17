@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
@@ -66,7 +67,7 @@ public abstract class SingleValueAggregatorFactory extends AggregatorFactory
   @Nullable
   public Object combine(@Nullable Object lhs, @Nullable Object rhs)
   {
-    throw new ISE("Aggregate combine invoked");
+    throw DruidException.defensive("Single Value Aggregator would not have more than one row to combine");
   }
 
 

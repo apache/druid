@@ -19,15 +19,13 @@
 
 package org.apache.druid.query.aggregation;
 
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
 /**
  */
-public class SingleValueLongBufferAggregator implements BufferAggregator
+public class SingleValueLongBufferAggregator extends SingleValueBufferAggregator
 {
 
   final BaseLongColumnValueSelector selector;
@@ -35,8 +33,8 @@ public class SingleValueLongBufferAggregator implements BufferAggregator
 
   SingleValueLongBufferAggregator(BaseLongColumnValueSelector selector)
   {
+    super();
     this.selector = selector;
-    this.aggregateInvoked = false;
   }
 
   @Override
@@ -46,50 +44,14 @@ public class SingleValueLongBufferAggregator implements BufferAggregator
   }
 
   @Override
-  public void aggregate(ByteBuffer buf, int position)
-  {
-    if (aggregateInvoked){
-      throw new ISE("Aggregatge invoked for second time");
-    }
+  void updateBuffervalue(ByteBuffer buf, int position) {
     buf.putLong(position, selector.getLong());
-    aggregateInvoked = true;
   }
 
   @Override
   public Object get(ByteBuffer buf, int position)
   {
     return buf.getLong(position);
-  }
-
-  @Override
-  public float getFloat(ByteBuffer buf, int position)
-  {
-    return (float) buf.getLong(position);
-  }
-
-  @Override
-  public double getDouble(ByteBuffer buf, int position)
-  {
-    return (double) buf.getLong(position);
-  }
-
-
-  @Override
-  public long getLong(ByteBuffer buf, int position)
-  {
-    return buf.getLong(position);
-  }
-
-  @Override
-  public void close()
-  {
-    // no resources to cleanup
-  }
-
-  @Override
-  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-  {
-    // nothing to inspect
   }
 
   @Override
