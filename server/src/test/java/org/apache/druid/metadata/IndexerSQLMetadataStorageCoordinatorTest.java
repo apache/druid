@@ -1437,7 +1437,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         null,
         null,
         null,
-        DateTime.now()
+        DateTimes.nowUtc()
     );
     Assert.assertEquals(5, actualUnusedSegments.size());
 
@@ -1446,7 +1446,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         null,
         null,
         null,
-        DateTime.now().minusHours(1)
+        DateTimes.nowUtc().minusHours(1)
     );
     Assert.assertEquals(0, actualUnusedSegments2.size());
   }
@@ -1468,12 +1468,12 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     }
 
     markAllSegmentsUnused(new HashSet<>(oddYearSegments));
-    final DateTime maxUsedFlagLastUpdatedTime1 = DateTime.now();
+    final DateTime maxUsedFlagLastUpdatedTime1 = DateTimes.nowUtc();
 
     Thread.sleep(1500);
 
     markAllSegmentsUnused(new HashSet<>(evenYearSegments));
-    final DateTime maxUsedFlagLastUpdatedTime2 = DateTime.now();
+    final DateTime maxUsedFlagLastUpdatedTime2 = DateTimes.nowUtc();
 
     final Interval interval = Intervals.of("1900/1950");
 

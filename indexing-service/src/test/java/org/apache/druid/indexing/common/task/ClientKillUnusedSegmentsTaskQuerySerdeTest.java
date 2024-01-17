@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import org.apache.druid.client.indexing.ClientKillUnusedSegmentsTaskQuery;
 import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.joda.time.DateTime;
 import org.junit.Assert;
@@ -55,7 +56,7 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
         false,
         99,
         5,
-        DateTime.now()
+        DateTimes.nowUtc()
     );
     final byte[] json = objectMapper.writeValueAsBytes(taskQuery);
     final KillUnusedSegmentsTask fromJson = (KillUnusedSegmentsTask) objectMapper.readValue(json, Task.class);
@@ -129,7 +130,7 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
         null,
         99,
         100,
-        DateTime.now()
+        DateTimes.nowUtc()
     );
     final byte[] json = objectMapper.writeValueAsBytes(task);
     final ClientKillUnusedSegmentsTaskQuery taskQuery = (ClientKillUnusedSegmentsTaskQuery) objectMapper.readValue(
