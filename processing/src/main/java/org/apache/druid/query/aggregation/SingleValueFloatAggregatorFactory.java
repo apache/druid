@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
-import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnType;
 
@@ -46,7 +45,7 @@ public class SingleValueFloatAggregatorFactory extends SingleValueAggregatorFact
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    final BaseLongColumnValueSelector valueSelector = metricFactory.makeColumnValueSelector(getFieldName());
+    final BaseFloatColumnValueSelector valueSelector = metricFactory.makeColumnValueSelector(getFieldName());
     return new SingleValueFloatAggregator(
         valueSelector
     );

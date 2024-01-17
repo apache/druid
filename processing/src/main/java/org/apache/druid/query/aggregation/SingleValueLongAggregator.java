@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation;
 
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 
 /**
@@ -40,7 +40,7 @@ public class SingleValueLongAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    throw new ISE("Single Value - cant be aggregated");
+    throw DruidException.defensive("Single Value Aggregator would not be applied to more than one row");
   }
 
   @Override
@@ -76,7 +76,7 @@ public class SingleValueLongAggregator implements Aggregator
   @Override
   public String toString()
   {
-    return "SingleValueAggregator{" +
+    return "SingleValueLongAggregator{" +
            "valueSelector=" + valueSelector +
            ", value=" + value +
            '}';

@@ -19,52 +19,52 @@
 
 package org.apache.druid.query.aggregation;
 
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.segment.BaseLongColumnValueSelector;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 
 /**
  *
  */
 public class SingleValueDoubleAggregator implements Aggregator
 {
-  final BaseLongColumnValueSelector valueSelector;
+  final BaseDoubleColumnValueSelector valueSelector;
 
-  Long value;
+  Double value;
 
-  public SingleValueDoubleAggregator(BaseLongColumnValueSelector valueSelector)
+  public SingleValueDoubleAggregator(BaseDoubleColumnValueSelector valueSelector)
   {
     this.valueSelector = valueSelector;
-    this.value = valueSelector.getLong();
+    this.value = valueSelector.getDouble();
   }
 
   @Override
   public void aggregate()
   {
-    throw new ISE("Single Value - cant be aggregated");
+    throw DruidException.defensive("Single Value Aggregator would not be applied to more than one row");
   }
 
   @Override
   public Object get()
   {
-    return this.getLong();
+    return this.getDouble();
   }
 
   @Override
   public float getFloat()
   {
-    return (float) this.getLong();
+    return (float) this.getDouble();
   }
 
   @Override
   public long getLong()
   {
-    return value;
+    return (long) this.getDouble();
   }
 
   @Override
   public double getDouble()
   {
-    return value.doubleValue();
+    return value;
   }
 
   @Override
@@ -76,7 +76,7 @@ public class SingleValueDoubleAggregator implements Aggregator
   @Override
   public String toString()
   {
-    return "SingleValueAggregator{" +
+    return "SingleValueDoubleAggregator{" +
            "valueSelector=" + valueSelector +
            ", value=" + value +
            '}';

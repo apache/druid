@@ -19,29 +19,28 @@
 
 package org.apache.druid.query.aggregation;
 
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.segment.BaseLongColumnValueSelector;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.segment.BaseFloatColumnValueSelector;
 
 /**
  *
  */
 public class SingleValueFloatAggregator implements Aggregator
 {
-  final BaseLongColumnValueSelector valueSelector;
+  final BaseFloatColumnValueSelector valueSelector;
 
-  Long value;
+  Float value;
 
-  public SingleValueFloatAggregator(BaseLongColumnValueSelector valueSelector)
+  public SingleValueFloatAggregator(BaseFloatColumnValueSelector valueSelector)
   {
     this.valueSelector = valueSelector;
-    this.value = valueSelector.getLong();
-    //this.aggregatedEarlier = false;
+    this.value = valueSelector.getFloat();
   }
 
   @Override
   public void aggregate()
   {
-    throw new ISE("Single Value - cant be aggregated");
+    throw DruidException.defensive("Single Value Aggregator would not be applied to more than one row");
   }
 
   @Override
@@ -59,13 +58,13 @@ public class SingleValueFloatAggregator implements Aggregator
   @Override
   public long getLong()
   {
-    return value;
+    return (long) this.getFloat();
   }
 
   @Override
   public double getDouble()
   {
-    return value.doubleValue();
+    return this.getFloat();
   }
 
   @Override
@@ -77,7 +76,7 @@ public class SingleValueFloatAggregator implements Aggregator
   @Override
   public String toString()
   {
-    return "SingleValueAggregator{" +
+    return "SingleValueFloatAggregator{" +
            "valueSelector=" + valueSelector +
            ", value=" + value +
            '}';
