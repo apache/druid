@@ -128,9 +128,6 @@ public class SqlTestFramework
    */
   public interface QueryComponentSupplier
   {
-
-    void beforeNewFrameworkCreateHook() throws Exception;
-
     /**
      * Gather properties to be used within tests. Particularly useful when choosing
      * among aggregator implementations: avoids the need to copy/paste code to select
@@ -287,12 +284,6 @@ public class SqlTestFramework
     @Override
     public void finalizeTestFramework(SqlTestFramework sqlTestFramework)
     {
-    }
-
-    @Override
-    public void beforeNewFrameworkCreateHook()
-    {
-      throw new RuntimeException("Unimplemented!");
     }
   }
 
@@ -574,7 +565,6 @@ public class SqlTestFramework
   {
     this.builder = builder;
     this.componentSupplier = builder.componentSupplier;
-    builder.componentSupplier.beforeNewFrameworkCreateHook();
     Properties properties = new Properties();
     this.componentSupplier.gatherProperties(properties);
     Injector startupInjector = new StartupInjectorBuilder()

@@ -648,11 +648,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   }
 
   @Override
-  public void beforeNewFrameworkCreateHook() throws Exception
-  {
-  }
-
-  @Override
   public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
       final QueryRunnerFactoryConglomerate conglomerate,
       final JoinableFactoryWrapper joinableFactory,
