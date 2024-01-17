@@ -140,7 +140,7 @@ public class AzureInputSource extends CloudObjectInputSource
       public Iterator<LocationWithSize> getDescriptorIteratorForPrefixes(List<URI> prefixes)
       {
         return Iterators.transform(
-            azureCloudBlobIterableFactory.create(getPrefixes(), inputDataConfig.getMaxListingLength()).iterator(),
+            azureCloudBlobIterableFactory.create(getPrefixes(), inputDataConfig.getMaxListingLength(), storage).iterator(),
             blob -> {
               try {
                 return new LocationWithSize(

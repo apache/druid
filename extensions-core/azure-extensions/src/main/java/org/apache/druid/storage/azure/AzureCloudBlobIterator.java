@@ -22,6 +22,9 @@ package org.apache.druid.storage.azure;
 import com.azure.storage.blob.models.BlobItem;
 import com.google.inject.assistedinject.Assisted;
 import com.google.inject.assistedinject.AssistedInject;
+import org.apache.druid.data.input.azure.AzureStorageAccountInputSource;
+import org.apache.druid.data.input.impl.CloudObjectLocation;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.azure.blob.CloudBlobHolder;
@@ -37,9 +40,11 @@ import java.util.NoSuchElementException;
 public class AzureCloudBlobIterator implements Iterator<CloudBlobHolder>
 {
   private static final Logger log = new Logger(AzureCloudBlobIterator.class);
-  private final AzureStorage storage;
+  private final AzureClientFactory azureClientFactory;
   private final Iterator<URI> prefixesIterator;
   private final int maxListingLength;
+  private AzureStorage storage;
+  private String currentStorageAccount;
   private String currentContainer;
   private String currentPrefix;
   private CloudBlobHolder currentBlobItem;
@@ -48,16 +53,17 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobHolder>
 
   @AssistedInject
   AzureCloudBlobIterator(
-      AzureStorage storage,
+      @Assisted AzureClientFactory azureClientFactory,
       AzureAccountConfig config,
       @Assisted final Iterable<URI> prefixes,
       @Assisted final int maxListingLength
   )
   {
-    this.storage = storage;
+    this.azureClientFactory = azureClientFactory;
     this.config = config;
     this.prefixesIterator = prefixes.iterator();
     this.maxListingLength = maxListingLength;
+    this.currentStorageAccount = null;
     this.currentContainer = null;
     this.currentPrefix = null;
     this.currentBlobItem = null;
@@ -91,8 +97,19 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobHolder>
   private void prepareNextRequest()
   {
     URI currentUri = prefixesIterator.next();
-    currentContainer = currentUri.getAuthority();
-    currentPrefix = AzureUtils.extractAzureKey(currentUri);
+
+    if (currentUri.getScheme().equals(AzureStorageAccountInputSource.SCHEME)) {
+      CloudObjectLocation cloudObjectLocation = new CloudObjectLocation(currentUri);
+      Pair<String, String> containerInfo = AzureStorageAccountInputSource.getContainerAndPathFromObjectLocation(cloudObjectLocation);
+      currentStorageAccount = cloudObjectLocation.getBucket();
+      currentContainer = containerInfo.lhs;
+      currentPrefix = containerInfo.rhs;
+    } else {
+      currentStorageAccount = config.getAccount();
+      currentContainer = currentUri.getAuthority();
+      currentPrefix = AzureUtils.extractAzureKey(currentUri);
+    }
+    storage = new AzureStorage(azureClientFactory, currentStorageAccount);
     log.debug("currentUri: %s\ncurrentContainer: %s\ncurrentPrefix: %s",
               currentUri, currentContainer, currentPrefix
     );
@@ -135,7 +152,7 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobHolder>
       while (blobItemIterator.hasNext()) {
         BlobItem blobItem = blobItemIterator.next();
         if (!blobItem.isPrefix() && blobItem.getProperties().getContentLength() > 0) {
-          currentBlobItem = new CloudBlobHolder(blobItem, currentContainer);
+          currentBlobItem = new CloudBlobHolder(blobItem, currentContainer, currentStorageAccount);
           return;
         }
       }
