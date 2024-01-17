@@ -33,6 +33,7 @@ import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.data.input.impl.systemfield.SystemField;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.storage.azure.AzureAccountConfig;
@@ -61,15 +62,15 @@ import java.util.stream.Stream;
 
 public class AzureStorageAccountInputSourceTest extends EasyMockSupport
 {
-  private static final String CONTAINER_NAME = "container";
   private static final String BLOB_NAME = "blob";
   private static final URI PREFIX_URI;
   private final List<URI> EMPTY_URIS = ImmutableList.of();
   private final List<URI> EMPTY_PREFIXES = ImmutableList.of();
   private final List<CloudObjectLocation> EMPTY_OBJECTS = ImmutableList.of();
+  private static final String STORAGE_ACCOUNT = "STORAGE_ACCOUNT";
   private static final String CONTAINER = "CONTAINER";
   private static final String BLOB_PATH = "BLOB_PATH.csv";
-  private static final CloudObjectLocation CLOUD_OBJECT_LOCATION_1 = new CloudObjectLocation(CONTAINER, BLOB_PATH);
+  private static final CloudObjectLocation CLOUD_OBJECT_LOCATION_1 = new CloudObjectLocation(STORAGE_ACCOUNT, CONTAINER + "/" + BLOB_PATH);
   private static final int MAX_LISTING_LENGTH = 10;
 
   private static final InputFormat INPUT_FORMAT = new JsonInputFormat(
@@ -96,7 +97,7 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
 
   static {
     try {
-      PREFIX_URI = new URI(AzureStorageAccountInputSource.SCHEME + "://" + CONTAINER_NAME + "/" + BLOB_NAME);
+      PREFIX_URI = new URI(AzureStorageAccountInputSource.SCHEME + "://" + STORAGE_ACCOUNT + "/" + CONTAINER + "/" + BLOB_NAME);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -296,7 +297,7 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
     );
 
     Assert.assertEquals(
-        "AzureStorageAccountInputSource{uris=[], prefixes=[azureStorage://container/blob], objects=[], objectGlob=null, azureInputSourceConfig=" + azureInputSourceConfig.toString() + "}",
+        "AzureStorageAccountInputSource{uris=[], prefixes=[azureStorage://STORAGE_ACCOUNT/CONTAINER/blob], objects=[], objectGlob=null, azureInputSourceConfig=" + azureInputSourceConfig.toString() + "}",
         azureInputSource.toString()
     );
   }
@@ -321,7 +322,7 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
     Assert.assertEquals(
         "AzureStorageAccountInputSource{"
             + "uris=[], "
-            + "prefixes=[azureStorage://container/blob], "
+            + "prefixes=[azureStorage://STORAGE_ACCOUNT/CONTAINER/blob], "
             + "objects=[], "
             + "objectGlob=null, "
             + "azureInputSourceConfig=" + azureInputSourceConfig.toString() + ", "
@@ -400,6 +401,17 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
         .withNonnullFields("azureAccountConfig")
         .withNonnullFields("azureIngestClientFactory")
         .verify();
+  }
+
+  @Test
+  public void test_getContainerAndPathFromObjectLocation()
+  {
+    Pair<String, String> storageLocation = AzureStorageAccountInputSource.getContainerAndPathFromObjectLocation(
+        CLOUD_OBJECT_LOCATION_1
+    );
+    Assert.assertEquals(CONTAINER, storageLocation.lhs);
+    Assert.assertEquals(BLOB_PATH, storageLocation.rhs);
+
   }
 
   @After

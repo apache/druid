@@ -137,11 +137,4 @@ public class AzureUtils
       }
     }
   }
-
-  // Returns a <containerName, path> pair given a location using the azureStorage schema.
-  public static Pair<String, String> parseAzureStorageLocation(CloudObjectLocation location)
-  {
-    String[] pathParts = location.getPath().split("/", 2);
-    return Pair.of(pathParts[0], pathParts[1]);
-  }
 }

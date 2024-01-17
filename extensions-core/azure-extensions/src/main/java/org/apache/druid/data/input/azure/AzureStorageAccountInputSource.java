@@ -42,7 +42,6 @@ import org.apache.druid.storage.azure.AzureCloudBlobIterableFactory;
 import org.apache.druid.storage.azure.AzureIngestClientFactory;
 import org.apache.druid.storage.azure.AzureInputDataConfig;
 import org.apache.druid.storage.azure.AzureStorage;
-import org.apache.druid.storage.azure.AzureUtils;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -159,7 +158,7 @@ public class AzureStorageAccountInputSource extends CloudObjectInputSource
       public Iterator<LocationWithSize> getDescriptorIteratorForPrefixes(List<URI> prefixes)
       {
         return Iterators.transform(
-            azureCloudBlobIterableFactory.create(getPrefixes(), inputDataConfig.getMaxListingLength()).iterator(),
+            azureCloudBlobIterableFactory.create(prefixes, inputDataConfig.getMaxListingLength()).iterator(),
             blob -> {
               try {
                 return new LocationWithSize(
@@ -180,7 +179,7 @@ public class AzureStorageAccountInputSource extends CloudObjectInputSource
       {
         try {
           AzureStorage azureStorage = new AzureStorage(azureIngestClientFactory, location.getBucket());
-          Pair<String, String> locationInfo = AzureUtils.parseAzureStorageLocation(location);
+          Pair<String, String> locationInfo = getContainerAndPathFromObjectLocation(location);
           final BlockBlobClient blobWithAttributes = azureStorage.getBlockBlobReferenceWithAttributes(
               locationInfo.lhs,
               locationInfo.rhs
@@ -243,5 +242,12 @@ public class AzureStorageAccountInputSource extends CloudObjectInputSource
         ", azureInputSourceConfig=" + getAzureInputSourceConfig() +
         (systemFields.getFields().isEmpty() ? "" : ", systemFields=" + systemFields) +
         '}';
+  }
+
+  // Returns a <containerName, path> pair given a location using the azureStorage schema.
+  public static Pair<String, String> getContainerAndPathFromObjectLocation(CloudObjectLocation location)
+  {
+    String[] pathParts = location.getPath().split("/", 2);
+    return Pair.of(pathParts[0], pathParts[1]);
   }
 }
