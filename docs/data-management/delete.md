@@ -108,7 +108,7 @@ Some of the parameters used in the task payload are further explained below:
 |-------------|-----------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `batchSize`    |100    | Maximum number of segments that are deleted in one kill batch. Some operations on the Overlord may get stuck while a `kill` task is in progress due to concurrency constraints (such as in `TaskLockbox`). Thus, a `kill` task splits the list of unused segments to be deleted into smaller batches to yield the Overlord resources intermittently to other task operations.|
 | `limit`     | null (no limit) | Maximum number of segments for the kill task to delete.|
-| `maxUsedFlagLastUpdatedTime` | null (no cutoff) | Represents the maximum timestamp used as a cutoff to include unused segments. The kill task considers segments in the specified `interval` marked as unused no later than this time.|
+| `maxUsedFlagLastUpdatedTime` | null (no cutoff) | Represents the maximum timestamp used as a cutoff to include unused segments. The kill task considers segments in the specified `interval` marked as unused no later than this time. The default behavior is to kill all unused segments in the `interval` regardless of the time when segments where marked as unused.|
 
 
 **WARNING:** The `kill` task permanently removes all information about the affected segments from the metadata store and
