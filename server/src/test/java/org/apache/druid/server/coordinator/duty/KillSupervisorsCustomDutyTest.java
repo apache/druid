@@ -20,13 +20,11 @@
 package org.apache.druid.server.coordinator.duty;
 
 import org.apache.druid.metadata.MetadataSupervisorManager;
-import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.joda.time.Duration;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentMatchers;
@@ -43,17 +41,7 @@ public class KillSupervisorsCustomDutyTest
   @Mock
   private DruidCoordinatorRuntimeParams mockDruidCoordinatorRuntimeParams;
 
-  @Mock
-  private DruidCoordinatorConfig coordinatorConfig;
-
   private KillSupervisorsCustomDuty killSupervisors;
-
-  @Before
-  public void setup()
-  {
-    Mockito.when(coordinatorConfig.getCoordinatorMetadataStoreManagementPeriod())
-           .thenReturn(new Duration(3600 * 1000));
-  }
 
   @Test
   public void testConstructorSuccess()
