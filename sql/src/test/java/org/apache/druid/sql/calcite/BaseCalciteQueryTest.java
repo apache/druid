@@ -671,7 +671,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       baseComponentSupplier = new StandardComponentSupplier(
           temporaryFolder.newFolder()
       );
-    } catch (IOException e) {
+    }
+    catch (IOException e) {
       throw new RuntimeException(e);
     }
     baseComponentSupplier.gatherProperties(properties);
