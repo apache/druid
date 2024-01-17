@@ -24,7 +24,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.azure.blob.CloudBlobHolder;
 
@@ -127,7 +126,7 @@ public class AzureUtils
         azureCloudBlobIterableFactory.create(ImmutableList.of(new CloudObjectLocation(
             bucket,
             prefix
-        ).toUri("azure")), config.getMaxListingLength(), storage.getAzureClientFactory());
+        ).toUri("azure")), config.getMaxListingLength(), storage);
     Iterator<CloudBlobHolder> iterator = azureCloudBlobIterable.iterator();
 
     while (iterator.hasNext()) {

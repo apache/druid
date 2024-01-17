@@ -54,11 +54,16 @@ public class AzureCloudBlobIteratorTest extends EasyMockSupport
   private final Integer MAX_TRIES = 3;
   private final Integer MAX_LISTING_LENGTH = 10;
   private final String CONTAINER = "container";
+  private final String STORAGE_ACCOUNT = "storageAccount";
+  private final String DEFAULT_STORAGE_ACCOUNT = "defaultStorageAccount";
+
 
   @Before
   public void setup()
   {
     config.setMaxTries(MAX_TRIES);
+    config.setAccount(DEFAULT_STORAGE_ACCOUNT);
+
   }
 
   @Test
@@ -86,7 +91,7 @@ public class AzureCloudBlobIteratorTest extends EasyMockSupport
     SettableSupplier<PagedResponse<BlobItem>> supplier = new SettableSupplier<>();
     supplier.set(new TestPagedResponse<>(ImmutableList.of(blobItem)));
     PagedIterable<BlobItem> pagedIterable = new PagedIterable<>(supplier);
-    EasyMock.expect(storage.listBlobsWithPrefixInContainerSegmented(CONTAINER, "dir1", MAX_LISTING_LENGTH, MAX_TRIES))
+    EasyMock.expect(storage.listBlobsWithPrefixInContainerSegmented(DEFAULT_STORAGE_ACCOUNT, CONTAINER, "dir1", MAX_LISTING_LENGTH, MAX_TRIES))
         .andReturn(pagedIterable);
 
     BlobItem blobPrefixItem = new BlobItem().setIsPrefix(true).setName("subdir").setProperties(new BlobItemProperties());
@@ -94,7 +99,7 @@ public class AzureCloudBlobIteratorTest extends EasyMockSupport
     SettableSupplier<PagedResponse<BlobItem>> supplier2 = new SettableSupplier<>();
     supplier2.set(new TestPagedResponse<>(ImmutableList.of(blobPrefixItem, blobItem2)));
     PagedIterable<BlobItem> pagedIterable2 = new PagedIterable<>(supplier2);
-    EasyMock.expect(storage.listBlobsWithPrefixInContainerSegmented(CONTAINER, "dir2", MAX_LISTING_LENGTH, MAX_TRIES))
+    EasyMock.expect(storage.listBlobsWithPrefixInContainerSegmented(DEFAULT_STORAGE_ACCOUNT, CONTAINER, "dir2", MAX_LISTING_LENGTH, MAX_TRIES))
         .andReturn(pagedIterable2);
 
     replayAll();
@@ -110,8 +115,8 @@ public class AzureCloudBlobIteratorTest extends EasyMockSupport
     }
     verifyAll();
     List<CloudBlobHolder> expectedBlobItems = ImmutableList.of(
-        new CloudBlobHolder(blobItem, CONTAINER),
-        new CloudBlobHolder(blobItem2, CONTAINER)
+        new CloudBlobHolder(blobItem, CONTAINER, null),
+        new CloudBlobHolder(blobItem2, CONTAINER, null)
     );
     Assert.assertEquals(expectedBlobItems.size(), actualBlobItems.size());
     Assert.assertEquals(
@@ -132,7 +137,7 @@ public class AzureCloudBlobIteratorTest extends EasyMockSupport
     SettableSupplier<PagedResponse<BlobItem>> supplier = new SettableSupplier<>();
     supplier.set(new TestPagedResponse<>(ImmutableList.of(blobItem, blobItem2)));
     PagedIterable<BlobItem> pagedIterable = new PagedIterable<>(supplier);
-    EasyMock.expect(storage.listBlobsWithPrefixInContainerSegmented(CONTAINER, "dir1", MAX_LISTING_LENGTH, MAX_TRIES))
+    EasyMock.expect(storage.listBlobsWithPrefixInContainerSegmented(DEFAULT_STORAGE_ACCOUNT, CONTAINER, "dir1", MAX_LISTING_LENGTH, MAX_TRIES))
         .andReturn(pagedIterable);
 
     replayAll();
@@ -148,7 +153,7 @@ public class AzureCloudBlobIteratorTest extends EasyMockSupport
     }
     verifyAll();
     List<CloudBlobHolder> expectedBlobItems = ImmutableList.of(
-        new CloudBlobHolder(blobItem, CONTAINER)
+        new CloudBlobHolder(blobItem, CONTAINER, STORAGE_ACCOUNT)
     );
     Assert.assertEquals(expectedBlobItems.size(), actualBlobItems.size());
     Assert.assertEquals(
@@ -178,6 +183,7 @@ public class AzureCloudBlobIteratorTest extends EasyMockSupport
     EasyMock.expect(storage.listBlobsWithPrefixInContainerSegmented(
         EasyMock.anyString(),
         EasyMock.anyString(),
+        EasyMock.anyString(),
         EasyMock.anyInt(),
         EasyMock.anyInt()
     )).andThrow(new BlobStorageException("", null, null)).times(3);
@@ -199,6 +205,7 @@ public class AzureCloudBlobIteratorTest extends EasyMockSupport
         new URI(StringUtils.format("azure://%s/dir1", CONTAINER))
     );
     EasyMock.expect(storage.listBlobsWithPrefixInContainerSegmented(
+        EasyMock.anyString(),
         EasyMock.anyString(),
         EasyMock.anyString(),
         EasyMock.anyInt(),

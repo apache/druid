@@ -68,6 +68,7 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
   private final List<URI> EMPTY_PREFIXES = ImmutableList.of();
   private final List<CloudObjectLocation> EMPTY_OBJECTS = ImmutableList.of();
   private static final String STORAGE_ACCOUNT = "STORAGE_ACCOUNT";
+  private static final String DEFAULT_STORAGE_ACCOUNT = "DEFAULT_STORAGE_ACCOUNT";
   private static final String CONTAINER = "CONTAINER";
   private static final String BLOB_PATH = "BLOB_PATH.csv";
   private static final CloudObjectLocation CLOUD_OBJECT_LOCATION_1 = new CloudObjectLocation(STORAGE_ACCOUNT, CONTAINER + "/" + BLOB_PATH);
@@ -117,6 +118,7 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
     azureCloudBlobIterable = createMock(AzureCloudBlobIterable.class);
     azureInputSourceConfig = createMock(AzureInputSourceConfig.class);
     azureAccountConfig = createMock(AzureAccountConfig.class);
+    EasyMock.expect(azureAccountConfig.getAccount()).andReturn(DEFAULT_STORAGE_ACCOUNT).anyTimes();
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -172,9 +174,10 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
     List<CloudBlobHolder> expectedCloudBlobs = ImmutableList.of(cloudBlobDruid1);
     Iterator<CloudBlobHolder> expectedCloudBlobsIterator = expectedCloudBlobs.iterator();
     EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_LISTING_LENGTH);
-    EasyMock.expect(azureCloudBlobIterableFactory.create(prefixes, MAX_LISTING_LENGTH)).andReturn(
+    EasyMock.expect(azureCloudBlobIterableFactory.create(EasyMock.eq(prefixes), EasyMock.eq(MAX_LISTING_LENGTH), EasyMock.anyObject(AzureStorage.class))).andReturn(
         azureCloudBlobIterable);
     EasyMock.expect(azureCloudBlobIterable.iterator()).andReturn(expectedCloudBlobsIterator);
+    EasyMock.expect(cloudBlobDruid1.getStorageAccount()).andReturn(STORAGE_ACCOUNT).anyTimes();
     EasyMock.expect(cloudBlobDruid1.getContainerName()).andReturn(CONTAINER).anyTimes();
     EasyMock.expect(cloudBlobDruid1.getName()).andReturn(BLOB_PATH).anyTimes();
     EasyMock.expect(cloudBlobDruid1.getBlobLength()).andReturn(100L).anyTimes();
@@ -221,9 +224,10 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
     );
 
     EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_LISTING_LENGTH);
-    EasyMock.expect(azureCloudBlobIterableFactory.create(prefixes, MAX_LISTING_LENGTH)).andReturn(
+    EasyMock.expect(azureCloudBlobIterableFactory.create(EasyMock.eq(prefixes), EasyMock.eq(MAX_LISTING_LENGTH), EasyMock.anyObject(AzureStorage.class))).andReturn(
         azureCloudBlobIterable);
     EasyMock.expect(azureCloudBlobIterable.iterator()).andReturn(expectedCloudBlobsIterator);
+    EasyMock.expect(cloudBlobDruid1.getStorageAccount()).andReturn(STORAGE_ACCOUNT).anyTimes();
     EasyMock.expect(cloudBlobDruid1.getBlobLength()).andReturn(100L).anyTimes();
     EasyMock.expect(cloudBlobDruid1.getContainerName()).andReturn(CONTAINER).anyTimes();
     EasyMock.expect(cloudBlobDruid1.getName()).andReturn(BLOB_PATH).anyTimes();

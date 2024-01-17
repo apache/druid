@@ -62,7 +62,7 @@ public class AzureStorage
   private static final Logger log = new Logger(AzureStorage.class);
 
   private final AzureClientFactory azureClientFactory;
-  private final String defaultStorageAccount;
+  private String defaultStorageAccount;
 
   public AzureStorage(
       AzureClientFactory azureClientFactory,
@@ -216,14 +216,21 @@ public class AzureStorage
   }
 
   @VisibleForTesting
+  BlobServiceClient getBlobServiceClient(String storageAccount, Integer maxAttempts)
+  {
+    return azureClientFactory.getBlobServiceClient(maxAttempts, storageAccount);
+  }
+
+  @VisibleForTesting
   PagedIterable<BlobItem> listBlobsWithPrefixInContainerSegmented(
+      final String storageAccount,
       final String containerName,
       final String prefix,
       int maxResults,
       Integer maxAttempts
   ) throws BlobStorageException
   {
-    BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName, maxAttempts);
+    BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(storageAccount, containerName, maxAttempts);
     return blobContainerClient.listBlobs(
         new ListBlobsOptions().setPrefix(prefix).setMaxResultsPerPage(maxResults),
         Duration.ofMillis(DELTA_BACKOFF_MS)
@@ -240,8 +247,8 @@ public class AzureStorage
     return getBlobServiceClient(maxRetries).createBlobContainerIfNotExists(containerName);
   }
 
-  public AzureClientFactory getAzureClientFactory()
+  private BlobContainerClient getOrCreateBlobContainerClient(final String storageAccount, final String containerName, final Integer maxRetries)
   {
-    return this.azureClientFactory;
+    return getBlobServiceClient(storageAccount, maxRetries).createBlobContainerIfNotExists(containerName);
   }
 }

@@ -180,8 +180,8 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   {
     injector = makeInjectorWithProperties(PROPERTIES);
     AzureCloudBlobIteratorFactory factory = injector.getInstance(AzureCloudBlobIteratorFactory.class);
-    Object object1 = factory.create(EMPTY_PREFIXES_ITERABLE, 10);
-    Object object2 = factory.create(EMPTY_PREFIXES_ITERABLE, 10);
+    Object object1 = factory.create(EMPTY_PREFIXES_ITERABLE, 10, azureStorage);
+    Object object2 = factory.create(EMPTY_PREFIXES_ITERABLE, 10, azureStorage);
     Assert.assertNotNull(object1);
     Assert.assertNotNull(object2);
     Assert.assertNotSame(object1, object2);
@@ -192,8 +192,8 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   {
     injector = makeInjectorWithProperties(PROPERTIES);
     AzureCloudBlobIterableFactory factory = injector.getInstance(AzureCloudBlobIterableFactory.class);
-    AzureCloudBlobIterable object1 = factory.create(EMPTY_PREFIXES_ITERABLE, 10);
-    AzureCloudBlobIterable object2 = factory.create(EMPTY_PREFIXES_ITERABLE, 10);
+    AzureCloudBlobIterable object1 = factory.create(EMPTY_PREFIXES_ITERABLE, 10, azureStorage);
+    AzureCloudBlobIterable object2 = factory.create(EMPTY_PREFIXES_ITERABLE, 10, azureStorage);
     Assert.assertNotNull(object1);
     Assert.assertNotNull(object2);
     Assert.assertNotSame(object1, object2);

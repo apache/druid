@@ -40,7 +40,6 @@ import java.util.NoSuchElementException;
 public class AzureCloudBlobIterator implements Iterator<CloudBlobHolder>
 {
   private static final Logger log = new Logger(AzureCloudBlobIterator.class);
-  private final AzureClientFactory azureClientFactory;
   private final Iterator<URI> prefixesIterator;
   private final int maxListingLength;
   private AzureStorage storage;
@@ -53,13 +52,13 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobHolder>
 
   @AssistedInject
   AzureCloudBlobIterator(
-      @Assisted AzureClientFactory azureClientFactory,
+      @Assisted AzureStorage azureStorage,
       AzureAccountConfig config,
       @Assisted final Iterable<URI> prefixes,
       @Assisted final int maxListingLength
   )
   {
-    this.azureClientFactory = azureClientFactory;
+    this.storage = azureStorage;
     this.config = config;
     this.prefixesIterator = prefixes.iterator();
     this.maxListingLength = maxListingLength;
@@ -109,7 +108,6 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobHolder>
       currentContainer = currentUri.getAuthority();
       currentPrefix = AzureUtils.extractAzureKey(currentUri);
     }
-    storage = new AzureStorage(azureClientFactory, currentStorageAccount);
     log.debug("currentUri: %s\ncurrentContainer: %s\ncurrentPrefix: %s",
               currentUri, currentContainer, currentPrefix
     );
@@ -126,6 +124,7 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobHolder>
       );
       // We don't need to iterate by page because the client handles this, it will fetch the next page when necessary.
       blobItemIterator = storage.listBlobsWithPrefixInContainerSegmented(
+          currentStorageAccount,
           currentContainer,
           currentPrefix,
           maxListingLength,

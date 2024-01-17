@@ -26,5 +26,5 @@ import java.net.URI;
  */
 public interface AzureCloudBlobIteratorFactory
 {
-  AzureCloudBlobIterator create(Iterable<URI> prefixes, int maxListingLength, AzureClientFactory azureClientFactory);
+  AzureCloudBlobIterator create(Iterable<URI> prefixes, int maxListingLength, AzureStorage azureStorage);
 }

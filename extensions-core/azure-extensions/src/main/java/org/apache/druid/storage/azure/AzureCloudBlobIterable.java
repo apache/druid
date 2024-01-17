@@ -34,25 +34,25 @@ public class AzureCloudBlobIterable implements Iterable<CloudBlobHolder>
   private final Iterable<URI> prefixes;
   private final int maxListingLength;
   private final AzureCloudBlobIteratorFactory azureCloudBlobIteratorFactory;
-  private final AzureClientFactory azureClientFactory;
+  private final AzureStorage azureStorage;
 
   @AssistedInject
   public AzureCloudBlobIterable(
       AzureCloudBlobIteratorFactory azureCloudBlobIteratorFactory,
       @Assisted final Iterable<URI> prefixes,
       @Assisted final int maxListingLength,
-      @Assisted final AzureClientFactory azureClientFactory
+      @Assisted final AzureStorage azureStorage
   )
   {
     this.azureCloudBlobIteratorFactory = azureCloudBlobIteratorFactory;
     this.prefixes = prefixes;
     this.maxListingLength = maxListingLength;
-    this.azureClientFactory = azureClientFactory;
+    this.azureStorage = azureStorage;
   }
 
   @Override
   public Iterator<CloudBlobHolder> iterator()
   {
-    return azureCloudBlobIteratorFactory.create(prefixes, maxListingLength, azureClientFactory);
+    return azureCloudBlobIteratorFactory.create(prefixes, maxListingLength, azureStorage);
   }
 }
