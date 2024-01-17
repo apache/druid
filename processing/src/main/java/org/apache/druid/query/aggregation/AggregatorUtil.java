@@ -163,15 +163,15 @@ public class AggregatorUtil
   /**
    * Given a list of PostAggregators and the name of an output column, returns the minimal list of PostAggregators
    * required to compute the output column.
-   *
+   * <p>
    * If the outputColumn does not exist in the list of PostAggregators, the return list will be empty (under the
    * assumption that the outputColumn comes from a project, aggregation or really anything other than a
    * PostAggregator).
-   *
+   * <p>
    * If the outputColumn <strong>does</strong> exist in the list of PostAggregators, then the return list will have at
    * least one element.  If the PostAggregator with outputName depends on any other PostAggregators, then the returned
    * list will contain all PostAggregators required to compute the outputColumn.
-   *
+   * <p>
    * Note that PostAggregators are processed in list-order, meaning that for a PostAggregator to depend on another
    * PostAggregator, the "depender" must exist *after* the "dependee" in the list.  That is, if PostAggregator A
    * depends on PostAggregator B, then the list should be [B, A], such that A is computed after B.
@@ -179,8 +179,7 @@ public class AggregatorUtil
    * @param postAggregatorList List of postAggregator, there is a restriction that the list should be in an order such
    *                           that all the dependencies of any given aggregator should occur before that aggregator.
    *                           See AggregatorUtilTest.testOutOfOrderPruneDependentPostAgg for example.
-   * @param outputName        name of the postAgg on which dependency is to be calculated
-   *
+   * @param outputName         name of the postAgg on which dependency is to be calculated
    * @return the list of dependent postAggregators
    */
   public static List<PostAggregator> pruneDependentPostAgg(List<PostAggregator> postAggregatorList, String outputName)
@@ -406,7 +405,7 @@ public class AggregatorUtil
     return columnSelectorFactory.makeValueSelector(fieldName);
   }
 
-  public static Supplier<byte[]>  getSimpleAggregatorCacheKeySupplier(
+  public static Supplier<byte[]> getSimpleAggregatorCacheKeySupplier(
       byte aggregatorType,
       String fieldName,
       Supplier<Expr> fieldExpression

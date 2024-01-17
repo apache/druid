@@ -19,12 +19,16 @@
 
 package org.apache.druid.query.aggregation;
 
-import com.fasterxml.jackson.annotation.*;
-import org.apache.druid.segment.*;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.segment.BaseLongColumnValueSelector;
+import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
-import java.util.*;
+import java.util.Objects;
 
 @JsonTypeName("singleValueLong")
 public class SingleValueLongAggregatorFactory extends SingleValueAggregatorFactory
@@ -32,29 +36,32 @@ public class SingleValueLongAggregatorFactory extends SingleValueAggregatorFacto
 
   @JsonCreator
   public SingleValueLongAggregatorFactory(
-          @JsonProperty("name") String name,
-          @JsonProperty("fieldName") final String fieldName
+      @JsonProperty("name") String name,
+      @JsonProperty("fieldName") final String fieldName
   )
   {
-      super(name, fieldName);
+    super(name, fieldName);
   }
 
   @Override
-  public Aggregator factorize(ColumnSelectorFactory metricFactory) {
+  public Aggregator factorize(ColumnSelectorFactory metricFactory)
+  {
     final BaseLongColumnValueSelector valueSelector = metricFactory.makeColumnValueSelector(getFieldName());
     return new SingleValueLongAggregator(
-            valueSelector
+        valueSelector
     );
   }
 
   @Override
-  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory) {
+  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
+  {
     final BaseLongColumnValueSelector valueSelector = metricFactory.makeColumnValueSelector(getFieldName());
     return new SingleValueLongBufferAggregator(valueSelector);
   }
 
   @Override
-  public AggregatorFactory getCombiningFactory() {
+  public AggregatorFactory getCombiningFactory()
+  {
     return new SingleValueLongAggregatorFactory(getName(), getName());
   }
 
@@ -72,12 +79,14 @@ public class SingleValueLongAggregatorFactory extends SingleValueAggregatorFacto
   }
 
   @Override
-  public int getMaxIntermediateSize() {
+  public int getMaxIntermediateSize()
+  {
     return Long.BYTES;
   }
 
   @Override
-  public byte[] getCacheKey() {
+  public byte[] getCacheKey()
+  {
     return new byte[]{AggregatorUtil.SINGLE_VALUE_CACHE_TYPE_ID};
   }
 
@@ -94,23 +103,30 @@ public class SingleValueLongAggregatorFactory extends SingleValueAggregatorFacto
   }
 
   @Override
-  public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
     SingleValueLongAggregatorFactory that = (SingleValueLongAggregatorFactory) o;
     return Objects.equals(getName(), that.getName()) && Objects.equals(getFieldName(), that.getFieldName());
   }
 
   @Override
-  public int hashCode() {
+  public int hashCode()
+  {
     return Objects.hash(getName(), getFieldName());
   }
 
   @Override
-  public String toString() {
+  public String toString()
+  {
     return "SingleValueLongAggregatorFactory{" +
-            "name='" + getName() + '\'' +
-            ", fieldName='" + getFieldName() + '\'' +
-            '}';
+           "name='" + getName() + '\'' +
+           ", fieldName='" + getFieldName() + '\'' +
+           '}';
   }
 }

@@ -23,6 +23,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 
 /**
+ *
  */
 public class SingleValueLongAggregator implements Aggregator
 {
@@ -34,7 +35,6 @@ public class SingleValueLongAggregator implements Aggregator
   {
     this.valueSelector = valueSelector;
     this.value = valueSelector.getLong();
-    //this.aggregatedEarlier = false;
   }
 
   @Override
@@ -74,10 +74,11 @@ public class SingleValueLongAggregator implements Aggregator
   }
 
   @Override
-  public String toString() {
+  public String toString()
+  {
     return "SingleValueAggregator{" +
-            "valueSelector=" + valueSelector +
-            ", value=" + value +
-            '}';
+           "valueSelector=" + valueSelector +
+           ", value=" + value +
+           '}';
   }
 }

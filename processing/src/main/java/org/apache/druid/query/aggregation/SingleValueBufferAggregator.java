@@ -25,6 +25,7 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import java.nio.ByteBuffer;
 
 /**
+ *
  */
 public abstract class SingleValueBufferAggregator implements BufferAggregator
 {
@@ -38,7 +39,7 @@ public abstract class SingleValueBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    if (aggregateInvoked){
+    if (aggregateInvoked) {
       throw DruidException.defensive("Single Value Aggregator can not be applied on more than one row");
     }
     updateBuffervalue(buf, position);

@@ -24,12 +24,12 @@ import org.apache.druid.segment.BaseLongColumnValueSelector;
 import java.nio.ByteBuffer;
 
 /**
+ *
  */
 public class SingleValueLongBufferAggregator extends SingleValueBufferAggregator
 {
 
   final BaseLongColumnValueSelector selector;
-  boolean aggregateInvoked;
 
   SingleValueLongBufferAggregator(BaseLongColumnValueSelector selector)
   {
@@ -44,7 +44,8 @@ public class SingleValueLongBufferAggregator extends SingleValueBufferAggregator
   }
 
   @Override
-  void updateBuffervalue(ByteBuffer buf, int position) {
+  void updateBuffervalue(ByteBuffer buf, int position)
+  {
     buf.putLong(position, selector.getLong());
   }
 
@@ -55,10 +56,11 @@ public class SingleValueLongBufferAggregator extends SingleValueBufferAggregator
   }
 
   @Override
-  public String toString() {
+  public String toString()
+  {
     return "SingleValueBufferAggregator{" +
-            "selector=" + selector +
-            ", aggregateInvoked=" + aggregateInvoked +
-            '}';
+           "selector=" + selector +
+           ", aggregateInvoked=" + aggregateInvoked +
+           '}';
   }
 }

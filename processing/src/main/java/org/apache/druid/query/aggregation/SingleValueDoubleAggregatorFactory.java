@@ -36,29 +36,32 @@ public class SingleValueDoubleAggregatorFactory extends SingleValueAggregatorFac
 
   @JsonCreator
   public SingleValueDoubleAggregatorFactory(
-          @JsonProperty("name") String name,
-          @JsonProperty("fieldName") final String fieldName
+      @JsonProperty("name") String name,
+      @JsonProperty("fieldName") final String fieldName
   )
   {
-      super(name, fieldName);
+    super(name, fieldName);
   }
 
   @Override
-  public Aggregator factorize(ColumnSelectorFactory metricFactory) {
+  public Aggregator factorize(ColumnSelectorFactory metricFactory)
+  {
     final BaseLongColumnValueSelector valueSelector = metricFactory.makeColumnValueSelector(getFieldName());
     return new SingleValueDoubleAggregator(
-            valueSelector
+        valueSelector
     );
   }
 
   @Override
-  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory) {
+  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
+  {
     final BaseDoubleColumnValueSelector valueSelector = metricFactory.makeColumnValueSelector(getFieldName());
     return new SingleValueDoubleBufferAggregator(valueSelector);
   }
 
   @Override
-  public AggregatorFactory getCombiningFactory() {
+  public AggregatorFactory getCombiningFactory()
+  {
     return new SingleValueDoubleAggregatorFactory(getName(), getName());
   }
 
@@ -76,12 +79,14 @@ public class SingleValueDoubleAggregatorFactory extends SingleValueAggregatorFac
   }
 
   @Override
-  public int getMaxIntermediateSize() {
+  public int getMaxIntermediateSize()
+  {
     return Long.BYTES;
   }
 
   @Override
-  public byte[] getCacheKey() {
+  public byte[] getCacheKey()
+  {
     return new byte[]{AggregatorUtil.SINGLE_VALUE_CACHE_TYPE_ID};
   }
 
@@ -98,23 +103,30 @@ public class SingleValueDoubleAggregatorFactory extends SingleValueAggregatorFac
   }
 
   @Override
-  public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
     SingleValueDoubleAggregatorFactory that = (SingleValueDoubleAggregatorFactory) o;
     return Objects.equals(getName(), that.getName()) && Objects.equals(getFieldName(), that.getFieldName());
   }
 
   @Override
-  public int hashCode() {
+  public int hashCode()
+  {
     return Objects.hash(getName(), getFieldName());
   }
 
   @Override
-  public String toString() {
+  public String toString()
+  {
     return "SingleValueDoubleAggregatorFactory{" +
-            "name='" + getName() + '\'' +
-            ", fieldName='" + getFieldName() + '\'' +
-            '}';
+           "name='" + getName() + '\'' +
+           ", fieldName='" + getFieldName() + '\'' +
+           '}';
   }
 }

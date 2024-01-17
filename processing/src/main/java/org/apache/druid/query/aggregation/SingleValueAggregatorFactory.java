@@ -22,16 +22,13 @@ package org.apache.druid.query.aggregation;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 
 public abstract class SingleValueAggregatorFactory extends AggregatorFactory
 {
@@ -46,8 +43,8 @@ public abstract class SingleValueAggregatorFactory extends AggregatorFactory
 
   @JsonCreator
   public SingleValueAggregatorFactory(
-          @JsonProperty("name") String name,
-          @JsonProperty("fieldName") final String fieldName
+      @JsonProperty("name") String name,
+      @JsonProperty("fieldName") final String fieldName
   )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
@@ -85,12 +82,14 @@ public abstract class SingleValueAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public List<String> requiredFields() {
+  public List<String> requiredFields()
+  {
     return Collections.singletonList(fieldName);
   }
 
   @Override
-  public byte[] getCacheKey() {
+  public byte[] getCacheKey()
+  {
     return new byte[]{AggregatorUtil.SINGLE_VALUE_CACHE_TYPE_ID};
   }
 

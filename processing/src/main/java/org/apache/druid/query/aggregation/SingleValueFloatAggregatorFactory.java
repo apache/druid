@@ -36,29 +36,32 @@ public class SingleValueFloatAggregatorFactory extends SingleValueAggregatorFact
 
   @JsonCreator
   public SingleValueFloatAggregatorFactory(
-          @JsonProperty("name") String name,
-          @JsonProperty("fieldName") final String fieldName
+      @JsonProperty("name") String name,
+      @JsonProperty("fieldName") final String fieldName
   )
   {
-      super(name, fieldName);
+    super(name, fieldName);
   }
 
   @Override
-  public Aggregator factorize(ColumnSelectorFactory metricFactory) {
+  public Aggregator factorize(ColumnSelectorFactory metricFactory)
+  {
     final BaseLongColumnValueSelector valueSelector = metricFactory.makeColumnValueSelector(getFieldName());
     return new SingleValueFloatAggregator(
-            valueSelector
+        valueSelector
     );
   }
 
   @Override
-  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory) {
+  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
+  {
     final BaseFloatColumnValueSelector valueSelector = metricFactory.makeColumnValueSelector(getFieldName());
     return new SingleValueFloatBufferAggregator(valueSelector);
   }
 
   @Override
-  public AggregatorFactory getCombiningFactory() {
+  public AggregatorFactory getCombiningFactory()
+  {
     return new SingleValueFloatAggregatorFactory(getName(), getName());
   }
 
@@ -76,12 +79,14 @@ public class SingleValueFloatAggregatorFactory extends SingleValueAggregatorFact
   }
 
   @Override
-  public int getMaxIntermediateSize() {
+  public int getMaxIntermediateSize()
+  {
     return Float.BYTES;
   }
 
   @Override
-  public byte[] getCacheKey() {
+  public byte[] getCacheKey()
+  {
     return new byte[]{AggregatorUtil.SINGLE_VALUE_CACHE_TYPE_ID};
   }
 
@@ -98,23 +103,30 @@ public class SingleValueFloatAggregatorFactory extends SingleValueAggregatorFact
   }
 
   @Override
-  public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
     SingleValueFloatAggregatorFactory that = (SingleValueFloatAggregatorFactory) o;
     return Objects.equals(getName(), that.getName()) && Objects.equals(getFieldName(), that.getFieldName());
   }
 
   @Override
-  public int hashCode() {
+  public int hashCode()
+  {
     return Objects.hash(getName(), getFieldName());
   }
 
   @Override
-  public String toString() {
+  public String toString()
+  {
     return "SingleValueFloatAggregatorFactory{" +
-            "name='" + getName() + '\'' +
-            ", fieldName='" + getFieldName() + '\'' +
-            '}';
+           "name='" + getName() + '\'' +
+           ", fieldName='" + getFieldName() + '\'' +
+           '}';
   }
 }

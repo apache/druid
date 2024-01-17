@@ -24,14 +24,18 @@ import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.aggregation.*;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.SingleValueDoubleAggregatorFactory;
+import org.apache.druid.query.aggregation.SingleValueFloatAggregatorFactory;
+import org.apache.druid.query.aggregation.SingleValueLongAggregatorFactory;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.planner.Calcites;
 
 import javax.annotation.Nullable;
 
-public class SingleValueSqlAggregator extends SimpleSqlAggregator {
+public class SingleValueSqlAggregator extends SimpleSqlAggregator
+{
 
   @Override
   public SqlAggFunction calciteFunction()
@@ -52,7 +56,13 @@ public class SingleValueSqlAggregator extends SimpleSqlAggregator {
     if (valueType == null) {
       return null;
     }
-    return Aggregation.create(createSingleValueAggregatorFactory(valueType, name, fieldName, macroTable, aggregateCall));
+    return Aggregation.create(createSingleValueAggregatorFactory(
+        valueType,
+        name,
+        fieldName,
+        macroTable,
+        aggregateCall
+    ));
   }
 
   static AggregatorFactory createSingleValueAggregatorFactory(
@@ -63,10 +73,10 @@ public class SingleValueSqlAggregator extends SimpleSqlAggregator {
       final AggregateCall aggregateCall
   )
   {
-    if (aggregateCall.getArgList().size() > 1){
+    if (aggregateCall.getArgList().size() > 1) {
       throw DruidException.defensive(
-              "More than one argument not allowed for [%s] aggregator",
-              aggregateCall.getAggregation().getName()
+          "More than one argument not allowed for [%s] aggregator",
+          aggregateCall.getAggregation().getName()
       );
     }
     switch (aggregationType.getType()) {

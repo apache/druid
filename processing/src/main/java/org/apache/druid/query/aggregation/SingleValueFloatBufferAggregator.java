@@ -24,6 +24,7 @@ import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import java.nio.ByteBuffer;
 
 /**
+ *
  */
 public class SingleValueFloatBufferAggregator extends SingleValueBufferAggregator
 {
@@ -43,7 +44,8 @@ public class SingleValueFloatBufferAggregator extends SingleValueBufferAggregato
   }
 
   @Override
-  void updateBuffervalue(ByteBuffer buf, int position) {
+  void updateBuffervalue(ByteBuffer buf, int position)
+  {
     buf.putFloat(position, selector.getFloat());
   }
 
@@ -54,10 +56,11 @@ public class SingleValueFloatBufferAggregator extends SingleValueBufferAggregato
   }
 
   @Override
-  public String toString() {
+  public String toString()
+  {
     return "SingleValueFloatBufferAggregator{" +
-            "selector=" + selector +
-            ", aggregateInvoked=" + aggregateInvoked +
-            '}';
+           "selector=" + selector +
+           ", aggregateInvoked=" + aggregateInvoked +
+           '}';
   }
 }

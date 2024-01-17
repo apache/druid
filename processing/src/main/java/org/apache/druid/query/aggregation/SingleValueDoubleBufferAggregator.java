@@ -24,6 +24,7 @@ import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import java.nio.ByteBuffer;
 
 /**
+ *
  */
 public class SingleValueDoubleBufferAggregator extends SingleValueBufferAggregator
 {
@@ -43,7 +44,8 @@ public class SingleValueDoubleBufferAggregator extends SingleValueBufferAggregat
   }
 
   @Override
-  void updateBuffervalue(ByteBuffer buf, int position) {
+  void updateBuffervalue(ByteBuffer buf, int position)
+  {
     buf.putDouble(position, selector.getDouble());
   }
 
@@ -54,10 +56,11 @@ public class SingleValueDoubleBufferAggregator extends SingleValueBufferAggregat
   }
 
   @Override
-  public String toString() {
+  public String toString()
+  {
     return "SingleValueDoubleBufferAggregator{" +
-            "selector=" + selector +
-            ", aggregateInvoked=" + aggregateInvoked +
-            '}';
+           "selector=" + selector +
+           ", aggregateInvoked=" + aggregateInvoked +
+           '}';
   }
 }
