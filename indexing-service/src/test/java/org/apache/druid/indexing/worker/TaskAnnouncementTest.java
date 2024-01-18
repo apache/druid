@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.worker;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.data.input.impl.NoopInputSource;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TestUtils;
@@ -29,7 +30,6 @@ import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -46,7 +46,7 @@ public class TaskAnnouncementTest
   @Test
   public void testBackwardsCompatibleSerde() throws Exception
   {
-    final IndexTask.IndexIOConfig ioConfig = EasyMock.createNiceMock(IndexTask.IndexIOConfig.class);
+    final IndexTask.IndexIOConfig ioConfig = new IndexTask.IndexIOConfig(null, new NoopInputSource(), null, null, null);
     final Task task = new IndexTask(
         "theid",
         new TaskResource("rofl", 2),
