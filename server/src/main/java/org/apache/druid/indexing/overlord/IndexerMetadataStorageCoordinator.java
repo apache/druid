@@ -128,26 +128,6 @@ public interface IndexerMetadataStorageCoordinator
   );
 
   /**
-   * See {@link #retrieveUnusedSegmentsForInterval(String, Interval, Integer, DateTime)}.
-   */
-  default List<DataSegment> retrieveUnusedSegmentsForInterval(String dataSource, Interval interval)
-  {
-    return retrieveUnusedSegmentsForInterval(dataSource, interval, null, null);
-  }
-
-  /**
-   * See {@link #retrieveUnusedSegmentsForInterval(String, Interval, Integer, DateTime)}.
-   */
-  default List<DataSegment> retrieveUnusedSegmentsForInterval(
-      String dataSource,
-      Interval interval,
-      @Nullable Integer limit
-  )
-  {
-    return retrieveUnusedSegmentsForInterval(dataSource, interval, limit, null);
-  }
-
-  /**
    * Retrieve all published segments which include ONLY data within the given interval and are marked as unused from the
    * metadata store.
    *

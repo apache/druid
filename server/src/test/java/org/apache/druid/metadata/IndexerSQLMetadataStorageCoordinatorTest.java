@@ -1152,6 +1152,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
         DS.WIKI,
         Intervals.of("1900/3000"),
+        null,
         null
     );
 
@@ -1169,7 +1170,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
         DS.WIKI,
         Intervals.of("1900/3000"),
-        requestedLimit
+        requestedLimit,
+        null
     );
 
     Assert.assertEquals(requestedLimit, actualUnusedSegments.size());
@@ -1186,7 +1188,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
         DS.WIKI,
         Intervals.of("1900/3000"),
-        requestedLimit
+        requestedLimit,
+        null
     );
 
     Assert.assertEquals(requestedLimit, actualUnusedSegments.size());
@@ -1203,7 +1206,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
         DS.WIKI,
         Intervals.of("1900/3000"),
-        limit
+        limit,
+        null
     );
     Assert.assertEquals(segments.size(), actualUnusedSegments.size());
     Assert.assertTrue(actualUnusedSegments.containsAll(segments));
@@ -1223,7 +1227,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
         DS.WIKI,
         outOfRangeInterval,
-        limit
+        limit,
+        null
     );
     Assert.assertEquals(0, actualUnusedSegments.size());
   }
@@ -1506,7 +1511,9 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableSet.copyOf(
             coordinator.retrieveUnusedSegmentsForInterval(
                 defaultSegment.getDataSource(),
-                defaultSegment.getInterval()
+                defaultSegment.getInterval(),
+                null,
+                null
             )
         )
     );
@@ -1522,7 +1529,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         coordinator.retrieveUnusedSegmentsForInterval(
             defaultSegment.getDataSource(),
             defaultSegment.getInterval(),
-            limit
+            limit,
+            null
         )
     );
     Assert.assertEquals(limit, retreivedUnusedSegments.size());
@@ -1634,7 +1642,9 @@ public class IndexerSQLMetadataStorageCoordinatorTest
             new Interval(
                 defaultSegment.getInterval().getStart().minus(1),
                 defaultSegment.getInterval().getStart().plus(1)
-            )
+            ),
+            null,
+            null
         ).isEmpty()
     );
   }
@@ -1647,7 +1657,9 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertTrue(
         coordinator.retrieveUnusedSegmentsForInterval(
             defaultSegment.getDataSource(),
-            new Interval(defaultSegment.getInterval().getStart().plus(1), defaultSegment.getInterval().getEnd())
+            new Interval(defaultSegment.getInterval().getStart().plus(1), defaultSegment.getInterval().getEnd()),
+            null,
+            null
         ).isEmpty()
     );
   }
@@ -1661,7 +1673,9 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertTrue(
         coordinator.retrieveUnusedSegmentsForInterval(
             defaultSegment.getDataSource(),
-            new Interval(defaultSegment.getInterval().getStart(), defaultSegment.getInterval().getEnd().minus(1))
+            new Interval(defaultSegment.getInterval().getStart(), defaultSegment.getInterval().getEnd().minus(1)),
+            null,
+            null
         ).isEmpty()
     );
   }
@@ -1674,7 +1688,9 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertTrue(
         coordinator.retrieveUnusedSegmentsForInterval(
             defaultSegment.getDataSource(),
-            defaultSegment.getInterval().withStart(defaultSegment.getInterval().getEnd().minus(1))
+            defaultSegment.getInterval().withStart(defaultSegment.getInterval().getEnd().minus(1)),
+            null,
+            null
         ).isEmpty()
     );
   }
@@ -1689,7 +1705,9 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableSet.copyOf(
             coordinator.retrieveUnusedSegmentsForInterval(
                 defaultSegment.getDataSource(),
-                Intervals.of("2000/2999")
+                Intervals.of("2000/2999"),
+                null,
+                null
             )
         )
     );
@@ -1705,7 +1723,9 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableSet.copyOf(
             coordinator.retrieveUnusedSegmentsForInterval(
                 defaultSegment.getDataSource(),
-                defaultSegment.getInterval().withStart(defaultSegment.getInterval().getStart().minus(1))
+                defaultSegment.getInterval().withStart(defaultSegment.getInterval().getStart().minus(1)),
+                null,
+                null
             )
         )
     );
@@ -1714,7 +1734,9 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableSet.copyOf(
             coordinator.retrieveUnusedSegmentsForInterval(
                 defaultSegment.getDataSource(),
-                defaultSegment.getInterval().withStart(defaultSegment.getInterval().getStart().minusYears(1))
+                defaultSegment.getInterval().withStart(defaultSegment.getInterval().getStart().minusYears(1)),
+                null,
+                null
             )
         )
     );
@@ -1730,7 +1752,9 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableSet.copyOf(
             coordinator.retrieveUnusedSegmentsForInterval(
                 defaultSegment.getDataSource(),
-                defaultSegment.getInterval().withEnd(defaultSegment.getInterval().getEnd().plus(1))
+                defaultSegment.getInterval().withEnd(defaultSegment.getInterval().getEnd().plus(1)),
+                null,
+                null
             )
         )
     );
@@ -1739,7 +1763,9 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableSet.copyOf(
             coordinator.retrieveUnusedSegmentsForInterval(
                 defaultSegment.getDataSource(),
-                defaultSegment.getInterval().withEnd(defaultSegment.getInterval().getEnd().plusYears(1))
+                defaultSegment.getInterval().withEnd(defaultSegment.getInterval().getEnd().plusYears(1)),
+                null,
+                null
             )
         )
     );
@@ -2979,7 +3005,9 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableSet.copyOf(
             coordinator.retrieveUnusedSegmentsForInterval(
                 existingSegment1.getDataSource(),
-                existingSegment1.getInterval().withEnd(existingSegment1.getInterval().getEnd().plus(1))
+                existingSegment1.getInterval().withEnd(existingSegment1.getInterval().getEnd().plus(1)),
+                null,
+                null
             )
         )
     );
@@ -2988,7 +3016,9 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableSet.copyOf(
             coordinator.retrieveUnusedSegmentsForInterval(
                 existingSegment2.getDataSource(),
-                existingSegment2.getInterval().withEnd(existingSegment2.getInterval().getEnd().plusYears(1))
+                existingSegment2.getInterval().withEnd(existingSegment2.getInterval().getEnd().plusYears(1)),
+                null,
+                null
             )
         )
     );
@@ -3011,7 +3041,9 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableSet.copyOf(
             coordinator.retrieveUnusedSegmentsForInterval(
                 existingSegment1.getDataSource(),
-                existingSegment1.getInterval().withEnd(existingSegment1.getInterval().getEnd().plus(1))
+                existingSegment1.getInterval().withEnd(existingSegment1.getInterval().getEnd().plus(1)),
+                null,
+                null
             )
         )
     );
@@ -3020,7 +3052,9 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableSet.copyOf(
             coordinator.retrieveUnusedSegmentsForInterval(
                 existingSegment2.getDataSource(),
-                existingSegment2.getInterval().withEnd(existingSegment2.getInterval().getEnd().plusYears(1))
+                existingSegment2.getInterval().withEnd(existingSegment2.getInterval().getEnd().plusYears(1)),
+                null,
+                null
             )
         )
     );

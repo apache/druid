@@ -230,22 +230,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public List<DataSegment> retrieveUnusedSegmentsForInterval(final String dataSource, final Interval interval)
-  {
-    return retrieveUnusedSegmentsForInterval(dataSource, interval, null);
-  }
-
-  @Override
-  public List<DataSegment> retrieveUnusedSegmentsForInterval(
-      String dataSource,
-      Interval interval,
-      @Nullable Integer limit
-  )
-  {
-    return retrieveUnusedSegmentsForInterval(dataSource, interval, limit, null);
-  }
-
-  @Override
   public List<DataSegment> retrieveUnusedSegmentsForInterval(
       String dataSource,
       Interval interval,
