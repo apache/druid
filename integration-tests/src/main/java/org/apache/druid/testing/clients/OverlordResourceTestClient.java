@@ -127,9 +127,7 @@ public class OverlordResourceTestClient
               StringUtils.urlEncode(taskID)
           )
       );
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Index status response" + response.getContent());
-      }
+      LOG.debug("Index status response" + response.getContent());
       TaskStatusResponse taskStatusResponse = jsonMapper.readValue(
           response.getContent(),
           new TypeReference<TaskStatusResponse>()
