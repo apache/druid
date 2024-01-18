@@ -40,6 +40,7 @@ import org.apache.druid.java.util.common.parsers.ObjectFlattener;
 import org.apache.druid.java.util.common.parsers.ObjectFlatteners;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -98,6 +99,21 @@ public class JsonReader extends IntermediateRowParsingReader<InputEntity>
   protected InputEntity source()
   {
     return source;
+  }
+
+  @Override
+  protected String intermediateRowAsString(@Nullable InputEntity entity)
+  {
+    if (entity == null) {
+      return "null";
+    } else {
+      try {
+        return IOUtils.toString(entity.open(), StandardCharsets.UTF_8);
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
   }
 
   @Override
