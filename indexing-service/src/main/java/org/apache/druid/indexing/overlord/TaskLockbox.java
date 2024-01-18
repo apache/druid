@@ -1600,6 +1600,7 @@ public class TaskLockbox
              && taskLock.getType() == TaskLockType.APPEND
              && taskLock.getType() == otherLock.getType()
              && taskLock.getVersion().compareTo(otherLock.getVersion()) > 0
+             && !taskLock.getInterval().equals(otherLock.getInterval())
              && taskLock.getInterval().contains(otherLock.getInterval())
              && taskLock.getGroupId().equals(otherLock.getGroupId());
     }
