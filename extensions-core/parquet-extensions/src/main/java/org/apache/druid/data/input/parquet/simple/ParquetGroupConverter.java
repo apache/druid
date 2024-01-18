@@ -426,9 +426,9 @@ public class ParquetGroupConverter
             int scale = pt.asPrimitiveType().getDecimalMetadata().getScale();
             switch (pt.getPrimitiveTypeName()) {
               case INT32:
-                return new BigDecimal(g.getInteger(fieldIndex, index));
+                return new BigDecimal(g.getInteger(fieldIndex, index)).movePointLeft(scale);
               case INT64:
-                return new BigDecimal(g.getLong(fieldIndex, index));
+                return new BigDecimal(g.getLong(fieldIndex, index)).movePointLeft(scale);
               case FIXED_LEN_BYTE_ARRAY:
               case BINARY:
                 Binary value = g.getBinary(fieldIndex, index);
