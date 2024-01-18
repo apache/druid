@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.segment.realtime.plumber;
+package org.apache.druid.segment.realtime.sink;
 
 
 import org.apache.druid.segment.SegmentReference;

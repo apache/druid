@@ -26,10 +26,6 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
-import org.apache.druid.segment.realtime.plumber.IntervalStartVersioningPolicy;
-import org.apache.druid.segment.realtime.plumber.RejectionPolicyFactory;
-import org.apache.druid.segment.realtime.plumber.ServerTimeRejectionPolicyFactory;
-import org.apache.druid.segment.realtime.plumber.VersioningPolicy;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -46,8 +42,6 @@ public class RealtimeTuningConfig implements AppenderatorConfig
 {
   private static final Period DEFAULT_INTERMEDIATE_PERSIST_PERIOD = new Period("PT10M");
   private static final Period DEFAULT_WINDOW_PERIOD = new Period("PT10M");
-  private static final VersioningPolicy DEFAULT_VERSIONING_POLICY = new IntervalStartVersioningPolicy();
-  private static final RejectionPolicyFactory DEFAULT_REJECTION_POLICY_FACTORY = new ServerTimeRejectionPolicyFactory();
   private static final int DEFAULT_MAX_PENDING_PERSISTS = 0;
   private static final ShardSpec DEFAULT_SHARD_SPEC = new NumberedShardSpec(0, 1);
   private static final IndexSpec DEFAULT_INDEX_SPEC = IndexSpec.DEFAULT;
@@ -56,33 +50,6 @@ public class RealtimeTuningConfig implements AppenderatorConfig
   private static final long DEFAULT_ALERT_TIMEOUT = 0;
   private static final String DEFAULT_DEDUP_COLUMN = null;
 
-  // Might make sense for this to be a builder
-  public static RealtimeTuningConfig makeDefaultTuningConfig(final @Nullable File basePersistDirectory)
-  {
-    return new RealtimeTuningConfig(
-        DEFAULT_APPENDABLE_INDEX,
-        DEFAULT_MAX_ROWS_IN_MEMORY_REALTIME,
-        0L,
-        DEFAULT_SKIP_BYTES_IN_MEMORY_OVERHEAD_CHECK,
-        DEFAULT_INTERMEDIATE_PERSIST_PERIOD,
-        DEFAULT_WINDOW_PERIOD,
-        basePersistDirectory,
-        DEFAULT_VERSIONING_POLICY,
-        DEFAULT_REJECTION_POLICY_FACTORY,
-        DEFAULT_MAX_PENDING_PERSISTS,
-        DEFAULT_SHARD_SPEC,
-        DEFAULT_INDEX_SPEC,
-        DEFAULT_INDEX_SPEC,
-        0,
-        0,
-        DEFAULT_REPORT_PARSE_EXCEPTIONS,
-        DEFAULT_HANDOFF_CONDITION_TIMEOUT,
-        DEFAULT_ALERT_TIMEOUT,
-        null,
-        DEFAULT_DEDUP_COLUMN
-    );
-  }
-
   private final AppendableIndexSpec appendableIndexSpec;
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
@@ -90,8 +57,6 @@ public class RealtimeTuningConfig implements AppenderatorConfig
   private final Period intermediatePersistPeriod;
   private final Period windowPeriod;
   private final File basePersistDirectory;
-  private final VersioningPolicy versioningPolicy;
-  private final RejectionPolicyFactory rejectionPolicyFactory;
   private final int maxPendingPersists;
   private final ShardSpec shardSpec;
   private final IndexSpec indexSpec;
@@ -114,8 +79,6 @@ public class RealtimeTuningConfig implements AppenderatorConfig
       Period intermediatePersistPeriod,
       Period windowPeriod,
       File basePersistDirectory,
-      VersioningPolicy versioningPolicy,
-      RejectionPolicyFactory rejectionPolicyFactory,
       Integer maxPendingPersists,
       ShardSpec shardSpec,
       IndexSpec indexSpec,
@@ -141,10 +104,6 @@ public class RealtimeTuningConfig implements AppenderatorConfig
                                      : intermediatePersistPeriod;
     this.windowPeriod = windowPeriod == null ? DEFAULT_WINDOW_PERIOD : windowPeriod;
     this.basePersistDirectory = basePersistDirectory;
-    this.versioningPolicy = versioningPolicy;
-    this.rejectionPolicyFactory = rejectionPolicyFactory == null
-                                  ? DEFAULT_REJECTION_POLICY_FACTORY
-                                  : rejectionPolicyFactory;
     this.maxPendingPersists = maxPendingPersists == null ? DEFAULT_MAX_PENDING_PERSISTS : maxPendingPersists;
     this.shardSpec = shardSpec == null ? DEFAULT_SHARD_SPEC : shardSpec;
     this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
@@ -174,7 +133,6 @@ public class RealtimeTuningConfig implements AppenderatorConfig
       @JsonProperty("skipBytesInMemoryOverheadCheck") @Nullable Boolean skipBytesInMemoryOverheadCheck,
       @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
       @JsonProperty("windowPeriod") Period windowPeriod,
-      @JsonProperty("rejectionPolicy") RejectionPolicyFactory rejectionPolicyFactory,
       @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
       @JsonProperty("shardSpec") ShardSpec shardSpec,
       @JsonProperty("indexSpec") IndexSpec indexSpec,
@@ -196,8 +154,6 @@ public class RealtimeTuningConfig implements AppenderatorConfig
         intermediatePersistPeriod,
         windowPeriod,
         null,
-        null,
-        rejectionPolicyFactory,
         maxPendingPersists,
         shardSpec,
         indexSpec,
@@ -257,17 +213,6 @@ public class RealtimeTuningConfig implements AppenderatorConfig
   public File getBasePersistDirectory()
   {
     return Preconditions.checkNotNull(basePersistDirectory, "basePersistDirectory not set");
-  }
-
-  public VersioningPolicy getVersioningPolicy()
-  {
-    return Preconditions.checkNotNull(versioningPolicy, "versioningPolicy not set");
-  }
-
-  @JsonProperty("rejectionPolicy")
-  public RejectionPolicyFactory getRejectionPolicyFactory()
-  {
-    return rejectionPolicyFactory;
   }
 
   @Override
@@ -349,32 +294,6 @@ public class RealtimeTuningConfig implements AppenderatorConfig
     return dedupColumn;
   }
 
-  public RealtimeTuningConfig withVersioningPolicy(VersioningPolicy policy)
-  {
-    return new RealtimeTuningConfig(
-        appendableIndexSpec,
-        maxRowsInMemory,
-        maxBytesInMemory,
-        skipBytesInMemoryOverheadCheck,
-        intermediatePersistPeriod,
-        windowPeriod,
-        basePersistDirectory,
-        policy,
-        rejectionPolicyFactory,
-        maxPendingPersists,
-        shardSpec,
-        indexSpec,
-        indexSpecForIntermediatePersists,
-        persistThreadPriority,
-        mergeThreadPriority,
-        reportParseExceptions,
-        handoffConditionTimeout,
-        alertTimeout,
-        segmentWriteOutMediumFactory,
-        dedupColumn
-    );
-  }
-
   @Override
   public RealtimeTuningConfig withBasePersistDirectory(File dir)
   {
@@ -386,8 +305,6 @@ public class RealtimeTuningConfig implements AppenderatorConfig
         intermediatePersistPeriod,
         windowPeriod,
         dir,
-        versioningPolicy,
-        rejectionPolicyFactory,
         maxPendingPersists,
         shardSpec,
         indexSpec,

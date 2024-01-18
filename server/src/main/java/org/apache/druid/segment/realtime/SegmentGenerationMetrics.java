@@ -25,17 +25,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
+ * Metrics for segment generation.
  */
-public class FireDepartmentMetrics
+public class SegmentGenerationMetrics
 {
   private static final long NO_EMIT_SEGMENT_HANDOFF_TIME = -1L;
 
   private static final long NO_EMIT_MESSAGE_GAP = -1L;
 
-  private final AtomicLong processedCount = new AtomicLong(0);
-  private final AtomicLong processedWithErrorsCount = new AtomicLong(0);
-  private final AtomicLong thrownAwayCount = new AtomicLong(0);
-  private final AtomicLong unparseableCount = new AtomicLong(0);
   private final AtomicLong dedupCount = new AtomicLong(0);
   private final AtomicLong rowOutputCount = new AtomicLong(0);
   private final AtomicLong numPersists = new AtomicLong(0);
@@ -57,31 +54,6 @@ public class FireDepartmentMetrics
   private final AtomicBoolean processingDone = new AtomicBoolean(false);
 
   private final AtomicLong maxSegmentHandoffTime = new AtomicLong(NO_EMIT_SEGMENT_HANDOFF_TIME);
-
-  public void incrementProcessed()
-  {
-    processedCount.incrementAndGet();
-  }
-
-  public void incrementProcessedWithErrors()
-  {
-    processedWithErrorsCount.incrementAndGet();
-  }
-
-  public void incrementThrownAway()
-  {
-    thrownAwayCount.incrementAndGet();
-  }
-
-  public void incrementDedup()
-  {
-    dedupCount.incrementAndGet();
-  }
-
-  public void incrementUnparseable()
-  {
-    unparseableCount.incrementAndGet();
-  }
 
   public void incrementRowOutputCount(long numRows)
   {
@@ -113,11 +85,6 @@ public class FireDepartmentMetrics
     failedHandoffs.incrementAndGet();
   }
 
-  public void incrementMergeTimeMillis(long millis)
-  {
-    mergeTimeMillis.addAndGet(millis);
-  }
-
   public void incrementMergedRows(long rows)
   {
     mergedRows.addAndGet(rows);
@@ -126,16 +93,6 @@ public class FireDepartmentMetrics
   public void incrementPushedRows(long rows)
   {
     pushedRows.addAndGet(rows);
-  }
-
-  public void incrementMergeCpuTime(long mergeTime)
-  {
-    mergeCpuTime.addAndGet(mergeTime);
-  }
-
-  public void incrementPersistCpuTime(long persistTime)
-  {
-    persistCpuTime.addAndGet(persistTime);
   }
 
   public void incrementHandOffCount()
@@ -167,26 +124,6 @@ public class FireDepartmentMetrics
   public boolean isProcessingDone()
   {
     return processingDone.get();
-  }
-
-  public long processed()
-  {
-    return processedCount.get();
-  }
-
-  public long processedWithErrors()
-  {
-    return processedWithErrorsCount.get();
-  }
-
-  public long thrownAway()
-  {
-    return thrownAwayCount.get();
-  }
-
-  public long unparseable()
-  {
-    return unparseableCount.get();
   }
 
   public long dedup()
@@ -268,13 +205,9 @@ public class FireDepartmentMetrics
     return maxSegmentHandoffTime.get();
   }
 
-  public FireDepartmentMetrics snapshot()
+  public SegmentGenerationMetrics snapshot()
   {
-    final FireDepartmentMetrics retVal = new FireDepartmentMetrics();
-    retVal.processedCount.set(processedCount.get());
-    retVal.processedWithErrorsCount.set(processedWithErrorsCount.get());
-    retVal.thrownAwayCount.set(thrownAwayCount.get());
-    retVal.unparseableCount.set(unparseableCount.get());
+    final SegmentGenerationMetrics retVal = new SegmentGenerationMetrics();
     retVal.dedupCount.set(dedupCount.get());
     retVal.rowOutputCount.set(rowOutputCount.get());
     retVal.numPersists.set(numPersists.get());

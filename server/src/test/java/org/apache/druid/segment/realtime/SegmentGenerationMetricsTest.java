@@ -23,20 +23,20 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class FireDepartmentMetricsTest
+public class SegmentGenerationMetricsTest
 {
-  private FireDepartmentMetrics metrics;
+  private SegmentGenerationMetrics metrics;
 
   @Before
   public void setup()
   {
-    metrics = new FireDepartmentMetrics();
+    metrics = new SegmentGenerationMetrics();
   }
 
   @Test
   public void testSnapshotBeforeProcessing()
   {
-    FireDepartmentMetrics snapshot = metrics.snapshot();
+    SegmentGenerationMetrics snapshot = metrics.snapshot();
     Assert.assertEquals(0L, snapshot.messageGap());
     // invalid value
     Assert.assertTrue(0 > snapshot.maxSegmentHandoffTime());
@@ -47,7 +47,7 @@ public class FireDepartmentMetricsTest
   {
     metrics.reportMessageMaxTimestamp(System.currentTimeMillis() - 20L);
     metrics.reportMaxSegmentHandoffTime(7L);
-    FireDepartmentMetrics snapshot = metrics.snapshot();
+    SegmentGenerationMetrics snapshot = metrics.snapshot();
     Assert.assertTrue(snapshot.messageGap() >= 20L);
     Assert.assertEquals(7, snapshot.maxSegmentHandoffTime());
   }
@@ -60,7 +60,7 @@ public class FireDepartmentMetricsTest
     // Should reset to invalid value
     metrics.snapshot();
     metrics.markProcessingDone();
-    FireDepartmentMetrics snapshot = metrics.snapshot();
+    SegmentGenerationMetrics snapshot = metrics.snapshot();
     // Message gap must be invalid after processing is done
     Assert.assertTrue(0 > snapshot.messageGap());
     // value must be invalid

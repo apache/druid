@@ -45,7 +45,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.DataSegmentPusher;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -62,7 +62,7 @@ public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
   public static final String DATASOURCE = "foo";
 
   private final DataSchema schema;
-  private final FireDepartmentMetrics metrics;
+  private final SegmentGenerationMetrics metrics;
   private final DataSegmentPusher dataSegmentPusher;
   private final ObjectMapper objectMapper;
   private final Appenderator appenderator;
@@ -139,7 +139,7 @@ public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
         objectMapper
     );
     tuningConfig =
-        new ClosedSegmensSinksBatchAppenderatorTester.TestIndexTuningConfig(
+        new TestAppenderatorConfig(
             TuningConfig.DEFAULT_APPENDABLE_INDEX,
             maxRowsInMemory,
             maxSizeInBytes == 0L ? getDefaultMaxBytesInMemory() : maxSizeInBytes,
@@ -153,7 +153,7 @@ public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
             basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory
         );
 
-    metrics = new FireDepartmentMetrics();
+    metrics = new SegmentGenerationMetrics();
 
     indexIO = new IndexIO(
         objectMapper,
@@ -252,7 +252,7 @@ public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
     return tuningConfig;
   }
 
-  public FireDepartmentMetrics getMetrics()
+  public SegmentGenerationMetrics getMetrics()
   {
     return metrics;
   }

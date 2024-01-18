@@ -40,7 +40,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.loading.DataSegmentKiller;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
 import org.apache.druid.timeline.DataSegment;
 
@@ -78,7 +78,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
   private static final long HANDOFF_TIME_THRESHOLD = 600_000;
 
   private final SegmentHandoffNotifier handoffNotifier;
-  private final FireDepartmentMetrics metrics;
+  private final SegmentGenerationMetrics metrics;
   private final ObjectMapper objectMapper;
 
   /**
@@ -98,7 +98,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       UsedSegmentChecker usedSegmentChecker,
       DataSegmentKiller dataSegmentKiller,
       ObjectMapper objectMapper,
-      FireDepartmentMetrics metrics
+      SegmentGenerationMetrics metrics
   )
   {
     super(appenderator, segmentAllocator, usedSegmentChecker, dataSegmentKiller);

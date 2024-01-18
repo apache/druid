@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.indexing;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.segment.IndexSpec;
@@ -29,9 +28,6 @@ import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 /**
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "realtime", value = RealtimeTuningConfig.class)
-})
 public interface TuningConfig
 {
   boolean DEFAULT_LOG_PARSE_EXCEPTIONS = false;

@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import com.fasterxml.jackson.databind.introspect.AnnotationIntrospectorPair;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
@@ -121,7 +120,6 @@ import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
@@ -873,48 +871,6 @@ public class CompactionTaskTest
     );
 
     Assert.assertEquals(compactionTuningConfig, CompactionTask.getTuningConfig(parallelIndexTuningConfig));
-  }
-
-  @Test
-  public void testSerdeWithUnknownTuningConfigThrowingError() throws IOException
-  {
-    final OldCompactionTaskWithAnyTuningConfigType taskWithUnknownTuningConfig =
-        new OldCompactionTaskWithAnyTuningConfigType(
-            null,
-            null,
-            DATA_SOURCE,
-            null,
-            SEGMENTS,
-            null,
-            null,
-            null,
-            null,
-            null,
-            RealtimeTuningConfig.makeDefaultTuningConfig(null),
-            null,
-            OBJECT_MAPPER,
-            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            null,
-            toolbox.getRowIngestionMetersFactory(),
-            COORDINATOR_CLIENT,
-            segmentCacheManagerFactory,
-            RETRY_POLICY_FACTORY,
-            toolbox.getAppenderatorsManager()
-        );
-
-    final ObjectMapper mapper = new DefaultObjectMapper((DefaultObjectMapper) OBJECT_MAPPER);
-    mapper.registerSubtypes(
-        new NamedType(OldCompactionTaskWithAnyTuningConfigType.class, "compact"),
-        new NamedType(RealtimeTuningConfig.class, "realtime")
-    );
-    final byte[] bytes = mapper.writeValueAsBytes(taskWithUnknownTuningConfig);
-
-    expectedException.expect(ValueInstantiationException.class);
-    expectedException.expectCause(CoreMatchers.instanceOf(IllegalStateException.class));
-    expectedException.expectMessage(
-        "Unknown tuningConfig type: [org.apache.druid.segment.indexing.RealtimeTuningConfig]"
-    );
-    mapper.readValue(bytes, CompactionTask.class);
   }
 
   private static void assertEquals(CompactionTask expected, CompactionTask actual)

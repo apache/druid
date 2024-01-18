@@ -49,7 +49,7 @@ import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.realtime.plumber.Committers;
+import org.apache.druid.segment.realtime.sink.Committers;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
@@ -827,7 +827,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   @Test
   public void testRestoreFromDisk() throws Exception
   {
-    final RealtimeTuningConfig tuningConfig;
+    final AppenderatorConfig tuningConfig;
     try (
         final StreamAppenderatorTester tester =
             new StreamAppenderatorTester.Builder().maxRowsInMemory(2)

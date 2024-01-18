@@ -27,7 +27,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
-import org.apache.druid.segment.realtime.FireDepartment;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -54,7 +54,7 @@ public class TaskRealtimeMetricsMonitorTest
   private static final Map<String, Object> TAGS = ImmutableMap.of("author", "Author Name", "version", 10);
 
   @Mock(answer = Answers.RETURNS_MOCKS)
-  private FireDepartment fireDepartment;
+  private SegmentGenerationMetrics segmentGenerationMetrics;
   @Mock(answer = Answers.RETURNS_MOCKS)
   private RowIngestionMeters rowIngestionMeters;
   @Mock
@@ -74,7 +74,7 @@ public class TaskRealtimeMetricsMonitorTest
           return null;
         })
         .when(emitter).emit(ArgumentMatchers.any(Event.class));
-    target = new TaskRealtimeMetricsMonitor(fireDepartment, rowIngestionMeters, DIMENSIONS, TAGS);
+    target = new TaskRealtimeMetricsMonitor(segmentGenerationMetrics, rowIngestionMeters, DIMENSIONS, TAGS);
   }
 
   @Test
@@ -89,7 +89,7 @@ public class TaskRealtimeMetricsMonitorTest
   @Test
   public void testdoMonitorWithoutTagsShouldNotEmitTags()
   {
-    target = new TaskRealtimeMetricsMonitor(fireDepartment, rowIngestionMeters, DIMENSIONS, null);
+    target = new TaskRealtimeMetricsMonitor(segmentGenerationMetrics, rowIngestionMeters, DIMENSIONS, null);
     for (ServiceMetricEvent sme : emittedEvents.values()) {
       Assert.assertFalse(sme.getUserDims().containsKey(DruidMetrics.TAGS));
     }

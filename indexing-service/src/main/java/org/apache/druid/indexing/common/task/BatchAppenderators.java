@@ -27,7 +27,7 @@ import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
@@ -39,7 +39,7 @@ public final class BatchAppenderators
   public static Appenderator newAppenderator(
       String taskId,
       AppenderatorsManager appenderatorsManager,
-      FireDepartmentMetrics metrics,
+      SegmentGenerationMetrics metrics,
       TaskToolbox toolbox,
       DataSchema dataSchema,
       AppenderatorConfig appenderatorConfig,
@@ -65,7 +65,7 @@ public final class BatchAppenderators
   public static Appenderator newAppenderator(
       String taskId,
       AppenderatorsManager appenderatorsManager,
-      FireDepartmentMetrics metrics,
+      SegmentGenerationMetrics metrics,
       TaskToolbox toolbox,
       DataSchema dataSchema,
       AppenderatorConfig appenderatorConfig,

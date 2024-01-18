@@ -28,54 +28,49 @@ import org.apache.druid.java.util.metrics.MonitorUtils;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
-import org.apache.druid.segment.realtime.FireDepartment;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 
 import javax.annotation.Nullable;
 import java.util.Map;
 
 /**
- * Replaces the old RealtimeMetricsMonitor for indexing tasks that use a single FireDepartment, with changes to
- * read row ingestion stats from RowIngestionMeters (which supports moving averages) instead of FireDepartmentMetrics.
- * See comment on RowIngestionMeters for more information regarding relationship between RowIngestionMeters and
- * FireDepartmentMetrics.
+ * Emits metrics from {@link SegmentGenerationMetrics} and {@link RowIngestionMeters}.
  */
 public class TaskRealtimeMetricsMonitor extends AbstractMonitor
 {
   private static final EmittingLogger log = new EmittingLogger(TaskRealtimeMetricsMonitor.class);
 
-  private final FireDepartment fireDepartment;
+  private final SegmentGenerationMetrics segmentGenerationMetrics;
   private final RowIngestionMeters rowIngestionMeters;
   private final Map<String, String[]> dimensions;
   @Nullable
   private final Map<String, Object> metricTags;
 
-  private FireDepartmentMetrics previousFireDepartmentMetrics;
+  private SegmentGenerationMetrics previousSegmentGenerationMetrics;
   private RowIngestionMetersTotals previousRowIngestionMetersTotals;
 
   public TaskRealtimeMetricsMonitor(
-      FireDepartment fireDepartment,
+      SegmentGenerationMetrics segmentGenerationMetrics,
       RowIngestionMeters rowIngestionMeters,
       Map<String, String[]> dimensions,
       @Nullable Map<String, Object> metricTags
   )
   {
-    this.fireDepartment = fireDepartment;
+    this.segmentGenerationMetrics = segmentGenerationMetrics;
     this.rowIngestionMeters = rowIngestionMeters;
     this.dimensions = ImmutableMap.copyOf(dimensions);
     this.metricTags = metricTags;
-    previousFireDepartmentMetrics = new FireDepartmentMetrics();
+    previousSegmentGenerationMetrics = new SegmentGenerationMetrics();
     previousRowIngestionMetersTotals = new RowIngestionMetersTotals(0, 0, 0, 0, 0);
   }
 
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
-    FireDepartmentMetrics metrics = fireDepartment.getMetrics().snapshot();
+    SegmentGenerationMetrics metrics = segmentGenerationMetrics.snapshot();
     RowIngestionMetersTotals rowIngestionMetersTotals = rowIngestionMeters.getTotals();
 
-    final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
-        .setDimension(DruidMetrics.DATASOURCE, fireDepartment.getDataSchema().getDataSource());
+    final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
     MonitorUtils.addDimensionsToBuilder(builder, dimensions);
 
     final long thrownAway = rowIngestionMetersTotals.getThrownAway() - previousRowIngestionMetersTotals.getThrownAway();
@@ -103,7 +98,7 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
 
     emitter.emit(builder.setMetric("ingest/events/processed", rowIngestionMetersTotals.getProcessed() - previousRowIngestionMetersTotals.getProcessed()));
 
-    final long dedup = metrics.dedup() - previousFireDepartmentMetrics.dedup();
+    final long dedup = metrics.dedup() - previousSegmentGenerationMetrics.dedup();
     if (dedup > 0) {
       log.warn("[%,d] duplicate events!", dedup);
     }
@@ -115,21 +110,21 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
         )
     );
 
-    emitter.emit(builder.setMetric("ingest/rows/output", metrics.rowOutput() - previousFireDepartmentMetrics.rowOutput()));
-    emitter.emit(builder.setMetric("ingest/persists/count", metrics.numPersists() - previousFireDepartmentMetrics.numPersists()));
-    emitter.emit(builder.setMetric("ingest/persists/time", metrics.persistTimeMillis() - previousFireDepartmentMetrics.persistTimeMillis()));
-    emitter.emit(builder.setMetric("ingest/persists/cpu", metrics.persistCpuTime() - previousFireDepartmentMetrics.persistCpuTime()));
+    emitter.emit(builder.setMetric("ingest/rows/output", metrics.rowOutput() - previousSegmentGenerationMetrics.rowOutput()));
+    emitter.emit(builder.setMetric("ingest/persists/count", metrics.numPersists() - previousSegmentGenerationMetrics.numPersists()));
+    emitter.emit(builder.setMetric("ingest/persists/time", metrics.persistTimeMillis() - previousSegmentGenerationMetrics.persistTimeMillis()));
+    emitter.emit(builder.setMetric("ingest/persists/cpu", metrics.persistCpuTime() - previousSegmentGenerationMetrics.persistCpuTime()));
     emitter.emit(
         builder.setMetric(
             "ingest/persists/backPressure",
-            metrics.persistBackPressureMillis() - previousFireDepartmentMetrics.persistBackPressureMillis()
+            metrics.persistBackPressureMillis() - previousSegmentGenerationMetrics.persistBackPressureMillis()
         )
     );
-    emitter.emit(builder.setMetric("ingest/persists/failed", metrics.failedPersists() - previousFireDepartmentMetrics.failedPersists()));
-    emitter.emit(builder.setMetric("ingest/handoff/failed", metrics.failedHandoffs() - previousFireDepartmentMetrics.failedHandoffs()));
-    emitter.emit(builder.setMetric("ingest/merge/time", metrics.mergeTimeMillis() - previousFireDepartmentMetrics.mergeTimeMillis()));
-    emitter.emit(builder.setMetric("ingest/merge/cpu", metrics.mergeCpuTime() - previousFireDepartmentMetrics.mergeCpuTime()));
-    emitter.emit(builder.setMetric("ingest/handoff/count", metrics.handOffCount() - previousFireDepartmentMetrics.handOffCount()));
+    emitter.emit(builder.setMetric("ingest/persists/failed", metrics.failedPersists() - previousSegmentGenerationMetrics.failedPersists()));
+    emitter.emit(builder.setMetric("ingest/handoff/failed", metrics.failedHandoffs() - previousSegmentGenerationMetrics.failedHandoffs()));
+    emitter.emit(builder.setMetric("ingest/merge/time", metrics.mergeTimeMillis() - previousSegmentGenerationMetrics.mergeTimeMillis()));
+    emitter.emit(builder.setMetric("ingest/merge/cpu", metrics.mergeCpuTime() - previousSegmentGenerationMetrics.mergeCpuTime()));
+    emitter.emit(builder.setMetric("ingest/handoff/count", metrics.handOffCount() - previousSegmentGenerationMetrics.handOffCount()));
     emitter.emit(builder.setMetric("ingest/sink/count", metrics.sinkCount()));
 
     long messageGap = metrics.messageGap();
@@ -143,7 +138,7 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
     }
 
     previousRowIngestionMetersTotals = rowIngestionMetersTotals;
-    previousFireDepartmentMetrics = metrics;
+    previousSegmentGenerationMetrics = metrics;
     return true;
   }
 }

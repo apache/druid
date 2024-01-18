@@ -46,6 +46,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
@@ -87,7 +88,8 @@ public class SqlSegmentsMetadataManagerTest
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
   private SqlSegmentsMetadataManager sqlSegmentsMetadataManager;
-  private SQLMetadataSegmentPublisher publisher;
+  private SQLMetadataConnector connector;
+  private MetadataStorageTablesConfig config;
   private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
   private final DataSegment segment1 = createSegment(
@@ -119,7 +121,9 @@ public class SqlSegmentsMetadataManagerTest
     if (null != usedFlagLastUpdated) {
       usedFlagLastUpdatedStr = usedFlagLastUpdated.toString();
     }
-    publisher.publishSegment(
+    publishSegment(
+        connector,
+        config,
         segment.getId().toString(),
         segment.getDataSource(),
         DateTimes.nowUtc().toString(),
@@ -136,7 +140,7 @@ public class SqlSegmentsMetadataManagerTest
   @Before
   public void setUp() throws Exception
   {
-    TestDerbyConnector connector = derbyConnectorRule.getConnector();
+    connector = derbyConnectorRule.getConnector();
     SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig();
     config.setPollDuration(Period.seconds(3));
     sqlSegmentsMetadataManager = new SqlSegmentsMetadataManager(
@@ -147,16 +151,11 @@ public class SqlSegmentsMetadataManagerTest
     );
     sqlSegmentsMetadataManager.start();
 
-    publisher = new SQLMetadataSegmentPublisher(
-        jsonMapper,
-        derbyConnectorRule.metadataTablesConfigSupplier().get(),
-        connector
-    );
-
+    this.config = derbyConnectorRule.metadataTablesConfigSupplier().get();
     connector.createSegmentTable();
 
-    publisher.publishSegment(segment1);
-    publisher.publishSegment(segment2);
+    publishSegment(segment1);
+    publishSegment(segment2);
   }
 
   @After
@@ -254,7 +253,7 @@ public class SqlSegmentsMetadataManagerTest
     );
     final String newDataSource2 = "wikipedia2";
     final DataSegment newSegment2 = createNewSegment1(newDataSource2);
-    publisher.publishSegment(newSegment2);
+    publishSegment(newSegment2);
 
     // This call will force on demand poll
     sqlSegmentsMetadataManager.forceOrWaitOngoingDatabasePoll();
@@ -272,7 +271,7 @@ public class SqlSegmentsMetadataManagerTest
 
     final String newDataSource3 = "wikipedia3";
     final DataSegment newSegment3 = createNewSegment1(newDataSource3);
-    publisher.publishSegment(newSegment3);
+    publishSegment(newSegment3);
 
     // This time wait for periodic poll (not doing on demand poll so we have to wait a bit...)
     while (sqlSegmentsMetadataManager.getDataSourcesSnapshot().getDataSource(newDataSource3) == null) {
@@ -347,7 +346,7 @@ public class SqlSegmentsMetadataManagerTest
         sqlSegmentsMetadataManager.retrieveAllDataSourceNames()
     );
     DataSegment newSegment = createNewSegment1("wikipedia2");
-    publisher.publishSegment(newSegment);
+    publishSegment(newSegment);
     sqlSegmentsMetadataManager.startPollingDatabasePeriodically();
     return newSegment;
   }
@@ -358,7 +357,9 @@ public class SqlSegmentsMetadataManagerTest
     //create a corrupted segment entry in segments table, which tests
     //that overall loading of segments from database continues to work
     //even in one of the entries are corrupted.
-    publisher.publishSegment(
+    publishSegment(
+        connector,
+        config,
         "corrupt-segment-id",
         "corrupt-datasource",
         "corrupt-create-date",
@@ -473,7 +474,7 @@ public class SqlSegmentsMetadataManagerTest
     final String newDataSource = "wikipedia2";
     final DataSegment newSegment = createNewSegment1(newDataSource);
 
-    publisher.publishSegment(newSegment);
+    publishSegment(newSegment);
 
     awaitDataSourceAppeared(newDataSource);
     int numChangedSegments = sqlSegmentsMetadataManager.markAsUnusedAllSegmentsInDataSource(newDataSource);
@@ -520,7 +521,7 @@ public class SqlSegmentsMetadataManagerTest
         0
     );
 
-    publisher.publishSegment(newSegment);
+    publishSegment(newSegment);
     awaitDataSourceAppeared(newDataSource);
     Assert.assertNotNull(sqlSegmentsMetadataManager.getImmutableDataSourceWithUsedSegments(newDataSource));
 
@@ -766,8 +767,8 @@ public class SqlSegmentsMetadataManagerTest
 
     final DataSegment newSegment2 = createNewSegment1(newDataSource);
 
-    publisher.publishSegment(newSegment1);
-    publisher.publishSegment(newSegment2);
+    publishSegment(newSegment1);
+    publishSegment(newSegment2);
     final ImmutableSet<SegmentId> segmentIds =
         ImmutableSet.of(newSegment1.getId(), newSegment1.getId());
 
@@ -799,9 +800,9 @@ public class SqlSegmentsMetadataManagerTest
         0
     );
 
-    publisher.publishSegment(newSegment1);
-    publisher.publishSegment(newSegment2);
-    publisher.publishSegment(newSegment3);
+    publishSegment(newSegment1);
+    publishSegment(newSegment2);
+    publishSegment(newSegment3);
     final Interval theInterval = Intervals.of("2017-10-15T00:00:00.000/2017-10-18T00:00:00.000");
 
     // 2 out of 3 segments match the interval
@@ -840,9 +841,9 @@ public class SqlSegmentsMetadataManagerTest
         0
     );
 
-    publisher.publishSegment(newSegment1);
-    publisher.publishSegment(newSegment2);
-    publisher.publishSegment(newSegment3);
+    publishSegment(newSegment1);
+    publishSegment(newSegment2);
+    publishSegment(newSegment3);
     final Interval theInterval = Intervals.of("2017-10-16T00:00:00.000/2017-10-20T00:00:00.000");
 
     // 1 out of 3 segments match the interval, other 2 overlap, only the segment fully contained will be marked unused
@@ -884,7 +885,7 @@ public class SqlSegmentsMetadataManagerTest
         "index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip",
         0
     );
-    publisher.publishSegment(newSegment2);
+    publishSegment(newSegment2);
 
     // New segment is not returned since we call without force poll
     segments = sqlSegmentsMetadataManager.iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(
@@ -944,5 +945,93 @@ public class SqlSegmentsMetadataManagerTest
           }
         }
     );
+  }
+
+  private void publishSegment(final DataSegment segment) throws IOException
+  {
+    publishSegment(connector, config, jsonMapper, segment);
+  }
+
+  public static void publishSegment(
+      final SQLMetadataConnector connector,
+      final MetadataStorageTablesConfig config,
+      final ObjectMapper jsonMapper,
+      final DataSegment segment
+  ) throws IOException
+  {
+    String now = DateTimes.nowUtc().toString();
+    publishSegment(
+        connector,
+        config,
+        segment.getId().toString(),
+        segment.getDataSource(),
+        now,
+        segment.getInterval().getStart().toString(),
+        segment.getInterval().getEnd().toString(),
+        (segment.getShardSpec() instanceof NoneShardSpec) ? false : true,
+        segment.getVersion(),
+        true,
+        jsonMapper.writeValueAsBytes(segment),
+        now
+    );
+  }
+
+  private static void publishSegment(
+      final SQLMetadataConnector connector,
+      final MetadataStorageTablesConfig config,
+      final String segmentId,
+      final String dataSource,
+      final String createdDate,
+      final String start,
+      final String end,
+      final boolean partitioned,
+      final String version,
+      final boolean used,
+      final byte[] payload,
+      final String usedFlagLastUpdated
+  )
+  {
+    try {
+      final DBI dbi = connector.getDBI();
+      List<Map<String, Object>> exists = dbi.withHandle(
+          handle ->
+              handle.createQuery(StringUtils.format("SELECT id FROM %s WHERE id=:id", config.getSegmentsTable()))
+                    .bind("id", segmentId)
+                    .list()
+      );
+
+      if (!exists.isEmpty()) {
+        return;
+      }
+
+      final String publishStatement = StringUtils.format(
+          "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload, used_status_last_updated) "
+          + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, :used_status_last_updated)",
+          config.getSegmentsTable(),
+          connector.getQuoteString()
+      );
+
+      dbi.withHandle(
+          (HandleCallback<Void>) handle -> {
+            handle.createStatement(publishStatement)
+                  .bind("id", segmentId)
+                  .bind("dataSource", dataSource)
+                  .bind("created_date", createdDate)
+                  .bind("start", start)
+                  .bind("end", end)
+                  .bind("partitioned", partitioned)
+                  .bind("version", version)
+                  .bind("used", used)
+                  .bind("payload", payload)
+                  .bind("used_status_last_updated", usedFlagLastUpdated)
+                  .execute();
+
+            return null;
+          }
+      );
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 }

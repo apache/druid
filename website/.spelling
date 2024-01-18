@@ -1633,7 +1633,6 @@ EventReceiverFirehoseMonitor
 Filesystem
 JVMMonitor
 QueryCountStatsMonitor
-RealtimeMetricsMonitor
 Sys
 SysMonitor
 TaskCountStatsMonitor

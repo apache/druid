@@ -17,21 +17,40 @@
  * under the License.
  */
 
-package org.apache.druid.segment.realtime.plumber;
+package org.apache.druid.segment.realtime.sink;
 
-import org.apache.druid.java.util.common.Intervals;
-import org.junit.Assert;
-import org.junit.Test;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
+import org.apache.druid.data.input.Committer;
 
-/**
- */
-public class IntervalStartVersioningPolicyTest
+import javax.annotation.Nullable;
+
+public class Committers
 {
-  @Test
-  public void testGetVersion()
+  private static final Committer NIL = new Committer()
   {
-    IntervalStartVersioningPolicy policy = new IntervalStartVersioningPolicy();
-    String version = policy.getVersion(Intervals.of("2013-01-01/2013-01-02"));
-    Assert.assertEquals("2013-01-01T00:00:00.000Z", version);
+    @Nullable
+    @Override
+    public Object getMetadata()
+    {
+      return null;
+    }
+
+    @Override
+    public void run()
+    {
+      // Do nothing
+    }
+  };
+  private static final Supplier<Committer> NIL_SUPPLIER = Suppliers.ofInstance(NIL);
+
+  public static Committer nil()
+  {
+    return NIL;
+  }
+
+  public static Supplier<Committer> nilSupplier()
+  {
+    return NIL_SUPPLIER;
   }
 }

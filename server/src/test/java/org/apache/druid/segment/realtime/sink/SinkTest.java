@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.segment.realtime.plumber;
+package org.apache.druid.segment.realtime.sink;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -43,16 +43,17 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.RealtimeTuningConfig;
+import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.utils.CloseableUtils;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -69,6 +70,9 @@ import java.util.function.Function;
  */
 public class SinkTest extends InitializedNullHandlingTest
 {
+  private static final ShardSpec SHARD_SPEC = new NumberedShardSpec(0, 1);
+  private static final int MAX_ROWS_IN_MEMORY = 100;
+
   @Test
   public void testSwap() throws Exception
   {
@@ -83,38 +87,15 @@ public class SinkTest extends InitializedNullHandlingTest
 
     final Interval interval = Intervals.of("2013-01-01/2013-01-02");
     final String version = DateTimes.nowUtc().toString();
-    RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
-        null,
-        100,
-        null,
-        null,
-        new Period("P1Y"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        0,
-        0,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
     final Sink sink = new Sink(
         interval,
         schema,
-        tuningConfig.getShardSpec(),
+        SHARD_SPEC,
         version,
-        tuningConfig.getAppendableIndexSpec(),
-        tuningConfig.getMaxRowsInMemory(),
-        tuningConfig.getMaxBytesInMemoryOrDefault(),
-        true,
-        tuningConfig.getDedupColumn()
+        TuningConfig.DEFAULT_APPENDABLE_INDEX,
+        MAX_ROWS_IN_MEMORY,
+        TuningConfig.DEFAULT_APPENDABLE_INDEX.getDefaultMaxBytesInMemory(),
+        true
     );
 
     sink.add(
@@ -227,92 +208,6 @@ public class SinkTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testDedup() throws Exception
-  {
-    final DataSchema schema = new DataSchema(
-        "test",
-        new TimestampSpec(null, null, null),
-        DimensionsSpec.EMPTY,
-        new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        new UniformGranularitySpec(Granularities.HOUR, Granularities.MINUTE, null),
-        null
-    );
-
-    final Interval interval = Intervals.of("2013-01-01/2013-01-02");
-    final String version = DateTimes.nowUtc().toString();
-    RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
-        null,
-        100,
-        null,
-        null,
-        new Period("P1Y"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        0,
-        0,
-        null,
-        null,
-        null,
-        null,
-        "dedupColumn"
-    );
-    final Sink sink = new Sink(
-        interval,
-        schema,
-        tuningConfig.getShardSpec(),
-        version,
-        tuningConfig.getAppendableIndexSpec(),
-        tuningConfig.getMaxRowsInMemory(),
-        tuningConfig.getMaxBytesInMemoryOrDefault(),
-        true,
-        tuningConfig.getDedupColumn()
-    );
-
-    int rows = sink.add(new MapBasedInputRow(
-        DateTimes.of("2013-01-01"),
-        ImmutableList.of("field", "dedupColumn"),
-        ImmutableMap.of("field1", "value1", "dedupColumn", "v1")
-    ), false).getRowCount();
-    Assert.assertTrue(rows > 0);
-
-    // dedupColumn is null
-    rows = sink.add(new MapBasedInputRow(
-        DateTimes.of("2013-01-01"),
-        ImmutableList.of("field", "dedupColumn"),
-        ImmutableMap.of("field1", "value2")
-    ), false).getRowCount();
-    Assert.assertTrue(rows > 0);
-
-    // dedupColumn is null
-    rows = sink.add(new MapBasedInputRow(
-        DateTimes.of("2013-01-01"),
-        ImmutableList.of("field", "dedupColumn"),
-        ImmutableMap.of("field1", "value3")
-    ), false).getRowCount();
-    Assert.assertTrue(rows > 0);
-
-    rows = sink.add(new MapBasedInputRow(
-        DateTimes.of("2013-01-01"),
-        ImmutableList.of("field", "dedupColumn"),
-        ImmutableMap.of("field1", "value4", "dedupColumn", "v2")
-    ), false).getRowCount();
-    Assert.assertTrue(rows > 0);
-
-    rows = sink.add(new MapBasedInputRow(
-        DateTimes.of("2013-01-01"),
-        ImmutableList.of("field", "dedupColumn"),
-        ImmutableMap.of("field1", "value5", "dedupColumn", "v1")
-    ), false).getRowCount();
-    Assert.assertTrue(rows == -2);
-  }
-
-  @Test
   public void testAcquireSegmentReferences_empty()
   {
     Assert.assertEquals(
@@ -376,38 +271,15 @@ public class SinkTest extends InitializedNullHandlingTest
 
     final Interval interval = Intervals.of("2013-01-01/2013-01-02");
     final String version = DateTimes.nowUtc().toString();
-    RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
-        null,
-        2,
-        null,
-        null,
-        new Period("P1Y"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        0,
-        0,
-        null,
-        null,
-        null,
-        null,
-        "dedupColumn"
-    );
     final Sink sink = new Sink(
         interval,
         schema,
-        tuningConfig.getShardSpec(),
+        SHARD_SPEC,
         version,
-        tuningConfig.getAppendableIndexSpec(),
-        tuningConfig.getMaxRowsInMemory(),
-        tuningConfig.getMaxBytesInMemoryOrDefault(),
-        true,
-        tuningConfig.getDedupColumn()
+        TuningConfig.DEFAULT_APPENDABLE_INDEX,
+        MAX_ROWS_IN_MEMORY,
+        TuningConfig.DEFAULT_APPENDABLE_INDEX.getDefaultMaxBytesInMemory(),
+        true
     );
 
     sink.add(new MapBasedInputRow(

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.segment.realtime.plumber;
+package org.apache.druid.segment.realtime.sink;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
@@ -60,13 +60,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -74,6 +72,8 @@ import java.util.function.Function;
 
 public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
 {
+  private static final IncrementalIndexAddResult NOT_WRITABLE = new IncrementalIndexAddResult(-1, -1, "not writable");
+
   private static final IncrementalIndexAddResult ALREADY_SWAPPED =
       new IncrementalIndexAddResult(-1, -1, "write after index swapped");
   private static final Logger log = new Logger(Sink.class);
@@ -98,8 +98,6 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   private final Map<String, ColumnType> columnTypeExcludingCurrIndex = new HashMap<>();
 
   private final AtomicInteger numRowsExcludingCurrIndex = new AtomicInteger();
-  private final String dedupColumn;
-  private final Set<Long> dedupSet = new HashSet<>();
 
   private volatile FireHydrant currHydrant;
   private volatile boolean writable = true;
@@ -112,8 +110,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
       AppendableIndexSpec appendableIndexSpec,
       int maxRowsInMemory,
       long maxBytesInMemory,
-      boolean useMaxMemoryEstimates,
-      String dedupColumn
+      boolean useMaxMemoryEstimates
   )
   {
     this(
@@ -125,7 +122,6 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         maxRowsInMemory,
         maxBytesInMemory,
         useMaxMemoryEstimates,
-        dedupColumn,
         Collections.emptyList()
     );
   }
@@ -139,7 +135,6 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
       int maxRowsInMemory,
       long maxBytesInMemory,
       boolean useMaxMemoryEstimates,
-      String dedupColumn,
       List<FireHydrant> hydrants
   )
   {
@@ -151,7 +146,6 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
     this.maxRowsInMemory = maxRowsInMemory;
     this.maxBytesInMemory = maxBytesInMemory;
     this.useMaxMemoryEstimates = useMaxMemoryEstimates;
-    this.dedupColumn = dedupColumn;
 
     int maxCount = -1;
     for (int i = 0; i < hydrants.size(); ++i) {
@@ -175,11 +169,6 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
     makeNewCurrIndex(interval.getStartMillis(), schema);
   }
 
-  public void clearDedupCache()
-  {
-    dedupSet.clear();
-  }
-
   public Interval getInterval()
   {
     return interval;
@@ -198,16 +187,12 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
 
     synchronized (hydrantLock) {
       if (!writable) {
-        return Plumber.NOT_WRITABLE;
+        return NOT_WRITABLE;
       }
 
       IncrementalIndex index = currHydrant.getIndex();
       if (index == null) {
         return ALREADY_SWAPPED; // the hydrant was swapped without being replaced
-      }
-
-      if (checkInDedupSet(row)) {
-        return Plumber.DUPLICATE;
       }
 
       return index.add(row, skipMaxRowsInMemoryCheck);
@@ -267,7 +252,6 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         return false;
       }
       writable = false;
-      clearDedupCache();
     }
     return true;
   }
@@ -332,41 +316,6 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   )
   {
     return acquireSegmentReferences(hydrants, segmentMapFn, skipIncrementalSegment);
-  }
-
-  private boolean checkInDedupSet(InputRow row)
-  {
-    if (dedupColumn != null) {
-      Object value = row.getRaw(dedupColumn);
-      if (value != null) {
-        if (value instanceof List) {
-          throw new IAE("Dedup on multi-value field not support");
-        }
-        Long pk;
-        if (value instanceof Long || value instanceof Integer) {
-          pk = ((Number) value).longValue();
-        } else {
-          // use long type hashcode to reduce heap cost.
-          // maybe hash collision, but it's more important to avoid OOM
-          pk = pkHash(String.valueOf(value));
-        }
-        if (dedupSet.contains(pk)) {
-          return true;
-        }
-        dedupSet.add(pk);
-      }
-    }
-    return false;
-  }
-
-  private long pkHash(String s)
-  {
-    long seed = 131; // 31 131 1313 13131 131313 etc..  BKDRHash
-    long hash = 0;
-    for (int i = 0; i < s.length(); i++) {
-      hash = (hash * seed) + s.charAt(i);
-    }
-    return hash;
   }
 
   private FireHydrant makeNewCurrIndex(long minTimestamp, DataSchema schema)

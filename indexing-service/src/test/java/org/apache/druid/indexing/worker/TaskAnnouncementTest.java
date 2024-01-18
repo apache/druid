@@ -23,14 +23,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TestUtils;
-import org.apache.druid.indexing.common.task.RealtimeIndexTask;
+import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.RealtimeIOConfig;
-import org.apache.druid.segment.realtime.FireDepartment;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
@@ -48,13 +46,13 @@ public class TaskAnnouncementTest
   @Test
   public void testBackwardsCompatibleSerde() throws Exception
   {
-    final RealtimeIOConfig realtimeIOConfig = EasyMock.createNiceMock(RealtimeIOConfig.class);
-    final Task task = new RealtimeIndexTask(
+    final IndexTask.IndexIOConfig ioConfig = EasyMock.createNiceMock(IndexTask.IndexIOConfig.class);
+    final Task task = new IndexTask(
         "theid",
         new TaskResource("rofl", 2),
-        new FireDepartment(
+        new IndexTask.IndexIngestionSpec(
             new DataSchema("foo", null, new AggregatorFactory[0], null, null, new DefaultObjectMapper()),
-            realtimeIOConfig,
+            ioConfig,
             null
         ),
         null
