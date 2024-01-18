@@ -60,7 +60,7 @@ public class CoordinatorKillConfigs
   @JsonProperty("durationToRetain")
   private final Duration killUnusedDurationToRetain;
 
-  @JsonProperty("ignoredDurationToRetain")
+  @JsonProperty("ignoreDurationToRetain")
   private final Boolean killUnusedIgnoreDurationToRetain;
 
   @JsonProperty("bufferPeriod")
@@ -81,7 +81,7 @@ public class CoordinatorKillConfigs
       @JsonProperty("on") Boolean killUnusedEnabled,
       @JsonProperty("period") Duration killUnusedPeriod,
       @JsonProperty("durationToRetain") Duration killUnusedDurationToRetain,
-      @JsonProperty("ignoredDurationToRetain") Boolean killUnusedIgnoreDurationToRetain,
+      @JsonProperty("ignoreDurationToRetain") Boolean killUnusedIgnoreDurationToRetain,
       @JsonProperty("bufferPeriod") Duration killUnusedBufferPeriod,
       @JsonProperty("maxSegments") Integer killUnusedMaxSegments
   )

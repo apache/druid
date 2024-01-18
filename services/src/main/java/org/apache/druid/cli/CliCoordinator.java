@@ -237,7 +237,7 @@ public class CliCoordinator extends ServerRunnable
             JsonConfigProvider.bind(binder, "druid.manager.rules", MetadataRuleManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.manager.lookups", LookupCoordinatorManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.coordinator", CoordinatorRunConfig.class);
-            JsonConfigProvider.bind(binder, "druid.coorinator.kill", CoordinatorKillConfigs.class);
+            JsonConfigProvider.bind(binder, "druid.coordinator.kill", CoordinatorKillConfigs.class);
             JsonConfigProvider.bind(binder, "druid.coordinator.period", CoordinatorPeriodConfig.class);
             JsonConfigProvider.bind(binder, "druid.coordinator.loadqueuepeon.http", HttpLoadQueuePeonConfig.class);
             JsonConfigProvider.bind(binder, "druid.coordinator.balancer", BalancerStrategyFactory.class);
