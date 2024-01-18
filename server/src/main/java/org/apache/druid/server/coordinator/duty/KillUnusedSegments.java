@@ -129,7 +129,6 @@ public class KillUnusedSegments implements CoordinatorDuty
 
     this.segmentsMetadataManager = segmentsMetadataManager;
     this.overlordClient = overlordClient;
-    this.lastKillTime = DateTimes.nowUtc();
   }
 
   @Override
@@ -295,10 +294,9 @@ public class KillUnusedSegments implements CoordinatorDuty
     );
   }
 
-  @VisibleForTesting
-  boolean canDutyRun()
+  private boolean canDutyRun()
   {
-    return !DateTimes.nowUtc().isBefore(lastKillTime.plus(period));
+    return lastKillTime == null || !DateTimes.nowUtc().isBefore(lastKillTime.plus(period));
   }
 
   @VisibleForTesting

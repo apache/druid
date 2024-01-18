@@ -159,14 +159,6 @@ public class KillUnusedSegmentsTest
         overlordClient,
         config
     );
-    while (!target.canDutyRun()) {
-      try {
-        Thread.sleep(250);
-      }
-      catch (InterruptedException e) {
-        // ignore
-      }
-    }
   }
 
   @Test
