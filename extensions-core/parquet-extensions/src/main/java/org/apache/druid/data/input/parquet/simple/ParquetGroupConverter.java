@@ -426,8 +426,12 @@ public class ParquetGroupConverter
             int scale = pt.asPrimitiveType().getDecimalMetadata().getScale();
             switch (pt.getPrimitiveTypeName()) {
               case INT32:
+                // The primitive returned from Group is an unscaledValue.
+                // We need to do unscaledValue * 10^(-scale) to convert back to decimal
                 return new BigDecimal(g.getInteger(fieldIndex, index)).movePointLeft(scale);
               case INT64:
+                // The primitive returned from Group is an unscaledValue.
+                // We need to do unscaledValue * 10^(-scale) to convert back to decimal
                 return new BigDecimal(g.getLong(fieldIndex, index)).movePointLeft(scale);
               case FIXED_LEN_BYTE_ARRAY:
               case BINARY:
