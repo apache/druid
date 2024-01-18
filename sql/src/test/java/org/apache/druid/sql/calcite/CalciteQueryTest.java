@@ -6815,7 +6815,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.PLAN_MISMATCH)
   @Test
   public void testExactCountDistinctWithGroupingAndOtherAggregators()
   {
@@ -14085,61 +14084,78 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of()
     );
+  }
+    @Test
+    public void testReturnEmptyRowWhenGroupByIsConvertedToTimeseriesWithSingleConstantDimension2()
+    {
+      skipVectorize();
 
-
-    // dim1 is not getting reduced to 'wat' in this case in Calcite (ProjectMergeRule is not getting applied),
-    // therefore the query is not optimized to a timeseries query
     testQuery(
         "SELECT 'A' from foo WHERE dim1 = 'wat' GROUP BY dim1",
         ImmutableList.of(
-            GroupByQuery.builder()
-                        .setDataSource(
-                            "foo"
-                        )
-                        .setInterval(querySegmentSpec(Intervals.ETERNITY))
-                        .setGranularity(Granularities.ALL)
-                        .addDimension(new DefaultDimensionSpec("dim1", "d0", ColumnType.STRING))
-                        .setDimFilter(equality("dim1", "wat", ColumnType.STRING))
-                        .setPostAggregatorSpecs(
-                            ImmutableList.of(
-                                expressionPostAgg("p0", "'A'", ColumnType.STRING)
-                            )
-                        )
-
-                        .build()
+            Druids.newTimeseriesQueryBuilder()
+            .dataSource(CalciteTests.DATASOURCE1)
+            .intervals(querySegmentSpec(Filtration.eternity()))
+            .filters(
+                equality("dim1", "wat", ColumnType.STRING)
+            )
+            .granularity(Granularities.ALL)
+            .postAggregators(
+                expressionPostAgg("p0", "'A'", ColumnType.STRING)
+            )
+            .context(QUERY_CONTEXT_DO_SKIP_EMPTY_BUCKETS)
+            .build()
         ),
         ImmutableList.of()
     );
+  }
+
+  public void testQuery1(
+      final String sql,
+      final List<Query<?>> expectedQueries,
+      final List<Object[]> expectedResults
+  )
+  {
+    testBuilder()
+        .sql(sql)
+        .expectedQueries(expectedQueries)
+        .expectedResults(expectedResults)
+        .run();
   }
 
   @Test
   public void testReturnEmptyRowWhenGroupByIsConvertedToTimeseriesWithMultipleConstantDimensions()
   {
     skipVectorize();
-    testQuery(
-        "SELECT 'A', dim1 from foo WHERE m1 = 50 AND dim1 = 'wat' GROUP BY dim1",
-        ImmutableList.of(
-            Druids.newTimeseriesQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(querySegmentSpec(Filtration.eternity()))
-                  .filters(
-                      and(
-                          NullHandling.replaceWithDefault()
-                          ? selector("m1", "50")
-                          : equality("m1", 50.0, ColumnType.FLOAT),
-                          equality("dim1", "wat", ColumnType.STRING)
+    testBuilder()
+    .sql("SELECT 'A', dim1 from foo WHERE m1 = 50 AND dim1 = 'wat' GROUP BY dim1")
+    .queryContext(
+        ImmutableMap.of(
+            QueryContexts.ENABLE_DEBUG, true
+        )
+    )
+    .expectedQueries(ImmutableList.of(
+                Druids.newTimeseriesQueryBuilder()
+                      .dataSource(CalciteTests.DATASOURCE1)
+                      .intervals(querySegmentSpec(Filtration.eternity()))
+                      .filters(
+                          and(
+                              NullHandling.replaceWithDefault()
+                              ? selector("m1", "50")
+                              : equality("m1", 50.0, ColumnType.FLOAT),
+                              equality("dim1", "wat", ColumnType.STRING)
+                          )
                       )
-                  )
-                  .granularity(Granularities.ALL)
-                  .postAggregators(
-                      expressionPostAgg("p0", "'A'", ColumnType.STRING),
-                      expressionPostAgg("p1", "'wat'", ColumnType.STRING)
-                  )
-                  .context(QUERY_CONTEXT_DO_SKIP_EMPTY_BUCKETS)
-                  .build()
-        ),
-        ImmutableList.of()
-    );
+                      .granularity(Granularities.ALL)
+                      .postAggregators(
+                          expressionPostAgg("p0", "'A'", ColumnType.STRING),
+                          expressionPostAgg("p1", "'wat'", ColumnType.STRING)
+                      )
+                      .context(QUERY_CONTEXT_DO_SKIP_EMPTY_BUCKETS)
+                      .build()
+            ))
+    .expectedResults(ImmutableList.of())
+    .run();
 
     // Sanity test, that even when dimensions are reduced, but should produce a valid result (i.e. when filters are
     // correct, then they should
@@ -14167,7 +14183,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.PLAN_MISMATCH)
   @Test
   public void testPlanWithInFilterLessThanInSubQueryThreshold()
   {
@@ -14732,9 +14747,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .setDataSource(CalciteTests.DATASOURCE1)
                 .setInterval(querySegmentSpec(Filtration.eternity()))
                 .setGranularity(Granularities.ALL)
+                .setVirtualColumns(
+                    expressionVirtualColumn("v0", "'abc'", ColumnType.STRING))
                 .setDimFilter(equality("dim2", "abc", ColumnType.STRING))
                 .setDimensions(
-                    dimensions(new DefaultDimensionSpec("dim2", "d0", ColumnType.STRING)))
+                    dimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)))
                 .setAggregatorSpecs(
                     aggregators(
                         new StringLastAggregatorFactory("a0", "dim3", "__time", 1024),
