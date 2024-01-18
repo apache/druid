@@ -37,10 +37,10 @@ import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -70,8 +70,8 @@ public class KillUnusedSegments implements CoordinatorDuty
                 && (KILL_TASK_TYPE.equals(status.getType()) && status.getId().startsWith(TASK_ID_PREFIX));
   private static final Logger log = new Logger(KillUnusedSegments.class);
 
-  private final long period;
-  private final long durationToRetain;
+  private final Duration period;
+  private final Duration durationToRetain;
   private final boolean ignoreDurationToRetain;
   private final int maxSegmentsToKill;
 
@@ -105,9 +105,9 @@ public class KillUnusedSegments implements CoordinatorDuty
           config.getCoordinatorKillMaxSegments()
       );
     }
-    this.period = config.getCoordinatorKillPeriod().getMillis();
+    this.period = config.getCoordinatorKillPeriod();
     this.ignoreDurationToRetain = config.getCoordinatorKillIgnoreDurationToRetain();
-    this.durationToRetain = config.getCoordinatorKillDurationToRetain().getMillis();
+    this.durationToRetain = config.getCoordinatorKillDurationToRetain();
     if (this.ignoreDurationToRetain) {
       log.debug(
           "druid.coordinator.kill.durationToRetain[%s] will be ignored when discovering segments to kill "
@@ -116,7 +116,6 @@ public class KillUnusedSegments implements CoordinatorDuty
       );
     }
     this.bufferPeriod = config.getCoordinatorKillBufferPeriod().getMillis();
-
     this.maxSegmentsToKill = config.getCoordinatorKillMaxSegments();
     datasourceToLastKillIntervalEnd = new ConcurrentHashMap<>();
 
@@ -139,7 +138,7 @@ public class KillUnusedSegments implements CoordinatorDuty
     if (!canDutyRun()) {
       log.debug(
           "Skipping KillUnusedSegments until period[%s] has elapsed after lastKillTime[%s].",
-          Duration.ofMillis(period),
+          period,
           lastKillTime
       );
       return params;
