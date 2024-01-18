@@ -110,28 +110,28 @@ public class AzureTaskLogs implements TaskLogs
   @Override
   public Optional<InputStream> streamTaskPayload(String taskid) throws IOException
   {
-    return streamTaskFile(taskid, 0, getTaskPayloadKey(taskid));
+    return streamTaskFile(0, getTaskPayloadKey(taskid));
   }
 
   @Override
   public Optional<InputStream> streamTaskLog(final String taskid, final long offset) throws IOException
   {
-    return streamTaskFile(taskid, offset, getTaskLogKey(taskid));
+    return streamTaskFile(offset, getTaskLogKey(taskid));
   }
 
   @Override
   public Optional<InputStream> streamTaskReports(String taskid) throws IOException
   {
-    return streamTaskFile(taskid, 0, getTaskReportsKey(taskid));
+    return streamTaskFile(0, getTaskReportsKey(taskid));
   }
 
   @Override
   public Optional<InputStream> streamTaskStatus(String taskid) throws IOException
   {
-    return streamTaskFile(taskid, 0, getTaskStatusKey(taskid));
+    return streamTaskFile(0, getTaskStatusKey(taskid));
   }
 
-  private Optional<InputStream> streamTaskFile(final String taskid, final long offset, String taskKey)
+  private Optional<InputStream> streamTaskFile(final long offset, String taskKey)
       throws IOException
   {
     final String container = config.getContainer();
