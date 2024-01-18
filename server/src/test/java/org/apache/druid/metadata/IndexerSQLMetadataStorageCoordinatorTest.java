@@ -372,10 +372,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
   private void markAllSegmentsUnused()
   {
-    markAllSegmentsUnused(SEGMENTS);
+    markAllSegmentsUnused(SEGMENTS, DateTimes.nowUtc());
   }
 
-  private void markAllSegmentsUnused(Set<DataSegment> segments)
+  private void markAllSegmentsUnused(Set<DataSegment> segments, DateTime usedStatusLastUpdatedTime)
   {
     for (final DataSegment segment : segments) {
       Assert.assertEquals(
@@ -386,7 +386,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
                     "UPDATE %s SET used = false, used_status_last_updated = :used_status_last_updated WHERE id = :id",
                     derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable()
                 );
-                return handle.createStatement(request).bind("id", segment.getId().toString()).bind("used_status_last_updated", DateTimes.nowUtc().toString()).execute();
+                return handle.createStatement(request)
+                             .bind("id", segment.getId().toString())
+                             .bind("used_status_last_updated", usedStatusLastUpdatedTime.toString()
+                ).execute();
               }
           )
       );
@@ -977,7 +980,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   public void testRetrieveSegmentForId()
   {
     insertUsedSegments(ImmutableSet.of(defaultSegment));
-    markAllSegmentsUnused(ImmutableSet.of(defaultSegment));
+    markAllSegmentsUnused(ImmutableSet.of(defaultSegment), DateTimes.nowUtc());
     Assert.assertEquals(defaultSegment, coordinator.retrieveSegmentForId(defaultSegment.getId().toString(), true));
   }
 
@@ -1147,7 +1150,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   public void testRetrieveUnusedSegmentsUsingSingleIntervalAndNoLimit() throws IOException
   {
     final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
-    markAllSegmentsUnused(new HashSet<>(segments));
+    markAllSegmentsUnused(new HashSet<>(segments), DateTimes.nowUtc());
 
     final List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
         DS.WIKI,
@@ -1164,7 +1167,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   public void testRetrieveUnusedSegmentsUsingSingleIntervalAndLimitAtRange() throws IOException
   {
     final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
-    markAllSegmentsUnused(new HashSet<>(segments));
+    markAllSegmentsUnused(new HashSet<>(segments), DateTimes.nowUtc());
 
     final int requestedLimit = segments.size();
     final List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
@@ -1182,7 +1185,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   public void testRetrieveUnusedSegmentsUsingSingleIntervalAndLimitInRange() throws IOException
   {
     final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
-    markAllSegmentsUnused(new HashSet<>(segments));
+    markAllSegmentsUnused(new HashSet<>(segments), DateTimes.nowUtc());
 
     final int requestedLimit = segments.size() - 1;
     final List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
@@ -1200,7 +1203,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   public void testRetrieveUnusedSegmentsUsingSingleIntervalAndLimitOutOfRange() throws IOException
   {
     final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
-    markAllSegmentsUnused(new HashSet<>(segments));
+    markAllSegmentsUnused(new HashSet<>(segments), DateTimes.nowUtc());
 
     final int limit = segments.size() + 1;
     final List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
@@ -1217,7 +1220,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   public void testRetrieveUnusedSegmentsUsingSingleIntervalOutOfRange() throws IOException
   {
     final List<DataSegment> segments = createAndGetUsedYearSegments(1905, 1910);
-    markAllSegmentsUnused(new HashSet<>(segments));
+    markAllSegmentsUnused(new HashSet<>(segments), DateTimes.nowUtc());
 
     final Interval outOfRangeInterval = Intervals.of("1700/1800");
     Assert.assertTrue(segments.stream()
@@ -1237,7 +1240,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   public void testRetrieveUnusedSegmentsUsingMultipleIntervalsAndNoLimit() throws IOException
   {
     final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
-    markAllSegmentsUnused(new HashSet<>(segments));
+    markAllSegmentsUnused(new HashSet<>(segments), DateTimes.nowUtc());
 
     final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegments(
         segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
@@ -1254,7 +1257,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   public void testRetrieveUnusedSegmentsUsingNoIntervalsNoLimitAndNoLastSegmentId() throws IOException
   {
     final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
-    markAllSegmentsUnused(new HashSet<>(segments));
+    markAllSegmentsUnused(new HashSet<>(segments), DateTimes.nowUtc());
 
     final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegments(
         ImmutableList.of(),
@@ -1271,7 +1274,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   public void testRetrieveUnusedSegmentsUsingNoIntervalsAndNoLimitAndNoLastSegmentId() throws IOException
   {
     final List<DataSegment> segments = createAndGetUsedYearSegments(2033, 2133);
-    markAllSegmentsUnused(new HashSet<>(segments));
+    markAllSegmentsUnused(new HashSet<>(segments), DateTimes.nowUtc());
 
     String lastSegmentId = segments.get(9).getId().toString();
     final List<DataSegment> expectedSegmentsAscOrder = segments.stream()
@@ -1317,7 +1320,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   public void testRetrieveUnusedSegmentsUsingMultipleIntervalsAndLimitAtRange() throws IOException
   {
     final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
-    markAllSegmentsUnused(new HashSet<>(segments));
+    markAllSegmentsUnused(new HashSet<>(segments), DateTimes.nowUtc());
 
     final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegments(
         segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
@@ -1334,7 +1337,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   public void testRetrieveUnusedSegmentsUsingMultipleIntervalsAndLimitInRange() throws IOException
   {
     final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
-    markAllSegmentsUnused(new HashSet<>(segments));
+    markAllSegmentsUnused(new HashSet<>(segments), DateTimes.nowUtc());
 
     final int requestedLimit = segments.size() - 1;
     final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegments(
@@ -1352,7 +1355,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   public void testRetrieveUnusedSegmentsUsingMultipleIntervalsInSingleBatchLimitAndLastSegmentId() throws IOException
   {
     final List<DataSegment> segments = createAndGetUsedYearSegments(2034, 2133);
-    markAllSegmentsUnused(new HashSet<>(segments));
+    markAllSegmentsUnused(new HashSet<>(segments), DateTimes.nowUtc());
 
     final int requestedLimit = segments.size();
     final String lastSegmentId = segments.get(4).getId().toString();
@@ -1374,7 +1377,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   public void testRetrieveUnusedSegmentsUsingMultipleIntervalsLimitAndLastSegmentId() throws IOException
   {
     final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
-    markAllSegmentsUnused(new HashSet<>(segments));
+    markAllSegmentsUnused(new HashSet<>(segments), DateTimes.nowUtc());
 
     final int requestedLimit = segments.size() - 1;
     final String lastSegmentId = segments.get(4).getId().toString();
@@ -1396,7 +1399,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   public void testRetrieveUnusedSegmentsUsingMultipleIntervals() throws IOException
   {
     final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
-    markAllSegmentsUnused(new HashSet<>(segments));
+    markAllSegmentsUnused(new HashSet<>(segments), DateTimes.nowUtc());
 
     final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegments(
         segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
@@ -1413,7 +1416,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   public void testRetrieveUnusedSegmentsUsingIntervalOutOfRange() throws IOException
   {
     final List<DataSegment> segments = createAndGetUsedYearSegments(1905, 1910);
-    markAllSegmentsUnused(new HashSet<>(segments));
+    markAllSegmentsUnused(new HashSet<>(segments), DateTimes.nowUtc());
 
     final Interval outOfRangeInterval = Intervals.of("1700/1800");
     Assert.assertTrue(segments.stream()
@@ -1433,18 +1436,18 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   public void testRetrieveUnusedSegmentsWithMaxUsedStatusLastUpdatedTime() throws IOException
   {
     final List<DataSegment> segments = createAndGetUsedYearSegments(1905, 1910);
-    markAllSegmentsUnused(new HashSet<>(segments));
+    markAllSegmentsUnused(new HashSet<>(segments), DateTimes.nowUtc());
 
     final Interval interval = Intervals.of("1905/1920");
 
-    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegments(
+    final ImmutableList<DataSegment> actualUnusedSegments1 = retrieveUnusedSegments(
         ImmutableList.of(interval),
         null,
         null,
         null,
         DateTimes.nowUtc()
     );
-    Assert.assertEquals(5, actualUnusedSegments.size());
+    Assert.assertEquals(5, actualUnusedSegments1.size());
 
     final ImmutableList<DataSegment> actualUnusedSegments2 = retrieveUnusedSegments(
         ImmutableList.of(interval),
@@ -1457,7 +1460,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
-  public void testRetrieveUnusedSegmentsWithMaxUsedStatusLastUpdatedTime2() throws IOException, InterruptedException
+  public void testRetrieveUnusedSegmentsWithMaxUsedStatusLastUpdatedTime2() throws IOException
   {
     final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 1950);
     final List<DataSegment> evenYearSegments = new ArrayList<>();
@@ -1472,24 +1475,22 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       }
     }
 
-    markAllSegmentsUnused(new HashSet<>(oddYearSegments));
     final DateTime maxUsedStatusLastUpdatedTime1 = DateTimes.nowUtc();
+    markAllSegmentsUnused(new HashSet<>(oddYearSegments), maxUsedStatusLastUpdatedTime1);
 
-    Thread.sleep(1500);
-
-    markAllSegmentsUnused(new HashSet<>(evenYearSegments));
     final DateTime maxUsedStatusLastUpdatedTime2 = DateTimes.nowUtc();
+    markAllSegmentsUnused(new HashSet<>(evenYearSegments), maxUsedStatusLastUpdatedTime2);
 
     final Interval interval = Intervals.of("1900/1950");
 
-    final ImmutableList<DataSegment> actualUnusedSegments = retrieveUnusedSegments(
+    final ImmutableList<DataSegment> actualUnusedSegments1 = retrieveUnusedSegments(
         ImmutableList.of(interval),
         null,
         null,
         null,
         maxUsedStatusLastUpdatedTime1
     );
-    Assert.assertEquals(oddYearSegments.size(), actualUnusedSegments.size());
+    Assert.assertEquals(oddYearSegments.size(), actualUnusedSegments1.size());
 
     final ImmutableList<DataSegment> actualUnusedSegments2 = retrieveUnusedSegments(
         ImmutableList.of(interval),
@@ -2298,7 +2299,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertEquals(1, identifier3.getShardSpec().getNumCorePartitions());
 
     // now drop the used segment previously loaded:
-    markAllSegmentsUnused(ImmutableSet.of(segment));
+    markAllSegmentsUnused(ImmutableSet.of(segment), DateTimes.nowUtc());
 
     // and final load, this reproduces an issue that could happen with multiple streaming appends,
     // followed by a reindex, followed by a drop, and more streaming data coming in for same interval
@@ -2463,7 +2464,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     // 5) reverted compaction (by marking B_0 as unused)
     // Revert compaction a manual metadata update which is basically the following two steps:
-    markAllSegmentsUnused(ImmutableSet.of(compactedSegment)); // <- drop compacted segment
+    markAllSegmentsUnused(ImmutableSet.of(compactedSegment), DateTimes.nowUtc()); // <- drop compacted segment
     //        pending: version = A, id = 0,1,2
     //                 version = B, id = 1
     //
@@ -3217,7 +3218,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertTrue(coordinator.commitSegments(dataSegments).containsAll(dataSegments));
 
     // Mark the tombstone as unused
-    markAllSegmentsUnused(tombstones);
+    markAllSegmentsUnused(tombstones, DateTimes.nowUtc());
 
     final Collection<DataSegment> allUsedSegments = coordinator.retrieveAllUsedSegments(
         DS.WIKI,
@@ -3271,7 +3272,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertTrue(coordinator.commitSegments(dataSegments).containsAll(dataSegments));
 
     // Mark the tombstone as unused
-    markAllSegmentsUnused(tombstones);
+    markAllSegmentsUnused(tombstones, DateTimes.nowUtc());
 
     final Collection<DataSegment> allUsedSegments = coordinator.retrieveAllUsedSegments(
         DS.WIKI,
