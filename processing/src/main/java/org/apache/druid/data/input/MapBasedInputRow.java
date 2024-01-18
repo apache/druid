@@ -86,7 +86,7 @@ public class MapBasedInputRow extends MapBasedRow implements InputRow
   @Override
   public String toString()
   {
-    return "MapBasedInputRow{" +
+    return "{" +
            "timestamp=" + DateTimes.utc(getTimestampFromEpoch()) +
            ", event=" + getEvent() +
            ", dimensions=" + dimensions +
