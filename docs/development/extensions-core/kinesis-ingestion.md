@@ -404,13 +404,11 @@ Note that when the supervisor is running and detects new partitions, tasks read 
 
 If resharding occurs when the supervisor is suspended and `useEarliestSequence` is set to `false`, resuming the supervisor causes tasks to read the new shards from the latest sequence. This is by design so that the consumer can catch up quickly with any lag accumulated while the supervisor was suspended. 
 
-## Kinesis known issues
+## Known issues
 
 Before you deploy the `druid-kinesis-indexing-service` extension to production, consider the following known issues:
 
-- Avoid implementing more than one Kinesis supervisor that reads from the same Kinesis stream for ingestion. Kinesis has a per-shard read throughput limit and having multiple supervisors on the same stream can reduce available read throughput for an individual supervisor's tasks. Multiple supervisors ingesting to the same Druid datasource can also cause increased contention for locks on the datasource.
-- The only way to change the stream reset policy is to submit a new ingestion spec and set up a new supervisor.
-- If ingestion tasks get stuck, the supervisor does not automatically recover. You should monitor ingestion tasks and investigate if your ingestion falls behind.
+- Kinesis imposes a read throughput limit per shard. If you have multiple supervisors reading from the same Kinesis stream, consider adding more shards to ensure sufficient read throughput for all supervisors.
 - A Kinesis supervisor can sometimes compare the checkpoint offset to retention window of the stream to see if it has fallen behind. These checks fetch the earliest sequence number for Kinesis which can result in `IteratorAgeMilliseconds` becoming very high in AWS CloudWatch.
 
 ## Learn more
