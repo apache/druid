@@ -100,8 +100,8 @@ public class LookupJoinable implements Joinable
   @Override
   public ColumnValuesWithUniqueFlag getMatchableColumnValues(String columnName, boolean includeNull, int maxNumValues)
   {
-    if (LookupColumnSelectorFactory.KEY_COLUMN.equals(columnName) && extractor.canGetKeySet()) {
-      final Set<String> keys = extractor.keySet();
+    if (LookupColumnSelectorFactory.KEY_COLUMN.equals(columnName) && extractor.supportsAsMap()) {
+      final Set<String> keys = extractor.asMap().keySet();
 
       final Set<String> nonMatchingValues;
 

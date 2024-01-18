@@ -23,7 +23,9 @@ import com.google.common.collect.ImmutableMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.MapLookupExtractor;
+import org.apache.druid.query.lookup.ImmutableLookupMap;
 import org.apache.druid.query.lookup.LookupExtractor;
 
 import java.util.HashMap;
@@ -35,6 +37,11 @@ import java.util.stream.IntStream;
  */
 public class LookupBenchmarkUtil
 {
+  /**
+   * Length of keys. They are zero-padded to this size.
+   */
+  private static final int KEY_LENGTH = 20;
+
   public enum LookupType
   {
     HASHMAP {
@@ -69,6 +76,17 @@ public class LookupBenchmarkUtil
         }
         return new MapLookupExtractor(map, false);
       }
+    },
+    REVERSIBLE {
+      @Override
+      public LookupExtractor build(Iterable<Pair<String, String>> keyValuePairs)
+      {
+        final Map<String, String> map = new HashMap<>();
+        for (final Pair<String, String> keyValuePair : keyValuePairs) {
+          map.put(keyValuePair.lhs, keyValuePair.rhs);
+        }
+        return ImmutableLookupMap.fromMap(map).asLookupExtractor(false, () -> new byte[0]);
+      }
     };
 
     public abstract LookupExtractor build(Iterable<Pair<String, String>> keyValuePairs);
@@ -91,9 +109,14 @@ public class LookupBenchmarkUtil
 
     final Iterable<Pair<String, String>> keys =
         () -> IntStream.range(0, numKeys)
-                       .mapToObj(i -> Pair.of(String.valueOf(i), String.valueOf(i % numValues)))
+                       .mapToObj(i -> Pair.of(makeKeyOrValue(i), makeKeyOrValue(i % numValues)))
                        .iterator();
 
     return lookupType.build(keys);
+  }
+
+  public static String makeKeyOrValue(final int i)
+  {
+    return StringUtils.format("%0" + KEY_LENGTH + "d", i);
   }
 }

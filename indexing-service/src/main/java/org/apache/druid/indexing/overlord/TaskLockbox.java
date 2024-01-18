@@ -1176,6 +1176,14 @@ public class TaskLockbox
     try {
       try {
         log.info("Removing task[%s] from activeTasks", task.getId());
+        if (findLocksForTask(task).stream().anyMatch(lock -> lock.getType() == TaskLockType.REPLACE)) {
+          final int upgradeSegmentsDeleted = metadataStorageCoordinator.deleteUpgradeSegmentsForTask(task.getId());
+          log.info(
+              "Deleted [%d] entries from upgradeSegments table for task[%s] with REPLACE locks.",
+              upgradeSegmentsDeleted,
+              task.getId()
+          );
+        }
         unlockAll(task);
       }
       finally {
