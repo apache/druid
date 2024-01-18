@@ -929,7 +929,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
-  public void testTransactionalAnnounceFailDbNullWantNotNull() throws IOException
+  public void testTransactionalAnnounceFailDbNullWantNotNull()
   {
     final SegmentPublishResult result1 = coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
@@ -943,7 +943,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
-  public void testTransactionalAnnounceFailDbNotNullWantNull() throws IOException
+  public void testTransactionalAnnounceFailDbNotNullWantNull()
   {
     final SegmentPublishResult result1 = coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
@@ -1013,7 +1013,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
-  public void testTransactionalAnnounceFailDbNotNullWantDifferent() throws IOException
+  public void testTransactionalAnnounceFailDbNotNullWantDifferent()
   {
     final SegmentPublishResult result1 = coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
@@ -1885,7 +1885,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
-  public void testDeleteDataSourceMetadata() throws IOException
+  public void testDeleteDataSourceMetadata()
   {
     coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
@@ -2798,7 +2798,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
-  public void testRemoveDataSourceMetadataOlderThanDatasourceActiveShouldNotBeDeleted() throws Exception
+  public void testRemoveDataSourceMetadataOlderThanDatasourceActiveShouldNotBeDeleted()
   {
     coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
@@ -2826,7 +2826,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
-  public void testRemoveDataSourceMetadataOlderThanDatasourceNotActiveAndOlderThanTimeShouldBeDeleted() throws Exception
+  public void testRemoveDataSourceMetadataOlderThanDatasourceNotActiveAndOlderThanTimeShouldBeDeleted()
   {
     coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),
@@ -2851,7 +2851,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
   @Test
   public void testRemoveDataSourceMetadataOlderThanDatasourceNotActiveButNotOlderThanTimeShouldNotBeDeleted()
-      throws Exception
   {
     coordinator.commitSegmentsAndMetadata(
         ImmutableSet.of(defaultSegment),

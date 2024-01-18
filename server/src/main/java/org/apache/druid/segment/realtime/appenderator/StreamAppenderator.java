@@ -1076,7 +1076,7 @@ public class StreamAppenderator implements Appenderator
   /**
    * Unannounces the given base segment and all its upgraded versions.
    */
-  private void unannounceAllVersionsOfSegment(DataSegment baseSegment) throws IOException
+  private void unannounceAllVersionsOfSegment(DataSegment baseSegment)
   {
     segmentAnnouncer.unannounceSegment(baseSegment);
 

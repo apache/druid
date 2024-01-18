@@ -396,7 +396,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public Set<DataSegment> commitSegments(final Set<DataSegment> segments) throws IOException
+  public Set<DataSegment> commitSegments(final Set<DataSegment> segments)
   {
     final SegmentPublishResult result = commitSegmentsAndMetadata(segments, null, null);
 
