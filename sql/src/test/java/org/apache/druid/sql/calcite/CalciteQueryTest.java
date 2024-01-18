@@ -15063,7 +15063,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
     msqIncompatible();
     String sql = "\n"
-        + "SELECT dim1,dim2,count(1) FROM foo GROUP BY dim2,dim1 order by dim1";
+        + "SELECT dim1,dim2,count(1),count(1) OVER (partition by dim2) FROM "
+        + " (select dim1,dim2 from foo GROUP BY dim1,dim2 order by dim2) t group by dim1,dim2";
+//    + "SELECT dim1,dim2,count(1) FROM foo GROUP BY dim1,dim2 order by dim2";
     ImmutableList<Object[]> expectedResults = ImmutableList.of(
         new Object[]{"", "a", 1L},
         new Object[]{"1", "a", 1L},
@@ -15074,6 +15076,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
 
     testBuilder()
+    .queryContext(
+        ImmutableMap.of(
+            PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
+            QueryContexts.ENABLE_DEBUG, true
+        )
+    )
         .sql(sql)
         .expectedResults(expectedResults)
         .run();
