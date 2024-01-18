@@ -271,12 +271,6 @@ public class KillUnusedSegments implements CoordinatorDuty
     List<Interval> unusedSegmentIntervals = segmentsMetadataManager
         .getUnusedSegmentIntervals(dataSource, datasourceToLastKillIntervalEnd.get(dataSource), maxEndTime, maxSegmentsToKill, maxUsedStatusLastUpdatedTime);
 
-    log.info("Found unused segment intervals[%s] for datasource[%s] of size[%s] and maxUsedStatusLastUpdatedTime[%s]",
-             unusedSegmentIntervals,
-             dataSource,
-             unusedSegmentIntervals == null ? 0 : unusedSegmentIntervals.size(),
-             maxUsedStatusLastUpdatedTime
-    );
     if (CollectionUtils.isNullOrEmpty(unusedSegmentIntervals)) {
       return null;
     } else if (unusedSegmentIntervals.size() == 1) {
