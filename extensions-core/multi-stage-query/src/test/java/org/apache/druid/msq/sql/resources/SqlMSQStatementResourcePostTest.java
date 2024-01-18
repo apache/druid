@@ -179,6 +179,65 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     );
   }
 
+  @Test
+  public void emptyInsert()
+  {
+    Response response = resource.doPost(new SqlQuery(
+        "insert into foo1 select  __time, dim1 , count(*) as cnt from foo where dim1 is not null and __time < TIMESTAMP '1971-01-01 00:00:00' group by 1, 2 PARTITIONED by day clustered by dim1",
+        null,
+        false,
+        false,
+        false,
+        ImmutableMap.<String, Object>builder()
+                    .putAll(defaultAsyncContext())
+                    .build(),
+        null
+    ), SqlStatementResourceTest.makeOkRequest());
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+
+    SqlStatementResult actual = (SqlStatementResult) response.getEntity();
+
+    SqlStatementResult expected = new SqlStatementResult(
+        actual.getQueryId(),
+        SqlStatementState.SUCCESS,
+        MSQTestOverlordServiceClient.CREATED_TIME,
+        null,
+        MSQTestOverlordServiceClient.DURATION,
+        new ResultSetInformation(0L, 0L, null, "foo1", null, null),
+        null
+    );
+    Assert.assertEquals(expected, actual);
+  }
+
+  @Test
+  public void emptyReplace()
+  {
+    Response response = resource.doPost(new SqlQuery(
+        "replace into foo1 overwrite all select  __time, dim1 , count(*) as cnt from foo where dim1 is not null and __time < TIMESTAMP '1971-01-01 00:00:00' group by 1, 2 PARTITIONED by day clustered by dim1",
+        null,
+        false,
+        false,
+        false,
+        ImmutableMap.<String, Object>builder()
+                    .putAll(defaultAsyncContext())
+                    .build(),
+        null
+    ), SqlStatementResourceTest.makeOkRequest());
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+
+    SqlStatementResult actual = (SqlStatementResult) response.getEntity();
+
+    SqlStatementResult expected = new SqlStatementResult(
+        actual.getQueryId(),
+        SqlStatementState.SUCCESS,
+        MSQTestOverlordServiceClient.CREATED_TIME,
+        null,
+        MSQTestOverlordServiceClient.DURATION,
+        new ResultSetInformation(0L, 0L, null, "foo1", null, null),
+        null
+    );
+    Assert.assertEquals(expected, actual);
+  }
 
   @Test
   public void insertCannotBeEmptyFaultTest()
@@ -432,7 +491,6 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     rows.add(ImmutableList.of(1466985600000L, "TaxonBot"));
     rows.add(ImmutableList.of(1466985600000L, "GiftBot"));
     rows.add(ImmutableList.of(1466985600000L, "GiftBot"));
-
 
     Assert.assertEquals(rows, SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
         sqlStatementResult.getQueryId(),
