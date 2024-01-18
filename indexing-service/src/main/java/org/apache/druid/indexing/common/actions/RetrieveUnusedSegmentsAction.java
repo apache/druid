@@ -44,20 +44,20 @@ public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment
   private final Integer limit;
 
   @JsonIgnore
-  private final DateTime maxUsedFlagLastUpdatedTime;
+  private final DateTime maxUsedStatusLastUpdatedTime;
 
   @JsonCreator
   public RetrieveUnusedSegmentsAction(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
       @JsonProperty("limit") @Nullable Integer limit,
-      @JsonProperty("maxUsedFlagLastUpdatedTime") @Nullable DateTime maxUsedFlagLastUpdatedTime
+      @JsonProperty("maxUsedStatusLastUpdatedTime") @Nullable DateTime maxUsedStatusLastUpdatedTime
   )
   {
     this.dataSource = dataSource;
     this.interval = interval;
     this.limit = limit;
-    this.maxUsedFlagLastUpdatedTime = maxUsedFlagLastUpdatedTime;
+    this.maxUsedStatusLastUpdatedTime = maxUsedStatusLastUpdatedTime;
   }
 
   @JsonProperty
@@ -81,9 +81,9 @@ public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment
 
   @Nullable
   @JsonProperty
-  public DateTime getMaxUsedFlagLastUpdatedTime()
+  public DateTime getMaxUsedStatusLastUpdatedTime()
   {
-    return maxUsedFlagLastUpdatedTime;
+    return maxUsedStatusLastUpdatedTime;
   }
 
   @Override
@@ -96,7 +96,7 @@ public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment
   public List<DataSegment> perform(Task task, TaskActionToolbox toolbox)
   {
     return toolbox.getIndexerMetadataStorageCoordinator()
-        .retrieveUnusedSegmentsForInterval(dataSource, interval, limit, maxUsedFlagLastUpdatedTime);
+        .retrieveUnusedSegmentsForInterval(dataSource, interval, limit, maxUsedStatusLastUpdatedTime);
   }
 
   @Override
@@ -112,7 +112,7 @@ public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment
            "dataSource='" + dataSource + '\'' +
            ", interval=" + interval +
            ", limit=" + limit +
-           ", maxUsedFlagLastUpdatedTime=" + maxUsedFlagLastUpdatedTime +
+           ", maxUsedStatusLastUpdatedTime=" + maxUsedStatusLastUpdatedTime +
            '}';
   }
 }

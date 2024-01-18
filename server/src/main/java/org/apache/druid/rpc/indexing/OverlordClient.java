@@ -108,12 +108,12 @@ public interface OverlordClient
    * @param dataSource Datasource to kill
    * @param interval   Umbrella interval to be considered by the kill task. Note that unused segments falling in this
    *                   widened umbrella interval may have different {@code used_status_last_updated} time, so the kill task
-   *                   should also filter by {@code maxUsedFlagLastUpdatedTime}
+   *                   should also filter by {@code maxUsedStatusLastUpdatedTime}
    * @param maxSegmentsToKill  The maximum number of segments to kill
-   * @param maxUsedFlagLastUpdatedTime The maximum {@code used_status_last_updated} time. Any unused segment in {@code interval}
+   * @param maxUsedStatusLastUpdatedTime The maximum {@code used_status_last_updated} time. Any unused segment in {@code interval}
    *                                   with {@code used_status_last_updated} no later than this time will be included in the
    *                                   kill task. Segments without {@code used_status_last_updated} time (due to an upgrade
-   *                                   from legacy Druid) will have {@code maxUsedFlagLastUpdatedTime} ignored
+   *                                   from legacy Druid) will have {@code maxUsedStatusLastUpdatedTime} ignored
    *
    * @return future with task ID
    */
@@ -122,7 +122,7 @@ public interface OverlordClient
       String dataSource,
       Interval interval,
       @Nullable Integer maxSegmentsToKill,
-      @Nullable DateTime maxUsedFlagLastUpdatedTime
+      @Nullable DateTime maxUsedStatusLastUpdatedTime
   )
   {
     final String taskId = IdUtils.newTaskId(idPrefix, ClientKillUnusedSegmentsTaskQuery.TYPE, dataSource, interval);
@@ -133,7 +133,7 @@ public interface OverlordClient
         false,
         null,
         maxSegmentsToKill,
-        maxUsedFlagLastUpdatedTime
+        maxUsedStatusLastUpdatedTime
     );
     return FutureUtils.transform(runTask(taskId, taskQuery), ignored -> taskId);
   }

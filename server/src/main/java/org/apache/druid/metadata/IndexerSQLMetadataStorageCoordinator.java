@@ -250,7 +250,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       String dataSource,
       Interval interval,
       @Nullable Integer limit,
-      @Nullable DateTime maxUsedFlagLastUpdatedTime
+      @Nullable DateTime maxUsedStatusLastUpdatedTime
   )
   {
     final List<DataSegment> matchingSegments = connector.inReadOnlyTransaction(
@@ -263,7 +263,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                                                limit,
                                                null,
                                                null,
-                                               maxUsedFlagLastUpdatedTime
+                                               maxUsedStatusLastUpdatedTime
                                            )
           ) {
             return ImmutableList.copyOf(iterator);
@@ -271,8 +271,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         }
     );
 
-    log.info("Found [%,d] unused segments for datasource[%s] in interval[%s] with maxUsedFlagLastUpdatedTime[%s].",
-             matchingSegments.size(), dataSource, interval, maxUsedFlagLastUpdatedTime);
+    log.info("Found [%,d] unused segments for datasource[%s] in interval[%s] with maxUsedStatusLastUpdatedTime[%s].",
+             matchingSegments.size(), dataSource, interval, maxUsedStatusLastUpdatedTime);
     return matchingSegments;
   }
 

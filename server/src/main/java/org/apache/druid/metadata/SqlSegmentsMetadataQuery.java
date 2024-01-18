@@ -145,10 +145,10 @@ public class SqlSegmentsMetadataQuery
    *                      lexigraphically if sortOrder is DESC.
    * @param sortOrder     Specifies the order with which to return the matching segments by start time, end time.
    *                      A null value indicates that order does not matter.
-   * @param maxUsedFlagLastUpdatedTime The maximum {@code used_status_last_updated} time. Any unused segment in {@code intervals}
+   * @param maxUsedStatusLastUpdatedTime The maximum {@code used_status_last_updated} time. Any unused segment in {@code intervals}
    *                                   with {@code used_status_last_updated} no later than this time will be included in the
    *                                   iterator. Segments without {@code used_status_last_updated} time (due to an upgrade
-   *                                   from legacy Druid) will have {@code maxUsedFlagLastUpdatedTime} ignored
+   *                                   from legacy Druid) will have {@code maxUsedStatusLastUpdatedTime} ignored
 
    * Returns a closeable iterator. You should close it when you are done.
    */
@@ -158,7 +158,7 @@ public class SqlSegmentsMetadataQuery
       @Nullable final Integer limit,
       @Nullable final String lastSegmentId,
       @Nullable final SortOrder sortOrder,
-      @Nullable final DateTime maxUsedFlagLastUpdatedTime
+      @Nullable final DateTime maxUsedStatusLastUpdatedTime
   )
   {
     return retrieveSegments(
@@ -169,7 +169,7 @@ public class SqlSegmentsMetadataQuery
         limit,
         lastSegmentId,
         sortOrder,
-        maxUsedFlagLastUpdatedTime
+        maxUsedStatusLastUpdatedTime
     );
   }
 
@@ -405,12 +405,12 @@ public class SqlSegmentsMetadataQuery
       @Nullable final Integer limit,
       @Nullable final String lastSegmentId,
       @Nullable final SortOrder sortOrder,
-      @Nullable final DateTime maxUsedFlagLastUpdatedTime
+      @Nullable final DateTime maxUsedStatusLastUpdatedTime
   )
   {
     if (intervals.isEmpty() || intervals.size() <= MAX_INTERVALS_PER_BATCH) {
       return CloseableIterators.withEmptyBaggage(
-          retrieveSegmentsInIntervalsBatch(dataSource, intervals, matchMode, used, limit, lastSegmentId, sortOrder, maxUsedFlagLastUpdatedTime)
+          retrieveSegmentsInIntervalsBatch(dataSource, intervals, matchMode, used, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)
       );
     } else {
       final List<List<Interval>> intervalsLists = Lists.partition(new ArrayList<>(intervals), MAX_INTERVALS_PER_BATCH);
@@ -426,7 +426,7 @@ public class SqlSegmentsMetadataQuery
             limitPerBatch,
             lastSegmentId,
             sortOrder,
-            maxUsedFlagLastUpdatedTime
+            maxUsedStatusLastUpdatedTime
         );
         if (limitPerBatch != null) {
           // If limit is provided, we need to shrink the limit for subsequent batches or circuit break if
@@ -453,7 +453,7 @@ public class SqlSegmentsMetadataQuery
       @Nullable final Integer limit,
       @Nullable final String lastSegmentId,
       @Nullable final SortOrder sortOrder,
-      @Nullable final DateTime maxUsedFlagLastUpdatedTime
+      @Nullable final DateTime maxUsedStatusLastUpdatedTime
   )
   {
     // Check if the intervals all support comparing as strings. If so, bake them into the SQL.
@@ -466,8 +466,8 @@ public class SqlSegmentsMetadataQuery
       appendConditionForIntervalsAndMatchMode(sb, intervals, matchMode, connector);
     }
 
-    // Add the used_status_last_updated time filter only for unused segments when maxUsedFlagLastUpdatedTime is non-null.
-    final boolean addMaxUsedLastUpdatedTimeFilter = !used && maxUsedFlagLastUpdatedTime != null;
+    // Add the used_status_last_updated time filter only for unused segments when maxUsedStatusLastUpdatedTime is non-null.
+    final boolean addMaxUsedLastUpdatedTimeFilter = !used && maxUsedStatusLastUpdatedTime != null;
     if (addMaxUsedLastUpdatedTimeFilter) {
       sb.append(" AND (used_status_last_updated IS NOT NULL AND used_status_last_updated <= :used_status_last_updated)");
     }
@@ -498,7 +498,7 @@ public class SqlSegmentsMetadataQuery
         .bind("dataSource", dataSource);
 
     if (addMaxUsedLastUpdatedTimeFilter) {
-      sql.bind("used_status_last_updated", maxUsedFlagLastUpdatedTime.toString());
+      sql.bind("used_status_last_updated", maxUsedStatusLastUpdatedTime.toString());
     }
 
     if (lastSegmentId != null) {

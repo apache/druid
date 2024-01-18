@@ -212,8 +212,8 @@ public class KillUnusedSegments implements CoordinatorDuty
               + "on the next coordinator cycle.", submittedTasks, availableKillTaskSlots));
           break;
         }
-        final DateTime maxUsedFlagLastUpdatedTime = DateTimes.nowUtc().minus(bufferPeriod);
-        final Interval intervalToKill = findIntervalForKill(dataSource, maxUsedFlagLastUpdatedTime);
+        final DateTime maxUsedStatusLastUpdatedTime = DateTimes.nowUtc().minus(bufferPeriod);
+        final Interval intervalToKill = findIntervalForKill(dataSource, maxUsedStatusLastUpdatedTime);
         if (intervalToKill == null) {
           datasourceToLastKillIntervalEnd.remove(dataSource);
           continue;
@@ -226,7 +226,7 @@ public class KillUnusedSegments implements CoordinatorDuty
                   dataSource,
                   intervalToKill,
                   maxSegmentsToKill,
-                  maxUsedFlagLastUpdatedTime
+                  maxUsedStatusLastUpdatedTime
               ),
               true
           );
@@ -265,19 +265,19 @@ public class KillUnusedSegments implements CoordinatorDuty
    * Calculates the interval for which segments are to be killed in a datasource.
    */
   @Nullable
-  private Interval findIntervalForKill(String dataSource, DateTime maxUsedFlagLastUpdatedTime)
+  private Interval findIntervalForKill(String dataSource, DateTime maxUsedStatusLastUpdatedTime)
   {
     final DateTime maxEndTime = ignoreDurationToRetain
                                 ? DateTimes.COMPARE_DATE_AS_STRING_MAX
                                 : DateTimes.nowUtc().minus(durationToRetain);
     List<Interval> unusedSegmentIntervals = segmentsMetadataManager
-        .getUnusedSegmentIntervals(dataSource, datasourceToLastKillIntervalEnd.get(dataSource), maxEndTime, maxSegmentsToKill, maxUsedFlagLastUpdatedTime);
+        .getUnusedSegmentIntervals(dataSource, datasourceToLastKillIntervalEnd.get(dataSource), maxEndTime, maxSegmentsToKill, maxUsedStatusLastUpdatedTime);
 
-    log.info("Found unused segment intervals[%s] for datasource[%s] of size[%s] and maxUsedFlagLastUpdatedTime[%s]",
+    log.info("Found unused segment intervals[%s] for datasource[%s] of size[%s] and maxUsedStatusLastUpdatedTime[%s]",
              unusedSegmentIntervals,
              dataSource,
              unusedSegmentIntervals == null ? 0 : unusedSegmentIntervals.size(),
-             maxUsedFlagLastUpdatedTime
+             maxUsedStatusLastUpdatedTime
     );
     if (CollectionUtils.isNullOrEmpty(unusedSegmentIntervals)) {
       return null;

@@ -65,7 +65,7 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
     Assert.assertEquals(taskQuery.getMarkAsUnused(), fromJson.isMarkAsUnused());
     Assert.assertEquals(taskQuery.getBatchSize(), Integer.valueOf(fromJson.getBatchSize()));
     Assert.assertEquals(taskQuery.getLimit(), fromJson.getLimit());
-    Assert.assertEquals(taskQuery.getMaxUsedFlagLastUpdatedTime(), fromJson.getMaxUsedFlagLastUpdatedTime());
+    Assert.assertEquals(taskQuery.getMaxUsedStatusLastUpdatedTime(), fromJson.getMaxUsedStatusLastUpdatedTime());
   }
 
   @Test
@@ -88,7 +88,7 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
     Assert.assertEquals(taskQuery.getMarkAsUnused(), fromJson.isMarkAsUnused());
     Assert.assertEquals(100, fromJson.getBatchSize());
     Assert.assertNull(taskQuery.getLimit());
-    Assert.assertNull(taskQuery.getMaxUsedFlagLastUpdatedTime());
+    Assert.assertNull(taskQuery.getMaxUsedStatusLastUpdatedTime());
   }
 
   @Test
@@ -115,7 +115,7 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
     Assert.assertEquals(task.isMarkAsUnused(), taskQuery.getMarkAsUnused());
     Assert.assertEquals(Integer.valueOf(task.getBatchSize()), taskQuery.getBatchSize());
     Assert.assertNull(task.getLimit());
-    Assert.assertNull(task.getMaxUsedFlagLastUpdatedTime());
+    Assert.assertNull(task.getMaxUsedStatusLastUpdatedTime());
   }
 
   @Test
@@ -142,6 +142,6 @@ public class ClientKillUnusedSegmentsTaskQuerySerdeTest
     Assert.assertNull(taskQuery.getMarkAsUnused());
     Assert.assertEquals(Integer.valueOf(task.getBatchSize()), taskQuery.getBatchSize());
     Assert.assertEquals(task.getLimit(), taskQuery.getLimit());
-    Assert.assertEquals(task.getMaxUsedFlagLastUpdatedTime(), taskQuery.getMaxUsedFlagLastUpdatedTime());
+    Assert.assertEquals(task.getMaxUsedStatusLastUpdatedTime(), taskQuery.getMaxUsedStatusLastUpdatedTime());
   }
 }

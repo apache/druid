@@ -43,7 +43,7 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
   private final Boolean markAsUnused;
   private final Integer batchSize;
   @Nullable private final Integer limit;
-  @Nullable private final DateTime maxUsedFlagLastUpdatedTime;
+  @Nullable private final DateTime maxUsedStatusLastUpdatedTime;
 
   @JsonCreator
   public ClientKillUnusedSegmentsTaskQuery(
@@ -53,7 +53,7 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
       @JsonProperty("markAsUnused") @Deprecated Boolean markAsUnused,
       @JsonProperty("batchSize") Integer batchSize,
       @JsonProperty("limit") @Nullable Integer limit,
-      @JsonProperty("maxUsedFlagLastUpdatedTime") @Nullable DateTime maxUsedFlagLastUpdatedTime
+      @JsonProperty("maxUsedStatusLastUpdatedTime") @Nullable DateTime maxUsedStatusLastUpdatedTime
   )
   {
     if (id == null) {
@@ -68,7 +68,7 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
     this.markAsUnused = markAsUnused;
     this.batchSize = batchSize;
     this.limit = limit;
-    this.maxUsedFlagLastUpdatedTime = maxUsedFlagLastUpdatedTime;
+    this.maxUsedStatusLastUpdatedTime = maxUsedStatusLastUpdatedTime;
   }
 
   @JsonProperty
@@ -127,9 +127,9 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
 
   @JsonProperty
   @Nullable
-  public DateTime getMaxUsedFlagLastUpdatedTime()
+  public DateTime getMaxUsedStatusLastUpdatedTime()
   {
-    return maxUsedFlagLastUpdatedTime;
+    return maxUsedStatusLastUpdatedTime;
   }
 
 
@@ -149,12 +149,12 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
            && Objects.equals(markAsUnused, that.markAsUnused)
            && Objects.equals(batchSize, that.batchSize)
            && Objects.equals(limit, that.limit)
-           && Objects.equals(maxUsedFlagLastUpdatedTime, that.maxUsedFlagLastUpdatedTime);
+           && Objects.equals(maxUsedStatusLastUpdatedTime, that.maxUsedStatusLastUpdatedTime);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(id, dataSource, interval, markAsUnused, batchSize, limit, maxUsedFlagLastUpdatedTime);
+    return Objects.hash(id, dataSource, interval, markAsUnused, batchSize, limit, maxUsedStatusLastUpdatedTime);
   }
 }

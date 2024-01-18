@@ -154,10 +154,10 @@ public interface IndexerMetadataStorageCoordinator
    * @param dataSource  The data source the segments belong to
    * @param interval    Filter the data segments to ones that include data in this interval exclusively.
    * @param limit The maximum number of unused segments to retreive. If null, no limit is applied.
-   * @param maxUsedFlagLastUpdatedTime The maximum {@code used_status_last_updated} time. Any unused segment in {@code interval}
+   * @param maxUsedStatusLastUpdatedTime The maximum {@code used_status_last_updated} time. Any unused segment in {@code interval}
    *                                   with {@code used_status_last_updated} no later than this time will be included in the
    *                                   kill task. Segments without {@code used_status_last_updated} time (due to an upgrade
-   *                                   from legacy Druid) will have {@code maxUsedFlagLastUpdatedTime} ignored
+   *                                   from legacy Druid) will have {@code maxUsedStatusLastUpdatedTime} ignored
    *
    * @return DataSegments which include ONLY data within the requested interval and are marked as unused. Segments NOT
    * returned here may include data in the interval
@@ -166,7 +166,7 @@ public interface IndexerMetadataStorageCoordinator
       String dataSource,
       Interval interval,
       @Nullable Integer limit,
-      @Nullable DateTime maxUsedFlagLastUpdatedTime
+      @Nullable DateTime maxUsedStatusLastUpdatedTime
   );
 
   /**

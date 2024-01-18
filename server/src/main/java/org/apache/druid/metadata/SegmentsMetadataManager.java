@@ -167,9 +167,9 @@ public interface SegmentsMetadataManager
    *
    * <li> The start time of the segment must be no earlier than the specified {@code minStartTime} (if not null). </li>
    * <li> The end time of the segment must be no later than the specified {@code maxEndTime}. </li>
-   * <li> The {@code used_status_last_updated} time of the segment must be no later than {@code maxUsedFlagLastUpdatedTime}.
+   * <li> The {@code used_status_last_updated} time of the segment must be no later than {@code maxUsedStatusLastUpdatedTime}.
    *      Segments that have no {@code used_status_last_updated} time (due to an upgrade from legacy Druid) will
-   *      have {@code maxUsedFlagLastUpdatedTime} ignored. </li>
+   *      have {@code maxUsedStatusLastUpdatedTime} ignored. </li>
    *
    * <p>
    * The list of intervals is ordered by segment start time and then by end time.
@@ -180,7 +180,7 @@ public interface SegmentsMetadataManager
       DateTime minStartTime,
       DateTime maxEndTime,
       int limit,
-      DateTime maxUsedFlagLastUpdatedTime
+      DateTime maxUsedStatusLastUpdatedTime
   );
 
   @VisibleForTesting

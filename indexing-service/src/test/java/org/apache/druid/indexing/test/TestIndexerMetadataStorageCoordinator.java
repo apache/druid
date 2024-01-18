@@ -138,7 +138,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
       String dataSource,
       Interval interval,
       @Nullable Integer limit,
-      @Nullable DateTime maxUsedFlagLastUpdatedTime
+      @Nullable DateTime maxUsedStatusLastUpdatedTime
   )
   {
     synchronized (unusedSegments) {

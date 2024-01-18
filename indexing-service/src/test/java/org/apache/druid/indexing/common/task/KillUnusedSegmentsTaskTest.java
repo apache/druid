@@ -227,11 +227,11 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
 
   /**
    * Test kill functionality of multiple unused segments in a wide interval with different {@code used_status_last_updated}
-   * timestamps. A kill task submitted with null {@code maxUsedFlagLastUpdatedTime} will kill all the unused segments in the kill
+   * timestamps. A kill task submitted with null {@code maxUsedStatusLastUpdatedTime} will kill all the unused segments in the kill
    * interval.
    */
   @Test
-  public void testKillMultipleUnusedSegmentsWithNullMaxUsedFlagLastUpdatedTime() throws Exception
+  public void testKillMultipleUnusedSegmentsWithNullMaxUsedStatusLastUpdatedTime() throws Exception
   {
     final String version = DateTimes.nowUtc().toString();
     final DataSegment segment1 = newSegment(Intervals.of("2019-01-01/2019-02-01"), version);
@@ -304,12 +304,12 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
    * <li> {@code segment4} is a used segment and therefore shouldn't be killed </li>
    *
    * <p>
-   * A kill task submitted with t2 as the {@code maxUsedFlagLastUpdatedTime} should only kill {@code segment1} and {@code segment2}
-   * After that, a kill task submitted with t3 as the {@code maxUsedFlagLastUpdatedTime} should kill {@code segment3}.
+   * A kill task submitted with t2 as the {@code maxUsedStatusLastUpdatedTime} should only kill {@code segment1} and {@code segment2}
+   * After that, a kill task submitted with t3 as the {@code maxUsedStatusLastUpdatedTime} should kill {@code segment3}.
    * </p>
    */
   @Test
-  public void testKillMultipleUnusedSegmentsWithDifferentMaxUsedFlagLastUpdatedTime() throws Exception
+  public void testKillMultipleUnusedSegmentsWithDifferentMaxUsedStatusLastUpdatedTime() throws Exception
   {
     final String version = DateTimes.nowUtc().toString();
     final DataSegment segment1 = newSegment(Intervals.of("2019-01-01/2019-02-01"), version);
@@ -339,7 +339,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
     );
 
     // Capture the last updated time cutoff
-    final DateTime maxUsedFlagLastUpdatedTime1 = DateTimes.nowUtc();
+    final DateTime maxUsedStatusLastUpdatedTime1 = DateTimes.nowUtc();
 
     // Delay for 1s, mark the segments as unused and then capture the last updated time cutoff again
     Thread.sleep(1000);
@@ -353,7 +353,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         )
     );
 
-    final DateTime maxUsedFlagLastUpdatedTime2 = DateTimes.nowUtc();
+    final DateTime maxUsedStatusLastUpdatedTime2 = DateTimes.nowUtc();
 
 
     final List<Interval> segmentIntervals = segments.stream()
@@ -371,7 +371,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
             false,
             1,
             10,
-            maxUsedFlagLastUpdatedTime1
+            maxUsedStatusLastUpdatedTime1
         );
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task1).get().getStatusCode());
@@ -391,7 +391,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
             false,
             1,
             10,
-            maxUsedFlagLastUpdatedTime2
+            maxUsedStatusLastUpdatedTime2
         );
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task2).get().getStatusCode());
@@ -404,7 +404,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
   }
 
   /**
-   * Similar to {@link #testKillMultipleUnusedSegmentsWithDifferentMaxUsedFlagLastUpdatedTime()}, but with a different setup.
+   * Similar to {@link #testKillMultipleUnusedSegmentsWithDifferentMaxUsedStatusLastUpdatedTime()}}, but with a different setup.
    *
    * Tests kill functionality of multiple unused segments in a wide interval with different {@code used_status_last_updated}
    * timestamps. Consider:
@@ -412,12 +412,12 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
    * <li> {@code segment2} and {@code segment3} have t2 {@code used_status_last_updated} timestamp, where t1 < t2 </li>
    *
    * <p>
-   * A kill task submitted with t1 as the {@code maxUsedFlagLastUpdatedTime} should only kill {@code segment1} and {@code segment4}
-   * After that, a kill task submitted with t2 as the {@code maxUsedFlagLastUpdatedTime} should kill {@code segment2} and {@code segment3}.
+   * A kill task submitted with t1 as the {@code maxUsedStatusLastUpdatedTime} should only kill {@code segment1} and {@code segment4}
+   * After that, a kill task submitted with t2 as the {@code maxUsedStatusLastUpdatedTime} should kill {@code segment2} and {@code segment3}.
    * </p>
    */
   @Test
-  public void testKillMultipleUnusedSegmentsWithDifferentMaxUsedFlagLastUpdatedTime2() throws Exception
+  public void testKillMultipleUnusedSegmentsWithDifferentMaxUsedStatusLastUpdatedTime2() throws Exception
   {
     final String version = DateTimes.nowUtc().toString();
     final DataSegment segment1 = newSegment(Intervals.of("2019-01-01/2019-02-01"), version);
@@ -440,7 +440,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         )
     );
 
-    final DateTime maxUsedFlagLastUpdatedTime1 = DateTimes.nowUtc();
+    final DateTime maxUsedStatusLastUpdatedTime1 = DateTimes.nowUtc();
 
     // Delay for 1s, mark the segments as unused and then capture the last updated time cutoff again
     Thread.sleep(1000);
@@ -455,7 +455,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         )
     );
 
-    final DateTime maxUsedFlagLastUpdatedTime2 = DateTimes.nowUtc();
+    final DateTime maxUsedStatusLastUpdatedTime2 = DateTimes.nowUtc();
 
 
     final List<Interval> segmentIntervals = segments.stream()
@@ -474,7 +474,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
             false,
             1,
             10,
-            maxUsedFlagLastUpdatedTime1
+            maxUsedStatusLastUpdatedTime1
         );
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task1).get().getStatusCode());
@@ -494,7 +494,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
             false,
             1,
             10,
-            maxUsedFlagLastUpdatedTime2
+            maxUsedStatusLastUpdatedTime2
         );
 
     Assert.assertEquals(TaskState.SUCCESS, taskRunner.run(task2).get().getStatusCode());

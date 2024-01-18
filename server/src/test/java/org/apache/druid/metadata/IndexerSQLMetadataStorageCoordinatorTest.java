@@ -1425,7 +1425,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
-  public void testRetrieveUnusedSegmentsWithMaxUsedFlagLastUpdatedTime() throws IOException
+  public void testRetrieveUnusedSegmentsWithMaxUsedStatusLastUpdatedTime() throws IOException
   {
     final List<DataSegment> segments = createAndGetUsedYearSegments(1905, 1910);
     markAllSegmentsUnused(new HashSet<>(segments));
@@ -1452,7 +1452,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
-  public void testRetrieveUnusedSegmentsWithMaxUsedFlagLastUpdatedTime2() throws IOException, InterruptedException
+  public void testRetrieveUnusedSegmentsWithMaxUsedStatusLastUpdatedTime2() throws IOException, InterruptedException
   {
     final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 1950);
     final List<DataSegment> evenYearSegments = new ArrayList<>();
@@ -1468,12 +1468,12 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     }
 
     markAllSegmentsUnused(new HashSet<>(oddYearSegments));
-    final DateTime maxUsedFlagLastUpdatedTime1 = DateTimes.nowUtc();
+    final DateTime maxUsedStatusLastUpdatedTime1 = DateTimes.nowUtc();
 
     Thread.sleep(1500);
 
     markAllSegmentsUnused(new HashSet<>(evenYearSegments));
-    final DateTime maxUsedFlagLastUpdatedTime2 = DateTimes.nowUtc();
+    final DateTime maxUsedStatusLastUpdatedTime2 = DateTimes.nowUtc();
 
     final Interval interval = Intervals.of("1900/1950");
 
@@ -1482,7 +1482,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         null,
         null,
         null,
-        maxUsedFlagLastUpdatedTime1
+        maxUsedStatusLastUpdatedTime1
     );
     Assert.assertEquals(oddYearSegments.size(), actualUnusedSegments.size());
 
@@ -1491,7 +1491,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         null,
         null,
         null,
-        maxUsedFlagLastUpdatedTime2
+        maxUsedStatusLastUpdatedTime2
     );
     Assert.assertEquals(segments.size(), actualUnusedSegments2.size());
   }
@@ -3289,7 +3289,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       final Integer limit,
       final String lastSegmentId,
       final SortOrder sortOrder,
-      final DateTime maxUsedFlagLastUpdatedTime
+      final DateTime maxUsedStatusLastUpdatedTime
   )
   {
     return derbyConnector.inReadOnlyTransaction(
@@ -3301,7 +3301,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
                            derbyConnectorRule.metadataTablesConfigSupplier().get(),
                            mapper
                        )
-                       .retrieveUnusedSegments(DS.WIKI, intervals, limit, lastSegmentId, sortOrder, maxUsedFlagLastUpdatedTime)) {
+                       .retrieveUnusedSegments(DS.WIKI, intervals, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)) {
             return ImmutableList.copyOf(iterator);
           }
         }
