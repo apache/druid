@@ -73,33 +73,7 @@ public interface OverlordClient
   ListenableFuture<Void> runTask(String taskId, Object taskObject);
 
   /**
-   * Shortcut to {@link #runKillTask(String, String, Interval, Integer, DateTime)}.
-   * Note that this method is deprecated and newer implementations must use {@link #runKillTask(String, String, Interval, Integer, DateTime)}.
-   */
-  @Deprecated
-  default ListenableFuture<String> runKillTask(String idPrefix, String dataSource, Interval interval)
-  {
-    return runKillTask(idPrefix, dataSource, interval, null, null);
-  }
-
-  /**
-   * Shortcut to {@link #runKillTask(String, String, Interval, Integer, DateTime)}.
-   * Note that this method is deprecated and newer implementations must use {@link #runKillTask(String, String, Interval, Integer, DateTime)}.
-   */
-  @Deprecated
-  default ListenableFuture<String> runKillTask(
-      String idPrefix,
-      String dataSource,
-      Interval interval,
-      @Nullable Integer maxSegmentsToKill
-  )
-  {
-    return runKillTask(idPrefix, dataSource, interval, maxSegmentsToKill, null);
-  }
-
-  /**
    * Run a "kill" task for a particular datasource and interval. Shortcut to {@link #runTask(String, Object)}.
-   *
    * The kill task deletes all unused segment records from deep storage and the metadata store. The task runs
    * asynchronously after the API call returns. The resolved future is the ID of the task, which can be used to
    * monitor its progress through the {@link #taskStatus(String)} API.
