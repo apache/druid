@@ -1884,7 +1884,7 @@ public class TaskLockboxTest
         TaskLockType.APPEND,
         task,
         Intervals.of("2024-01-01/2024-02-01"),
-        "v0"
+        "v1"
     ).getTaskLock();
     Assert.assertEquals(
         ImmutableSet.copyOf(taskStorage.getLocks(task.getId())),

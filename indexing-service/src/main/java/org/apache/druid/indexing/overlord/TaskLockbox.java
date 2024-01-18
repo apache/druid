@@ -1591,7 +1591,7 @@ public class TaskLockbox
              && taskLock.getGranularity() == otherLock.getGranularity()
              && taskLock.getType() == TaskLockType.APPEND
              && taskLock.getType() == otherLock.getType()
-             && taskLock.getVersion().compareTo(otherLock.getVersion()) >= 0
+             && taskLock.getVersion().compareTo(otherLock.getVersion()) > 0
              && taskLock.getInterval().contains(otherLock.getInterval())
              && taskLock.getGroupId().equals(otherLock.getGroupId());
     }
