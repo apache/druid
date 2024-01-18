@@ -278,7 +278,7 @@ public interface IndexerMetadataStorageCoordinator
       Set<DataSegment> segments,
       @Nullable DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata
-  ) throws IOException;
+  );
 
   /**
    * Commits segments created by an APPEND task. This method also handles segment

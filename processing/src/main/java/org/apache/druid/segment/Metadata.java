@@ -108,11 +108,6 @@ public class Metadata
     return this;
   }
 
-  public Object get(String key)
-  {
-    return container.get(key);
-  }
-
   // arbitrary key-value pairs from the metadata just follow the semantics of last one wins if same
   // key exists in multiple input Metadata containers
   // for others e.g. Aggregators, appropriate merging is done

@@ -44,21 +44,16 @@ import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.NoopDataSegmentPusher;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
-import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
-import java.net.URI;
-import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 
 public class AppenderatorsTest
@@ -91,37 +86,29 @@ public class AppenderatorsTest
     }
   }
 
-
   private static class AppenderatorTester implements AutoCloseable
   {
     public static final String DATASOURCE = "foo";
 
-    private final DataSchema schema;
     private final AppenderatorConfig tuningConfig;
-    private final SegmentGenerationMetrics metrics;
-    private final ObjectMapper objectMapper;
     private final Appenderator appenderator;
     private final ServiceEmitter emitter;
 
-    private final List<DataSegment> pushedSegments = new CopyOnWriteArrayList<>();
-
-
     public AppenderatorTester(final String batchMode)
     {
-      this(100, 100, null, false, new SimpleRowIngestionMeters(), false, batchMode);
+      this(100, 100, null, new SimpleRowIngestionMeters(), false, batchMode);
     }
 
     public AppenderatorTester(
         final int maxRowsInMemory,
         final long maxSizeInBytes,
         @Nullable final File basePersistDirectory,
-        final boolean enablePushFailure,
         final RowIngestionMeters rowIngestionMeters,
         final boolean skipBytesInMemoryOverheadCheck,
         String batchMode
     )
     {
-      objectMapper = new DefaultObjectMapper();
+      ObjectMapper objectMapper = new DefaultObjectMapper();
       objectMapper.registerSubtypes(LinearShardSpec.class);
 
       final Map<String, Object> parserMap = objectMapper.convertValue(
@@ -137,7 +124,7 @@ public class AppenderatorsTest
           Map.class
       );
 
-      schema = new DataSchema(
+      DataSchema schema = new DataSchema(
           DATASOURCE,
           null,
           null,
@@ -164,7 +151,7 @@ public class AppenderatorsTest
           IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE,
           basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory
       );
-      metrics = new SegmentGenerationMetrics();
+      SegmentGenerationMetrics metrics = new SegmentGenerationMetrics();
 
       IndexIO indexIO = new IndexIO(objectMapper, ColumnConfig.DEFAULT);
       IndexMergerV9 indexMerger = new IndexMergerV9(
@@ -180,42 +167,6 @@ public class AppenderatorsTest
       );
       emitter.start();
       EmittingLogger.registerEmitter(emitter);
-      DataSegmentPusher dataSegmentPusher = new DataSegmentPusher()
-      {
-        private boolean mustFail = true;
-
-        @Deprecated
-        @Override
-        public String getPathForHadoop(String dataSource)
-        {
-          return getPathForHadoop();
-        }
-
-        @Override
-        public String getPathForHadoop()
-        {
-          throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public DataSegment push(File file, DataSegment segment, boolean useUniquePath) throws IOException
-        {
-          if (enablePushFailure && mustFail) {
-            mustFail = false;
-            throw new IOException("Push failure test");
-          } else if (enablePushFailure) {
-            mustFail = true;
-          }
-          pushedSegments.add(segment);
-          return segment;
-        }
-
-        @Override
-        public Map<String, Object> makeLoadSpec(URI uri)
-        {
-          throw new UnsupportedOperationException();
-        }
-      };
 
       switch (batchMode) {
         case "OPEN_SEGMENTS":
@@ -224,7 +175,7 @@ public class AppenderatorsTest
               schema,
               tuningConfig,
               metrics,
-              dataSegmentPusher,
+              new NoopDataSegmentPusher(),
               objectMapper,
               indexIO,
               indexMerger,
@@ -239,7 +190,7 @@ public class AppenderatorsTest
               schema,
               tuningConfig,
               metrics,
-              dataSegmentPusher,
+              new NoopDataSegmentPusher(),
               objectMapper,
               indexIO,
               indexMerger,
@@ -255,7 +206,7 @@ public class AppenderatorsTest
               schema,
               tuningConfig,
               metrics,
-              dataSegmentPusher,
+              new NoopDataSegmentPusher(),
               objectMapper,
               indexIO,
               indexMerger,

@@ -413,7 +413,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final Set<DataSegment> segments,
       @Nullable final DataSourceMetadata startMetadata,
       @Nullable final DataSourceMetadata endMetadata
-  ) throws IOException
+  )
   {
     if (segments.isEmpty()) {
       throw new IllegalArgumentException("segment set must not be empty");
