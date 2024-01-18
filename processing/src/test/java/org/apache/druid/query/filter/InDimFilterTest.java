@@ -28,9 +28,10 @@ import com.google.common.collect.Sets;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
+import org.apache.druid.query.lookup.ImmutableLookupMap;
 import org.apache.druid.query.lookup.LookupExtractionFn;
+import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
@@ -221,7 +222,7 @@ public class InDimFilterTest extends InitializedNullHandlingTest
     final Map<String, String> lookupMap = new HashMap<>();
     lookupMap.put("abc", "def");
     lookupMap.put("foo", "bar");
-    final MapLookupExtractor lookup = new MapLookupExtractor(lookupMap, false);
+    final LookupExtractor lookup = ImmutableLookupMap.fromMap(lookupMap).asLookupExtractor(false, () -> new byte[0]);
     final LookupExtractionFn extractionFn = new LookupExtractionFn(lookup, false, null, null, true);
 
     Assert.assertEquals(
@@ -285,7 +286,7 @@ public class InDimFilterTest extends InitializedNullHandlingTest
     final Map<String, String> lookupMap = new HashMap<>();
     lookupMap.put("abc", "def");
     lookupMap.put("foo", "bar");
-    final MapLookupExtractor lookup = new MapLookupExtractor(lookupMap, false);
+    final LookupExtractor lookup = ImmutableLookupMap.fromMap(lookupMap).asLookupExtractor(false, () -> new byte[0]);
     final LookupExtractionFn extractionFn = new LookupExtractionFn(lookup, false, "baz", null, true);
 
     Assert.assertEquals(
@@ -352,7 +353,7 @@ public class InDimFilterTest extends InitializedNullHandlingTest
     lookupMap.put("nv", null);
     lookupMap.put("abc", "def");
     lookupMap.put("foo", "bar");
-    final MapLookupExtractor lookup = new MapLookupExtractor(lookupMap, false);
+    final LookupExtractor lookup = ImmutableLookupMap.fromMap(lookupMap).asLookupExtractor(false, () -> new byte[0]);
     final LookupExtractionFn extractionFn = new LookupExtractionFn(lookup, false, "bar", null, true);
 
     Assert.assertNull(
@@ -418,7 +419,7 @@ public class InDimFilterTest extends InitializedNullHandlingTest
     lookupMap.put("emptystring", "");
     lookupMap.put("abc", "def");
     lookupMap.put("foo", "bar");
-    final MapLookupExtractor lookup = new MapLookupExtractor(lookupMap, false);
+    final LookupExtractor lookup = ImmutableLookupMap.fromMap(lookupMap).asLookupExtractor(false, () -> new byte[0]);
     final LookupExtractionFn extractionFn = new LookupExtractionFn(lookup, false, "bar", null, true);
 
     Assert.assertNull(
@@ -483,7 +484,7 @@ public class InDimFilterTest extends InitializedNullHandlingTest
   {
     final Map<String, String> lookupMap = new HashMap<>();
     lookupMap.put("emptystring", "");
-    final MapLookupExtractor lookup = new MapLookupExtractor(lookupMap, false);
+    final LookupExtractor lookup = ImmutableLookupMap.fromMap(lookupMap).asLookupExtractor(false, () -> new byte[0]);
     final LookupExtractionFn extractionFn = new LookupExtractionFn(lookup, false, null, null, true);
 
     Assert.assertEquals(
@@ -513,7 +514,7 @@ public class InDimFilterTest extends InitializedNullHandlingTest
   {
     final Map<String, String> lookupMap = new HashMap<>();
     lookupMap.put("", "bar");
-    final MapLookupExtractor lookup = new MapLookupExtractor(lookupMap, false);
+    final LookupExtractor lookup = ImmutableLookupMap.fromMap(lookupMap).asLookupExtractor(false, () -> new byte[0]);
     final LookupExtractionFn extractionFn = new LookupExtractionFn(lookup, false, null, null, true);
 
     Assert.assertEquals(
@@ -544,7 +545,7 @@ public class InDimFilterTest extends InitializedNullHandlingTest
     final Map<String, String> lookupMap = new HashMap<>();
     lookupMap.put("abc", "def");
     lookupMap.put("foo", "bar");
-    final MapLookupExtractor lookup = new MapLookupExtractor(lookupMap, false);
+    final LookupExtractor lookup = ImmutableLookupMap.fromMap(lookupMap).asLookupExtractor(false, () -> new byte[0]);
     final LookupExtractionFn extractionFn = new LookupExtractionFn(lookup, true, null, null, true);
 
     Assert.assertEquals(
@@ -611,7 +612,7 @@ public class InDimFilterTest extends InitializedNullHandlingTest
     final Map<String, String> lookupMap = new HashMap<>();
     lookupMap.put("abc", "def");
     lookupMap.put("foo", "bar");
-    final MapLookupExtractor lookup = new MapLookupExtractor(lookupMap, true);
+    final LookupExtractor lookup = ImmutableLookupMap.fromMap(lookupMap).asLookupExtractor(true, () -> new byte[0]);
     final LookupExtractionFn extractionFn = new LookupExtractionFn(lookup, false, null, null, true);
 
     Assert.assertEquals(
@@ -680,7 +681,7 @@ public class InDimFilterTest extends InitializedNullHandlingTest
   {
     final Map<String, String> lookupMap = new HashMap<>();
     lookupMap.put(null, "nv");
-    final MapLookupExtractor lookup = new MapLookupExtractor(lookupMap, false);
+    final LookupExtractor lookup = ImmutableLookupMap.fromMap(lookupMap).asLookupExtractor(false, () -> new byte[0]);
     final LookupExtractionFn extractionFn = new LookupExtractionFn(lookup, false, null, null, true);
 
     Assert.assertEquals(

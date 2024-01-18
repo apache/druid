@@ -347,7 +347,10 @@ export function normalizeSpec(spec: Partial<IngestionSpec>): IngestionSpec {
   spec = deepSetIfUnset(spec, 'spec.tuningConfig.type', specType);
 
   if (spec.context?.taskLockType !== undefined) {
-    spec.context.taskLockType = spec.spec?.ioConfig.appendToExisting ? 'APPEND' : 'REPLACE';
+    spec.context.taskLockType =
+      isStreamingSpec(spec) || deepGet(spec, 'spec.ioConfig.appendToExisting')
+        ? 'APPEND'
+        : 'REPLACE';
   }
 
   return spec as IngestionSpec;

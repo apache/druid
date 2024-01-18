@@ -37,6 +37,7 @@ import org.apache.druid.segment.loading.NoopSegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
+import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus;
 import org.apache.druid.server.coordination.SegmentLoadDropHandler.Status.STATE;
@@ -176,8 +177,17 @@ public class SegmentLoadDropHandlerTest
         }
         announceCount.addAndGet(-Iterables.size(segments));
       }
-    };
 
+      @Override
+      public void announceSegmentSchemas(String taskId, SegmentSchemas segmentSchemas, SegmentSchemas segmentSchemasChange)
+      {
+      }
+
+      @Override
+      public void removeSegmentSchemasForTask(String taskId)
+      {
+      }
+    };
 
     segmentLoaderConfig = new SegmentLoaderConfig()
     {
