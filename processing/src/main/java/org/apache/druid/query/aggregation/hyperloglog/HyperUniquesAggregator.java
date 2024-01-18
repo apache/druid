@@ -39,7 +39,7 @@ public class HyperUniquesAggregator implements Aggregator
   }
 
   @Override
-  public void aggregate()
+  public synchronized void aggregate()
   {
     Object object = selector.getObject();
     if (object == null) {
@@ -53,13 +53,13 @@ public class HyperUniquesAggregator implements Aggregator
 
   @Nullable
   @Override
-  public Object get()
+  public synchronized Object get()
   {
     if (collector == null) {
       return null;
     }
-    // Workaround for non-thread-safe use of HyperLogLogCollector.
-    // OnheapIncrementalIndex has a penchant for calling "aggregate" and "get" simultaneously.
+    // Must make a new collector duplicating the underlying buffer to ensure the object from "get" is usable
+    // in a thread-safe manner.
     return HyperLogLogCollector.makeCollectorSharingStorage(collector);
   }
 

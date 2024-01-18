@@ -21,8 +21,8 @@ package org.apache.druid.segment.incremental;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -94,26 +94,40 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * In-memory, row-based data structure used to hold data during ingestion. Realtime tasks query this index using
+ * {@link IncrementalIndexStorageAdapter}.
+ *
+ * Concurrency model: {@link #add(InputRow)} and {@link #add(InputRow, boolean)} are not thread-safe, and must be
+ * called from a single thread or externally synchronized. However, the methods that support
+ * {@link IncrementalIndexStorageAdapter} are thread-safe, and may be called concurrently with each other, and with
+ * the "add" methods. This concurrency model supports real-time queries of the data in the index.
+ */
 public abstract class IncrementalIndex implements Iterable<Row>, Closeable, ColumnInspector
 {
   /**
    * Column selector used at ingestion time for inputs to aggregators.
    *
-   * @param agg                       the aggregator
-   * @param in                        ingestion-time input row supplier
+   * @param virtualColumns virtual columns
+   * @param inputRowHolder ingestion-time input row holder
+   * @param agg            the aggregator, or null to make a generic aggregator. Only required if the agg has
+   *                       {@link AggregatorFactory#getIntermediateType()} as {@link ValueType#COMPLEX}, because
+   *                       in this case we need to do some magic to ensure the correct values show up.
+   *
    * @return column selector factory
    */
   public static ColumnSelectorFactory makeColumnSelectorFactory(
       final VirtualColumns virtualColumns,
-      final AggregatorFactory agg,
-      final Supplier<InputRow> in
+      final InputRowHolder inputRowHolder,
+      @Nullable final AggregatorFactory agg
   )
   {
     // we use RowSignature.empty() because ColumnInspector here should be the InputRow schema, not the
     // IncrementalIndex schema, because we are reading values from the InputRow
-    final RowBasedColumnSelectorFactory<InputRow> baseSelectorFactory = RowBasedColumnSelectorFactory.create(
+    final RowBasedColumnSelectorFactory<InputRow> baseSelectorFactory = new RowBasedColumnSelectorFactory<>(
+        inputRowHolder::getRow,
+        inputRowHolder::getRowId,
         RowAdapters.standardRow(),
-        in,
         RowSignature.empty(),
         true,
         true
@@ -126,7 +140,7 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
       {
         final ColumnValueSelector selector = baseSelectorFactory.makeColumnValueSelector(column);
 
-        if (!agg.getIntermediateType().is(ValueType.COMPLEX)) {
+        if (agg == null || !agg.getIntermediateType().is(ValueType.COMPLEX)) {
           return selector;
         } else {
           // Wrap selector in a special one that uses ComplexMetricSerde to modify incoming objects.
@@ -176,13 +190,13 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
             public Object getObject()
             {
               // Here is where the magic happens: read from "in" directly, don't go through the normal "selector".
-              return extractor.extractValue(in.get(), column, agg);
+              return extractor.extractValue(inputRowHolder.getRow(), column, agg);
             }
 
             @Override
             public void inspectRuntimeShape(RuntimeShapeInspector inspector)
             {
-              inspector.visit("in", in);
+              inspector.visit("inputRowHolder", inputRowHolder);
               inspector.visit("selector", selector);
               inspector.visit("extractor", extractor);
             }
@@ -230,12 +244,9 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
 
   private final boolean useSchemaDiscovery;
 
-  // This is modified on add() in a critical section.
-  private final ThreadLocal<InputRow> in = new ThreadLocal<>();
-  private final Supplier<InputRow> rowSupplier = in::get;
+  private final InputRowHolder inputRowHolder = new InputRowHolder();
 
   private volatile DateTime maxIngestedEventTime;
-
 
   /**
    * @param incrementalIndexSchema    the schema to use for incremental index
@@ -277,7 +288,7 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
         this.rollup
     );
 
-    initAggs(metrics, rowSupplier);
+    initAggs(metrics, inputRowHolder);
 
     for (AggregatorFactory metric : metrics) {
       MetricDesc metricDesc = new MetricDesc(metricDescs.size(), metric);
@@ -333,15 +344,13 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
 
   protected abstract void initAggs(
       AggregatorFactory[] metrics,
-      Supplier<InputRow> rowSupplier
+      InputRowHolder rowSupplier
   );
 
-  // Note: This method needs to be thread safe.
+  // Note: This method does not need to be thread safe.
   protected abstract AddToFactsResult addToFacts(
-      InputRow row,
       IncrementalIndexRow key,
-      ThreadLocal<InputRow> rowContainer,
-      Supplier<InputRow> rowSupplier,
+      InputRowHolder inputRowHolder,
       boolean skipMaxRowsInMemoryCheck
   ) throws IndexSizeExceededException;
 
@@ -412,6 +421,34 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
     }
   }
 
+  public static class InputRowHolder
+  {
+    @Nullable
+    private InputRow row;
+    private long rowId = -1;
+
+    public void set(final InputRow row)
+    {
+      this.row = row;
+      this.rowId++;
+    }
+
+    public void unset()
+    {
+      this.row = null;
+    }
+
+    public InputRow getRow()
+    {
+      return Preconditions.checkNotNull(row, "row");
+    }
+
+    public long getRowId()
+    {
+      return rowId;
+    }
+  }
+
   public boolean isRollup()
   {
     return rollup;
@@ -474,14 +511,14 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
   /**
    * Adds a new row.  The row might correspond with another row that already exists, in which case this will
    * update that row instead of inserting a new one.
-   * <p>
-   * <p>
-   * Calls to add() are thread safe.
-   * <p>
+   *
+   * Not thread-safe.
    *
    * @param row the row of data to add
    *
    * @return the number of rows in the data set after adding the InputRow. If any parse failure occurs, a {@link ParseException} is returned in {@link IncrementalIndexAddResult}.
+   *
+   * @throws IndexSizeExceededException this exception is thrown once it reaches max rows limit and skipMaxRowsInMemoryCheck is set to false.
    */
   public IncrementalIndexAddResult add(InputRow row) throws IndexSizeExceededException
   {
@@ -491,25 +528,24 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
   /**
    * Adds a new row.  The row might correspond with another row that already exists, in which case this will
    * update that row instead of inserting a new one.
-   * <p>
-   * <p>
-   * Calls to add() are thread safe.
-   * <p>
+   *
+   * Not thread-safe.
    *
    * @param row                      the row of data to add
-   * @param skipMaxRowsInMemoryCheck whether or not to skip the check of rows exceeding the max rows limit
+   * @param skipMaxRowsInMemoryCheck whether or not to skip the check of rows exceeding the max rows or bytes limit
+   *
    * @return the number of rows in the data set after adding the InputRow. If any parse failure occurs, a {@link ParseException} is returned in {@link IncrementalIndexAddResult}.
+   *
    * @throws IndexSizeExceededException this exception is thrown once it reaches max rows limit and skipMaxRowsInMemoryCheck is set to false.
    */
   public IncrementalIndexAddResult add(InputRow row, boolean skipMaxRowsInMemoryCheck)
       throws IndexSizeExceededException
   {
     IncrementalIndexRowResult incrementalIndexRowResult = toIncrementalIndexRow(row);
+    inputRowHolder.set(row);
     final AddToFactsResult addToFactsResult = addToFacts(
-        row,
         incrementalIndexRowResult.getIncrementalIndexRow(),
-        in,
-        rowSupplier,
+        inputRowHolder,
         skipMaxRowsInMemoryCheck
     );
     updateMaxIngestedTime(row.getTimestamp());
@@ -518,6 +554,7 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
         incrementalIndexRowResult.getParseExceptionMessages(),
         addToFactsResult.getParseExceptionMessages()
     );
+    inputRowHolder.unset();
     return new IncrementalIndexAddResult(
         addToFactsResult.getRowCount(),
         addToFactsResult.getBytesInMemory(),
@@ -1022,11 +1059,11 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
   }
 
   protected ColumnSelectorFactory makeColumnSelectorFactory(
-      final AggregatorFactory agg,
-      final Supplier<InputRow> in
+      @Nullable final AggregatorFactory agg,
+      final InputRowHolder in
   )
   {
-    return makeColumnSelectorFactory(virtualColumns, agg, in);
+    return makeColumnSelectorFactory(virtualColumns, in, agg);
   }
 
   protected final Comparator<IncrementalIndexRow> dimsComparator()
