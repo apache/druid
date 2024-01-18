@@ -23,6 +23,7 @@ import com.azure.storage.blob.models.BlobStorageException;
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
 import org.apache.druid.common.utils.CurrentTimeMillisSupplier;
+import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -53,7 +54,7 @@ public class AzureTaskLogs implements TaskLogs
       AzureTaskLogsConfig config,
       AzureInputDataConfig inputDataConfig,
       AzureAccountConfig accountConfig,
-      AzureStorage azureStorage,
+      @Global AzureStorage azureStorage,
       AzureCloudBlobIterableFactory azureCloudBlobIterableFactory,
       CurrentTimeMillisSupplier timeSupplier)
   {

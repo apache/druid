@@ -21,6 +21,7 @@ package org.apache.druid.storage.azure;
 
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
+import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.SegmentLoadingException;
@@ -44,7 +45,7 @@ public class AzureDataSegmentPuller
   @Inject
   public AzureDataSegmentPuller(
       AzureByteSourceFactory byteSourceFactory,
-      AzureStorage azureStorage,
+      @Global AzureStorage azureStorage,
       AzureAccountConfig azureAccountConfig
   )
   {

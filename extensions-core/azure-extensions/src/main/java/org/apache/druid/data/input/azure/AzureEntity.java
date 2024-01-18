@@ -46,9 +46,9 @@ public class AzureEntity extends RetryingInputEntity
 
   @AssistedInject
   AzureEntity(
-      @Nonnull @Assisted("location") CloudObjectLocation location,
-      @Nonnull @Assisted("azureStorage") AzureStorage azureStorage,
-      @Nonnull @Assisted("scheme") String scheme,
+      @Nonnull @Assisted CloudObjectLocation location,
+      @Nonnull @Assisted AzureStorage azureStorage,
+      @Nonnull @Assisted String scheme,
       @Nonnull AzureByteSourceFactory byteSourceFactory
 
   )

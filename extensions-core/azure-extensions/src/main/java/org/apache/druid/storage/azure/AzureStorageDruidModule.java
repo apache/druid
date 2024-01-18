@@ -35,6 +35,7 @@ import org.apache.druid.data.input.azure.AzureStorageAccountInputSource;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
 
@@ -133,6 +134,7 @@ public class AzureStorageDruidModule implements DruidModule
   }
 
   @Provides
+  @Global
   @LazySingleton
   public AzureStorage getAzureStorageContainer(
       final AzureClientFactory azureClientFactory,
