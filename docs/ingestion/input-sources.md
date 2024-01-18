@@ -309,84 +309,8 @@ Google Cloud Storage object:
 The Azure input source reads objects directly from Azure Blob store or Azure Data Lake sources. You can
 specify objects as a list of file URI strings or prefixes. You can split the Azure input source for use with [Parallel task](./native-batch.md) indexing and each worker task reads one chunk of the split data.
 
-Sample specs:
 
-```json
-...
-    "ioConfig": {
-      "type": "index_parallel",
-      "inputSource": {
-        "type": "azure",
-        "objectGlob": "**.json",
-        "uris": ["azure://container/prefix1/file.json", "azure://container/prefix2/file2.json"]
-      },
-      "inputFormat": {
-        "type": "json"
-      },
-      ...
-    },
-...
-```
-
-```json
-...
-    "ioConfig": {
-      "type": "index_parallel",
-      "inputSource": {
-        "type": "azure",
-        "objectGlob": "**.parquet",
-        "prefixes": ["azure://container/prefix1/", "azure://container/prefix2/"]
-      },
-      "inputFormat": {
-        "type": "json"
-      },
-      ...
-    },
-...
-```
-
-
-```json
-...
-    "ioConfig": {
-      "type": "index_parallel",
-      "inputSource": {
-        "type": "azure",
-        "objectGlob": "**.json",
-        "objects": [
-          { "bucket": "container", "path": "prefix1/file1.json"},
-          { "bucket": "container", "path": "prefix2/file2.json"}
-        ]
-      },
-      "inputFormat": {
-        "type": "json"
-      },
-      ...
-    },
-...
-```
-
-|Property|Description|Default|Required|
-|--------|-----------|-------|---------|
-|type|Set the value to `azure`.|None|yes|
-|uris|JSON array of URIs where the Azure objects to be ingested are located, in the form `azure://<container>/<path-to-file>`|None|`uris` or `prefixes` or `objects` must be set|
-|prefixes|JSON array of URI prefixes for the locations of Azure objects to ingest, in the form `azure://<container>/<prefix>`. Empty objects starting with one of the given prefixes are skipped.|None|`uris` or `prefixes` or `objects` must be set|
-|objects|JSON array of Azure objects to ingest.|None|`uris` or `prefixes` or `objects` must be set|
-|objectGlob|A glob for the object part of the Azure URI. In the URI `azure://foo/bar/file.json`, the glob is applied to `bar/file.json`.<br /><br />The glob must match the entire object part, not just the filename. For example, the glob `*.json` does not match `azure://foo/bar/file.json`, because the object part is `bar/file.json`, and the`*` does not match the slash. To match all objects ending in `.json`, use `**.json` instead.<br /><br />For more information, refer to the documentation for [`FileSystem#getPathMatcher`](https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem.html#getPathMatcher-java.lang.String-).|None|no|
-|systemFields|JSON array of system fields to return as part of input rows. Possible values: `__file_uri` (Azure blob URI starting with `azure://`), `__file_bucket` (Azure bucket), and `__file_path` (Azure object path).|None|no|
-
-Note that the Azure input source skips all empty objects only when `prefixes` is specified.
-
-The `objects` property is:
-
-|Property|Description|Default|Required|
-|--------|-----------|-------|---------|
-|bucket|Name of the Azure Blob Storage or Azure Data Lake container|None|yes|
-|path|The path where data is located.|None|yes|
-
-
-### Ingesting from multiple Azure storage accounts
-To ingest from a storage account other than the one configured in `druid.azure.account`, use the `azureStorage` schema instead of the `azure` one.
+The `azure` schema is on a path towards deprecation, use the `azureStorage` schema instead.
 
 Sample specs:
 
@@ -480,6 +404,86 @@ Either set sharedAccessStorageToken OR key OR appRegistrationClientId/appRegistr
 |appRegistrationClientSecret|The client secret of the Azure App registration to authenticate as|None|Yes if `appRegistrationClientId` is provided|
 |tenantId|The tenant ID of the Azure App registration to authenticate as|None|Yes if `appRegistrationClientId` is provided|
 
+<details closed>
+  <summary>The v1 'azure' input source</summary>
+The old `azure` input source did not support specifying which storage account to ingest from so it has been deprecated.
+
+Sample specs:
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "azure",
+        "objectGlob": "**.json",
+        "uris": ["azure://container/prefix1/file.json", "azure://container/prefix2/file2.json"]
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      ...
+    },
+...
+```
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "azure",
+        "objectGlob": "**.parquet",
+        "prefixes": ["azure://container/prefix1/", "azure://container/prefix2/"]
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      ...
+    },
+...
+```
+
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "azure",
+        "objectGlob": "**.json",
+        "objects": [
+          { "bucket": "container", "path": "prefix1/file1.json"},
+          { "bucket": "container", "path": "prefix2/file2.json"}
+        ]
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      ...
+    },
+...
+```
+
+|Property|Description|Default|Required|
+|--------|-----------|-------|---------|
+|type|Set the value to `azure`.|None|yes|
+|uris|JSON array of URIs where the Azure objects to be ingested are located, in the form `azure://<container>/<path-to-file>`|None|`uris` or `prefixes` or `objects` must be set|
+|prefixes|JSON array of URI prefixes for the locations of Azure objects to ingest, in the form `azure://<container>/<prefix>`. Empty objects starting with one of the given prefixes are skipped.|None|`uris` or `prefixes` or `objects` must be set|
+|objects|JSON array of Azure objects to ingest.|None|`uris` or `prefixes` or `objects` must be set|
+|objectGlob|A glob for the object part of the Azure URI. In the URI `azure://foo/bar/file.json`, the glob is applied to `bar/file.json`.<br /><br />The glob must match the entire object part, not just the filename. For example, the glob `*.json` does not match `azure://foo/bar/file.json`, because the object part is `bar/file.json`, and the`*` does not match the slash. To match all objects ending in `.json`, use `**.json` instead.<br /><br />For more information, refer to the documentation for [`FileSystem#getPathMatcher`](https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem.html#getPathMatcher-java.lang.String-).|None|no|
+|systemFields|JSON array of system fields to return as part of input rows. Possible values: `__file_uri` (Azure blob URI starting with `azure://`), `__file_bucket` (Azure bucket), and `__file_path` (Azure object path).|None|no|
+
+Note that the Azure input source skips all empty objects only when `prefixes` is specified.
+
+The `objects` property is:
+
+|Property|Description|Default|Required|
+|--------|-----------|-------|---------|
+|bucket|Name of the Azure Blob Storage or Azure Data Lake container|None|yes|
+|path|The path where data is located.|None|yes|
+
+</details>
 
 ## HDFS input source
 
