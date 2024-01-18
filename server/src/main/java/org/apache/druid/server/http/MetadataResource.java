@@ -24,6 +24,7 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import io.netty.util.internal.UnstableApi;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.error.InvalidInput;
@@ -337,6 +338,11 @@ public class MetadataResource
     return builder.entity(Collections2.transform(segments, DataSegment::getId)).build();
   }
 
+  /**
+   * Do not use this API. It will be removed and eventually replaced by a SQL systems table.
+   */
+  @Deprecated
+  @UnstableApi
   @GET
   @Path("/datasources/{dataSourceName}/unusedSegments")
   @Produces(MediaType.APPLICATION_JSON)
