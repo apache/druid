@@ -138,7 +138,7 @@ public class KillUnusedSegments implements CoordinatorDuty
   {
     if (!canDutyRun()) {
       log.debug(
-          "Skipping KillUnusedSegments until period[%s] have elapsed after lastKillTime[%s].",
+          "Skipping KillUnusedSegments until period[%s] has elapsed after lastKillTime[%s].",
           Duration.ofMillis(period),
           lastKillTime
       );
