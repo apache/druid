@@ -15063,7 +15063,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
     msqIncompatible();
     String sql = "\n"
-        + "SELECT dim1,dim2,count(1) FROM foo GROUP BY dim2,dim1 order by dim2";
+        + "SELECT dim1,dim2,count(1) FROM foo GROUP BY dim2,dim1 order by dim1";
     ImmutableList<Object[]> expectedResults = ImmutableList.of(
         new Object[]{"", "a", 1L},
         new Object[]{"1", "a", 1L},
