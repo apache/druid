@@ -97,7 +97,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
     this.skipBytesInMemoryOverheadCheck = skipBytesInMemoryOverheadCheck == null ?
                                           DEFAULT_SKIP_BYTES_IN_MEMORY_OVERHEAD_CHECK : skipBytesInMemoryOverheadCheck;
     this.intermediatePersistPeriod =
-        intermediatePersistPeriod == null? DEFAULT_INTERMEDIATE_PERSIST_PERIOD: intermediatePersistPeriod;
+        intermediatePersistPeriod == null ? DEFAULT_INTERMEDIATE_PERSIST_PERIOD : intermediatePersistPeriod;
     this.basePersistDirectory = basePersistDirectory;
     this.maxPendingPersists = maxPendingPersists == null ? 0 : maxPendingPersists;
     this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
