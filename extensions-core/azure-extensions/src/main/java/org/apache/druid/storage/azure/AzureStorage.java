@@ -221,6 +221,8 @@ public class AzureStorage
     return azureClientFactory.getBlobServiceClient(maxAttempts, storageAccount);
   }
 
+  // This method is used in AzureCloudBlobIterator in a method where one azureStorage instance might need to list from multiple
+  // storage accounts, so storageAccount is a valid parameter.
   @VisibleForTesting
   PagedIterable<BlobItem> listBlobsWithPrefixInContainerSegmented(
       final String storageAccount,
