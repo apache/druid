@@ -238,7 +238,7 @@ public class CalciteRulesManager
 
   public List<Program> programs(final PlannerContext plannerContext)
   {
-    final boolean isDebug = true || plannerContext.queryContext().isDebug();
+    final boolean isDebug = plannerContext.queryContext().isDebug();
     final Program druidPreProgram = buildPreProgram(plannerContext, true);
     final Program bindablePreProgram = buildPreProgram(plannerContext, false);
 
@@ -269,7 +269,7 @@ public class CalciteRulesManager
    */
   private Program buildPreProgram(final PlannerContext plannerContext, final boolean isDruid)
   {
-    final boolean isDebug = true ||plannerContext.queryContext().isDebug();
+    final boolean isDebug = plannerContext.queryContext().isDebug();
 
     // Program that pre-processes the tree before letting the full-on VolcanoPlanner loose.
     final List<Program> prePrograms = new ArrayList<>();
@@ -284,8 +284,6 @@ public class CalciteRulesManager
     if (isDruid) {
       prePrograms.add(buildPreVolcanoManipulationProgram(plannerContext));
       prePrograms.add(new LoggingProgram("Finished pre-Volcano manipulation program", isDebug));
-//      prePrograms.add(buildReductionProgram(plannerContext, true));
-//      prePrograms.add(new LoggingProgram("Finished reduction II program", isDebug));
     }
 
     return Programs.sequence(prePrograms.toArray(new Program[0]));
@@ -306,21 +304,8 @@ public class CalciteRulesManager
       builder.addRuleInstance(CoreRules.FILTER_INTO_JOIN);
     }
 
-//    builder.addRuleInstance(CoreRules.FILTER_PROJECT_TRANSPOSE);
-//    builder.addRuleInstance(CoreRules.PROJECT_MERGE);
-////    builder.addRuleInstance(CoreRules.PROJECT_AGGREGATE_MERGE);
-//    builder.addRuleInstance(CoreRules.AGGREGATE_PROJECT_MERGE);
     // Apply SORT_PROJECT_TRANSPOSE to match the expected order of "sort" and "sortProject" in PartialDruidQuery.
     builder.addRuleInstance(CoreRules.SORT_PROJECT_TRANSPOSE);
-
-//    builder.addRuleInstance(CoreRules.FILTER_PROJECT_TRANSPOSE);
-//    builder.addRuleInstance(CoreRules.PROJECT_MERGE);
-//    builder.addRuleInstance(CoreRules.PROJECT_AGGREGATE_MERGE);
-//    builder.addRuleInstance(CoreRules.AGGREGATE_PROJECT_MERGE);
-//CoreRules.PROJECT_AGGREGATE_MERGE,
-//CoreRules.AGGREGATE_PROJECT_MERGE,
-//CoreRules.SORT_PROJECT_TRANSPOSE,
-
 
     return Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE);
   }
