@@ -15054,6 +15054,31 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .run();
   }
 
+
+  @NotYetSupported(Modes.CANNOT_TRANSLATE)
+  @Test
+  public void testWindowingWithScanAndSortX()
+  {
+    skipVectorize();
+    cannotVectorize();
+    msqIncompatible();
+    String sql = "\n"
+        + "SELECT dim1,dim2,count(1) FROM foo GROUP BY dim2,dim1 order by dim2";
+    ImmutableList<Object[]> expectedResults = ImmutableList.of(
+        new Object[]{"", "a", 1L},
+        new Object[]{"1", "a", 1L},
+        new Object[]{"10.1", null, 1L},
+        new Object[]{"2", "", 1L},
+        new Object[]{"abc", null, 1L},
+        new Object[]{"def", "abc", 1L}
+    );
+
+    testBuilder()
+        .sql(sql)
+        .expectedResults(expectedResults)
+        .run();
+  }
+
   @NotYetSupported(Modes.CANNOT_TRANSLATE)
   @Test
   public void testWindowingWithOrderBy()

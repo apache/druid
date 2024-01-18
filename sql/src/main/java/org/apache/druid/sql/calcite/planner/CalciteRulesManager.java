@@ -143,7 +143,7 @@ public class CalciteRulesManager
           CoreRules.PROJECT_VALUES_MERGE,
           CoreRules.PROJECT_MERGE,
           CoreRules.FILTER_MERGE,
-          CoreRules.AGGREGATE_PROJECT_MERGE,
+//          CoreRules.AGGREGATE_PROJECT_MERGE,
 //          CoreRules.PROJECT_FILTER_TRANSPOSE,
           CoreRules.FILTER_PROJECT_TRANSPOSE,
           CoreRules.PROJECT_MERGE,
