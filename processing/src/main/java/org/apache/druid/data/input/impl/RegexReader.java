@@ -39,7 +39,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class RegexReader extends TextReader
+public class RegexReader extends TextReader.Strings
 {
   private final String pattern;
   private final Pattern compiledPattern;

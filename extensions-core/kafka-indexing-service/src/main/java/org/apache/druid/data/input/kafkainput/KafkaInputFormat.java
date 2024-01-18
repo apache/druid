@@ -26,6 +26,7 @@ import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.ByteEntity;
+import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.indexing.seekablestream.SettableByteEntity;
@@ -109,12 +110,12 @@ public class KafkaInputFormat implements InputFormat
             record ->
                 (record.getRecord().key() == null) ?
                     null :
-                    keyFormat.createReader(
+                    JsonInputFormat.withLineSplittable(keyFormat, false).createReader(
                         newInputRowSchema,
                         new ByteEntity(record.getRecord().key()),
                         temporaryDirectory
                     ),
-        valueFormat.createReader(
+        JsonInputFormat.withLineSplittable(valueFormat, false).createReader(
             newInputRowSchema,
             source,
             temporaryDirectory
