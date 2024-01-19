@@ -160,9 +160,9 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
     // But shuffle spec for window was d1
     // example query
     // select m1,m2,
-    // SUM(m2) OVER(PARTITION BY m1) summ1
+    // SUM(m1) OVER(PARTITION BY m2) summ1
     // from foo
-    // GROUP BY m2, m1
+    // GROUP BY m1, m2
 
     // create the shufflespec from the column in the context
     final ShuffleSpec nextShuffleWindowSpec;
@@ -175,34 +175,61 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
     } else {
       nextShuffleWindowSpec = null;
     }
+    final ShuffleSpec stageShuffleSpec;
+    if (shuffleSpecFactoryPostAggregation != null) {
+      List<KeyColumn> columns = resultClusterBy.getColumns();
+      if (nextShuffleWindowSpec != null) {
+        columns.addAll(nextShuffleWindowSpec.clusterBy().getColumns());
+      }
+      stageShuffleSpec = shuffleSpecFactoryPostAggregation.build(new ClusterBy(columns, maxWorkerCount), false);
+    } else {
+      stageShuffleSpec = nextShuffleWindowSpec;
+    }
 
-    queryDefBuilder.add(
-        StageDefinition.builder(firstStageNumber + 1)
-                       .inputs(new StageInputSpec(firstStageNumber))
-                       .signature(resultSignature)
-                       .maxWorkerCount(maxWorkerCount)
-                       .shuffleSpec(
-                           shuffleSpecFactoryPostAggregation != null
-                           ? shuffleSpecFactoryPostAggregation.build(resultClusterBy, false)
-                           : nextShuffleWindowSpec
-                       )
-                       .processorFactory(new GroupByPostShuffleFrameProcessorFactory(queryToRun))
+    final RowSignature stageSignature = QueryKitUtils.sortableSignature(
+        resultSignature,
+        stageShuffleSpec.clusterBy().getColumns()
     );
 
     if (doLimitOrOffset) {
+      queryDefBuilder.add(
+          StageDefinition.builder(firstStageNumber + 1)
+                         .inputs(new StageInputSpec(firstStageNumber))
+                         .signature(resultSignature)
+                         .maxWorkerCount(maxWorkerCount)
+                         .shuffleSpec(
+                             shuffleSpecFactoryPostAggregation != null
+                             ? shuffleSpecFactoryPostAggregation.build(resultClusterBy, false)
+                             : null
+                         )
+                         .processorFactory(new GroupByPostShuffleFrameProcessorFactory(queryToRun))
+      );
       final DefaultLimitSpec limitSpec = (DefaultLimitSpec) queryToRun.getLimitSpec();
       queryDefBuilder.add(
           StageDefinition.builder(firstStageNumber + 2)
                          .inputs(new StageInputSpec(firstStageNumber + 1))
                          .signature(resultSignature)
                          .maxWorkerCount(1)
-                         .shuffleSpec(nextShuffleWindowSpec) // no shuffling should be required after a limit processor.
+                         // no shuffling should be required after a limit processor.
+                         // but need one if the next stage is a window with a partition by
+                         .shuffleSpec(nextShuffleWindowSpec)
                          .processorFactory(
                              new OffsetLimitFrameProcessorFactory(
                                  limitSpec.getOffset(),
                                  limitSpec.isLimited() ? (long) limitSpec.getLimit() : null
                              )
                          )
+      );
+    } else {
+      queryDefBuilder.add(
+          StageDefinition.builder(firstStageNumber + 1)
+                         .inputs(new StageInputSpec(firstStageNumber))
+                         .signature(stageSignature)
+                         .maxWorkerCount(maxWorkerCount)
+                         .shuffleSpec(
+                             stageShuffleSpec
+                         )
+                         .processorFactory(new GroupByPostShuffleFrameProcessorFactory(queryToRun))
       );
     }
 

@@ -919,19 +919,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
-
-  @Test
-  public void testSingleAgg()
-  {
-    msqIncompatible();
-    testQuery(
-        "SELECT count(*) FROM foo where m1 >= (select max(m1) - 4 from foo)",
-        ImmutableList.of(),
-        ImmutableList.of(
-            new Object[]{2.0f}
-        )
-    );
-  }
   
   // This test the off-heap (buffer) version of the AnyAggregator (Double/Float/Long) against numeric columns
   // that have null values (when run in SQL compatible null mode)

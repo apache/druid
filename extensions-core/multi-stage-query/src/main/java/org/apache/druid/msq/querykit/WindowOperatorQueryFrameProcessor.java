@@ -27,9 +27,9 @@ import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.FrameProcessors;
+import org.apache.druid.frame.processor.FrameRowTooLargeException;
 import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.frame.read.FrameReader;
-import org.apache.druid.frame.util.SettableLongVirtualColumn;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.Unit;
@@ -52,12 +52,7 @@ import org.apache.druid.query.rowsandcols.semantic.ColumnSelectorFactoryMaker;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.segment.SimpleAscendingOffset;
-import org.apache.druid.segment.SimpleSettableOffset;
-import org.apache.druid.segment.VirtualColumn;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
@@ -65,6 +60,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -77,25 +73,16 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
 
   private final List<OperatorFactory> operatorFactoryList;
   private final ObjectMapper jsonMapper;
-  private final SettableLongVirtualColumn partitionBoostVirtualColumn;
-  private final VirtualColumns frameWriterVirtualColumns;
   private final Closer closer = Closer.create();
   private final RowSignature outputStageSignature;
-  private final SimpleSettableOffset cursorOffset = new SimpleAscendingOffset(Integer.MAX_VALUE);
-
-  private Segment segment;
-
+  private final ArrayList<RowsAndColumns> frameRowsAndCols;
+  private final ArrayList<RowsAndColumns> resultRowAndCols;
+  ArrayList<ResultRow> objectsOfASingleRac;
   private long currentAllocatorCapacity; // Used for generating FrameRowTooLargeException if needed
   private Cursor frameCursor = null;
   private Supplier<ResultRow> rowSupplierFromFrameCursor;
   private ResultRow outputRow = null;
   private FrameWriter frameWriter = null;
-
-  private ArrayList<RowsAndColumns> frameRowsAndCols;
-
-  private ArrayList<RowsAndColumns> resultRowAndCols;
-
-  ArrayList<ResultRow> objectsOfASingleRac;
 
   public WindowOperatorQueryFrameProcessor(
       final WindowOperatorQuery query,
@@ -116,21 +103,8 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
     );
     this.query = query;
     this.jsonMapper = jsonMapper;
-    this.partitionBoostVirtualColumn = new SettableLongVirtualColumn(QueryKitUtils.PARTITION_BOOST_COLUMN);
     this.operatorFactoryList = operatorFactoryList;
     this.outputStageSignature = rowSignature;
-
-    final List<VirtualColumn> frameWriterVirtualColumns = new ArrayList<>();
-    frameWriterVirtualColumns.add(partitionBoostVirtualColumn);
-
-    final VirtualColumn segmentGranularityVirtualColumn =
-        QueryKitUtils.makeSegmentGranularityVirtualColumn(jsonMapper, query);
-
-    if (segmentGranularityVirtualColumn != null) {
-      frameWriterVirtualColumns.add(segmentGranularityVirtualColumn);
-    }
-
-    this.frameWriterVirtualColumns = VirtualColumns.create(frameWriterVirtualColumns);
     this.frameRowsAndCols = new ArrayList<>();
     this.resultRowAndCols = new ArrayList<>();
     this.objectsOfASingleRac = new ArrayList<>();
@@ -191,7 +165,7 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
      *
      *
      * Frame 2 -> rac2
-     * 3, 1
+     * 3, 1 --> key changed
      * 3, 2
      * 3, 3
      * 3, 4
@@ -200,8 +174,7 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
      *
      * 3, 5
      * 3, 6
-     * ---------------
-     * 4, 1
+     * 4, 1 --> key changed
      * 4, 2
      *
      * In case of empty OVER clause, all these racs need to be added to a single rows and columns
@@ -240,7 +213,6 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
     // eagerly validate presence of empty OVER() clause
     boolean status = checkEagerlyForEmptyWindow(operatorFactoryList);
     List<Integer> partitionColsIndex = null;
-    //status = true;
     if (status) {
       // if OVER() found
       // convert each frame to rac
@@ -250,7 +222,7 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
         final Frame frame = inputChannel.read();
         convertRowFrameToRowsAndColumns(frame, inputFrameReader.signature());
       } else if (inputChannel.isFinished()) {
-        runAllOpsOnRowsAndColumns();
+        runAllOpsOnMultipleRac(frameRowsAndCols);
         return ReturnOrAwait.returnObject(Unit.instance());
       } else {
         return ReturnOrAwait.awaitAll(inputChannels().size());
@@ -287,12 +259,12 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
           // reaached end of channel
           // if there is data remaining
           // write it into a rac
+          // and run operators on it
           if (!objectsOfASingleRac.isEmpty()) {
             RowsAndColumns rac = MapOfColumnsRowsAndColumns.fromResultRow(
                 objectsOfASingleRac,
                 inputFrameReader.signature()
             );
-            // run operators on this rac
             runAllOpsOnSingleRac(rac);
             objectsOfASingleRac.clear();
           }
@@ -308,15 +280,18 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
           outputRow = currentRow.copy();
           objectsOfASingleRac.add(currentRow);
         } else if (comparePartitionKeys(outputRow, currentRow, partitionColsIndex)) {
+          // if they have the same partition key
+          // keep adding them
           objectsOfASingleRac.add(currentRow);
-
         } else {
-          // create the rac from the rows you have seen before
+          // key change noted
+          // create rac from the rows seen before
+          // run the operators on this rows and columns
+          // clean up the object to hold the new row only
           RowsAndColumns rac = MapOfColumnsRowsAndColumns.fromResultRow(
               objectsOfASingleRac,
               inputFrameReader.signature()
           );
-          // run operators on this rac
           runAllOpsOnSingleRac(rac);
           objectsOfASingleRac.clear();
           outputRow = currentRow.copy();
@@ -336,7 +311,7 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
     } else {
       int match = 0;
       for (int i : partitionIndices) {
-        if (row1.get(i).equals(row2.get(i))) {
+        if (Objects.equals(row1.get(i), row2.get(i))) {
           match++;
         }
       }
@@ -369,6 +344,54 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
     return false;
   }
 
+
+  private void runOperatorsAfterThis(Operator op)
+  {
+    for (OperatorFactory of : operatorFactoryList) {
+      op = of.wrap(op);
+    }
+    Operator.go(op, new Operator.Receiver()
+    {
+      @Override
+      public Operator.Signal push(RowsAndColumns rac)
+      {
+        resultRowAndCols.add(rac);
+        return Operator.Signal.GO;
+      }
+
+      @Override
+      public void completed()
+      {
+        try {
+          flushAllRowsAndCols(resultRowAndCols);
+        }
+        catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+        finally {
+          resultRowAndCols.clear();
+        }
+      }
+    });
+  }
+
+  private void runAllOpsOnMultipleRac(ArrayList<RowsAndColumns> listOfRacs)
+  {
+    Operator op = new Operator()
+    {
+      @Nullable
+      @Override
+      public Closeable goOrContinue(Closeable continuationObject, Receiver receiver)
+      {
+        RowsAndColumns rac = new ConcatRowsAndColumns(listOfRacs);
+        receiver.push(rac);
+        receiver.completed();
+        return null;
+      }
+    };
+    runOperatorsAfterThis(op);
+  }
+
   private void runAllOpsOnSingleRac(RowsAndColumns singleRac)
   {
     Operator op = new Operator()
@@ -382,75 +405,7 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
         return null;
       }
     };
-    for (OperatorFactory of : operatorFactoryList) {
-      op = of.wrap(op);
-    }
-    Operator.go(op, new Operator.Receiver()
-    {
-      @Override
-      public Operator.Signal push(RowsAndColumns rac)
-      {
-        resultRowAndCols.add(rac);
-        return Operator.Signal.GO;
-      }
-
-      @Override
-      public void completed()
-      {
-        try {
-          flushAllRowsAndCols(resultRowAndCols);
-        }
-        catch (IOException e) {
-          throw new RuntimeException(e);
-        }
-        finally {
-          resultRowAndCols.clear();
-        }
-      }
-    });
-
-  }
-
-  private void runAllOpsOnRowsAndColumns()
-  {
-    Operator op = new Operator()
-    {
-      @Nullable
-      @Override
-      public Closeable goOrContinue(Closeable continuationObject, Receiver receiver)
-      {
-        RowsAndColumns rac = new ConcatRowsAndColumns(frameRowsAndCols);
-        receiver.push(rac);
-        receiver.completed();
-        return null;
-      }
-    };
-    for (OperatorFactory of : operatorFactoryList) {
-      op = of.wrap(op);
-    }
-    Operator.go(op, new Operator.Receiver()
-    {
-      @Override
-      public Operator.Signal push(RowsAndColumns rac)
-      {
-        resultRowAndCols.add(rac);
-        return Operator.Signal.GO;
-      }
-
-      @Override
-      public void completed()
-      {
-        try {
-          flushAllRowsAndCols(resultRowAndCols);
-        }
-        catch (IOException e) {
-          throw new RuntimeException(e);
-        }
-        finally {
-          resultRowAndCols.clear();
-        }
-      }
-    });
+    runOperatorsAfterThis(op);
   }
 
   private void convertRowFrameToRowsAndColumns(Frame frame, RowSignature signature)
@@ -470,47 +425,29 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
 
   private void flushAllRowsAndCols(ArrayList<RowsAndColumns> resultRowAndCols) throws IOException
   {
-    // add bells and whistles on framewriter row size etc
     RowsAndColumns rac = new ConcatRowsAndColumns(resultRowAndCols);
     rac.getColumnNames();
     AtomicInteger rowId = new AtomicInteger(0);
     createFrameWriterIfNeeded(rac, rowId);
-    materializeRacToRowFrames(rac, outputStageSignature, rowId);
-    try {
-      flushFrameWriter();
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    writeRacToFrame(rac, outputStageSignature, rowId);
   }
 
-  public void materializeRacToRowFrames(RowsAndColumns rac, RowSignature outputSignature, AtomicInteger rowId)
+  public void writeRacToFrame(RowsAndColumns rac, RowSignature outputSignature, AtomicInteger rowId) throws IOException
   {
     final int numRows = rac.numRows();
-
-
-    // 3 rac
-    /**
-     * r1 r2 r3
-     * m1, m2, m3
-     * 1, 2, 3
-     * 1, 4, 5
-     * 2, 2, 3
-     * 2, 4, 5
-     * 3, 2, 3
-     * 3, 4, 5
-     *
-     * 3 rac
-     *
-     * each rac1, rac2, rac3 2 rows each
-     * 1, 2, 3,
-     * 1, 4, 5
-     *
-     */
     rowId.set(0);
-    for (; rowId.get() < numRows; rowId.incrementAndGet()) {
-      frameWriter.addSelection();
+    while (rowId.get() < numRows) {
+      final boolean didAddToFrame = frameWriter.addSelection();
+      if (didAddToFrame) {
+        rowId.incrementAndGet();
+      } else if (frameWriter.getNumRows() == 0) {
+        throw new FrameRowTooLargeException(currentAllocatorCapacity);
+      } else {
+        flushFrameWriter();
+        return;
+      }
     }
+    flushFrameWriter();
   }
 
   private void createFrameWriterIfNeeded(RowsAndColumns rac, AtomicInteger rowId)
@@ -522,6 +459,14 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
       frameWriter = frameWriterFactory.newFrameWriter(frameWriterColumnSelectorFactory);
       currentAllocatorCapacity = frameWriterFactory.allocatorCapacity();
     }
+  }
+
+  @Override
+  public void cleanup() throws IOException
+  {
+    closer.register(frameWriter);
+    closer.register(super::cleanup);
+    closer.close();
   }
 
   private long flushFrameWriter() throws IOException
@@ -537,7 +482,6 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
         frameWriter.close();
         frameWriter = null;
       }
-
       return 0;
     }
   }

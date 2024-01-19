@@ -63,7 +63,6 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
   @Override
   public List<ReadableFrameChannel> inputChannels()
   {
-    // somu: need to clarify if the data is in broker only
     if (baseInput.hasSegment()) {
       return Collections.emptyList();
     } else {

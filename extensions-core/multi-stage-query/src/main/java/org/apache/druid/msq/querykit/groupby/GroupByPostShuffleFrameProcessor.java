@@ -149,23 +149,18 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Object>
         }
 
         final int fullRowSize = query.getResultRowSignature().size();
-        rowSupplierFromFrameCursor = new Supplier<ResultRow>()
-        {
-          @Override
-          public ResultRow get()
-          {
-            final ResultRow row = ResultRow.create(fullRowSize);
-            for (int i = 0; i < fieldSuppliers.length; i++) {
-              row.set(i, fieldSuppliers[i].get());
-            }
-
-            for (int i = fieldSuppliers.length; i < fullRowSize; i++) {
-              // Post-aggregators.
-              row.set(i, null);
-            }
-
-            return row;
+        rowSupplierFromFrameCursor = () -> {
+          final ResultRow row = ResultRow.create(fullRowSize);
+          for (int i = 0; i < fieldSuppliers.length; i++) {
+            row.set(i, fieldSuppliers[i].get());
           }
+
+          for (int i = fieldSuppliers.length; i < fullRowSize; i++) {
+            // Post-aggregators.
+            row.set(i, null);
+          }
+
+          return row;
         };
       }
     }
