@@ -84,7 +84,9 @@ public class KafkaEmitter implements Emitter
     this.alertQueue = new MemoryBoundLinkedBlockingQueue<>(queueMemoryBound);
     this.requestQueue = new MemoryBoundLinkedBlockingQueue<>(queueMemoryBound);
     this.segmentMetadataQueue = new MemoryBoundLinkedBlockingQueue<>(queueMemoryBound);
-    this.scheduler = Executors.newScheduledThreadPool(4);
+    // need one thread per scheduled task. Scheduled tasks are per eventType and 1 for reporting the lost events
+    int numOfThreads = config.getEventTypes().size() + 1;
+    this.scheduler = Executors.newScheduledThreadPool(numOfThreads);
     this.metricLost = new AtomicLong(0L);
     this.alertLost = new AtomicLong(0L);
     this.requestLost = new AtomicLong(0L);

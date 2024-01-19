@@ -181,6 +181,29 @@ public class AzureTaskLogsTest extends EasyMockSupport
     }
   }
 
+  @Test
+  public void test_PushTaskPayload_uploadsBlob() throws Exception
+  {
+    final File tmpDir = FileUtils.createTempDir();
+
+    try {
+      final File taskFile = new File(tmpDir, "task.json");
+
+      EasyMock.expect(accountConfig.getMaxTries()).andReturn(MAX_TRIES).anyTimes();
+      azureStorage.uploadBlockBlob(taskFile, CONTAINER, PREFIX + "/" + TASK_ID + "/task.json", MAX_TRIES);
+      EasyMock.expectLastCall();
+
+      replayAll();
+
+      azureTaskLogs.pushTaskPayload(TASK_ID, taskFile);
+
+      verifyAll();
+    }
+    finally {
+      FileUtils.deleteDirectory(tmpDir);
+    }
+  }
+
   @Test(expected = RuntimeException.class)
   public void test_PushTaskReports_exception_rethrowsException() throws Exception
   {
@@ -421,6 +444,80 @@ public class AzureTaskLogsTest extends EasyMockSupport
 
     verifyAll();
   }
+
+  @Test
+  public void test_streamTaskPayload_blobExists_succeeds() throws Exception
+  {
+    final String taskPayload = "{}";
+
+    final String blobPath = PREFIX + "/" + TASK_ID + "/task.json";
+    EasyMock.expect(azureStorage.getBlockBlobExists(CONTAINER, blobPath)).andReturn(true);
+    EasyMock.expect(azureStorage.getBlockBlobLength(CONTAINER, blobPath)).andReturn((long) taskPayload.length());
+    EasyMock.expect(azureStorage.getBlockBlobInputStream(CONTAINER, blobPath)).andReturn(
+        new ByteArrayInputStream(taskPayload.getBytes(StandardCharsets.UTF_8)));
+
+
+    replayAll();
+
+    final Optional<InputStream> stream = azureTaskLogs.streamTaskPayload(TASK_ID);
+
+    final StringWriter writer = new StringWriter();
+    IOUtils.copy(stream.get(), writer, "UTF-8");
+    Assert.assertEquals(writer.toString(), taskPayload);
+
+    verifyAll();
+  }
+
+  @Test
+  public void test_streamTaskPayload_blobDoesNotExist_returnsAbsent() throws Exception
+  {
+    final String blobPath = PREFIX + "/" + TASK_ID_NOT_FOUND + "/task.json";
+    EasyMock.expect(azureStorage.getBlockBlobExists(CONTAINER, blobPath)).andReturn(false);
+
+    replayAll();
+
+    final Optional<InputStream> stream = azureTaskLogs.streamTaskPayload(TASK_ID_NOT_FOUND);
+
+
+    Assert.assertFalse(stream.isPresent());
+
+    verifyAll();
+  }
+
+  @Test(expected = IOException.class)
+  public void test_streamTaskPayload_exceptionWhenGettingStream_throwsException() throws Exception
+  {
+    final String taskPayload = "{}";
+
+    final String blobPath = PREFIX + "/" + TASK_ID + "/task.json";
+    EasyMock.expect(azureStorage.getBlockBlobExists(CONTAINER, blobPath)).andReturn(true);
+    EasyMock.expect(azureStorage.getBlockBlobLength(CONTAINER, blobPath)).andReturn((long) taskPayload.length());
+    EasyMock.expect(azureStorage.getBlockBlobInputStream(CONTAINER, blobPath)).andThrow(
+        new BlobStorageException("", null, null));
+
+
+    replayAll();
+
+    final Optional<InputStream> stream = azureTaskLogs.streamTaskPayload(TASK_ID);
+
+    final StringWriter writer = new StringWriter();
+    IOUtils.copy(stream.get(), writer, "UTF-8");
+    verifyAll();
+  }
+
+  @Test(expected = IOException.class)
+  public void test_streamTaskPayload_exceptionWhenCheckingBlobExistence_throwsException() throws Exception
+  {
+    final String blobPath = PREFIX + "/" + TASK_ID + "/task.json";
+    EasyMock.expect(azureStorage.getBlockBlobExists(CONTAINER, blobPath)).andThrow(new BlobStorageException("", null, null));
+
+    replayAll();
+
+    azureTaskLogs.streamTaskPayload(TASK_ID);
+
+    verifyAll();
+  }
+
 
   @Test
   public void test_killAll_noException_deletesAllTaskLogs() throws Exception

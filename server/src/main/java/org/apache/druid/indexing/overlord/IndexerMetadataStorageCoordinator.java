@@ -24,6 +24,7 @@ import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.PartialShardSpec;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -127,20 +128,16 @@ public interface IndexerMetadataStorageCoordinator
   );
 
   /**
-   * see {@link #retrieveUnusedSegmentsForInterval(String, Interval, Integer)}
-   */
-  default List<DataSegment> retrieveUnusedSegmentsForInterval(String dataSource, Interval interval)
-  {
-    return retrieveUnusedSegmentsForInterval(dataSource, interval, null);
-  }
-
-  /**
    * Retrieve all published segments which include ONLY data within the given interval and are marked as unused from the
    * metadata store.
    *
    * @param dataSource  The data source the segments belong to
    * @param interval    Filter the data segments to ones that include data in this interval exclusively.
    * @param limit The maximum number of unused segments to retreive. If null, no limit is applied.
+   * @param maxUsedStatusLastUpdatedTime The maximum {@code used_status_last_updated} time. Any unused segment in {@code interval}
+   *                                   with {@code used_status_last_updated} no later than this time will be included in the
+   *                                   kill task. Segments without {@code used_status_last_updated} time (due to an upgrade
+   *                                   from legacy Druid) will have {@code maxUsedStatusLastUpdatedTime} ignored
    *
    * @return DataSegments which include ONLY data within the requested interval and are marked as unused. Segments NOT
    * returned here may include data in the interval
@@ -148,7 +145,8 @@ public interface IndexerMetadataStorageCoordinator
   List<DataSegment> retrieveUnusedSegmentsForInterval(
       String dataSource,
       Interval interval,
-      @Nullable Integer limit
+      @Nullable Integer limit,
+      @Nullable DateTime maxUsedStatusLastUpdatedTime
   );
 
   /**

@@ -926,7 +926,7 @@ public class OverlordResourceTest
         auditManager
     );
 
-    Task task = new KillUnusedSegmentsTask("kill_all", "allow", Intervals.ETERNITY, null, false, 10, null);
+    Task task = new KillUnusedSegmentsTask("kill_all", "allow", Intervals.ETERNITY, null, false, 10, null, null);
     overlordResource.taskPost(task, req);
 
     Assert.assertTrue(auditEntryCapture.hasCaptured());
