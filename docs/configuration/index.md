@@ -378,7 +378,7 @@ You can configure Druid services to emit [metrics](../operations/metrics.md) reg
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.monitoring.emissionPeriod`| Frequency that Druid emits metrics.|`PT1M`|
-|[`druid.monitoring.monitors`](#metrics-monitors)|Sets list of Druid monitors used by a service.|none (no monitors)|
+|[`druid.monitoring.monitors`](#metrics-monitors)|Sets list of Druid monitors used by a service.<br /><br />Because individual monitors sometimes only work on specific process types, it is best to set this property for each process type individually in e.g. `historical/runtime.properties` rather than `_common/common.runtime.properties`.|none (no monitors)|
 |[`druid.emitter`](#metrics-emitters)|Setting this value initializes one of the emitter modules.|`noop` (metric emission disabled by default)|
 
 #### Metrics monitors
