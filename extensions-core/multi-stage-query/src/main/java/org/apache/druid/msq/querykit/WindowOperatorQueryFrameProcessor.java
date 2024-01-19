@@ -110,32 +110,6 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
     this.objectsOfASingleRac = new ArrayList<>();
   }
 
-  private static Operator getOperator(RowBasedFrameRowAndColumns frameRowsAndColumns)
-  {
-    LazilyDecoratedRowsAndColumns ldrc = new LazilyDecoratedRowsAndColumns(
-        frameRowsAndColumns,
-        null,
-        null,
-        null,
-        OffsetLimit.limit(Integer.MAX_VALUE),
-        null,
-        null
-    );
-    // Create an operator on top of the created rows and columns
-    Operator op = new Operator()
-    {
-      @Nullable
-      @Override
-      public Closeable goOrContinue(Closeable continuationObject, Receiver receiver)
-      {
-        receiver.push(ldrc);
-        receiver.completed();
-        return null;
-      }
-    };
-    return op;
-  }
-
   @Override
   protected ReturnOrAwait<Unit> runWithSegment(SegmentWithDescriptor segment)
   {

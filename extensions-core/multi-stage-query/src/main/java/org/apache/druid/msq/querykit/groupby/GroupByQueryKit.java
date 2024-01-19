@@ -181,15 +181,21 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
       if (nextShuffleWindowSpec != null) {
         columns.addAll(nextShuffleWindowSpec.clusterBy().getColumns());
       }
-      stageShuffleSpec = shuffleSpecFactoryPostAggregation.build(new ClusterBy(columns, maxWorkerCount), false);
+      stageShuffleSpec = shuffleSpecFactoryPostAggregation.build(resultClusterBy, false);
+      // Q for Karan, if there is a postagg, how can the windowing for next stage can be added ?
+      //stageShuffleSpec = shuffleSpecFactoryPostAggregation.build(new ClusterBy(columns, maxWorkerCount), false);
     } else {
       stageShuffleSpec = nextShuffleWindowSpec;
     }
-
-    final RowSignature stageSignature = QueryKitUtils.sortableSignature(
-        resultSignature,
-        stageShuffleSpec.clusterBy().getColumns()
-    );
+    final RowSignature stageSignature;
+    if (stageShuffleSpec == null) {
+      stageSignature = resultSignature;
+    } else {
+      stageSignature = QueryKitUtils.sortableSignature(
+          resultSignature,
+          stageShuffleSpec.clusterBy().getColumns()
+      );
+    }
 
     if (doLimitOrOffset) {
       queryDefBuilder.add(
