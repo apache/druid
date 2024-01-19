@@ -60,7 +60,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -131,7 +130,7 @@ public class MaterializedViewSupervisorTest
   }
 
   @Test
-  public void testCheckSegments() throws IOException
+  public void testCheckSegments()
   {
     Set<DataSegment> baseSegments = Sets.newHashSet(
         new DataSegment(
@@ -237,7 +236,7 @@ public class MaterializedViewSupervisorTest
   }
 
   @Test
-  public void testCheckSegmentsAndSubmitTasks() throws IOException
+  public void testCheckSegmentsAndSubmitTasks()
   {
     Set<DataSegment> baseSegments = Sets.newHashSet(
         new DataSegment(

@@ -32,7 +32,6 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -48,7 +47,7 @@ public class RetrieveSegmentsActionsTest
   private static Set<DataSegment> expectedUsedSegments;
 
   @BeforeClass
-  public static void setup() throws IOException
+  public static void setup()
   {
     task = NoopTask.create();
 

@@ -58,7 +58,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
@@ -402,7 +401,7 @@ public class SegmentAllocateActionTest
   }
 
   @Test
-  public void testSegmentIsAllocatedForLatestUsedSegmentVersion() throws IOException
+  public void testSegmentIsAllocatedForLatestUsedSegmentVersion()
   {
     final Task task = NoopTask.create();
     taskActionTestKit.getTaskLockbox().add(task);
@@ -634,7 +633,7 @@ public class SegmentAllocateActionTest
   }
 
   @Test
-  public void testAddToExistingLinearShardSpecsSameGranularity() throws Exception
+  public void testAddToExistingLinearShardSpecsSameGranularity()
   {
     final Task task = NoopTask.create();
 
@@ -699,7 +698,7 @@ public class SegmentAllocateActionTest
   }
 
   @Test
-  public void testAddToExistingNumberedShardSpecsSameGranularity() throws Exception
+  public void testAddToExistingNumberedShardSpecsSameGranularity()
   {
     final Task task = NoopTask.create();
 
@@ -762,7 +761,7 @@ public class SegmentAllocateActionTest
   }
 
   @Test
-  public void testAddToExistingNumberedShardSpecsCoarserPreferredGranularity() throws Exception
+  public void testAddToExistingNumberedShardSpecsCoarserPreferredGranularity()
   {
     final Task task = NoopTask.create();
 
@@ -801,7 +800,7 @@ public class SegmentAllocateActionTest
   }
 
   @Test
-  public void testAddToExistingNumberedShardSpecsFinerPreferredGranularity() throws Exception
+  public void testAddToExistingNumberedShardSpecsFinerPreferredGranularity()
   {
     final Task task = NoopTask.create();
 
@@ -840,7 +839,7 @@ public class SegmentAllocateActionTest
   }
 
   @Test
-  public void testCannotAddToExistingNumberedShardSpecsWithCoarserQueryGranularity() throws Exception
+  public void testCannotAddToExistingNumberedShardSpecsWithCoarserQueryGranularity()
   {
     final Task task = NoopTask.create();
 
@@ -882,7 +881,7 @@ public class SegmentAllocateActionTest
   }
 
   @Test
-  public void testWithPartialShardSpecAndOvershadowingSegments() throws IOException
+  public void testWithPartialShardSpecAndOvershadowingSegments()
   {
     final Task task = NoopTask.create();
     taskActionTestKit.getTaskLockbox().add(task);
