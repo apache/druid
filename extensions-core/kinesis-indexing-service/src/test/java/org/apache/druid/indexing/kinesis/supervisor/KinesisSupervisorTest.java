@@ -125,7 +125,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
       ImmutableMap.of(),
       false,
       false,
-      false,
       false
   );
   private static final String DATASOURCE = "testDS";

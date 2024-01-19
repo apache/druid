@@ -982,6 +982,37 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   }
 
   @Test
+  public void testCleanUpgradeSegmentsTableForTask()
+  {
+    final String taskToClean = "taskToClean";
+    final ReplaceTaskLock replaceLockToClean = new ReplaceTaskLock(
+        taskToClean,
+        Intervals.of("2023-01-01/2023-02-01"),
+        "2023-03-01"
+    );
+    DataSegment segmentToClean0 = createSegment(
+        Intervals.of("2023-01-01/2023-02-01"),
+        "2023-02-01",
+        new NumberedShardSpec(0, 0)
+    );
+    DataSegment segmentToClean1 = createSegment(
+        Intervals.of("2023-01-01/2023-01-02"),
+        "2023-01-02",
+        new NumberedShardSpec(0, 0)
+    );
+    insertIntoUpgradeSegmentsTable(
+        ImmutableMap.of(segmentToClean0, replaceLockToClean, segmentToClean1, replaceLockToClean)
+    );
+
+    // Unrelated task should not result in clean up
+    Assert.assertEquals(0, coordinator.deleteUpgradeSegmentsForTask("someRandomTask"));
+    // The two segment entries are deleted
+    Assert.assertEquals(2, coordinator.deleteUpgradeSegmentsForTask(taskToClean));
+    // Nothing further to delete
+    Assert.assertEquals(0, coordinator.deleteUpgradeSegmentsForTask(taskToClean));
+  }
+
+  @Test
   public void testTransactionalAnnounceFailDbNotNullWantDifferent() throws IOException
   {
     final SegmentPublishResult result1 = coordinator.commitSegmentsAndMetadata(

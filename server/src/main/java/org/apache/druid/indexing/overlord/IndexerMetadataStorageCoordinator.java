@@ -443,4 +443,11 @@ public interface IndexerMetadataStorageCoordinator
    * @return DataSegment used segment corresponding to given id
    */
   DataSegment retrieveSegmentForId(String id, boolean includeUnused);
+
+  /**
+   * Delete entries from the upgrade segments table after the corresponding replace task has ended
+   * @param taskId - id of the task with replace locks
+   * @return number of deleted entries from the metadata store
+   */
+  int deleteUpgradeSegmentsForTask(String taskId);
 }
