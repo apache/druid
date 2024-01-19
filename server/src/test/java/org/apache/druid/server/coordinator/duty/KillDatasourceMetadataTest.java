@@ -21,16 +21,15 @@ package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.metadata.MetadataSupervisorManager;
-import org.apache.druid.metadata.TestSupervisorSpec;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Stats;
 import org.joda.time.Duration;
-import org.junit.Rule;
+import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
@@ -49,16 +48,15 @@ public class KillDatasourceMetadataTest
   @Mock
   private DruidCoordinatorRuntimeParams mockDruidCoordinatorRuntimeParams;
 
-  @Mock
-  private TestSupervisorSpec mockKinesisSupervisorSpec;
-
-  @Mock
-  private ServiceEmitter mockServiceEmitter;
-
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
-
   private KillDatasourceMetadata killDatasourceMetadata;
+  private CoordinatorRunStats runStats;
+
+  @Before
+  public void setup()
+  {
+    runStats = new CoordinatorRunStats();
+    Mockito.when(mockDruidCoordinatorRuntimeParams.getCoordinatorStats()).thenReturn(runStats);
+  }
 
   @Test
   public void testRunSkipIfLastRunLessThanPeriod()
@@ -79,7 +77,7 @@ public class KillDatasourceMetadataTest
   @Test
   public void testRunNotSkipIfLastRunMoreThanPeriod()
   {
-    Mockito.when(mockDruidCoordinatorRuntimeParams.getEmitter()).thenReturn(mockServiceEmitter);
+    Mockito.when(mockDruidCoordinatorRuntimeParams.getCoordinatorStats()).thenReturn(runStats);
 
     TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
         .withMetadataStoreManagementPeriod(new Duration("PT5S"))
@@ -88,10 +86,14 @@ public class KillDatasourceMetadataTest
         .withCoordinatorKillMaxSegments(10)
         .withCoordinatorKillIgnoreDurationToRetain(false)
         .build();
-    killDatasourceMetadata = new KillDatasourceMetadata(druidCoordinatorConfig, mockIndexerMetadataStorageCoordinator, mockMetadataSupervisorManager);
+    killDatasourceMetadata = new KillDatasourceMetadata(
+        druidCoordinatorConfig,
+        mockIndexerMetadataStorageCoordinator,
+        mockMetadataSupervisorManager
+    );
     killDatasourceMetadata.run(mockDruidCoordinatorRuntimeParams);
     Mockito.verify(mockIndexerMetadataStorageCoordinator).removeDataSourceMetadataOlderThan(ArgumentMatchers.anyLong(), ArgumentMatchers.anySet());
-    Mockito.verify(mockServiceEmitter).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
+    Assert.assertTrue(runStats.hasStat(Stats.Kill.DATASOURCES));
   }
 
   @Test
@@ -104,9 +106,20 @@ public class KillDatasourceMetadataTest
         .withCoordinatorKillMaxSegments(10)
         .withCoordinatorKillIgnoreDurationToRetain(false)
         .build();
-    exception.expect(IllegalArgumentException.class);
-    exception.expectMessage("Coordinator datasource metadata kill period must be >= druid.coordinator.period.metadataStoreManagementPeriod");
-    killDatasourceMetadata = new KillDatasourceMetadata(druidCoordinatorConfig, mockIndexerMetadataStorageCoordinator, mockMetadataSupervisorManager);
+
+    final IllegalArgumentException exception = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> killDatasourceMetadata = new KillDatasourceMetadata(
+            druidCoordinatorConfig,
+            mockIndexerMetadataStorageCoordinator,
+            mockMetadataSupervisorManager
+        )
+    );
+    Assert.assertEquals(
+        "[druid.coordinator.kill.datasource.period] must be greater than"
+        + " [druid.coordinator.period.metadataStoreManagementPeriod]",
+        exception.getMessage()
+    );
   }
 
   @Test
@@ -119,16 +132,23 @@ public class KillDatasourceMetadataTest
         .withCoordinatorKillMaxSegments(10)
         .withCoordinatorKillIgnoreDurationToRetain(false)
         .build();
-    exception.expect(IllegalArgumentException.class);
-    exception.expectMessage("Coordinator datasource metadata kill retainDuration must be >= 0");
-    killDatasourceMetadata = new KillDatasourceMetadata(druidCoordinatorConfig, mockIndexerMetadataStorageCoordinator, mockMetadataSupervisorManager);
+    final IllegalArgumentException exception = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> killDatasourceMetadata = new KillDatasourceMetadata(
+            druidCoordinatorConfig,
+            mockIndexerMetadataStorageCoordinator,
+            mockMetadataSupervisorManager
+        )
+    );
+    Assert.assertEquals(
+        "[druid.coordinator.kill.datasource.durationToRetain] must be 0 milliseconds or higher",
+        exception.getMessage()
+    );
   }
 
   @Test
   public void testRunWithEmptyFilterExcludedDatasource()
   {
-    Mockito.when(mockDruidCoordinatorRuntimeParams.getEmitter()).thenReturn(mockServiceEmitter);
-
     TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
         .withMetadataStoreManagementPeriod(new Duration("PT5S"))
         .withCoordinatorDatasourceKillPeriod(new Duration("PT6S"))
@@ -139,6 +159,6 @@ public class KillDatasourceMetadataTest
     killDatasourceMetadata = new KillDatasourceMetadata(druidCoordinatorConfig, mockIndexerMetadataStorageCoordinator, mockMetadataSupervisorManager);
     killDatasourceMetadata.run(mockDruidCoordinatorRuntimeParams);
     Mockito.verify(mockIndexerMetadataStorageCoordinator).removeDataSourceMetadataOlderThan(ArgumentMatchers.anyLong(), ArgumentMatchers.eq(ImmutableSet.of()));
-    Mockito.verify(mockServiceEmitter).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
+    Assert.assertTrue(runStats.hasStat(Stats.Kill.DATASOURCES));
   }
 }

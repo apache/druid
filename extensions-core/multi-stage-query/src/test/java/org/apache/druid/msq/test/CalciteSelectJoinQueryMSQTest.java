@@ -20,6 +20,7 @@
 package org.apache.druid.msq.test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import org.apache.calcite.rel.RelRoot;
@@ -127,8 +128,9 @@ public class CalciteSelectJoinQueryMSQTest
       final MSQTestOverlordServiceClient indexingServiceClient = new MSQTestOverlordServiceClient(
           queryJsonMapper,
           injector,
-          new MSQTestTaskActionClient(queryJsonMapper),
-          workerMemoryParameters
+          new MSQTestTaskActionClient(queryJsonMapper, injector),
+          workerMemoryParameters,
+          ImmutableList.of()
       );
       return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper)
       {

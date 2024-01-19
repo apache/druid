@@ -21,6 +21,7 @@ package org.apache.druid.indexing.overlord.supervisor;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
@@ -28,6 +29,7 @@ import org.apache.druid.segment.incremental.ParseExceptionReport;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public interface Supervisor
 {
@@ -61,7 +63,19 @@ public interface Supervisor
     return null; // default implementation for interface compatability; returning null since true or false is misleading
   }
 
+  /**
+   * Resets all offsets for a dataSource.
+   * @param dataSourceMetadata optional dataSource metadata.
+   */
   void reset(DataSourceMetadata dataSourceMetadata);
+
+  /**
+   * Reset offsets with provided dataSource metadata. The resulting stored offsets should be a union of existing checkpointed
+   * offsets with provided offsets.
+   * @param resetDataSourceMetadata required datasource metadata with offsets to reset.
+   * @throws DruidException if any metadata attribute doesn't match the supervisor's state.
+   */
+  void resetOffsets(DataSourceMetadata resetDataSourceMetadata);
 
   /**
    * The definition of checkpoint is not very strict as currently it does not affect data or control path.
@@ -80,4 +94,9 @@ public interface Supervisor
   LagStats computeLagStats();
 
   int getActiveTaskGroupsCount();
+
+  /**
+   * @return active sequence prefixes for reading and pending completion task groups of a seekable stream supervisor
+   */
+  Set<String> getActiveRealtimeSequencePrefixes();
 }

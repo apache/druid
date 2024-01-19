@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.overlord;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
@@ -49,6 +50,7 @@ import org.apache.druid.segment.loading.NoopDataSegmentArchiver;
 import org.apache.druid.segment.loading.NoopDataSegmentKiller;
 import org.apache.druid.segment.loading.NoopDataSegmentMover;
 import org.apache.druid.segment.loading.NoopDataSegmentPusher;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.SetAndVerifyContextQueryRunner;
@@ -96,6 +98,7 @@ public class SingleTaskBackgroundRunnerTest
     final ServiceEmitter emitter = new NoopServiceEmitter();
     EmittingLogger.registerEmitter(emitter);
     final TaskToolboxFactory toolboxFactory = new TaskToolboxFactory(
+        null,
         taskConfig,
         null,
         EasyMock.createMock(TaskActionClientFactory.class),
@@ -129,11 +132,12 @@ public class SingleTaskBackgroundRunnerTest
         utils.getRowIngestionMetersFactory(),
         new TestAppenderatorsManager(),
         new NoopOverlordClient(),
+        new NoopCoordinatorClient(),
         null,
         null,
         null,
-        null,
-        "1"
+        "1",
+        CentralizedDatasourceSchemaConfig.create()
     );
     runner = new SingleTaskBackgroundRunner(
         toolboxFactory,
@@ -153,21 +157,7 @@ public class SingleTaskBackgroundRunnerTest
   @Test
   public void testRun() throws ExecutionException, InterruptedException
   {
-    NoopTask task = new NoopTask(null, null, null, 500L, 0, null, null, null)
-    {
-      @Nullable
-      @Override
-      public String setup(TaskToolbox toolbox)
-      {
-        return null;
-      }
-
-      @Override
-      public void cleanUp(TaskToolbox toolbox, TaskStatus taskStatus)
-      {
-        // do nothing
-      }
-    };
+    NoopTask task = new NoopTask(null, null, null, 500L, 0, null);
     Assert.assertEquals(
         TaskState.SUCCESS,
         runner.run(task).get().getStatusCode()
@@ -177,7 +167,7 @@ public class SingleTaskBackgroundRunnerTest
   @Test
   public void testGetQueryRunner() throws ExecutionException, InterruptedException
   {
-    runner.run(new NoopTask(null, null, "foo", 500L, 0, null, null, null)).get().getStatusCode();
+    runner.run(new NoopTask(null, null, "foo", 500L, 0, null)).get().getStatusCode();
 
     final QueryRunner<ScanResultValue> queryRunner =
         Druids.newScanQueryBuilder()
@@ -192,14 +182,24 @@ public class SingleTaskBackgroundRunnerTest
   @Test
   public void testStop() throws ExecutionException, InterruptedException, TimeoutException
   {
+    AtomicReference<Boolean> methodCallHolder = new AtomicReference<>();
     final ListenableFuture<TaskStatus> future = runner.run(
-        new NoopTask(null, null, null, Long.MAX_VALUE, 0, null, null, null) // infinite task
+        new NoopTask(null, null, null, Long.MAX_VALUE, 0, null) // infinite task
+        {
+          @Override
+          public boolean waitForCleanupToFinish()
+          {
+            methodCallHolder.set(true);
+            return true;
+          }
+        }
     );
     runner.stop();
     Assert.assertEquals(
         TaskState.FAILED,
         future.get(1000, TimeUnit.MILLISECONDS).getStatusCode()
     );
+    Assert.assertTrue(methodCallHolder.get());
   }
 
   @Test
@@ -319,8 +319,6 @@ public class SingleTaskBackgroundRunnerTest
             "datasource",
             10000, // 10 sec
             0,
-            null,
-            null,
             null
         )
     );

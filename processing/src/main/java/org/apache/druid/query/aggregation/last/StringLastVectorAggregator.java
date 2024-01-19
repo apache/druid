@@ -22,10 +22,11 @@ package org.apache.druid.query.aggregation.last;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.query.aggregation.VectorAggregator;
+import org.apache.druid.query.aggregation.first.FirstLastUtils;
 import org.apache.druid.query.aggregation.first.StringFirstLastUtils;
 import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
 import org.apache.druid.segment.vector.VectorObjectSelector;
+import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -36,13 +37,13 @@ public class StringLastVectorAggregator implements VectorAggregator
       DateTimes.MIN.getMillis(),
       null
   );
-  private final BaseLongVectorValueSelector timeSelector;
+  private final VectorValueSelector timeSelector;
   private final VectorObjectSelector valueSelector;
   private final int maxStringBytes;
   protected long lastTime;
 
   public StringLastVectorAggregator(
-      @Nullable final BaseLongVectorValueSelector timeSelector,
+      @Nullable final VectorValueSelector timeSelector,
       final VectorObjectSelector valueSelector,
       final int maxStringBytes
   )
@@ -64,8 +65,9 @@ public class StringLastVectorAggregator implements VectorAggregator
     if (timeSelector == null) {
       return;
     }
-    long[] times = timeSelector.getLongVector();
-    Object[] objectsWhichMightBeStrings = valueSelector.getObjectVector();
+    final long[] times = timeSelector.getLongVector();
+    final boolean[] nullTimeVector = timeSelector.getNullVector();
+    final Object[] objectsWhichMightBeStrings = valueSelector.getObjectVector();
 
     lastTime = buf.getLong(position);
     int index;
@@ -73,11 +75,14 @@ public class StringLastVectorAggregator implements VectorAggregator
       if (objectsWhichMightBeStrings[i] == null) {
         continue;
       }
-      if (times[i] < lastTime) {
-        break;
+      if (times[i] <= lastTime) {
+        continue;
+      }
+      if (nullTimeVector != null && nullTimeVector[i]) {
+        continue;
       }
       index = i;
-      final boolean foldNeeded = StringFirstLastUtils.objectNeedsFoldCheck(objectsWhichMightBeStrings[index]);
+      final boolean foldNeeded = FirstLastUtils.objectNeedsFoldCheck(objectsWhichMightBeStrings[index], SerializablePairLongString.class);
       if (foldNeeded) {
         // Less efficient code path when folding is a possibility (we must read the value selector first just in case
         // it's a foldable object).
@@ -127,22 +132,24 @@ public class StringLastVectorAggregator implements VectorAggregator
     if (timeSelector == null) {
       return;
     }
-    long[] timeVector = timeSelector.getLongVector();
-    Object[] objectsWhichMightBeStrings = valueSelector.getObjectVector();
+    final long[] timeVector = timeSelector.getLongVector();
+    final boolean[] nullTimeVector = timeSelector.getNullVector();
+    final Object[] objectsWhichMightBeStrings = valueSelector.getObjectVector();
 
     // iterate once over the object vector to find first non null element and
     // determine if the type is Pair or not
     boolean foldNeeded = false;
     for (Object obj : objectsWhichMightBeStrings) {
-      if (obj == null) {
-        continue;
-      } else {
-        foldNeeded = StringFirstLastUtils.objectNeedsFoldCheck(obj);
+      if (obj != null) {
+        foldNeeded = FirstLastUtils.objectNeedsFoldCheck(obj, SerializablePairLongString.class);
         break;
       }
     }
 
     for (int i = 0; i < numRows; i++) {
+      if (nullTimeVector != null && nullTimeVector[i]) {
+        continue;
+      }
       int position = positions[i] + positionOffset;
       int row = rows == null ? i : rows[i];
       long lastTime = buf.getLong(position);

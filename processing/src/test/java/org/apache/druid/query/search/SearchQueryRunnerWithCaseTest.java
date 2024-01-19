@@ -62,8 +62,9 @@ public class SearchQueryRunnerWithCaseTest extends InitializedNullHandlingTest
     configs[0].setSearchStrategy(UseIndexesStrategy.NAME);
     configs[1] = new SearchQueryConfig();
     configs[1].setSearchStrategy(CursorOnlyStrategy.NAME);
+    // test auto to ensure that it doesn't explode
     configs[2] = new SearchQueryConfig();
-    configs[2].setSearchStrategy(AutoStrategy.NAME);
+    configs[2].setSearchStrategy("auto");
 
     CharSource input = CharSource.wrap(
         "2011-01-12T00:00:00.000Z\tspot\tAutoMotive\t1000\t10000.0\t10000.0\t100000\t10\t10.0\t10.0\tPREFERRED\ta\u0001preferred\t100.000000\n" +

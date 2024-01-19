@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.metadata.SortOrder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentId;
@@ -127,13 +128,22 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
         ++numModifiedSegments;
       }
     }
+
+    if (numModifiedSegments > 0) {
+      snapshot = null;
+    }
     return numModifiedSegments;
   }
 
   @Override
   public boolean markSegmentAsUnused(SegmentId segmentId)
   {
-    return usedSegments.remove(segmentId.toString()) != null;
+    boolean updated = usedSegments.remove(segmentId.toString()) != null;
+    if (updated) {
+      snapshot = null;
+    }
+
+    return updated;
   }
 
   @Nullable
@@ -184,13 +194,31 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
+  public Iterable<DataSegment> iterateAllUnusedSegmentsForDatasource(
+      String datasource,
+      @Nullable Interval interval,
+      @Nullable Integer limit,
+      @Nullable String lastSegmentId,
+      @Nullable SortOrder sortOrder
+  )
+  {
+    return null;
+  }
+
+  @Override
   public Set<String> retrieveAllDataSourceNames()
   {
     return null;
   }
 
   @Override
-  public List<Interval> getUnusedSegmentIntervals(String dataSource, DateTime maxEndTime, int limit)
+  public List<Interval> getUnusedSegmentIntervals(
+      final String dataSource,
+      @Nullable final DateTime minStartTime,
+      final DateTime maxEndTime,
+      final int limit,
+      final DateTime maxUsedStatusLastUpdatedTime
+  )
   {
     return null;
   }
@@ -199,5 +227,15 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   public void poll()
   {
 
+  }
+
+  @Override
+  public void populateUsedFlagLastUpdatedAsync()
+  {
+  }
+
+  @Override
+  public void stopAsyncUsedFlagLastUpdatedUpdate()
+  {
   }
 }

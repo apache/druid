@@ -16,13 +16,11 @@
  * limitations under the License.
  */
 
-import { Button, Code, Intent, Menu, MenuItem } from '@blueprintjs/core';
+import { Code, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import type { QueryResult } from '@druid-toolkit/query';
 import { QueryRunner, SqlQuery } from '@druid-toolkit/query';
 import axios from 'axios';
-import classNames from 'classnames';
 import type { JSX } from 'react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import SplitterLayout from 'react-splitter-layout';
@@ -43,7 +41,7 @@ import { ExecutionStateCache } from '../../../singletons/execution-state-cache';
 import { WorkbenchHistory } from '../../../singletons/workbench-history';
 import type { WorkbenchRunningPromise } from '../../../singletons/workbench-running-promises';
 import { WorkbenchRunningPromises } from '../../../singletons/workbench-running-promises';
-import type { ColumnMetadata, QueryAction, RowColumn } from '../../../utils';
+import type { ColumnMetadata, QueryAction, QuerySlice, RowColumn } from '../../../utils';
 import {
   DruidError,
   localStorageGet,
@@ -59,7 +57,6 @@ import { ExecutionStagesPane } from '../execution-stages-pane/execution-stages-p
 import { ExecutionSummaryPanel } from '../execution-summary-panel/execution-summary-panel';
 import { ExecutionTimerPanel } from '../execution-timer-panel/execution-timer-panel';
 import { FlexibleQueryInput } from '../flexible-query-input/flexible-query-input';
-import { HelperQuery } from '../helper-query/helper-query';
 import { IngestSuccessPane } from '../ingest-success-pane/ingest-success-pane';
 import { metadataStateStore } from '../metadata-state-store';
 import { ResultTablePane } from '../result-table-pane/result-table-pane';
@@ -74,6 +71,7 @@ const queryRunner = new QueryRunner({
 
 export interface QueryTabProps {
   query: WorkbenchQuery;
+  id: string;
   mandatoryQueryContext: QueryContext | undefined;
   columnMetadata: readonly ColumnMetadata[] | undefined;
   onQueryChange(newQuery: WorkbenchQuery): void;
@@ -88,6 +86,7 @@ export interface QueryTabProps {
 export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
   const {
     query,
+    id,
     columnMetadata,
     mandatoryQueryContext,
     onQueryChange,
@@ -145,7 +144,6 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
 
   const queryInputRef = useRef<FlexibleQueryInput | null>(null);
 
-  const id = query.getId();
   const [executionState, queryManager] = useQueryManager<
     WorkbenchQuery | WorkbenchRunningPromise | LastExecution,
     Execution,
@@ -159,13 +157,13 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     processQuery: async (q, cancelToken) => {
       if (q instanceof WorkbenchQuery) {
         ExecutionStateCache.deleteState(id);
-        const { engine, query, sqlPrefixLines, cancelQueryId } = q.getApiQuery();
+        const { engine, query, prefixLines, cancelQueryId } = q.getApiQuery();
 
         switch (engine) {
           case 'sql-msq-task':
             return await submitTaskQuery({
               query,
-              prefixLines: sqlPrefixLines,
+              prefixLines,
               cancelToken,
               preserveOnTermination: true,
               onSubmitted: id => {
@@ -199,13 +197,13 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
                   nativeQueryCancelFnRef.current = cancelFn;
                 }),
               });
-              WorkbenchRunningPromises.storePromise(id, { promise: resultPromise, sqlPrefixLines });
+              WorkbenchRunningPromises.storePromise(id, { promise: resultPromise, prefixLines });
 
               result = await resultPromise;
               nativeQueryCancelFnRef.current = undefined;
             } catch (e) {
               nativeQueryCancelFnRef.current = undefined;
-              throw new DruidError(e, sqlPrefixLines);
+              throw new DruidError(e, prefixLines);
             }
 
             return Execution.fromResult(engine, result);
@@ -217,7 +215,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
           result = await q.promise;
         } catch (e) {
           WorkbenchRunningPromises.deletePromise(id);
-          throw new DruidError(e, q.sqlPrefixLines);
+          throw new DruidError(e, q.prefixLines);
         }
 
         WorkbenchRunningPromises.deletePromise(id);
@@ -274,7 +272,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     currentQueryInput.goToPosition(position);
   }
 
-  const handleRun = usePermanentCallback(async (preview: boolean) => {
+  const handleRun = usePermanentCallback(async (preview: boolean, querySlice?: QuerySlice) => {
     const queryIssue = query.getIssue();
     if (queryIssue) {
       const position = WorkbenchQuery.getRowColumnFromIssue(queryIssue);
@@ -294,15 +292,22 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
       return;
     }
 
-    if (query.getEffectiveEngine() !== 'sql-msq-task') {
-      WorkbenchHistory.addQueryToHistory(query);
-      queryManager.runQuery(query);
+    let effectiveQuery = query;
+    if (querySlice) {
+      effectiveQuery = effectiveQuery
+        .changeQueryString(querySlice.sql)
+        .changePrefixLines(querySlice.startRowColumn.row);
+    }
+
+    if (effectiveQuery.getEffectiveEngine() !== 'sql-msq-task') {
+      WorkbenchHistory.addQueryToHistory(effectiveQuery);
+      queryManager.runQuery(effectiveQuery);
       return;
     }
 
-    const effectiveQuery = preview
-      ? query.makePreview()
-      : query.setMaxNumTasksIfUnset(clusterCapacity);
+    effectiveQuery = preview
+      ? effectiveQuery.makePreview()
+      : effectiveQuery.setMaxNumTasksIfUnset(clusterCapacity);
 
     const capacityInfo = await maybeGetClusterCapacity();
 
@@ -327,9 +332,6 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
 
   const statsTaskId: string | undefined = execution?.id;
 
-  const queryPrefixes = query.getPrefixQueries();
-  const extractedCtes = query.extractCteHelpers();
-
   const onUserCancel = (message?: string) => {
     queryManager.cancelCurrent(message);
     nativeQueryCancelFnRef.current?.();
@@ -347,81 +349,22 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
       >
         <div className="top-section">
           <div className="query-section">
-            {queryPrefixes.map((queryPrefix, i) => (
-              <HelperQuery
-                key={queryPrefix.getId()}
-                query={queryPrefix}
-                mandatoryQueryContext={mandatoryQueryContext}
-                columnMetadata={columnMetadata}
-                onQueryChange={newQuery => {
-                  onQueryChange(query.applyUpdate(newQuery, i));
-                }}
-                onQueryTab={onQueryTab}
-                onDelete={() => {
-                  onQueryChange(query.remove(i));
-                }}
-                onDetails={onDetails}
-                queryEngines={queryEngines}
-                clusterCapacity={clusterCapacity}
-                goToTask={goToTask}
-              />
-            ))}
-            <div className={classNames('main-query', queryPrefixes.length ? 'multi' : 'single')}>
-              <FlexibleQueryInput
-                ref={queryInputRef}
-                autoHeight={Boolean(queryPrefixes.length)}
-                minRows={10}
-                queryString={query.getQueryString()}
-                onQueryStringChange={handleQueryStringChange}
-                columnMetadata={
-                  columnMetadata ? columnMetadata.concat(query.getInlineMetadata()) : undefined
-                }
-                editorStateId={query.getId()}
-              />
-              <div className="corner">
-                <Popover2
-                  content={
-                    <Menu>
-                      <MenuItem
-                        icon={IconNames.ARROW_UP}
-                        text="Save as helper query"
-                        onClick={() => {
-                          onQueryChange(query.addBlank());
-                        }}
-                      />
-                      {extractedCtes !== query && (
-                        <MenuItem
-                          icon={IconNames.DOCUMENT_SHARE}
-                          text="Extract WITH clauses into helper queries"
-                          onClick={() => onQueryChange(extractedCtes)}
-                        />
-                      )}
-                      {query.hasHelperQueries() && (
-                        <MenuItem
-                          icon={IconNames.DOCUMENT_OPEN}
-                          text="Materialize helper queries"
-                          onClick={() => onQueryChange(query.materializeHelpers())}
-                        />
-                      )}
-                      <MenuItem
-                        icon={IconNames.DUPLICATE}
-                        text="Duplicate as helper query"
-                        onClick={() => onQueryChange(query.duplicateLast())}
-                      />
-                    </Menu>
-                  }
-                >
-                  <Button icon={IconNames.LIST} minimal />
-                </Popover2>
-              </div>
-            </div>
+            <FlexibleQueryInput
+              ref={queryInputRef}
+              queryString={query.getQueryString()}
+              onQueryStringChange={handleQueryStringChange}
+              runQuerySlice={slice => void handleRun(false, slice)}
+              running={executionState.loading}
+              columnMetadata={columnMetadata}
+              editorStateId={id}
+            />
           </div>
           <div className="run-bar">
             <RunPanel
               query={query}
               onQueryChange={onQueryChange}
               onRun={handleRun}
-              loading={executionState.loading}
+              running={executionState.loading}
               queryEngines={queryEngines}
               clusterCapacity={clusterCapacity}
               moreMenu={runMoreMenu}

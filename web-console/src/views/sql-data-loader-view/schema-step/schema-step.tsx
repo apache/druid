@@ -58,7 +58,7 @@ import {
   ingestQueryPatternToQuery,
   possibleDruidFormatForValues,
   TIME_COLUMN,
-  WorkbenchQueryPart,
+  WorkbenchQuery,
 } from '../../../druid-models';
 import {
   executionBackgroundResultStatusCheck,
@@ -483,8 +483,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
   const [previewResultState] = useQueryManager<string, QueryResult, Execution>({
     query: previewQueryString,
     processQuery: async (previewQueryString, cancelToken) => {
-      const taskEngine = WorkbenchQueryPart.isTaskEngineNeeded(previewQueryString);
-      if (taskEngine) {
+      if (WorkbenchQuery.isTaskEngineNeeded(previewQueryString)) {
         return extractResult(
           await submitTaskQuery({
             query: previewQueryString,
@@ -872,7 +871,6 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
             ))}
           {effectiveMode === 'sql' && (
             <FlexibleQueryInput
-              autoHeight={false}
               queryString={queryString}
               onQueryStringChange={onQueryStringChange}
               columnMetadata={undefined}

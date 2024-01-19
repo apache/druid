@@ -34,6 +34,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputFormat;
@@ -115,6 +116,7 @@ import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderator;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
@@ -661,6 +663,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
     final DataSegmentPusher dataSegmentPusher = new LocalDataSegmentPusher(dataSegmentPusherConfig);
 
     toolboxFactory = new TaskToolboxFactory(
+        null,
         taskConfig,
         null, // taskExecutorNode
         taskActionClientFactory,
@@ -694,11 +697,12 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
         testUtils.getRowIngestionMetersFactory(),
         new TestAppenderatorsManager(),
         new NoopOverlordClient(),
+        new NoopCoordinatorClient(),
         null,
         null,
         null,
-        null,
-        "1"
+        "1",
+        CentralizedDatasourceSchemaConfig.create()
     );
   }
 

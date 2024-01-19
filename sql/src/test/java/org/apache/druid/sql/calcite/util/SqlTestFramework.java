@@ -39,10 +39,12 @@ import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.topn.TopNQueryConfig;
+import org.apache.druid.segment.DefaultColumnFormatConfig;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.SqlStatementFactory;
@@ -153,6 +155,11 @@ public class SqlTestFramework
         Injector injector
     );
 
+    default CatalogResolver createCatalogResolver()
+    {
+      return CatalogResolver.NULL_RESOLVER;
+    }
+
     /**
      * Configure the JSON mapper.
      *
@@ -219,7 +226,7 @@ public class SqlTestFramework
       } else {
         return QueryStackTests.createQueryRunnerFactoryConglomerate(
             resourceCloser,
-            QueryStackTests.getProcessingConfig(true, builder.mergeBufferCount)
+            QueryStackTests.getProcessingConfig(builder.mergeBufferCount)
         );
       }
     }
@@ -417,7 +424,8 @@ public class SqlTestFramework
           plannerConfig,
           viewManager,
           componentSupplier.createSchemaManager(),
-          framework.authorizerMapper
+          framework.authorizerMapper,
+          framework.builder.catalogResolver
       );
 
       this.plannerFactory = new PlannerFactory(
@@ -485,6 +493,7 @@ public class SqlTestFramework
     {
       binder.bind(DruidOperatorTable.class).in(LazySingleton.class);
       binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
+      binder.bind(DefaultColumnFormatConfig.class).toInstance(new DefaultColumnFormatConfig(null));
     }
 
     @Provides

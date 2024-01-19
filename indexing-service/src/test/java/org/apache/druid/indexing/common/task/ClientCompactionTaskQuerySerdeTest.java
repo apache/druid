@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionIOConfig;
 import org.apache.druid.client.indexing.ClientCompactionIntervalSpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskDimensionsSpec;
@@ -73,9 +74,9 @@ import java.util.HashMap;
 
 public class ClientCompactionTaskQuerySerdeTest
 {
-  private static final RowIngestionMetersFactory ROW_INGESTION_METERS_FACTORY = new TestUtils()
-      .getRowIngestionMetersFactory();
-  private static final CoordinatorClient COORDINATOR_CLIENT = new CoordinatorClient(null, null);
+  private static final RowIngestionMetersFactory ROW_INGESTION_METERS_FACTORY =
+      new TestUtils().getRowIngestionMetersFactory();
+  private static final CoordinatorClient COORDINATOR_CLIENT = new NoopCoordinatorClient();
   private static final AppenderatorsManager APPENDERATORS_MANAGER = new TestAppenderatorsManager();
 
   @Test

@@ -366,6 +366,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         disabled={AutoForm.evaluateFunctor(field.disabled, model, false)}
         intent={required && modelValue == null ? AutoForm.REQUIRED_INTENT : undefined}
         multiline={AutoForm.evaluateFunctor(field.multiline, model, false)}
+        height={field.height}
       />
     );
   }

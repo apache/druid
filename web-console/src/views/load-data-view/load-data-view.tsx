@@ -226,6 +226,7 @@ function showKafkaLine(line: SampleEntry): string {
   if (!input) return 'Invalid kafka row';
   return compact([
     `[ Kafka timestamp: ${input['kafka.timestamp']}`,
+    `  Topic: ${input['kafka.topic']}`,
     ...filterMap(Object.entries(input), ([k, v]) => {
       if (!k.startsWith('kafka.header.')) return;
       return `  Header: ${k.slice(13)}=${v}`;
@@ -1366,13 +1367,16 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
               this.updateSpec(fillDataSourceNameIfNeeded(newSpec));
             } else {
-              const issue = issueWithSampleData(inputData, spec);
+              const issue = issueWithSampleData(
+                filterMap(inputData.data, l => l.input?.raw),
+                isStreamingSpec(spec),
+              );
               if (issue) {
                 AppToaster.show({
                   icon: IconNames.WARNING_SIGN,
                   intent: Intent.WARNING,
                   message: issue,
-                  timeout: 10000,
+                  timeout: 30000,
                 });
                 return false;
               }
@@ -3155,6 +3159,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 name: 'spec.ioConfig.appendToExisting',
                 label: 'Append to existing',
                 type: 'boolean',
+                defined: s => !isStreamingSpec(s),
                 defaultValue: false,
                 // appendToExisting can only be set on 'dynamic' portioning.
                 // We chose to show it always and instead have a specific message, separate from this form, to notify the user of the issue.
@@ -3168,6 +3173,23 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             ]}
             model={spec}
             onChange={this.updateSpec}
+          />
+          <Switch
+            label="Allow concurrent tasks (experimental)"
+            checked={typeof deepGet(spec, 'context.taskLockType') === 'string'}
+            onChange={() => {
+              this.updateSpec(
+                typeof deepGet(spec, 'context.taskLockType') === 'string'
+                  ? deepDelete(spec, 'context.taskLockType')
+                  : deepSet(
+                      spec,
+                      'context.taskLockType',
+                      isStreamingSpec(spec) || deepGet(spec, 'spec.ioConfig.appendToExisting')
+                        ? 'APPEND'
+                        : 'REPLACE',
+                    ),
+              );
+            }}
           />
         </div>
         <div className="other">

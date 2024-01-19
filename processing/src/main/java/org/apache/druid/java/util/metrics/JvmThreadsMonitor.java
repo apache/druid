@@ -62,12 +62,12 @@ public class JvmThreadsMonitor extends FeedDefiningMonitor
 
     long startedThreadsDiff = newStartedThreads - lastStartedThreads;
 
-    emitter.emit(builder.build("jvm/threads/started", startedThreadsDiff));
-    emitter.emit(builder.build("jvm/threads/finished", lastLiveThreads + startedThreadsDiff - newLiveThreads));
-    emitter.emit(builder.build("jvm/threads/live", newLiveThreads));
-    emitter.emit(builder.build("jvm/threads/liveDaemon", threadBean.getDaemonThreadCount()));
+    emitter.emit(builder.setMetric("jvm/threads/started", startedThreadsDiff));
+    emitter.emit(builder.setMetric("jvm/threads/finished", lastLiveThreads + startedThreadsDiff - newLiveThreads));
+    emitter.emit(builder.setMetric("jvm/threads/live", newLiveThreads));
+    emitter.emit(builder.setMetric("jvm/threads/liveDaemon", threadBean.getDaemonThreadCount()));
 
-    emitter.emit(builder.build("jvm/threads/livePeak", threadBean.getPeakThreadCount()));
+    emitter.emit(builder.setMetric("jvm/threads/livePeak", threadBean.getPeakThreadCount()));
     threadBean.resetPeakThreadCount();
 
     lastStartedThreads = newStartedThreads;

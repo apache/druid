@@ -29,7 +29,7 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>28.0.0-SNAPSHOT</version>
+    <version>29.0.0-SNAPSHOT</version>
   </parent>
 
   <properties>
@@ -37,7 +37,7 @@
     <sigar.base.version>1.6.5</sigar.base.version>
     <sigar.version>${sigar.base.version}.132</sigar.version>
     <ipaddress.version>5.3.4</ipaddress.version>
-    <oshi.version>6.4.2</oshi.version>
+    <oshi.version>6.4.4</oshi.version>
   </properties>
 
   <dependencies>
@@ -120,8 +120,8 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>javax.validation</groupId>
-      <artifactId>validation-api</artifactId>
+      <groupId>jakarta.validation</groupId>
+      <artifactId>jakarta.validation-api</artifactId>
     </dependency>
     <dependency>
       <groupId>org.ow2.asm</groupId>
@@ -232,10 +232,6 @@
     <dependency>
       <groupId>it.unimi.dsi</groupId>
       <artifactId>fastutil-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>it.unimi.dsi</groupId>
-      <artifactId>fastutil-extra</artifactId>
     </dependency>
     <dependency>
       <groupId>org.antlr</groupId>
@@ -364,9 +360,16 @@
       <artifactId>caliper</artifactId>
       <scope>test</scope>
     </dependency>
+    <!-- explicitly declare mockito-core dependency to make anaylize-dependencies happy when running with Java 8 -->
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
+      <version>${mockito.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-${mockito.inline.artifact}</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -424,11 +427,6 @@
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-util</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-inline</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>

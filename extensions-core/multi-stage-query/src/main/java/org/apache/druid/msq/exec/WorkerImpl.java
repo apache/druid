@@ -32,6 +32,7 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.common.guava.FutureUtils;
@@ -61,6 +62,8 @@ import org.apache.druid.frame.processor.OutputChannels;
 import org.apache.druid.frame.processor.PartitionedOutputChannel;
 import org.apache.druid.frame.processor.SuperSorter;
 import org.apache.druid.frame.processor.SuperSorterProgressTracker;
+import org.apache.druid.frame.processor.manager.ProcessorManager;
+import org.apache.druid.frame.processor.manager.ProcessorManagers;
 import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.indexer.TaskStatus;
@@ -70,8 +73,6 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.counters.CounterNames;
@@ -132,6 +133,7 @@ import org.apache.druid.query.PrioritizedCallable;
 import org.apache.druid.query.PrioritizedRunnable;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryProcessingPool;
+import org.apache.druid.rpc.ServiceClosedException;
 import org.apache.druid.server.DruidNode;
 
 import javax.annotation.Nullable;
@@ -293,6 +295,7 @@ public class WorkerImpl implements Worker
   {
     this.controllerClient = context.makeControllerClient(task.getControllerTaskId());
     closer.register(controllerClient::close);
+    closer.register(context.loadedSegmentDataProviderFactory());
     context.registerWorker(this, closer); // Uses controllerClient, so must be called after that is initialized
 
     this.workerClient = new ExceptionWrappingWorkerClient(context.makeWorkerClient());
@@ -850,7 +853,17 @@ public class WorkerImpl implements Worker
     final CounterSnapshotsTree snapshotsTree = getCounters();
 
     if (controllerAlive && !snapshotsTree.isEmpty()) {
-      controllerClient.postCounters(id(), snapshotsTree);
+      try {
+        controllerClient.postCounters(id(), snapshotsTree);
+      }
+      catch (IOException e) {
+        if (e.getCause() instanceof ServiceClosedException) {
+          // Suppress. This can happen if the controller goes away while a postCounters call is in flight.
+          log.debug(e, "Ignoring failure on postCounters, because controller has gone away.");
+        } else {
+          throw e;
+        }
+      }
     }
   }
 
@@ -1088,7 +1101,13 @@ public class WorkerImpl implements Worker
                       .put(ExternalInputSlice.class, new ExternalInputSliceReader(frameContext.tempDir()))
                       .put(InlineInputSlice.class, new InlineInputSliceReader(frameContext.segmentWrangler()))
                       .put(LookupInputSlice.class, new LookupInputSliceReader(frameContext.segmentWrangler()))
-                      .put(SegmentsInputSlice.class, new SegmentsInputSliceReader(frameContext.dataSegmentProvider()))
+                      .put(
+                          SegmentsInputSlice.class,
+                          new SegmentsInputSliceReader(
+                              frameContext,
+                              MultiStageQueryContext.isReindex(QueryContext.of(task().getContext()))
+                          )
+                      )
                       .build()
       );
     }
@@ -1135,7 +1154,16 @@ public class WorkerImpl implements Worker
           );
     }
 
-    private <FactoryType extends FrameProcessorFactory<I, WorkerClass, T, R>, I, WorkerClass extends FrameProcessor<T>, T, R> void makeAndRunWorkProcessors()
+    /**
+     * Use {@link FrameProcessorFactory#makeProcessors} to create {@link ProcessorsAndChannels}. Executes the
+     * processors using {@link #exec} and sets the output channels in {@link #workResultAndOutputChannels}.
+     *
+     * @param <FactoryType>         type of {@link StageDefinition#getProcessorFactory()}
+     * @param <ProcessorReturnType> return type of {@link FrameProcessor} created by the manager
+     * @param <ManagerReturnType>   result type of {@link ProcessorManager#result()}
+     * @param <ExtraInfoType>       type of {@link WorkOrder#getExtraInfo()}
+     */
+    private <FactoryType extends FrameProcessorFactory<ProcessorReturnType, ManagerReturnType, ExtraInfoType>, ProcessorReturnType, ManagerReturnType, ExtraInfoType> void makeAndRunWorkProcessors()
         throws IOException
     {
       if (workResultAndOutputChannels != null) {
@@ -1146,13 +1174,13 @@ public class WorkerImpl implements Worker
       final FactoryType processorFactory = (FactoryType) kernel.getStageDefinition().getProcessorFactory();
 
       @SuppressWarnings("unchecked")
-      final ProcessorsAndChannels<WorkerClass, T> processors =
+      final ProcessorsAndChannels<ProcessorReturnType, ManagerReturnType> processors =
           processorFactory.makeProcessors(
               kernel.getStageDefinition(),
               kernel.getWorkOrder().getWorkerNumber(),
               kernel.getWorkOrder().getInputs(),
               inputSliceReader,
-              (I) kernel.getWorkOrder().getExtraInfo(),
+              (ExtraInfoType) kernel.getWorkOrder().getExtraInfo(),
               workOutputChannelFactory,
               frameContext,
               parallelism,
@@ -1160,7 +1188,7 @@ public class WorkerImpl implements Worker
               e -> warningPublisher.publishException(kernel.getStageDefinition().getStageNumber(), e)
           );
 
-      final Sequence<WorkerClass> processorSequence = processors.processors();
+      final ProcessorManager<ProcessorReturnType, ManagerReturnType> processorManager = processors.getProcessorManager();
 
       final int maxOutstandingProcessors;
 
@@ -1173,10 +1201,8 @@ public class WorkerImpl implements Worker
             Math.max(1, Math.min(parallelism, processors.getOutputChannels().getAllChannels().size()));
       }
 
-      final ListenableFuture<R> workResultFuture = exec.runAllFully(
-          processorSequence,
-          processorFactory.newAccumulatedResult(),
-          processorFactory::accumulateResult,
+      final ListenableFuture<ManagerReturnType> workResultFuture = exec.runAllFully(
+          processorManager,
           maxOutstandingProcessors,
           processorBouncer,
           cancellationId
@@ -1309,7 +1335,8 @@ public class WorkerImpl implements Worker
                       kernelHolder.getStageKernelMap().get(stageDef.getId()).fail(t)
               );
             }
-          }
+          },
+          MoreExecutors.directExecutor()
       );
     }
 
@@ -1601,7 +1628,7 @@ public class WorkerImpl implements Worker
               };
 
               // Chain futures so we only sort one partition at a time.
-              nextFuture = Futures.transform(
+              nextFuture = Futures.transformAsync(
                   nextFuture,
                   (AsyncFunction<OutputChannel, OutputChannel>) ignored -> {
                     final SuperSorter sorter = new SuperSorter(
@@ -1628,7 +1655,8 @@ public class WorkerImpl implements Worker
                     );
 
                     return FutureUtils.transform(sorter.run(), r -> Iterables.getOnlyElement(r.getAllChannels()));
-                  }
+                  },
+                  MoreExecutors.directExecutor()
               );
 
               sortedChannelFutures.add(nextFuture);
@@ -1654,7 +1682,7 @@ public class WorkerImpl implements Worker
         throw new ISE("Not initialized");
       }
 
-      return Futures.transform(
+      return Futures.transformAsync(
           pipelineFuture,
           (AsyncFunction<ResultAndChannels<?>, OutputChannels>) resultAndChannels ->
               Futures.transform(
@@ -1662,8 +1690,10 @@ public class WorkerImpl implements Worker
                   (Function<Object, OutputChannels>) input -> {
                     sanityCheckOutputChannels(resultAndChannels.getOutputChannels());
                     return resultAndChannels.getOutputChannels();
-                  }
-              )
+                  },
+                  MoreExecutors.directExecutor()
+              ),
+          MoreExecutors.directExecutor()
       );
     }
 
@@ -1695,11 +1725,13 @@ public class WorkerImpl implements Worker
 
       final ListenableFuture<ClusterByStatisticsCollector> clusterByStatisticsCollectorFuture =
           exec.runAllFully(
-              Sequences.simple(processors),
-              stageDefinition.createResultKeyStatisticsCollector(
-                  frameContext.memoryParameters().getPartitionStatisticsMaxRetainedBytes()
-              ),
-              ClusterByStatisticsCollector::addAll,
+              ProcessorManagers.of(processors)
+                               .withAccumulation(
+                                   stageDefinition.createResultKeyStatisticsCollector(
+                                       frameContext.memoryParameters().getPartitionStatisticsMaxRetainedBytes()
+                                   ),
+                                   ClusterByStatisticsCollector::addAll
+                               ),
               // Run all processors simultaneously. They are lightweight and this keeps things moving.
               processors.size(),
               Bouncer.unlimited(),
@@ -1731,7 +1763,8 @@ public class WorkerImpl implements Worker
                   }
               );
             }
-          }
+          },
+          MoreExecutors.directExecutor()
       );
 
       return new ResultAndChannels<>(
@@ -1761,7 +1794,7 @@ public class WorkerImpl implements Worker
       }
 
       pipelineFuture = FutureUtils.transform(
-          Futures.transform(
+          Futures.transformAsync(
               pipelineFuture,
               new AsyncFunction<ResultAndChannels<?>, ResultAndChannels<?>>()
               {
@@ -1770,7 +1803,8 @@ public class WorkerImpl implements Worker
                 {
                   return fn.apply(t);
                 }
-              }
+              },
+              MoreExecutors.directExecutor()
           ),
           resultAndChannels -> new ResultAndChannels<>(
               resultAndChannels.getResultFuture(),

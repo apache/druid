@@ -30,14 +30,15 @@ import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
-import org.apache.druid.server.coordinator.balancer.CostBalancerStrategyFactory;
-import org.apache.druid.server.coordinator.loading.LoadQueuePeonTester;
+import org.apache.druid.server.coordinator.balancer.CostBalancerStrategy;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
+import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
@@ -71,7 +72,7 @@ public class BalanceSegmentsTest
   @Before
   public void setUp()
   {
-    loadQueueManager = new SegmentLoadQueueManager(null, null, null);
+    loadQueueManager = new SegmentLoadQueueManager(null, null);
 
     // Create test segments for multiple datasources
     final DateTime start1 = DateTimes.of("2012-01-01");
@@ -91,7 +92,7 @@ public class BalanceSegmentsTest
     server4 = new DruidServer("server4", "server4", null, 100L, ServerType.HISTORICAL, "normal", 0);
 
     balancerStrategyExecutor = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "BalanceSegmentsTest-%d"));
-    balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(balancerStrategyExecutor);
+    balancerStrategy = new CostBalancerStrategy(balancerStrategyExecutor);
 
     broadcastDatasources = Collections.singleton("datasourceBroadcast");
   }
@@ -120,68 +121,6 @@ public class BalanceSegmentsTest
     Assert.assertEquals(2L, totalMoved);
   }
 
-  /**
-   * Server 1 has 2 segments.
-   * Server 2 (decommissioning) has 2 segments.
-   * Server 3 is empty.
-   * Decommissioning percent is 60.
-   * Max segments to move is 3.
-   * 2 (of 2) segments should be moved from Server 2 and 1 (of 2) from Server 1.
-   */
-  @Test
-  public void testMoveDecommissioningMaxPercentOfMaxSegmentsToMove()
-  {
-    final ServerHolder serverHolder1 = createHolder(server1, true, segment1, segment2, segment3, segment4);
-    final ServerHolder serverHolder2 = createHolder(server2, false);
-
-    // ceil(3 * 0.6) = 2 segments from decommissioning servers
-    CoordinatorDynamicConfig dynamicConfig =
-        CoordinatorDynamicConfig.builder()
-                                .withSmartSegmentLoading(false)
-                                .withMaxSegmentsToMove(3)
-                                .withDecommissioningMaxPercentOfMaxSegmentsToMove(60)
-                                .build();
-    DruidCoordinatorRuntimeParams params =
-        defaultRuntimeParamsBuilder(serverHolder1, serverHolder2)
-            .withDynamicConfigs(dynamicConfig)
-            .withBalancerStrategy(balancerStrategy)
-            .withBroadcastDatasources(broadcastDatasources)
-            .withSegmentAssignerUsing(loadQueueManager)
-            .build();
-
-    CoordinatorRunStats stats = runBalancer(params);
-
-    // 2 segments are moved from the decommissioning server
-    long totalMoved = stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource1")
-                      + stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource2");
-    Assert.assertEquals(2L, totalMoved);
-    Set<DataSegment> segmentsMoved = serverHolder2.getPeon().getSegmentsToLoad();
-    Assert.assertEquals(2, segmentsMoved.size());
-  }
-
-  @Test
-  public void testZeroDecommissioningMaxPercentOfMaxSegmentsToMove()
-  {
-    final ServerHolder holder1 = createHolder(server1, false, segment1, segment2);
-    final ServerHolder holder2 = createHolder(server2, true, segment3, segment4);
-    final ServerHolder holder3 = createHolder(server3, false);
-
-    CoordinatorDynamicConfig dynamicConfig =
-        CoordinatorDynamicConfig.builder()
-                                .withSmartSegmentLoading(false)
-                                .withDecommissioningMaxPercentOfMaxSegmentsToMove(0)
-                                .withMaxSegmentsToMove(1).build();
-    DruidCoordinatorRuntimeParams params =
-        defaultRuntimeParamsBuilder(holder1, holder2, holder3).withDynamicConfigs(dynamicConfig).build();
-
-    CoordinatorRunStats stats = runBalancer(params);
-
-    // Verify that either segment1 or segment2 is chosen for move
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.MOVED, "normal", segment1.getDataSource()));
-    DataSegment movingSegment = holder3.getPeon().getSegmentsToLoad().iterator().next();
-    Assert.assertEquals(segment1.getDataSource(), movingSegment.getDataSource());
-  }
-
   @Test
   public void testMaxDecommissioningMaxPercentOfMaxSegmentsToMove()
   {
@@ -192,7 +131,6 @@ public class BalanceSegmentsTest
     CoordinatorDynamicConfig dynamicConfig =
         CoordinatorDynamicConfig.builder()
                                 .withSmartSegmentLoading(false)
-                                .withDecommissioningMaxPercentOfMaxSegmentsToMove(100)
                                 .withMaxSegmentsToMove(1).build();
     DruidCoordinatorRuntimeParams params =
         defaultRuntimeParamsBuilder(holder1, holder2, holder3).withDynamicConfigs(dynamicConfig).build();
@@ -205,11 +143,8 @@ public class BalanceSegmentsTest
     Assert.assertEquals(segment3.getDataSource(), movingSegment.getDataSource());
   }
 
-  /**
-   * Should balance segments as usual (ignoring percent) with empty decommissioningNodes.
-   */
   @Test
-  public void testMoveDecommissioningMaxPercentOfMaxSegmentsToMoveWithNoDecommissioning()
+  public void testMoveWithNoDecommissioning()
   {
     final ServerHolder serverHolder1 = createHolder(server1, segment1, segment2, segment3, segment4);
     final ServerHolder serverHolder2 = createHolder(server2);
@@ -218,7 +153,6 @@ public class BalanceSegmentsTest
         CoordinatorDynamicConfig.builder()
                                 .withSmartSegmentLoading(false)
                                 .withMaxSegmentsToMove(4)
-                                .withDecommissioningMaxPercentOfMaxSegmentsToMove(9)
                                 .build();
     DruidCoordinatorRuntimeParams params =
         defaultRuntimeParamsBuilder(serverHolder1, serverHolder2)
@@ -378,7 +312,7 @@ public class BalanceSegmentsTest
 
   private CoordinatorRunStats runBalancer(DruidCoordinatorRuntimeParams params)
   {
-    params = new BalanceSegments().run(params);
+    params = new BalanceSegments(Duration.standardMinutes(1)).run(params);
     if (params == null) {
       Assert.fail("BalanceSegments duty returned null params");
       return new CoordinatorRunStats();
@@ -394,7 +328,7 @@ public class BalanceSegmentsTest
     return DruidCoordinatorRuntimeParams
         .newBuilder(DateTimes.nowUtc())
         .withDruidCluster(DruidCluster.builder().addTier("normal", servers).build())
-        .withUsedSegmentsInTest(allSegments)
+        .withUsedSegments(allSegments)
         .withBroadcastDatasources(broadcastDatasources)
         .withBalancerStrategy(balancerStrategy)
         .withSegmentAssignerUsing(loadQueueManager);
@@ -423,7 +357,7 @@ public class BalanceSegmentsTest
 
     return new ServerHolder(
         server.toImmutableDruidServer(),
-        new LoadQueuePeonTester(),
+        new TestLoadQueuePeon(),
         isDecommissioning,
         maxSegmentsInLoadQueue,
         10

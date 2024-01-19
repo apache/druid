@@ -219,7 +219,7 @@ The values shown above are for the default docker compose cluster. For other clu
 
 - docker-compose.druid-hadoop.yml
 
-  For starting Apache Hadoop 2.8.5 cluster with the same setup as the Druid tutorial.
+  For starting Apache Hadoop 3.3.6 cluster with the same setup as the Druid tutorial.
 
   ```bash
   docker-compose -f docker-compose.druid-hadoop.yml up

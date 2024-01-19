@@ -26,6 +26,7 @@ import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.longs.LongArraySet;
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongSet;
+import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
@@ -51,8 +52,10 @@ import org.apache.druid.segment.data.CompressedColumnarLongsSupplier;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.VByte;
+import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.SimpleBitmapColumnIndex;
+import org.apache.druid.segment.index.SimpleImmutableBitmapDelegatingIterableIndex;
 import org.apache.druid.segment.index.SimpleImmutableBitmapIndex;
 import org.apache.druid.segment.index.SimpleImmutableBitmapIterableIndex;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
@@ -231,31 +234,29 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
     @Override
     public BitmapColumnIndex forValue(@Nonnull Object value, TypeSignature<ValueType> valueType)
     {
-
-      final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(valueType), value)
-                                       .castTo(ExpressionType.LONG);
-      if (eval.isNumericNull()) {
-        // value wasn't null, but not a number
-        return null;
+      final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(valueType), value);
+      final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(eval, ExpressionType.LONG);
+      if (castForComparison == null) {
+        return new AllFalseBitmapColumnIndex(bitmapFactory, nullValueBitmap);
       }
-      final long longValue = eval.asLong();
+      final long longValue = castForComparison.asLong();
+
       return new SimpleBitmapColumnIndex()
       {
         final FixedIndexed<Long> dictionary = longDictionarySupplier.get();
-        @Override
-        public double estimateSelectivity(int totalRows)
-        {
-          final int id = dictionary.indexOf(longValue);
-          if (id < 0) {
-            return 0.0;
-          }
-          return (double) getBitmap(id).size() / totalRows;
-        }
 
         @Override
-        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
         {
           final int id = dictionary.indexOf(longValue);
+          if (includeUnknown) {
+            if (id < 0) {
+              return bitmapResultFactory.wrapDimensionValue(nullValueBitmap);
+            }
+            return bitmapResultFactory.unionDimensionValueBitmaps(
+                ImmutableList.of(getBitmap(id), nullValueBitmap)
+            );
+          }
           if (id < 0) {
             return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
           }
@@ -277,31 +278,9 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
       final Long longValue = GuavaUtils.tryParseLong(value);
       return new SimpleBitmapColumnIndex()
       {
-        @Override
-        public double estimateSelectivity(int totalRows)
-        {
-          if (longValue == null) {
-            if (inputNull && NullHandling.sqlCompatible()) {
-              return (double) getBitmap(0).size() / totalRows;
-            } else {
-              return 0.0;
-            }
-          }
-          if (NullHandling.replaceWithDefault() && longValue.equals(NullHandling.defaultLongValue())) {
-            if (defaultValueIndex >= 0) {
-              return ((double) getBitmap(0).size() + (double) getBitmap(defaultValueIndex).size()) / totalRows;
-            }
-            return (double) getBitmap(0).size() / totalRows;
-          }
-          final int id = dictionary.indexOf(longValue);
-          if (id < 0) {
-            return 0.0;
-          }
-          return (double) getBitmap(id).size() / totalRows;
-        }
 
         @Override
-        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
         {
           if (longValue == null) {
             if (inputNull && NullHandling.sqlCompatible()) {
@@ -322,6 +301,14 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
             return bitmapResultFactory.wrapDimensionValue(getBitmap(0));
           }
           final int id = dictionary.indexOf(longValue);
+          if (includeUnknown) {
+            if (id < 0) {
+              return bitmapResultFactory.wrapDimensionValue(nullValueBitmap);
+            }
+            return bitmapResultFactory.unionDimensionValueBitmaps(
+                ImmutableList.of(getBitmap(id), nullValueBitmap)
+            );
+          }
           if (id < 0) {
             return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
           }
@@ -333,7 +320,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
     @Override
     public BitmapColumnIndex forSortedValues(SortedSet<String> values)
     {
-      return new SimpleImmutableBitmapIterableIndex()
+      return new SimpleImmutableBitmapDelegatingIterableIndex()
       {
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable()
@@ -400,6 +387,17 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
             }
           };
         }
+
+        @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
+        @Nullable
+        @Override
+        protected ImmutableBitmap getUnknownsBitmap()
+        {
+          if (!values.contains(null)) {
+            return nullValueBitmap;
+          }
+          return null;
+        }
       };
     }
   }
@@ -416,19 +414,30 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
     )
     {
       final FixedIndexed<Long> dictionary = longDictionarySupplier.get();
-      IntIntPair range = dictionary.getRange(
-          startValue == null ? null : startValue.longValue(),
-          startStrict,
-          endValue == null ? null : endValue.longValue(),
-          endStrict
-      );
+      final Long startLong;
+      final Long endLong;
+      if (startValue == null) {
+        startLong = null;
+      } else if (startStrict) {
+        startLong = (long) Math.floor(startValue.doubleValue());
+      } else {
+        startLong = (long) Math.ceil(startValue.doubleValue());
+      }
+      if (endValue == null) {
+        endLong = null;
+      } else if (endStrict) {
+        endLong = (long) Math.ceil(endValue.doubleValue());
+      } else {
+        endLong = (long) Math.floor(endValue.doubleValue());
+      }
+      final IntIntPair range = dictionary.getRange(startLong, startStrict, endLong, endStrict);
 
       final int startIndex = range.leftInt();
       final int endIndex = range.rightInt();
       if (ColumnIndexSupplier.skipComputingRangeIndexes(columnConfig, numRows, endIndex - startIndex)) {
         return null;
       }
-      return new SimpleImmutableBitmapIterableIndex()
+      return new SimpleImmutableBitmapDelegatingIterableIndex()
       {
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable()
@@ -450,6 +459,13 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
             }
           };
         }
+
+        @Nullable
+        @Override
+        protected ImmutableBitmap getUnknownsBitmap()
+        {
+          return nullValueBitmap;
+        }
       };
     }
   }
@@ -467,7 +483,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
       return new SimpleImmutableBitmapIterableIndex()
       {
         @Override
-        public Iterable<ImmutableBitmap> getBitmapIterable()
+        public Iterable<ImmutableBitmap> getBitmapIterable(boolean includeUnknown)
         {
           return () -> new Iterator<ImmutableBitmap>()
           {
@@ -507,12 +523,12 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
                 Long nextValue = iterator.next();
                 if (nextValue == null) {
                   if (NullHandling.sqlCompatible()) {
-                    nextSet = longPredicate.applyNull();
+                    nextSet = longPredicate.applyNull().matches(includeUnknown);
                   } else {
-                    nextSet = longPredicate.applyLong(NullHandling.defaultLongValue());
+                    nextSet = longPredicate.applyLong(NullHandling.defaultLongValue()).matches(includeUnknown);
                   }
                 } else {
-                  nextSet = longPredicate.applyLong(nextValue);
+                  nextSet = longPredicate.applyLong(nextValue).matches(includeUnknown);
                 }
                 if (nextSet) {
                   next = index;

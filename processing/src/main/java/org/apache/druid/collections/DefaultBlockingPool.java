@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
@@ -48,6 +49,8 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
   private final Condition notEnough;
   private final int maxSize;
 
+  private final AtomicLong pendingRequests;
+
   public DefaultBlockingPool(
       Supplier<T> generator,
       int limit
@@ -62,6 +65,7 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
 
     this.lock = new ReentrantLock();
     this.notEnough = lock.newCondition();
+    this.pendingRequests = new AtomicLong();
   }
 
   @Override
@@ -91,11 +95,15 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
     Preconditions.checkArgument(timeoutMs >= 0, "timeoutMs must be a non-negative value, but was [%s]", timeoutMs);
     checkInitialized();
     try {
+      pendingRequests.incrementAndGet();
       final List<T> objects = timeoutMs > 0 ? pollObjects(elementNum, timeoutMs) : pollObjects(elementNum);
       return objects.stream().map(this::wrapObject).collect(Collectors.toList());
     }
     catch (InterruptedException e) {
       throw new RuntimeException(e);
+    }
+    finally {
+      pendingRequests.decrementAndGet();
     }
   }
 
@@ -104,11 +112,21 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
   {
     checkInitialized();
     try {
+      pendingRequests.incrementAndGet();
       return takeObjects(elementNum).stream().map(this::wrapObject).collect(Collectors.toList());
     }
     catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
+    finally {
+      pendingRequests.incrementAndGet();
+    }
+  }
+
+  @Override
+  public long getPendingRequests()
+  {
+    return pendingRequests.get();
   }
 
   private List<T> pollObjects(int elementNum) throws InterruptedException

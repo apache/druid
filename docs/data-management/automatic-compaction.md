@@ -23,6 +23,9 @@ title: "Automatic compaction"
   -->
 
 In Apache Druid, compaction is a special type of ingestion task that reads data from a Druid datasource and writes it back into the same datasource. A common use case for this is to [optimally size segments](../operations/segment-optimization.md) after ingestion to improve query performance. Automatic compaction, or auto-compaction, refers to the system for automatic execution of compaction tasks managed by the [Druid Coordinator](../design/coordinator.md).
+This topic guides you through setting up automatic compaction for your Druid cluster. See the [examples](#examples) for common use cases for automatic compaction.
+
+## How Druid manages automatic compaction
 
 The Coordinator [indexing period](../configuration/index.md#coordinator-operation), `druid.coordinator.period.indexingPeriod`, controls the frequency of compaction tasks.
 The default indexing period is 30 minutes, meaning that the Coordinator first checks for segments to compact at most 30 minutes from when auto-compaction is enabled.
@@ -33,9 +36,12 @@ At every invocation of auto-compaction, the Coordinator initiates a [segment sea
 When there are eligible segments to compact, the Coordinator issues compaction tasks based on available worker capacity.
 If a compaction task takes longer than the indexing period, the Coordinator waits for it to finish before resuming the period for segment search.
 
+:::info
+ Auto-compaction skips datasources that have a segment granularity of `ALL`.
+:::
+
 As a best practice, you should set up auto-compaction for all Druid datasources. You can run compaction tasks manually for cases where you want to allocate more system resources. For example, you may choose to run multiple compaction tasks in parallel to compact an existing datasource for the first time. See [Compaction](compaction.md) for additional details and use cases.
 
-This topic guides you through setting up automatic compaction for your Druid cluster. See the [examples](#examples) for common use cases for automatic compaction.
 
 ## Enable automatic compaction
 
@@ -59,10 +65,10 @@ To disable auto-compaction for a datasource, click **Delete** from the **Compact
 
 ### Compaction configuration API
 
-Use the [Automatic compaction API](../api-reference/automatic-compaction-api.md#automatic-compaction-status) to configure automatic compaction.
+Use the [Automatic compaction API](../api-reference/automatic-compaction-api.md#manage-automatic-compaction) to configure automatic compaction.
 To enable auto-compaction for a datasource, create a JSON object with the desired auto-compaction settings.
 See [Configure automatic compaction](#configure-automatic-compaction) for the syntax of an auto-compaction spec.
-Send the JSON object as a payload in a [`POST` request](../api-reference/automatic-compaction-api.md#automatic-compaction-configuration) to `/druid/coordinator/v1/config/compaction`.
+Send the JSON object as a payload in a [`POST` request](../api-reference/automatic-compaction-api.md#create-or-update-automatic-compaction-configuration) to `/druid/coordinator/v1/config/compaction`.
 The following example configures auto-compaction for the `wikipedia` datasource:
 
 ```sh
@@ -76,7 +82,7 @@ curl --location --request POST 'http://localhost:8081/druid/coordinator/v1/confi
 }'
 ```
 
-To disable auto-compaction for a datasource, send a [`DELETE` request](../api-reference/automatic-compaction-api.md#automatic-compaction-configuration) to `/druid/coordinator/v1/config/compaction/{dataSource}`. Replace `{dataSource}` with the name of the datasource for which to disable auto-compaction. For example:
+To disable auto-compaction for a datasource, send a [`DELETE` request](../api-reference/automatic-compaction-api.md#remove-automatic-compaction-configuration) to `/druid/coordinator/v1/config/compaction/{dataSource}`. Replace `{dataSource}` with the name of the datasource for which to disable auto-compaction. For example:
 
 ```sh
 curl --location --request DELETE 'http://localhost:8081/druid/coordinator/v1/config/compaction/wikipedia'
@@ -115,12 +121,12 @@ The following properties are automatically set by the Coordinator:
 * `id`: Generated using the task type, datasource name, interval, and timestamp. The task ID is prefixed with `coordinator-issued`.
 * `context`: Set according to the user-provided `taskContext`.
 
-Compaction tasks typically fetch all [relevant segments](compaction.md#compaction-io-configuration) prior to launching any subtasks,
+Compaction tasks typically fetch all [relevant segments](manual-compaction.md#compaction-io-configuration) prior to launching any subtasks,
 _unless_ the following properties are all set to non-null values. It is strongly recommended to set them to non-null values to
 maximize performance and minimize disk usage of the `compact` tasks launched by auto-compaction:
 
-- [`granularitySpec`](compaction.md#compaction-granularity-spec), with non-null values for each of `segmentGranularity`, `queryGranularity`, and `rollup`
-- [`dimensionsSpec`](compaction.md#compaction-dimensions-spec)
+- [`granularitySpec`](manual-compaction.md#compaction-granularity-spec), with non-null values for each of `segmentGranularity`, `queryGranularity`, and `rollup`
+- [`dimensionsSpec`](manual-compaction.md#compaction-dimensions-spec)
 - `metricsSpec`
 
 For more details on each of the specs in an auto-compaction configuration, see [Automatic compaction dynamic configuration](../configuration/index.md#automatic-compaction-dynamic-configuration).
@@ -152,11 +158,11 @@ After the Coordinator has initiated auto-compaction, you can view compaction sta
 
 In the web console, the Datasources view displays auto-compaction statistics. The Tasks view shows the task information for compaction tasks that were triggered by the automatic compaction system.
 
-To get statistics by API, send a [`GET` request](../api-reference/automatic-compaction-api.md#automatic-compaction-status) to `/druid/coordinator/v1/compaction/status`. To filter the results to a particular datasource, pass the datasource name as a query parameter to the request—for example, `/druid/coordinator/v1/compaction/status?dataSource=wikipedia`.
+To get statistics by API, send a [`GET` request](../api-reference/automatic-compaction-api.md#view-automatic-compaction-status) to `/druid/coordinator/v1/compaction/status`. To filter the results to a particular datasource, pass the datasource name as a query parameter to the request—for example, `/druid/coordinator/v1/compaction/status?dataSource=wikipedia`.
 
 ## Examples
 
-The following examples demonstrate potential use cases in which auto-compaction may improve your Druid performance. See more details in [Compaction strategies](../data-management/compaction.md#compaction-strategies). The examples in this section do not change the underlying data.
+The following examples demonstrate potential use cases in which auto-compaction may improve your Druid performance. See more details in [Compaction strategies](../data-management/compaction.md#compaction-guidelines). The examples in this section do not change the underlying data.
 
 ### Change segment granularity
 
@@ -173,8 +179,6 @@ The following auto-compaction configuration compacts existing `HOUR` segments in
   "skipOffsetFromLatest": "P1W",
 }
 ```
-
-> Auto-compaction skips datasources containing ALL granularity segments when the target granularity is different.
 
 ### Update partitioning scheme
 
@@ -199,10 +203,111 @@ The following auto-compaction configuration compacts updates the `wikipedia` seg
 }
 ```
 
+## Concurrent append and replace
+
+:::info
+Concurrent append and replace is an [experimental feature](../development/experimental.md) and is not currently available for SQL-based ingestion.
+:::
+
+This feature allows you to safely replace the existing data in an interval of a datasource while new data is being appended to that interval. One of the most common applications of this is appending new data (using say streaming ingestion) to an interval while compaction of that interval is already in progress.
+
+To set up concurrent append and replace, you need to ensure that your ingestion jobs have the appropriate lock types:
+
+You can enable concurrent append and replace by ensuring the following:
+- The append task (with `appendToExisting` set to `true`) has `taskLockType` set to `APPEND` in the task context.
+- The replace task (with `appendToExisting` set to `false`) has `taskLockType` set to `REPLACE` in the task context.
+- The segment granularity of the append task is equal to or finer than the segment granularity of the replace task.
+
+:::info
+
+When using concurrent append and replace, keep the following in mind:
+
+- Concurrent append and replace fails if the task with `APPEND` lock uses a coarser segment granularity than the task with the `REPLACE` lock. For example, if the `APPEND` task uses a segment granularity of YEAR and the `REPLACE` task uses a segment granularity of MONTH, you should not use concurrent append and replace.
+
+-  Only a single task can hold a `REPLACE` lock on a given interval of a datasource.
+  
+- Multiple tasks can hold `APPEND` locks on a given interval of a datasource and append data to that interval simultaneously.
+
+:::
+
+
+### Configure concurrent append and replace
+
+##### Update the compaction settings with the UI
+
+In the **Compaction config** for a datasource, set  **Allow concurrent compactions (experimental)** to **True**.
+
+##### Update the compaction settings with the API
+ 
+ Prepare your datasource for concurrent append and replace by setting its task lock type to `REPLACE`.
+Add the `taskContext` like you would any other automatic compaction setting through the API:
+
+```shell
+curl --location --request POST 'http://localhost:8081/druid/coordinator/v1/config/compaction' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "dataSource": "YOUR_DATASOURCE",
+    "taskContext": {
+        "taskLockType": "REPLACE"
+    }
+}'
+```
+
+
+#### Add a task lock type to your ingestion job
+
+Next, you need to configure the task lock type for your ingestion job: 
+
+- For streaming jobs, the context parameter goes in your supervisor spec, and the lock type is always `APPEND`
+- For legacy JSON-based batch ingestion, the context parameter goes in your ingestion spec, and the lock type can be either `APPEND` or `REPLACE`. 
+ 
+You can provide the context parameter through the API like any other parameter for ingestion job or through the UI.
+
+##### Add a task lock using the Druid console
+
+As part of the  **Load data** wizard for classic batch (JSON-based ingestion) and streaming ingestion, you can configure the task lock type for the ingestion during the **Publish** step:
+
+- If you set **Append to existing** to **True**, you can then set **Allow concurrent append tasks (experimental)** to **True**.
+- If you set **Append to existing** to **False**, you can then set **Allow concurrent replace tasks (experimental)** to **True**.
+
+##### Add the task lock type through the API
+
+Add the following JSON snippet to your supervisor or ingestion spec if you're using the API:
+
+```json
+"context": {
+   "taskLockType": LOCK_TYPE
+}   
+```
+ 
+The `LOCK_TYPE` depends on what you're trying to accomplish.
+
+Set `taskLockType` to  `APPEND` if either of the following are true:
+
+- Dynamic partitioning with append to existing is set to `true`
+- The ingestion job is a streaming ingestion job
+
+If you have multiple ingestion jobs that append all targeting the same datasource and want them to run simultaneously, you need to also include the following context parameter:
+
+```json
+"useSharedLock": "true"
+```
+
+Keep in mind that `taskLockType` takes precedence over `useSharedLock`. Do not use it with `REPLACE` task locks.
+
+
+Set  `taskLockType` to `REPLACE` if you're replacing data. For example, if you use any of the following partitioning types, use `REPLACE`:
+
+- hash partitioning 
+- range partitioning
+- dynamic partitioning with append to existing set to `false`
+
+
 ## Learn more
 
 See the following topics for more information:
-* [Compaction](compaction.md) for an overview of compaction and how to set up manual compaction in Druid.
+* [Compaction](compaction.md) for an overview of compaction in Druid.
+* [Manual compaction](manual-compaction.md) for how to manually perform compaction tasks.
 * [Segment optimization](../operations/segment-optimization.md) for guidance on evaluating and optimizing Druid segment size.
 * [Coordinator process](../design/coordinator.md#automatic-compaction) for details on how the Coordinator plans compaction tasks.
 

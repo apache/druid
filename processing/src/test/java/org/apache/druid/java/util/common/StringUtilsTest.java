@@ -386,4 +386,19 @@ public class StringUtilsTest
       }
     }
   }
+
+  @Test()
+  public void testNonStrictFormatWithNullMessage()
+  {
+    Assert.assertThrows(NullPointerException.class, () -> StringUtils.nonStrictFormat(null, 1, 2));
+  }
+
+  @Test
+  public void testNonStrictFormatWithStringContainingPercent()
+  {
+    Assert.assertEquals(
+        "some string containing % %s %d %f",
+        StringUtils.nonStrictFormat("%s", "some string containing % %s %d %f")
+    );
+  }
 }

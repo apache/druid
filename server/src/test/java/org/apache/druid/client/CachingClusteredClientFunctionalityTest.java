@@ -38,7 +38,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.query.DruidProcessingConfig;
+import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
@@ -47,7 +47,6 @@ import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.segment.join.JoinableFactoryWrapperTest;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -318,16 +317,23 @@ public class CachingClusteredClientFunctionalityTest
             return 0L;
           }
         },
-        new DruidProcessingConfig()
+        new BrokerParallelMergeConfig()
         {
           @Override
-          public String getFormatString()
+          public boolean useParallelMergePool()
           {
-            return null;
+            return true;
           }
 
           @Override
-          public int getMergePoolParallelism()
+          public int getParallelism()
+          {
+            // fixed so same behavior across all test environments
+            return 4;
+          }
+
+          @Override
+          public int getDefaultMaxQueryParallelism()
           {
             // fixed so same behavior across all test environments
             return 4;
@@ -335,7 +341,6 @@ public class CachingClusteredClientFunctionalityTest
         },
         ForkJoinPool.commonPool(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        JoinableFactoryWrapperTest.NOOP_JOINABLE_FACTORY_WRAPPER,
         new NoopServiceEmitter()
     );
   }

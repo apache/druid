@@ -41,4 +41,3 @@ export * from './time/time';
 export * from './timestamp-spec/timestamp-spec';
 export * from './transform-spec/transform-spec';
 export * from './workbench-query/workbench-query';
-export * from './workbench-query/workbench-query-part';

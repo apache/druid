@@ -21,7 +21,6 @@ import {
   C,
   F,
   SqlCase,
-  SqlColumn,
   SqlExpression,
   SqlFunction,
   SqlLiteral,
@@ -39,6 +38,7 @@ import { useQueryManager } from '../../../hooks';
 import { getInitQuery } from '../utils';
 
 import { GenericOutputTable } from './components';
+import { shiftTimeInWhere } from './utils/utils';
 
 import './table-react-module.scss';
 
@@ -73,29 +73,17 @@ const KNOWN_AGGREGATIONS = [
   'ANY_VALUE',
 ];
 
-const NULL_REPLACEMENT = SqlLiteral.create('__VIS_NULL__');
-
-function nullableColumn(column: ExpressionMeta) {
-  return column.sqlType !== 'TIMESTAMP';
-}
-
-function nvl(ex: SqlExpression): SqlExpression {
-  return SqlFunction.simple('NVL', [ex, NULL_REPLACEMENT]);
-}
-
-function nullif(ex: SqlExpression): SqlExpression {
-  return SqlFunction.simple('NULLIF', [ex, NULL_REPLACEMENT]);
-}
-
 function toGroupByExpression(
   splitColumn: ExpressionMeta,
-  nvlIfNeeded: boolean,
   timeBucket: string,
+  compareShiftDuration?: string,
 ) {
   const { expression, sqlType, name } = splitColumn;
   return expression
-    .applyIf(sqlType === 'TIMESTAMP', e => SqlFunction.simple('TIME_FLOOR', [e, timeBucket]))
-    .applyIf(nvlIfNeeded && nullableColumn(splitColumn), nvl)
+    .applyIf(sqlType === 'TIMESTAMP' && compareShiftDuration, e =>
+      F.timeShift(e, compareShiftDuration!, 1),
+    )
+    .applyIf(sqlType === 'TIMESTAMP', e => F.timeFloor(e, timeBucket))
     .as(name);
 }
 
@@ -141,16 +129,6 @@ function toShowColumnExpression(
   }
 
   return ex.as(showColumn.name);
-}
-
-function shiftTime(ex: SqlQuery, period: string): SqlQuery {
-  return ex.walk(q => {
-    if (q instanceof SqlColumn && q.getName() === '__time') {
-      return SqlFunction.simple('TIME_SHIFT', [q, period, 1]);
-    } else {
-      return q;
-    }
-  }) as SqlQuery;
 }
 
 interface QueryAndHints {
@@ -327,7 +305,7 @@ function TableModule(props: TableModuleProps) {
 
     const mainQuery = getInitQuery(table, where)
       .applyForEach(splitColumns, (q, splitColumn) =>
-        q.addSelect(toGroupByExpression(splitColumn, hasCompare, timeBucket), {
+        q.addSelect(toGroupByExpression(splitColumn, timeBucket), {
           addToGroupBy: 'end',
         }),
       )
@@ -379,28 +357,22 @@ function TableModule(props: TableModuleProps) {
             compares.map((comparePeriod, i) =>
               SqlWithPart.simple(
                 `compare${i}`,
-                getInitQuery(table, where)
+                getInitQuery(table, shiftTimeInWhere(where, comparePeriod))
                   .applyForEach(splitColumns, (q, splitColumn) =>
-                    q.addSelect(toGroupByExpression(splitColumn, true, timeBucket), {
+                    q.addSelect(toGroupByExpression(splitColumn, timeBucket, comparePeriod), {
                       addToGroupBy: 'end',
                     }),
                   )
                   .applyForEach(metrics, (q, metric) =>
                     q.addSelect(metric.expression.as(metric.name)),
-                  )
-                  .apply(q => shiftTime(q, comparePeriod)),
+                  ),
               ),
             ),
           ),
         )
         .changeSelectExpressions(
           splitColumns
-            .map(splitColumn =>
-              main
-                .column(splitColumn.name)
-                .applyIf(nullableColumn(splitColumn), nullif)
-                .as(splitColumn.name),
-            )
+            .map(splitColumn => main.column(splitColumn.name).as(splitColumn.name))
             .concat(
               showColumns.map(showColumn => main.column(showColumn.name).as(showColumn.name)),
               metrics.map(metric => main.column(metric.name).as(metric.name)),
@@ -432,7 +404,9 @@ function TableModule(props: TableModuleProps) {
             T(`compare${i}`),
             SqlExpression.and(
               ...splitColumns.map(splitColumn =>
-                main.column(splitColumn.name).equal(T(`compare${i}`).column(splitColumn.name)),
+                main
+                  .column(splitColumn.name)
+                  .isNotDistinctFrom(T(`compare${i}`).column(splitColumn.name)),
               ),
             ),
           ),

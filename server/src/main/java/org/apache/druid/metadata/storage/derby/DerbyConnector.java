@@ -89,24 +89,6 @@ public class DerbyConnector extends SQLMetadataConnector
   }
 
   @Override
-  public boolean tableContainsColumn(Handle handle, String table, String column)
-  {
-    try {
-      DatabaseMetaData databaseMetaData = handle.getConnection().getMetaData();
-      ResultSet columns = databaseMetaData.getColumns(
-          null,
-          null,
-          table.toUpperCase(Locale.ENGLISH),
-          column.toUpperCase(Locale.ENGLISH)
-      );
-      return columns.next();
-    }
-    catch (SQLException e) {
-      return false;
-    }
-  }
-
-  @Override
   public String getSerialType()
   {
     return SERIAL_TYPE;
@@ -163,6 +145,64 @@ public class DerbyConnector extends SQLMetadataConnector
                 )
             ).execute();
             return null;
+          }
+        }
+    );
+  }
+
+  /**
+   * Get the ResultSet for indexInfo for given table
+   *
+   * @param databaseMetaData DatabaseMetaData
+   * @param tableName        Name of table
+   * @return ResultSet with index info
+   */
+  @Override
+  public ResultSet getIndexInfo(DatabaseMetaData databaseMetaData, String tableName) throws SQLException
+  {
+    return databaseMetaData.getIndexInfo(
+        null,
+        null,
+        StringUtils.toUpperCase(tableName),  // tableName needs to be uppercase in derby default setting
+        false,
+        false
+    );
+  }
+  /**
+   * Interrogate table metadata and return true or false depending on the existance of the indicated column
+   *
+   * public visibility because DerbyConnector needs to override thanks to uppercase table and column names.
+   *
+   * @param tableName The table being interrogated
+   * @param columnName The column being looked for
+   * @return boolean indicating the existence of the column in question
+   */
+  @Override
+  public boolean tableHasColumn(String tableName, String columnName)
+  {
+    return getDBI().withHandle(
+        new HandleCallback<Boolean>()
+        {
+          @Override
+          public Boolean withHandle(Handle handle)
+          {
+            try {
+              if (tableExists(handle, tableName)) {
+                DatabaseMetaData dbMetaData = handle.getConnection().getMetaData();
+                ResultSet columns = dbMetaData.getColumns(
+                    null,
+                    null,
+                    tableName.toUpperCase(Locale.ENGLISH),
+                    columnName.toUpperCase(Locale.ENGLISH)
+                );
+                return columns.next();
+              } else {
+                return false;
+              }
+            }
+            catch (SQLException e) {
+              return false;
+            }
           }
         }
     );

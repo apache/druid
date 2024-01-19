@@ -56,10 +56,10 @@ public class VarianceTopNQueryTest extends InitializedNullHandlingTest
     return QueryRunnerTestHelper.transformToConstructionFeeder(TopNQueryRunnerTest.queryRunners());
   }
 
-  private final QueryRunner runner;
+  private final QueryRunner<Result<TopNResultValue>> runner;
 
   public VarianceTopNQueryTest(
-      QueryRunner runner
+      QueryRunner<Result<TopNResultValue>> runner
   )
   {
     this.runner = runner;
@@ -92,38 +92,38 @@ public class VarianceTopNQueryTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                        .put("market", "spot")
-                        .put("rows", 837L)
-                        .put("index", 95606.57232284546D)
-                        .put("addRowsIndexConstant", 96444.57232284546D)
-                        .put("uniques", QueryRunnerTestHelper.UNIQUES_9)
-                        .put("maxIndex", 277.2735290527344D)
-                        .put("minIndex", 59.02102279663086D)
-                        .put("index_var", 439.3851694586573D)
-                        .build(),
+                                .put("market", "spot")
+                                .put("rows", 837L)
+                                .put("index", 95606.57232284546D)
+                                .put("addRowsIndexConstant", 96444.57232284546D)
+                                .put("uniques", QueryRunnerTestHelper.UNIQUES_9)
+                                .put("maxIndex", 277.2735290527344D)
+                                .put("minIndex", 59.02102279663086D)
+                                .put("index_var", 439.3851694586573D)
+                                .build(),
                     ImmutableMap.<String, Object>builder()
-                        .put("market", "total_market")
-                        .put("rows", 186L)
-                        .put("index", 215679.82879638672D)
-                        .put("addRowsIndexConstant", 215866.82879638672D)
-                        .put("uniques", QueryRunnerTestHelper.UNIQUES_2)
-                        .put("maxIndex", 1743.9217529296875D)
-                        .put("minIndex", 792.3260498046875D)
-                        .put("index_var", 27679.900887366413D)
-                        .build(),
+                                .put("market", "total_market")
+                                .put("rows", 186L)
+                                .put("index", 215679.82879638672D)
+                                .put("addRowsIndexConstant", 215866.82879638672D)
+                                .put("uniques", QueryRunnerTestHelper.UNIQUES_2)
+                                .put("maxIndex", 1743.9217529296875D)
+                                .put("minIndex", 792.3260498046875D)
+                                .put("index_var", 27679.900887366413D)
+                                .build(),
                     ImmutableMap.<String, Object>builder()
-                        .put("market", "upfront")
-                        .put("rows", 186L)
-                        .put("index", 192046.1060180664D)
-                        .put("addRowsIndexConstant", 192233.1060180664D)
-                        .put("uniques", QueryRunnerTestHelper.UNIQUES_2)
-                        .put("maxIndex", 1870.06103515625D)
-                        .put("minIndex", 545.9906005859375D)
-                        .put("index_var", 79699.9780741607D)
-                        .build()
+                                .put("market", "upfront")
+                                .put("rows", 186L)
+                                .put("index", 192046.1060180664D)
+                                .put("addRowsIndexConstant", 192233.1060180664D)
+                                .put("uniques", QueryRunnerTestHelper.UNIQUES_2)
+                                .put("maxIndex", 1870.06103515625D)
+                                .put("minIndex", 545.9906005859375D)
+                                .put("index_var", 79699.9780741607D)
+                                .build()
                 )
             )
         )
@@ -131,7 +131,7 @@ public class VarianceTopNQueryTest extends InitializedNullHandlingTest
     assertExpectedResults(expectedResults, query);
   }
 
-  private Sequence<Result<TopNResultValue>> assertExpectedResults(
+  private void assertExpectedResults(
       Iterable<Result<TopNResultValue>> expectedResults,
       TopNQuery query
   )
@@ -140,7 +140,6 @@ public class VarianceTopNQueryTest extends InitializedNullHandlingTest
     final QueryRunner<Result<TopNResultValue>> mergeRunner = chest.mergeResults(runner);
     final Sequence<Result<TopNResultValue>> retval = mergeRunner.run(QueryPlus.wrap(query));
     TestHelper.assertExpectedResults(expectedResults, retval);
-    return retval;
   }
 
 }

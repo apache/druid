@@ -29,7 +29,9 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * A shard spec to represent tombstones. Its partition number is always zero and contains 1 core partitions.
+ * A shard spec to represent tombstones. Its partition number is always zero and contains zero core partitions as it
+ * contains no data. This allows other shard types appending to an existing {@link TombstoneShardSpec} to exist independently
+ * in the timeline even if the {@link TombstoneShardSpec} is dropped.
  */
 public class TombstoneShardSpec implements ShardSpec
 {
@@ -69,7 +71,7 @@ public class TombstoneShardSpec implements ShardSpec
   @JsonProperty("partitions")
   public int getNumCorePartitions()
   {
-    return 1;
+    return 0;
   }
 
   @Override
@@ -88,8 +90,8 @@ public class TombstoneShardSpec implements ShardSpec
   public String toString()
   {
     return "TombstoneShardSpec{" +
-           "partitionNum=" + 0 +
-           ", partitions=" + 1 +
+           "partitionNum=" + getPartitionNum() +
+           ", partitions=" + getNumCorePartitions() +
            '}';
   }
 

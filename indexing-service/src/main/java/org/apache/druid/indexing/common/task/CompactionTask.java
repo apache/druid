@@ -75,6 +75,7 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.IndexIO;
@@ -103,6 +104,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -126,6 +128,8 @@ import java.util.stream.IntStream;
 public class CompactionTask extends AbstractBatchIndexTask
 {
   private static final Logger log = new Logger(CompactionTask.class);
+  private static final Clock UTC_CLOCK = Clock.systemUTC();
+
 
   /**
    * The CompactionTask creates and runs multiple IndexTask instances. When the {@link AppenderatorsManager}
@@ -167,9 +171,6 @@ public class CompactionTask extends AbstractBatchIndexTask
   private final SegmentCacheManagerFactory segmentCacheManagerFactory;
 
   @JsonIgnore
-  private final RetryPolicyFactory retryPolicyFactory;
-
-  @JsonIgnore
   private final CurrentSubTaskHolder currentSubTaskHolder = new CurrentSubTaskHolder(
       (taskObject, config) -> {
         final ParallelIndexSupervisorTask indexTask = (ParallelIndexSupervisorTask) taskObject;
@@ -193,8 +194,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       @JsonProperty("granularitySpec") @Nullable final ClientCompactionTaskGranularitySpec granularitySpec,
       @JsonProperty("tuningConfig") @Nullable final TuningConfig tuningConfig,
       @JsonProperty("context") @Nullable final Map<String, Object> context,
-      @JacksonInject SegmentCacheManagerFactory segmentCacheManagerFactory,
-      @JacksonInject RetryPolicyFactory retryPolicyFactory
+      @JacksonInject SegmentCacheManagerFactory segmentCacheManagerFactory
   )
   {
     super(
@@ -248,7 +248,6 @@ public class CompactionTask extends AbstractBatchIndexTask
     this.segmentProvider = new SegmentProvider(dataSource, this.ioConfig.getInputSpec());
     this.partitionConfigurationManager = new PartitionConfigurationManager(this.tuningConfig);
     this.segmentCacheManagerFactory = segmentCacheManagerFactory;
-    this.retryPolicyFactory = retryPolicyFactory;
   }
 
   @VisibleForTesting
@@ -460,6 +459,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     emitCompactIngestionModeMetrics(toolbox.getEmitter(), ioConfig.isDropExisting());
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = createIngestionSchema(
+        UTC_CLOCK,
         toolbox,
         getTaskLockHelper().getLockGranularityToUse(),
         ioConfig,
@@ -471,8 +471,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         granularitySpec,
         toolbox.getCoordinatorClient(),
         segmentCacheManagerFactory,
-        retryPolicyFactory,
-        ioConfig.isDropExisting()
+        getMetricBuilder()
     );
     final List<ParallelIndexSupervisorTask> indexTaskSpecs = IntStream
         .range(0, ingestionSpecs.size())
@@ -569,6 +568,7 @@ public class CompactionTask extends AbstractBatchIndexTask
    */
   @VisibleForTesting
   static List<ParallelIndexIngestionSpec> createIngestionSchema(
+      final Clock clock,
       final TaskToolbox toolbox,
       final LockGranularity lockGranularityInUse,
       final CompactionIOConfig ioConfig,
@@ -580,8 +580,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       @Nullable final ClientCompactionTaskGranularitySpec granularitySpec,
       final CoordinatorClient coordinatorClient,
       final SegmentCacheManagerFactory segmentCacheManagerFactory,
-      final RetryPolicyFactory retryPolicyFactory,
-      final boolean dropExisting
+      final ServiceMetricEvent.Builder metricBuilder
   ) throws IOException
   {
     final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = retrieveRelevantTimelineHolders(
@@ -637,6 +636,9 @@ public class CompactionTask extends AbstractBatchIndexTask
         // creates new granularitySpec and set segmentGranularity
         Granularity segmentGranularityToUse = GranularityType.fromPeriod(interval.toPeriod()).getDefaultGranularity();
         final DataSchema dataSchema = createDataSchema(
+            clock,
+            toolbox.getEmitter(),
+            metricBuilder,
             segmentProvider.dataSource,
             interval,
             lazyFetchSegments(segmentsToCompact, toolbox.getSegmentCacheManager(), toolbox.getIndexIO()),
@@ -657,7 +659,6 @@ public class CompactionTask extends AbstractBatchIndexTask
                     interval,
                     coordinatorClient,
                     segmentCacheManagerFactory,
-                    retryPolicyFactory,
                     ioConfig
                 ),
                 compactionTuningConfig
@@ -669,6 +670,9 @@ public class CompactionTask extends AbstractBatchIndexTask
     } else {
       // given segment granularity
       final DataSchema dataSchema = createDataSchema(
+          clock,
+          toolbox.getEmitter(),
+          metricBuilder,
           segmentProvider.dataSource,
           JodaUtils.umbrellaInterval(
               Iterables.transform(
@@ -696,7 +700,6 @@ public class CompactionTask extends AbstractBatchIndexTask
                   segmentProvider.interval,
                   coordinatorClient,
                   segmentCacheManagerFactory,
-                  retryPolicyFactory,
                   ioConfig
               ),
               compactionTuningConfig
@@ -711,7 +714,6 @@ public class CompactionTask extends AbstractBatchIndexTask
       Interval interval,
       CoordinatorClient coordinatorClient,
       SegmentCacheManagerFactory segmentCacheManagerFactory,
-      RetryPolicyFactory retryPolicyFactory,
       CompactionIOConfig compactionIOConfig
   )
   {
@@ -744,9 +746,8 @@ public class CompactionTask extends AbstractBatchIndexTask
             toolbox.getIndexIO(),
             coordinatorClient,
             segmentCacheManagerFactory,
-            retryPolicyFactory,
             toolbox.getConfig()
-        ),
+        ).withTaskToolbox(toolbox),
         null,
         false,
         compactionIOConfig.isDropExisting()
@@ -769,6 +770,9 @@ public class CompactionTask extends AbstractBatchIndexTask
   }
 
   private static DataSchema createDataSchema(
+      Clock clock,
+      ServiceEmitter emitter,
+      ServiceMetricEvent.Builder metricBuilder,
       String dataSource,
       Interval totalInterval,
       Iterable<Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>>> segments,
@@ -786,8 +790,15 @@ public class CompactionTask extends AbstractBatchIndexTask
         dimensionsSpec == null,
         metricsSpec == null
     );
-
-    existingSegmentAnalyzer.fetchAndProcessIfNeeded();
+    long start = clock.millis();
+    try {
+      existingSegmentAnalyzer.fetchAndProcessIfNeeded();
+    }
+    finally {
+      if (emitter != null) {
+        emitter.emit(metricBuilder.setMetric("compact/segmentAnalyzer/fetchAndProcessMillis", clock.millis() - start));
+      }
+    }
 
     final Granularity queryGranularityToUse;
     if (granularitySpec.getQueryGranularity() == null) {
@@ -1322,8 +1333,7 @@ public class CompactionTask extends AbstractBatchIndexTask
           granularitySpec,
           tuningConfig,
           context,
-          segmentCacheManagerFactory,
-          retryPolicyFactory
+          segmentCacheManagerFactory
       );
     }
   }

@@ -188,17 +188,6 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(new HyperUniquesAggregatorFactory(
-        fieldName,
-        fieldName,
-        isInputHyperUnique,
-        round
-    ));
-  }
-
-  @Override
   public Object deserialize(Object object)
   {
     final ByteBuffer buffer;

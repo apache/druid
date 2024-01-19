@@ -26,22 +26,23 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.filter.BooleanFilter;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.query.filter.DruidPredicateMatch;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.ColumnProcessors;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.filter.cnf.CNFFilterExplosionException;
 import org.apache.druid.segment.filter.cnf.CalciteCnfHelper;
 import org.apache.druid.segment.filter.cnf.HiveCnfHelper;
 import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
 import org.apache.druid.segment.index.AllTrueBitmapColumnIndex;
+import org.apache.druid.segment.index.AllUnknownBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
@@ -51,7 +52,6 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
@@ -66,19 +66,11 @@ public class Filters
   private static final ColumnSelectorFactory ALL_NULL_COLUMN_SELECTOR_FACTORY = new AllNullColumnSelectorFactory();
 
   /**
-   * Convert a list of DimFilters to a list of Filters.
+   * Convert a {@link DimFilter} to an optimized {@link Filter} for use at the top level of a query.
    *
-   * @param dimFilters list of DimFilters, should all be non-null
-   *
-   * @return list of Filters
-   */
-  public static List<Filter> toFilters(List<DimFilter> dimFilters)
-  {
-    return dimFilters.stream().map(Filters::toFilter).collect(Collectors.toList());
-  }
-
-  /**
-   * Convert a DimFilter to a Filter.
+   * Must not be used by {@link DimFilter} to convert their children, because the three-valued logic parameter
+   * "includeUnknown" will not be correctly propagated. For {@link DimFilter} that convert their children, use
+   * {@link DimFilter#toOptimizedFilter(boolean)} instead.
    *
    * @param dimFilter dimFilter
    *
@@ -87,9 +79,8 @@ public class Filters
   @Nullable
   public static Filter toFilter(@Nullable DimFilter dimFilter)
   {
-    return dimFilter == null ? null : dimFilter.toOptimizedFilter();
+    return dimFilter == null ? null : dimFilter.toOptimizedFilter(false);
   }
-
 
   /**
    * Create a ValueMatcher that applies a predicate to row values.
@@ -139,51 +130,30 @@ public class Filters
       return null;
     }
     // missing column -> match all rows if the predicate matches null; match no rows otherwise
-    return predicateFactory.makeStringPredicate().apply(null)
-           ? new AllTrueBitmapColumnIndex(selector)
-           : new AllFalseBitmapColumnIndex(selector);
+    final DruidPredicateMatch match = predicateFactory.makeStringPredicate().apply(null);
+    return makeMissingColumnNullIndex(match, selector);
   }
 
-  public static BitmapColumnIndex makeMissingColumnNullIndex(boolean matchesNull, final ColumnIndexSelector selector)
+  public static BitmapColumnIndex makeMissingColumnNullIndex(
+      DruidPredicateMatch match,
+      final ColumnIndexSelector selector
+  )
   {
-    return matchesNull ? new AllTrueBitmapColumnIndex(selector) : new AllFalseBitmapColumnIndex(selector);
+    if (match == DruidPredicateMatch.TRUE) {
+      return new AllTrueBitmapColumnIndex(selector);
+    }
+    if (match == DruidPredicateMatch.UNKNOWN) {
+      return new AllUnknownBitmapColumnIndex(selector);
+    }
+    return new AllFalseBitmapColumnIndex(selector.getBitmapFactory());
   }
 
   public static ImmutableBitmap computeDefaultBitmapResults(Filter filter, ColumnIndexSelector selector)
   {
     return filter.getBitmapColumnIndex(selector).computeBitmapResult(
-        new DefaultBitmapResultFactory(selector.getBitmapFactory())
+        new DefaultBitmapResultFactory(selector.getBitmapFactory()),
+        false
     );
-  }
-
-  public static boolean supportsSelectivityEstimation(
-      Filter filter,
-      String dimension,
-      ColumnSelector columnSelector,
-      ColumnIndexSelector indexSelector
-  )
-  {
-    if (filter.getBitmapColumnIndex(indexSelector) != null) {
-      final ColumnHolder columnHolder = columnSelector.getColumnHolder(dimension);
-      if (columnHolder != null) {
-        return columnHolder.getCapabilities().hasMultipleValues().isFalse();
-      }
-    }
-    return false;
-  }
-
-  public static double estimateSelectivity(
-      final Iterator<ImmutableBitmap> bitmaps,
-      final long totalNumRows
-  )
-  {
-    long numMatchedRows = 0;
-    while (bitmaps.hasNext()) {
-      final ImmutableBitmap bitmap = bitmaps.next();
-      numMatchedRows += bitmap.size();
-    }
-
-    return Math.min(1, (double) numMatchedRows / totalNumRows);
   }
 
   @Nullable
@@ -370,7 +340,7 @@ public class Filters
   public static boolean filterMatchesNull(Filter filter)
   {
     ValueMatcher valueMatcher = filter.makeMatcher(ALL_NULL_COLUMN_SELECTOR_FACTORY);
-    return valueMatcher.matches();
+    return valueMatcher.matches(false);
   }
 
 
@@ -421,5 +391,20 @@ public class Filters
     }
 
     return retVal;
+  }
+
+  public static int countNumberOfFilters(@Nullable Filter filter)
+  {
+    if (filter == null) {
+      return 0;
+    }
+    if (filter instanceof BooleanFilter) {
+      return ((BooleanFilter) filter).getFilters()
+                                     .stream()
+                                     .map(f -> countNumberOfFilters(f))
+                                     .mapToInt(Integer::intValue)
+                                     .sum();
+    }
+    return 1;
   }
 }

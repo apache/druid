@@ -12,7 +12,7 @@ exports[`FlexibleQueryInput matches snapshot 1`] = `
   class="flexible-query-input"
 >
   <div
-    class="ace-container"
+    class="ace-container query-idle"
   >
     <div
       class=" ace_editor ace_hidpi ace-tm placeholder-padding no-background ace_focus"

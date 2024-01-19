@@ -9,6 +9,7 @@ exports[`IngestSuccessPane matches snapshot 1`] = `
   </p>
   <p>
     Insert query took 0:00:23. 
+     
     <span
       className="action"
       onClick={[Function]}

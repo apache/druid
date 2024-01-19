@@ -16,10 +16,19 @@
  * limitations under the License.
  */
 
+import { C } from '@druid-toolkit/query';
+
 import type { StageDefinition } from '../stages/stages';
 
 export type TaskStatus = 'WAITING' | 'PENDING' | 'RUNNING' | 'FAILED' | 'SUCCESS';
 export type TaskStatusWithCanceled = TaskStatus | 'CANCELED';
+
+export const TASK_CANCELED_ERROR_MESSAGES: string[] = [
+  'Shutdown request from user',
+  'Canceled: Query canceled by user or by task shutdown.',
+];
+
+export const TASK_CANCELED_PREDICATE = C('error_msg').in(TASK_CANCELED_ERROR_MESSAGES);
 
 export interface TaskStatusResponse {
   task: string;
@@ -57,6 +66,7 @@ export interface MsqTaskPayloadResponse {
     sqlQueryContext: Record<string, any>;
     sqlResultsContext: Record<string, any>;
     sqlTypeNames: string[];
+    nativeTypeNames: string[];
     context: Record<string, any>;
     groupId: string;
     dataSource: string;

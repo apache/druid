@@ -301,8 +301,6 @@ public class KinesisIndexTaskTuningConfigTest
         null,
         null,
         null,
-        null,
-        null,
         1000,
         500,
         500,

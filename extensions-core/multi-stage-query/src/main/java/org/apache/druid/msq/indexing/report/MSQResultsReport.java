@@ -117,7 +117,7 @@ public class MSQResultsReport
     return resultYielder;
   }
 
-  @JsonProperty("resultsTruncted")
+  @JsonProperty("resultsTruncated")
   public boolean isResultsTruncated()
   {
     return resultsTruncated;

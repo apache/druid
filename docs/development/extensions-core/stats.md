@@ -47,12 +47,14 @@ This algorithm was proven to be numerically stable by J.L. Barlow in
 "Error analysis of a pairwise summation algorithm to compute sample variance"
 Numer. Math, 58 (1991) pp. 583--590
 
-> As with all [aggregators](../../querying/sql-aggregations.md), the order of operations across segments is
-> non-deterministic. This means that if this aggregator operates with an input type of "float" or "double", the result
-> of the aggregation may not be precisely the same across multiple runs of the query.
->
-> To produce consistent results, round the variance to a fixed number of decimal places so that the results are 
-> precisely the same across query runs.
+:::info
+ As with all [aggregators](../../querying/sql-aggregations.md), the order of operations across segments is
+ non-deterministic. This means that if this aggregator operates with an input type of "float" or "double", the result
+ of the aggregation may not be precisely the same across multiple runs of the query.
+
+ To produce consistent results, round the variance to a fixed number of decimal places so that the results are
+ precisely the same across query runs.
+:::
 
 ### Pre-aggregating variance at ingestion time
 

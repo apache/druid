@@ -25,8 +25,10 @@ title: "MySQL Metadata Store"
 
 To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `mysql-metadata-storage` in the extensions load list.
 
-> The MySQL extension requires the MySQL Connector/J library or MariaDB Connector/J library, neither of which are included in the Druid distribution.
-> Refer to the following section for instructions on how to install this library.
+:::info
+ The MySQL extension requires the MySQL Connector/J library or MariaDB Connector/J library, neither of which are included in the Druid distribution.
+ Refer to the following section for instructions on how to install this library.
+:::
 
 ## Installing the MySQL connector library
 
@@ -59,6 +61,8 @@ Depending on the MariaDB client library version, the connector supports both `jd
 
 ## Setting up MySQL
 
+To avoid issues with upgrades that require schema changes to a large metadata table, consider a MySQL version that supports instant ADD COLUMN semantics. For example, MySQL 8.
+
 1. Install MySQL
 
   Use your favorite package manager to install mysql, e.g.:
@@ -76,7 +80,7 @@ This extension also supports using MariaDB server, https://mariadb.org/download/
   Connect to MySQL from the machine where it is installed.
 
   ```bash
-  > mysql -u root
+  mysql -u root
   ```
 
   Paste the following snippet into the mysql prompt:

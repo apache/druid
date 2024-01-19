@@ -82,13 +82,16 @@ For each row in the list of column data, there is only a single bitmap that has 
 
 ## Handling null values
 
-By default, Druid string dimension columns use the values `''` and `null` interchangeably. Numeric and metric columns cannot represent `null` but use nulls to mean `0`. However, Druid provides a SQL compatible null handling mode, which you can enable at the system level through `druid.generic.useDefaultValueForNull`. This setting, when set to `false`, allows Druid to create segments _at ingestion time_ in which the following occurs:
-* String columns can distinguish `''` from `null`,
-* Numeric columns can represent `null` valued rows instead of `0`.
+By default Druid stores segments in a SQL compatible null handling mode. String columns always store the null value as id 0, the first position in the value dictionary and an associated entry in the bitmap value indexes used to filter null values. Numeric columns also store a null value bitmap index to indicate the null valued rows, which is used to null check aggregations and for filter matching null values. 
 
-String dimension columns contain no additional column structures in SQL compatible null handling mode. Instead, they reserve an additional dictionary entry for the `null` value. Numeric columns are stored in the segment with an additional bitmap in which the set bits indicate `null`-valued rows. 
+Druid also has a legacy mode which uses default values instead of nulls, which was the default prior to Druid 28.0.0. This legacy mode can be enabled by setting `druid.generic.useDefaultValueForNull=true`.
 
-In addition to slightly increased segment sizes, SQL compatible null handling can incur a performance cost at query time, due to the need to check the null bitmap. This performance cost only occurs for columns that actually contain null values.
+In legacy mode, Druid segments created _at ingestion time_ have the following characteristics:
+
+* String columns can not distinguish `''` from `null`, they are treated interchangeably as the same value
+* Numeric columns can not represent `null` valued rows, and instead store a `0`.
+
+In legacy mode, numeric columns do not have the null value bitmap, and so can have slightly decreased segment sizes, and queries involving numeric columns can have slightly increased performance in some cases since there is no need to check the null value bitmap.
 
 ## Segments with different schemas
 

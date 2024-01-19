@@ -22,14 +22,12 @@ package org.apache.druid.query.topn;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
-import org.apache.druid.query.TestQueryRunners;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
@@ -40,7 +38,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -60,30 +57,7 @@ public class TopNUnionQueryTest extends InitializedNullHandlingTest
   @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
   {
-    final CloseableStupidPool<ByteBuffer> defaultPool = TestQueryRunners.createDefaultNonBlockingPool();
-    final CloseableStupidPool<ByteBuffer> customPool = new CloseableStupidPool<>(
-        "TopNQueryRunnerFactory-bufferPool",
-        () -> ByteBuffer.allocate(2000)
-    );
-
-    return QueryRunnerTestHelper.cartesian(
-        Iterables.concat(
-            QueryRunnerTestHelper.makeUnionQueryRunners(
-                new TopNQueryRunnerFactory(
-                    defaultPool,
-                    new TopNQueryQueryToolChest(new TopNQueryConfig()),
-                    QueryRunnerTestHelper.NOOP_QUERYWATCHER
-                )
-            ),
-            QueryRunnerTestHelper.makeUnionQueryRunners(
-                new TopNQueryRunnerFactory(
-                    customPool,
-                    new TopNQueryQueryToolChest(new TopNQueryConfig()),
-                    QueryRunnerTestHelper.NOOP_QUERYWATCHER
-                )
-            )
-        )
-    );
+    return QueryRunnerTestHelper.transformToConstructionFeeder(TopNQueryRunnerTest.queryRunners());
   }
 
   private final QueryRunner runner;
@@ -126,7 +100,7 @@ public class TopNUnionQueryTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put(QueryRunnerTestHelper.MARKET_DIMENSION, "total_market")

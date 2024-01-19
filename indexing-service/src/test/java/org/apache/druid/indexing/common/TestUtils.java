@@ -32,7 +32,6 @@ import org.apache.druid.data.input.impl.NoopInputSource;
 import org.apache.druid.guice.DruidSecondaryModule;
 import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
-import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProvider;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -105,7 +104,6 @@ public class TestUtils
             .addValue(AuthorizerMapper.class, new AuthorizerMapper(ImmutableMap.of()))
             .addValue(AppenderatorsManager.class, APPENDERATORS_MANAGER)
             .addValue(LocalDataSegmentPuller.class, new LocalDataSegmentPuller())
-            .addValue(IndexTaskClientFactory.class, TASK_CLIENT_PROVIDER)
     );
 
     jsonMapper.registerModule(

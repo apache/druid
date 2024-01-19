@@ -245,6 +245,12 @@ public class DistinctKeyCollector implements KeyCollector<DistinctKeyCollector>
     return new ClusterByPartitions(partitions);
   }
 
+  @Override
+  public int sketchAccuracyFactor()
+  {
+    return -spaceReductionFactor;
+  }
+
   @JsonProperty("keys")
   Map<RowKey, Long> getRetainedKeys()
   {
@@ -311,5 +317,16 @@ public class DistinctKeyCollector implements KeyCollector<DistinctKeyCollector>
     }
 
     return true;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "DistinctKeyCollector{" +
+           "maxBytes=" + maxBytes +
+           ", retainedBytes=" + retainedBytes +
+           ", spaceReductionFactor=" + spaceReductionFactor +
+           ", totalWeightUnadjusted=" + totalWeightUnadjusted +
+           '}';
   }
 }

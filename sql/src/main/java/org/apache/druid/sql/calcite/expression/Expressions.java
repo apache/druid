@@ -45,6 +45,8 @@ import org.apache.druid.query.extraction.TimeFormatExtractionFn;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.ExpressionDimFilter;
+import org.apache.druid.query.filter.IsFalseDimFilter;
+import org.apache.druid.query.filter.IsTrueDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.OrDimFilter;
@@ -54,6 +56,7 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.sql.calcite.filtration.BoundRefKey;
 import org.apache.druid.sql.calcite.filtration.Bounds;
 import org.apache.druid.sql.calcite.filtration.Filtration;
@@ -378,22 +381,47 @@ public class Expressions
   {
     final SqlKind kind = expression.getKind();
 
-    if (kind == SqlKind.IS_TRUE || kind == SqlKind.IS_NOT_FALSE) {
-      return toFilter(
-          plannerContext,
-          rowSignature,
-          virtualColumnRegistry,
-          Iterables.getOnlyElement(((RexCall) expression).getOperands())
-      );
-    } else if (kind == SqlKind.IS_FALSE || kind == SqlKind.IS_NOT_TRUE) {
-      return new NotDimFilter(
-          toFilter(
+    if (kind == SqlKind.IS_TRUE
+        || kind == SqlKind.IS_NOT_TRUE
+        || kind == SqlKind.IS_FALSE
+        || kind == SqlKind.IS_NOT_FALSE) {
+      if (NullHandling.useThreeValueLogic()) {
+        final DimFilter baseFilter = toFilter(
+            plannerContext,
+            rowSignature,
+            virtualColumnRegistry,
+            Iterables.getOnlyElement(((RexCall) expression).getOperands())
+        );
+
+        if (kind == SqlKind.IS_TRUE) {
+          return IsTrueDimFilter.of(baseFilter);
+        } else if (kind == SqlKind.IS_NOT_TRUE) {
+          return NotDimFilter.of(IsTrueDimFilter.of(baseFilter));
+        } else if (kind == SqlKind.IS_FALSE) {
+          return IsFalseDimFilter.of(baseFilter);
+        } else { // SqlKind.IS_NOT_FALSE
+          return NotDimFilter.of(IsFalseDimFilter.of(baseFilter));
+        }
+      } else {
+        // legacy behavior
+        if (kind == SqlKind.IS_TRUE || kind == SqlKind.IS_NOT_FALSE) {
+          return toFilter(
               plannerContext,
               rowSignature,
               virtualColumnRegistry,
               Iterables.getOnlyElement(((RexCall) expression).getOperands())
-          )
-      );
+          );
+        } else { // SqlKind.IS_FALSE || SqlKind.IS_NOT_TRUE
+          return new NotDimFilter(
+              toFilter(
+                  plannerContext,
+                  rowSignature,
+                  virtualColumnRegistry,
+                  Iterables.getOnlyElement(((RexCall) expression).getOperands())
+              )
+          );
+        }
+      }
     } else if (kind == SqlKind.CAST && expression.getType().getSqlTypeName() == SqlTypeName.BOOLEAN) {
       // Calcite sometimes leaves errant, useless cast-to-booleans inside filters. Strip them and continue.
       return toFilter(
@@ -402,9 +430,7 @@ public class Expressions
           virtualColumnRegistry,
           Iterables.getOnlyElement(((RexCall) expression).getOperands())
       );
-    } else if (kind == SqlKind.AND
-               || kind == SqlKind.OR
-               || kind == SqlKind.NOT) {
+    } else if (kind == SqlKind.AND || kind == SqlKind.OR || kind == SqlKind.NOT) {
       final List<DimFilter> filters = new ArrayList<>();
       for (final RexNode rexNode : ((RexCall) expression).getOperands()) {
         final DimFilter nextFilter = toFilter(
@@ -423,8 +449,7 @@ public class Expressions
         return new AndDimFilter(filters);
       } else if (kind == SqlKind.OR) {
         return new OrDimFilter(filters);
-      } else {
-        assert kind == SqlKind.NOT;
+      } else { // SqlKind.NOT
         return new NotDimFilter(Iterables.getOnlyElement(filters));
       }
     } else {
@@ -487,6 +512,11 @@ public class Expressions
     final SqlKind kind = rexNode.getKind();
 
     if (kind == SqlKind.IS_TRUE || kind == SqlKind.IS_NOT_FALSE) {
+      if (NullHandling.useThreeValueLogic()) {
+        // use expression filter to get istrue or notfalse expressions for correct 3vl behavior
+        return toExpressionLeafFilter(plannerContext, rowSignature, rexNode);
+      }
+      // legacy behavior
       return toSimpleLeafFilter(
           plannerContext,
           rowSignature,
@@ -494,6 +524,11 @@ public class Expressions
           Iterables.getOnlyElement(((RexCall) rexNode).getOperands())
       );
     } else if (kind == SqlKind.IS_FALSE || kind == SqlKind.IS_NOT_TRUE) {
+      if (NullHandling.useThreeValueLogic()) {
+        // use expression filter to get isfalse or nottrue expressions for correct 3vl behavior
+        return toExpressionLeafFilter(plannerContext, rowSignature, rexNode);
+      }
+      // legacy behavior
       return new NotDimFilter(
           toSimpleLeafFilter(
               plannerContext,
@@ -512,7 +547,7 @@ public class Expressions
 
       final DimFilter equalFilter;
       final ColumnType outputType = druidExpression.getDruidType();
-      final boolean isOutputNumeric = outputType != null && outputType.isNumeric();
+      final boolean isOutputNumeric = Types.isNumeric(outputType);
       // if a simple extraction, we can typically use the base column directly for filtering. however, some expressions
       // such as cast also appear as a simple extraction because some native layer things can handle the cast
       // themselves, so we check the output type of the expression and compare it to the type of the direct column. a
@@ -528,10 +563,19 @@ public class Expressions
           );
         } else {
           if (druidExpression.getSimpleExtraction().getExtractionFn() != null) {
-            // return null to fallback to using an expression filter
-            return null;
+            if (virtualColumnRegistry != null) {
+              String column = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
+                  druidExpression,
+                  druidExpression.getDruidType()
+              );
+              equalFilter = NullFilter.forColumn(column);
+            } else {
+              // virtual column registry unavailable, fallback to expression filter
+              return null;
+            }
+          } else {
+            equalFilter = NullFilter.forColumn(druidExpression.getDirectColumn());
           }
-          equalFilter = NullFilter.forColumn(druidExpression.getDirectColumn());
         }
       } else if (virtualColumnRegistry != null) {
         final String virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
@@ -551,6 +595,8 @@ public class Expressions
       return kind == SqlKind.IS_NOT_NULL ? new NotDimFilter(equalFilter) : equalFilter;
     } else if (kind == SqlKind.EQUALS
                || kind == SqlKind.NOT_EQUALS
+               || kind == SqlKind.IS_NOT_DISTINCT_FROM
+               || kind == SqlKind.IS_DISTINCT_FROM
                || kind == SqlKind.GREATER_THAN
                || kind == SqlKind.GREATER_THAN_OR_EQUAL
                || kind == SqlKind.LESS_THAN
@@ -576,6 +622,8 @@ public class Expressions
         switch (kind) {
           case EQUALS:
           case NOT_EQUALS:
+          case IS_NOT_DISTINCT_FROM:
+          case IS_DISTINCT_FROM:
             flippedKind = kind;
             break;
           case GREATER_THAN:
@@ -627,7 +675,7 @@ public class Expressions
         );
       }
 
-      final String column;
+      String column;
       final ExtractionFn extractionFn;
       if (lhsExpression.isSimpleExtraction()) {
         column = lhsExpression.getSimpleExtraction().getColumn();
@@ -687,9 +735,13 @@ public class Expressions
         // Always use BoundDimFilters, to simplify filter optimization later (it helps to remember the comparator).
         switch (flippedKind) {
           case EQUALS:
+          case IS_NOT_DISTINCT_FROM:
+            // OK to treat EQUALS, IS_NOT_DISTINCT_FROM the same since we know stringVal is nonnull.
             filter = Bounds.equalTo(boundRefKey, stringVal);
             break;
           case NOT_EQUALS:
+          case IS_DISTINCT_FROM:
+            // OK to treat NOT_EQUALS, IS_DISTINCT_FROM the same since we know stringVal is nonnull.
             filter = new NotDimFilter(Bounds.equalTo(boundRefKey, stringVal));
             break;
           case GREATER_THAN:
@@ -712,9 +764,22 @@ public class Expressions
       } else {
         final Object val = rhsParsed.getLiteralValue();
 
-        if (extractionFn != null || val == null) {
+        if (val == null) {
           // fall back to expression filter
           return null;
+        }
+
+        // extractionFn are not supported by equality/range filter
+        if (extractionFn != null) {
+          if (virtualColumnRegistry != null) {
+            column = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
+                lhsExpression,
+                lhs.getType()
+            );
+          } else {
+            // if this happens for some reason, bail and use an expression filter
+            return null;
+          }
         }
 
         final RangeRefKey rangeRefKey = new RangeRefKey(column, matchValueType);
@@ -723,9 +788,11 @@ public class Expressions
         // Always use RangeFilter, to simplify filter optimization later
         switch (flippedKind) {
           case EQUALS:
+          case IS_NOT_DISTINCT_FROM:
             filter = Ranges.equalTo(rangeRefKey, val);
             break;
           case NOT_EQUALS:
+          case IS_DISTINCT_FROM:
             filter = new NotDimFilter(Ranges.equalTo(rangeRefKey, val));
             break;
           case GREATER_THAN:

@@ -34,8 +34,8 @@ import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.NestedDataDimensionSchema;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.data.FrontCodedIndexed;
@@ -45,6 +45,7 @@ import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.sql.calcite.SqlVectorizedExpressionSanityTest;
@@ -57,7 +58,6 @@ import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -90,7 +90,7 @@ public class SqlNestedDataBenchmark
 
   static {
     NullHandling.initializeForTests();
-    ExpressionProcessing.initializeForStrictBooleansTests(true);
+    ExpressionProcessing.initializeForTests();
   }
 
   private static final DruidProcessingConfig PROCESSING_CONFIG = new DruidProcessingConfig()
@@ -112,13 +112,7 @@ public class SqlNestedDataBenchmark
     {
       return 1;
     }
-
-    @Override
-    public boolean useParallelMergePoolConfigured()
-    {
-      return true;
-    }
-
+    
     @Override
     public String getFormatString()
     {
@@ -304,7 +298,7 @@ public class SqlNestedDataBenchmark
     );
     List<DimensionSchema> dims = ImmutableList.<DimensionSchema>builder()
                                               .addAll(schemaInfo.getDimensionsSpec().getDimensions())
-                                              .add(new NestedDataDimensionSchema("nested"))
+                                              .add(new AutoTypeColumnSchema("nested", null))
                                               .build();
     DimensionsSpec dimsSpec = new DimensionsSpec(dims);
 

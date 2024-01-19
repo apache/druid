@@ -36,6 +36,7 @@ import {
 } from '../../components';
 import { AlertDialog, AsyncActionDialog, SpecDialog, TaskTableActionDialog } from '../../dialogs';
 import type { QueryWithContext } from '../../druid-models';
+import { TASK_CANCELED_ERROR_MESSAGES, TASK_CANCELED_PREDICATE } from '../../druid-models';
 import type { Capabilities } from '../../helpers';
 import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
 import { Api, AppToaster } from '../../singletons';
@@ -51,6 +52,7 @@ import {
   QueryState,
 } from '../../utils';
 import type { BasicAction } from '../../utils/basic-action';
+import { ExecutionDetailsDialog } from '../workbench-view/execution-details-dialog/execution-details-dialog';
 
 import './tasks-view.scss';
 
@@ -65,8 +67,6 @@ const taskTableColumns: string[] = [
   'Location',
   ACTION_COLUMN_LABEL,
 ];
-
-const CANCELED_ERROR_MSG = 'Shutdown request from user';
 
 interface TaskQueryResultRow {
   task_id: string;
@@ -100,9 +100,8 @@ export interface TasksViewState {
   taskSpecDialogOpen: boolean;
   alertErrorMsg?: string;
 
-  taskTableActionDialogId?: string;
-  taskTableActionDialogStatus?: string;
-  taskTableActionDialogActions: BasicAction[];
+  taskTableActionDialogOpen?: { id: string; status: string; actions: BasicAction[] };
+  executionDialogOpen?: string;
   visibleColumns: LocalStorageBackedVisibility;
 }
 
@@ -137,7 +136,7 @@ export class TasksView extends React.PureComponent<TasksViewProps, TasksViewStat
 
   static TASK_SQL = `WITH tasks AS (SELECT
   "task_id", "group_id", "type", "datasource", "created_time", "location", "duration", "error_msg",
-  CASE WHEN "error_msg" = '${CANCELED_ERROR_MSG}' THEN 'CANCELED' WHEN "status" = 'RUNNING' THEN "runner_status" ELSE "status" END AS "status"
+  CASE WHEN ${TASK_CANCELED_PREDICATE} THEN 'CANCELED' WHEN "status" = 'RUNNING' THEN "runner_status" ELSE "status" END AS "status"
   FROM sys.tasks
 )
 SELECT "task_id", "group_id", "type", "datasource", "created_time", "location", "duration", "error_msg", "status"
@@ -160,8 +159,6 @@ ORDER BY
       tasksState: QueryState.INIT,
 
       taskSpecDialogOpen: Boolean(props.openTaskDialog),
-
-      taskTableActionDialogActions: [],
 
       visibleColumns: new LocalStorageBackedVisibility(
         LocalStorageKeys.TASK_TABLE_COLUMN_SELECTION,
@@ -244,10 +241,26 @@ ORDER BY
     datasource: string,
     status: string,
     type: string,
+    fromTable?: boolean,
   ): BasicAction[] {
     const { goToDatasource, goToClassicBatchDataLoader } = this.props;
 
     const actions: BasicAction[] = [];
+    if (fromTable) {
+      actions.push({
+        icon: IconNames.SEARCH_TEMPLATE,
+        title: 'View raw details',
+        onAction: () => {
+          this.setState({
+            taskTableActionDialogOpen: {
+              id,
+              status,
+              actions: this.getTaskActions(id, datasource, status, type),
+            },
+          });
+        },
+      });
+    }
     if (datasource && status === 'SUCCESS') {
       actions.push({
         icon: IconNames.MULTI_SELECT,
@@ -318,16 +331,19 @@ ORDER BY
   }
 
   private onTaskDetail(task: TaskQueryResultRow) {
-    this.setState({
-      taskTableActionDialogId: task.task_id,
-      taskTableActionDialogStatus: task.status,
-      taskTableActionDialogActions: this.getTaskActions(
-        task.task_id,
-        task.datasource,
-        task.status,
-        task.type,
-      ),
-    });
+    if (task.type === 'query_controller') {
+      this.setState({
+        executionDialogOpen: task.task_id,
+      });
+    } else {
+      this.setState({
+        taskTableActionDialogOpen: {
+          id: task.task_id,
+          status: task.status,
+          actions: this.getTaskActions(task.task_id, task.datasource, task.status, task.type),
+        },
+      });
+    }
   }
 
   private renderTaskTable() {
@@ -406,16 +422,11 @@ ORDER BY
                   filters={filters}
                   onFiltersChange={onFiltersChange}
                 >
-                  <span>
+                  <span title={errorMsg}>
                     <span style={{ color: statusToColor(status) }}>&#x25cf;&nbsp;</span>
                     {status}
-                    {errorMsg && errorMsg !== CANCELED_ERROR_MSG && (
-                      <a
-                        onClick={() => this.setState({ alertErrorMsg: errorMsg })}
-                        title={errorMsg}
-                      >
-                        &nbsp;?
-                      </a>
+                    {errorMsg && !TASK_CANCELED_ERROR_MESSAGES.includes(errorMsg) && (
+                      <a onClick={() => this.setState({ alertErrorMsg: errorMsg })}>&nbsp;?</a>
                     )}
                   </span>
                 </TableFilterableCell>
@@ -488,11 +499,10 @@ ORDER BY
               const id = row.value;
               const type = row.row.type;
               const { datasource, status } = row.original;
-              const taskActions = this.getTaskActions(id, datasource, status, type);
               return (
                 <ActionCell
                   onDetail={() => this.onTaskDetail(row.original)}
-                  actions={taskActions}
+                  actions={this.getTaskActions(id, datasource, status, type, true)}
                 />
               );
             },
@@ -526,13 +536,13 @@ ORDER BY
   }
 
   render() {
+    const { onFiltersChange } = this.props;
     const {
       groupTasksBy,
       taskSpecDialogOpen,
+      executionDialogOpen,
       alertErrorMsg,
-      taskTableActionDialogId,
-      taskTableActionDialogActions,
-      taskTableActionDialogStatus,
+      taskTableActionDialogOpen,
       visibleColumns,
     } = this.state;
 
@@ -609,12 +619,22 @@ ORDER BY
         >
           <p>{alertErrorMsg}</p>
         </AlertDialog>
-        {taskTableActionDialogId && taskTableActionDialogStatus && (
+        {taskTableActionDialogOpen && (
           <TaskTableActionDialog
-            status={taskTableActionDialogStatus}
-            taskId={taskTableActionDialogId}
-            actions={taskTableActionDialogActions}
-            onClose={() => this.setState({ taskTableActionDialogId: undefined })}
+            taskId={taskTableActionDialogOpen.id}
+            status={taskTableActionDialogOpen.status}
+            actions={taskTableActionDialogOpen.actions}
+            onClose={() => this.setState({ taskTableActionDialogOpen: undefined })}
+          />
+        )}
+        {executionDialogOpen && (
+          <ExecutionDetailsDialog
+            id={executionDialogOpen}
+            goToTask={taskId => {
+              onFiltersChange([{ id: 'task_id', value: `=${taskId}` }]);
+              this.setState({ executionDialogOpen: undefined });
+            }}
+            onClose={() => this.setState({ executionDialogOpen: undefined })}
           />
         )}
       </div>

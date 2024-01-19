@@ -31,9 +31,11 @@ import com.google.common.collect.Sets;
 import org.apache.druid.client.BatchServerInventoryView;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.BrokerServerView;
+import org.apache.druid.client.DirectDruidClientFactory;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
 import org.apache.druid.client.selector.RandomServerSelectorStrategy;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.indexing.materializedview.DerivativeDataSourceMetadata;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -50,6 +52,7 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.initialization.ZkPathsConfig;
@@ -72,6 +75,10 @@ import java.util.concurrent.TimeUnit;
 
 public class DatasourceOptimizerTest extends CuratorTestBase
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
   private DerivativeDataSourceManager derivativesManager;
@@ -142,7 +149,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
     Set<String> metrics = Sets.newHashSet("cost");
     DerivativeDataSourceMetadata metadata = new DerivativeDataSourceMetadata(baseDataSource, dims, metrics);
     metadataStorageCoordinator.insertDataSourceMetadata(dataSource, metadata);
-    // insert base datasource segments 
+    // insert base datasource segments
     List<Boolean> baseResult = Lists.transform(
         ImmutableList.of(
             "2011-04-01/2011-04-02",
@@ -160,7 +167,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
               1024 * 1024
           );
           try {
-            metadataStorageCoordinator.announceHistoricalSegments(Sets.newHashSet(segment));
+            metadataStorageCoordinator.commitSegments(Sets.newHashSet(segment));
             announceSegmentForServer(druidServer, segment, zkPathsConfig, jsonMapper);
           }
           catch (IOException e) {
@@ -185,7 +192,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
               1024
           );
           try {
-            metadataStorageCoordinator.announceHistoricalSegments(Sets.newHashSet(segment));
+            metadataStorageCoordinator.commitSegments(Sets.newHashSet(segment));
             announceSegmentForServer(druidServer, segment, zkPathsConfig, jsonMapper);
           }
           catch (IOException e) {
@@ -285,16 +292,27 @@ public class DatasourceOptimizerTest extends CuratorTestBase
               {
                 return callback.segmentViewInitialized();
               }
+
+              @Override
+              public CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
+              {
+                return CallbackAction.CONTINUE;
+              }
             }
         );
       }
     };
 
-    brokerServerView = new BrokerServerView(
+    DirectDruidClientFactory druidClientFactory = new DirectDruidClientFactory(
+        new NoopServiceEmitter(),
         EasyMock.createMock(QueryToolChestWarehouse.class),
         EasyMock.createMock(QueryWatcher.class),
         getSmileMapper(),
-        EasyMock.createMock(HttpClient.class),
+        EasyMock.createMock(HttpClient.class)
+    );
+
+    brokerServerView = new BrokerServerView(
+        druidClientFactory,
         baseView,
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
         new NoopServiceEmitter(),

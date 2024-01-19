@@ -47,6 +47,9 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.SerializablePairLongDouble;
+import org.apache.druid.query.aggregation.SerializablePairLongFloat;
+import org.apache.druid.query.aggregation.SerializablePairLongLong;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.query.aggregation.last.DoubleLastAggregatorFactory;
 import org.apache.druid.query.aggregation.last.FloatLastAggregatorFactory;
@@ -70,9 +73,6 @@ import org.apache.druid.query.groupby.having.NotHavingSpec;
 import org.apache.druid.query.groupby.having.OrHavingSpec;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
-import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
-import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
@@ -109,7 +109,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setPostAggregatorSpecs(
             ImmutableList.of(
-                new ExpressionPostAggregator("post", "alias + 'x'", null, TestExprMacroTable.INSTANCE)
+                new ExpressionPostAggregator("post", "alias + 'x'", null, null, TestExprMacroTable.INSTANCE)
             )
         )
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
@@ -123,7 +123,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setPostAggregatorSpecs(
             ImmutableList.of(
-                new ExpressionPostAggregator("post", "alias - 'x'", null, TestExprMacroTable.INSTANCE)
+                new ExpressionPostAggregator("post", "alias - 'x'", null, null, TestExprMacroTable.INSTANCE)
             )
         )
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
@@ -155,7 +155,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setPostAggregatorSpecs(
             ImmutableList.of(
-                new ExpressionPostAggregator("post", "alias + 'x'", null, TestExprMacroTable.INSTANCE)
+                new ExpressionPostAggregator("post", "alias + 'x'", null, null, TestExprMacroTable.INSTANCE)
             )
         )
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
@@ -177,7 +177,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setPostAggregatorSpecs(
             ImmutableList.of(
-                new ExpressionPostAggregator("post", "alias - 'x'", null, TestExprMacroTable.INSTANCE)
+                new ExpressionPostAggregator("post", "alias - 'x'", null, null, TestExprMacroTable.INSTANCE)
             )
         )
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
@@ -217,7 +217,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setPostAggregatorSpecs(
             ImmutableList.of(
-                new ExpressionPostAggregator("post", "alias + 'x'", null, TestExprMacroTable.INSTANCE)
+                new ExpressionPostAggregator("post", "alias + 'x'", null, null, TestExprMacroTable.INSTANCE)
             )
         )
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
@@ -240,7 +240,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setPostAggregatorSpecs(
             ImmutableList.of(
-                new ExpressionPostAggregator("post", "alias + 'x'", null, TestExprMacroTable.INSTANCE)
+                new ExpressionPostAggregator("post", "alias + 'x'", null, null, TestExprMacroTable.INSTANCE)
             )
         )
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
@@ -303,7 +303,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setPostAggregatorSpecs(
             ImmutableList.of(
-                new ExpressionPostAggregator("post", "alias + 'x'", null, TestExprMacroTable.INSTANCE)
+                new ExpressionPostAggregator("post", "alias + 'x'", null, null, TestExprMacroTable.INSTANCE)
             )
         )
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
@@ -326,7 +326,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setPostAggregatorSpecs(
             ImmutableList.of(
-                new ExpressionPostAggregator("post", "alias + 'x'", null, TestExprMacroTable.INSTANCE)
+                new ExpressionPostAggregator("post", "alias + 'x'", null, null, TestExprMacroTable.INSTANCE)
             )
         )
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
@@ -396,7 +396,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setPostAggregatorSpecs(
             ImmutableList.of(
-                new ExpressionPostAggregator("post", "alias + 'x'", null, TestExprMacroTable.INSTANCE)
+                new ExpressionPostAggregator("post", "alias + 'x'", null, null, TestExprMacroTable.INSTANCE)
             )
         )
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
@@ -419,7 +419,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
         .setPostAggregatorSpecs(
             ImmutableList.of(
-                new ExpressionPostAggregator("post", "alias + 'x'", null, TestExprMacroTable.INSTANCE)
+                new ExpressionPostAggregator("post", "alias + 'x'", null, null, TestExprMacroTable.INSTANCE)
             )
         )
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
@@ -963,9 +963,11 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
   {
     switch (valueType) {
       case LONG:
+        return new SerializablePairLongLong(123L, (long) dimValue);
       case DOUBLE:
+        return new SerializablePairLongDouble(123L, (double) dimValue);
       case FLOAT:
-        return new SerializablePair<>(123L, dimValue);
+        return new SerializablePairLongFloat(123L, (float) dimValue);
       case STRING:
         return new SerializablePairLongString(123L, (String) dimValue);
       default:
@@ -989,7 +991,8 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
             )
         )
         .setPostAggregatorSpecs(
-            ImmutableList.of(new ConstantPostAggregator("post", 10))
+            new ConstantPostAggregator("post", 10),
+            new ConstantPostAggregator("post2", 20)
         )
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .build();
@@ -1020,14 +1023,14 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     Assert.assertEquals(result1, fromCacheResult);
 
     // test timestamps that result in integer size millis
-    final ResultRow result2 = ResultRow.of(123L, dimValue, 1, dimValue, 10);
+    final ResultRow result2 = ResultRow.of(123L, dimValue, 1, dimValue, 10, 20);
 
     // Please see the comments on aggregator serde and type handling in CacheStrategy.fetchAggregatorsFromCache()
     final ResultRow typeAdjustedResult2;
     if (valueType.is(ValueType.FLOAT)) {
-      typeAdjustedResult2 = ResultRow.of(123L, dimValue, 1, 2.1d, 10);
+      typeAdjustedResult2 = ResultRow.of(123L, dimValue, 1, 2.1d, 10, 20);
     } else if (valueType.is(ValueType.LONG)) {
-      typeAdjustedResult2 = ResultRow.of(123L, dimValue, 1, 2, 10);
+      typeAdjustedResult2 = ResultRow.of(123L, dimValue, 1, 2, 10, 20);
     } else {
       typeAdjustedResult2 = result2;
     }
@@ -1180,24 +1183,16 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         bufferSupplier,
         processingConfig.getNumMergeBuffers()
     );
-    final GroupByStrategySelector strategySelector = new GroupByStrategySelector(
+    final GroupingEngine groupingEngine = new GroupingEngine(
+        processingConfig,
         queryConfigSupplier,
-        new GroupByStrategyV1(
-            queryConfigSupplier,
-            new GroupByQueryEngine(queryConfigSupplier, bufferPool),
-            QueryRunnerTestHelper.NOOP_QUERYWATCHER
-        ),
-        new GroupByStrategyV2(
-            processingConfig,
-            queryConfigSupplier,
-            bufferPool,
-            mergeBufferPool,
-            TestHelper.makeJsonMapper(),
-            new ObjectMapper(new SmileFactory()),
-            QueryRunnerTestHelper.NOOP_QUERYWATCHER
-        )
+        bufferPool,
+        mergeBufferPool,
+        TestHelper.makeJsonMapper(),
+        new ObjectMapper(new SmileFactory()),
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
-    final GroupByQueryQueryToolChest queryToolChest = new GroupByQueryQueryToolChest(strategySelector);
+    final GroupByQueryQueryToolChest queryToolChest = new GroupByQueryQueryToolChest(groupingEngine);
     CacheStrategy<ResultRow, Object, GroupByQuery> cacheStrategy = queryToolChest.getCacheStrategy(query);
     Assert.assertTrue(
         "result level cache on broker server for GroupByStrategyV2 should be enabled",

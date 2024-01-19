@@ -42,6 +42,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -50,15 +51,17 @@ import java.util.List;
 public class SegmentMetadataUnionQueryTest extends InitializedNullHandlingTest
 {
 
-  private static final QueryRunnerFactory FACTORY = new SegmentMetadataQueryRunnerFactory(
-      new SegmentMetadataQueryQueryToolChest(new SegmentMetadataQueryConfig()),
-      QueryRunnerTestHelper.NOOP_QUERYWATCHER
-  );
-  private final QueryRunner runner;
+  private static final QueryRunnerFactory<SegmentAnalysis, SegmentMetadataQuery> FACTORY =
+      new SegmentMetadataQueryRunnerFactory(
+          new SegmentMetadataQueryQueryToolChest(new SegmentMetadataQueryConfig()),
+          QueryRunnerTestHelper.NOOP_QUERYWATCHER
+      );
+
+  private final QueryRunner<SegmentAnalysis> runner;
   private final boolean mmap;
 
   public SegmentMetadataUnionQueryTest(
-      QueryRunner runner,
+      QueryRunner<SegmentAnalysis> runner,
       boolean mmap
   )
   {
@@ -69,23 +72,25 @@ public class SegmentMetadataUnionQueryTest extends InitializedNullHandlingTest
   @Parameterized.Parameters
   public static Iterable<Object[]> constructorFeeder()
   {
-    return ImmutableList.of(
-        new Object[]{
-            QueryRunnerTestHelper.makeUnionQueryRunner(
+    final ArrayList<QueryRunner<SegmentAnalysis>> runners = QueryRunnerTestHelper.mapQueryRunnersToMerge(
+        FACTORY,
+        ImmutableList.of(
+            QueryRunnerTestHelper.makeQueryRunner(
                 FACTORY,
                 new QueryableIndexSegment(TestIndex.getMMappedTestIndex(), QueryRunnerTestHelper.SEGMENT_ID),
                 null
             ),
-            true,
-            },
-        new Object[]{
-            QueryRunnerTestHelper.makeUnionQueryRunner(
+            QueryRunnerTestHelper.makeQueryRunner(
                 FACTORY,
                 new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), QueryRunnerTestHelper.SEGMENT_ID),
                 null
-            ),
-            false
-        }
+            )
+        )
+    );
+
+    return ImmutableList.of(
+        new Object[]{runners.get(0), true},
+        new Object[]{runners.get(1), false}
     );
   }
 

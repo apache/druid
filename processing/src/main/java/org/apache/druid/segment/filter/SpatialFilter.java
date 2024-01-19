@@ -21,7 +21,6 @@ package org.apache.druid.segment.filter;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.search.Bound;
@@ -30,17 +29,18 @@ import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.query.filter.DruidPredicateMatch;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
 import org.apache.druid.segment.incremental.SpatialDimensionRowTransformer;
-import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
+import org.apache.druid.segment.index.AllUnknownBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.semantic.SpatialIndex;
 
@@ -75,9 +75,12 @@ public class SpatialFilter implements Filter
       return null;
     }
     final ColumnIndexSupplier indexSupplier = selector.getIndexSupplier(dimension);
-    final SpatialIndex spatialIndex = indexSupplier == null ? null : indexSupplier.as(SpatialIndex.class);
+    if (indexSupplier == null) {
+      return new AllUnknownBitmapColumnIndex(selector);
+    }
+    final SpatialIndex spatialIndex = indexSupplier.as(SpatialIndex.class);
     if (spatialIndex == null) {
-      return new AllFalseBitmapColumnIndex(selector);
+      return null;
     }
     return new BitmapColumnIndex()
     {
@@ -88,14 +91,7 @@ public class SpatialFilter implements Filter
       }
 
       @Override
-      public double estimateSelectivity(int totalRows)
-      {
-        // selectivity estimation for multi-value columns is not implemented yet.
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
-      public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+      public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
       {
         Iterable<ImmutableBitmap> search = spatialIndex.getRTree().search(bound);
         return bitmapResultFactory.unionDimensionValueBitmaps(search);
@@ -115,22 +111,9 @@ public class SpatialFilter implements Filter
   }
 
   @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
-  {
-    return false;
-  }
-
-  @Override
   public Set<String> getRequiredColumns()
   {
     return ImmutableSet.of(dimension);
-  }
-
-  @Override
-  public double estimateSelectivity(ColumnIndexSelector indexSelector)
-  {
-    // selectivity estimation for multi-value columns is not implemented yet.
-    throw new UnsupportedOperationException();
   }
 
   @Override
@@ -165,14 +148,14 @@ public class SpatialFilter implements Filter
     }
 
     @Override
-    public Predicate<String> makeStringPredicate()
+    public DruidObjectPredicate<String> makeStringPredicate()
     {
       return input -> {
         if (input == null) {
-          return false;
+          return DruidPredicateMatch.UNKNOWN;
         }
         final float[] coordinate = SpatialDimensionRowTransformer.decode(input);
-        return bound.contains(coordinate);
+        return DruidPredicateMatch.of(bound.contains(coordinate));
       };
     }
 
@@ -180,21 +163,21 @@ public class SpatialFilter implements Filter
     public DruidLongPredicate makeLongPredicate()
     {
       // SpatialFilter does not currently support longs
-      return DruidLongPredicate.ALWAYS_FALSE;
+      return DruidLongPredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
     }
 
     @Override
     public DruidFloatPredicate makeFloatPredicate()
     {
       // SpatialFilter does not currently support floats
-      return DruidFloatPredicate.ALWAYS_FALSE;
+      return DruidFloatPredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
     }
 
     @Override
     public DruidDoublePredicate makeDoublePredicate()
     {
       // SpatialFilter does not currently support doubles
-      return DruidDoublePredicate.ALWAYS_FALSE;
+      return DruidDoublePredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
     }
 
     @Override

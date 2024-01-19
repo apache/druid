@@ -4,7 +4,7 @@
     "expectedResults": [
       {
         "__time": 1377933081000,
-        "isRobot": "",
+        "isRobot": null,
         "added": 123,
         "delta": 111,
         "deleted": 12,

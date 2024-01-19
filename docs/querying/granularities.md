@@ -23,10 +23,12 @@ sidebar_label: "Granularities"
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
-> This document describes the native
-> language. For information about time functions available in SQL, refer to the
-> [SQL documentation](sql-scalar.md#date-and-time-functions).
+:::info
+ Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+ This document describes the native
+ language. For information about time functions available in SQL, refer to the
+ [SQL documentation](sql-scalar.md#date-and-time-functions).
+:::
 
 Granularity determines how to bucket data across the time dimension, or how to aggregate data by hour, day, minute, etc.
 
@@ -59,7 +61,9 @@ Druid supports the following granularity strings:
 The minimum and maximum granularities are `none` and `all`, described as follows:
 * `all` buckets everything into a single bucket.
 * `none` does not mean zero bucketing. It buckets data to millisecond granularity—the granularity of the internal index. You can think of `none` as equivalent to `millisecond`.
-  > Do not use `none` in a [timeseries query](../querying/timeseriesquery.md); Druid fills empty interior time buckets with zeroes, meaning the output will contain results for every single millisecond in the requested interval.
+:::info
+ Do not use `none` in a [timeseries query](../querying/timeseriesquery.md); Druid fills empty interior time buckets with zeroes, meaning the output will contain results for every single millisecond in the requested interval.
+:::
 
 *Avoid using the `week` granularity for partitioning at ingestion time, because weeks don't align neatly with months and years, making it difficult to partition by coarser granularities later.
 

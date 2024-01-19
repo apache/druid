@@ -63,7 +63,9 @@ memberOf: cn=mygroup,ou=groups,dc=example,dc=com
 
 You use this information to map the LDAP group to Druid roles in a later step. 
 
-> Druid uses the `memberOf` attribute to determine a group's membership using LDAP. If your LDAP server implementation doesn't include this attribute, you must complete some additional steps when you [map LDAP groups to Druid roles](#map-ldap-groups-to-druid-roles).
+:::info
+ Druid uses the `memberOf` attribute to determine a group's membership using LDAP. If your LDAP server implementation doesn't include this attribute, you must complete some additional steps when you [map LDAP groups to Druid roles](#map-ldap-groups-to-druid-roles).
+:::
 
 ## Configure Druid for LDAP authentication
 
@@ -105,7 +107,9 @@ In the example below, the LDAP user is `internal@example.com`.
    - `userAttribute`: The user search attribute.
    - `internal@example.com` is the LDAP user you created in step 1. In the example it serves as both the internal client user and the initial admin user.
 
-   > In the above example, the [Druid escalator](../development/extensions-core/druid-basic-security.md#escalator) and LDAP initial admin user are set to the same user - `internal@example.com`. If the escalator is set to a different user, you must follow steps 4 and 5 to create the group mapping and allocate initial roles before the rest of the cluster can function.
+:::info
+ In the above example, the [Druid escalator](../development/extensions-core/druid-basic-security.md#escalator) and LDAP initial admin user are set to the same user - `internal@example.com`. If the escalator is set to a different user, you must follow steps 4 and 5 to create the group mapping and allocate initial roles before the rest of the cluster can function.
+:::
 
 4. Save your group mapping to a JSON file. An example file `groupmap.json` looks like this:
    
@@ -250,17 +254,20 @@ Before you start to set up LDAPS in Druid, you must [configure Druid for LDAP au
 
 Complete the following steps to set up LDAPS for Druid. See [Configuration reference](../configuration/index.md) for the location of the configuration files. 
 
-1. Import the CA certificate for your LDAP server or a self-signed certificate into the truststore location saved as `druid.client.https.trustStorePath` in your `common.runtime.properties` file.
+1. Import the CA or self-signed certificate for your LDAP server into either a newly created LDAP trust store or the trust store specified by the `druid.client.https.trustStorePath`  property located in your `common.runtime.properties` file.
+
+   The example below illustrates the option with one key store for both HTTPS clients and LDAP clients, but you can use a separate dedicated trust store just for ldap if you wish. 
+
+  ```
+  keytool -import -trustcacerts -keystore path/to/cacerts -storepass truststorepassword -alias aliasName -file path/to/certificate.cer
+  ```
+
+  Replace `path/to/cacerts` with the path to your truststore, `truststorepassword` with your truststore password, `aliasName` with an alias name for the keystore, and `path/to/certificate.cer` with the location and name of your certificate. For example:
 
    ```
-   keytool -import -trustcacerts -keystore path/to/cacerts -storepass truststorepassword -alias aliasName -file path/to/certificate.cer
-   ```
+  keytool -import -trustcacerts -keystore /Library/Java/JavaVirtualMachines/adoptopenjdk-8.jdk/Contents/Home/jre/lib/security/cacerts -storepass mypassword -alias myAlias -file /etc/ssl/certs/my-certificate.cer
+  ```
 
-   Replace `path/to/cacerts` with the path to your truststore, `truststorepassword` with your truststore password, `aliasName` with an alias name for the keystore, and `path/to/certificate.cer` with the location and name of your certificate. For example:
-
-   ```
-   keytool -import -trustcacerts -keystore /Library/Java/JavaVirtualMachines/adoptopenjdk-8.jdk/Contents/Home/jre/lib/security/cacerts -storepass mypassword -alias myAlias -file /etc/ssl/certs/my-certificate.cer
-   ```
 
 2. If the root certificate for the CA isn't already in the Java truststore, import it:
 
@@ -274,7 +281,7 @@ Complete the following steps to set up LDAPS for Druid. See [Configuration refer
    keytool -importcert -keystore /Library/Java/JavaVirtualMachines/adoptopenjdk-8.jdk/Contents/Home/jre/lib/security/cacerts -storepass mypassword -alias myAlias -file /etc/ssl/certs/my-certificate.cer
    ```
 
-3. In your `common.runtime.properties` file, add the following lines to the LDAP configuration section, substituting your own truststore path and password:
+3. In your `common.runtime.properties` file, add the following lines to the LDAP configuration section, substituting your own trust store path and password. Note that the property to point to the trust store is `druid.auth.basic.ssl.trustStorePath` and not `druid.client.https.trustStorePath` . Regardless of if you use the same trust store for HTTPS clients and LDAP or if you use a separate LDAP trust store, ensure the correct property points to the trust store where you imported the LDAP certificates. 
 
    ```
    druid.auth.basic.ssl.trustStorePath=/Library/Java/JavaVirtualMachines/adoptopenjdk-8.jdk/Contents/Home/jre/lib/security/cacerts

@@ -23,6 +23,23 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
 
+/**
+ * A {@link BalancerStrategy} which can be used when historicals in a tier have
+ * varying disk capacities. This strategy normalizes the cost of placing a segment on
+ * a server as calculated by {@link CostBalancerStrategy} by doing the following:
+ * <ul>
+ * <li>Divide the cost by the number of segments on the server. This ensures that
+ * cost does not increase just because the number of segments on a server is higher.</li>
+ * <li>Multiply the resulting value by disk usage ratio. This ensures that all
+ * hosts have equivalent levels of percentage disk utilization.</li>
+ * </ul>
+ * i.e. to place a segment on a given server
+ * <pre>
+ * cost = as computed by CostBalancerStrategy
+ * normalizedCost = (cost / numSegments) * usageRatio
+ *                = (cost / numSegments) * (diskUsed / totalDiskSpace)
+ * </pre>
+ */
 public class DiskNormalizedCostBalancerStrategy extends CostBalancerStrategy
 {
   public DiskNormalizedCostBalancerStrategy(ListeningExecutorService exec)
@@ -30,10 +47,6 @@ public class DiskNormalizedCostBalancerStrategy extends CostBalancerStrategy
     super(exec);
   }
 
-  /**
-   * Averages the cost obtained from CostBalancerStrategy. Also the costs are weighted according to their usage ratios.
-   * This ensures that all the hosts will have the same % disk utilization.
-   */
   @Override
   protected double computePlacementCost(
       final DataSegment proposalSegment,

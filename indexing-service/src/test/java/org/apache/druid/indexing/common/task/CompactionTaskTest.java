@@ -36,7 +36,10 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.common.guava.SettableSupplier;
@@ -84,6 +87,8 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
@@ -141,14 +146,18 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.junit.MockitoJUnitRunner;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -160,6 +169,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+@RunWith(MockitoJUnitRunner.class)
 public class CompactionTaskTest
 {
   private static final long SEGMENT_SIZE_BYTES = 100;
@@ -191,6 +201,8 @@ public class CompactionTaskTest
   private static final String CONFLICTING_SEGMENT_GRANULARITY_FORMAT =
       "Conflicting segment granularities found %s(segmentGranularity) and %s(granularitySpec.segmentGranularity).\n"
       + "Remove `segmentGranularity` and set the `granularitySpec.segmentGranularity` to the expected granularity";
+
+  private static final ServiceMetricEvent.Builder METRIC_BUILDER = new ServiceMetricEvent.Builder();
 
   private static Map<String, DimensionSchema> DIMENSIONS;
   private static List<AggregatorFactory> AGGREGATORS;
@@ -361,15 +373,21 @@ public class CompactionTaskTest
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
+  @Mock
+  private Clock clock;
+  private StubServiceEmitter emitter;
+
   @Before
   public void setup()
   {
     final IndexIO testIndexIO = new TestIndexIO(OBJECT_MAPPER, SEGMENT_MAP);
+    emitter = new StubServiceEmitter();
     toolbox = makeTaskToolbox(
         new TestTaskActionClient(new ArrayList<>(SEGMENT_MAP.keySet())),
         testIndexIO,
         SEGMENT_MAP
     );
+    Mockito.when(clock.millis()).thenReturn(0L, 10_000L);
     segmentCacheManagerFactory = new SegmentCacheManagerFactory(OBJECT_MAPPER);
   }
 
@@ -929,6 +947,7 @@ public class CompactionTaskTest
   public void testCreateIngestionSchema() throws IOException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
         new CompactionIOConfig(null, false, null),
@@ -940,8 +959,7 @@ public class CompactionTaskTest
         null,
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        METRIC_BUILDER
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -1004,6 +1022,7 @@ public class CompactionTaskTest
         null
     );
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
         new CompactionIOConfig(null, false, null),
@@ -1015,8 +1034,7 @@ public class CompactionTaskTest
         null,
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        METRIC_BUILDER
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -1080,6 +1098,7 @@ public class CompactionTaskTest
         null
     );
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
         new CompactionIOConfig(null, false, null),
@@ -1091,8 +1110,7 @@ public class CompactionTaskTest
         null,
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        METRIC_BUILDER
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -1156,6 +1174,7 @@ public class CompactionTaskTest
         null
     );
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
         new CompactionIOConfig(null, false, null),
@@ -1167,8 +1186,7 @@ public class CompactionTaskTest
         null,
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        METRIC_BUILDER
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -1222,6 +1240,7 @@ public class CompactionTaskTest
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
         new CompactionIOConfig(null, false, null),
@@ -1233,8 +1252,7 @@ public class CompactionTaskTest
         null,
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        METRIC_BUILDER
     );
 
     ingestionSpecs.sort(
@@ -1268,6 +1286,7 @@ public class CompactionTaskTest
     };
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
         new CompactionIOConfig(null, false, null),
@@ -1279,8 +1298,7 @@ public class CompactionTaskTest
         null,
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        METRIC_BUILDER
     );
 
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
@@ -1307,6 +1325,7 @@ public class CompactionTaskTest
   public void testCreateIngestionSchemaWithCustomSegments() throws IOException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
         new CompactionIOConfig(null, false, null),
@@ -1318,8 +1337,7 @@ public class CompactionTaskTest
         null,
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        METRIC_BUILDER
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -1352,6 +1370,7 @@ public class CompactionTaskTest
     // Remove one segment in the middle
     segments.remove(segments.size() / 2);
     CompactionTask.createIngestionSchema(
+        clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
         new CompactionIOConfig(null, false, null),
@@ -1363,8 +1382,7 @@ public class CompactionTaskTest
         null,
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        METRIC_BUILDER
     );
   }
 
@@ -1378,6 +1396,7 @@ public class CompactionTaskTest
     indexIO.removeMetadata(Iterables.getFirst(indexIO.getQueryableIndexMap().keySet(), null));
     final List<DataSegment> segments = new ArrayList<>(SEGMENTS);
     CompactionTask.createIngestionSchema(
+        clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
         new CompactionIOConfig(null, false, null),
@@ -1389,8 +1408,7 @@ public class CompactionTaskTest
         null,
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        METRIC_BUILDER
     );
   }
 
@@ -1416,6 +1434,7 @@ public class CompactionTaskTest
   public void testSegmentGranularityAndNullQueryGranularity() throws IOException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
         new CompactionIOConfig(null, false, null),
@@ -1427,8 +1446,7 @@ public class CompactionTaskTest
         new ClientCompactionTaskGranularitySpec(new PeriodGranularity(Period.months(3), null, null), null, null),
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        METRIC_BUILDER
     );
     final List<DimensionsSpec> expectedDimensionsSpec = ImmutableList.of(
         new DimensionsSpec(getDimensionSchema(new DoubleDimensionSchema("string_to_double")))
@@ -1456,6 +1474,7 @@ public class CompactionTaskTest
   public void testQueryGranularityAndNullSegmentGranularity() throws IOException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
         new CompactionIOConfig(null, false, null),
@@ -1467,8 +1486,7 @@ public class CompactionTaskTest
         new ClientCompactionTaskGranularitySpec(null, new PeriodGranularity(Period.months(3), null, null), null),
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        METRIC_BUILDER
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -1494,6 +1512,7 @@ public class CompactionTaskTest
   public void testQueryGranularityAndSegmentGranularityNonNull() throws IOException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
         new CompactionIOConfig(null, false, null),
@@ -1509,8 +1528,7 @@ public class CompactionTaskTest
         ),
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        METRIC_BUILDER
     );
     final List<DimensionsSpec> expectedDimensionsSpec = ImmutableList.of(
         new DimensionsSpec(getDimensionSchema(new DoubleDimensionSchema("string_to_double")))
@@ -1532,12 +1550,14 @@ public class CompactionTaskTest
         new PeriodGranularity(Period.months(3), null, null),
         BatchIOConfig.DEFAULT_DROP_EXISTING
     );
+    emitter.verifyValue("compact/segmentAnalyzer/fetchAndProcessMillis", 10_000L);
   }
 
   @Test
   public void testNullGranularitySpec() throws IOException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
         new CompactionIOConfig(null, false, null),
@@ -1549,8 +1569,7 @@ public class CompactionTaskTest
         null,
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        METRIC_BUILDER
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -1577,6 +1596,7 @@ public class CompactionTaskTest
       throws IOException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
         new CompactionIOConfig(null, false, null),
@@ -1588,8 +1608,7 @@ public class CompactionTaskTest
         new ClientCompactionTaskGranularitySpec(null, null, null),
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        METRIC_BUILDER
     );
     final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
 
@@ -1616,6 +1635,7 @@ public class CompactionTaskTest
       throws IOException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
         new CompactionIOConfig(null, false, null),
@@ -1627,8 +1647,7 @@ public class CompactionTaskTest
         new ClientCompactionTaskGranularitySpec(null, null, true),
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        METRIC_BUILDER
     );
 
     Assert.assertEquals(6, ingestionSpecs.size());
@@ -1642,6 +1661,7 @@ public class CompactionTaskTest
       throws IOException
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        clock,
         toolbox,
         LockGranularity.TIME_CHUNK,
         new CompactionIOConfig(null, false, null),
@@ -1653,8 +1673,7 @@ public class CompactionTaskTest
         new ClientCompactionTaskGranularitySpec(null, null, null),
         COORDINATOR_CLIENT,
         segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
+        METRIC_BUILDER
     );
     Assert.assertEquals(6, ingestionSpecs.size());
     for (ParallelIndexIngestionSpec indexIngestionSpec : ingestionSpecs) {
@@ -1888,27 +1907,26 @@ public class CompactionTaskTest
     }
   }
 
-  private static class TestCoordinatorClient extends CoordinatorClient
+  private static class TestCoordinatorClient extends NoopCoordinatorClient
   {
     private final Map<DataSegment, File> segmentMap;
 
     TestCoordinatorClient(Map<DataSegment, File> segmentMap)
     {
-      super(null, null);
       this.segmentMap = segmentMap;
     }
 
     @Override
-    public Collection<DataSegment> fetchUsedSegmentsInDataSourceForIntervals(
+    public ListenableFuture<List<DataSegment>> fetchUsedSegments(
         String dataSource,
         List<Interval> intervals
     )
     {
-      return ImmutableSet.copyOf(segmentMap.keySet());
+      return Futures.immediateFuture(ImmutableList.copyOf(segmentMap.keySet()));
     }
   }
 
-  private static TaskToolbox makeTaskToolbox(
+  private TaskToolbox makeTaskToolbox(
       TaskActionClient taskActionClient,
       IndexIO indexIO,
       Map<DataSegment, File> segments
@@ -1952,6 +1970,7 @@ public class CompactionTaskTest
         .segmentCacheManager(segmentCacheManager)
         .taskLogPusher(null)
         .attemptId("1")
+        .emitter(emitter)
         .build();
   }
 

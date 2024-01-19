@@ -45,6 +45,7 @@ import org.apache.druid.k8s.overlord.common.PeonCommandContext;
 import org.apache.druid.k8s.overlord.common.PeonPhase;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -90,7 +91,7 @@ public class DruidPeonClientIntegrationTest
         new NamedType(IndexTask.IndexTuningConfig.class, "index")
     );
     k8sClient = new DruidKubernetesClient();
-    peonClient = new KubernetesPeonClient(k8sClient, "default", false);
+    peonClient = new KubernetesPeonClient(k8sClient, "default", false, new NoopServiceEmitter());
     druidNode = new DruidNode(
         "test",
         null,
@@ -120,7 +121,8 @@ public class DruidPeonClientIntegrationTest
         taskConfig,
         startupLoggingConfig,
         druidNode,
-        jsonMapper
+        jsonMapper,
+        null
     );
     String taskBasePath = "/home/taskDir";
     PeonCommandContext context = new PeonCommandContext(Collections.singletonList(
@@ -130,7 +132,7 @@ public class DruidPeonClientIntegrationTest
     Job job = adapter.createJobFromPodSpec(podSpec, task, context);
 
     // launch the job and wait to start...
-    peonClient.launchPeonJobAndWaitForStart(job, 1, TimeUnit.MINUTES);
+    peonClient.launchPeonJobAndWaitForStart(job, task, 1, TimeUnit.MINUTES);
 
     // there should be one job that is a k8s peon job that exists
     List<Job> jobs = peonClient.getPeonJobs();

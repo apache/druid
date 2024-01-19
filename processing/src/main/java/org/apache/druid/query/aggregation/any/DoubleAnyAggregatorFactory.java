@@ -123,7 +123,7 @@ public class DoubleAnyAggregatorFactory extends AggregatorFactory
     if (capabilities == null || capabilities.isNumeric()) {
       return new DoubleAnyVectorAggregator(selectorFactory.makeValueSelector(fieldName));
     } else {
-      return NumericNilVectorAggregator.doubleNilVectorAggregator();
+      return NilVectorAggregator.doubleNilVectorAggregator();
     }
   }
 
@@ -156,12 +156,6 @@ public class DoubleAnyAggregatorFactory extends AggregatorFactory
   public AggregatorFactory getCombiningFactory()
   {
     return new DoubleAnyAggregatorFactory(name, name);
-  }
-
-  @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(new DoubleAnyAggregatorFactory(fieldName, fieldName));
   }
 
   @Override

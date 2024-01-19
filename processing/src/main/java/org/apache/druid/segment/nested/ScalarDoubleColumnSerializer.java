@@ -19,11 +19,13 @@
 
 package org.apache.druid.segment.nested;
 
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.ColumnarDoublesSerializer;
@@ -49,13 +51,13 @@ public class ScalarDoubleColumnSerializer extends ScalarNestedCommonFormatColumn
       Closer closer
   )
   {
-    super(name, DOUBLE_DICTIONARY_FILE_NAME, indexSpec, segmentWriteOutMedium, closer);
+    super(name, indexSpec, segmentWriteOutMedium, closer);
   }
 
   @Override
   protected int processValue(@Nullable Object rawValue) throws IOException
   {
-    final ExprEval<?> eval = ExprEval.bestEffortOf(rawValue);
+    final ExprEval<?> eval = ExprEval.bestEffortOf(rawValue).castTo(ExpressionType.DOUBLE);
     final double val = eval.asDouble();
     final int dictId = eval.isNumericNull() ? 0 : dictionaryIdLookup.lookupDouble(val);
     doublesSerializer.add(dictId == 0 ? 0.0 : val);
@@ -73,6 +75,16 @@ public class ScalarDoubleColumnSerializer extends ScalarNestedCommonFormatColumn
         true
     );
     dictionaryWriter.open();
+    dictionaryIdLookup = closer.register(
+        new DictionaryIdLookup(
+            name,
+            FileUtils.getTempDir(),
+            null,
+            null,
+            dictionaryWriter,
+            null
+        )
+    );
   }
 
   @Override
@@ -102,21 +114,30 @@ public class ScalarDoubleColumnSerializer extends ScalarNestedCommonFormatColumn
 
     // null is always 0
     dictionaryWriter.write(null);
-    dictionaryIdLookup.addNumericNull();
 
     for (Double value : doubles) {
       if (value == null) {
         continue;
       }
       dictionaryWriter.write(value);
-      dictionaryIdLookup.addDouble(value);
     }
     dictionarySerialized = true;
+
   }
 
   @Override
   protected void writeValueColumn(FileSmoosher smoosher) throws IOException
   {
     writeInternal(smoosher, doublesSerializer, DOUBLE_VALUE_COLUMN_FILE_NAME);
+  }
+
+  @Override
+  protected void writeDictionaryFile(FileSmoosher smoosher) throws IOException
+  {
+    if (dictionaryIdLookup.getDoubleBuffer() != null) {
+      writeInternal(smoosher, dictionaryIdLookup.getDoubleBuffer(), DOUBLE_DICTIONARY_FILE_NAME);
+    } else {
+      writeInternal(smoosher, dictionaryWriter, DOUBLE_DICTIONARY_FILE_NAME);
+    }
   }
 }

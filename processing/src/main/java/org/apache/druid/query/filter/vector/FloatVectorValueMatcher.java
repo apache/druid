@@ -42,13 +42,14 @@ public class FloatVectorValueMatcher implements VectorValueMatcherFactory
   public VectorValueMatcher makeMatcher(@Nullable final String value)
   {
     if (value == null) {
-      return makeNullValueMatcher(selector);
+      // special case for selector filter, which is both '=' and 'is null'
+      return VectorValueMatcher.nullMatcher(selector);
     }
 
     final Float matchVal = DimensionHandlerUtils.convertObjectToFloat(value);
 
     if (matchVal == null) {
-      return BooleanVectorValueMatcher.of(selector, false);
+      return VectorValueMatcher.allFalseValueMatcher(selector);
     }
 
     final float matchValFloat = matchVal;
@@ -57,14 +58,14 @@ public class FloatVectorValueMatcher implements VectorValueMatcherFactory
   }
 
   @Override
-  public VectorValueMatcher makeMatcher(Object value, ColumnType type)
+  public VectorValueMatcher makeMatcher(Object matchValue, ColumnType matchValueType)
   {
-    ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnType(type), value);
-    ExprEval<?> cast = eval.castTo(ExpressionType.DOUBLE);
-    if (cast.isNumericNull()) {
-      return makeNullValueMatcher(selector);
+    final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnType(matchValueType), matchValue);
+    final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(eval, ExpressionType.DOUBLE);
+    if (castForComparison == null || castForComparison.isNumericNull()) {
+      return VectorValueMatcher.allFalseValueMatcher(selector);
     }
-    return makeFloatMatcher((float) cast.asDouble());
+    return makeFloatMatcher((float) castForComparison.asDouble());
   }
 
   private BaseVectorValueMatcher makeFloatMatcher(float matchValFloat)
@@ -74,7 +75,7 @@ public class FloatVectorValueMatcher implements VectorValueMatcherFactory
       final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
 
       @Override
-      public ReadableVectorMatch match(final ReadableVectorMatch mask)
+      public ReadableVectorMatch match(final ReadableVectorMatch mask, boolean includeUnknown)
       {
         final float[] vector = selector.getFloatVector();
         final int[] selection = match.getSelection();
@@ -86,9 +87,10 @@ public class FloatVectorValueMatcher implements VectorValueMatcherFactory
         for (int i = 0; i < mask.getSelectionSize(); i++) {
           final int rowNum = mask.getSelection()[i];
           if (hasNulls && nulls[rowNum]) {
-            continue;
-          }
-          if (vector[rowNum] == matchValFloat) {
+            if (includeUnknown) {
+              selection[numRows++] = rowNum;
+            }
+          } else if (vector[rowNum] == matchValFloat) {
             selection[numRows++] = rowNum;
           }
         }
@@ -109,7 +111,7 @@ public class FloatVectorValueMatcher implements VectorValueMatcherFactory
       final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
 
       @Override
-      public ReadableVectorMatch match(final ReadableVectorMatch mask)
+      public ReadableVectorMatch match(final ReadableVectorMatch mask, boolean includeUnknown)
       {
         final float[] vector = selector.getFloatVector();
         final int[] selection = match.getSelection();
@@ -121,10 +123,10 @@ public class FloatVectorValueMatcher implements VectorValueMatcherFactory
         for (int i = 0; i < mask.getSelectionSize(); i++) {
           final int rowNum = mask.getSelection()[i];
           if (hasNulls && nulls[rowNum]) {
-            if (predicate.applyNull()) {
+            if (predicate.applyNull().matches(includeUnknown)) {
               selection[numRows++] = rowNum;
             }
-          } else if (predicate.applyFloat(vector[rowNum])) {
+          } else if (predicate.applyFloat(vector[rowNum]).matches(includeUnknown)) {
             selection[numRows++] = rowNum;
           }
         }

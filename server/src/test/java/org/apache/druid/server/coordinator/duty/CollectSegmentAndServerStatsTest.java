@@ -19,14 +19,14 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import it.unimi.dsi.fastutil.objects.Object2IntMaps;
-import it.unimi.dsi.fastutil.objects.Object2LongMaps;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.server.coordinator.DruidCluster;
-import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.balancer.RandomBalancerStrategy;
+import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
+import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.junit.Assert;
@@ -36,13 +36,11 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
-import java.util.Collections;
-
 @RunWith(MockitoJUnitRunner.class)
 public class CollectSegmentAndServerStatsTest
 {
   @Mock
-  private DruidCoordinator mockDruidCoordinator;
+  private LoadQueueTaskMaster mockTaskMaster;
 
   @Test
   public void testCollectedSegmentStats()
@@ -50,22 +48,20 @@ public class CollectSegmentAndServerStatsTest
     DruidCoordinatorRuntimeParams runtimeParams =
         DruidCoordinatorRuntimeParams.newBuilder(DateTimes.nowUtc())
                                      .withDruidCluster(DruidCluster.EMPTY)
-                                     .withUsedSegmentsInTest()
+                                     .withUsedSegments()
                                      .withBalancerStrategy(new RandomBalancerStrategy())
-                                     .withSegmentAssignerUsing(new SegmentLoadQueueManager(null, null, null))
+                                     .withSegmentAssignerUsing(new SegmentLoadQueueManager(null, null))
                                      .build();
 
-    Mockito.when(mockDruidCoordinator.getDatasourceToUnavailableSegmentCount())
-           .thenReturn(Object2IntMaps.singleton("ds", 10));
-    Mockito.when(mockDruidCoordinator.getTierToDatasourceToUnderReplicatedCount(false))
-           .thenReturn(Collections.singletonMap("ds", Object2LongMaps.singleton("tier1", 100)));
+    Mockito.when(mockTaskMaster.getAllPeons())
+           .thenReturn(ImmutableMap.of("server1", new TestLoadQueuePeon()));
 
-    CoordinatorDuty duty = new CollectSegmentAndServerStats(mockDruidCoordinator);
+    CoordinatorDuty duty = new CollectSegmentAndServerStats(mockTaskMaster);
     DruidCoordinatorRuntimeParams params = duty.run(runtimeParams);
 
     CoordinatorRunStats stats = params.getCoordinatorStats();
-    Assert.assertTrue(stats.hasStat(Stats.Segments.UNAVAILABLE));
-    Assert.assertTrue(stats.hasStat(Stats.Segments.UNDER_REPLICATED));
+    Assert.assertTrue(stats.hasStat(Stats.SegmentQueue.NUM_TO_LOAD));
+    Assert.assertTrue(stats.hasStat(Stats.SegmentQueue.NUM_TO_DROP));
   }
 
 }

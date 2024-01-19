@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.KafkaRecordSupplier;
@@ -75,6 +76,7 @@ public class KafkaSupervisorIOConfigTest
     );
 
     Assert.assertEquals("my-topic", config.getTopic());
+    Assert.assertNull(config.getTopicPattern());
     Assert.assertEquals(1, (int) config.getReplicas());
     Assert.assertEquals(1, (int) config.getTaskCount());
     Assert.assertEquals(Duration.standardMinutes(60), config.getTaskDuration());
@@ -87,6 +89,28 @@ public class KafkaSupervisorIOConfigTest
     Assert.assertFalse("lateMessageRejectionPeriod", config.getLateMessageRejectionPeriod().isPresent());
     Assert.assertFalse("earlyMessageRejectionPeriod", config.getEarlyMessageRejectionPeriod().isPresent());
     Assert.assertFalse("lateMessageRejectionStartDateTime", config.getLateMessageRejectionStartDateTime().isPresent());
+  }
+
+  @Test
+  public void testSerdeWithTopicPattern() throws Exception
+  {
+    String jsonStr = "{\n"
+                     + "  \"type\": \"kafka\",\n"
+                     + "  \"topicPattern\": \"my-topic.*\",\n"
+                     + "  \"consumerProperties\": {\"bootstrap.servers\":\"localhost:9092\"}\n"
+                     + "}";
+
+    KafkaSupervisorIOConfig config = mapper.readValue(
+        mapper.writeValueAsString(
+            mapper.readValue(
+                jsonStr,
+                KafkaSupervisorIOConfig.class
+            )
+        ), KafkaSupervisorIOConfig.class
+    );
+
+    Assert.assertEquals("my-topic.*", config.getTopicPattern());
+    Assert.assertNull(config.getTopic());
   }
 
   @Test
@@ -118,6 +142,7 @@ public class KafkaSupervisorIOConfigTest
         );
 
     Assert.assertEquals("my-topic", config.getTopic());
+    Assert.assertNull(config.getTopicPattern());
     Assert.assertEquals(3, (int) config.getReplicas());
     Assert.assertEquals(9, (int) config.getTaskCount());
     Assert.assertEquals(Duration.standardMinutes(30), config.getTaskDuration());
@@ -160,6 +185,7 @@ public class KafkaSupervisorIOConfigTest
         );
 
     Assert.assertEquals("my-topic", config.getTopic());
+    Assert.assertNull(config.getTopicPattern());
     Assert.assertEquals(3, (int) config.getReplicas());
     Assert.assertEquals(9, (int) config.getTaskCount());
     Assert.assertEquals(Duration.standardMinutes(30), config.getTaskDuration());
@@ -189,6 +215,7 @@ public class KafkaSupervisorIOConfigTest
     KafkaRecordSupplier.addConsumerPropertiesFromConfig(props, mapper, config.getConsumerProperties());
 
     Assert.assertEquals("my-topic", config.getTopic());
+    Assert.assertNull(config.getTopicPattern());
     Assert.assertEquals("localhost:9092", props.getProperty("bootstrap.servers"));
     Assert.assertEquals("mytruststorepassword", props.getProperty("ssl.truststore.password"));
     Assert.assertEquals("mykeystorepassword", props.getProperty("ssl.keystore.password"));
@@ -204,8 +231,8 @@ public class KafkaSupervisorIOConfigTest
                      + "}";
 
     exception.expect(JsonMappingException.class);
-    exception.expectCause(CoreMatchers.isA(NullPointerException.class));
-    exception.expectMessage(CoreMatchers.containsString("topic"));
+    exception.expectCause(CoreMatchers.isA(DruidException.class));
+    exception.expectMessage(CoreMatchers.containsString("Either topic or topicPattern must be specified"));
     mapper.readValue(jsonStr, KafkaSupervisorIOConfig.class);
   }
 
@@ -293,6 +320,7 @@ public class KafkaSupervisorIOConfigTest
     KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
         "test",
         null,
+        null,
         1,
         1,
         new Period("PT1H"),
@@ -303,6 +331,7 @@ public class KafkaSupervisorIOConfigTest
         new Period("PT30S"),
         true,
         new Period("PT30M"),
+        null,
         null,
         null,
         null,
@@ -334,6 +363,7 @@ public class KafkaSupervisorIOConfigTest
     KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
         "test",
         null,
+        null,
         1,
         1,
         new Period("PT1H"),
@@ -348,7 +378,8 @@ public class KafkaSupervisorIOConfigTest
         null,
         null,
         null,
-        mapper.convertValue(idleConfig, IdleConfig.class)
+        mapper.convertValue(idleConfig, IdleConfig.class),
+        null
     );
     String ioConfig = mapper.writeValueAsString(kafkaSupervisorIOConfig);
     KafkaSupervisorIOConfig kafkaSupervisorIOConfig1 = mapper.readValue(ioConfig, KafkaSupervisorIOConfig.class);

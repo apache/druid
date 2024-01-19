@@ -73,13 +73,6 @@ public class PassthroughAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  @JsonProperty
-  public String getComplexTypeName()
-  {
-    return complexTypeName;
-  }
-
-  @Override
   public byte[] getCacheKey()
   {
     throw new UnsupportedOperationException();
@@ -115,12 +108,6 @@ public class PassthroughAggregatorFactory extends AggregatorFactory
   public AggregatorFactory getCombiningFactory()
   {
     return this;
-  }
-
-  @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    throw new UnsupportedOperationException();
   }
 
   @Override

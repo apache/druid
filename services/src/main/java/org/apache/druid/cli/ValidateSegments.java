@@ -23,7 +23,6 @@ import com.github.rvesse.airline.annotations.Arguments;
 import com.github.rvesse.airline.annotations.Command;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
@@ -32,9 +31,7 @@ import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.column.ColumnConfig;
 
 import java.io.File;
 import java.util.List;
@@ -85,39 +82,10 @@ public class ValidateSegments extends GuiceRunnable
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
-        new Module()
-        {
-          @Override
-          public void configure(Binder binder)
-          {
-            binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/tool");
-            binder.bindConstant().annotatedWith(Names.named("servicePort")).to(9999);
-            binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
-            binder.bind(DruidProcessingConfig.class).toInstance(
-                new DruidProcessingConfig()
-                {
-                  @Override
-                  public String getFormatString()
-                  {
-                    return "processing-%s";
-                  }
-
-                  @Override
-                  public int intermediateComputeSizeBytes()
-                  {
-                    return 100 * 1024 * 1024;
-                  }
-
-                  @Override
-                  public int getNumThreads()
-                  {
-                    return 1;
-                  }
-
-                }
-            );
-            binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class);
-          }
+        binder -> {
+          binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/tool");
+          binder.bindConstant().annotatedWith(Names.named("servicePort")).to(9999);
+          binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
         }
     );
   }

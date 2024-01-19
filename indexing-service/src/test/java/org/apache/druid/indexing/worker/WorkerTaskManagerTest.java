@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -49,6 +50,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.join.NoopJoinableFactory;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
@@ -99,7 +101,7 @@ public class WorkerTaskManagerTest
     this.restoreTasksOnRestart = restoreTasksOnRestart;
   }
 
-  @Parameterized.Parameters(name = "restoreTasksOnRestart = {0}, useMultipleBaseTaskDirPaths = {1}")
+  @Parameterized.Parameters(name = "restoreTasksOnRestart = {0}")
   public static Collection<Object[]> getParameters()
   {
     Object[][] parameters = new Object[][]{{false}, {true}};
@@ -127,6 +129,7 @@ public class WorkerTaskManagerTest
         jsonMapper,
         new TestTaskRunner(
             new TaskToolboxFactory(
+                null,
                 taskConfig,
                 null,
                 taskActionClientFactory,
@@ -160,11 +163,12 @@ public class WorkerTaskManagerTest
                 testUtils.getRowIngestionMetersFactory(),
                 new TestAppenderatorsManager(),
                 overlordClient,
+                new NoopCoordinatorClient(),
                 null,
                 null,
                 null,
-                null,
-                "1"
+                "1",
+                CentralizedDatasourceSchemaConfig.create()
             ),
             taskConfig,
             location
@@ -200,6 +204,8 @@ public class WorkerTaskManagerTest
   @Test(timeout = 60_000L)
   public void testTaskRun() throws Exception
   {
+    EasyMock.expect(overlordClient.withRetryPolicy(EasyMock.anyObject())).andReturn(overlordClient).anyTimes();
+    EasyMock.replay(overlordClient);
     Task task1 = createNoopTask("task1-assigned-via-assign-dir");
     Task task2 = createNoopTask("task2-completed-already");
     Task task3 = createNoopTask("task3-assigned-explicitly");
@@ -292,7 +298,7 @@ public class WorkerTaskManagerTest
   @Test(timeout = 30_000L)
   public void testTaskStatusWhenTaskRunnerFutureThrowsException() throws Exception
   {
-    Task task = new NoopTask("id", null, null, 100, 0, null, null, ImmutableMap.of(Tasks.PRIORITY_KEY, 0))
+    Task task = new NoopTask("id", null, null, 100, 0, ImmutableMap.of(Tasks.PRIORITY_KEY, 0))
     {
       @Override
       public TaskStatus runTask(TaskToolbox toolbox)
@@ -441,7 +447,7 @@ public class WorkerTaskManagerTest
 
   private NoopTask createNoopTask(String id)
   {
-    return new NoopTask(id, null, null, 100, 0, null, null, ImmutableMap.of(Tasks.PRIORITY_KEY, 0));
+    return new NoopTask(id, null, null, 100, 0, ImmutableMap.of(Tasks.PRIORITY_KEY, 0));
   }
 
   /**
@@ -450,7 +456,10 @@ public class WorkerTaskManagerTest
    */
   private Task setUpCompletedTasksCleanupTest() throws Exception
   {
-    final Task task = new NoopTask("id", null, null, 100, 0, null, null, ImmutableMap.of(Tasks.PRIORITY_KEY, 0));
+    EasyMock.expect(overlordClient.withRetryPolicy(EasyMock.anyObject())).andReturn(overlordClient).anyTimes();
+    EasyMock.replay(overlordClient);
+
+    final Task task = new NoopTask("id", null, null, 100, 0, ImmutableMap.of(Tasks.PRIORITY_KEY, 0));
 
     // Scheduled scheduleCompletedTasksCleanup will not run, because initialDelay is 1 minute, which is longer than
     // the 30-second timeout of this test case.
@@ -468,6 +477,7 @@ public class WorkerTaskManagerTest
     Assert.assertNotNull(announcement);
     Assert.assertEquals(TaskState.SUCCESS, announcement.getStatus());
 
+    EasyMock.reset(overlordClient);
     return task;
   }
 }

@@ -51,6 +51,7 @@ import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -277,7 +278,7 @@ public class BackgroundCachePopulatorTest
         index += 3;
       }
 
-      retVal.add(new Result<>(timestamp, new TopNResultValue(values)));
+      retVal.add(new Result<>(timestamp, TopNResultValue.create(values)));
     }
     return retVal;
   }

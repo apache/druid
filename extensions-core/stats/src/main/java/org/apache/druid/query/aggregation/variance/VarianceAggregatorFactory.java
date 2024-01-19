@@ -250,12 +250,6 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(new VarianceAggregatorFactory(fieldName, fieldName, estimator, inputType));
-  }
-
-  @Override
   public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
   {
     if (Objects.equals(getName(), other.getName()) && other instanceof VarianceAggregatorFactory) {

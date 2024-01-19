@@ -55,6 +55,9 @@ public class ExpressionTypeConversion
   {
     ExpressionType type = eval.type();
     ExpressionType otherType = otherEval.type();
+    if (type == otherType && type.getType().isPrimitive()) {
+      return type;
+    }
     if (Types.is(type, ExprType.STRING) && Types.is(otherType, ExprType.STRING)) {
       return ExpressionType.STRING;
     }
@@ -247,7 +250,7 @@ public class ExpressionTypeConversion
   {
     final ExpressionType functionType = ExpressionTypeConversion.function(type, other);
     // any number is long
-    return functionType != null && functionType.isNumeric() ? ExpressionType.LONG : functionType;
+    return Types.isNumeric(functionType) ? ExpressionType.LONG : functionType;
   }
 
   /**

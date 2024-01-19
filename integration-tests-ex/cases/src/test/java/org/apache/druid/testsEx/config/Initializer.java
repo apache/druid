@@ -35,9 +35,9 @@ import org.apache.druid.curator.discovery.DiscoveryModule;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.AnnouncerModule;
-import org.apache.druid.guice.DruidProcessingConfigModule;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.LegacyBrokerParallelMergeConfigModule;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.SQLMetadataStorageDruidModule;
@@ -496,7 +496,7 @@ public class Initializer
             new AnnouncerModule(),
             new DiscoveryModule(),
             // Dependencies from other modules
-            new DruidProcessingConfigModule(),
+            new LegacyBrokerParallelMergeConfigModule(),
             // Dependencies from other modules
             new StorageNodeModule(),
 

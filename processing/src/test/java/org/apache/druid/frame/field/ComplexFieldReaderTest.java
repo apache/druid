@@ -123,7 +123,7 @@ public class ComplexFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(null);
 
     final ColumnValueSelector<?> readSelector =
-        new ComplexFieldReader(SERDE).makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        new ComplexFieldReader(SERDE).makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1));
 
     Assert.assertNull(readSelector.getObject());
   }
@@ -134,7 +134,7 @@ public class ComplexFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory("foo");
 
     final ColumnValueSelector<?> readSelector =
-        new ComplexFieldReader(SERDE).makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        new ComplexFieldReader(SERDE).makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1));
 
     Assert.assertEquals("foo", readSelector.getObject());
   }

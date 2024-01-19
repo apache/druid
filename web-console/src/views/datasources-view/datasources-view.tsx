@@ -383,8 +383,8 @@ export class DatasourcesView extends React.PureComponent<
     return `SELECT
 ${columns.join(',\n')}
 FROM sys.segments
-GROUP BY 1
-ORDER BY 1`;
+GROUP BY datasource
+ORDER BY datasource`;
   }
 
   static RUNNING_TASK_SQL = `SELECT

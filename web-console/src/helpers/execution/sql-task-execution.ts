@@ -19,7 +19,7 @@
 import { L, QueryResult } from '@druid-toolkit/query';
 import type { AxiosResponse, CancelToken } from 'axios';
 
-import type { AsyncStatusResponse, QueryContext } from '../../druid-models';
+import type { AsyncStatusResponse, MsqTaskPayloadResponse, QueryContext } from '../../druid-models';
 import { Execution } from '../../druid-models';
 import { Api } from '../../singletons';
 import {
@@ -48,7 +48,6 @@ function ensureExecutionModeIsSet(context: QueryContext | undefined): QueryConte
 export interface SubmitTaskQueryOptions {
   query: string | Record<string, any>;
   context?: QueryContext;
-  skipResults?: boolean;
   prefixLines?: number;
   cancelToken?: CancelToken;
   preserveOnTermination?: boolean;
@@ -58,15 +57,13 @@ export interface SubmitTaskQueryOptions {
 export async function submitTaskQuery(
   options: SubmitTaskQueryOptions,
 ): Promise<Execution | IntermediateQueryState<Execution>> {
-  const {
-    query,
-    context,
-    skipResults,
-    prefixLines,
-    cancelToken,
-    preserveOnTermination,
-    onSubmitted,
-  } = options;
+  const { query, prefixLines, cancelToken, preserveOnTermination, onSubmitted } = options;
+
+  // setting waitUntilSegmentsLoad to true by default
+  const context = {
+    waitUntilSegmentsLoad: true,
+    ...(options.context || {}),
+  };
 
   let sqlQuery: string;
   let jsonQuery: Record<string, any>;
@@ -123,10 +120,6 @@ export async function submitTaskQuery(
     onSubmitted(execution.id);
   }
 
-  if (skipResults) {
-    execution = execution.changeDestination({ type: 'download' });
-  }
-
   execution = await updateExecutionWithDatasourceLoadedIfNeeded(execution, cancelToken);
 
   if (execution.isFullyComplete()) return execution;
@@ -178,7 +171,7 @@ export async function updateExecutionWithTaskIfNeeded(
 
 export async function getTaskExecution(
   id: string,
-  taskPayloadOverride?: { payload: any; task: string },
+  taskPayloadOverride?: MsqTaskPayloadResponse,
   cancelToken?: CancelToken,
 ): Promise<Execution> {
   const encodedId = Api.encodePath(id);
@@ -221,7 +214,7 @@ export async function getTaskExecution(
     execution = Execution.fromAsyncStatus(statusResp.data);
   }
 
-  let taskPayload: any = taskPayloadOverride;
+  let taskPayload = taskPayloadOverride;
   if (USE_TASK_PAYLOAD && !taskPayload) {
     try {
       taskPayload = (
@@ -235,6 +228,22 @@ export async function getTaskExecution(
   }
   if (taskPayload) {
     execution = execution.updateWithTaskPayload(taskPayload);
+  }
+
+  // Still have to pull the destination page info from the async status, do this in a best effort way since the statements API may have permission errors
+  if (execution.status === 'SUCCESS' && !execution.destinationPages) {
+    try {
+      const statusResp = await Api.instance.get<AsyncStatusResponse>(
+        `/druid/v2/sql/statements/${encodedId}`,
+        {
+          cancelToken,
+        },
+      );
+
+      execution = execution.updateWithAsyncStatus(statusResp.data);
+    } catch (e) {
+      if (Api.isNetworkError(e)) throw e;
+    }
   }
 
   if (execution.hasPotentiallyStuckStage()) {
@@ -256,6 +265,11 @@ export async function updateExecutionWithDatasourceLoadedIfNeeded(
     execution.status !== 'SUCCESS'
   ) {
     return execution;
+  }
+
+  // This means we don't have to perform the SQL query to check if the segments are loaded
+  if (execution.queryContext?.waitUntilSegmentsLoad === true) {
+    return execution.markDestinationDatasourceLoaded();
   }
 
   const endTime = execution.getEndTime();

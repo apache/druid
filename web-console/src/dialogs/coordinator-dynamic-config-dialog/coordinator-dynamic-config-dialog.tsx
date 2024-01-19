@@ -114,7 +114,13 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
             </ExternalLink>
             .
           </p>
-          <FormJsonSelector tab={currentTab} onChange={setCurrentTab} />
+          <FormJsonSelector
+            tab={currentTab}
+            onChange={t => {
+              setJsonError(undefined);
+              setCurrentTab(t);
+            }}
+          />
           {currentTab === 'form' ? (
             <AutoForm
               fields={COORDINATOR_DYNAMIC_CONFIG_FIELDS}
@@ -125,11 +131,8 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
             <JsonInput
               value={dynamicConfig}
               height="50vh"
-              onChange={v => {
-                setDynamicConfig(v);
-                setJsonError(undefined);
-              }}
-              onError={setJsonError}
+              onChange={setDynamicConfig}
+              setError={setJsonError}
             />
           )}
         </>

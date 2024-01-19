@@ -26,7 +26,6 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.AnnouncerModule;
 import org.apache.druid.guice.CoordinatorDiscoveryModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
-import org.apache.druid.guice.DruidProcessingConfigModule;
 import org.apache.druid.guice.DruidSecondaryModule;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.ExtensionsModule;
@@ -112,7 +111,6 @@ public class CoreInjectorBuilder extends DruidInjectorBuilder
         new MetricsModule(),
         new SegmentWriteOutMediumModule(),
         new ServerModule(),
-        new DruidProcessingConfigModule(),
         new StorageNodeModule(),
         new JettyServerModule(),
         new ExpressionModule(),

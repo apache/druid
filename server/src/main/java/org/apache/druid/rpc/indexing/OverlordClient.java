@@ -32,7 +32,9 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.rpc.ServiceRetryPolicy;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -72,21 +74,41 @@ public interface OverlordClient
 
   /**
    * Run a "kill" task for a particular datasource and interval. Shortcut to {@link #runTask(String, Object)}.
-   *
    * The kill task deletes all unused segment records from deep storage and the metadata store. The task runs
    * asynchronously after the API call returns. The resolved future is the ID of the task, which can be used to
    * monitor its progress through the {@link #taskStatus(String)} API.
    *
    * @param idPrefix   Descriptive prefix to include at the start of task IDs
    * @param dataSource Datasource to kill
-   * @param interval   Interval to kill
+   * @param interval   Umbrella interval to be considered by the kill task. Note that unused segments falling in this
+   *                   widened umbrella interval may have different {@code used_status_last_updated} time, so the kill task
+   *                   should also filter by {@code maxUsedStatusLastUpdatedTime}
+   * @param maxSegmentsToKill  The maximum number of segments to kill
+   * @param maxUsedStatusLastUpdatedTime The maximum {@code used_status_last_updated} time. Any unused segment in {@code interval}
+   *                                   with {@code used_status_last_updated} no later than this time will be included in the
+   *                                   kill task. Segments without {@code used_status_last_updated} time (due to an upgrade
+   *                                   from legacy Druid) will have {@code maxUsedStatusLastUpdatedTime} ignored
    *
    * @return future with task ID
    */
-  default ListenableFuture<String> runKillTask(String idPrefix, String dataSource, Interval interval)
+  default ListenableFuture<String> runKillTask(
+      String idPrefix,
+      String dataSource,
+      Interval interval,
+      @Nullable Integer maxSegmentsToKill,
+      @Nullable DateTime maxUsedStatusLastUpdatedTime
+  )
   {
     final String taskId = IdUtils.newTaskId(idPrefix, ClientKillUnusedSegmentsTaskQuery.TYPE, dataSource, interval);
-    final ClientTaskQuery taskQuery = new ClientKillUnusedSegmentsTaskQuery(taskId, dataSource, interval, false);
+    final ClientTaskQuery taskQuery = new ClientKillUnusedSegmentsTaskQuery(
+        taskId,
+        dataSource,
+        interval,
+        false,
+        null,
+        maxSegmentsToKill,
+        maxUsedStatusLastUpdatedTime
+    );
     return FutureUtils.transform(runTask(taskId, taskQuery), ignored -> taskId);
   }
 
@@ -154,15 +176,15 @@ public interface OverlordClient
   ListenableFuture<CloseableIterator<SupervisorStatus>> supervisorStatuses();
 
   /**
-   * Returns a list of intervals locked by higher priority tasks for each datasource.
+   * Returns a list of intervals locked by higher priority conflicting lock types
    *
-   * @param minTaskPriority Minimum task priority for each datasource. Only the intervals that are locked by tasks with
-   *                        equal or higher priority than this are returned.
-   *
-   * @return Map from dtasource name to list of intervals locked by tasks that have priority greater than or equal to
-   * the {@code minTaskPriority} for that datasource.
+   * @param lockFilterPolicies List of all filters for different datasources
+   * @return Map from datasource name to list of intervals locked by tasks that have a conflicting lock type with
+   * priority greater than or equal to the {@code minTaskPriority} for that datasource.
    */
-  ListenableFuture<Map<String, List<Interval>>> findLockedIntervals(Map<String, Integer> minTaskPriority);
+  ListenableFuture<Map<String, List<Interval>>> findLockedIntervals(
+      List<LockFilterPolicy> lockFilterPolicies
+  );
 
   /**
    * Deletes pending segment records from the metadata store for a particular datasource. Records with

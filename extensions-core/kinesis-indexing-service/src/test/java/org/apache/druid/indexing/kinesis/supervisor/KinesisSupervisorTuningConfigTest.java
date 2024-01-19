@@ -65,7 +65,6 @@ public class KinesisSupervisorTuningConfigTest
     Assert.assertEquals(false, config.isReportParseExceptions());
     Assert.assertEquals(java.time.Duration.ofMinutes(15).toMillis(), config.getHandoffConditionTimeout());
     Assert.assertNull(config.getWorkerThreads());
-    Assert.assertNull(config.getChatThreads());
     Assert.assertEquals(8L, (long) config.getChatRetries());
     Assert.assertEquals(Duration.standardSeconds(10), config.getHttpTimeout());
     Assert.assertEquals(Duration.standardSeconds(80), config.getShutdownTimeout());
@@ -85,7 +84,6 @@ public class KinesisSupervisorTuningConfigTest
                      + "  \"reportParseExceptions\": true,\n"
                      + "  \"handoffConditionTimeout\": 100,\n"
                      + "  \"workerThreads\": 12,\n"
-                     + "  \"chatThreads\": 13,\n"
                      + "  \"chatRetries\": 14,\n"
                      + "  \"httpTimeout\": \"PT15S\",\n"
                      + "  \"shutdownTimeout\": \"PT95S\",\n"
@@ -112,7 +110,6 @@ public class KinesisSupervisorTuningConfigTest
     Assert.assertEquals(true, config.isReportParseExceptions());
     Assert.assertEquals(100, config.getHandoffConditionTimeout());
     Assert.assertEquals(12, (int) config.getWorkerThreads());
-    Assert.assertEquals(13, (int) config.getChatThreads());
     Assert.assertEquals(14L, (long) config.getChatRetries());
     Assert.assertEquals(Duration.standardSeconds(15), config.getHttpTimeout());
     Assert.assertEquals(Duration.standardSeconds(95), config.getShutdownTimeout());

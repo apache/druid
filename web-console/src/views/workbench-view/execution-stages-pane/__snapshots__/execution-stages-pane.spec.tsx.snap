@@ -158,7 +158,7 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
     Array [
       Object {
         "definition": Object {
-          "id": "8af42220-2724-4a76-b39f-c2f98df2de69_0",
+          "id": "ad318360-2ccf-4afc-b221-27c8704bf4fe_0",
           "input": Array [
             Object {
               "inputFormat": Object {
@@ -196,15 +196,16 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
               "context": Object {
                 "__timeColumn": "v0",
                 "__user": "allowAll",
+                "executionMode": "async",
                 "finalize": false,
                 "finalizeAggregations": false,
                 "groupByEnableMultiValueUnnesting": false,
                 "maxNumTasks": 2,
                 "maxParseExceptions": 0,
-                "queryId": "5aa683e2-a6ee-4655-a834-a643e91055b1",
+                "queryId": "93a855fa-c35a-48df-b596-6bc98eed1101",
                 "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
                 "sqlInsertSegmentGranularity": "{\\"type\\":\\"all\\"}",
-                "sqlQueryId": "5aa683e2-a6ee-4655-a834-a643e91055b1",
+                "sqlQueryId": "93a855fa-c35a-48df-b596-6bc98eed1101",
                 "sqlReplaceTimeChunks": "all",
               },
               "dataSource": Object {
@@ -283,17 +284,17 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
             },
           ],
         },
-        "duration": 20483,
+        "duration": 21324,
         "partitionCount": 1,
         "phase": "FINISHED",
         "sort": true,
         "stageNumber": 0,
-        "startTime": "2023-06-19T05:39:26.711Z",
+        "startTime": "2023-08-01T03:12:59.865Z",
         "workerCount": 1,
       },
       Object {
         "definition": Object {
-          "id": "8af42220-2724-4a76-b39f-c2f98df2de69_1",
+          "id": "ad318360-2ccf-4afc-b221-27c8704bf4fe_1",
           "input": Array [
             Object {
               "stage": 0,
@@ -359,11 +360,11 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
           },
           "signature": Array [],
         },
-        "duration": 2381,
+        "duration": 2070,
         "partitionCount": 1,
         "phase": "FINISHED",
         "stageNumber": 1,
-        "startTime": "2023-06-19T05:39:47.166Z",
+        "startTime": "2023-08-01T03:13:21.156Z",
         "workerCount": 1,
       },
     ]

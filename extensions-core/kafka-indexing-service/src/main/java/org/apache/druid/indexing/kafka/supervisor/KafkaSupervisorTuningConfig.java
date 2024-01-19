@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.kafka.supervisor;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig;
@@ -35,8 +34,6 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
     implements SeekableStreamSupervisorTuningConfig
 {
   private final Integer workerThreads;
-  private final Boolean chatAsync;
-  private final Integer chatThreads;
   private final Long chatRetries;
   private final Duration httpTimeout;
   private final Duration shutdownTimeout;
@@ -45,8 +42,6 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
   public static KafkaSupervisorTuningConfig defaultConfig()
   {
     return new KafkaSupervisorTuningConfig(
-        null,
-        null,
         null,
         null,
         null,
@@ -89,8 +84,6 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
       @JsonProperty("resetOffsetAutomatically") Boolean resetOffsetAutomatically,
       @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       @JsonProperty("workerThreads") Integer workerThreads,
-      @JsonProperty("chatAsync") Boolean chatAsync,
-      @JsonProperty("chatThreads") Integer chatThreads,
       @JsonProperty("chatRetries") Long chatRetries,
       @JsonProperty("httpTimeout") Period httpTimeout,
       @JsonProperty("shutdownTimeout") Period shutdownTimeout,
@@ -123,8 +116,6 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
         maxSavedParseExceptions
     );
     this.workerThreads = workerThreads;
-    this.chatAsync = chatAsync;
-    this.chatThreads = chatThreads;
     this.chatRetries = (chatRetries != null ? chatRetries : DEFAULT_CHAT_RETRIES);
     this.httpTimeout = SeekableStreamSupervisorTuningConfig.defaultDuration(httpTimeout, DEFAULT_HTTP_TIMEOUT);
     this.shutdownTimeout = SeekableStreamSupervisorTuningConfig.defaultDuration(
@@ -142,30 +133,6 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
   public Integer getWorkerThreads()
   {
     return workerThreads;
-  }
-
-  @Override
-  public boolean getChatAsync()
-  {
-    if (chatAsync != null) {
-      return chatAsync;
-    } else {
-      return DEFAULT_ASYNC;
-    }
-  }
-
-  @JsonProperty("chatAsync")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  Boolean getChatAsyncConfigured()
-  {
-    return chatAsync;
-  }
-
-  @Override
-  @JsonProperty
-  public Integer getChatThreads()
-  {
-    return chatThreads;
   }
 
   @Override
@@ -224,7 +191,6 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
            ", resetOffsetAutomatically=" + isResetOffsetAutomatically() +
            ", segmentWriteOutMediumFactory=" + getSegmentWriteOutMediumFactory() +
            ", workerThreads=" + workerThreads +
-           ", chatThreads=" + chatThreads +
            ", chatRetries=" + chatRetries +
            ", httpTimeout=" + httpTimeout +
            ", shutdownTimeout=" + shutdownTimeout +

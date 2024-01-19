@@ -113,9 +113,10 @@ export interface TimeMenuItemsProps {
 }
 
 export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuItemsProps) {
-  function renderFilterMenu(): JSX.Element | undefined {
-    const { columnName, parsedQuery, onQueryChange } = props;
+  const { columnName, parsedQuery, onQueryChange } = props;
+  const column = C(columnName);
 
+  function renderFilterMenu(): JSX.Element | undefined {
     function filterMenuItem(label: string, clause: SqlExpression) {
       return (
         <MenuItem
@@ -161,7 +162,6 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
   }
 
   function renderRemoveFilter(): JSX.Element | undefined {
-    const { columnName, parsedQuery, onQueryChange } = props;
     if (!parsedQuery.getEffectiveWhereExpression().containsColumnName(columnName)) return;
 
     return (
@@ -176,7 +176,6 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
   }
 
   function renderRemoveGroupBy(): JSX.Element | undefined {
-    const { columnName, parsedQuery, onQueryChange } = props;
     const groupedSelectIndexes = parsedQuery.getGroupedSelectIndexesForColumn(columnName);
     if (!groupedSelectIndexes.length) return;
 
@@ -192,7 +191,6 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
   }
 
   function renderGroupByMenu(): JSX.Element | undefined {
-    const { columnName, parsedQuery, onQueryChange } = props;
     if (!parsedQuery.hasGroupBy()) return;
 
     function groupByMenuItem(ex: SqlExpression, alias: string) {
@@ -212,7 +210,6 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
       );
     }
 
-    const column = C(columnName);
     return (
       <MenuItem icon={IconNames.GROUP_OBJECTS} text="Group by">
         {groupByMenuItem(F.timeFloor(column, 'PT1H'), `${columnName}_by_hour`)}
@@ -229,7 +226,6 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
   }
 
   function renderAggregateMenu(): JSX.Element | undefined {
-    const { columnName, parsedQuery, onQueryChange } = props;
     if (!parsedQuery.hasGroupBy()) return;
 
     function aggregateMenuItem(ex: SqlExpression, alias: string) {
@@ -243,7 +239,6 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
       );
     }
 
-    const column = C(columnName);
     return (
       <MenuItem icon={IconNames.FUNCTION} text="Aggregate">
         {aggregateMenuItem(F.max(column), `max_${columnName}`)}

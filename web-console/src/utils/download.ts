@@ -20,7 +20,24 @@ import type { QueryResult } from '@druid-toolkit/query';
 import FileSaver from 'file-saver';
 import * as JSONBig from 'json-bigint-native';
 
-import { stringifyValue } from './general';
+import { copyAndAlert, stringifyValue } from './general';
+
+export function downloadUrl(url: string, filename: string) {
+  // Create a link and set the URL using `createObjectURL`
+  const link = document.createElement('a');
+  link.style.display = 'none';
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+
+  // To make this work on Firefox we need to wait
+  // a little while before removing it.
+  setTimeout(() => {
+    if (!link.parentNode) return;
+    link.parentNode.removeChild(link);
+  }, 0);
+}
 
 export function formatForFormat(s: null | string | number | Date, format: 'csv' | 'tsv'): string {
   // stringify and remove line break
@@ -57,11 +74,7 @@ export function downloadFile(text: string, type: string, filename: string): void
   FileSaver.saveAs(blob, filename);
 }
 
-export function downloadQueryResults(
-  queryResult: QueryResult,
-  filename: string,
-  format: string,
-): void {
+function queryResultsToString(queryResult: QueryResult, format: string): string {
   let lines: string[] = [];
   let separator = '';
 
@@ -86,7 +99,19 @@ export function downloadQueryResults(
       return JSONBig.stringify(outputObject);
     });
   }
+  return lines.join('\n');
+}
 
-  const lineBreak = '\n';
-  downloadFile(lines.join(lineBreak), format, filename);
+export function downloadQueryResults(
+  queryResult: QueryResult,
+  filename: string,
+  format: string,
+): void {
+  const resultString: string = queryResultsToString(queryResult, format);
+  downloadFile(resultString, format, filename);
+}
+
+export function copyQueryResultsToClipboard(queryResult: QueryResult, format: string): void {
+  const resultString: string = queryResultsToString(queryResult, format);
+  copyAndAlert(resultString, 'Query results copied to clipboard');
 }

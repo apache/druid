@@ -57,7 +57,6 @@ export const ExpressionEditorDialog = React.memo(function ExpressionEditorDialog
       <div className={Classes.DIALOG_BODY}>
         <FormGroup>
           <FlexibleQueryInput
-            autoHeight={false}
             showGutter={false}
             placeholder="expression"
             queryString={formula}

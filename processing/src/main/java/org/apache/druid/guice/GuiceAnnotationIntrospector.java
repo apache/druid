@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.introspect.Annotated;
 import com.fasterxml.jackson.databind.introspect.AnnotatedClass;
+import com.fasterxml.jackson.databind.introspect.AnnotatedField;
 import com.fasterxml.jackson.databind.introspect.AnnotatedMember;
 import com.fasterxml.jackson.databind.introspect.AnnotatedMethod;
 import com.fasterxml.jackson.databind.introspect.AnnotatedParameter;
@@ -33,6 +34,7 @@ import com.google.inject.Key;
 import org.apache.druid.java.util.common.IAE;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Type;
 import java.util.Map;
 
 /**
@@ -40,11 +42,22 @@ import java.util.Map;
 public class GuiceAnnotationIntrospector extends NopAnnotationIntrospector
 {
   @Override
-  public Object findInjectableValueId(AnnotatedMember m)
+  public JacksonInject.Value findInjectableValue(AnnotatedMember m)
+  {
+    Object id = findGuiceInjectId(m);
+    if (id == null) {
+      return null;
+    }
+    return JacksonInject.Value.forId(id);
+  }
+
+  private Object findGuiceInjectId(AnnotatedMember m)
   {
     if (m.getAnnotation(JacksonInject.class) == null) {
       return null;
     }
+
+    Type genericType = null;
 
     Annotation guiceAnnotation = null;
     for (Annotation annotation : m.annotations()) {
@@ -54,39 +67,54 @@ public class GuiceAnnotationIntrospector extends NopAnnotationIntrospector
       }
     }
 
+    // Annotated.getGenericType() is removed since jackson-databind 2.11 version. We need the generic type so that we can inject values of the type such as List<XYZ> correctly.
+    // Jackson library removed the method on the abstract class but the methods are still there in the implementations of AnnotatedMember. The method signatures are implementation specific and we are calling those methods to get the generic type.
+
+    if (m instanceof AnnotatedField) {
+      genericType = ((AnnotatedField) m).getAnnotated().getGenericType();
+    } else if (m instanceof AnnotatedMethod) {
+      genericType = ((AnnotatedMethod) m).getAnnotated().getGenericReturnType();
+    } else if (m instanceof AnnotatedParameter) {
+      genericType = ((AnnotatedParameter) m).getOwner().getGenericParameterType(((AnnotatedParameter) m).getIndex());
+    }
+
+    if (genericType == null) {
+      // Fall back to type-erased raw type in case we missed an implementation. We are unlikely to ever get here though
+      genericType = m.getRawType();
+    }
     if (guiceAnnotation == null) {
       if (m instanceof AnnotatedMethod) {
         throw new IAE("Annotated methods don't work very well yet...");
       }
-      return Key.get(m.getGenericType());
+      return Key.get(genericType);
     }
-    return Key.get(m.getGenericType(), guiceAnnotation);
+    return Key.get(genericType, guiceAnnotation);
   }
 
-  /**
-   * This method is used to find what property to ignore in deserialization. Jackson calls this method
-   * per every class and every constructor parameter.
-   *
-   * This implementation returns a {@link JsonIgnoreProperties.Value#empty()} that allows empty names if
-   * the parameters has the {@link JsonProperty} annotation. Otherwise, it returns
-   * {@code JsonIgnoreProperties.Value.forIgnoredProperties("")} that does NOT allow empty names.
-   * This behavior is to work around a bug in Jackson deserializer (see the below comment for details) and
-   * can be removed in the future after the bug is fixed.
-   * For example, suppose a constructor like below:
-   *
-   * <pre>{@code
-   * @JsonCreator
-   * public ClassWithJacksonInject(
-   *   @JsonProperty("val") String val,
-   *   @JacksonInject InjectedParameter injected
-   * )
-   * }</pre>
-   *
-   * During deserializing a JSON string into this class, this method will be called at least twice,
-   * one for {@code val} and another for {@code injected}. It will return {@code Value.empty()} for {@code val},
-   * while {Value.forIgnoredProperties("")} for {@code injected} because the later does not have {@code JsonProperty}.
-   * As a result, {@code injected} will be ignored during deserialization since it has no name.
-   */
+    /**
+     * This method is used to find what property to ignore in deserialization. Jackson calls this method
+     * per every class and every constructor parameter.
+     *
+     * This implementation returns a {@link JsonIgnoreProperties.Value#empty()} that allows empty names if
+     * the parameters has the {@link JsonProperty} annotation. Otherwise, it returns
+     * {@code JsonIgnoreProperties.Value.forIgnoredProperties("")} that does NOT allow empty names.
+     * This behavior is to work around a bug in Jackson deserializer (see the below comment for details) and
+     * can be removed in the future after the bug is fixed.
+     * For example, suppose a constructor like below:
+     *
+     * <pre>{@code
+     * @JsonCreator
+     * public ClassWithJacksonInject(
+     *   @JsonProperty("val") String val,
+     *   @JacksonInject InjectedParameter injected
+     * )
+     * }</pre>
+     *
+     * During deserializing a JSON string into this class, this method will be called at least twice,
+     * one for {@code val} and another for {@code injected}. It will return {@code Value.empty()} for {@code val},
+     * while {Value.forIgnoredProperties("")} for {@code injected} because the later does not have {@code JsonProperty}.
+     * As a result, {@code injected} will be ignored during deserialization since it has no name.
+     */
   @Override
   public JsonIgnoreProperties.Value findPropertyIgnorals(Annotated ac)
   {

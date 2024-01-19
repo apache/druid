@@ -37,7 +37,6 @@ import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -111,11 +110,9 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
         NestedDataTestUtils.getSegmentGenerators(NestedDataTestUtils.SIMPLE_DATA_FILE);
 
     for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
-      if (!GroupByStrategySelector.STRATEGY_V1.equals(config.getDefaultStrategy())) {
-        for (BiFunction<TemporaryFolder, Closer, List<Segment>> generatorFn : segmentsGenerators) {
-          for (String vectorize : new String[]{"false", "true", "force"}) {
-            constructors.add(new Object[]{config, generatorFn, vectorize});
-          }
+      for (BiFunction<TemporaryFolder, Closer, List<Segment>> generatorFn : segmentsGenerators) {
+        for (String vectorize : new String[]{"false", "true", "force"}) {
+          constructors.add(new Object[]{config, generatorFn, vectorize});
         }
       }
     }

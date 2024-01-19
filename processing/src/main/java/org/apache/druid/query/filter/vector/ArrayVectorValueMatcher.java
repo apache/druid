@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.filter.vector;
 
-import com.google.common.base.Predicate;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.TypeSignature;
@@ -51,7 +51,7 @@ public class ArrayVectorValueMatcher implements VectorValueMatcherFactory
   }
 
   @Override
-  public VectorValueMatcher makeMatcher(Object value, ColumnType type)
+  public VectorValueMatcher makeMatcher(Object matchValue, ColumnType matchValueType)
   {
     throw new UnsupportedOperationException(
         "Vectorized matcher cannot make object matcher for ARRAY types"
@@ -61,14 +61,13 @@ public class ArrayVectorValueMatcher implements VectorValueMatcherFactory
   @Override
   public VectorValueMatcher makeMatcher(DruidPredicateFactory predicateFactory)
   {
-    final Predicate<Object[]> predicate = predicateFactory.makeArrayPredicate(columnType);
-
+    final DruidObjectPredicate<Object[]> predicate = predicateFactory.makeArrayPredicate(columnType);
     return new BaseVectorValueMatcher(selector)
     {
       final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
 
       @Override
-      public ReadableVectorMatch match(final ReadableVectorMatch mask)
+      public ReadableVectorMatch match(final ReadableVectorMatch mask, boolean includeUnknown)
       {
         final Object[] vector = selector.getObjectVector();
         final int[] selection = match.getSelection();
@@ -78,14 +77,12 @@ public class ArrayVectorValueMatcher implements VectorValueMatcherFactory
         for (int i = 0; i < mask.getSelectionSize(); i++) {
           final int rowNum = mask.getSelection()[i];
           Object o = vector[rowNum];
-          if (o == null || o instanceof Object[]) {
-            if (predicate.apply((Object[]) o)) {
+          if ((o == null || o instanceof Object[])) {
+            if (predicate.apply((Object[]) o).matches(includeUnknown)) {
               selection[numRows++] = rowNum;
             }
-          } else {
-            if (predicate.apply(new Object[]{o})) {
-              selection[numRows++] = rowNum;
-            }
+          } else if (predicate.apply(new Object[]{o}).matches(includeUnknown)) {
+            selection[numRows++] = rowNum;
           }
         }
 

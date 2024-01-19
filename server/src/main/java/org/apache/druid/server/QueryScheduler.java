@@ -173,7 +173,7 @@ public class QueryScheduler implements QueryWatcher
                                                                     .setDimension("lane", lane.orElse("default"))
                                                                     .setDimension("dataSource", query.getDataSource().getTableNames())
                                                                     .setDimension("type", query.getType());
-    emitter.emit(builderUsr.build("query/priority", priority.orElse(Integer.valueOf(0))));
+    emitter.emit(builderUsr.setMetric("query/priority", priority.orElse(Integer.valueOf(0))));
     return lane.map(query::withLane).orElse(query);
   }
 

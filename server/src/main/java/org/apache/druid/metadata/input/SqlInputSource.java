@@ -33,7 +33,9 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.InputEntityIteratingReader;
 import org.apache.druid.data.input.impl.SplittableInputSource;
+import org.apache.druid.data.input.impl.systemfield.SystemFieldDecoratorFactory;
 import org.apache.druid.guice.annotations.Smile;
+import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.metadata.SQLFirehoseDatabaseConnector;
 
 import javax.annotation.Nonnull;
@@ -128,8 +130,9 @@ public class SqlInputSource extends AbstractInputSource implements SplittableInp
     return new InputEntityIteratingReader(
         inputRowSchema,
         inputFormat,
-        createSplits(inputFormat, null)
-            .map(split -> new SqlEntity(split.get(), sqlFirehoseDatabaseConnector, foldCase, objectMapper)).iterator(),
+        CloseableIterators.withEmptyBaggage(createSplits(inputFormat, null)
+            .map(split -> new SqlEntity(split.get(), sqlFirehoseDatabaseConnector, foldCase, objectMapper)).iterator()),
+        SystemFieldDecoratorFactory.NONE,
         temporaryDirectory
     );
   }

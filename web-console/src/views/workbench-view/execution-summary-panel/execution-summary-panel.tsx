@@ -20,10 +20,17 @@ import { Button, ButtonGroup, Menu, MenuDivider, MenuItem, Position } from '@blu
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import type { JSX } from 'react';
-import React from 'react';
+import React, { useState } from 'react';
 
 import type { Execution } from '../../../druid-models';
-import { downloadQueryResults, formatDurationHybrid, pluralIfNeeded } from '../../../utils';
+import {
+  copyQueryResultsToClipboard,
+  downloadQueryResults,
+  formatDurationHybrid,
+  formatInteger,
+  pluralIfNeeded,
+} from '../../../utils';
+import { DestinationPagesDialog } from '../destination-pages-dialog/destination-pages-dialog';
 
 import './execution-summary-panel.scss';
 
@@ -37,22 +44,33 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
   props: ExecutionSummaryPanelProps,
 ) {
   const { execution, onExecutionDetail, onReset } = props;
+  const [showDestinationPages, setShowDestinationPages] = useState(false);
   const queryResult = execution?.result;
 
   const buttons: JSX.Element[] = [];
 
   if (queryResult) {
     const wrapQueryLimit = queryResult.getSqlOuterLimit();
-    const hasMoreResults = queryResult.getNumResults() === wrapQueryLimit;
+    let resultCount: string;
+    const numTotalRows = execution?.destination?.numTotalRows;
+    if (typeof wrapQueryLimit === 'undefined' && typeof numTotalRows === 'number') {
+      resultCount = pluralIfNeeded(numTotalRows, 'result');
+    } else {
+      const hasMoreResults = queryResult.getNumResults() === wrapQueryLimit;
 
-    const resultCount = hasMoreResults
-      ? `${queryResult.getNumResults() - 1}+ results`
-      : pluralIfNeeded(queryResult.getNumResults(), 'result');
+      resultCount = hasMoreResults
+        ? `${formatInteger(queryResult.getNumResults() - 1)}+ results`
+        : pluralIfNeeded(queryResult.getNumResults(), 'result');
+    }
 
     const warningCount = execution?.stages?.getWarningCount();
 
     const handleDownload = (format: string) => {
       downloadQueryResults(queryResult, `results-${execution.id}.${format}`, format);
+    };
+
+    const handleCopy = (format: string) => {
+      copyQueryResultsToClipboard(queryResult, format);
     };
 
     buttons.push(
@@ -71,21 +89,34 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
           }
         }}
       />,
-      <Popover2
-        key="download"
-        className="download-button"
-        content={
-          <Menu>
-            <MenuDivider title="Download results as..." />
-            <MenuItem text="CSV" onClick={() => handleDownload('csv')} />
-            <MenuItem text="TSV" onClick={() => handleDownload('tsv')} />
-            <MenuItem text="JSON (new line delimited)" onClick={() => handleDownload('json')} />
-          </Menu>
-        }
-        position={Position.BOTTOM_RIGHT}
-      >
-        <Button icon={IconNames.DOWNLOAD} minimal />
-      </Popover2>,
+      execution?.destination?.type === 'durableStorage' && execution.destinationPages ? (
+        <Button
+          key="download"
+          icon={IconNames.DOWNLOAD}
+          minimal
+          onClick={() => setShowDestinationPages(true)}
+        />
+      ) : (
+        <Popover2
+          key="download"
+          className="download-button"
+          content={
+            <Menu>
+              <MenuDivider title="Download results as..." />
+              <MenuItem text="CSV" onClick={() => handleDownload('csv')} />
+              <MenuItem text="TSV" onClick={() => handleDownload('tsv')} />
+              <MenuItem text="JSON (new line delimited)" onClick={() => handleDownload('json')} />
+              <MenuDivider title="Copy to clipboard as..." />
+              <MenuItem text="CSV" onClick={() => handleCopy('csv')} />
+              <MenuItem text="TSV" onClick={() => handleCopy('tsv')} />
+              <MenuItem text="JSON (new line delimited)" onClick={() => handleCopy('json')} />
+            </Menu>
+          }
+          position={Position.BOTTOM_RIGHT}
+        >
+          <Button icon={IconNames.DOWNLOAD} minimal />
+        </Popover2>
+      ),
     );
   }
 
@@ -96,6 +127,12 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
   return (
     <ButtonGroup className="execution-summary-panel" minimal>
       {buttons}
+      {showDestinationPages && execution && (
+        <DestinationPagesDialog
+          execution={execution}
+          onClose={() => setShowDestinationPages(false)}
+        />
+      )}
     </ButtonGroup>
   );
 });

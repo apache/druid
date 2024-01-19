@@ -29,10 +29,8 @@ import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.ServerHolder;
-import org.apache.druid.server.coordinator.loading.LoadQueuePeonTester;
+import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
-import org.apache.druid.server.coordinator.stats.Dimension;
-import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.After;
@@ -283,7 +281,7 @@ public class CostBalancerStrategyTest
 
     // Create ServerHolder for each server
     final List<ServerHolder> serverHolders = historicals.stream().map(
-        server -> new ServerHolder(server.toImmutableDruidServer(), new LoadQueuePeonTester())
+        server -> new ServerHolder(server.toImmutableDruidServer(), new TestLoadQueuePeon())
     ).collect(Collectors.toList());
 
     final ServerHolder serverA = serverHolders.get(0);
@@ -317,35 +315,28 @@ public class CostBalancerStrategyTest
   }
 
   @Test
-  public void testGetAndResetStats()
+  public void testGetStats()
   {
     final ServerHolder serverA = new ServerHolder(
         createHistorical().toImmutableDruidServer(),
-        new LoadQueuePeonTester()
+        new TestLoadQueuePeon()
     );
     final ServerHolder serverB = new ServerHolder(
         createHistorical().toImmutableDruidServer(),
-        new LoadQueuePeonTester()
+        new TestLoadQueuePeon()
     );
 
     final DataSegment segment = CreateDataSegments.ofDatasource(DS_WIKI).eachOfSizeInMb(100).get(0);
 
     // Verify that computation stats have been tracked
     strategy.findServersToLoadSegment(segment, Arrays.asList(serverA, serverB));
-    CoordinatorRunStats computeStats = strategy.getAndResetStats();
+    CoordinatorRunStats computeStats = strategy.getStats();
 
-    final RowKey rowKey = RowKey.with(Dimension.DATASOURCE, DS_WIKI)
-                                .with(Dimension.DESCRIPTION, "LOAD")
-                                .and(Dimension.TIER, "hot");
-    Assert.assertEquals(1L, computeStats.get(Stats.Balancer.COMPUTATION_COUNT, rowKey));
+    Assert.assertEquals(1L, computeStats.get(Stats.Balancer.COMPUTATION_COUNT));
 
-    long computeTime = computeStats.get(Stats.Balancer.COMPUTATION_TIME, rowKey);
+    long computeTime = computeStats.get(Stats.Balancer.COMPUTATION_TIME);
     Assert.assertTrue(computeTime >= 0 && computeTime <= 100);
     Assert.assertFalse(computeStats.hasStat(Stats.Balancer.COMPUTATION_ERRORS));
-
-    // Verify that stats have been reset
-    computeStats = strategy.getAndResetStats();
-    Assert.assertEquals(0, computeStats.rowCount());
   }
 
   @Test
@@ -356,7 +347,7 @@ public class CostBalancerStrategyTest
                                             .startingAt("2012-10-24")
                                             .eachOfSizeInMb(100).get(0);
 
-    final LoadQueuePeonTester peon = new LoadQueuePeonTester();
+    final TestLoadQueuePeon peon = new TestLoadQueuePeon();
     ServerHolder serverA = new ServerHolder(createHistorical().toImmutableDruidServer(), peon);
     ServerHolder serverB = new ServerHolder(createHistorical().toImmutableDruidServer(), peon);
 

@@ -398,7 +398,8 @@ public class BatchAppenderator implements Appenderator
             {
               persistError = t;
             }
-          }
+          },
+          MoreExecutors.directExecutor()
       );
     }
     return new AppenderatorAddResult(identifier, sinksMetadata.get(identifier).numRowsInSegment, false);

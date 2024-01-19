@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.ISE;
@@ -210,7 +211,7 @@ public class WorkerSketchFetcher implements AutoCloseable
         }
 
       }
-    });
+    }, MoreExecutors.directExecutor());
 
     FutureUtils.getUnchecked(kernelActionFuture, true);
   }
@@ -303,6 +304,11 @@ public class WorkerSketchFetcher implements AutoCloseable
   @Override
   public void close()
   {
-    executorService.shutdownNow();
+    try {
+      executorService.shutdownNow();
+    }
+    catch (Throwable suppressed) {
+      log.warn(suppressed, "Error while shutting down WorkerSketchFetcher");
+    }
   }
 }
