@@ -469,9 +469,15 @@ public class OverlordResource
       return Response.status(Response.Status.BAD_REQUEST).entity("No TaskIds provided.").build();
     }
 
+    final Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
     Map<String, TaskStatus> result = Maps.newHashMapWithExpectedSize(taskIds.size());
     for (String taskId : taskIds) {
-      Optional<TaskStatus> optional = taskStorageQueryAdapter.getStatus(taskId);
+      final Optional<TaskStatus> optional;
+      if (taskQueue.isPresent()) {
+        optional = taskQueue.get().getTaskStatus(taskId);
+      } else {
+        optional = taskStorageQueryAdapter.getStatus(taskId);
+      }
       if (optional.isPresent()) {
         result.put(taskId, optional.get());
       }
