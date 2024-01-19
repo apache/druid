@@ -28,39 +28,5 @@ import java.nio.ByteBuffer;
 
 public class GroupByUtils
 {
-  /**
-   *
-   */
   public static final String CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION = "mergeRunnersUsingChainedExecution";
-
-  /**
-   *
-   */
-  public static final String CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2 = "runnerMergesUsingGroupByMergingQueryRunnerV2";
-
-  /**
-   * Reason for using this is to ensure that we donot set the merge buffers multiple times on the same response context
-   */
-  public static final ResponseContext.Key RESPONSE_KEY_GROUP_BY_MERGING_QUERY_RUNNER_BUFFERS =
-      new ResponseContext.AbstractKey(
-          "groupByMergingQueryRunnerBuffers",
-          false,
-          true,
-          new TypeReference<ResourceHolder<ByteBuffer>>(){}
-      )
-      {
-
-        @Override
-        public Object mergeValues(Object oldValue, Object newValue)
-        {
-          // oldValue and newValue are always non null when this method is invoked, therefore throw an error because
-          // merge buffers should be setup only one time
-          throw DruidException.defensive("Can only set merge buffers once!");
-        }
-      };
-
-  static {
-    ResponseContext.Keys.instance().registerKey(RESPONSE_KEY_GROUP_BY_MERGING_QUERY_RUNNER_BUFFERS);
-  }
-
 }

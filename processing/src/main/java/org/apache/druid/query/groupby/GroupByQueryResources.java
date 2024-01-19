@@ -47,7 +47,7 @@ import java.util.stream.Collectors;
  * It contains merge buffers for the execution of
  * a) {@link GroupByQueryQueryToolChest#mergeResults(QueryRunner)} - Required for merging the results of the subqueries
  *    and the subtotals.
- * b) {@link org.apache.druid.query.groupby.epinephelinae.GroupByMergingQueryRunnerV2} - Required for merging the results
+ * b) {@link org.apache.druid.query.groupby.epinephelinae.GroupByMergingQueryRunner} - Required for merging the results
  *    of the individual runners created by {@link GroupByQueryRunnerFactory#createRunner(Segment)}
  */
 public class GroupByQueryResources implements Closeable

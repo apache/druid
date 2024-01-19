@@ -48,16 +48,35 @@ public class MaterializedViewQueryQueryToolChest extends QueryToolChest
   {
     this.warehouse = warehouse;
   }
-  
+
   @Override
   public QueryRunner mergeResults(QueryRunner runner)
   {
-    return new QueryRunner() {
+    return new QueryRunner()
+    {
       @Override
       public Sequence run(QueryPlus queryPlus, ResponseContext responseContext)
       {
         Query realQuery = getRealQuery(queryPlus.getQuery());
-        return warehouse.getToolChest(realQuery).mergeResults(runner).run(queryPlus.withQuery(realQuery), responseContext);
+        return warehouse.getToolChest(realQuery)
+                        .mergeResults(runner)
+                        .run(queryPlus.withQuery(realQuery), responseContext);
+      }
+    };
+  }
+
+  @Override
+  public QueryRunner mergeResults(QueryRunner runner, boolean forMergeRunner)
+  {
+    return new QueryRunner()
+    {
+      @Override
+      public Sequence run(QueryPlus queryPlus, ResponseContext responseContext)
+      {
+        Query realQuery = getRealQuery(queryPlus.getQuery());
+        return warehouse.getToolChest(realQuery)
+                        .mergeResults(runner, forMergeRunner)
+                        .run(queryPlus.withQuery(realQuery), responseContext);
       }
     };
   }

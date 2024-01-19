@@ -468,7 +468,7 @@ public class CachingClusteredClientBenchmark
             toolChestWarehouse.getToolChest(query)
         )
         .applyPreMergeDecoration()
-        .mergeResults()
+        .mergeResults(true)
         .applyPostMergeDecoration();
 
     //noinspection unchecked

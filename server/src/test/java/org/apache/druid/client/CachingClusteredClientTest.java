@@ -1070,7 +1070,7 @@ public class CachingClusteredClientTest
     return FluentQueryRunner
         .create(getDefaultQueryRunner(), new TopNQueryQueryToolChest(new TopNQueryConfig()))
         .applyPreMergeDecoration()
-        .mergeResults()
+        .mergeResults(true)
         .applyPostMergeDecoration();
   }
 

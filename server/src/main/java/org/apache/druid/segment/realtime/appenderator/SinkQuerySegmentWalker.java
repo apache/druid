@@ -280,7 +280,8 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
             factory.mergeRunners(
                 queryProcessingPool,
                 perSegmentRunners
-            )
+            ),
+            true
         );
 
     return CPUTimeMetricQueryRunner.safeBuild(

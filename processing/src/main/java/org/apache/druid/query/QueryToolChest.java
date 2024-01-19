@@ -118,6 +118,11 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
     return new ResultMergeQueryRunner<>(runner, this::createResultComparator, this::createMergeFn);
   }
 
+  public QueryRunner<ResultType> mergeResults(QueryRunner<ResultType> runner, boolean forMergeRunner)
+  {
+    return mergeResults(runner);
+  }
+
   /**
    * Creates a merge function that is used to merge intermediate aggregates from historicals in broker. This merge
    * function is used in the default {@link ResultMergeQueryRunner} provided by

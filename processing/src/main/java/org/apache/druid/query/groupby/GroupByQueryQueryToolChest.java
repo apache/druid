@@ -34,7 +34,6 @@ import com.google.common.base.Functions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
-import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
@@ -44,7 +43,6 @@ import org.apache.druid.frame.segment.FrameCursorUtils;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.frame.write.FrameWriters;
-import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -106,12 +104,20 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   private final GroupingEngine groupingEngine;
   private final GroupByQueryConfig queryConfig;
   private final GroupByQueryMetricsFactory queryMetricsFactory;
-  private final BlockingPool<ByteBuffer> mergeBufferPool;
+  private final GroupByResourcesReservationPool groupByResourcesReservationPool;
 
   @VisibleForTesting
-  public GroupByQueryQueryToolChest(GroupingEngine groupingEngine, BlockingPool<ByteBuffer> mergeBufferPool)
+  public GroupByQueryQueryToolChest(
+      GroupingEngine groupingEngine,
+      GroupByResourcesReservationPool groupByResourcesReservationPool
+  )
   {
-    this(groupingEngine, GroupByQueryConfig::new, DefaultGroupByQueryMetricsFactory.instance(), mergeBufferPool);
+    this(
+        groupingEngine,
+        GroupByQueryConfig::new,
+        DefaultGroupByQueryMetricsFactory.instance(),
+        groupByResourcesReservationPool
+    );
   }
 
   @Inject
@@ -119,17 +125,24 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       GroupingEngine groupingEngine,
       Supplier<GroupByQueryConfig> queryConfigSupplier,
       GroupByQueryMetricsFactory queryMetricsFactory,
-      @Merging BlockingPool<ByteBuffer> mergeBufferPool
+      GroupByResourcesReservationPool groupByResourcesReservationPool
   )
   {
     this.groupingEngine = groupingEngine;
     this.queryConfig = queryConfigSupplier.get();
     this.queryMetricsFactory = queryMetricsFactory;
-    this.mergeBufferPool = mergeBufferPool;
+    this.groupByResourcesReservationPool = groupByResourcesReservationPool;
   }
 
   @Override
   public QueryRunner<ResultRow> mergeResults(final QueryRunner<ResultRow> runner)
+  {
+    return mergeResults(runner, true);
+  }
+
+
+  @Override
+  public QueryRunner<ResultRow> mergeResults(final QueryRunner<ResultRow> runner, boolean forMergeRunner)
   {
     return (queryPlus, responseContext) -> {
       if (queryPlus.getQuery().context().isBySegment()) {
@@ -137,7 +150,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       }
 
       final GroupByQuery groupByQuery = (GroupByQuery) queryPlus.getQuery();
-      return initAndMergeGroupByResults(groupByQuery, runner, responseContext);
+      return initAndMergeGroupByResults(groupByQuery, runner, responseContext, forMergeRunner);
     };
   }
 
@@ -156,36 +169,23 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   private Sequence<ResultRow> initAndMergeGroupByResults(
       final GroupByQuery query,
       QueryRunner<ResultRow> runner,
-      ResponseContext context
+      ResponseContext context,
+      boolean forMergeRunner
   )
   {
     // .. 1. Historicals, Broker -> Which is using localWalker
     // MerginV2 ->
-    ResponseContext clonedContext = context.clone();
-    Boolean usesGroupByMergingQueryRunner = (Boolean) query
-        .getContext()
-        .getOrDefault(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true);
-    final GroupByQueryResources resource = GroupingEngine.prepareResource(
-        query,
-        mergeBufferPool,
-        usesGroupByMergingQueryRunner,
-        queryConfig
-    );
-    if (usesGroupByMergingQueryRunner) {
-      clonedContext.add(GroupByUtils.RESPONSE_KEY_GROUP_BY_MERGING_QUERY_RUNNER_BUFFERS, resource);
-    }
+    groupByResourcesReservationPool.reserve("UID", query, forMergeRunner);
+    final GroupByQueryResources resource = groupByResourcesReservationPool.fetch("UID");
     try {
       final Sequence<ResultRow> mergedSequence = mergeGroupByResults(
           query,
           resource,
           runner,
-          clonedContext
+          context
       );
       Closer closer = Closer.create();
       closer.register(resource);
-      closer.register(() ->
-                          clonedContext.remove(GroupByUtils.RESPONSE_KEY_GROUP_BY_MERGING_QUERY_RUNNER_BUFFERS)
-      );
       return Sequences.withBaggage(mergedSequence, closer);
     }
     catch (Exception e) {

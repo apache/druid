@@ -137,7 +137,7 @@ public class DistinctCountGroupByQueryTest extends InitializedNullHandlingTest
     Iterable<ResultRow> results = FluentQueryRunner
         .create(factory.createRunner(incrementalIndexSegment), factory.getToolchest())
         .applyPreMergeDecoration()
-        .mergeResults()
+        .mergeResults(true)
         .applyPostMergeDecoration()
         .run(QueryPlus.wrap(query))
         .toList();

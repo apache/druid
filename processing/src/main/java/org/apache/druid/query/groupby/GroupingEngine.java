@@ -111,6 +111,7 @@ public class GroupingEngine
   private final DruidProcessingConfig processingConfig;
   private final Supplier<GroupByQueryConfig> configSupplier;
   private final NonBlockingPool<ByteBuffer> bufferPool;
+  GroupByResourcesReservationPool groupByResourcesReservationPool;
   private final ObjectMapper jsonMapper;
   private final ObjectMapper spillMapper;
   private final QueryWatcher queryWatcher;
@@ -120,6 +121,7 @@ public class GroupingEngine
       DruidProcessingConfig processingConfig,
       Supplier<GroupByQueryConfig> configSupplier,
       @Global NonBlockingPool<ByteBuffer> bufferPool,
+      GroupByResourcesReservationPool groupByResourcesReservationPool,
       @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper spillMapper,
       QueryWatcher queryWatcher
@@ -128,6 +130,7 @@ public class GroupingEngine
     this.processingConfig = processingConfig;
     this.configSupplier = configSupplier;
     this.bufferPool = bufferPool;
+    this.groupByResourcesReservationPool = groupByResourcesReservationPool;
     this.jsonMapper = jsonMapper;
     this.spillMapper = spillMapper;
     this.queryWatcher = queryWatcher;
@@ -425,7 +428,7 @@ public class GroupingEngine
    * also be called on the brokers if the query is operating on the local data sources, like the inline
    * datasources.
    *
-   * It uses {@link GroupByMergingQueryRunnerV2} which requires the merge buffers to be passed in the responseContext
+   * It uses {@link GroupByMergingQueryRunner} which requires the merge buffers to be passed in the responseContext
    * of the query that is run.
    *
    * @param queryProcessingPool {@link QueryProcessingPool} service used for parallel execution of the query runners
@@ -443,6 +446,7 @@ public class GroupingEngine
         queryProcessingPool,
         queryWatcher,
         queryRunners,
+        groupByResourcesReservationPool,
         processingConfig.getNumThreads(),
         processingConfig.intermediateComputeSizeBytes(),
         spillMapper,

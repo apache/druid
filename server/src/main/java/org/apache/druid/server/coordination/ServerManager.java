@@ -223,7 +223,7 @@ public class ServerManager implements QuerySegmentWalker
 
     return CPUTimeMetricQueryRunner.safeBuild(
         new FinalizeResultsQueryRunner<>(
-            toolChest.mergeResults(factory.mergeRunners(queryProcessingPool, queryRunners)),
+            toolChest.mergeResults(factory.mergeRunners(queryProcessingPool, queryRunners), true),
             toolChest
         ),
         toolChest,

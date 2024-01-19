@@ -523,7 +523,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     return FluentQueryRunner
         .create(baseRunner, toolChest)
         .applyPreMergeDecoration()
-        .mergeResults()
+        .mergeResults(false)
         .applyPostMergeDecoration()
         .emitCPUTimeMetric(emitter)
         .postProcess(

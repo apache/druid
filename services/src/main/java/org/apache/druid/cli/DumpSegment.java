@@ -746,7 +746,7 @@ public class DumpSegment extends GuiceRunnable
     final QueryRunner<T> runner = factory.createRunner(new QueryableIndexSegment(index, SegmentId.dummy("segment")));
     return factory
         .getToolchest()
-        .mergeResults(factory.mergeRunners(DirectQueryProcessingPool.INSTANCE, ImmutableList.of(runner)))
+        .mergeResults(factory.mergeRunners(DirectQueryProcessingPool.INSTANCE, ImmutableList.of(runner)), true)
         .run(QueryPlus.wrap(query), ResponseContext.createEmpty());
   }
 

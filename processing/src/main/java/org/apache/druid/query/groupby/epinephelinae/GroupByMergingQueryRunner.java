@@ -58,6 +58,7 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryResources;
 import org.apache.druid.query.groupby.GroupByUtils;
+import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBasedKey;
 
@@ -93,6 +94,7 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
   private final GroupByQueryConfig config;
   private final DruidProcessingConfig processingConfig;
   private final Iterable<QueryRunner<ResultRow>> queryables;
+  private final GroupByResourcesReservationPool groupByResourcesReservationPool;
   private final QueryProcessingPool queryProcessingPool;
   private final QueryWatcher queryWatcher;
   private final int concurrencyHint;
@@ -106,6 +108,7 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
       QueryProcessingPool queryProcessingPool,
       QueryWatcher queryWatcher,
       Iterable<QueryRunner<ResultRow>> queryables,
+      GroupByResourcesReservationPool groupByResourcesReservationPool,
       int concurrencyHint,
       int mergeBufferSize,
       ObjectMapper spillMapper,
@@ -117,6 +120,7 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
     this.queryProcessingPool = queryProcessingPool;
     this.queryWatcher = queryWatcher;
     this.queryables = Iterables.unmodifiableIterable(Iterables.filter(queryables, Predicates.notNull()));
+    this.groupByResourcesReservationPool = groupByResourcesReservationPool;
     this.concurrencyHint = concurrencyHint;
     this.spillMapper = spillMapper;
     this.processingTmpDir = processingTmpDir;
@@ -185,10 +189,8 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
               // If parallelCombine is enabled, we need two merge buffers for parallel aggregating and parallel combining
               final int numMergeBuffers = querySpecificConfig.getNumParallelCombineThreads() > 1 ? 2 : 1;
 
-              final List<ReferenceCountingResourceHolder<ByteBuffer>> mergeBufferHolders = getMergeBuffersHolder(
-                  numMergeBuffers,
-                  responseContext
-              );
+              final List<ReferenceCountingResourceHolder<ByteBuffer>> mergeBufferHolders =
+                  getMergeBuffersHolder(numMergeBuffers);
               resources.registerAll(mergeBufferHolders);
 
               final ReferenceCountingResourceHolder<ByteBuffer> mergeBufferHolder = mergeBufferHolders.get(0);
@@ -308,14 +310,11 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
     );
   }
 
-  private List<ReferenceCountingResourceHolder<ByteBuffer>> getMergeBuffersHolder(
-      int numBuffers,
-      ResponseContext responseContext
-  )
+  private List<ReferenceCountingResourceHolder<ByteBuffer>> getMergeBuffersHolder(int numBuffers)
   {
-    GroupByQueryResources resource = (GroupByQueryResources) responseContext.get(GroupByUtils.RESPONSE_KEY_GROUP_BY_MERGING_QUERY_RUNNER_BUFFERS);
+    GroupByQueryResources resource = groupByResourcesReservationPool.fetch("UID");
     if (resource == null) {
-      throw DruidException.defensive("Expected merge buffers to be passed in the response context while executing the "
+      throw DruidException.defensive("Expected merge buffers to be reserved in the reservation pool, however while executing the "
                                      + "GroupByMergingQueryRunnerV2, however none were provided.");
     }
     if (numBuffers > resource.getNumMergingQueryRunnerMergeBuffers()) {

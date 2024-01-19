@@ -791,7 +791,7 @@ public class QuerySchedulerTest
                 toolChest
             )
             .applyPreMergeDecoration()
-            .mergeResults()
+            .mergeResults(true)
             .applyPostMergeDecoration();
 
         final int actualNumRows = consumeAndCloseSequence(runner.run(QueryPlus.wrap(query)));
