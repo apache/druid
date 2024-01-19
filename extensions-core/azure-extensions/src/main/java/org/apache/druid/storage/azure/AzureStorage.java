@@ -175,7 +175,7 @@ public class AzureStorage
   {
 
     BlobBatchClient blobBatchClient = new BlobBatchClientBuilder(getOrCreateBlobContainerClient(containerName, maxAttempts)).buildClient();
-    blobBatchClient.deleteBlobs(Lists.newArrayList(paths), DeleteSnapshotsOptionType.ONLY);
+    blobBatchClient.deleteBlobs(Lists.newArrayList(paths), DeleteSnapshotsOptionType.INCLUDE);
   }
 
   public List<String> listDir(final String containerName, final String virtualDirPath, final Integer maxAttempts)
