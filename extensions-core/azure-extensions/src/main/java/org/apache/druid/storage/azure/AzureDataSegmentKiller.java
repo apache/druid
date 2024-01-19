@@ -82,12 +82,12 @@ public class AzureDataSegmentKiller implements DataSegmentKiller
       Map<String, Object> loadSpec = segment.getLoadSpec();
       final String containerName = MapUtils.getString(loadSpec, "containerName");
       final String blobPath = MapUtils.getString(loadSpec, "blobPath");
-      final String dirPath = Paths.get(blobPath).getParent().toString();
       List<String> keysToDelete = containerToKeysToDelete.computeIfAbsent(
           containerName,
           k -> new ArrayList<>()
       );
-      keysToDelete.add(dirPath);
+      keysToDelete.add(blobPath);
+      keysToDelete.add(DataSegmentKiller.descriptorPath(blobPath));
     }
 
     for (Map.Entry<String, List<String>> bucketToKeys : containerToKeysToDelete.entrySet()) {
