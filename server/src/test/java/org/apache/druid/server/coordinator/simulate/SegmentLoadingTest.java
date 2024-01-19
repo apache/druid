@@ -21,6 +21,8 @@ package org.apache.druid.server.coordinator.simulate;
 
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.coordinator.rules.Load;
+import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Test;
@@ -409,7 +411,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
 
     // Verify that all the segments are broadcast to all historicals
     // irrespective of throttle limit
-    verifyValue(Metric.ASSIGNED_COUNT, filterByDatasource(DS.WIKI), 30L);
+    verifyValue(Metric.ASSIGNED_COUNT, filter(Dimension.DATASOURCE, DS.WIKI), 30L);
     verifyNotEmitted(Metric.DROPPED_COUNT);
   }
 

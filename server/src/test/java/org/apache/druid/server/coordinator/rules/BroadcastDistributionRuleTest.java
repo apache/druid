@@ -19,17 +19,21 @@
 
 package org.apache.druid.server.coordinator.rules;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.client.DruidServer;
-import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.DruidCluster;
-import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.balancer.RandomBalancerStrategy;
 import org.apache.druid.server.coordinator.loading.SegmentAction;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
+import org.apache.druid.server.coordinator.loading.SegmentLoadingConfig;
 import org.apache.druid.server.coordinator.loading.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
@@ -37,10 +41,13 @@ import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
+import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 
 public class BroadcastDistributionRuleTest
@@ -51,13 +58,31 @@ public class BroadcastDistributionRuleTest
   private static final String TIER_1 = "tier1";
   private static final String TIER_2 = "tier2";
 
+  private static final ObjectMapper MAPPER = new DefaultObjectMapper();
   private final DataSegment wikiSegment
       = CreateDataSegments.ofDatasource(DS_WIKI).eachOfSizeInMb(100).get(0);
+
+  private CoordinatorRunStats stats;
 
   @Before
   public void setUp()
   {
     serverId = 0;
+    stats = new CoordinatorRunStats();
+  }
+
+  @Test
+  public void testRuleSerde() throws IOException
+  {
+    final List<Rule> rules = Arrays.asList(
+        new ForeverBroadcastDistributionRule(),
+        new IntervalBroadcastDistributionRule(Intervals.of("0/1000")),
+        new PeriodBroadcastDistributionRule(new Period(1000), null)
+    );
+
+    final String json = MAPPER.writeValueAsString(rules);
+    final List<Rule> fromJson = MAPPER.readValue(json, new TypeReference<List<Rule>>(){});
+    Assert.assertEquals(rules, fromJson);
   }
 
   @Test
@@ -66,11 +91,9 @@ public class BroadcastDistributionRuleTest
     // 2 tiers with one server each
     final ServerHolder serverT11 = create10gbHistorical(TIER_1);
     final ServerHolder serverT21 = create10gbHistorical(TIER_2);
-    DruidCluster cluster = DruidCluster.builder().add(serverT11).add(serverT21).build();
-    DruidCoordinatorRuntimeParams params = makeParamsWithUsedSegments(cluster, wikiSegment);
+    StrategicSegmentAssigner segmentAssigner = createSegmentAssigner(serverT11, serverT21);
 
-    ForeverBroadcastDistributionRule rule = new ForeverBroadcastDistributionRule();
-    CoordinatorRunStats stats = runRuleOnSegment(rule, wikiSegment, params);
+    new ForeverBroadcastDistributionRule().run(wikiSegment, segmentAssigner);
 
     // Verify that segment is assigned to servers of all tiers
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_1, DS_WIKI));
@@ -86,11 +109,9 @@ public class BroadcastDistributionRuleTest
     // serverT11 is already serving the segment which is being broadcast
     final ServerHolder serverT11 = create10gbHistorical(TIER_1, wikiSegment);
     final ServerHolder serverT12 = create10gbHistorical(TIER_1);
-    DruidCluster cluster = DruidCluster.builder().add(serverT11).add(serverT12).build();
-    DruidCoordinatorRuntimeParams params = makeParamsWithUsedSegments(cluster, wikiSegment);
+    StrategicSegmentAssigner segmentAssigner = createSegmentAssigner(serverT11, serverT12);
 
-    ForeverBroadcastDistributionRule rule = new ForeverBroadcastDistributionRule();
-    CoordinatorRunStats stats = runRuleOnSegment(rule, wikiSegment, params);
+    new ForeverBroadcastDistributionRule().run(wikiSegment, segmentAssigner);
 
     // Verify that serverT11 is already serving and serverT12 is loading segment
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_1, DS_WIKI));
@@ -104,13 +125,9 @@ public class BroadcastDistributionRuleTest
   {
     ServerHolder activeServer = create10gbHistorical(TIER_1);
     ServerHolder decommissioningServer = createDecommissioningHistorical(TIER_1);
-    DruidCluster cluster = DruidCluster.builder()
-                                       .add(activeServer)
-                                       .add(decommissioningServer).build();
-    DruidCoordinatorRuntimeParams params = makeParamsWithUsedSegments(cluster, wikiSegment);
+    StrategicSegmentAssigner segmentAssigner = createSegmentAssigner(activeServer, decommissioningServer);
 
-    ForeverBroadcastDistributionRule rule = new ForeverBroadcastDistributionRule();
-    CoordinatorRunStats stats = runRuleOnSegment(rule, wikiSegment, params);
+    new ForeverBroadcastDistributionRule().run(wikiSegment, segmentAssigner);
 
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_1, DS_WIKI));
     Assert.assertTrue(activeServer.isLoadingSegment(wikiSegment));
@@ -123,14 +140,9 @@ public class BroadcastDistributionRuleTest
     // Both active and decommissioning servers are already serving the segment
     ServerHolder activeServer = create10gbHistorical(TIER_1, wikiSegment);
     ServerHolder decommissioningServer = createDecommissioningHistorical(TIER_1, wikiSegment);
-    DruidCluster cluster = DruidCluster.builder()
-                                       .add(activeServer)
-                                       .add(decommissioningServer)
-                                       .build();
-    DruidCoordinatorRuntimeParams params = makeParamsWithUsedSegments(cluster, wikiSegment);
+    StrategicSegmentAssigner segmentAssigner = createSegmentAssigner(activeServer, decommissioningServer);
 
-    ForeverBroadcastDistributionRule rule = new ForeverBroadcastDistributionRule();
-    CoordinatorRunStats stats = runRuleOnSegment(rule, wikiSegment, params);
+    new ForeverBroadcastDistributionRule().run(wikiSegment, segmentAssigner);
 
     // Verify that segment is dropped only from the decommissioning server
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, TIER_1, DS_WIKI));
@@ -150,14 +162,9 @@ public class BroadcastDistributionRuleTest
         new TestLoadQueuePeon()
     );
     final ServerHolder historical = create10gbHistorical(TIER_1);
+    StrategicSegmentAssigner segmentAssigner = createSegmentAssigner(indexer, broker, historical);
 
-    DruidCluster cluster = DruidCluster.builder()
-                                       .add(broker).add(indexer).add(historical)
-                                       .build();
-    DruidCoordinatorRuntimeParams params = makeParamsWithUsedSegments(cluster, wikiSegment);
-
-    ForeverBroadcastDistributionRule rule = new ForeverBroadcastDistributionRule();
-    final CoordinatorRunStats stats = runRuleOnSegment(rule, wikiSegment, params);
+    new ForeverBroadcastDistributionRule().run(wikiSegment, segmentAssigner);
 
     // Verify that segment is assigned to historical, broker as well as indexer
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_1, DS_WIKI));
@@ -194,15 +201,13 @@ public class BroadcastDistributionRuleTest
     segmentsInQueue.forEach(s -> serverWithFullQueue.startOperation(SegmentAction.LOAD, s));
     Assert.assertTrue(serverWithFullQueue.isLoadQueueFull());
 
-    DruidCluster cluster = DruidCluster.builder()
-                                       .add(eligibleServer)
-                                       .add(serverWithNoDiskSpace)
-                                       .add(serverWithFullQueue)
-                                       .build();
-    DruidCoordinatorRuntimeParams params = makeParamsWithUsedSegments(cluster, wikiSegment);
+    StrategicSegmentAssigner segmentAssigner = createSegmentAssigner(
+        eligibleServer,
+        serverWithFullQueue,
+        serverWithNoDiskSpace
+    );
 
-    ForeverBroadcastDistributionRule rule = new ForeverBroadcastDistributionRule();
-    final CoordinatorRunStats stats = runRuleOnSegment(rule, wikiSegment, params);
+    new ForeverBroadcastDistributionRule().run(wikiSegment, segmentAssigner);
 
     // Verify that the segment is broadcast only to the eligible server
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_1, DS_WIKI));
@@ -217,29 +222,16 @@ public class BroadcastDistributionRuleTest
     Assert.assertEquals(1L, stats.get(Stats.Segments.ASSIGN_SKIPPED, metricKey));
   }
 
-  private CoordinatorRunStats runRuleOnSegment(
-      Rule rule,
-      DataSegment segment,
-      DruidCoordinatorRuntimeParams params
-  )
+  private StrategicSegmentAssigner createSegmentAssigner(ServerHolder... servers)
   {
-    StrategicSegmentAssigner segmentAssigner = params.getSegmentAssigner();
-    rule.run(segment, segmentAssigner);
-    return segmentAssigner.getStats();
-  }
-
-  private DruidCoordinatorRuntimeParams makeParamsWithUsedSegments(
-      DruidCluster druidCluster,
-      DataSegment... usedSegments
-  )
-  {
-    return DruidCoordinatorRuntimeParams
-        .newBuilder(DateTimes.nowUtc())
-        .withDruidCluster(druidCluster)
-        .withUsedSegments(usedSegments)
-        .withBalancerStrategy(new RandomBalancerStrategy())
-        .withSegmentAssignerUsing(new SegmentLoadQueueManager(null, null))
-        .build();
+    DruidCluster cluster = DruidCluster.builder().add(servers).build();
+    return new StrategicSegmentAssigner(
+        new SegmentLoadQueueManager(null, null),
+        cluster,
+        new RandomBalancerStrategy(),
+        SegmentLoadingConfig.create(CoordinatorDynamicConfig.builder().build(), 1),
+        stats
+    );
   }
 
   private ServerHolder create10gbHistorical(String tier, DataSegment... segments)

@@ -141,8 +141,7 @@ public class RunRulesTest
     final DruidServer server2 = createHistorical("server2", "normal");
     final DruidCluster druidCluster = DruidCluster
         .builder()
-        .addTier(
-            "normal",
+        .add(
             new ServerHolder(server1.toImmutableDruidServer(), mockPeon),
             new ServerHolder(server2.toImmutableDruidServer(), mockPeon)
         ).build();
@@ -200,13 +199,11 @@ public class RunRulesTest
 
     DruidCluster druidCluster = DruidCluster
         .builder()
-        .addTier(
-            "hot",
+        .add(
             new ServerHolder(serverHot1.toImmutableDruidServer(), mockPeon),
             new ServerHolder(serverHot2.toImmutableDruidServer(), mockPeon)
         )
-        .addTier(
-            "normal",
+        .add(
             new ServerHolder(serverNorm1.toImmutableDruidServer(), mockPeon),
             new ServerHolder(serverNorm2.toImmutableDruidServer(), mockPeon)
         )
@@ -266,22 +263,19 @@ public class RunRulesTest
 
     DruidCluster druidCluster = DruidCluster
         .builder()
-        .addTier(
-            "hot",
+        .add(
             new ServerHolder(
                 createHistorical("serverHot", "hot").toImmutableDruidServer(),
                 mockPeon
             )
         )
-        .addTier(
-            "normal",
+        .add(
             new ServerHolder(
                 createHistorical("serverNorm", "normal").toImmutableDruidServer(),
                 mockPeon
             )
         )
-        .addTier(
-            "cold",
+        .add(
             new ServerHolder(
                 createHistorical("serverCold", "cold").toImmutableDruidServer(),
                 mockPeon
@@ -550,7 +544,7 @@ public class RunRulesTest
 
     DruidCluster druidCluster = DruidCluster
         .builder()
-        .addTier("normal", new ServerHolder(server.toImmutableDruidServer(), mockPeon))
+        .add(new ServerHolder(server.toImmutableDruidServer(), mockPeon))
         .build();
 
     DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
@@ -591,8 +585,7 @@ public class RunRulesTest
 
     DruidCluster druidCluster = DruidCluster
         .builder()
-        .addTier(
-            "normal",
+        .add(
             new ServerHolder(server1.toImmutableDruidServer(), mockPeon),
             new ServerHolder(server2.toImmutableDruidServer(), mockPeon)
         )
@@ -647,8 +640,8 @@ public class RunRulesTest
 
     DruidCluster druidCluster = DruidCluster
         .builder()
-        .addTier("hot", new ServerHolder(server1.toImmutableDruidServer(), mockPeon))
-        .addTier("normal", new ServerHolder(server2.toImmutableDruidServer(), mockPeon))
+        .add(new ServerHolder(server1.toImmutableDruidServer(), mockPeon))
+        .add(new ServerHolder(server2.toImmutableDruidServer(), mockPeon))
         .build();
 
     DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
@@ -744,8 +737,7 @@ public class RunRulesTest
 
     DruidCluster druidCluster = DruidCluster
         .builder()
-        .addTier(
-            "normal",
+        .add(
             new ServerHolder(server1.toImmutableDruidServer(), mockPeon, false),
             new ServerHolder(server2.toImmutableDruidServer(), anotherMockPeon, false),
             new ServerHolder(server3.toImmutableDruidServer(), anotherMockPeon, false)
@@ -791,8 +783,7 @@ public class RunRulesTest
 
     DruidCluster druidCluster = DruidCluster
         .builder()
-        .addTier(
-            "hot",
+        .add(
             new ServerHolder(
                 createHistorical("serverHot", "hot").toImmutableDruidServer(),
                 mockPeon
@@ -858,7 +849,7 @@ public class RunRulesTest
             Collections.singletonList(
                 new IntervalLoadRule(
                     Intervals.of("2012-01-01/2013-01-01"),
-                    ImmutableMap.of("hot", 1, DruidServer.DEFAULT_TIER, 1),
+                    ImmutableMap.of("hot", 1, "normal", 1),
                     null
                 )
             )
@@ -868,15 +859,13 @@ public class RunRulesTest
 
     final DruidCluster druidCluster = DruidCluster
         .builder()
-        .addTier(
-            "hot",
+        .add(
             new ServerHolder(
                 createHistorical("serverHot", "hot").toImmutableDruidServer(),
                 mockPeon
             )
         )
-        .addTier(
-            DruidServer.DEFAULT_TIER,
+        .add(
             new ServerHolder(
                 createHistorical("serverNorm", "normal").toImmutableDruidServer(),
                 mockPeon
@@ -892,7 +881,7 @@ public class RunRulesTest
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
     Assert.assertEquals(24L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DATASOURCE));
-    Assert.assertEquals(24L, stats.getSegmentStat(Stats.Segments.ASSIGNED, DruidServer.DEFAULT_TIER, DATASOURCE));
+    Assert.assertEquals(24L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "normal", DATASOURCE));
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
 
     EasyMock.verify(mockPeon);
@@ -1048,8 +1037,7 @@ public class RunRulesTest
         1
     );
 
-    DruidCluster druidCluster = DruidCluster.builder().addTier(
-        DruidServer.DEFAULT_TIER,
+    DruidCluster druidCluster = DruidCluster.builder().add(
         new ServerHolder(
             createHistorical("server1", DruidServer.DEFAULT_TIER)
                 .addDataSegment(dataSegment)
@@ -1110,8 +1098,7 @@ public class RunRulesTest
         1
     );
 
-    DruidCluster druidCluster = DruidCluster.builder().addTier(
-        DruidServer.DEFAULT_TIER,
+    DruidCluster druidCluster = DruidCluster.builder().add(
         new ServerHolder(
             createHistorical("server1", DruidServer.DEFAULT_TIER).toImmutableDruidServer(),
             mockPeon
@@ -1164,8 +1151,7 @@ public class RunRulesTest
         11
     );
 
-    DruidCluster druidCluster = DruidCluster.builder().addTier(
-        DruidServer.DEFAULT_TIER,
+    DruidCluster druidCluster = DruidCluster.builder().add(
         new ServerHolder(
             new DruidServer("server1", "host1", null, 10, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0)
                 .toImmutableDruidServer(),
@@ -1226,8 +1212,7 @@ public class RunRulesTest
         11
     );
 
-    DruidCluster druidCluster = DruidCluster.builder().addTier(
-        DruidServer.DEFAULT_TIER,
+    DruidCluster druidCluster = DruidCluster.builder().add(
         new ServerHolder(
             new DruidServer("server1", "host1", null, 10, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0)
                 .toImmutableDruidServer(),

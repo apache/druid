@@ -21,11 +21,9 @@ package org.apache.druid.server.coordinator.simulate;
 
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.metadata.MetadataRuleManager;
-import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,15 +32,7 @@ public class TestMetadataRuleManager implements MetadataRuleManager
 {
   private final Map<String, List<Rule>> rules = new HashMap<>();
 
-  private static final String DEFAULT_DATASOURCE = "_default";
-
-  public TestMetadataRuleManager()
-  {
-    rules.put(
-        DEFAULT_DATASOURCE,
-        Collections.singletonList(new ForeverLoadRule(null, null))
-    );
-  }
+  public static final String DEFAULT_DATASOURCE = "_default";
 
   @Override
   public void start()

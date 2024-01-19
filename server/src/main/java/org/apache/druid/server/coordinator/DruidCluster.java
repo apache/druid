@@ -120,7 +120,15 @@ public class DruidCluster
     private final Map<String, Set<ServerHolder>> historicals = new HashMap<>();
     private final Set<ServerHolder> brokers = new HashSet<>();
 
-    public Builder add(ServerHolder serverHolder)
+    public Builder add(ServerHolder... serverHolders)
+    {
+      for (ServerHolder serverHolder : serverHolders) {
+        addServer(serverHolder);
+      }
+      return this;
+    }
+
+    private void addServer(ServerHolder serverHolder)
     {
       switch (serverHolder.getServer().getType()) {
         case BRIDGE:
@@ -137,26 +145,6 @@ public class DruidCluster
         default:
           throw new IAE("unknown server type[%s]", serverHolder.getServer().getType());
       }
-      return this;
-    }
-
-    public Builder addRealtimes(ServerHolder... realtimeServers)
-    {
-      realtimes.addAll(Arrays.asList(realtimeServers));
-      return this;
-    }
-
-    public Builder addBrokers(ServerHolder... brokers)
-    {
-      this.brokers.addAll(Arrays.asList(brokers));
-      return this;
-    }
-
-    public Builder addTier(String tier, ServerHolder... historicals)
-    {
-      this.historicals.computeIfAbsent(tier, t -> new HashSet<>())
-                      .addAll(Arrays.asList(historicals));
-      return this;
     }
 
     private void addHistorical(ServerHolder serverHolder)

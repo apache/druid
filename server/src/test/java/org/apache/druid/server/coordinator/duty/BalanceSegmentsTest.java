@@ -327,7 +327,7 @@ public class BalanceSegmentsTest
   {
     return DruidCoordinatorRuntimeParams
         .newBuilder(DateTimes.nowUtc())
-        .withDruidCluster(DruidCluster.builder().addTier("normal", servers).build())
+        .withDruidCluster(DruidCluster.builder().add(servers).build())
         .withUsedSegments(allSegments)
         .withBroadcastDatasources(broadcastDatasources)
         .withBalancerStrategy(balancerStrategy)

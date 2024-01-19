@@ -176,11 +176,6 @@ public abstract class CoordinatorSimulationBaseTest implements
     return filter(Dimension.TIER, tier);
   }
 
-  static Map<String, Object> filterByDatasource(String datasource)
-  {
-    return filter(Dimension.DATASOURCE, datasource);
-  }
-
   /**
    * Creates a map containing dimension key-values to filter out metric events.
    */
@@ -259,32 +254,6 @@ public abstract class CoordinatorSimulationBaseTest implements
                           .startingAt("2022-01-01")
                           .withNumPartitions(100)
                           .eachOfSizeInMb(500);
-  }
-
-  /**
-   * Builder for a load rule.
-   */
-  static class Load
-  {
-    private final Map<String, Integer> tieredReplicants = new HashMap<>();
-
-    static Load on(String tier, int numReplicas)
-    {
-      Load load = new Load();
-      load.tieredReplicants.put(tier, numReplicas);
-      return load;
-    }
-
-    Load andOn(String tier, int numReplicas)
-    {
-      tieredReplicants.put(tier, numReplicas);
-      return this;
-    }
-
-    Rule forever()
-    {
-      return new ForeverLoadRule(tieredReplicants, null);
-    }
   }
 
   /**

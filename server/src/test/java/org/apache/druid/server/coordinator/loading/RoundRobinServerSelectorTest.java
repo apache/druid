@@ -61,7 +61,7 @@ public class RoundRobinServerSelectorTest
 
     DruidCluster cluster = DruidCluster
         .builder()
-        .addTier(TIER, serverXL, serverM, serverXS, serverL)
+        .add(serverXL, serverM, serverXS, serverL)
         .build();
     final RoundRobinServerSelector selector = new RoundRobinServerSelector(cluster);
 
@@ -88,7 +88,7 @@ public class RoundRobinServerSelectorTest
 
     DruidCluster cluster = DruidCluster
         .builder()
-        .addTier(TIER, serverXL, serverM, serverXS, serverL)
+        .add(serverXL, serverM, serverXS, serverL)
         .build();
     final RoundRobinServerSelector selector = new RoundRobinServerSelector(cluster);
 
@@ -111,7 +111,7 @@ public class RoundRobinServerSelectorTest
   @Test
   public void testNoServersInTier()
   {
-    DruidCluster cluster = DruidCluster.builder().addTier(TIER).build();
+    DruidCluster cluster = DruidCluster.builder().build();
     final RoundRobinServerSelector selector = new RoundRobinServerSelector(cluster);
 
     Iterator<ServerHolder> eligibleServers = selector.getServersInTierToLoadSegment(TIER, segment);
@@ -121,8 +121,7 @@ public class RoundRobinServerSelectorTest
   @Test
   public void testNoEligibleServerInTier()
   {
-    DruidCluster cluster = DruidCluster.builder().addTier(
-        TIER,
+    DruidCluster cluster = DruidCluster.builder().add(
         createHistorical("server1", 40),
         createHistorical("server2", 30),
         createHistorical("server3", 10),
