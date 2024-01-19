@@ -1,0 +1,24 @@
+type: "operatorValidation"
+
+sql: |
+  SELECT
+    FLOOR(m1/3),
+    DENSE_RANK() OVER (ORDER BY FLOOR(m1/3)),
+    'prefix',
+    COUNT(1) OVER (ORDER BY FLOOR(m1/3) ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW),
+    COUNT(1) OVER (ORDER BY FLOOR(m1/3) RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW),
+    'postfix',
+    COUNT(1) OVER (ORDER BY FLOOR(m1/3) ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING),
+    COUNT(1) OVER (ORDER BY FLOOR(m1/3) RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING),
+    'k(1)',
+    COUNT(1) OVER (ORDER BY FLOOR(m1/3) ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING),
+    COUNT(1) OVER (ORDER BY FLOOR(m1/3) RANGE BETWEEN 1 PRECEDING AND 1 FOLLOWING)
+  FROM foo
+
+expectedResults:
+  - [0.0,1,"prefix",1,2,"postfix",6,6,"k(1)",2,5]
+  - [0.0,1,"prefix",2,2,"postfix",5,6,"k(1)",3,5]
+  - [1.0,2,"prefix",3,5,"postfix",4,4,"k(1)",3,6]
+  - [1.0,2,"prefix",4,5,"postfix",3,4,"k(1)",3,6]
+  - [1.0,2,"prefix",5,5,"postfix",2,4,"k(1)",3,6]
+  - [2.0,3,"prefix",6,6,"postfix",1,1,"k(1)",2,4]

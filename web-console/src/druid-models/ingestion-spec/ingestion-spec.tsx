@@ -1224,13 +1224,6 @@ export function getIoConfigTuningFormFields(
           ),
         },
         {
-          name: 'recordsPerFetch',
-          type: 'number',
-          defaultValue: 4000,
-          defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
-          info: <>The number of records to request per GetRecords call to Kinesis.</>,
-        },
-        {
           name: 'pollTimeout',
           type: 'number',
           defaultValue: 100,
@@ -1249,13 +1242,6 @@ export function getIoConfigTuningFormFields(
           defaultValue: 0,
           defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
           info: <>Time in milliseconds to wait between subsequent GetRecords calls to Kinesis.</>,
-        },
-        {
-          name: 'deaggregate',
-          type: 'boolean',
-          defaultValue: false,
-          defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
-          info: <>Whether to use the de-aggregate function of the KCL.</>,
         },
         {
           name: 'startDelay',
@@ -1444,7 +1430,7 @@ export interface TuningConfig {
   offsetFetchPeriod?: string;
   maxParseExceptions?: number;
   maxSavedParseExceptions?: number;
-  recordBufferSize?: number;
+  recordBufferSizeBytes?: number;
   recordBufferOfferTimeout?: number;
   recordBufferFullWait?: number;
   fetchThreads?: number;
@@ -2056,13 +2042,13 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     ),
   },
   {
-    name: 'spec.tuningConfig.recordBufferSize',
+    name: 'spec.tuningConfig.recordBufferSizeBytes',
     type: 'number',
-    defaultValue: 10000,
+    defaultValue: 100000000,
     defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
     info: (
       <>
-        Size of the buffer (number of events) used between the Kinesis fetch threads and the main
+        Size of the buffer (heap memory bytes) used between the Kinesis fetch threads and the main
         ingestion thread.
       </>
     ),
@@ -2107,15 +2093,15 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     ),
   },
   {
-    name: 'spec.tuningConfig.maxRecordsPerPoll',
+    name: 'spec.tuningConfig.maxBytesPerPoll',
     type: 'number',
-    defaultValue: 100,
+    defaultValue: 1000000,
     defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
     hideInMore: true,
     info: (
       <>
-        The maximum number of records/events to be fetched from buffer per poll. The actual maximum
-        will be <Code>max(maxRecordsPerPoll, max(bufferSize, 1))</Code>.
+        The maximum number of bytes to be fetched from buffer per poll. At least one record will be
+        fetched regardless of config.
       </>
     ),
   },
