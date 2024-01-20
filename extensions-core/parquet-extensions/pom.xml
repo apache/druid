@@ -34,6 +34,7 @@
 
   <properties>
     <parquet.version>1.13.1</parquet.version>
+    <cs.skyscreamer.version>1.5.0</cs.skyscreamer.version>
   </properties>
   <dependencies>
     <dependency>
@@ -178,6 +179,12 @@
       <version>${project.parent.version}</version>
       <scope>test</scope>
       <type>test-jar</type>
+    </dependency>
+    <dependency>
+      <groupId>org.skyscreamer</groupId>
+      <artifactId>jsonassert</artifactId>
+      <version>${cs.skyscreamer.version}</version>
+      <scope>test</scope>
     </dependency>
   </dependencies>
   <profiles>
