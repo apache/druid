@@ -74,7 +74,6 @@ public class WindowFramedAggregateProcessor implements Processor
     if (agger == null) {
       agger = new DefaultFramedOnHeapAggregatable(RowsAndColumns.expectAppendable(inputPartition));
     }
-
     return agger.aggregateAll(frame, aggregations);
   }
 
@@ -99,23 +98,28 @@ public class WindowFramedAggregateProcessor implements Processor
   }
 
   @Override
-  public boolean equals(Object o)
+  public int hashCode()
   {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    WindowFramedAggregateProcessor that = (WindowFramedAggregateProcessor) o;
-    return Objects.equals(frame, that.frame) && Arrays.equals(aggregations, that.aggregations);
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + Arrays.hashCode(aggregations);
+    result = prime * result + Objects.hash(frame);
+    return result;
   }
 
   @Override
-  public int hashCode()
+  public boolean equals(Object obj)
   {
-    int result = Objects.hash(frame);
-    result = 31 * result + Arrays.hashCode(aggregations);
-    return result;
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (getClass() != obj.getClass()) {
+      return false;
+    }
+    WindowFramedAggregateProcessor other = (WindowFramedAggregateProcessor) obj;
+    return Arrays.equals(aggregations, other.aggregations) && Objects.equals(frame, other.frame);
   }
 }

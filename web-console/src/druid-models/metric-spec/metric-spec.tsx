@@ -59,6 +59,12 @@ const KNOWN_TYPES = [
   'longMax',
   'doubleMax',
   'floatMax',
+  'longFirst',
+  'longLast',
+  'doubleFirst',
+  'doubleLast',
+  'floatFirst',
+  'floatLast',
   'stringFirst',
   'stringLast',
   'thetaSketch',
@@ -97,10 +103,14 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
         group: 'max',
         suggestions: ['longMax', 'doubleMax', 'floatMax'],
       },
-      // Do not show first and last aggregators as they can not be used in ingestion specs and this definition is only used in the data loader.
-      // Ref: https://druid.apache.org/docs/latest/querying/aggregations.html#first--last-aggregator
-      // Should the first / last aggregators become usable at ingestion time, reverse the changes made in:
-      // https://github.com/apache/druid/pull/10794
+      {
+        group: 'first',
+        suggestions: ['longFirst', 'doubleFirst', 'floatFirst', 'stringFirst'],
+      },
+      {
+        group: 'last',
+        suggestions: ['longLast', 'doubleLast', 'floatLast', 'stringLast'],
+      },
       'thetaSketch',
       'arrayOfDoublesSketch',
       {
@@ -129,6 +139,14 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
       'longMax',
       'doubleMax',
       'floatMax',
+      'longFirst',
+      'longLast',
+      'doubleFirst',
+      'doubleLast',
+      'floatFirst',
+      'floatLast',
+      'stringFirst',
+      'stringLast',
       'thetaSketch',
       'arrayOfDoublesSketch',
       'HLLSketchBuild',

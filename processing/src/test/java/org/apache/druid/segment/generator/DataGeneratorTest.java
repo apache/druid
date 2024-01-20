@@ -50,7 +50,6 @@ public class DataGeneratorTest extends InitializedNullHandlingTest
 {
   private static final Logger log = new Logger(DataGeneratorTest.class);
 
-
   @Test
   public void testSequential()
   {

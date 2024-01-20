@@ -28,6 +28,8 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.JacksonConfigManager;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskLocation;
@@ -924,7 +926,7 @@ public class OverlordResourceTest
         auditManager
     );
 
-    Task task = new KillUnusedSegmentsTask("kill_all", "allow", Intervals.ETERNITY, null, false, 10, null);
+    Task task = new KillUnusedSegmentsTask("kill_all", "allow", Intervals.ETERNITY, null, false, 10, null, null);
     overlordResource.taskPost(task, req);
 
     Assert.assertTrue(auditEntryCapture.hasCaptured());
@@ -983,10 +985,136 @@ public class OverlordResourceTest
         authConfig
     );
 
-    final Map<String, Integer> response = (Map<String, Integer>) overlordResource
-        .killPendingSegments("allow", new Interval(DateTimes.MIN, DateTimes.nowUtc()).toString(), req)
-        .getEntity();
-    Assert.assertEquals(2, response.get("numDeleted").intValue());
+    Response response = overlordResource
+        .killPendingSegments("allow", new Interval(DateTimes.MIN, DateTimes.nowUtc()).toString(), req);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("numDeleted", 2), response.getEntity());
+  }
+
+  @Test
+  public void testKillPendingSegmentsThrowsInvalidInputDruidException()
+  {
+    expectAuthorizationTokenCheck();
+
+    EasyMock.expect(taskMaster.isLeader()).andReturn(true);
+    final String exceptionMsg = "Some exception msg";
+    EasyMock
+        .expect(
+            indexerMetadataStorageAdapter.deletePendingSegments(
+                EasyMock.eq("allow"),
+                EasyMock.anyObject(Interval.class)
+            )
+        )
+        .andThrow(InvalidInput.exception(exceptionMsg))
+        .once();
+
+    EasyMock.replay(
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter,
+        authConfig
+    );
+
+    Response response = overlordResource
+        .killPendingSegments("allow", new Interval(DateTimes.MIN, DateTimes.nowUtc()).toString(), req);
+
+    Assert.assertEquals(400, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("error", exceptionMsg), response.getEntity());
+  }
+
+  @Test
+  public void testKillPendingSegmentsThrowsDefensiveDruidException()
+  {
+    expectAuthorizationTokenCheck();
+
+    EasyMock.expect(taskMaster.isLeader()).andReturn(true);
+    final String exceptionMsg = "An internal defensive exception";
+    EasyMock
+        .expect(
+            indexerMetadataStorageAdapter.deletePendingSegments(
+                EasyMock.eq("allow"),
+                EasyMock.anyObject(Interval.class)
+            )
+        )
+        .andThrow(DruidException.defensive(exceptionMsg))
+        .once();
+
+    EasyMock.replay(
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter,
+        authConfig
+    );
+
+    Response response = overlordResource
+        .killPendingSegments("allow", new Interval(DateTimes.MIN, DateTimes.nowUtc()).toString(), req);
+
+    Assert.assertEquals(500, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("error", exceptionMsg), response.getEntity());
+  }
+
+  @Test
+  public void testKillPendingSegmentsThrowsArbitraryException()
+  {
+    expectAuthorizationTokenCheck();
+
+    EasyMock.expect(taskMaster.isLeader()).andReturn(true);
+    final String exceptionMsg = "An unexpected illegal state exception";
+    EasyMock
+        .expect(
+            indexerMetadataStorageAdapter.deletePendingSegments(
+                EasyMock.eq("allow"),
+                EasyMock.anyObject(Interval.class)
+            )
+        )
+        .andThrow(new IllegalStateException(exceptionMsg))
+        .once();
+
+    EasyMock.replay(
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter,
+        authConfig
+    );
+
+    Response response = overlordResource
+        .killPendingSegments("allow", new Interval(DateTimes.MIN, DateTimes.nowUtc()).toString(), req);
+
+    Assert.assertEquals(500, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("error", exceptionMsg), response.getEntity());
+  }
+
+  @Test
+  public void testKillPendingSegmentsToNonLeader()
+  {
+    expectAuthorizationTokenCheck();
+
+    EasyMock.expect(taskMaster.isLeader()).andReturn(false);
+
+    EasyMock.replay(
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter,
+        authConfig
+    );
+
+    Response response = overlordResource
+        .killPendingSegments("allow", new Interval(DateTimes.MIN, DateTimes.nowUtc()).toString(), req);
+
+    Assert.assertEquals(503, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("error", "overlord is not the leader or not initialized yet"), response.getEntity());
   }
 
   @Test

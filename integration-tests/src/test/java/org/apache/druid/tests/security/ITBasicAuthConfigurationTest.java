@@ -78,6 +78,20 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   }
 
   @Override
+  protected void setupHttpClientsAndUsers() throws Exception
+  {
+    super.setupHttpClientsAndUsers();
+
+    // Add a delay to allow propagation of credentials to all services
+    try {
+      Thread.sleep(5000);
+    }
+    catch (Throwable t) {
+      // Ignore exception
+    }
+  }
+
+  @Override
   protected void setupDatasourceOnlyUser() throws Exception
   {
     createUserAndRoleWithPermissions(

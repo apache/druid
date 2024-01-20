@@ -114,6 +114,10 @@ public class MultiStageQueryContext
 
   public static final String CTX_FAULT_TOLERANCE = "faultTolerance";
   public static final boolean DEFAULT_FAULT_TOLERANCE = false;
+
+  public static final String CTX_FAIL_ON_EMPTY_INSERT = "failOnEmptyInsert";
+  public static final boolean DEFAULT_FAIL_ON_EMPTY_INSERT = false;
+
   public static final String CTX_SEGMENT_LOAD_WAIT = "waitUntilSegmentsLoad";
   public static final boolean DEFAULT_SEGMENT_LOAD_WAIT = false;
   public static final String CTX_MAX_INPUT_BYTES_PER_WORKER = "maxInputBytesPerWorker";
@@ -172,6 +176,14 @@ public class MultiStageQueryContext
     return queryContext.getBoolean(
         CTX_FAULT_TOLERANCE,
         DEFAULT_FAULT_TOLERANCE
+    );
+  }
+
+  public static boolean isFailOnEmptyInsertEnabled(final QueryContext queryContext)
+  {
+    return queryContext.getBoolean(
+        CTX_FAIL_ON_EMPTY_INSERT,
+        DEFAULT_FAIL_ON_EMPTY_INSERT
     );
   }
 
@@ -368,6 +380,13 @@ public class MultiStageQueryContext
    */
   public static TaskLockType validateAndGetTaskLockType(QueryContext queryContext, boolean isReplaceQuery)
   {
+    final boolean useConcurrentLocks = queryContext.getBoolean(
+        Tasks.USE_CONCURRENT_LOCKS,
+        Tasks.DEFAULT_USE_CONCURRENT_LOCKS
+    );
+    if (useConcurrentLocks) {
+      return isReplaceQuery ? TaskLockType.REPLACE : TaskLockType.APPEND;
+    }
     final TaskLockType taskLockType = QueryContexts.getAsEnum(
         Tasks.TASK_LOCK_TYPE,
         queryContext.getString(Tasks.TASK_LOCK_TYPE, null),

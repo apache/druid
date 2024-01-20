@@ -1008,4 +1008,12 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
     emitter.verifyEmitted("metadatacache/refresh/time", ImmutableMap.of(DruidMetrics.DATASOURCE, dataSource), 1);
     emitter.verifyEmitted("metadatacache/refresh/count", ImmutableMap.of(DruidMetrics.DATASOURCE, dataSource), 1);
   }
+
+  // This test is present to achieve coverage for BrokerSegmentMetadataCache#initServerViewTimelineCallback
+  @Test
+  public void testInvokeSegmentSchemaAnnounced() throws InterruptedException
+  {
+    buildSchemaMarkAndTableLatch();
+    serverView.invokeSegmentSchemasAnnouncedDummy();
+  }
 }

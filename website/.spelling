@@ -131,6 +131,7 @@ InputFormat
 InputSource
 InputSources
 Integer.MAX_VALUE
+IntelliJ
 ioConfig
 Istio
 JBOD
@@ -373,7 +374,6 @@ kubernetes
 kubexit
 k8s
 laning
-lastSegmentId
 lifecycle
 localhost
 log4j
@@ -429,6 +429,7 @@ pluggable
 podSpec
 postgres
 postgresql
+pre-aggregate
 pre-aggregated
 pre-aggregates
 pre-aggregating
@@ -502,7 +503,6 @@ Smoosh
 smoosh
 smooshed
 snapshotting
-sortOrder
 splittable
 ssl
 sslmode
@@ -947,6 +947,7 @@ prometheus
 Pushgateway
 flushPeriod
 postAggregator
+postAggregators
 quantileFromTDigestSketch
 quantilesFromTDigestSketch
 tDigestSketch
@@ -1124,6 +1125,7 @@ LZ4LZFuncompressedLZ4LZ4LZFuncompressednoneLZ4autolongsautolongslongstypeconcise
 deaggregate
 druid-kinesis-indexing-service
 maxRecordsPerPoll
+maxBytesPerPoll
 maxRecordsPerPollrecordsPerFetchfetchDelayMillisreplicasfetchDelayMillisrecordsPerFetchfetchDelayMillismaxRecordsPerPollamazon-kinesis-client1
 numKinesisShards
 numProcessors
@@ -2365,8 +2367,19 @@ isLeader
 taskslots
 loadstatus
 sqlQueryId
+useAzureCredentialsChain
+DefaultAzureCredential
 LAST_VALUE
 markUnused
 markUsed
 segmentId
 aggregateMultipleValues
+
+- ../docs/development/extensions-contrib/spectator-histogram.md
+SpectatorHistogram
+PercentileBuckets
+spectatorHistogram
+spectatorHistogramTimer
+spectatorHistogramDistribution
+percentileSpectatorHistogram
+percentilesSpectatorHistogram

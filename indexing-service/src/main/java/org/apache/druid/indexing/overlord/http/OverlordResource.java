@@ -939,10 +939,25 @@ public class OverlordResource
     }
 
     if (taskMaster.isLeader()) {
-      final int numDeleted = indexerMetadataStorageAdapter.deletePendingSegments(dataSource, deleteInterval);
-      return Response.ok().entity(ImmutableMap.of("numDeleted", numDeleted)).build();
+      try {
+        final int numDeleted = indexerMetadataStorageAdapter.deletePendingSegments(dataSource, deleteInterval);
+        return Response.ok().entity(ImmutableMap.of("numDeleted", numDeleted)).build();
+      }
+      catch (DruidException e) {
+        return Response.status(e.getStatusCode())
+                       .entity(ImmutableMap.<String, Object>of("error", e.getMessage()))
+                       .build();
+      }
+      catch (Exception e) {
+        log.warn(e, "Failed to delete pending segments for datasource[%s] and interval[%s].", dataSource, deleteInterval);
+        return Response.status(Status.INTERNAL_SERVER_ERROR)
+                       .entity(ImmutableMap.<String, Object>of("error", e.getMessage()))
+                       .build();
+      }
     } else {
-      return Response.status(Status.SERVICE_UNAVAILABLE).build();
+      return Response.status(Status.SERVICE_UNAVAILABLE)
+                     .entity(ImmutableMap.of("error", "overlord is not the leader or not initialized yet"))
+                     .build();
     }
   }
 

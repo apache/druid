@@ -59,6 +59,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -993,6 +994,66 @@ public class SegmentAllocateActionTest
     Assert.assertNotNull(id2);
     Assert.assertEquals(Intervals.ETERNITY, id1.getInterval());
     Assert.assertEquals(Intervals.ETERNITY, id2.getInterval());
+  }
+
+  @Test
+  public void testAllocateWeekOnlyWhenWeekIsPreferred()
+  {
+    final Task task = NoopTask.create();
+    taskActionTestKit.getTaskLockbox().add(task);
+
+    final SegmentIdWithShardSpec id1 = allocate(
+        task,
+        DateTimes.of("2023-12-16"),
+        Granularities.MINUTE,
+        Granularities.HOUR,
+        "s1",
+        null
+    );
+
+    final SegmentIdWithShardSpec id2 = allocate(
+        task,
+        DateTimes.of("2023-12-18"),
+        Granularities.MINUTE,
+        Granularities.WEEK,
+        "s2",
+        null
+    );
+
+    Assert.assertNotNull(id1);
+    Assert.assertNotNull(id2);
+    Assert.assertEquals(Duration.ofHours(1).toMillis(), id1.getInterval().toDurationMillis());
+    Assert.assertEquals(Duration.ofDays(7).toMillis(), id2.getInterval().toDurationMillis());
+  }
+
+  @Test
+  public void testAllocateDayWhenMonthNotPossible()
+  {
+    final Task task = NoopTask.create();
+    taskActionTestKit.getTaskLockbox().add(task);
+
+    final SegmentIdWithShardSpec id1 = allocate(
+        task,
+        DateTimes.of("2023-12-16"),
+        Granularities.MINUTE,
+        Granularities.HOUR,
+        "s1",
+        null
+    );
+
+    final SegmentIdWithShardSpec id2 = allocate(
+        task,
+        DateTimes.of("2023-12-18"),
+        Granularities.MINUTE,
+        Granularities.MONTH,
+        "s2",
+        null
+    );
+
+    Assert.assertNotNull(id1);
+    Assert.assertNotNull(id2);
+    Assert.assertEquals(Duration.ofHours(1).toMillis(), id1.getInterval().toDurationMillis());
+    Assert.assertEquals(Duration.ofDays(1).toMillis(), id2.getInterval().toDurationMillis());
   }
 
   private SegmentIdWithShardSpec allocate(
