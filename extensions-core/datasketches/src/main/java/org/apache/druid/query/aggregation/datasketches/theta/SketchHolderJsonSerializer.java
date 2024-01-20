@@ -22,6 +22,8 @@ package org.apache.druid.query.aggregation.datasketches.theta;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
+import org.apache.datasketches.theta.CompactSketch;
+import org.apache.datasketches.theta.Sketch;
 
 import java.io.IOException;
 
@@ -31,6 +33,11 @@ public class SketchHolderJsonSerializer extends JsonSerializer<SketchHolder>
   public void serialize(SketchHolder sketchHolder, JsonGenerator jgen, SerializerProvider provider)
       throws IOException
   {
-    jgen.writeBinary(sketchHolder.getSketch().toByteArray());
+    final Sketch sketch = sketchHolder.getSketch(); 
+    if (sketch instanceof CompactSketch) {
+      jgen.writeBinary(((CompactSketch) sketch).toByteArrayCompressed());
+    } else {
+      jgen.writeBinary(sketch.toByteArray());
+    }
   }
 }

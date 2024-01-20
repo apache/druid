@@ -21,6 +21,7 @@ package org.apache.druid.query.aggregation.datasketches.theta;
 
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.datasketches.memory.Memory;
+import org.apache.datasketches.theta.CompactSketch;
 import org.apache.datasketches.theta.Sketch;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.data.SafeWritableMemory;
@@ -61,6 +62,9 @@ public class SketchHolderObjectStrategy implements ObjectStrategy<SketchHolder>
       Sketch sketch = obj.getSketch();
       if (sketch.isEmpty()) {
         return ByteArrays.EMPTY_ARRAY;
+      }
+      if (sketch instanceof CompactSketch) {
+        return ((CompactSketch) sketch).toByteArrayCompressed();
       }
       return sketch.toByteArray();
     } else {

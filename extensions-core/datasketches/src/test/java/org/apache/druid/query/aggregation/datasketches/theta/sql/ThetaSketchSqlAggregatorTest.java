@@ -377,7 +377,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
               3.0d,
               "{\"estimate\":2.0,\"highBound\":2.0,\"lowBound\":2.0,\"numStdDev\":10}",
               "\"AQMDAAA6zJOQxkPsNomrZQ==\"",
-              "\"AgMDAAAazJMGAAAAAACAP1XTBztMIcMJ+HOoBBne1zKQxkPsNomrZUeWbJt3n+VpF8EdUoUHAXvxsLkOSE0lfQ==\"",
+              "\"AQQDPgEazJMGJwyFMOwfTVaRS8zMmgoKPLTqx3nm1KYEOhZAryjPt0RtoDbaxKtAIkRcK8m+/aA=\"",
               "\"AQMDAAA6zJMXwR1ShQcBew==\"",
               "\"AQMDAAA6zJOQxkPsNomrZQ==\"",
               1.0d
@@ -391,7 +391,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
               3.0d,
               "{\"estimate\":2.0,\"highBound\":2.0,\"lowBound\":2.0,\"numStdDev\":10}",
               "\"AQMDAAA6zJOQxkPsNomrZQ==\"",
-              "\"AgMDAAAazJMGAAAAAACAP1XTBztMIcMJ+HOoBBne1zKQxkPsNomrZUeWbJt3n+VpF8EdUoUHAXvxsLkOSE0lfQ==\"",
+              "\"AQQDPgEazJMGJwyFMOwfTVaRS8zMmgoKPLTqx3nm1KYEOhZAryjPt0RtoDbaxKtAIkRcK8m+/aA=\"",
               "\"AQMDAAA6zJMXwR1ShQcBew==\"",
               "\"AQMDAAA6zJOQxkPsNomrZQ==\"",
               1.0d
@@ -553,7 +553,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
               3.0d,
               "{\"estimate\":2.0,\"highBound\":2.0,\"lowBound\":2.0,\"numStdDev\":10}",
               "\"AQMDAAA6zJOQxkPsNomrZQ==\"",
-              "\"AgMDAAAazJMGAAAAAACAP1XTBztMIcMJ+HOoBBne1zKQxkPsNomrZUeWbJt3n+VpF8EdUoUHAXvxsLkOSE0lfQ==\"",
+              "\"AQQDPgEazJMGJwyFMOwfTVaRS8zMmgoKPLTqx3nm1KYEOhZAryjPt0RtoDbaxKtAIkRcK8m+/aA=\"",
               "\"AQMDAAA6zJMXwR1ShQcBew==\"",
               "\"AQMDAAA6zJOQxkPsNomrZQ==\"",
               1.0d
@@ -567,7 +567,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
               3.0d,
               "{\"estimate\":2.0,\"highBound\":2.0,\"lowBound\":2.0,\"numStdDev\":10}",
               "\"AQMDAAA6zJOQxkPsNomrZQ==\"",
-              "\"AgMDAAAazJMGAAAAAACAP1XTBztMIcMJ+HOoBBne1zKQxkPsNomrZUeWbJt3n+VpF8EdUoUHAXvxsLkOSE0lfQ==\"",
+              "\"AQQDPgEazJMGJwyFMOwfTVaRS8zMmgoKPLTqx3nm1KYEOhZAryjPt0RtoDbaxKtAIkRcK8m+/aA=\"",
               "\"AQMDAAA6zJMXwR1ShQcBew==\"",
               "\"AQMDAAA6zJOQxkPsNomrZQ==\"",
               1.0d
