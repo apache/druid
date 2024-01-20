@@ -217,7 +217,7 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
       @Nullable final DateTime minStartTime,
       final DateTime maxEndTime,
       final int limit,
-      final DateTime maxUsedFlagLastUpdatedTime
+      final DateTime maxUsedStatusLastUpdatedTime
   )
   {
     return null;

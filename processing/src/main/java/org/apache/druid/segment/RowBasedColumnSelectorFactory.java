@@ -61,10 +61,10 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
   private final boolean useStringValueOfNullInLists;
 
   /**
-   * Package-private constructor for {@link RowBasedCursor}. Allows passing in a rowIdSupplier, which enables
+   * Full constructor for {@link RowBasedCursor}. Allows passing in a rowIdSupplier, which enables
    * column value reuse optimizations.
    */
-  RowBasedColumnSelectorFactory(
+  public RowBasedColumnSelectorFactory(
       final Supplier<T> rowSupplier,
       @Nullable final RowIdSupplier rowIdSupplier,
       final RowAdapter<T> adapter,
