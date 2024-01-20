@@ -285,7 +285,7 @@ public class MSQInsertTest extends MSQTestBase
   // There is an issue with this test throwing out an ISE
   // Comes in the case when the GroupByPostShuffle has a shuffle spec
   // for the next window, the one with empty OVER() works
-  @Test(expected = ISE.class)
+  @Test
   public void testInsertWithWindow()
   {
     List<Object[]> expectedRows = ImmutableList.of(
@@ -352,7 +352,7 @@ public class MSQInsertTest extends MSQTestBase
   // There is an issue with this test throwing out an ISE
   // Comes in the case when the GroupByPostShuffle has a shuffle spec
   // for the next window, the one with empty OVER() works
-  @Test (expected = ISE.class)
+  @Test
   public void testInsertWithWindowPartitionByOrderBy()
   {
     List<Object[]> expectedRows = ImmutableList.of(

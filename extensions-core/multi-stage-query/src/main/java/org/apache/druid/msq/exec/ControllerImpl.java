@@ -2731,8 +2731,21 @@ public class ControllerImpl implements Controller
             throw new MSQException(new InsertCannotBeEmptyFault(task.getDataSource()));
           }
 
-          final ClusterByPartitions partitionBoundaries =
-              queryKernel.getResultPartitionBoundariesForStage(shuffleStageId);
+          // Q for MSQ folks
+          // I am not sure why can't we switch to universal
+          // if the partition boundary for a stage derived from the last valid shuffle spec
+          // is not ready, especially when the stage before the final has a shuffle spec of null
+          final ClusterByPartitions partitionBoundaries;
+          ClusterByPartitions tmp = ClusterByPartitions.oneUniversalPartition();
+          try {
+            tmp = queryKernel.getResultPartitionBoundariesForStage(shuffleStageId);
+          }
+          catch (ISE e) {
+            log.warn("Partiton boundaries not ready switching to universal");
+          }
+          finally {
+            partitionBoundaries = tmp;
+          }
 
           final boolean mayHaveMultiValuedClusterByFields =
               !queryKernel.getStageDefinition(shuffleStageId).mustGatherResultKeyStatistics()
