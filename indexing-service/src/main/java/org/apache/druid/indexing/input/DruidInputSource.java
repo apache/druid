@@ -559,8 +559,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
                                   dataSource,
                                   null,
                                   Collections.singletonList(interval),
-                                  Segments.ONLY_VISIBLE,
-                                  true
+                                  Segments.ONLY_VISIBLE
                               ));
       }
       catch (IOException e) {

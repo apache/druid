@@ -428,7 +428,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       throws IOException
   {
     return ImmutableList.copyOf(
-        taskActionClient.submit(new RetrieveUsedSegmentsAction(getDataSource(), null, intervals, Segments.ONLY_VISIBLE, true))
+        taskActionClient.submit(new RetrieveUsedSegmentsAction(getDataSource(), null, intervals, Segments.ONLY_VISIBLE))
     );
   }
 
@@ -1164,7 +1164,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     {
       return new ArrayList<>(
           actionClient.submit(
-              new RetrieveUsedSegmentsAction(dataSource, null, ImmutableList.of(interval), Segments.ONLY_VISIBLE, true)
+              new RetrieveUsedSegmentsAction(dataSource, null, ImmutableList.of(interval), Segments.ONLY_VISIBLE)
           )
       );
     }

@@ -51,17 +51,21 @@ import java.util.stream.Collectors;
 /**
  * This TaskAction returns a collection of segments which have data within the specified intervals and are marked as
  * used.
+ * If the task holds REPLACE locks and the datasource being read is also the one being replaced,
+ * fetch only those segments for the interval that were created before its REPLACE lock's version.
+ * This change is needed to ensure that the input set of segments is always consistent for a replacing task
+ * when concurrent appending tasks append segments.
  *
  * The order of segments within the returned collection is unspecified, but each segment is guaranteed to appear in
  * the collection only once.
  *
- * @implNote This action doesn't produce a {@link java.util.Set} because it's implemented via {@link
+ * @implNote This action doesn't produce a {@link Set} because it's implemented via {@link
  * org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator#retrieveUsedSegmentsForIntervals} which returns
- * a collection. Producing a {@link java.util.Set} would require an unnecessary copy of segments collection.
+ * a collection. Producing a {@link Set} would require an unnecessary copy of segments collection.
  */
 public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSegment>>
 {
-  private static final Logger log = new Logger(RetrieveSegmentsToReplaceAction.class);
+  private static final Logger log = new Logger(RetrieveUsedSegmentsAction.class);
 
   @JsonIgnore
   private final String dataSource;
@@ -72,9 +76,6 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
   @JsonIgnore
   private final Segments visibility;
 
-  @JsonIgnore
-  private final boolean replace;
-
   @JsonCreator
   public RetrieveUsedSegmentsAction(
       @JsonProperty("dataSource") String dataSource,
@@ -82,8 +83,7 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
       @JsonProperty("intervals") Collection<Interval> intervals,
       // When JSON object is deserialized, this parameter is optional for backward compatibility.
       // Otherwise, it shouldn't be considered optional.
-      @JsonProperty("visibility") @Nullable Segments visibility,
-      @JsonProperty("replace") @Nullable Boolean replace
+      @JsonProperty("visibility") @Nullable Segments visibility
   )
   {
     this.dataSource = dataSource;
@@ -103,8 +103,6 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
 
     // Defaulting to the former behaviour when visibility wasn't explicitly specified for backward compatibility
     this.visibility = visibility != null ? visibility : Segments.ONLY_VISIBLE;
-
-    this.replace = replace != null ? replace : false;
   }
 
   @JsonProperty
@@ -125,12 +123,6 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
     return visibility;
   }
 
-  @JsonProperty
-  public boolean getReplace()
-  {
-    return replace;
-  }
-
   @Override
   public TypeReference<Collection<DataSegment>> getReturnTypeReference()
   {
@@ -140,13 +132,10 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
   @Override
   public Collection<DataSegment> perform(Task task, TaskActionToolbox toolbox)
   {
-    if (!replace) {
-      return retrieveUsedSegments(toolbox);
-    }
-
     // The DruidInputSource can be used to read from one datasource and write to another.
     // In such a case, the race condition described in the class-level docs cannot occur,
-    // and the action can simply fetch all visible segments for the datasource and interval
+    // and the action can simply fetch all visible segments for the datasource and interval.
+    // Similarly, an MSQ replace could read from a different datasource.
     if (!task.getDataSource().equals(dataSource)) {
       return retrieveUsedSegments(toolbox);
     }
@@ -241,16 +230,13 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
     if (!intervals.equals(that.intervals)) {
       return false;
     }
-    if (!visibility.equals(that.visibility)) {
-      return false;
-    }
-    return replace == that.replace;
+    return visibility.equals(that.visibility);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(dataSource, intervals, visibility, replace);
+    return Objects.hash(dataSource, intervals, visibility);
   }
 
   @Override
@@ -260,7 +246,6 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
            "dataSource='" + dataSource + '\'' +
            ", intervals=" + intervals +
            ", visibility=" + visibility +
-           ", replace=" + replace +
            '}';
   }
 }

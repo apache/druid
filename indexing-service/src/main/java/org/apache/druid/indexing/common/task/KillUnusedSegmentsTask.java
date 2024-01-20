@@ -221,8 +221,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
             getDataSource(),
             null,
             ImmutableList.of(getInterval()),
-            Segments.INCLUDING_OVERSHADOWED,
-            false
+            Segments.INCLUDING_OVERSHADOWED
     );
     // Fetch the load specs of all segments overlapping with the unused segment intervals
     final Set<Map<String, Object>> usedSegmentLoadSpecs =

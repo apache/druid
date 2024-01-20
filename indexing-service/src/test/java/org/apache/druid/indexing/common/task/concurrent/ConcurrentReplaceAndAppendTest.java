@@ -939,8 +939,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
               WIKI,
               null,
               ImmutableList.of(interval),
-              visibility,
-              null
+              visibility
           )
       );
       Assert.assertEquals(Sets.newHashSet(expectedSegments), Sets.newHashSet(allUsedSegments));
@@ -959,8 +958,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
               WIKI,
               null,
               Collections.singletonList(interval),
-              Segments.ONLY_VISIBLE,
-              true
+              Segments.ONLY_VISIBLE
           )
       );
       Assert.assertEquals(Sets.newHashSet(expectedSegments), Sets.newHashSet(allUsedSegments));

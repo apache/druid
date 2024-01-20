@@ -655,7 +655,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   {
     return ImmutableList.copyOf(
         actionClient.submit(
-            new RetrieveUsedSegmentsAction(dataSource, null, intervalsToRead, Segments.ONLY_VISIBLE, true)
+            new RetrieveUsedSegmentsAction(dataSource, null, intervalsToRead, Segments.ONLY_VISIBLE)
         )
     );
   }
