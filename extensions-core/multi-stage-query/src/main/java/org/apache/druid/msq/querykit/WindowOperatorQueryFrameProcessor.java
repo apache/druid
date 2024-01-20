@@ -403,10 +403,10 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
     rac.getColumnNames();
     AtomicInteger rowId = new AtomicInteger(0);
     createFrameWriterIfNeeded(rac, rowId);
-    writeRacToFrame(rac, outputStageSignature, rowId);
+    writeRacToFrame(rac, rowId);
   }
 
-  public void writeRacToFrame(RowsAndColumns rac, RowSignature outputSignature, AtomicInteger rowId) throws IOException
+  public void writeRacToFrame(RowsAndColumns rac, AtomicInteger rowId) throws IOException
   {
     final int numRows = rac.numRows();
     rowId.set(0);
@@ -445,18 +445,18 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
 
   private long flushFrameWriter() throws IOException
   {
-    if (frameWriter != null && frameWriter.getNumRows() > 0) {
-      final Frame frame = Frame.wrap(frameWriter.toByteArray());
-      Iterables.getOnlyElement(outputChannels()).write(new FrameWithPartition(frame, FrameWithPartition.NO_PARTITION));
-      frameWriter.close();
-      frameWriter = null;
-      return frame.numRows();
-    } else {
+    if (frameWriter == null || frameWriter.getNumRows() <= 0) {
       if (frameWriter != null) {
         frameWriter.close();
         frameWriter = null;
       }
       return 0;
+    } else {
+      final Frame frame = Frame.wrap(frameWriter.toByteArray());
+      Iterables.getOnlyElement(outputChannels()).write(new FrameWithPartition(frame, FrameWithPartition.NO_PARTITION));
+      frameWriter.close();
+      frameWriter = null;
+      return frame.numRows();
     }
   }
 }

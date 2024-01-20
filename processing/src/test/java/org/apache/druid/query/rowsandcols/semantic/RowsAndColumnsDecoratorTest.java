@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.operator.ColumnWithDirection;
 import org.apache.druid.query.operator.OffsetLimit;
 import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
@@ -123,6 +124,91 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
           int limit = (k == 0 ? -1 : limits[k - 1]);
           for (int l = 0; l <= orderings.length; ++l) {
             validateDecorated(base, siggy, vals, interval, filter, OffsetLimit.limit(limit), l == 0 ? null : orderings[l - 1]);
+          }
+        }
+      }
+    }
+  }
+
+  @Test
+  public void testDecorationWithListOfResultRows()
+  {
+    ArrayList<ResultRow> resultRowArrayList = new ArrayList<>();
+
+    resultRowArrayList.add(ResultRow.of(1L, "a", 123L, 0L));
+    resultRowArrayList.add(ResultRow.of(2L, "a", 456L, 1L));
+    resultRowArrayList.add(ResultRow.of(3L, "b", 789L, 2L));
+    resultRowArrayList.add(ResultRow.of(4L, "b", 123L, 3L));
+    resultRowArrayList.add(ResultRow.of(5L, "c", 456L, 4L));
+    resultRowArrayList.add(ResultRow.of(6L, "c", 789L, 5L));
+    resultRowArrayList.add(ResultRow.of(7L, "c", 123L, 6L));
+    resultRowArrayList.add(ResultRow.of(8L, "d", 456L, 7L));
+    resultRowArrayList.add(ResultRow.of(9L, "e", 789L, 8L));
+    resultRowArrayList.add(ResultRow.of(10L, "f", 123L, 9L));
+    resultRowArrayList.add(ResultRow.of(11L, "f", 456L, 10L));
+    resultRowArrayList.add(ResultRow.of(12L, "g", 789L, 11L));
+
+    RowSignature siggy = RowSignature.builder()
+                                     .add("__time", ColumnType.LONG)
+                                     .add("dim", ColumnType.STRING)
+                                     .add("val", ColumnType.LONG)
+                                     .add("arrayIndex", ColumnType.LONG)
+                                     .build();
+
+    final RowsAndColumns base = make(MapOfColumnsRowsAndColumns.fromResultRow(resultRowArrayList, siggy));
+
+    Object[][] vals = new Object[][]{
+        {1L, "a", 123L, 0L},
+        {2L, "a", 456L, 1L},
+        {3L, "b", 789L, 2L},
+        {4L, "b", 123L, 3L},
+        {5L, "c", 456L, 4L},
+        {6L, "c", 789L, 5L},
+        {7L, "c", 123L, 6L},
+        {8L, "d", 456L, 7L},
+        {9L, "e", 789L, 8L},
+        {10L, "f", 123L, 9L},
+        {11L, "f", 456L, 10L},
+        {12L, "g", 789L, 11L},
+        };
+
+    Interval[] intervals = new Interval[]{Intervals.utc(0, 6), Intervals.utc(6, 13), Intervals.utc(4, 8)};
+    Filter[] filters = new Filter[]{
+        new InDimFilter("dim", ImmutableSet.of("a", "b", "c", "e", "g")),
+        new AndFilter(Arrays.asList(
+            new InDimFilter("dim", ImmutableSet.of("a", "b", "g")),
+            new SelectorFilter("val", "789")
+        )),
+        new OrFilter(Arrays.asList(
+            new SelectorFilter("dim", "b"),
+            new SelectorFilter("val", "789")
+        )),
+        new SelectorFilter("dim", "f")
+    };
+    int[] limits = new int[]{3, 6, 100};
+    List<ColumnWithDirection>[] orderings = new List[]{
+        Arrays.asList(ColumnWithDirection.descending("__time"), ColumnWithDirection.ascending("dim")),
+        Collections.singletonList(ColumnWithDirection.ascending("val"))
+    };
+
+    // call the same method multiple times
+
+    for (int i = 0; i <= intervals.length; ++i) {
+      Interval interval = (i == 0 ? null : intervals[i - 1]);
+      for (int j = 0; j <= filters.length; ++j) {
+        Filter filter = (j == 0 ? null : filters[j - 1]);
+        for (int k = 0; k <= limits.length; ++k) {
+          int limit = (k == 0 ? -1 : limits[k - 1]);
+          for (int l = 0; l <= orderings.length; ++l) {
+            validateDecorated(
+                base,
+                siggy,
+                vals,
+                interval,
+                filter,
+                OffsetLimit.limit(limit),
+                l == 0 ? null : orderings[l - 1]
+            );
           }
         }
       }
