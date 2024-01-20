@@ -91,11 +91,4 @@ public class TestMetadataRuleManager implements MetadataRuleManager
   {
     return 0;
   }
-
-  public void removeRulesForDatasource(String dataSource)
-  {
-    if (!DEFAULT_DATASOURCE.equals(dataSource)) {
-      rules.remove(dataSource);
-    }
-  }
 }

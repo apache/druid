@@ -23,11 +23,11 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.metrics.MetricsVerifier;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.CoordinatorBaseTest;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.rules.ForeverBroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.ForeverDropRule;
-import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.timeline.DataSegment;
@@ -36,7 +36,6 @@ import org.junit.Assert;
 import org.junit.Before;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -51,7 +50,9 @@ import java.util.Map;
  * Otherwise, the segment sampling is random and can produce repeated values
  * leading to flakiness in the tests.
  */
-public abstract class CoordinatorSimulationBaseTest implements
+public abstract class CoordinatorSimulationBaseTest
+    extends CoordinatorBaseTest
+    implements
     CoordinatorSimulation.CoordinatorState,
     CoordinatorSimulation.ClusterState,
     MetricsVerifier
@@ -196,18 +197,6 @@ public abstract class CoordinatorSimulationBaseTest implements
 
   // Utility and constant holder classes
 
-  static class DS
-  {
-    static final String WIKI = "wiki";
-    static final String KOALA = "koala";
-  }
-
-  static class Tier
-  {
-    static final String T1 = "tier_t1";
-    static final String T2 = "tier_t2";
-  }
-
   static class Metric
   {
     static final String ASSIGNED_COUNT = "segment/assigned/count";
@@ -256,25 +245,4 @@ public abstract class CoordinatorSimulationBaseTest implements
                           .eachOfSizeInMb(500);
   }
 
-  /**
-   * Builder for a broadcast rule.
-   */
-  static class Broadcast
-  {
-    static Rule forever()
-    {
-      return new ForeverBroadcastDistributionRule();
-    }
-  }
-
-  /**
-   * Builder for a drop rule.
-   */
-  static class Drop
-  {
-    static Rule forever()
-    {
-      return new ForeverDropRule();
-    }
-  }
 }

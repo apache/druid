@@ -25,6 +25,7 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.CoordinatorBaseTest;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
@@ -45,7 +46,7 @@ import org.junit.Test;
 import java.util.Collections;
 import java.util.Set;
 
-public class UnloadUnusedSegmentsTest
+public class UnloadUnusedSegmentsTest extends CoordinatorBaseTest
 {
   private MetadataRuleManager databaseRuleManager;
   private SegmentLoadQueueManager loadQueueManager;
@@ -79,7 +80,7 @@ public class UnloadUnusedSegmentsTest
                 .builder()
                 .add(
                     new ServerHolder(
-                        new DruidServer("histT1", "histT1", null, 100L, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 1)
+                        new DruidServer("histT1", "histT1", null, 100L, ServerType.HISTORICAL, Tier.T1, 1)
                             .addDataSegment(segmentWiki).addDataSegment(segmentKoala).addDataSegment(broadcastSegment)
                             .toImmutableDruidServer(),
                         new TestLoadQueuePeon()
@@ -87,7 +88,7 @@ public class UnloadUnusedSegmentsTest
                 )
                 .add(
                     new ServerHolder(
-                        new DruidServer("histT2", "histT2", null, 100L, ServerType.HISTORICAL, "tier2", 1)
+                        new DruidServer("histT2", "histT2", null, 100L, ServerType.HISTORICAL, Tier.T2, 1)
                             .addDataSegment(segmentWiki).addDataSegment(segmentKoala).addDataSegment(broadcastSegment)
                             .toImmutableDruidServer(),
                         new TestLoadQueuePeon()
@@ -95,7 +96,7 @@ public class UnloadUnusedSegmentsTest
                 )
                 .add(
                     new ServerHolder(
-                        new DruidServer("broker1", "broker1", null, 100L, ServerType.BROKER, DruidServer.DEFAULT_TIER, 1)
+                        new DruidServer("broker1", "broker1", null, 100L, ServerType.BROKER, Tier.T1, 1)
                             .addDataSegment(segmentWiki).addDataSegment(segmentKoala).addDataSegment(broadcastSegment)
                             .toImmutableDruidServer(),
                         new TestLoadQueuePeon()
@@ -103,7 +104,7 @@ public class UnloadUnusedSegmentsTest
                 )
                 .add(
                     new ServerHolder(
-                        new DruidServer("indexer1", "indexer1", null, 100L, ServerType.INDEXER_EXECUTOR, DruidServer.DEFAULT_TIER, 1)
+                        new DruidServer("indexer1", "indexer1", null, 100L, ServerType.INDEXER_EXECUTOR, Tier.T1, 1)
                             .addDataSegment(realtimeSegment)
                             .toImmutableDruidServer(),
                         new TestLoadQueuePeon()
@@ -120,16 +121,16 @@ public class UnloadUnusedSegmentsTest
     CoordinatorRunStats stats = params.getCoordinatorStats();
 
     // We drop segment1 and broadcast1 from all servers, realtimeSegment is not dropped by the indexer
-    Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.UNNEEDED, DruidServer.DEFAULT_TIER, DS.WIKI));
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.UNNEEDED, "tier2", DS.WIKI));
+    Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.UNNEEDED, Tier.T1, DS.WIKI));
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.UNNEEDED, Tier.T2, DS.WIKI));
 
-    Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.UNNEEDED, DruidServer.DEFAULT_TIER, DS.BROADCAST));
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.UNNEEDED, "tier2", DS.BROADCAST));
+    Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.UNNEEDED, Tier.T1, DS.BROADCAST));
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.UNNEEDED, Tier.T2, DS.BROADCAST));
   }
 
   private void setupRuleManager()
   {
-    final LoadRule loadOnT1T2 = new ForeverLoadRule(ImmutableMap.of(DruidServer.DEFAULT_TIER, 1, "tier2", 1), true);
+    final LoadRule loadOnT1T2 = new ForeverLoadRule(ImmutableMap.of(Tier.T1, 1, Tier.T2, 1), true);
     databaseRuleManager.overrideRule(DS.WIKI, Collections.singletonList(loadOnT1T2), null);
     databaseRuleManager.overrideRule(DS.KOALA, Collections.singletonList(loadOnT1T2), null);
 
@@ -138,15 +139,5 @@ public class UnloadUnusedSegmentsTest
         Collections.singletonList(new ForeverBroadcastDistributionRule()),
         null
     );
-  }
-
-  /**
-   * Bunch of test datasources.
-   */
-  private static class DS
-  {
-    static final String WIKI = "wiki";
-    static final String KOALA = "koala";
-    static final String BROADCAST = "broadcast";
   }
 }
