@@ -72,7 +72,7 @@ services:
   # The image will intialize the user and DB upon first start.
   metadata:
     # Uncomment the following when running on M1 Macs:
-    # platform: linux/x86_64
+    platform: linux/x86_64
     image: mysql:$MYSQL_IMAGE_VERSION
     container_name: metadata
     labels:
