@@ -646,7 +646,7 @@ public class MSQSelectTest extends MSQTestBase
                                            .build();
 
 
-    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0);
+    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0, null);
     final AggregatorFactory[] theAggs = {
         new DoubleSumAggregatorFactory("w0", "d0")
     };
@@ -737,7 +737,7 @@ public class MSQSelectTest extends MSQTestBase
                                            .build();
 
 
-    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0);
+    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0, null);
     final AggregatorFactory[] theAggs = {
         new DoubleSumAggregatorFactory("w0", "d1")
     };
@@ -845,7 +845,7 @@ public class MSQSelectTest extends MSQTestBase
                                            .build();
 
 
-    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0);
+    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0, null);
     final AggregatorFactory[] theAggs = {
         new DoubleSumAggregatorFactory("w0", "d1")
     };
@@ -956,7 +956,7 @@ public class MSQSelectTest extends MSQTestBase
                                            .build();
 
 
-    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0);
+    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0, null);
     final AggregatorFactory[] theAggs = {
         new DoubleSumAggregatorFactory("w0", "d0")
     };
@@ -1062,7 +1062,7 @@ public class MSQSelectTest extends MSQTestBase
                                            .build();
 
 
-    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0);
+    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0, null);
     final AggregatorFactory[] theAggs = {
         new DoubleSumAggregatorFactory("w0", "d0")
     };
