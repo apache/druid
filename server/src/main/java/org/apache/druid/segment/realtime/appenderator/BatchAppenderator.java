@@ -50,12 +50,18 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.SchemaPayload;
+import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -674,6 +680,7 @@ public class BatchAppenderator implements Appenderator
     }
 
     final List<DataSegment> dataSegments = new ArrayList<>();
+    final Map<String, SegmentSchemaMetadata> segmentSchema = new HashMap<>();
 
     return Futures.transform(
         persistAll(null), // make sure persists is done before push...
@@ -703,14 +710,15 @@ public class BatchAppenderator implements Appenderator
             }
 
             // push it:
-            final DataSegment dataSegment = mergeAndPush(
+            final Pair<DataSegment, SegmentSchemaMetadata> segmentAndSchema = mergeAndPush(
                 identifier,
                 sinkForIdentifier
             );
 
             // record it:
-            if (dataSegment != null) {
-              dataSegments.add(dataSegment);
+            if (segmentAndSchema != null) {
+              dataSegments.add(segmentAndSchema.lhs);
+              segmentSchema.put(segmentAndSchema.lhs.getId().toString(), segmentAndSchema.rhs);
             } else {
               log.warn("mergeAndPush[%s] returned null, skipping.", identifier);
             }
@@ -718,7 +726,7 @@ public class BatchAppenderator implements Appenderator
           log.info("Push done: total sinks merged[%d], total hydrants merged[%d]",
                    identifiers.size(), totalHydrantsMerged
           );
-          return new SegmentsAndCommitMetadata(dataSegments, commitMetadata);
+          return new SegmentsAndCommitMetadata(dataSegments, commitMetadata, segmentSchema);
         },
         pushExecutor // push it in the background, pushAndClear in BaseAppenderatorDriver guarantees
         // that segments are dropped before next add row
@@ -733,7 +741,7 @@ public class BatchAppenderator implements Appenderator
    * @return segment descriptor, or null if the sink is no longer valid
    */
   @Nullable
-  private DataSegment mergeAndPush(
+  private Pair<DataSegment, SegmentSchemaMetadata> mergeAndPush(
       final SegmentIdWithShardSpec identifier,
       final Sink sink
   )
@@ -768,7 +776,7 @@ public class BatchAppenderator implements Appenderator
       if (descriptorFile.exists()) {
         // Already pushed.
         log.info("Segment[%s] already pushed, skipping.", identifier);
-        return objectMapper.readValue(descriptorFile, DataSegment.class);
+        return Pair.of(objectMapper.readValue(descriptorFile, DataSegment.class), getSegmentSchema(mergedTarget));
       }
 
       removeDirectory(mergedTarget);
@@ -862,13 +870,29 @@ public class BatchAppenderator implements Appenderator
           objectMapper.writeValueAsString(segment.getLoadSpec())
       );
 
-      return segment;
+      return Pair.of(segment, getSegmentSchema(mergedFile));
     }
     catch (Exception e) {
       metrics.incrementFailedHandoffs();
       log.warn(e, "Failed to push merged index for segment[%s].", identifier);
       throw new RuntimeException(e);
     }
+  }
+
+  private SegmentSchemaMetadata getSegmentSchema(File segmentFile) throws IOException
+  {
+    final QueryableIndex queryableIndex = indexIO.loadIndex(segmentFile);
+    final StorageAdapter storageAdapter = new QueryableIndexStorageAdapter(queryableIndex);
+    final RowSignature rowSignature = storageAdapter.getRowSignature();
+    final long numRows = storageAdapter.getNumRows();
+    final AggregatorFactory[] aggregatorFactories = storageAdapter.getMetadata().getAggregators();
+    Map<String, AggregatorFactory> aggregatorFactoryMap = new HashMap<>();
+    if (null != aggregatorFactories) {
+      for (AggregatorFactory aggregatorFactory : aggregatorFactories) {
+        aggregatorFactoryMap.put(aggregatorFactory.getName(), aggregatorFactory);
+      }
+    }
+    return new SegmentSchemaMetadata(new SchemaPayload(rowSignature, aggregatorFactoryMap), numRows);
   }
 
   @Override

@@ -171,7 +171,7 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @return set of segments actually added
    */
-  Set<DataSegment> commitSegments(Set<DataSegment> segments, Map<SegmentId, SegmentSchemaMetadata> segmentSchemaMetadataMap) throws IOException;
+  Set<DataSegment> commitSegments(Set<DataSegment> segments, Map<String, SegmentSchemaMetadata> segmentSchemaMetadataMap) throws IOException;
 
   /**
    * Allocates pending segments for the given requests in the pending segments table.
@@ -280,7 +280,7 @@ public interface IndexerMetadataStorageCoordinator
       Set<DataSegment> segments,
       @Nullable DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata,
-      Map<SegmentId, SegmentSchemaMetadata> segmentSchemaMetadataMap
+      Map<String, SegmentSchemaMetadata> segmentSchemaMetadataMap
       ) throws IOException;
 
   /**

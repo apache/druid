@@ -406,9 +406,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public Set<DataSegment> commitSegments(final Set<DataSegment> segments,  final Map<SegmentId, SegmentSchemaMetadata> segmentSchemaMetadataMap) throws IOException
+  public Set<DataSegment> commitSegments(final Set<DataSegment> segments,  final Map<String, SegmentSchemaMetadata> segmentSchemaMetadataMap) throws IOException
   {
-    final SegmentPublishResult result = commitSegmentsAndMetadata(segments, null, null);
+    final SegmentPublishResult result = commitSegmentsAndMetadata(segments, null, null, segmentSchemaMetadataMap);
 
     // Metadata transaction cannot fail because we are not trying to do one.
     if (!result.isSuccess()) {
@@ -1964,7 +1964,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final Handle handle,
       final Set<DataSegment> segments,
       final Set<DataSegment> usedSegments,
-      final Map<SegmentId, SegmentSchemaMetadata> segmentSchemaMetadataMap
+      final Map<String, SegmentSchemaMetadata> segmentSchemaMetadataMap
   ) throws IOException
   {
     final Set<DataSegment> toInsertSegments = new HashSet<>();
@@ -1972,7 +1972,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     try {
       if (segmentSchemaMetadataMap.size() > 0) {
         List<SegmentSchemaMetadataPlus> schemaBatch = new ArrayList<>();
-        for (Map.Entry<SegmentId, SegmentSchemaMetadata> entry : segmentSchemaMetadataMap.entrySet()) {
+        for (Map.Entry<String, SegmentSchemaMetadata> entry : segmentSchemaMetadataMap.entrySet()) {
           schemaBatch.add(new SegmentSchemaMetadataPlus(
               entry.getKey().toString(),
               entry.getValue(),

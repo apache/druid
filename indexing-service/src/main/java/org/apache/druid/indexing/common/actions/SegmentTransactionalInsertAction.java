@@ -40,6 +40,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -77,7 +78,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       Set<DataSegment> segmentsToPublish
   )
   {
-    return new SegmentTransactionalInsertAction(segmentsToBeOverwritten, segmentsToPublish, null, null, null);
+    return new SegmentTransactionalInsertAction(segmentsToBeOverwritten, segmentsToPublish, null, null, null, Collections.emptyMap());
   }
 
   public static SegmentTransactionalInsertAction appendAction(
@@ -96,7 +97,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       DataSourceMetadata endMetadata
   )
   {
-    return new SegmentTransactionalInsertAction(null, null, startMetadata, endMetadata, dataSource);
+    return new SegmentTransactionalInsertAction(null, null, startMetadata, endMetadata, dataSource, Collections.emptyMap());
   }
 
   @JsonCreator

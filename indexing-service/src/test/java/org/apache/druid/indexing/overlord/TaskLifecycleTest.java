@@ -176,6 +176,7 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -1127,7 +1128,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             .size(0)
             .build();
 
-        toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(segment)));
+        toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(segment), Collections.emptyMap()));
         return TaskStatus.success(getId());
       }
     };
@@ -1210,7 +1211,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             .size(0)
             .build();
 
-        toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(segment)));
+        toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(segment), Collections.emptyMap()));
         return TaskStatus.success(getId());
       }
     };

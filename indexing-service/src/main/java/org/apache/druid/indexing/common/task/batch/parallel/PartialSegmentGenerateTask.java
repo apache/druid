@@ -217,7 +217,7 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
           parseExceptionHandler,
           pushTimeout
       );
-      return pushed.getSegmentWithSchemas();
+      return pushed.getSegments();
     }
     catch (Exception e) {
       exceptionOccurred = true;

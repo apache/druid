@@ -48,6 +48,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -330,7 +331,8 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
         return Futures.immediateFuture(
             new SegmentsAndCommitMetadata(
                 segmentsAndCommitMetadata.getSegments(),
-                ((AppenderatorDriverMetadata) metadata).getCallerMetadata()
+                ((AppenderatorDriverMetadata) metadata).getCallerMetadata(),
+                Collections.emptyMap()
             )
         );
       }
@@ -373,7 +375,8 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
                         resultFuture.set(
                             new SegmentsAndCommitMetadata(
                                 segments,
-                                ((AppenderatorDriverMetadata) metadata).getCallerMetadata()
+                                ((AppenderatorDriverMetadata) metadata).getCallerMetadata(),
+                                Collections.emptyMap()
                             )
                         );
                       }

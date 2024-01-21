@@ -37,6 +37,7 @@ import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.SegmentUtils;
+import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.timeline.DataSegment;
 
@@ -219,9 +220,9 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
       }
 
       if (runner.isEndOffsetExclusive()) {
-        ret &= recordOffset.compareTo(partitionEndOffset) < 0;
+        ret = ret && recordOffset.compareTo(partitionEndOffset) < 0;
       } else {
-        ret &= recordOffset.compareTo(partitionEndOffset) <= 0;
+        ret = ret && recordOffset.compareTo(partitionEndOffset) <= 0;
       }
 
       return ret;
@@ -351,7 +352,8 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
     public SegmentPublishResult publishAnnotatedSegments(
         @Nullable Set<DataSegment> mustBeNullOrEmptyOverwriteSegments,
         Set<DataSegment> segmentsToPush,
-        @Nullable Object commitMetadata
+        @Nullable Object commitMetadata,
+        Map<String, SegmentSchemaMetadata> segmentsToPublishSchema
     ) throws IOException
     {
       if (mustBeNullOrEmptyOverwriteSegments != null && !mustBeNullOrEmptyOverwriteSegments.isEmpty()) {
@@ -418,11 +420,11 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
         final DataSourceMetadata endMetadata = runner.createDataSourceMetadata(finalPartitions);
         action = taskLockType == TaskLockType.APPEND
                  ? SegmentTransactionalAppendAction.forSegmentsAndMetadata(segmentsToPush, startMetadata, endMetadata)
-                 : SegmentTransactionalInsertAction.appendAction(segmentsToPush, startMetadata, endMetadata);
+                 : SegmentTransactionalInsertAction.appendAction(segmentsToPush, startMetadata, endMetadata, segmentsToPublishSchema);
       } else {
         action = taskLockType == TaskLockType.APPEND
                  ? SegmentTransactionalAppendAction.forSegments(segmentsToPush)
-                 : SegmentTransactionalInsertAction.appendAction(segmentsToPush, null, null);
+                 : SegmentTransactionalInsertAction.appendAction(segmentsToPush, null, null, segmentsToPublishSchema);
       }
 
       return toolbox.getTaskActionClient().submit(action);

@@ -861,7 +861,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       for (SegmentsAndCommitMetadata handedOff : handedOffList) {
         log.info(
             "Handoff complete for segments: %s",
-            String.join(", ", Lists.transform(handedOff.getSegmentWithSchemas(), DataSegment::toString))
+            String.join(", ", Lists.transform(handedOff.getSegments(), DataSegment::toString))
         );
       }
 
@@ -1005,11 +1005,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           {
             log.info(
                 "Published %s segments for sequence [%s] with metadata [%s].",
-                publishedSegmentsAndCommitMetadata.getSegmentWithSchemas().size(),
+                publishedSegmentsAndCommitMetadata.getSegments().size(),
                 sequenceMetadata.getSequenceName(),
                 Preconditions.checkNotNull(publishedSegmentsAndCommitMetadata.getCommitMetadata(), "commitMetadata")
             );
-            log.infoSegments(publishedSegmentsAndCommitMetadata.getSegmentWithSchemas(), "Published segments");
+            log.infoSegments(publishedSegmentsAndCommitMetadata.getSegments(), "Published segments");
 
             publishedSequences.add(sequenceMetadata.getSequenceName());
             sequences.remove(sequenceMetadata);
@@ -1035,10 +1035,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                     if (handoffSegmentsAndCommitMetadata == null) {
                       log.warn(
                           "Failed to hand off %s segments",
-                          publishedSegmentsAndCommitMetadata.getSegmentWithSchemas().size()
+                          publishedSegmentsAndCommitMetadata.getSegments().size()
                       );
                       log.warnSegments(
-                          publishedSegmentsAndCommitMetadata.getSegmentWithSchemas(),
+                          publishedSegmentsAndCommitMetadata.getSegments(),
                           "Failed to hand off segments"
                       );
                     }
@@ -1051,8 +1051,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             // emit segment count metric:
             int segmentCount = 0;
             if (publishedSegmentsAndCommitMetadata != null
-                && publishedSegmentsAndCommitMetadata.getSegmentWithSchemas() != null) {
-              segmentCount = publishedSegmentsAndCommitMetadata.getSegmentWithSchemas().size();
+                && publishedSegmentsAndCommitMetadata.getSegments() != null) {
+              segmentCount = publishedSegmentsAndCommitMetadata.getSegments().size();
             }
             task.emitMetric(
                 toolbox.getEmitter(),

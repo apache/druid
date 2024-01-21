@@ -207,7 +207,7 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
   {
     final Map<String, SegmentsForSequence> snapshot;
     synchronized (segments) {
-      snapshot = ImmutableMap.copyOf(segments);
+    snapshot = ImmutableMap.copyOf(segments);
     }
 
     return publishInBackground(
@@ -226,7 +226,8 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
                     )
                 )
                 .collect(Collectors.toList()),
-            null
+            null,
+            Collections.emptyMap()
         ),
         publisher,
         outputSegmentsAnnotateFunction

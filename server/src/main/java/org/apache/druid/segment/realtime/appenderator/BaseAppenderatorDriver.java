@@ -608,7 +608,8 @@ public abstract class BaseAppenderatorDriver implements Closeable
                     segmentsToBeOverwritten,
                     ourSegments,
                     outputSegmentsAnnotateFunction,
-                    callerMetadata
+                    callerMetadata,
+                    segmentsAndCommitMetadata.getSegmentSchema()
                 );
 
                 if (publishResult.isSuccess()) {

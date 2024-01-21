@@ -22,11 +22,14 @@ package org.apache.druid.indexing.common.actions;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.segment.SegmentUtils;
+import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -38,12 +41,16 @@ public class SegmentInsertAction implements TaskAction<Set<DataSegment>>
 {
   private final Set<DataSegment> segments;
 
+  private final Map<String, SegmentSchemaMetadata> schemaMetadataMap;
+
   @JsonCreator
   public SegmentInsertAction(
-      @JsonProperty("segments") Set<DataSegment> segments
+      @JsonProperty("segments") Set<DataSegment> segments,
+      @JsonProperty("schemaMetadataMap") Map<String, SegmentSchemaMetadata> schemaMetadataMap
   )
   {
     this.segments = ImmutableSet.copyOf(segments);
+    this.schemaMetadataMap = ImmutableMap.copyOf(schemaMetadataMap);
   }
 
   @JsonProperty
@@ -68,7 +75,7 @@ public class SegmentInsertAction implements TaskAction<Set<DataSegment>>
   @Override
   public Set<DataSegment> perform(Task task, TaskActionToolbox toolbox)
   {
-    return SegmentTransactionalInsertAction.appendAction(segments, null, null).perform(task, toolbox).getSegments();
+    return SegmentTransactionalInsertAction.appendAction(segments, null, null, schemaMetadataMap).perform(task, toolbox).getSegments();
   }
 
   @Override
