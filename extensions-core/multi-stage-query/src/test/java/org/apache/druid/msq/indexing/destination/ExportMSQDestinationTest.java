@@ -20,24 +20,27 @@
 package org.apache.druid.msq.indexing.destination;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.catalog.model.table.export.S3ExportDestination;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.sql.http.ResultFormat;
+import org.apache.druid.storage.StorageConnectorModule;
+import org.apache.druid.storage.local.LocalFileStorageConnectorProvider;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.IOException;
 
 public class ExportMSQDestinationTest
 {
-
   @Test
   public void testSerde() throws IOException
   {
-    ExportMSQDestination exportDestination = new ExportMSQDestination(new S3ExportDestination("hdfs://localhost:9090/outputdirectory/", null));
+    ExportMSQDestination exportDestination = new ExportMSQDestination(new LocalFileStorageConnectorProvider(new File("/path")), ResultFormat.CSV);
     ObjectMapper objectMapper = new DefaultObjectMapper();
-    String s = objectMapper.writeValueAsString(exportDestination);
+    new StorageConnectorModule().getJacksonModules().forEach(objectMapper::registerModule);
+    String string = objectMapper.writeValueAsString(exportDestination);
 
-    ExportMSQDestination newDest = objectMapper.readValue(s, ExportMSQDestination.class);
+    ExportMSQDestination newDest = objectMapper.readValue(string, ExportMSQDestination.class);
     Assert.assertEquals(exportDestination, newDest);
   }
 }

@@ -35,6 +35,7 @@ import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
 import org.apache.druid.catalog.model.table.IngestDestination;
+import org.apache.druid.catalog.model.table.export.ExportDestination;
 import org.apache.druid.catalog.model.table.export.TableDestination;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.DruidException;
@@ -109,12 +110,35 @@ public abstract class IngestHandler extends QueryHandler
   @Override
   public void validate()
   {
-    if (ingestNode().getPartitionedBy() == null) {
+    if (ingestNode().getTargetTable() instanceof ExternalDestinationSqlIdentifier) {
+      if (!handlerContext.plannerContext().featureAvailable(EngineFeature.WRITE_EXTERNAL_DATA)) {
+        throw InvalidSqlInput.exception(
+            "Writing to external sources are not supported by requested SQL engine [%s], consider using MSQ.",
+            handlerContext.engine().name()
+        );
+      }
+    } else if (ingestNode().getPartitionedBy() == null) {
       throw InvalidSqlInput.exception(
           "Operation [%s] requires a PARTITIONED BY to be explicitly defined, but none was found.",
           operationName()
       );
     }
+
+    String exportFileFormat = ingestNode().getExportFileFormat();
+    if (ingestNode().getTargetTable() instanceof ExternalDestinationSqlIdentifier) {
+      if (exportFileFormat == null) {
+        throw InvalidSqlInput.exception(
+            "External write statemetns requires a AS clause to specify the format, but none was found.",
+            operationName()
+        );
+      } else {
+        handlerContext.plannerContext().queryContextMap().put(
+            DruidSqlIngest.SQL_EXPORT_FILE_FORMAT,
+            exportFileFormat
+        );
+      }
+    }
+
     try {
       PlannerContext plannerContext = handlerContext.plannerContext();
       if (ingestionGranularity != null) {
@@ -180,7 +204,8 @@ public abstract class IngestHandler extends QueryHandler
           .ofCategory(DruidException.Category.DEFENSIVE)
           .build("Operation [%s] requires a target table", operationName());
     } else if (tableIdentifier instanceof ExternalDestinationSqlIdentifier) {
-      dataSource = ((ExternalDestinationSqlIdentifier) tableIdentifier).getExportDestination();
+      String exportDestinationString = ((ExternalDestinationSqlIdentifier) tableIdentifier).getExportDestinationString();
+      dataSource = new ExportDestination(exportDestinationString);
     } else if (tableIdentifier.names.size() == 1) {
       // Unqualified name.
       String tableName = Iterables.getOnlyElement(tableIdentifier.names);

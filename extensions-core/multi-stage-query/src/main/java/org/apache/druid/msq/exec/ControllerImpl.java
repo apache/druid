@@ -106,6 +106,7 @@ import org.apache.druid.msq.indexing.WorkerCount;
 import org.apache.druid.msq.indexing.client.ControllerChatHandler;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
+import org.apache.druid.msq.indexing.destination.ExportMSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.indexing.error.CanceledFault;
@@ -168,6 +169,7 @@ import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.msq.querykit.groupby.GroupByQueryKit;
+import org.apache.druid.msq.querykit.results.ExportResultsFrameProcessorFactory;
 import org.apache.druid.msq.querykit.results.QueryResultFrameProcessorFactory;
 import org.apache.druid.msq.querykit.scan.ScanQueryKit;
 import org.apache.druid.msq.shuffle.input.DurableStorageInputChannelFactory;
@@ -201,6 +203,8 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
+import org.apache.druid.sql.http.ResultFormat;
+import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
@@ -1780,6 +1784,11 @@ public class ControllerImpl implements Controller
           MultiStageQueryContext.getRowsPerPage(querySpec.getQuery().context())
       );
       queryToPlan = querySpec.getQuery();
+    } else if (querySpec.getDestination() instanceof ExportMSQDestination) {
+      shuffleSpecFactory = ShuffleSpecFactories.getGlobalSortWithTargetSize(
+          MultiStageQueryContext.getRowsPerPage(querySpec.getQuery().context())
+      );
+      queryToPlan = querySpec.getQuery();
     } else {
       throw new ISE("Unsupported destination [%s]", querySpec.getDestination());
     }
@@ -1872,6 +1881,24 @@ public class ControllerImpl implements Controller
       } else {
         return queryDef;
       }
+    } else if (querySpec.getDestination() instanceof ExportMSQDestination) {
+      ExportMSQDestination exportMSQDestination = (ExportMSQDestination) querySpec.getDestination();
+      StorageConnectorProvider storageConnectorProvider = exportMSQDestination.getStorageConnectorProvider();
+      ResultFormat resultFormat = exportMSQDestination.getResultFormat();
+
+      final QueryDefinitionBuilder builder = QueryDefinition.builder();
+      builder.addAll(queryDef);
+      builder.add(StageDefinition.builder(queryDef.getNextStageNumber())
+                                 .inputs(new StageInputSpec(queryDef.getFinalStageDefinition().getStageNumber()))
+                                 .maxWorkerCount(tuningConfig.getMaxNumWorkers())
+                                 .signature(queryDef.getFinalStageDefinition().getSignature())
+                                 .shuffleSpec(null)
+                                 .processorFactory(new ExportResultsFrameProcessorFactory(
+                                     storageConnectorProvider,
+                                     resultFormat
+                                 ))
+      );
+      return builder.build();
     } else {
       throw new ISE("Unsupported destination [%s]", querySpec.getDestination());
     }

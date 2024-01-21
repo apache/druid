@@ -32,7 +32,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   public void testReplaceIntoExtern()
   {
     testIngestionQuery()
-        .sql("REPLACE INTO EXTERN(s3(uri=\"s3://druid-data/exportdest/\",username=\"user1\")) AS CSV OVERWRITE ALL SELECT dim2 FROM foo PARTITIONED BY ALL")
+        .sql("REPLACE INTO EXTERN('{\"type\":\"s3\",\"bucket\":\"bucket1\",\"prefix\":\"prefix1\",\"tempDir\":\"/tempdir\",\"chunkSize\":5242880,\"maxRetry\":1}') AS CSV OVERWRITE ALL SELECT dim2 FROM foo PARTITIONED BY ALL")
         .expectQuery(
             Druids.newScanQueryBuilder()
                   .dataSource(
@@ -45,7 +45,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
                   .build()
         )
         .expectResources(dataSourceRead("foo"))
-        .expectTarget("s3", RowSignature.builder().add("dim2", ColumnType.STRING).build())
+        .expectTarget("EXTERN", RowSignature.builder().add("dim2", ColumnType.STRING).build())
         .verify();
   }
 }

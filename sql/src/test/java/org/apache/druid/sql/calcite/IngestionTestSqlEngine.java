@@ -89,6 +89,7 @@ public class IngestionTestSqlEngine implements SqlEngine
       case CAN_INSERT:
       case CAN_REPLACE:
       case READ_EXTERNAL_DATA:
+      case WRITE_EXTERNAL_DATA:
       case SCAN_ORDER_BY_NON_TIME:
       case ALLOW_BROADCAST_RIGHTY_JOIN:
       case ALLOW_TOP_LEVEL_UNION_ALL:

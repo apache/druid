@@ -19,20 +19,10 @@
 
 package org.apache.druid.catalog.model.table;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import org.apache.druid.catalog.model.table.export.S3ExportDestination;
-import org.apache.druid.catalog.model.table.export.TableDestination;
 import org.apache.druid.guice.annotations.UnstableApi;
 
 @UnstableApi
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = IngestDestination.TYPE_PROPERTY)
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = TableDestination.TYPE_KEY, value = TableDestination.class),
-    @JsonSubTypes.Type(name = S3ExportDestination.TYPE_KEY, value = S3ExportDestination.class)
-})
 public interface IngestDestination
 {
-  String TYPE_PROPERTY = "type";
   String getDestinationName();
 }

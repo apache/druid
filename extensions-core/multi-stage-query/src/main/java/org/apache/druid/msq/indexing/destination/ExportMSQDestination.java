@@ -21,25 +21,36 @@ package org.apache.druid.msq.indexing.destination;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.catalog.model.table.export.ExportDestination;
+import org.apache.druid.sql.http.ResultFormat;
+import org.apache.druid.storage.StorageConnectorProvider;
 
 import java.util.Objects;
 
 public class ExportMSQDestination implements MSQDestination
 {
   public static final String TYPE = "export";
-  private final ExportDestination exportDestination;
+  private final StorageConnectorProvider storageConnectorProvider;
+  private final ResultFormat resultFormat;
 
   @JsonCreator
-  public ExportMSQDestination(@JsonProperty("exportDestination") ExportDestination exportDestination)
+  public ExportMSQDestination(@JsonProperty("storageConnectorProvider") StorageConnectorProvider storageConnectorProvider,
+                              @JsonProperty("resultFormat") ResultFormat resultFormat
+  )
   {
-    this.exportDestination = exportDestination;
+    this.storageConnectorProvider = storageConnectorProvider;
+    this.resultFormat = resultFormat;
   }
 
-  @JsonProperty("exportDestination")
-  public ExportDestination getExportDestination()
+  @JsonProperty("storageConnectorProvider")
+  public StorageConnectorProvider getStorageConnectorProvider()
   {
-    return exportDestination;
+    return storageConnectorProvider;
+  }
+
+  @JsonProperty("resultFormat")
+  public ResultFormat getResultFormat()
+  {
+    return resultFormat;
   }
 
   @Override
@@ -52,20 +63,22 @@ public class ExportMSQDestination implements MSQDestination
       return false;
     }
     ExportMSQDestination that = (ExportMSQDestination) o;
-    return Objects.equals(exportDestination, that.exportDestination);
+    return Objects.equals(storageConnectorProvider, that.storageConnectorProvider)
+           && resultFormat == that.resultFormat;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(exportDestination);
+    return Objects.hash(storageConnectorProvider, resultFormat);
   }
 
   @Override
   public String toString()
   {
     return "ExportMSQDestination{" +
-           "exportDestination=" + exportDestination +
+           "storageConnectorProvider=" + storageConnectorProvider +
+           ", resultFormat=" + resultFormat +
            '}';
   }
 }

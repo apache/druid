@@ -60,6 +60,7 @@ public class ViewSqlEngine implements SqlEngine
       case CAN_SELECT:
       case ALLOW_BINDABLE_PLAN:
       case READ_EXTERNAL_DATA:
+      case WRITE_EXTERNAL_DATA:
       case SCAN_ORDER_BY_NON_TIME:
       case GROUPING_SETS:
       case WINDOW_FUNCTIONS:

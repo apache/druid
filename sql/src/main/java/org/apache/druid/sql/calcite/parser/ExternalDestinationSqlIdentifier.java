@@ -20,13 +20,11 @@
 package org.apache.druid.sql.calcite.parser;
 
 import com.google.common.collect.Iterables;
+import org.apache.calcite.sql.SqlCharStringLiteral;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.parser.SqlParserPos;
-import org.apache.druid.catalog.model.table.export.ExportDestination;
-
-import java.util.Map;
 
 /**
  * Extends the {@link SqlIdentifier} to hold parameters for an external table destination. This contains information
@@ -34,45 +32,35 @@ import java.util.Map;
  */
 public class ExternalDestinationSqlIdentifier extends SqlIdentifier
 {
-  private final ExportDestination exportDestination;
-  private final Map<String, String> propertiesForUnparse;
+  private final SqlCharStringLiteral exportDestinationString;
 
   public ExternalDestinationSqlIdentifier(
       String name,
       SqlParserPos pos,
-      ExportDestination exportDestination,
-      Map<String, String> propertiesForUnparse
+      SqlNode exportDestinationString
   )
   {
     super(name, pos);
-    this.exportDestination = exportDestination;
-    this.propertiesForUnparse = propertiesForUnparse;
+    this.exportDestinationString = (SqlCharStringLiteral) exportDestinationString;
   }
 
-  public ExportDestination getExportDestination()
+  public String getExportDestinationString()
   {
-    return exportDestination;
+    return exportDestinationString.toString();
   }
 
   @Override
   public void unparse(SqlWriter writer, int leftPrec, int rightPrec)
   {
     SqlWriter.Frame externFrame = writer.startFunCall("EXTERN");
-    SqlWriter.Frame frame = writer.startFunCall(Iterables.getOnlyElement(names));
-    for (Map.Entry<String, String> property : propertiesForUnparse.entrySet()) {
-      writer.sep(",");
-      writer.keyword(property.getKey());
-      writer.print("=");
-      writer.identifier(property.getValue(), false);
-    }
-    writer.endFunCall(frame);
+    writer.print(exportDestinationString.toString());
     writer.endFunCall(externFrame);
   }
 
   @Override
   public SqlNode clone(SqlParserPos pos)
   {
-    return new ExternalDestinationSqlIdentifier(Iterables.getOnlyElement(names), pos, exportDestination, propertiesForUnparse);
+    return new ExternalDestinationSqlIdentifier(Iterables.getOnlyElement(names), pos, exportDestinationString);
   }
 
   @Override

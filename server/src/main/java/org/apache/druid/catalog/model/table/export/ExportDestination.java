@@ -20,7 +20,26 @@
 package org.apache.druid.catalog.model.table.export;
 
 import org.apache.druid.catalog.model.table.IngestDestination;
+import org.apache.druid.storage.StorageConnectorProvider;
 
-public interface ExportDestination extends IngestDestination
+public class ExportDestination implements IngestDestination
 {
+  private final String exportDestinationString;
+
+  public ExportDestination(String exportDestinationString)
+  {
+
+    this.exportDestinationString = exportDestinationString;
+  }
+
+  public String getExportDestinationString()
+  {
+    return exportDestinationString;
+  }
+
+  @Override
+  public String getDestinationName()
+  {
+    return "EXTERN";
+  }
 }

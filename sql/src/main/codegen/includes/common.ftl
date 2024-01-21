@@ -110,38 +110,18 @@ SqlTypeNameSpec DruidType() :
 SqlIdentifier ExternalDestination() :
 {
   final Span s;
-  Map<String, String> properties = new HashMap();
+  final SqlNode key;
 }
 {
-  (
-    <S3> [ <LPAREN> properties = ExternProperties() <RPAREN>]
-    {
-      s = span();
-      return new ExternalDestinationSqlIdentifier(
-        org.apache.druid.catalog.model.table.export.S3ExportDestination.TYPE_KEY,
+   key = StringLiteral()
+   {
+     s = span();
+     return new ExternalDestinationSqlIdentifier(
+        "EXTERN",
         s.pos(),
-        new S3ExportDestination(properties),
-        properties
-      );
-    }
-  )
-}
-
-Map<String, String> ExternProperties() :
-{
-  final Span s;
-  final Map<String, String> properties = new HashMap();
-  SqlNodeList commaList = null;
-}
-{
-  commaList = ExpressionCommaList(span(), ExprContext.ACCEPT_NON_QUERY)
-  {
-    for (SqlNode sqlNode : commaList) {
-      List<SqlNode> sqlNodeList = ((SqlBasicCall) sqlNode).getOperandList();
-      properties.put(((SqlIdentifier) sqlNodeList.get(0)).getSimple(), ((SqlIdentifier) sqlNodeList.get(1)).getSimple());
-    }
-    return properties;
-  }
+        key
+        );
+   }
 }
 
 // Parses the supported file formats for export.

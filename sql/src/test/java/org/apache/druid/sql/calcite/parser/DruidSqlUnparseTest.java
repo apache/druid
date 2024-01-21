@@ -99,8 +99,8 @@ public class DruidSqlUnparseTest
   @Test
   public void testUnparseExternalSqlIdentifier() throws ParseException
   {
-    String sqlQuery = "REPLACE INTO EXTERN(s3(uri = s3url, user = user1)) AS CSV OVERWRITE ALL SELECT dim2 FROM foo PARTITIONED BY ALL";
-    String prettySqlQuery = "REPLACE INTO EXTERN(S3(URI =\"s3url\", USER =\"user1\"))\n"
+    String sqlQuery = "REPLACE INTO EXTERN('{\"type\":\"s3\",\"bucket\":\"bucket1\",\"prefix\":\"prefix1\",\"tempDir\":\"/tempdir\",\"chunkSize\":5242880,\"maxRetry\":1}') AS CSV OVERWRITE ALL SELECT dim2 FROM foo PARTITIONED BY ALL";
+    String prettySqlQuery = "REPLACE INTO EXTERN('{\"type\":\"s3\",\"bucket\":\"bucket1\",\"prefix\":\"prefix1\",\"tempDir\":\"/tempdir\",\"chunkSize\":5242880,\"maxRetry\":1}')\n"
                             + "AS CSV\n"
                             + "OVERWRITE ALL\n"
                             + "SELECT \"dim2\"\n"
