@@ -79,7 +79,6 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.batch.TooManyBucketsException;
 import org.apache.druid.indexing.common.task.batch.parallel.TombstoneHelper;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
-import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -1235,15 +1234,13 @@ public class ControllerImpl implements Controller
       final Collection<DataSegment> publishedUsedSegments;
       try {
         // Additional check as the task action does not accept empty intervals
-        if (!intervals.isEmpty()) {
+        if (intervals.isEmpty()) {
+          publishedUsedSegments = Collections.emptySet();
+        } else {
           publishedUsedSegments = context.taskActionClient().submit(new RetrieveUsedSegmentsAction(
               dataSource,
-              null,
-              intervals,
-              Segments.ONLY_VISIBLE
+              intervals
           ));
-        } else {
-          publishedUsedSegments = Collections.emptySet();
         }
       }
       catch (IOException e) {

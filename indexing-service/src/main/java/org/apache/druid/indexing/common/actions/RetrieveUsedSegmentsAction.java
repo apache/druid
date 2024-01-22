@@ -51,10 +51,10 @@ import java.util.stream.Collectors;
 /**
  * This TaskAction returns a collection of segments which have data within the specified intervals and are marked as
  * used.
- * If the task holds REPLACE locks and the datasource being read is also the one being replaced,
- * fetch only those segments for the interval that were created before its REPLACE lock's version.
- * This change is needed to ensure that the input set of segments is always consistent for a replacing task
- * when concurrent appending tasks append segments.
+ * If the task holds REPLACE locks and is writing back to the same datasource,
+ * only segments that were created before the REPLACE lock was acquired are returned for an interval.
+ * This ensures that the input set of segments for this replace task remains consistent
+ * even when new data is appended by other concurrent tasks.
  *
  * The order of segments within the returned collection is unspecified, but each segment is guaranteed to appear in
  * the collection only once.
@@ -105,6 +105,11 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
     this.visibility = visibility != null ? visibility : Segments.ONLY_VISIBLE;
   }
 
+  public RetrieveUsedSegmentsAction(String dataSource, Collection<Interval> intervals)
+  {
+    this(dataSource, null, intervals, Segments.ONLY_VISIBLE);
+  }
+
   @JsonProperty
   public String getDataSource()
   {
@@ -132,10 +137,9 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
   @Override
   public Collection<DataSegment> perform(Task task, TaskActionToolbox toolbox)
   {
-    // The DruidInputSource can be used to read from one datasource and write to another.
-    // In such a case, the race condition described in the class-level docs cannot occur,
-    // and the action can simply fetch all visible segments for the datasource and interval.
-    // Similarly, an MSQ replace could read from a different datasource.
+    // When fetching segments for a datasource other than the one this task is writing to,
+    // just return all segments with the needed visibility.
+    // This is because we can't ensure that the set of returned segments is consistent throughout the task's lifecycle
     if (!task.getDataSource().equals(dataSource)) {
       return retrieveUsedSegments(toolbox);
     }
@@ -163,9 +167,9 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
     for (Pair<DataSegment, String> segmentAndCreatedDate :
         toolbox.getIndexerMetadataStorageCoordinator().retrieveUsedSegmentsAndCreatedDates(dataSource, intervals)) {
       final DataSegment segment = segmentAndCreatedDate.lhs;
-      final String created = segmentAndCreatedDate.rhs;
+      final String createdDate = segmentAndCreatedDate.rhs;
       intervalToCreatedToSegments.computeIfAbsent(segment.getInterval(), s -> new HashMap<>())
-                                 .computeIfAbsent(created, c -> new HashSet<>())
+                                 .computeIfAbsent(createdDate, c -> new HashSet<>())
                                  .add(segment);
     }
 
@@ -176,6 +180,7 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
       for (ReplaceTaskLock replaceLock : replaceLocksForTask) {
         if (replaceLock.getInterval().contains(segmentInterval)) {
           lockVersion = replaceLock.getVersion();
+          break;
         }
       }
       final Map<String, Set<DataSegment>> createdToSegmentsMap = entry.getValue();
@@ -204,7 +209,6 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
     return toolbox.getIndexerMetadataStorageCoordinator()
                   .retrieveUsedSegmentsForIntervals(dataSource, intervals, visibility);
   }
-
 
   @Override
   public boolean isAudited()
