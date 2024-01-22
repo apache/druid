@@ -38,6 +38,16 @@ export interface DimensionSpec {
   readonly castToType?: string;
 }
 
+// This is a web console internal made up column type that represents a multi value dimension
+const MADE_UP_MV_COLUMN_TYPE = 'mv-string';
+function madeMadeUpMvDimensionSpec(name: string): DimensionSpec {
+  return {
+    type: 'string',
+    name,
+    multiValueHandling: 'SORTED_ARRAY',
+  };
+}
+
 const KNOWN_TYPES = ['auto', 'string', 'long', 'float', 'double', 'json'];
 export const DIMENSION_SPEC_FIELDS: Field<DimensionSpec>[] = [
   {
@@ -60,10 +70,11 @@ export const DIMENSION_SPEC_FIELDS: Field<DimensionSpec>[] = [
   },
   {
     name: 'multiValueHandling',
+    label: 'Multi-value handling',
     type: 'string',
     defined: typeIsKnown(KNOWN_TYPES, 'string'),
-    defaultValue: 'SORTED_ARRAY',
-    suggestions: ['SORTED_ARRAY', 'SORTED_SET', 'ARRAY'],
+    placeholder: 'unset (defaults to SORTED_ARRAY)',
+    suggestions: [undefined, 'SORTED_ARRAY', 'SORTED_SET', 'ARRAY'],
   },
   {
     name: 'castToType',
@@ -87,23 +98,53 @@ export function getDimensionSpecName(dimensionSpec: string | DimensionSpec): str
 
 export function getDimensionSpecColumnType(dimensionSpec: string | DimensionSpec): string {
   if (typeof dimensionSpec === 'string') return 'string';
-  if (dimensionSpec.type !== 'auto') return dimensionSpec.type;
-  return dimensionSpec.castToType ?? 'auto';
+  switch (dimensionSpec.type) {
+    case 'string':
+      return typeof dimensionSpec.multiValueHandling === 'string'
+        ? MADE_UP_MV_COLUMN_TYPE
+        : 'string';
+
+    case 'auto':
+      return dimensionSpec.castToType ?? 'auto';
+
+    default:
+      return dimensionSpec.type;
+  }
 }
 
 export function getDimensionSpecUserType(dimensionSpec: string | DimensionSpec): string {
   if (typeof dimensionSpec === 'string') return 'string';
-  if (dimensionSpec.type !== 'auto') return dimensionSpec.type;
-  return dimensionSpec.castToType ?? 'auto';
+  switch (dimensionSpec.type) {
+    case 'string':
+      return typeof dimensionSpec.multiValueHandling === 'string'
+        ? 'string (multi-value)'
+        : 'string';
+
+    case 'auto':
+      return dimensionSpec.castToType ?? 'auto';
+
+    default:
+      return dimensionSpec.type;
+  }
 }
 
 export function getDimensionSpecClassType(
   dimensionSpec: string | DimensionSpec,
 ): string | undefined {
   if (typeof dimensionSpec === 'string') return 'string';
-  if (dimensionSpec.type !== 'auto') return dimensionSpec.type;
-  if (String(dimensionSpec.castToType).startsWith('ARRAY')) return 'array';
-  return dimensionSpec.castToType?.toLowerCase();
+  switch (dimensionSpec.type) {
+    case 'string':
+      return typeof dimensionSpec.multiValueHandling === 'string'
+        ? MADE_UP_MV_COLUMN_TYPE
+        : 'string';
+
+    case 'auto':
+      if (String(dimensionSpec.castToType).startsWith('ARRAY')) return 'array';
+      return dimensionSpec.castToType?.toLowerCase();
+
+    default:
+      return dimensionSpec.type;
+  }
 }
 
 export function inflateDimensionSpec(dimensionSpec: string | DimensionSpec): DimensionSpec {
@@ -116,12 +157,33 @@ export function getDimensionSpecs(
   sampleResponse: SampleResponse,
   columnTypeHints: Record<string, string>,
   guessNumericStringsAsNumbers: boolean,
+  forceMvdInsteadOfArray: boolean,
   hasRollup: boolean,
 ): (string | DimensionSpec)[] {
   return filterMap(getHeaderNamesFromSampleResponse(sampleResponse, 'ignore'), h => {
-    const columnType =
-      columnTypeHints[h] ||
-      guessColumnTypeFromSampleResponse(sampleResponse, h, guessNumericStringsAsNumbers);
+    const columnTypeHint = columnTypeHints[h];
+    const guessedColumnType = guessColumnTypeFromSampleResponse(
+      sampleResponse,
+      h,
+      guessNumericStringsAsNumbers,
+    );
+    let columnType = columnTypeHint || guessedColumnType;
+
+    if (forceMvdInsteadOfArray) {
+      if (columnType.startsWith('ARRAY')) {
+        columnType = MADE_UP_MV_COLUMN_TYPE;
+      }
+
+      if (columnType === MADE_UP_MV_COLUMN_TYPE) {
+        return madeMadeUpMvDimensionSpec(h);
+      }
+    } else {
+      // Ignore the type hint if it is MVD and we don't want to force people into them
+      if (columnTypeHint === MADE_UP_MV_COLUMN_TYPE) {
+        columnType = guessedColumnType;
+      }
+    }
+
     if (columnType === 'string') return h;
     if (columnType.startsWith('ARRAY')) {
       return {

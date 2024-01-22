@@ -30,8 +30,12 @@
         background: rgba($blue3, 0.3);
       }
 
-      &.array {
+      &.mv-string {
         background: rgba($orange4, 0.3);
+      }
+
+      &.array {
+        background: rgba($orange2, 0.3);
       }
     }
 
@@ -50,8 +54,12 @@
         background: rgba($blue3, 0.1);
       }
 
-      &.array {
+      &.mv-string {
         background: rgba($orange4, 0.1);
+      }
+
+      &.array {
+        background: rgba($orange2, 0.1);
       }
     }
 

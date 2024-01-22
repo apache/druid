@@ -824,12 +824,17 @@ describe('spec utils', () => {
     });
   });
 
-  it('updateSchemaWithSample', () => {
-    const withRollup = updateSchemaWithSample(ingestionSpec, JSON_SAMPLE, 'fixed', true);
-
-    expect(withRollup).toMatchInlineSnapshot(`
-      Object {
-        "spec": Object {
+  describe('updateSchemaWithSample', () => {
+    it('works with rollup, arrays', () => {
+      const updateSpec = updateSchemaWithSample(
+        ingestionSpec,
+        JSON_SAMPLE,
+        'fixed',
+        'arrays',
+        true,
+      );
+      expect(updateSpec.spec).toMatchInlineSnapshot(`
+        Object {
           "dataSchema": Object {
             "dataSource": "wikipedia",
             "dimensionsSpec": Object {
@@ -893,16 +898,97 @@ describe('spec utils', () => {
             },
             "type": "index_parallel",
           },
-        },
-        "type": "index_parallel",
-      }
-    `);
+        }
+      `);
+    });
 
-    const noRollup = updateSchemaWithSample(ingestionSpec, JSON_SAMPLE, 'fixed', false);
+    it('works with rollup, MVDs', () => {
+      const updateSpec = updateSchemaWithSample(
+        ingestionSpec,
+        JSON_SAMPLE,
+        'fixed',
+        'multi-values',
+        true,
+      );
+      expect(updateSpec.spec).toMatchInlineSnapshot(`
+        Object {
+          "dataSchema": Object {
+            "dataSource": "wikipedia",
+            "dimensionsSpec": Object {
+              "dimensions": Array [
+                "user",
+                "id",
+                Object {
+                  "multiValueHandling": "SORTED_ARRAY",
+                  "name": "tags",
+                  "type": "string",
+                },
+                Object {
+                  "multiValueHandling": "SORTED_ARRAY",
+                  "name": "nums",
+                  "type": "string",
+                },
+              ],
+            },
+            "granularitySpec": Object {
+              "queryGranularity": "hour",
+              "rollup": true,
+              "segmentGranularity": "day",
+            },
+            "metricsSpec": Array [
+              Object {
+                "name": "count",
+                "type": "count",
+              },
+              Object {
+                "fieldName": "followers",
+                "name": "sum_followers",
+                "type": "longSum",
+              },
+              Object {
+                "fieldName": "spend",
+                "name": "sum_spend",
+                "type": "doubleSum",
+              },
+            ],
+            "timestampSpec": Object {
+              "column": "timestamp",
+              "format": "iso",
+            },
+          },
+          "ioConfig": Object {
+            "inputFormat": Object {
+              "type": "json",
+            },
+            "inputSource": Object {
+              "type": "http",
+              "uris": Array [
+                "https://website.com/wikipedia.json.gz",
+              ],
+            },
+            "type": "index_parallel",
+          },
+          "tuningConfig": Object {
+            "forceGuaranteedRollup": true,
+            "partitionsSpec": Object {
+              "type": "hashed",
+            },
+            "type": "index_parallel",
+          },
+        }
+      `);
+    });
 
-    expect(noRollup).toMatchInlineSnapshot(`
-      Object {
-        "spec": Object {
+    it('works without rollup, arrays', () => {
+      const updatedSpec = updateSchemaWithSample(
+        ingestionSpec,
+        JSON_SAMPLE,
+        'fixed',
+        'arrays',
+        false,
+      );
+      expect(updatedSpec.spec).toMatchInlineSnapshot(`
+        Object {
           "dataSchema": Object {
             "dataSource": "wikipedia",
             "dimensionsSpec": Object {
@@ -957,10 +1043,77 @@ describe('spec utils', () => {
             },
             "type": "index_parallel",
           },
-        },
-        "type": "index_parallel",
-      }
-    `);
+        }
+      `);
+    });
+
+    it('works without rollup, MVDs', () => {
+      const updatedSpec = updateSchemaWithSample(
+        ingestionSpec,
+        JSON_SAMPLE,
+        'fixed',
+        'multi-values',
+        false,
+      );
+      expect(updatedSpec.spec).toMatchInlineSnapshot(`
+        Object {
+          "dataSchema": Object {
+            "dataSource": "wikipedia",
+            "dimensionsSpec": Object {
+              "dimensions": Array [
+                "user",
+                Object {
+                  "name": "followers",
+                  "type": "long",
+                },
+                Object {
+                  "name": "spend",
+                  "type": "double",
+                },
+                "id",
+                Object {
+                  "multiValueHandling": "SORTED_ARRAY",
+                  "name": "tags",
+                  "type": "string",
+                },
+                Object {
+                  "multiValueHandling": "SORTED_ARRAY",
+                  "name": "nums",
+                  "type": "string",
+                },
+              ],
+            },
+            "granularitySpec": Object {
+              "queryGranularity": "none",
+              "rollup": false,
+              "segmentGranularity": "day",
+            },
+            "timestampSpec": Object {
+              "column": "timestamp",
+              "format": "iso",
+            },
+          },
+          "ioConfig": Object {
+            "inputFormat": Object {
+              "type": "json",
+            },
+            "inputSource": Object {
+              "type": "http",
+              "uris": Array [
+                "https://website.com/wikipedia.json.gz",
+              ],
+            },
+            "type": "index_parallel",
+          },
+          "tuningConfig": Object {
+            "partitionsSpec": Object {
+              "type": "dynamic",
+            },
+            "type": "index_parallel",
+          },
+        }
+      `);
+    });
   });
 
   it('adjustId', () => {

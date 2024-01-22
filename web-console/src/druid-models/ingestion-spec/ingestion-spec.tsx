@@ -44,7 +44,7 @@ import {
   typeIsKnown,
 } from '../../utils';
 import type { SampleResponse } from '../../utils/sampler';
-import type { DimensionsSpec } from '../dimension-spec/dimension-spec';
+import type { DimensionSpec, DimensionsSpec } from '../dimension-spec/dimension-spec';
 import {
   getDimensionSpecColumnType,
   getDimensionSpecName,
@@ -275,6 +275,8 @@ export interface DataSchema {
 
 export type SchemaMode = 'fixed' | 'string-only-discovery' | 'type-aware-discovery';
 
+export type ArrayMode = 'arrays' | 'multi-values';
+
 export function getSchemaMode(spec: Partial<IngestionSpec>): SchemaMode {
   if (deepGet(spec, 'spec.dataSchema.dimensionsSpec.useSchemaDiscovery') === true) {
     return 'type-aware-discovery';
@@ -284,6 +286,45 @@ export function getSchemaMode(spec: Partial<IngestionSpec>): SchemaMode {
   }
   const dimensions = deepGet(spec, 'spec.dataSchema.dimensionsSpec.dimensions') || EMPTY_ARRAY;
   return Array.isArray(dimensions) && dimensions.length === 0 ? 'string-only-discovery' : 'fixed';
+}
+
+export function getArrayMode(spec: Partial<IngestionSpec>): ArrayMode {
+  const schemaMode = getSchemaMode(spec);
+  switch (schemaMode) {
+    case 'type-aware-discovery':
+      return 'arrays';
+
+    case 'string-only-discovery':
+      return 'multi-values';
+
+    default: {
+      const dimensions: (DimensionSpec | string)[] = deepGet(
+        spec,
+        'spec.dataSchema.dimensionsSpec.dimensions',
+      );
+      if (
+        dimensions.some(
+          d =>
+            typeof d === 'object' && d.type === 'auto' && String(d.castToType).startsWith('ARRAY'),
+        )
+      ) {
+        return 'arrays';
+      }
+
+      if (
+        dimensions.some(
+          d =>
+            typeof d === 'object' &&
+            d.type === 'string' &&
+            typeof d.multiValueHandling === 'string',
+        )
+      ) {
+        return 'multi-values';
+      }
+
+      return 'arrays';
+    }
+  }
 }
 
 export function getRollup(spec: Partial<IngestionSpec>): boolean {
@@ -2500,6 +2541,7 @@ export function updateSchemaWithSample(
   spec: Partial<IngestionSpec>,
   sampleResponse: SampleResponse,
   schemaMode: SchemaMode,
+  arrayMode: ArrayMode,
   rollup: boolean,
   forcePartitionInitialization = false,
 ): Partial<IngestionSpec> {
@@ -2532,7 +2574,13 @@ export function updateSchemaWithSample(
       newSpec = deepSet(
         newSpec,
         'spec.dataSchema.dimensionsSpec.dimensions',
-        getDimensionSpecs(sampleResponse, columnTypeHints, guessNumericStringsAsNumbers, rollup),
+        getDimensionSpecs(
+          sampleResponse,
+          columnTypeHints,
+          guessNumericStringsAsNumbers,
+          arrayMode === 'multi-values',
+          rollup,
+        ),
       );
       break;
   }
