@@ -136,17 +136,12 @@ public @interface SqlTestFrameworkConfig
 
     ConfigurationInstance(SqlTestFrameworkConfig config, QueryComponentSupplier testHost)
     {
-      try {
-        SqlTestFramework.Builder builder = new SqlTestFramework.Builder(testHost)
-            .catalogResolver(testHost.createCatalogResolver())
-            .minTopNThreshold(config.minTopNThreshold())
-            .mergeBufferCount(config.numMergeBuffers())
-            .withOverrideModule(config.resultCache().makeModule());
-        framework = builder.build();
-      }
-      catch (Exception e) {
-        throw new RuntimeException(e);
-      }
+      SqlTestFramework.Builder builder = new SqlTestFramework.Builder(testHost)
+          .catalogResolver(testHost.createCatalogResolver())
+          .minTopNThreshold(config.minTopNThreshold())
+          .mergeBufferCount(config.numMergeBuffers())
+          .withOverrideModule(config.resultCache().makeModule());
+      framework = builder.build();
     }
 
     public void close()

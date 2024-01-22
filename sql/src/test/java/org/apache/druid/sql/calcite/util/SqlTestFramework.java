@@ -402,7 +402,7 @@ public class SqlTestFramework
       return this;
     }
 
-    public SqlTestFramework build() throws Exception
+    public SqlTestFramework build()
     {
       return new SqlTestFramework(this);
     }
