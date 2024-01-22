@@ -94,7 +94,7 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
   }
 
   @Override
-  public ReturnOrAwait<Object> runIncrementally(IntSet readableInputs) throws InterruptedException, IOException
+  public ReturnOrAwait<Object> runIncrementally(IntSet readableInputs) throws IOException
   {
     if (readableInputs.isEmpty()) {
       return ReturnOrAwait.awaitAll(1);

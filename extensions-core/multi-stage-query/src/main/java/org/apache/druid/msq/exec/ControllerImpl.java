@@ -204,6 +204,7 @@ import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.http.ResultFormat;
+import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
@@ -1885,6 +1886,19 @@ public class ControllerImpl implements Controller
       ExportMSQDestination exportMSQDestination = (ExportMSQDestination) querySpec.getDestination();
       StorageConnectorProvider storageConnectorProvider = exportMSQDestination.getStorageConnectorProvider();
       ResultFormat resultFormat = exportMSQDestination.getResultFormat();
+
+      // If the statement is a REPLACE, delete the existing files at the destination.
+      if (Intervals.ONLY_ETERNITY.equals(exportMSQDestination.getReplaceTimeChunks())) {
+        StorageConnector storageConnector = storageConnectorProvider.get();
+        try {
+          storageConnector.deleteRecursively("");
+        }
+        catch (IOException e) {
+          throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                              .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                              .build(e, "Count not delete existing files from ");
+        }
+      }
 
       final QueryDefinitionBuilder builder = QueryDefinition.builder();
       builder.addAll(queryDef);

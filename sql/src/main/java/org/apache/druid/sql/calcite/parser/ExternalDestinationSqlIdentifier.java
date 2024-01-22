@@ -62,7 +62,7 @@ public class ExternalDestinationSqlIdentifier extends SqlIdentifier
   {
     final String name = CollectionUtils.getOnlyElement(
         names,
-        x -> DruidException.defensive("Expected single name in identifier [%s], but got [%s]", names)
+        x -> DruidException.defensive("Expected single name in external destination identifier, but got [%s]", names)
     );
     return new ExternalDestinationSqlIdentifier(name, pos, exportDestinationString);
   }
