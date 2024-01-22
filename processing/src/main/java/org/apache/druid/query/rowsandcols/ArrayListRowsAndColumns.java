@@ -319,12 +319,14 @@ public class ArrayListRowsAndColumns<RowType> implements AppendableRowsAndColumn
     );
   }
 
+  @SuppressWarnings("unused")
   @SemanticCreator
   public ClusteredGroupPartitioner toClusteredGroupPartitioner()
   {
     return new MyClusteredGroupPartitioner();
   }
 
+  @SuppressWarnings("unused")
   @SemanticCreator
   public NaiveSortMaker toNaiveSortMaker()
   {
@@ -348,6 +350,7 @@ public class ArrayListRowsAndColumns<RowType> implements AppendableRowsAndColumn
     return new MyNaiveSortMaker();
   }
 
+  @SuppressWarnings("unused")
   @SemanticCreator
   public StorageAdapter toStorageAdapter()
   {

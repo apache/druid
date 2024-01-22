@@ -106,12 +106,14 @@ public class QueryableIndexRowsAndColumns implements RowsAndColumns, AutoCloseab
     }
   }
 
+  @SuppressWarnings("unused")
   @SemanticCreator
   public StorageAdapter toStorageAdapter()
   {
     return new QueryableIndexStorageAdapter(index);
   }
 
+  @SuppressWarnings("unused")
   @SemanticCreator
   public QueryableIndex toQueryableIndex()
   {
