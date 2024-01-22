@@ -72,8 +72,8 @@ public class SchemaPersistHelper
         for (String fingerprint : partition) {
           final String now = DateTimes.nowUtc().toString();
           schemaInsertBatch.add()
-                           .bind("fingerprint", fingerprint)
                            .bind("created_date", now)
+                           .bind("fingerprint", fingerprint)
                            .bind("payload", jsonMapper.writeValueAsBytes(schemaPayloadMap.get(fingerprint)));
         }
         final int[] affectedRows = schemaInsertBatch.execute();
@@ -110,7 +110,7 @@ public class SchemaPersistHelper
         Collectors.toList());
 
     // fetch schemaId
-    Map<String, Integer> fingerprintSchemaIdMap =
+    Map<String, Long> fingerprintSchemaIdMap =
         schemaIdFetchBatch(handle, segmentsToUpdate.stream().map(SegmentSchemaMetadataPlus::getFingerprint).collect(Collectors.toSet()));
 
     // update schemaId and numRows in segments table

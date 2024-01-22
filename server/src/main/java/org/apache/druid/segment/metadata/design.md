@@ -163,3 +163,72 @@ BackFillQueue
 - publish given schema
 - on success interact with SchemaCache to update smqResult and smqPublishedResult
 
+
+
+Task publish
+--
+
+Reverse Flow for batch task schema publish
+--
+
+1. SegmentTransactionInsertAction#appendAction
+
+2. SequenceMetadata#publishAnnotatedSegments
+
+3. TransactionSegmentPublisher#publishSegments
+
+4.a. BaseAppenderatorDriver#publishInBackground
+4.b. ParallelIndexSupervisorTask#publishSegments
+
+4.a.1. Appenderator#push
+
+4.a.2. AppenderatorImpl#push (done)
+4.a.3. BatchAppenderator#push (done)
+
+5.a.
+
+push flow
+---
+IndexTask#runTask
+IndexTask#generateAndPublishSegments
+InputSourceProcessor#process
+BatchAppenderatorDriver#pushAllAndClear
+BatchAppenderatorDriver#pushAndClear
+BaseAppenderatorDriver#pushInBackground
+appenderator#push -> imply is AppenderatorImpl and BatchAppenderator and the logic to get schema in both
+the returned SegmentAndCommitMetadata has got segment schema in it
+
+
+PartialSegmentGenerateTask#runTask
+PartialSegmentGenerateTask#generateSegments
+InputSourceProcessor.process
+
+SinglePhaseSubTask#runTask
+SinglePhaseSubTask#generateAndPushSegments
+BatchAppenderatorDriver#pushAllAndClear
+
+
+publish flow
+---
+IndexTask#generateAndPublishSegments (there is a TransactionSegmentPublisher which based on task lock type will publish stuff using append, replace etc actions)
+line 1001 -> driver.publishAll how do I add schema here
+
+BatchAppenderatorDriver#publishAll
+BaseAppenderatorDriver#publishInBackground
+blocked
+
+ParallelIndexSupervisorTask#runTask
+...
+ParallelIndexSupervisorTask#runRangePartitionMultiPhaseParallel
+ParallelIndexSupervisorTask#runHashPartitionMultiPhaseParallel
+ParallelIndexSupervisorTask#runSinglePhaseParallel
+ParallelIndexSupervisorTask#publishSegments
+TransactionalSegmentPublisher#publishSegments
+
+
+streaming
+---
+feeling hopeful but streaming usecase
+StreamAppenderatorDriver#publish
+BaseAppenderatorDriver#publishInBackground
+

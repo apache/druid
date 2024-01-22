@@ -329,10 +329,11 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  payload %2$s NOT NULL,\n"
                 + "  used_status_last_updated VARCHAR(255) NOT NULL,\n"
                 + "  schema_id VARCHAR(255),\n"
-                + "  segment_stats %2$s,\n"
-                + "  PRIMARY KEY (id)\n"
+                + "  num_rows BIGINT,\n"
+                + "  PRIMARY KEY (id),\n"
+                + "  FOREIGN KEY(schema_id) REFERENCES %5$s(id)\n"
                 + ")",
-                tableName, getPayloadType(), getQuoteString(), getCollation()
+                tableName, getPayloadType(), getQuoteString(), getCollation(), tablesConfigSupplier.get().getSegmentSchemaTable()
             ),
             StringUtils.format("CREATE INDEX idx_%1$s_used ON %1$s(used)", tableName),
             StringUtils.format(
@@ -528,11 +529,12 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   protected void alterSegmentTable()
   {
     final String tableName = tablesConfigSupplier.get().getSegmentsTable();
+    final String schemaTableName = tablesConfigSupplier.get().getSegmentSchemaTable();
 
     Map<String, String> columnNameTypes = new HashMap<>();
     columnNameTypes.put("used_status_last_updated", "varchar(255)");
     columnNameTypes.put("schema_id", "varchar(255)");
-    columnNameTypes.put("segment_stats", "BLOB");
+    columnNameTypes.put("num_rows", "BIGINT");
 
     Set<String> columnsToAdd = new HashSet<>();
 
@@ -560,7 +562,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
               StringUtils.format(
                   alterCommand.toString(),
                   tableName
-              )
+              ),
+              StringUtils.format("ALTER TABLE %1$s ADD FOREIGN KEY(schema_id) REFERENCES %2$s(id)", tableName, schemaTableName)
           )
       );
     }
@@ -939,12 +942,16 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
         ImmutableList.of(
             StringUtils.format(
                 "CREATE TABLE %1$s (\n"
-                + "  id VARCHAR(255) NOT NULL,\n"
+                + "  id %2$s NOT NULL,\n"
+                + "  created_date VARCHAR(255) NOT NULL"
+                + "  fingerprint VARCHAR(255) NOT NULL,\n"
                 + "  payload %3$s NOT NULL,\n"
                 + "  PRIMARY KEY (id)\n"
                 + ")",
-                tableName, getCollation(), getPayloadType()
-            )
+                tableName, getSerialType(), getPayloadType()
+            ),
+            StringUtils.format("CREATE INDEX idx_%1$s_key_time ON %1$s(fingerprint)", tableName),
+            StringUtils.format("CREATE INDEX idx_%1$s_key_time ON %1$s(created_date)", tableName)
         )
     );
   }

@@ -96,16 +96,17 @@ public class SegmentSchemaBackfillQueue
     }
 
     // finally add the published schema to different map in the schema cache
-    try {
+   // try {
       connector.retryTransaction((TransactionCallback<Void>) (handle, status) -> {
         schemaPersistHelper.persistSchema(handle, polled);
         schemaPersistHelper.updateSegments(handle, polled);
         return null;
       }, 1, 3);
-    } catch () {
+    //}
+    /**catch () {
 
     } finally {
 
-    }
+    }**/
   }
 }
