@@ -124,11 +124,10 @@ public class InPlanningBenchmark
   @Param({"500000"})
   private int rowsPerSegment;
 
-  @Param({"2147483647"})
+  @Param({"0", "2147483647"})
   private int inSubQueryThreshold;
 
   @Param({
-      "explicit",
       "auto"
   })
   private String schema;
@@ -220,10 +219,11 @@ public class InPlanningBenchmark
     try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(
         engine,
         sql,
-        ImmutableMap.of("inSubQueryThreshold",
-                        inSubQueryThreshold,
-                        "useCache",
-                        false
+        ImmutableMap.of(
+            "inSubQueryThreshold",
+            inSubQueryThreshold,
+            "useCache",
+            false
         )
     )) {
       final PlannerResult plannerResult = planner.plan();
@@ -248,7 +248,6 @@ public class InPlanningBenchmark
     closer.close();
   }
 
-  @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void queryInSql(Blackhole blackhole)
@@ -278,7 +277,52 @@ public class InPlanningBenchmark
         "inSubQueryThreshold", inSubQueryThreshold, "useCache", false
     );
     StringBuilder sqlBuilder = new StringBuilder().append(
-        "explain plan for select string1  from foo where string1 = '7' or long1 in (");
+        "explain plan for select long1 from foo where string1 = '7' or long1 in (");
+    IntStream.range(1, inClauseExprCount - 1).forEach(i -> sqlBuilder.append(i).append(","));
+    sqlBuilder.append(inClauseExprCount).append(")");
+    final String sql = sqlBuilder.toString();
+
+    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, context)) {
+      final PlannerResult plannerResult = planner.plan();
+      final Sequence<Object[]> resultSequence = plannerResult.run().getResults();
+      final Object[] lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);
+      blackhole.consume(lastRow);
+    }
+  }
+
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MILLISECONDS)
+  public void queryMultiEqualOrInSql(Blackhole blackhole)
+  {
+    final Map<String, Object> context = ImmutableMap.of(
+        "inSubQueryThreshold", inSubQueryThreshold, "useCache", false
+    );
+    StringBuilder sqlBuilder = new StringBuilder().append(
+        "explain plan for select long1 from foo where string1 = '7' or string1 = '8' or long1 in (");
+    IntStream.range(1, inClauseExprCount - 1).forEach(i -> sqlBuilder.append(i).append(","));
+    sqlBuilder.append(inClauseExprCount).append(")");
+    final String sql = sqlBuilder.toString();
+
+    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, context)) {
+      final PlannerResult plannerResult = planner.plan();
+      final Sequence<Object[]> resultSequence = plannerResult.run().getResults();
+      final Object[] lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);
+      blackhole.consume(lastRow);
+    }
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MILLISECONDS)
+  public void queryJoinEqualOrInSql(Blackhole blackhole)
+  {
+    final Map<String, Object> context = ImmutableMap.of(
+        "inSubQueryThreshold", inSubQueryThreshold, "useCache", false
+    );
+    StringBuilder sqlBuilder = new StringBuilder().append(
+        "explain plan for select foo.long1, fooright.string1 from foo inner join foo as fooright on foo.string1 = fooright.string1 where fooright.string1 = '7' or foo.long1 in (");
     IntStream.range(1, inClauseExprCount - 1).forEach(i -> sqlBuilder.append(i).append(","));
     sqlBuilder.append(inClauseExprCount).append(")");
     final String sql = sqlBuilder.toString();
