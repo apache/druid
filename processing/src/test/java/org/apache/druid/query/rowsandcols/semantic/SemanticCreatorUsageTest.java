@@ -60,7 +60,7 @@ public class SemanticCreatorUsageTest
     return params;
   }
 
-  public SemanticCreatorUsageTest(String simpleMethodName, Method method)
+  public SemanticCreatorUsageTest(@SuppressWarnings("unused") String simpleMethodName, Method method)
   {
     this.method = method;
   }
