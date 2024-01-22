@@ -522,7 +522,7 @@ public class SqlBenchmark
   )
   {
     final QueryRunnerFactoryConglomerate conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(closer);
-    final SpecificSegmentsQuerySegmentWalker walker = new SpecificSegmentsQuerySegmentWalker(conglomerate);
+    final SpecificSegmentsQuerySegmentWalker walker = SpecificSegmentsQuerySegmentWalker.createWalker(conglomerate);
     final PlannerConfig plannerConfig = new PlannerConfig();
 
     for (final Map.Entry<DataSegment, QueryableIndex> segmentEntry : segmentMap.entrySet()) {

@@ -48,7 +48,8 @@ public class ClientKillUnusedSegmentsTaskQueryTest
         INTERVAL,
         true,
         BATCH_SIZE,
-        LIMIT
+        LIMIT,
+        null
     );
   }
 
