@@ -235,7 +235,7 @@ public class CalciteTests
       null
   );
 
-  public static final Injector INJECTOR = QueryStackTests.injectorBuilder()
+  public static final Injector INJECTOR = QueryStackTests.defaultInjectorBuilder()
       .addModule(new LookylooModule())
       .addModule(new SqlAggregationModule())
       .addModule(new CalciteTestOperatorModule())
