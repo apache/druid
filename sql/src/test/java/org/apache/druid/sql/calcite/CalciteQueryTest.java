@@ -2804,7 +2804,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.CANNOT_APPLY_VIRTUAL_COL)
+  @NotYetSupported(Modes.PLAN_MISMATCH)
   @Test
   public void testGroupByWithSelectAndOrderByProjections()
   {
@@ -2889,7 +2889,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.CANNOT_APPLY_VIRTUAL_COL)
+  @NotYetSupported(Modes.PLAN_MISMATCH)
   @Test
   public void testTopNWithSelectAndOrderByProjections()
   {
@@ -2927,7 +2927,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported
+  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
   @Test
   public void testUnionAllQueries()
   {
@@ -3401,7 +3401,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
    * doesn't reset framework once the merge buffers
    */
   @SqlTestFrameworkConfig(numMergeBuffers = 3)
-  @NotYetSupported
+  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
   @Test
   public void testUnionAllSameTableThreeTimes()
   {
@@ -4857,7 +4857,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.CANNOT_APPLY_VIRTUAL_COL)
+  @NotYetSupported(Modes.PLAN_MISMATCH)
   @Test
   public void testGroupByWithSortOnPostAggregationDefault()
   {
@@ -4889,7 +4889,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.CANNOT_APPLY_VIRTUAL_COL)
+  @NotYetSupported(Modes.PLAN_MISMATCH)
   @Test
   public void testGroupByWithSortOnPostAggregationNoTopNConfig()
   {
@@ -4933,7 +4933,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.CANNOT_APPLY_VIRTUAL_COL)
+  @NotYetSupported(Modes.PLAN_MISMATCH)
   @Test
   public void testGroupByWithSortOnPostAggregationNoTopNContext()
   {
@@ -12073,7 +12073,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported
+  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
   @Test
   public void testRequireTimeConditionPositive()
   {
@@ -14570,7 +14570,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported
+  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
   @Test
   public void testOrderByAlongWithInternalScanQuery()
   {
