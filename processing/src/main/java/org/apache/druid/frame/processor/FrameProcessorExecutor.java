@@ -595,9 +595,7 @@ public class FrameProcessorExecutor
 
       sb.append("; cancel=").append(finishedFuture.isCancelled() ? "y" : "n");
       sb.append("; done=").append(finishedFuture.isDone() ? "y" : "n");
-      if (log.isDebugEnabled()) {
-        log.debug(StringUtils.encodeForFormat(sb.toString()));
-      }
+      log.debug(StringUtils.encodeForFormat(sb.toString()));
     }
   }
 

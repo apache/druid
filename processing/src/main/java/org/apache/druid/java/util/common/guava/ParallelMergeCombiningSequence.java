@@ -481,15 +481,9 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
             "Computed parallel tasks: [%s]; ForkJoinPool details - sequence parallelism: [%s] "
                 + "active threads: [%s] running threads: [%s] queued submissions: [%s] queued tasks: [%s] "
                 + "pool parallelism: [%s] pool size: [%s] steal count: [%s]",
-            computedNumParallelTasks,
-            parallelism,
-            pool.getActiveThreadCount(),
-            runningThreadCount,
-            submissionCount,
-            pool.getQueuedTaskCount(),
-            pool.getParallelism(),
-            pool.getPoolSize(),
-            pool.getStealCount()
+            computedNumParallelTasks, parallelism,
+            pool.getActiveThreadCount(), runningThreadCount, submissionCount, pool.getQueuedTaskCount(),
+            pool.getParallelism(), pool.getPoolSize(), pool.getStealCount()
         );
       }
 
@@ -635,17 +629,15 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
               (nextYieldAfter + (recursionDepth * yieldAfter)) / (recursionDepth + 1);
           final int adjustedNextYieldAfter = (int) Math.ceil(cumulativeMovingAverage);
 
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(
-                    "task recursion %s yielded %s results ran for %s millis (%s nanos), %s cpu nanos, next task yielding every %s operations",
-                    recursionDepth,
-                    yieldAfter,
-                    TimeUnit.MILLISECONDS.convert(elapsedNanos, TimeUnit.NANOSECONDS),
-                    elapsedNanos,
-                    elapsedCpuNanos,
-                    adjustedNextYieldAfter
-            );
-          }
+          LOG.debug(
+              "task recursion %s yielded %s results ran for %s millis (%s nanos), %s cpu nanos, next task yielding every %s operations",
+              recursionDepth,
+              yieldAfter,
+              TimeUnit.MILLISECONDS.convert(elapsedNanos, TimeUnit.NANOSECONDS),
+              elapsedNanos,
+              elapsedCpuNanos,
+              adjustedNextYieldAfter
+          );
           getPool().execute(new MergeCombineAction<>(
               pQueue,
               outputQueue,
