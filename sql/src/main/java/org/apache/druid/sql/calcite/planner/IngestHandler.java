@@ -117,6 +117,11 @@ public abstract class IngestHandler extends QueryHandler
             handlerContext.engine().name()
         );
       }
+      if (ingestNode().getPartitionedBy() != null) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.UNSUPPORTED)
+                            .build("Export statements do not currently support a PARTITIONED BY or CLUSTERED BY clause.");
+      }
     } else if (ingestNode().getPartitionedBy() == null) {
       throw InvalidSqlInput.exception(
           "Operation [%s] requires a PARTITIONED BY to be explicitly defined, but none was found.",

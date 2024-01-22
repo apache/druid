@@ -219,7 +219,7 @@ public class MSQTaskQueryMaker implements QueryMaker
             exportDestination,
             StorageConnectorProvider.class
         );
-        destination = new ExportMSQDestination(storageConnectorProvider, format);
+        destination = new ExportMSQDestination(storageConnectorProvider, format, replaceTimeChunks);
       }
       catch (Exception e) {
         throw DruidException.defensive()

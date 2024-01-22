@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
@@ -32,7 +33,10 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   public void testReplaceIntoExtern()
   {
     testIngestionQuery()
-        .sql("REPLACE INTO EXTERN('{\"type\":\"s3\",\"bucket\":\"bucket1\",\"prefix\":\"prefix1\",\"tempDir\":\"/tempdir\",\"chunkSize\":5242880,\"maxRetry\":1}') AS CSV OVERWRITE ALL SELECT dim2 FROM foo PARTITIONED BY ALL")
+        .sql("REPLACE INTO EXTERN('{\"type\":\"s3\",\"bucket\":\"bucket1\",\"prefix\":\"prefix1\",\"tempDir\":\"/tempdir\",\"chunkSize\":5242880,\"maxRetry\":1}') "
+             + "AS CSV "
+             + "OVERWRITE ALL "
+             + "SELECT dim2 FROM foo")
         .expectQuery(
             Druids.newScanQueryBuilder()
                   .dataSource(
@@ -46,6 +50,77 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
         )
         .expectResources(dataSourceRead("foo"))
         .expectTarget("EXTERN", RowSignature.builder().add("dim2", ColumnType.STRING).build())
+        .verify();
+  }
+
+  @Test
+  public void testExportWithPartitionedBy()
+  {
+    testIngestionQuery()
+        .sql("REPLACE INTO EXTERN('{\"type\":\"s3\",\"bucket\":\"bucket1\",\"prefix\":\"prefix1\",\"tempDir\":\"/tempdir\",\"chunkSize\":5242880,\"maxRetry\":1}') "
+             + "AS CSV "
+             + "OVERWRITE ALL "
+             + "SELECT dim2 FROM foo "
+             + "PARTITIONED BY ALL")
+        .expectValidationError(
+            DruidException.class,
+            "Export statements do not currently support a PARTITIONED BY or CLUSTERED BY clause."
+        )
+        .verify();
+  }
+
+  @Test
+  public void testInsertIntoExtern()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO EXTERN('{\"type\":\"s3\",\"bucket\":\"bucket1\",\"prefix\":\"prefix1\",\"tempDir\":\"/tempdir\",\"chunkSize\":5242880,\"maxRetry\":1}') "
+             + "AS CSV "
+             + "SELECT dim2 FROM foo")
+        .expectQuery(
+            Druids.newScanQueryBuilder()
+                  .dataSource(
+                      "foo"
+                  )
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .columns("dim2")
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .build()
+        )
+        .expectResources(dataSourceRead("foo"))
+        .expectTarget("EXTERN", RowSignature.builder().add("dim2", ColumnType.STRING).build())
+        .verify();
+  }
+
+  @Test
+  public void testExportWithoutFormat()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO EXTERN('{\"type\":\"s3\",\"bucket\":\"bucket1\",\"prefix\":\"prefix1\",\"tempDir\":\"/tempdir\",\"chunkSize\":5242880,\"maxRetry\":1}') "
+             + "SELECT dim2 FROM foo")
+        .expectValidationError(
+            DruidException.class,
+            "External write statemetns requires a AS clause to specify the format, but none was found."
+        )
+        .verify();
+  }
+
+  @Test
+  public void testSelectFromTableNamedExport()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO csv SELECT dim2 FROM foo PARTITIONED BY ALL")
+        .expectQuery(
+            Druids.newScanQueryBuilder()
+                  .dataSource("foo")
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .columns("dim2")
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .build()
+        )
+        .expectResources(dataSourceRead("foo"), dataSourceWrite("csv"))
+        .expectTarget("csv", RowSignature.builder().add("dim2", ColumnType.STRING).build())
         .verify();
   }
 }

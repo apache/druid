@@ -17,31 +17,19 @@
  * under the License.
  */
 
-package org.apache.druid.catalog.model.table.export;
+package org.apache.druid.storage.local;
 
-import com.fasterxml.jackson.annotation.JsonTypeName;
-import org.apache.druid.catalog.model.table.IngestDestination;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.junit.Test;
 
-@JsonTypeName(ExportDestination.TYPE_KEY)
-public class ExportDestination implements IngestDestination
+public class LocalFileStorageConnectorProviderTest
 {
-  public static final String TYPE_KEY = "external";
-  private final String exportDestinationString;
-
-  public ExportDestination(String exportDestinationString)
+  @Test
+  public void testEqualsAndHashCode()
   {
-
-    this.exportDestinationString = exportDestinationString;
-  }
-
-  public String getExportDestinationString()
-  {
-    return exportDestinationString;
-  }
-
-  @Override
-  public String getDestinationName()
-  {
-    return "EXTERN";
+    EqualsVerifier.forClass(LocalFileStorageConnectorProvider.class)
+                  .withNonnullFields("basePath")
+                  .usingGetClass()
+                  .verify();
   }
 }

@@ -31,7 +31,7 @@ public enum MSQSelectDestination
    */
   TASKREPORT("taskReport", false),
   /**
-   * Writes the results as rows to a location.
+   * Writes all the results as files in a specified format to an external location outside druid.
    */
   EXPORT("export", false),
   /**

@@ -19,9 +19,11 @@
 
 package org.apache.druid.catalog.model.table;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.guice.annotations.UnstableApi;
 
 @UnstableApi
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 public interface IngestDestination
 {
   String getDestinationName();

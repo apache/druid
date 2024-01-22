@@ -105,7 +105,7 @@ SqlNode DruidSqlInsertEof() :
   // actual error message.
   <EOF>
   {
-    insertNode = new SqlInsert(s.end(source), keywordList, tableRef, source, columnList);
+    insertNode = new SqlInsert(s.end(source), keywordList, destination, source, columnList);
     if (!(insertNode instanceof SqlInsert)) {
       // This shouldn't be encountered, but done as a defensive practice. SqlInsert() always returns a node of type
       // SqlInsert

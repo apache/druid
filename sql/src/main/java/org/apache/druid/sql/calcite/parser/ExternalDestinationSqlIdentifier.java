@@ -19,16 +19,16 @@
 
 package org.apache.druid.sql.calcite.parser;
 
-import com.google.common.collect.Iterables;
 import org.apache.calcite.sql.SqlCharStringLiteral;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.utils.CollectionUtils;
 
 /**
- * Extends the {@link SqlIdentifier} to hold parameters for an external table destination. This contains information
- * required for a task to write to a destination.
+ * Extends the {@link SqlIdentifier} to hold parameters for an external destination.
  */
 public class ExternalDestinationSqlIdentifier extends SqlIdentifier
 {
@@ -60,13 +60,17 @@ public class ExternalDestinationSqlIdentifier extends SqlIdentifier
   @Override
   public SqlNode clone(SqlParserPos pos)
   {
-    return new ExternalDestinationSqlIdentifier(Iterables.getOnlyElement(names), pos, exportDestinationString);
+    final String name = CollectionUtils.getOnlyElement(
+        names,
+        x -> DruidException.defensive("Expected single name in identifier [%s], but got [%s]", names)
+    );
+    return new ExternalDestinationSqlIdentifier(name, pos, exportDestinationString);
   }
 
   @Override
   @Deprecated
   public Object clone()
   {
-    throw new UnsupportedOperationException("Function is deprecated, please use clone(SqlNode) instead.");
+    throw DruidException.defensive("Function is deprecated, please use clone(SqlNode) instead.");
   }
 }

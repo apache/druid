@@ -20,10 +20,16 @@
 package org.apache.druid.msq.indexing.destination;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.storage.StorageConnectorProvider;
+import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Objects;
 
 public class ExportMSQDestination implements MSQDestination
@@ -31,14 +37,24 @@ public class ExportMSQDestination implements MSQDestination
   public static final String TYPE = "export";
   private final StorageConnectorProvider storageConnectorProvider;
   private final ResultFormat resultFormat;
+  @Nullable
+  private final List<Interval> replaceTimeChunks;
 
   @JsonCreator
   public ExportMSQDestination(@JsonProperty("storageConnectorProvider") StorageConnectorProvider storageConnectorProvider,
-                              @JsonProperty("resultFormat") ResultFormat resultFormat
+                              @JsonProperty("resultFormat") ResultFormat resultFormat,
+                              @JsonProperty("replaceTimeChunks") @Nullable List<Interval> replaceTimeChunks
   )
   {
     this.storageConnectorProvider = storageConnectorProvider;
     this.resultFormat = resultFormat;
+    if (replaceTimeChunks == null || Intervals.ONLY_ETERNITY.equals(replaceTimeChunks)) {
+      this.replaceTimeChunks = replaceTimeChunks;
+    } else {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.UNSUPPORTED)
+                          .build("Currently export only works with ");
+    }
   }
 
   @JsonProperty("storageConnectorProvider")
@@ -53,6 +69,14 @@ public class ExportMSQDestination implements MSQDestination
     return resultFormat;
   }
 
+  @Nullable
+  @JsonProperty("replaceTimeChunks")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public List<Interval> getReplaceTimeChunks()
+  {
+    return replaceTimeChunks;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -64,13 +88,14 @@ public class ExportMSQDestination implements MSQDestination
     }
     ExportMSQDestination that = (ExportMSQDestination) o;
     return Objects.equals(storageConnectorProvider, that.storageConnectorProvider)
-           && resultFormat == that.resultFormat;
+           && resultFormat == that.resultFormat
+           && Objects.equals(replaceTimeChunks, that.replaceTimeChunks);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(storageConnectorProvider, resultFormat);
+    return Objects.hash(storageConnectorProvider, resultFormat, replaceTimeChunks);
   }
 
   @Override
@@ -79,6 +104,7 @@ public class ExportMSQDestination implements MSQDestination
     return "ExportMSQDestination{" +
            "storageConnectorProvider=" + storageConnectorProvider +
            ", resultFormat=" + resultFormat +
+           ", replaceTimeChunks=" + replaceTimeChunks +
            '}';
   }
 }

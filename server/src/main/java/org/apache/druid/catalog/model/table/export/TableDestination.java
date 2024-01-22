@@ -21,10 +21,12 @@ package org.apache.druid.catalog.model.table.export;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.catalog.model.table.IngestDestination;
 
 import java.util.Objects;
 
+@JsonTypeName(TableDestination.TYPE_KEY)
 public class TableDestination implements IngestDestination
 {
   public static final String TYPE_KEY = "table";

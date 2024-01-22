@@ -39,9 +39,6 @@ import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.Iterator;
 
-import static java.nio.file.StandardOpenOption.APPEND;
-import static java.nio.file.StandardOpenOption.CREATE;
-
 /**
  * Implementation that uses local filesystem. All paths are appended with the base path, in such a way that it is not visible
  * to the users of this class.
@@ -104,7 +101,7 @@ public class LocalFileStorageConnector implements StorageConnector
   {
     File toWrite = fileWithBasePath(path);
     FileUtils.mkdirp(toWrite.getParentFile());
-    return Files.newOutputStream(toWrite.toPath(), CREATE, APPEND);
+    return Files.newOutputStream(toWrite.toPath(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
   }
 
   /**
