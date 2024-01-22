@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.rowsandcols.semantic;
 
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.rowsandcols.SemanticCreator;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -68,7 +69,7 @@ public class SemanticCreatorUsageTest
   public void testPublic()
   {
     int modifiers = method.getModifiers();
-    assertTrue(String.format("method [%s] is not public", method), Modifier.isPublic(modifiers));
+    assertTrue(StringUtils.format("method [%s] is not public", method), Modifier.isPublic(modifiers));
   }
 
   @Test
