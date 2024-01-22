@@ -138,7 +138,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                              .rows(TestDataBuilder.ROWS1)
                                              .buildMMappedIndex();
 
-    return new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
+    return SpecificSegmentsQuerySegmentWalker.createWalker(injector, conglomerate).add(
         DataSegment.builder()
                    .dataSource(DATA_SOURCE)
                    .interval(index.getDataInterval())
