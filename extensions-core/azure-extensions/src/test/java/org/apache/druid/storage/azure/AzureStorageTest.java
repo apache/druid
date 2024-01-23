@@ -19,7 +19,6 @@
 
 package org.apache.druid.storage.azure;
 
-import com.azure.core.http.HttpPipeline;
 import com.azure.core.http.rest.PagedIterable;
 import com.azure.core.http.rest.PagedResponse;
 import com.azure.storage.blob.BlobContainerClient;
