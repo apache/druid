@@ -25,6 +25,7 @@ import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SortOrder;
+import org.apache.druid.server.http.DataSegmentDto;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentId;
@@ -194,7 +195,7 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  public Iterable<DataSegment> iterateAllUnusedSegmentsForDatasource(
+  public Iterable<DataSegmentDto> iterateAllUnusedSegmentsForDatasource(
       String datasource,
       @Nullable Interval interval,
       @Nullable Integer limit,

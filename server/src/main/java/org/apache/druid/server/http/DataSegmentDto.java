@@ -1,9 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.apache.druid.server.http;
-
-import java.util.List;
-import java.util.Map;
-
-import javax.annotation.Nullable;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -21,11 +35,16 @@ import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
+import java.util.List;
+import java.util.Map;
+
 /**
  * {@link DataSegment} to be transmitted externally
  */
 @PublicApi
-public class DataSegmentDto {
+public class DataSegmentDto
+{
   private final DataSegment dataSegment;
   private final DateTime createdDate;
   @Nullable
@@ -91,24 +110,23 @@ public class DataSegmentDto {
   @JsonProperty
   public String getDataSource()
   {
-    return dataSegment.getDataSource()
+    return dataSegment.getDataSource();
   }
 
   @JsonProperty
   public Interval getInterval()
   {
-    return dataSegment.getInterval()
+    return dataSegment.getInterval();
   }
 
   @Nullable
   @JsonProperty
   public Map<String, Object> getLoadSpec()
   {
-    return dataSegment.getLoadSpec()
+    return dataSegment.getLoadSpec();
   }
 
   @JsonProperty("version")
-  @Override
   public String getVersion()
   {
     return dataSegment.getVersion();
@@ -155,13 +173,15 @@ public class DataSegmentDto {
   }
 
   @JsonProperty
-  public DateTime getCreatedDate() {
+  public DateTime getCreatedDate()
+  {
     return createdDate;
   }
 
   @Nullable
   @JsonProperty
-  public DateTime getUsedStatusLastUpdatedDate() {
+  public DateTime getUsedStatusLastUpdatedDate()
+  {
     return usedStatusLastUpdatedDate;
   }
 

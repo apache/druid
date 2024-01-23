@@ -45,6 +45,7 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentStatusInCluster;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -74,6 +75,10 @@ public class MetadataResourceTest
           .withNumPartitions(NUM_PARTITIONS)
           .eachOfSizeInMb(500)
           .toArray(new DataSegment[0]);
+
+  private final List<DataSegmentDto> segmentDtos = Arrays.stream(segments)
+          .map(s -> new DataSegmentDto(s, DateTime.now(), DateTime.now()))
+          .collect(Collectors.toList());
   private HttpServletRequest request;
   private SegmentsMetadataManager segmentsMetadataManager;
   private IndexerMetadataStorageCoordinator storageCoordinator;
@@ -281,7 +286,7 @@ public class MetadataResourceTest
         null,
         null
     );
-    List<DataSegment> resultList = extractResponseList(response);
+    List<DataSegmentDto> resultList = extractResponseList(response);
     Assert.assertTrue(resultList.isEmpty());
 
     // test valid datasource with bad limit - fails with expected invalid limit message
@@ -302,7 +307,7 @@ public class MetadataResourceTest
     response = metadataResource.getUnusedSegmentsInDataSource(request, DATASOURCE1, null, null, null, null);
 
     resultList = extractResponseList(response);
-    Assert.assertEquals(Arrays.asList(segments), resultList);
+    Assert.assertEquals(segmentDtos, resultList);
 
     // test valid datasource with interval filter - returns all unused segments for that datasource within interval
     int numDays = 2;
@@ -311,7 +316,10 @@ public class MetadataResourceTest
 
     resultList = extractResponseList(response);
     Assert.assertEquals(NUM_PARTITIONS * numDays, resultList.size());
-    Assert.assertEquals(Arrays.asList(segments[0], segments[1], segments[2], segments[3]), resultList);
+    Assert.assertEquals(
+        Arrays.asList(segmentDtos.get(0), segmentDtos.get(1), segmentDtos.get(2), segmentDtos.get(3)),
+        resultList
+    );
 
     // test valid datasource with interval filter limit and last segment id - returns unused segments for that
     // datasource within interval upto limit starting at last segment id
@@ -320,7 +328,7 @@ public class MetadataResourceTest
 
     resultList = extractResponseList(response);
     Assert.assertEquals(limit, resultList.size());
-    Assert.assertEquals(Arrays.asList(segments[0], segments[1], segments[2]), resultList);
+    Assert.assertEquals(Arrays.asList(segmentDtos.get(0), segmentDtos.get(1), segmentDtos.get(2)), resultList);
 
     // test valid datasource with interval filter limit and offset - returns unused segments for that datasource within
     // interval upto limit starting at offset
@@ -334,10 +342,10 @@ public class MetadataResourceTest
     );
 
     resultList = extractResponseList(response);
-    Assert.assertEquals(Collections.singletonList(segments[3]), resultList);
+    Assert.assertEquals(Collections.singletonList(segmentDtos.get(3)), resultList);
   }
 
-  Answer<Iterable<DataSegment>> mockIterateAllUnusedSegmentsForDatasource()
+  Answer<Iterable<DataSegmentDto>> mockIterateAllUnusedSegmentsForDatasource()
   {
     return invocationOnMock -> {
       String dataSourceName = invocationOnMock.getArgument(0);
@@ -349,7 +357,7 @@ public class MetadataResourceTest
         return ImmutableList.of();
       }
 
-      return Arrays.stream(segments)
+      return segmentDtos.stream()
           .filter(d -> d.getDataSource().equals(dataSourceName)
                        && (interval == null
                            || (d.getInterval().getStartMillis() >= interval.getStartMillis()
