@@ -29,6 +29,8 @@ import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
+
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -77,6 +79,8 @@ public final class Rows
     } else if (inputValue instanceof byte[]) {
       // convert byte[] to base64 encoded string
       return Collections.singletonList(StringUtils.encodeBase64String((byte[]) inputValue));
+    } else if (inputValue instanceof ByteBuffer) {
+      return Collections.singletonList(StringUtils.fromUtf8(((ByteBuffer) inputValue).array()));
     } else if (inputValue instanceof Object[]) {
       return Arrays.stream((Object[]) inputValue).map(String::valueOf).collect(Collectors.toList());
     } else {
