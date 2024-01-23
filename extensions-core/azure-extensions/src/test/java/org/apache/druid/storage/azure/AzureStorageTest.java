@@ -19,20 +19,26 @@
 
 package org.apache.druid.storage.azure;
 
+import com.azure.core.http.HttpPipeline;
 import com.azure.core.http.rest.PagedIterable;
 import com.azure.core.http.rest.PagedResponse;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
+import com.azure.storage.blob.batch.BlobBatchClient;
 import com.azure.storage.blob.models.BlobItem;
 import com.azure.storage.blob.models.BlobItemProperties;
 import com.azure.storage.blob.models.BlobStorageException;
+import com.azure.storage.blob.models.DeleteSnapshotsOptionType;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
+
+import java.util.List;
 
 
 // Using Mockito for the whole test class since azure classes (e.g. BlobContainerClient) are final and can't be mocked with EasyMock
@@ -86,6 +92,30 @@ public class AzureStorageTest
     Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(null);
 
     Assert.assertEquals(ImmutableList.of(BLOB_NAME), azureStorage.listDir(CONTAINER, "", null));
+  }
+
+  @Test
+  public void testBatchDeleteFiles_emptyResponse() throws BlobStorageException
+  {
+    String containerUrl = "https://implysaasdeveastussa.blob.core.windows.net/container";
+    BlobBatchClient blobBatchClient = Mockito.mock(BlobBatchClient.class);
+
+    SettableSupplier<PagedResponse<BlobItem>> supplier = new SettableSupplier<>();
+    supplier.set(new TestPagedResponse<>(ImmutableList.of()));
+    PagedIterable<BlobItem> pagedIterable = new PagedIterable<>(supplier);
+
+    ArgumentCaptor<List<String>> captor = ArgumentCaptor.forClass(List.class);
+
+    Mockito.doReturn(containerUrl).when(blobContainerClient).getBlobContainerUrl();
+    Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(CONTAINER);
+    Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(null);
+    Mockito.doReturn(blobBatchClient).when(azureClientFactory).getBlobBatchClient(blobContainerClient);
+    Mockito.doReturn(pagedIterable).when(blobBatchClient).deleteBlobs(
+        captor.capture(), ArgumentMatchers.eq(DeleteSnapshotsOptionType.INCLUDE)
+    );
+
+    azureStorage.batchDeleteFiles(CONTAINER, ImmutableList.of(BLOB_NAME), null);
+    Assert.assertEquals(captor.getValue().get(0), containerUrl + "/" + BLOB_NAME);
   }
 }
 

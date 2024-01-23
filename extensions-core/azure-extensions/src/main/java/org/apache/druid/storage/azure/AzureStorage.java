@@ -36,7 +36,7 @@ import com.azure.storage.blob.options.BlockBlobOutputStreamOptions;
 import com.azure.storage.blob.specialized.BlockBlobClient;
 import com.azure.storage.common.Utility;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Lists;
+import com.google.common.collect.Streams;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
 
@@ -49,6 +49,7 @@ import java.io.OutputStream;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Abstracts the Azure storage layer. Makes direct calls to Azure file system.
@@ -173,9 +174,15 @@ public class AzureStorage
   public void batchDeleteFiles(String containerName, Iterable<String> paths, Integer maxAttempts)
       throws BlobBatchStorageException
   {
-
-    BlobBatchClient blobBatchClient = new BlobBatchClientBuilder(getOrCreateBlobContainerClient(containerName, maxAttempts)).buildClient();
-    blobBatchClient.deleteBlobs(Lists.newArrayList(paths), DeleteSnapshotsOptionType.INCLUDE);
+    BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName, maxAttempts);
+    List<String> blobUris = Streams.stream(paths).map(path -> blobContainerClient.getBlobContainerUrl() + "/" + path).collect(Collectors.toList());
+    azureClientFactory.getBlobBatchClient(blobContainerClient).deleteBlobs(
+        blobUris,
+        DeleteSnapshotsOptionType.INCLUDE
+    ).forEach(response ->
+        log.info("Deleting blob with URL %s completed with status code %d%n",
+            response.getRequest().getUrl(), response.getStatusCode())
+    );
   }
 
   public List<String> listDir(final String containerName, final String virtualDirPath, final Integer maxAttempts)
