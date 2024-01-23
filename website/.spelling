@@ -2383,3 +2383,10 @@ spectatorHistogramTimer
 spectatorHistogramDistribution
 percentileSpectatorHistogram
 percentilesSpectatorHistogram
+ddSketch
+DDSketch
+collapsingLowestDense
+relativeError
+numBins
+quantilesFromDDSketch
+quantileFromDDSketch
