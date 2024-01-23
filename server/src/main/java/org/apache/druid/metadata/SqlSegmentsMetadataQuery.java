@@ -679,8 +679,8 @@ public class SqlSegmentsMetadataQuery
   {
     return sql.map((index, r, ctx) -> new DataSegmentDto(
             JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
-            new DateTime(r.getString(2)),
-            new DateTime(r.getString(3))
+            DateTime.parse(r.getString(2)),
+            DateTime.parse(r.getString(3))
         ))
         .iterator();
   }
