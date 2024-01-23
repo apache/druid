@@ -83,6 +83,7 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     name: 'tuningConfig.partitionsSpec.maxTotalRows',
     type: 'number',
     defaultValue: 20000000,
+    nullMeansUndefined: true,
     defined: t =>
       oneOfKnown(deepGet(t, 'tuningConfig.partitionsSpec.type'), KNOWN_PARTITION_TYPES, 'dynamic'),
     info: <>Total number of rows in segments waiting for being pushed.</>,
@@ -278,6 +279,7 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     type: 'number',
     defaultValue: 1,
     min: 1,
+    nullMeansUndefined: true,
     info: (
       <>
         Maximum number of tasks which can be run at the same time. The supervisor task would spawn
@@ -293,6 +295,7 @@ export const COMPACTION_CONFIG_FIELDS: Field<CompactionConfig>[] = [
     type: 'number',
     defaultValue: -1,
     min: -1,
+    nullMeansUndefined: true,
     info: (
       <>
         <p>
