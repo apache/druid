@@ -32,6 +32,11 @@ import java.util.Map;
 @SuppressWarnings("rawtypes")
 public class MultiQueryKit implements QueryKit<Query<?>>
 {
+  public Map<Class<? extends Query>, QueryKit> getToolKitMap()
+  {
+    return toolKitMap;
+  }
+
   private final Map<Class<? extends Query>, QueryKit> toolKitMap;
 
   public MultiQueryKit(final Map<Class<? extends Query>, QueryKit> toolKitMap)
