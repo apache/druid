@@ -30,8 +30,6 @@ import org.apache.druid.math.expr.vector.VectorProcessors;
 import org.apache.druid.segment.column.TypeStrategy;
 
 import javax.annotation.Nullable;
-import javax.annotation.concurrent.NotThreadSafe;
-
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -114,58 +112,6 @@ abstract class ConstantExpr<T> implements Expr
   }
 
   protected abstract ExprEval<T> realEval();
-
-  @Override
-  public final Expr singleThreaded()
-  {
-    return new ExprEvalBasedConstantExpr<T>(realEval());
-  }
-
-  /**
-   * Constant expression based on a concreate ExprEval.
-   *
-   * Not multi-thread safe.
-   */
-  @NotThreadSafe
-  @SuppressWarnings("Immutable")
-  private static final class ExprEvalBasedConstantExpr<T> extends ConstantExpr<T>
-  {
-    private final ExprEval<T> eval;
-
-    private ExprEvalBasedConstantExpr(ExprEval<T> eval)
-    {
-      super(eval.type(), eval.value);
-      this.eval = eval;
-    }
-
-    @Override
-    public ExprEval<T> realEval()
-    {
-      return eval;
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return Objects.hash(eval);
-    }
-
-    @Override
-    public boolean equals(Object obj)
-    {
-      if (this == obj) {
-        return true;
-      }
-      if (obj == null) {
-        return false;
-      }
-      if (getClass() != obj.getClass()) {
-        return false;
-      }
-      ExprEvalBasedConstantExpr<?> other = (ExprEvalBasedConstantExpr<?>) obj;
-      return Objects.equals(eval, other.eval);
-    }
-  }
 }
 
 /**
