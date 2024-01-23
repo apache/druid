@@ -45,7 +45,7 @@ import java.util.Map;
  * This also means that each text line should be a well-formed JSON text, pretty-printed format is not allowed
  *
  */
-public class JsonLineReader extends TextReader
+public class JsonLineReader extends TextReader.Bytes
 {
   private final ObjectFlattener<JsonNode> flattener;
   private final ObjectMapper mapper;
@@ -70,7 +70,7 @@ public class JsonLineReader extends TextReader
   }
 
   @Override
-  public List<InputRow> parseInputRows(String line) throws IOException, ParseException
+  public List<InputRow> parseInputRows(byte[] line) throws IOException, ParseException
   {
     final JsonNode document = mapper.readValue(line, JsonNode.class);
     final Map<String, Object> flattened = flattener.flatten(document);
@@ -78,7 +78,7 @@ public class JsonLineReader extends TextReader
   }
 
   @Override
-  public List<Map<String, Object>> toMap(String intermediateRow) throws IOException
+  public List<Map<String, Object>> toMap(byte[] intermediateRow) throws IOException
   {
     //noinspection unchecked
     return Collections.singletonList(mapper.readValue(intermediateRow, Map.class));
@@ -97,7 +97,7 @@ public class JsonLineReader extends TextReader
   }
 
   @Override
-  public void processHeaderLine(String line)
+  public void processHeaderLine(byte[] line)
   {
     // do nothing
   }

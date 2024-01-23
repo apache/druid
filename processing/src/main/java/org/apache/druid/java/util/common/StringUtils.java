@@ -20,7 +20,6 @@
 package org.apache.druid.java.util.common;
 
 import com.google.common.base.Strings;
-import it.unimi.dsi.fastutil.bytes.ByteArrayList;
 import org.apache.commons.io.IOUtils;
 
 import javax.annotation.Nonnull;
@@ -259,11 +258,6 @@ public class StringUtils
   public static String fromUtf8(final ByteBuffer buffer)
   {
     return StringUtils.fromUtf8(buffer, buffer.remaining());
-  }
-
-  public static String fromUtf8(final ByteArrayList buffer)
-  {
-    return StringUtils.fromUtf8(buffer.elements(), 0, buffer.size());
   }
 
   /**

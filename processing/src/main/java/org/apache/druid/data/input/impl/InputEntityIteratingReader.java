@@ -30,6 +30,7 @@ import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.impl.systemfield.SystemFieldDecoratorFactory;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.segment.RowAdapter;
 
 import java.io.File;
 import java.io.IOException;
@@ -103,6 +104,12 @@ public class InputEntityIteratingReader implements InputSourceReader
         throw new RuntimeException(e);
       }
     });
+  }
+
+  @Override
+  public RowAdapter<InputRow> rowAdapter()
+  {
+    return inputFormat.createRowAdapter(inputRowSchema);
   }
 
   private <R> CloseableIterator<R> createIterator(Function<InputEntity, CloseableIterator<R>> rowPopulator)
