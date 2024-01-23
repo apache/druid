@@ -110,19 +110,35 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
         "width": 150,
       },
       {
-        "Header": "Phase",
-        "accessor": [Function],
-        "className": "padded",
-        "id": "phase",
-        "width": 130,
-      },
-      {
         "Cell": [Function],
         "Header": "Timing",
         "accessor": [Function],
-        "className": "padded",
         "id": "timing",
         "width": 170,
+      },
+      {
+        "Cell": [Function],
+        "Header": <React.Fragment>
+          CPU utilization
+          <br />
+          <i>
+            <span
+              className="cpu-label"
+            >
+              counter
+            </span>
+            <span
+              className="cpu-counter"
+            >
+              wall time
+            </span>
+          </i>
+        </React.Fragment>,
+        "accessor": [Function],
+        "className": "padded",
+        "id": "cpu",
+        "show": false,
+        "width": 220,
       },
       {
         "Header": <React.Fragment>
@@ -135,22 +151,11 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
         "width": 75,
       },
       {
-        "Header": <React.Fragment>
-          Output
-          <br />
-          partitions
-        </React.Fragment>,
+        "Cell": [Function],
+        "Header": "Output",
         "accessor": "partitionCount",
         "className": "padded",
-        "width": 75,
-      },
-      {
-        "Cell": [Function],
-        "Header": "Cluster by",
-        "accessor": [Function],
-        "className": "padded",
-        "id": "clusterBy",
-        "minWidth": 400,
+        "width": 120,
       },
     ]
   }

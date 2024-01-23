@@ -28,7 +28,7 @@ import type { Filter } from 'react-table';
 
 import type { HeaderActiveTab } from './components';
 import { HeaderBar, Loader } from './components';
-import type { DruidEngine, QueryContext, QueryWithContext } from './druid-models';
+import type { QueryContext, QueryWithContext } from './druid-models';
 import { Capabilities, maybeGetClusterCapacity } from './helpers';
 import { stringToTableFilters, tableFiltersToString } from './react-table';
 import { AppToaster } from './singletons';
@@ -307,14 +307,6 @@ export class ConsoleApplication extends React.PureComponent<
       this.props;
     const { capabilities } = this.state;
 
-    const queryEngines: DruidEngine[] = ['native'];
-    if (capabilities.hasSql()) {
-      queryEngines.push('sql-native');
-    }
-    if (capabilities.hasMultiStageQuery()) {
-      queryEngines.push('sql-msq-task');
-    }
-
     return this.wrapInViewContainer(
       'workbench',
       <WorkbenchView
@@ -326,7 +318,7 @@ export class ConsoleApplication extends React.PureComponent<
         mandatoryQueryContext={mandatoryQueryContext}
         baseQueryContext={baseQueryContext}
         serverQueryContext={serverQueryContext}
-        queryEngines={queryEngines}
+        queryEngines={capabilities.getSupportedQueryEngines()}
         goToTask={this.goToTasksWithTaskId}
         getClusterCapacity={maybeGetClusterCapacity}
       />,
@@ -469,7 +461,7 @@ export class ConsoleApplication extends React.PureComponent<
                   component={this.wrappedClassicBatchDataLoaderView}
                 />
               )}
-              {capabilities.hasCoordinatorAccess() && capabilities.hasMultiStageQuery() && (
+              {capabilities.hasCoordinatorAccess() && capabilities.hasMultiStageQueryTask() && (
                 <Route path="/sql-data-loader" component={this.wrappedSqlDataLoaderView} />
               )}
 

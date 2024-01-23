@@ -148,7 +148,7 @@ export function change<T>(xs: readonly T[], from: T, to: T): T[] {
 
 export function countBy<T>(
   array: readonly T[],
-  fn: (x: T, index: number) => string = String,
+  fn: (x: T, index: number) => string | number = String,
 ): Record<string, number> {
   const counts: Record<string, number> = {};
   for (let i = 0; i < array.length; i++) {
@@ -207,7 +207,7 @@ export function groupBy<T, Q>(
 
 export function groupByAsMap<T, Q>(
   array: readonly T[],
-  keyFn: (x: T, index: number) => string,
+  keyFn: (x: T, index: number) => string | number,
   aggregateFn: (xs: readonly T[], key: string) => Q,
 ): Record<string, Q> {
   const buckets: Record<string, T[]> = {};
@@ -317,6 +317,10 @@ export function formatDurationWithMs(ms: NumberLike): string {
   return (
     timeInHours + ':' + pad2(timeInMin) + ':' + pad2(timeInSec) + '.' + pad3(Math.floor(n) % 1000)
   );
+}
+
+export function formatDurationWithMsIfNeeded(ms: NumberLike): string {
+  return Number(ms) < 1000 ? formatDurationWithMs(ms) : formatDuration(ms);
 }
 
 export function formatDurationHybrid(ms: NumberLike): string {
