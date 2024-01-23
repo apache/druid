@@ -20,8 +20,6 @@
 package org.apache.druid.query.aggregation;
 
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.error.DruidException;
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ColumnType;

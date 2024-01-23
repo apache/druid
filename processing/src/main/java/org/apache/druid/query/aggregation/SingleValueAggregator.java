@@ -19,12 +19,8 @@
 
 package org.apache.druid.query.aggregation;
 
-import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
-import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 
@@ -56,9 +52,6 @@ public class SingleValueAggregator implements Aggregator
   {
     if (isAggregateInvoked) {
       throw InvalidInput.exception("Single Value Aggregator would not be applied to more than one row..");
-//      throw DruidException.forPersona(DruidException.Persona.USER)
-//                          .ofCategory(DruidException.Category.INVALID_INPUT)
-//                          .build("Single Value Aggregator would not be applied to more than one row..");
     }
     boolean isNotNull = !selector.isNull();
     if (isNotNull && isNullResult) {
