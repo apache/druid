@@ -301,7 +301,7 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
     );
     String azureStorageAccountInputSourceString = azureInputSource.toString();
     Assert.assertEquals(
-        "AzureStorageAccountInputSource{uris=[], prefixes=[azureStorage://STORAGE_ACCOUNT/CONTAINER/blob], objects=[], objectGlob=null, azureInputSourceConfig=" + azureInputSourceConfig.toString() + "}",
+        "AzureStorageAccountInputSource{uris=[], prefixes=[azureStorage://STORAGE_ACCOUNT/CONTAINER/blob], objects=[], objectGlob=null, azureInputSourceConfig=" + azureInputSourceConfig + "}",
         azureStorageAccountInputSourceString
     );
   }
@@ -331,7 +331,7 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
             + "prefixes=[azureStorage://STORAGE_ACCOUNT/CONTAINER/blob], "
             + "objects=[], "
             + "objectGlob=null, "
-            + "azureInputSourceConfig=" + azureInputSourceConfig.toString() + ", "
+            + "azureInputSourceConfig=" + azureInputSourceConfig + ", "
             + "systemFields=[__file_uri, __file_bucket, __file_path]"
             + "}",
         azureStorageAccountInputSourceString
