@@ -19,52 +19,113 @@
 
 package org.apache.druid.query.aggregation;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 
 /**
  *
  */
-public abstract class SingleValueBufferAggregator implements BufferAggregator
+public class SingleValueBufferAggregator implements BufferAggregator
 {
-  boolean aggregateInvoked;
+  final ColumnValueSelector selector;
 
-  SingleValueBufferAggregator()
+  final ColumnType columnType;
+
+  private int stringByteArrayLength = 0;
+
+  SingleValueBufferAggregator(ColumnValueSelector selector, ColumnType columnType)
   {
-    this.aggregateInvoked = false;
+    this.selector = selector;
+    this.columnType = columnType;
+  }
+
+  @Override
+  public void init(ByteBuffer buf, int position)
+  {
+    buf.put(position, NullHandling.IS_NULL_BYTE);
+    buf.putLong(position + Byte.BYTES, 0L);
   }
 
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    if (aggregateInvoked) {
-      throw DruidException.defensive("Single Value Aggregator can not be applied on more than one row");
+    boolean isNotNull = !selector.isNull();
+    if (isNotNull) {
+      if (buf.get(position) == NullHandling.IS_NULL_BYTE) {
+        buf.put(position, NullHandling.IS_NOT_NULL_BYTE);
+      }
+      updatevalue(buf, position + Byte.BYTES);
     }
-    updateBuffervalue(buf, position);
-    aggregateInvoked = true;
   }
 
-  abstract void updateBuffervalue(ByteBuffer buf, int position);
+  private void updatevalue(ByteBuffer buf, int position)
+  {
+    if (columnType.is(ValueType.LONG)) {
+      buf.putLong(position, selector.getLong());
+    } else if (columnType.is(ValueType.FLOAT)) {
+      buf.putFloat(position, selector.getFloat());
+    } else if (columnType.is(ValueType.DOUBLE)) {
+      buf.putDouble(position, selector.getDouble());
+    } else if (columnType.is(ValueType.STRING)) {
+      byte[] bytes = DimensionHandlerUtils.convertObjectToString(selector.getObject()).getBytes(StandardCharsets.UTF_8);
+      int size = bytes.length;
+      for (int ii = 0; ii < size; ++ii) {
+        buf.putInt(position + ii * Integer.BYTES, bytes[ii]);
+      }
+      stringByteArrayLength = size;
+    }
+  }
+
+  @Nullable
+  @Override
+  public Object get(ByteBuffer buf, int position)
+  {
+    if (buf.get(position) == NullHandling.IS_NULL_BYTE) {
+      return null;
+    }
+    position += Byte.BYTES;
+    if (columnType.is(ValueType.LONG)) {
+      return getLong(buf, position);
+    } else if (columnType.is(ValueType.FLOAT)) {
+      return getFloat(buf, position);
+    } else if (columnType.is(ValueType.DOUBLE)) {
+      return getDouble(buf, position);
+    } else if (columnType.is(ValueType.STRING)) {
+      byte[] bytes = new byte[stringByteArrayLength];
+      for (int ii = 0; ii < stringByteArrayLength; ++ii) {
+        bytes[ii] = buf.get(position + ii * Integer.BYTES);
+      }
+      return new String(bytes, StandardCharsets.UTF_8);
+    }
+    return null;
+  }
 
   @Override
   public float getFloat(ByteBuffer buf, int position)
   {
-    return (float) buf.get(position);
+    return buf.getFloat(position);
   }
 
   @Override
   public double getDouble(ByteBuffer buf, int position)
   {
-    return (double) buf.get(position);
+    return buf.getDouble(position);
   }
 
 
   @Override
   public long getLong(ByteBuffer buf, int position)
   {
-    return (long) buf.get(position);
+    return buf.getLong(position);
   }
 
   @Override
@@ -73,9 +134,4 @@ public abstract class SingleValueBufferAggregator implements BufferAggregator
     // no resources to cleanup
   }
 
-  @Override
-  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-  {
-    // nothing to inspect
-  }
 }

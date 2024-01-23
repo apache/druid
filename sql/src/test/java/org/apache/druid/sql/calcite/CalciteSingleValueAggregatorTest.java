@@ -27,9 +27,7 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
-import org.apache.druid.query.aggregation.SingleValueDoubleAggregatorFactory;
-import org.apache.druid.query.aggregation.SingleValueFloatAggregatorFactory;
-import org.apache.druid.query.aggregation.SingleValueLongAggregatorFactory;
+import org.apache.druid.query.aggregation.SingleValueAggregatoractory;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.segment.column.ColumnType;
@@ -38,7 +36,7 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.Test;
 
-public class CalciteSingleValueAggregatorTest extends CalciteQueryTest
+public class CalciteSingleValueAggregatorTest extends BaseCalciteQueryTest
 {
 
   @Test
@@ -72,7 +70,7 @@ public class CalciteSingleValueAggregatorTest extends CalciteQueryTest
                                                       )
                                                       .setAggregatorSpecs(
                                                           aggregators(
-                                                              new SingleValueFloatAggregatorFactory("_a0", "v0")
+                                                              new SingleValueAggregatoractory("_a0", "v0", ColumnType.FLOAT)
                                                           )
                                                       )
                                                       .setLimitSpec(NoopLimitSpec.instance())
@@ -127,7 +125,7 @@ public class CalciteSingleValueAggregatorTest extends CalciteQueryTest
                                                       )
                                                       .setAggregatorSpecs(
                                                           aggregators(
-                                                              new SingleValueDoubleAggregatorFactory("_a0", "v0")
+                                                              new SingleValueAggregatoractory("_a0", "v0", ColumnType.DOUBLE)
                                                           )
                                                       )
                                                       .setLimitSpec(NoopLimitSpec.instance())
@@ -185,7 +183,7 @@ public class CalciteSingleValueAggregatorTest extends CalciteQueryTest
                                                       )
                                                       .setAggregatorSpecs(
                                                           aggregators(
-                                                              new SingleValueLongAggregatorFactory("_a0", "v0")
+                                                              new SingleValueAggregatoractory("_a0", "v0", ColumnType.LONG)
                                                           )
                                                       )
                                                       .setLimitSpec(NoopLimitSpec.instance())
@@ -208,4 +206,5 @@ public class CalciteSingleValueAggregatorTest extends CalciteQueryTest
         )
     );
   }
+
 }
