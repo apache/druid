@@ -1696,8 +1696,7 @@ public class StreamAppenderator implements Appenderator
     {
       this.announcer = StreamAppenderator.this.segmentAnnouncer;
       this.taskId = StreamAppenderator.this.myId;
-      boolean enabled = centralizedDatasourceSchemaConfig.isEnabled()
-                     && centralizedDatasourceSchemaConfig.announceRealtimeSegmentSchema();
+      boolean enabled = centralizedDatasourceSchemaConfig.isEnabled();
       this.scheduledExecutorService = enabled ? ScheduledExecutors.fixed(1, "Sink-Schema-Announcer-%d") : null;
     }
 

@@ -215,6 +215,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
    */
   private volatile @Nullable DatabasePoll latestDatabasePoll = null;
 
+  private volatile @Nullable DateTime latestSegmentSchemaPoll = null;
+
   /** Used to cancel periodic poll task in {@link #stopPollingDatabasePeriodically}. */
   @GuardedBy("startStopPollLock")
   private @Nullable Future<?> periodicPollTaskFuture = null;
@@ -1084,13 +1086,21 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
         }
     );
 
-    Map<Integer, SchemaPayload> schemaMap = new HashMap<>();
+    Map<Long, SchemaPayload> schemaMap = new HashMap<>();
+
+    String schemaPollQuery = null;
+    if (latestSegmentSchemaPoll == null) {
+      schemaPollQuery = String.format("SELECT id, payload, created_date FROM %s", getSegmentSchemaTable());
+    } else {
+      schemaPollQuery = String.format("SELECT id, payload, created_date FROM %s where created_date > %1$s from %2$s", latestSegmentSchemaPoll, getSegmentSchemaTable());
+    }
+    String finalSchemaPollQuery = schemaPollQuery;
     connector.inReadOnlyTransaction(new TransactionCallback<Object>()
     {
       @Override
       public Object inTransaction(Handle handle, TransactionStatus status) throws Exception
       {
-        return handle.createQuery(String.format("SELECT schema_id, payload FROM %s where created_date > %s", ))
+        return handle.createQuery(finalSchemaPollQuery)
             .map(new ResultSetMapper<Void>()
             {
               @Override
@@ -1098,7 +1108,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
               {
                 try {
                   schemaMap.put(
-                      r.getInt("id"),
+                      r.getLong("id"),
                       jsonMapper.readValue(r.getBytes("payload"), SchemaPayload.class)
                   );
                 }
@@ -1171,6 +1181,11 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   private String getSegmentsTable()
   {
     return dbTables.get().getSegmentsTable();
+  }
+
+  private String getSegmentSchemaTable()
+  {
+    return dbTables.get().getSegmentSchemaTable();
   }
 
   @Override

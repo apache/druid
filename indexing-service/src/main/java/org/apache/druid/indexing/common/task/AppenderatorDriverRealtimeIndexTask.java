@@ -351,7 +351,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       int sequenceNumber = 0;
       String sequenceName = makeSequenceName(getId(), sequenceNumber);
 
-      final TransactionalSegmentPublisher publisher = (mustBeNullOrEmptyOverwriteSegments, segments, commitMetadata) -> {
+      final TransactionalSegmentPublisher publisher = (mustBeNullOrEmptyOverwriteSegments, segments, commitMetadata, map) -> {
         if (mustBeNullOrEmptyOverwriteSegments != null && !mustBeNullOrEmptyOverwriteSegments.isEmpty()) {
           throw new ISE(
               "Stream ingestion task unexpectedly attempted to overwrite segments: %s",
@@ -361,7 +361,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         final SegmentTransactionalInsertAction action = SegmentTransactionalInsertAction.appendAction(
             segments,
             null,
-            null
+            null,
+            Collections.emptyMap()
         );
         return toolbox.getTaskActionClient().submit(action);
       };

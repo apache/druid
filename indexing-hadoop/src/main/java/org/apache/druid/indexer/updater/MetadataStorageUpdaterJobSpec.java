@@ -86,12 +86,14 @@ public class MetadataStorageUpdaterJobSpec implements Supplier<MetadataStorageCo
   //by the code using this
   public MetadataStorageTablesConfig getMetadataStorageTablesConfig()
   {
+    // todo should we set segments table here
     return new MetadataStorageTablesConfig(
         null,
         null,
         null,
         null,
         segmentTable,
+        null,
         null,
         null,
         null,

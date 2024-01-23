@@ -87,10 +87,8 @@ public class SegmentSchemaCache
      long schemaId = segmentStats.getSchemaId();
 
     return Optional.of(new SegmentSchemaMetadata(
-        schemaId,
-        segmentId.toString(),
-        segmentStats.getNumRows(),
-        finalizedSegmentSchema.get(schemaId)
+        finalizedSegmentSchema.get(schemaId),
+        segmentStats.getNumRows()
     ));
   }
 
