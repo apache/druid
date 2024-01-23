@@ -25,13 +25,18 @@ import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.calcite.runtime.CalciteException;
 import org.apache.calcite.sql.SqlCall;
+import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperatorTable;
+import org.apache.calcite.sql.SqlWindow;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
+import org.apache.calcite.util.Util;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.sql.calcite.run.EngineFeature;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Druid extended SQL validator. (At present, it doesn't actually
@@ -51,6 +56,47 @@ class DruidSqlValidator extends BaseDruidSqlValidator
   {
     super(opTab, catalogReader, typeFactory, validatorConfig);
     this.plannerContext = plannerContext;
+  }
+
+  @Override
+  public void validateWindow(SqlNode windowOrId, SqlValidatorScope scope, @Nullable SqlCall call)
+  {
+    final SqlWindow targetWindow;
+    switch (windowOrId.getKind()) {
+    case IDENTIFIER:
+      // Just verify the window exists in this query.  It will validate
+      // when the definition is processed
+      targetWindow = getWindowByName((SqlIdentifier) windowOrId, scope);
+      break;
+    case WINDOW:
+      targetWindow = (SqlWindow) windowOrId;
+      break;
+    default:
+      throw Util.unexpected(windowOrId.getKind());
+    }
+
+    if (plannerContext.queryContext().isWindowingStrictValidation()) {
+      if (!targetWindow.isRows() &&
+          (!isValidRangeEndpoint(targetWindow.getLowerBound()) ||
+              !isValidRangeEndpoint(targetWindow.getUpperBound()))) {
+        throw buildCalciteContextException(
+            StringUtils.format(
+                "The query contains a window frame which might not always give correct results. To disregard this warning [%s] can be set in the query context.",
+                QueryContexts.WINDOWING_STRICT_VALIDATION
+            ),
+            windowOrId
+        );
+      }
+    }
+    super.validateWindow(windowOrId, scope, call);
+  }
+
+  private boolean isValidRangeEndpoint(@Nullable SqlNode bound)
+  {
+    return bound == null
+        || SqlWindow.isCurrentRow(bound)
+        || SqlWindow.isUnboundedFollowing(bound)
+        || SqlWindow.isUnboundedPreceding(bound);
   }
 
   @Override
@@ -80,7 +126,7 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     super.validateCall(call, scope);
   }
 
-  private CalciteContextException buildCalciteContextException(String message, SqlCall call)
+  private CalciteContextException buildCalciteContextException(String message, SqlNode call)
   {
     SqlParserPos pos = call.getParserPosition();
     return new CalciteContextException(message,
