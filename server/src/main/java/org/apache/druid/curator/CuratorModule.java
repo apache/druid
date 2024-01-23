@@ -22,6 +22,7 @@ package org.apache.druid.curator;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import com.google.inject.multibindings.MapBinder;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.ensemble.fixed.FixedEnsembleProvider;
 import org.apache.curator.framework.CuratorFramework;
@@ -30,6 +31,8 @@ import org.apache.curator.framework.api.ACLProvider;
 import org.apache.curator.framework.imps.DefaultACLProvider;
 import org.apache.curator.retry.BoundedExponentialBackoffRetry;
 import org.apache.curator.shaded.com.google.common.base.Strings;
+import org.apache.druid.catalog.model.table.export.LocalStorageExportConfig;
+import org.apache.druid.catalog.model.table.export.ExportSourceConfig;
 import org.apache.druid.concurrent.Threads;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
@@ -75,6 +78,8 @@ public class CuratorModule implements Module
     JsonConfigProvider.bind(binder, CuratorConfig.CONFIG_PREFIX, ZkEnablementConfig.class);
     JsonConfigProvider.bind(binder, CuratorConfig.CONFIG_PREFIX, CuratorConfig.class);
     MetricsModule.register(binder, DruidConnectionStateListener.class);
+    MapBinder<String, ExportSourceConfig> mapbinder = MapBinder.newMapBinder(binder, String.class, ExportSourceConfig.class);
+    mapbinder.addBinding("local").to(LocalStorageExportConfig.class);
   }
 
   /**

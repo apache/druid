@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.inject.Injector;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
@@ -48,6 +49,19 @@ public class S3StorageConnectorProvider extends S3OutputConfig implements Storag
   )
   {
     super(bucket, prefix, tempDir, chunkSize, maxRetry);
+  }
+
+  public S3StorageConnectorProvider(
+      String bucket,
+      String prefix,
+      File tempDir,
+      HumanReadableBytes chunkSize,
+      Integer maxRetry,
+      Injector injector
+  )
+  {
+    super(bucket, prefix, tempDir, chunkSize, maxRetry);
+    this.s3 = injector.getInstance(ServerSideEncryptingAmazonS3.class);
   }
 
   @Override

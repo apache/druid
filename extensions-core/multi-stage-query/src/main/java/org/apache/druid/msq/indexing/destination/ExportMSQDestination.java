@@ -25,28 +25,31 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.sql.http.ResultFormat;
-import org.apache.druid.storage.StorageConnectorProvider;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 public class ExportMSQDestination implements MSQDestination
 {
   public static final String TYPE = "export";
-  private final StorageConnectorProvider storageConnectorProvider;
+  private final String storageConnectorType;
+  private final Map<String, String> properties;
   private final ResultFormat resultFormat;
   @Nullable
   private final List<Interval> replaceTimeChunks;
 
   @JsonCreator
-  public ExportMSQDestination(@JsonProperty("storageConnectorProvider") StorageConnectorProvider storageConnectorProvider,
+  public ExportMSQDestination(@JsonProperty("storageConnectorType") String storageConnectorType,
+                              @JsonProperty("properties") Map<String, String> properties,
                               @JsonProperty("resultFormat") ResultFormat resultFormat,
                               @JsonProperty("replaceTimeChunks") @Nullable List<Interval> replaceTimeChunks
   )
   {
-    this.storageConnectorProvider = storageConnectorProvider;
+    this.storageConnectorType = storageConnectorType;
+    this.properties = properties;
     this.resultFormat = resultFormat;
     if (replaceTimeChunks == null || Intervals.ONLY_ETERNITY.equals(replaceTimeChunks)) {
       this.replaceTimeChunks = replaceTimeChunks;
@@ -57,10 +60,16 @@ public class ExportMSQDestination implements MSQDestination
     }
   }
 
-  @JsonProperty("storageConnectorProvider")
-  public StorageConnectorProvider getStorageConnectorProvider()
+  @JsonProperty("storageConnectorType")
+  public String getStorageConnectorType()
   {
-    return storageConnectorProvider;
+    return storageConnectorType;
+  }
+
+  @JsonProperty("properties")
+  public Map<String, String> getProperties()
+  {
+    return properties;
   }
 
   @JsonProperty("resultFormat")
@@ -87,22 +96,24 @@ public class ExportMSQDestination implements MSQDestination
       return false;
     }
     ExportMSQDestination that = (ExportMSQDestination) o;
-    return Objects.equals(storageConnectorProvider, that.storageConnectorProvider)
-           && resultFormat == that.resultFormat
-           && Objects.equals(replaceTimeChunks, that.replaceTimeChunks);
+    return Objects.equals(storageConnectorType, that.storageConnectorType) && Objects.equals(
+        properties,
+        that.properties
+    ) && resultFormat == that.resultFormat && Objects.equals(replaceTimeChunks, that.replaceTimeChunks);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(storageConnectorProvider, resultFormat, replaceTimeChunks);
+    return Objects.hash(storageConnectorType, properties, resultFormat, replaceTimeChunks);
   }
 
   @Override
   public String toString()
   {
     return "ExportMSQDestination{" +
-           "storageConnectorProvider=" + storageConnectorProvider +
+           "storageConnectorType='" + storageConnectorType + '\'' +
+           ", properties=" + properties +
            ", resultFormat=" + resultFormat +
            ", replaceTimeChunks=" + replaceTimeChunks +
            '}';

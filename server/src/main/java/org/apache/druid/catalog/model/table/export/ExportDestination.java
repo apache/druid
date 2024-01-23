@@ -19,27 +19,40 @@
 
 package org.apache.druid.catalog.model.table.export;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.catalog.model.table.IngestDestination;
+
+import java.util.Map;
 
 @JsonTypeName(ExportDestination.TYPE_KEY)
 public class ExportDestination implements IngestDestination
 {
   public static final String TYPE_KEY = "external";
-  private final String exportDestinationString;
+  private final String destinationType;
+  private final Map<String, String> properties;
 
-  public ExportDestination(String exportDestinationString)
+  public ExportDestination(@JsonProperty("destinationType") String destinationType, @JsonProperty("properties") Map<String, String> properties)
   {
-
-    this.exportDestinationString = exportDestinationString;
+    this.destinationType = destinationType;
+    this.properties = properties;
   }
 
-  public String getExportDestinationString()
+  @JsonProperty("destinationType")
+  public String getDestinationType()
   {
-    return exportDestinationString;
+    return destinationType;
+  }
+
+  @JsonProperty("properties")
+  public Map<String, String> getProperties()
+  {
+    return properties;
   }
 
   @Override
+  @JsonIgnore
   public String getDestinationName()
   {
     return "EXTERN";

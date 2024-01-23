@@ -68,7 +68,6 @@ import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlResults;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.http.ResultFormat;
-import org.apache.druid.storage.StorageConnectorProvider;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -211,24 +210,14 @@ public class MSQTaskQueryMaker implements QueryMaker
     final MSQDestination destination;
 
     if (targetDataSource instanceof ExportDestination) {
-      String exportDestination = ((ExportDestination) targetDataSource).getExportDestinationString();
-      exportDestination = exportDestination.substring(1, exportDestination.length() - 1);
+      ExportDestination exportDestination = ((ExportDestination) targetDataSource);
       ResultFormat format = ResultFormat.fromString(sqlQueryContext.getString(DruidSqlIngest.SQL_EXPORT_FILE_FORMAT));
-      try {
-        StorageConnectorProvider storageConnectorProvider = jsonMapper.readValue(
-            exportDestination,
-            StorageConnectorProvider.class
-        );
-        destination = new ExportMSQDestination(storageConnectorProvider, format, replaceTimeChunks);
-      }
-      catch (Exception e) {
-        throw DruidException.defensive()
-                            .build(
-                                e,
-                                "Unable to deserialize the external destination: [%s].",
-                                exportDestination
-                            );
-      }
+      destination = new ExportMSQDestination(
+          exportDestination.getDestinationType(),
+          exportDestination.getProperties(),
+          format,
+          replaceTimeChunks
+      );
     } else if (targetDataSource instanceof TableDestination) {
       Granularity segmentGranularityObject;
       try {

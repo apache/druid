@@ -33,6 +33,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
+import com.google.inject.Injector;
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -40,6 +41,7 @@ import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.catalog.model.table.export.ExportSourceConfig;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.StringTuple;
@@ -655,7 +657,8 @@ public class ControllerImpl implements Controller
         id(),
         makeQueryControllerToolKit(),
         task.getQuerySpec(),
-        context.jsonMapper()
+        context.jsonMapper(),
+        context.injector()
     );
 
     QueryValidator.validateQueryDef(queryDef);
@@ -1747,7 +1750,8 @@ public class ControllerImpl implements Controller
       final String queryId,
       @SuppressWarnings("rawtypes") final QueryKit toolKit,
       final MSQSpec querySpec,
-      final ObjectMapper jsonMapper
+      final ObjectMapper jsonMapper,
+      final Injector injector
   )
   {
     final MSQTuningConfig tuningConfig = querySpec.getTuningConfig();
@@ -1884,10 +1888,13 @@ public class ControllerImpl implements Controller
       }
     } else if (querySpec.getDestination() instanceof ExportMSQDestination) {
       ExportMSQDestination exportMSQDestination = (ExportMSQDestination) querySpec.getDestination();
-      StorageConnectorProvider storageConnectorProvider = exportMSQDestination.getStorageConnectorProvider();
-      ResultFormat resultFormat = exportMSQDestination.getResultFormat();
+      final ExportSourceHandlers exportSourceHandlers = injector.getInstance(ExportSourceHandlers.class);
+      final ExportSourceConfig outputConfig = exportSourceHandlers.getConnectorProviderMap()
+                                                                  .get(exportMSQDestination.getStorageConnectorType());
+      final StorageConnectorProvider storageConnectorProvider = outputConfig.get(exportMSQDestination.getProperties(), injector);
+      final ResultFormat resultFormat = exportMSQDestination.getResultFormat();
 
-      // If the statement is a REPLACE, delete the existing files at the destination.
+      // If the statement is a REPLACE statement, delete the existing files at the destination.
       if (Intervals.ONLY_ETERNITY.equals(exportMSQDestination.getReplaceTimeChunks())) {
         StorageConnector storageConnector = storageConnectorProvider.get();
         try {

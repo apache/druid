@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.parser;
 
-import org.apache.calcite.sql.SqlCharStringLiteral;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlWriter;
@@ -27,33 +26,50 @@ import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.utils.CollectionUtils;
 
+import java.util.Map;
+
 /**
  * Extends the {@link SqlIdentifier} to hold parameters for an external destination.
  */
 public class ExternalDestinationSqlIdentifier extends SqlIdentifier
 {
-  private final SqlCharStringLiteral exportDestinationString;
+  private final Map<String, String> properties;
 
   public ExternalDestinationSqlIdentifier(
       String name,
       SqlParserPos pos,
-      SqlNode exportDestinationString
+      Map<String, String> properties
   )
   {
     super(name, pos);
-    this.exportDestinationString = (SqlCharStringLiteral) exportDestinationString;
+    this.properties = properties;
   }
 
-  public String getExportDestinationString()
+  public String getDestinationType()
   {
-    return exportDestinationString.toString();
+    return CollectionUtils.getOnlyElement(
+        names,
+        x -> DruidException.defensive("Expected single name in external destination identifier, but got [%s]", names)
+    );
+  }
+
+  public Map<String, String> getProperties()
+  {
+    return properties;
   }
 
   @Override
   public void unparse(SqlWriter writer, int leftPrec, int rightPrec)
   {
     SqlWriter.Frame externFrame = writer.startFunCall("EXTERN");
-    writer.print(exportDestinationString.toString());
+    SqlWriter.Frame frame = writer.startFunCall(getDestinationType());
+    for (Map.Entry<String, String> property : properties.entrySet()) {
+      writer.sep(",");
+      writer.print(property.getKey());
+      writer.print(" = ");
+      writer.identifier(property.getValue(), false);
+    }
+    writer.endFunCall(frame);
     writer.endFunCall(externFrame);
   }
 
@@ -64,7 +80,7 @@ public class ExternalDestinationSqlIdentifier extends SqlIdentifier
         names,
         x -> DruidException.defensive("Expected single name in external destination identifier, but got [%s]", names)
     );
-    return new ExternalDestinationSqlIdentifier(name, pos, exportDestinationString);
+    return new ExternalDestinationSqlIdentifier(name, pos, properties);
   }
 
   @Override

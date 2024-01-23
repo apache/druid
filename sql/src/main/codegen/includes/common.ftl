@@ -107,23 +107,6 @@ SqlTypeNameSpec DruidType() :
   }
 }
 
-SqlIdentifier ExternalDestination() :
-{
-  final Span s;
-  final SqlNode key;
-}
-{
-   key = StringLiteral()
-   {
-     s = span();
-     return new ExternalDestinationSqlIdentifier(
-        "EXTERN",
-        s.pos(),
-        key
-        );
-   }
-}
-
 // Parses the supported file formats for export.
 String FileFormat() :
 {}
@@ -134,4 +117,50 @@ String FileFormat() :
       return "CSV";
     }
   )
+}
+
+SqlIdentifier ExternalDestination() :
+{
+  final Span s;
+  Map<String, String> properties = new HashMap();
+}
+{
+  (
+    <S3> [ <LPAREN> [properties = ExternProperties()] <RPAREN>]
+    {
+      s = span();
+      return new ExternalDestinationSqlIdentifier(
+        "s3",
+        s.pos(),
+        properties
+      );
+    }
+    |
+    <LOCAL> [ <LPAREN> [properties = ExternProperties()] <RPAREN>]
+    {
+      s = span();
+      return new ExternalDestinationSqlIdentifier(
+        "local",
+        s.pos(),
+        properties
+      );
+    }
+  )
+}
+
+Map<String, String> ExternProperties() :
+{
+  final Span s;
+  final Map<String, String> properties = new HashMap();
+  SqlNodeList commaList = SqlNodeList.EMPTY;
+}
+{
+  commaList = ExpressionCommaList(span(), ExprContext.ACCEPT_NON_QUERY)
+  {
+    for (SqlNode sqlNode : commaList) {
+      List<SqlNode> sqlNodeList = ((SqlBasicCall) sqlNode).getOperandList();
+      properties.put(((SqlIdentifier) sqlNodeList.get(0)).getSimple(), ((SqlIdentifier) sqlNodeList.get(1)).getSimple());
+    }
+    return properties;
+  }
 }

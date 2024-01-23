@@ -209,8 +209,8 @@ public abstract class IngestHandler extends QueryHandler
           .ofCategory(DruidException.Category.DEFENSIVE)
           .build("Operation [%s] requires a target table", operationName());
     } else if (tableIdentifier instanceof ExternalDestinationSqlIdentifier) {
-      String exportDestinationString = ((ExternalDestinationSqlIdentifier) tableIdentifier).getExportDestinationString();
-      dataSource = new ExportDestination(exportDestinationString);
+      ExternalDestinationSqlIdentifier externalDestination = ((ExternalDestinationSqlIdentifier) tableIdentifier);
+      dataSource = new ExportDestination(externalDestination.getDestinationType(), externalDestination.getProperties());
     } else if (tableIdentifier.names.size() == 1) {
       // Unqualified name.
       String tableName = Iterables.getOnlyElement(tableIdentifier.names);
