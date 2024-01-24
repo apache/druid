@@ -116,7 +116,7 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
       handleBadRequest(
           response,
           StringUtils.format("Unsupported proxy destination[%s]", request.getRequestURI()),
-          HttpServletResponse.SC_BAD_GATEWAY
+          HttpServletResponse.SC_BAD_REQUEST
       );
       return;
     }
