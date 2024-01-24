@@ -29,7 +29,11 @@ import org.pac4j.core.engine.CallbackLogic;
 import org.pac4j.core.engine.DefaultCallbackLogic;
 import org.pac4j.core.engine.DefaultSecurityLogic;
 import org.pac4j.core.engine.SecurityLogic;
+import org.pac4j.core.exception.TechnicalException;
 import org.pac4j.core.exception.http.HttpAction;
+import org.pac4j.core.exception.http.RedirectionAction;
+import org.pac4j.core.exception.http.WithContentAction;
+import org.pac4j.core.exception.http.WithLocationAction;
 import org.pac4j.core.http.adapter.HttpActionAdapter;
 import org.pac4j.core.profile.UserProfile;
 
@@ -48,7 +52,29 @@ public class Pac4jFilter implements Filter
 {
   private static final Logger LOGGER = new Logger(Pac4jFilter.class);
 
-  private static final HttpActionAdapter<String, JEEContext> NOOP_HTTP_ACTION_ADAPTER = (HttpAction code, JEEContext ctx) -> null;
+  private static final HttpActionAdapter<String, JEEContext> HTTP_ACTION_ADAPTER = (HttpAction action, JEEContext context) -> {
+    if (action instanceof RedirectionAction) {
+      int code = action.getCode();
+      HttpServletResponse response = context.getNativeResponse();
+      response.setStatus(code);
+      if (action instanceof WithLocationAction) {
+        WithLocationAction withLocationAction = (WithLocationAction) action;
+        context.setResponseHeader("Location", withLocationAction.getLocation());
+      } else if (action instanceof WithContentAction) {
+        WithContentAction withContentAction = (WithContentAction) action;
+        String content = withContentAction.getContent();
+        if (content != null) {
+          try {
+            response.getWriter().write(content);
+          }
+          catch (IOException var8) {
+            throw new TechnicalException(var8);
+          }
+        }
+      }
+    }
+    return null;
+  };
 
   private final Config pac4jConfig;
   private final SecurityLogic<String, JEEContext> securityLogic;
@@ -95,7 +121,7 @@ public class Pac4jFilter implements Filter
       callbackLogic.perform(
           context,
           pac4jConfig,
-          NOOP_HTTP_ACTION_ADAPTER,
+          HTTP_ACTION_ADAPTER,
           "/",
           true, false, false, null);
     } else {
@@ -110,7 +136,7 @@ public class Pac4jFilter implements Filter
               return profiles.iterator().next().getId();
             }
           },
-          NOOP_HTTP_ACTION_ADAPTER,
+          HTTP_ACTION_ADAPTER,
           null, null, null, null);
 
       if (uid != null) {
