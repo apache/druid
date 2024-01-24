@@ -22,8 +22,6 @@ package org.apache.druid.storage.azure;
 import com.azure.core.http.rest.PagedIterable;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
-import com.azure.storage.blob.batch.BlobBatchClient;
-import com.azure.storage.blob.batch.BlobBatchClientBuilder;
 import com.azure.storage.blob.batch.BlobBatchStorageException;
 import com.azure.storage.blob.models.BlobItem;
 import com.azure.storage.blob.models.BlobRange;
@@ -36,7 +34,7 @@ import com.azure.storage.blob.options.BlockBlobOutputStreamOptions;
 import com.azure.storage.blob.specialized.BlockBlobClient;
 import com.azure.storage.common.Utility;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Lists;
+import com.google.common.collect.Streams;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
 
@@ -49,6 +47,7 @@ import java.io.OutputStream;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Abstracts the Azure storage layer. Makes direct calls to Azure file system.
@@ -173,9 +172,17 @@ public class AzureStorage
   public void batchDeleteFiles(String containerName, Iterable<String> paths, Integer maxAttempts)
       throws BlobBatchStorageException
   {
+    BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName, maxAttempts);
+    List<String> blobUris = Streams.stream(paths).map(path -> blobContainerClient.getBlobContainerUrl() + "/" + path).collect(Collectors.toList());
 
-    BlobBatchClient blobBatchClient = new BlobBatchClientBuilder(getOrCreateBlobContainerClient(containerName, maxAttempts)).buildClient();
-    blobBatchClient.deleteBlobs(Lists.newArrayList(paths), DeleteSnapshotsOptionType.ONLY);
+    // We have to call forEach on the response because this is the only way azure batch will throw an exception on a operation failure.
+    azureClientFactory.getBlobBatchClient(blobContainerClient).deleteBlobs(
+        blobUris,
+        DeleteSnapshotsOptionType.INCLUDE
+    ).forEach(response ->
+        log.debug("Deleting blob with URL %s completed with status code %d%n",
+            response.getRequest().getUrl(), response.getStatusCode())
+    );
   }
 
   public List<String> listDir(final String containerName, final String virtualDirPath, final Integer maxAttempts)

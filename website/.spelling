@@ -2374,6 +2374,11 @@ markUnused
 markUsed
 segmentId
 aggregateMultipleValues
+relativeError
+ddSketch
+DDSketch
+druid-ddsketch
+numBins
 
 - ../docs/development/extensions-contrib/spectator-histogram.md
 SpectatorHistogram
@@ -2383,3 +2388,8 @@ spectatorHistogramTimer
 spectatorHistogramDistribution
 percentileSpectatorHistogram
 percentilesSpectatorHistogram
+
+- ../docs/development/extensions-contrib/ddsketch-quantiles.md
+quantilesFromDDSketch
+quantileFromDDSketch
+collapsingLowestDense
