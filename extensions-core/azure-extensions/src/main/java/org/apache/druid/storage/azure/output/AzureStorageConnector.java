@@ -23,7 +23,6 @@ import com.azure.storage.blob.models.BlobStorageException;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;
 import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
-import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.storage.azure.AzureStorage;
 import org.apache.druid.storage.azure.AzureUtils;
 import org.apache.druid.storage.remote.ChunkingStorageConnector;
