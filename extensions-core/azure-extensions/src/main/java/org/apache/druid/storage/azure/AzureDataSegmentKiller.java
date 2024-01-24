@@ -19,8 +19,10 @@
 
 package org.apache.druid.storage.azure;
 
+import com.azure.storage.blob.batch.BlobBatchStorageException;
 import com.azure.storage.blob.models.BlobStorageException;
 import com.google.common.base.Predicates;
+import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.MapUtils;
@@ -35,6 +37,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Used for removing segment files stored in Azure based deep storage
@@ -42,6 +45,7 @@ import java.util.Map;
 public class AzureDataSegmentKiller implements DataSegmentKiller
 {
   private static final Logger log = new Logger(AzureDataSegmentKiller.class);
+  private static final Integer MAX_MULTI_OBJECT_DELETE_SIZE = 256; // https://learn.microsoft.com/en-us/rest/api/storageservices/blob-batch?tabs=microsoft-entra-id
 
   private final AzureDataSegmentConfig segmentConfig;
   private final AzureInputDataConfig inputDataConfig;
@@ -90,12 +94,59 @@ public class AzureDataSegmentKiller implements DataSegmentKiller
       keysToDelete.add(DataSegmentKiller.descriptorPath(blobPath));
     }
 
-    for (Map.Entry<String, List<String>> bucketToKeys : containerToKeysToDelete.entrySet()) {
-      String container = bucketToKeys.getKey();
-      List<String> keysToDelete = bucketToKeys.getValue();
-      azureStorage.batchDeleteFiles(container, keysToDelete);
+    boolean shouldThrowException = false;
+    for (Map.Entry<String, List<String>> containerToKeys : containerToKeysToDelete.entrySet()) {
+      shouldThrowException = deleteBlobKeys(containerToKeys.getValue(), containerToKeys.getKey());
+    }
+
+    for (Map.Entry<String, List<String>> containerToKeys : containerToKeysToDelete.entrySet()) {
+      List<String> keysToDelete = containerToKeys.getValue().stream().map(DataSegmentKiller::descriptorPath).collect(Collectors.toList());
+      deleteBlobKeys(keysToDelete, containerToKeys.getKey()); // ignore failures to delete descriptor.json since they will frequently be missing
+    }
+
+    if (shouldThrowException) {
+      throw new SegmentLoadingException(
+          "Couldn't delete segments from Azure. See the task logs for more details."
+      );
     }
   }
+
+  private Boolean deleteBlobKeys(List<String> keysToDelete, String containerName)
+  {
+    boolean hadException = false;
+    List<List<String>> keysChunks = Lists.partition(
+        keysToDelete,
+        MAX_MULTI_OBJECT_DELETE_SIZE
+    );
+    for (List<String> chunkOfKeys : keysChunks) {
+      try {
+        log.info(
+            "Removing from container: [%s] the following index files: [%s] from s3!",
+            containerName,
+            chunkOfKeys
+        );
+        azureStorage.batchDeleteFiles(containerName, keysToDelete);
+      }
+      catch (BlobStorageException | BlobBatchStorageException e) {
+        hadException = true;
+        log.noStackTrace().warn(e,
+            "Unable to delete from container [%s], the following keys [%s]",
+            containerName,
+            chunkOfKeys
+        );
+      }
+      catch (Exception e) {
+        hadException = true;
+        log.noStackTrace().warn(e,
+            "Unexpected exception occurred when deleting from container [%s], the following keys [%s]",
+            containerName,
+            chunkOfKeys
+        );
+      }
+    }
+    return hadException;
+  }
+
 
   @Override
   public void kill(DataSegment segment) throws SegmentLoadingException
