@@ -26,16 +26,16 @@ import java.util.Map;
 
 public class ExportStorageConnectorFactories
 {
-  public Map<String, ExportStorageConnectorFactory> getConnectorProviderMap()
+  public Map<String, ExportStorageConnectorFactory> getFactories()
   {
-    return connectorProviderMap;
+    return factoriesMap;
   }
 
-  private final Map<String, ExportStorageConnectorFactory> connectorProviderMap;
+  private final Map<String, ExportStorageConnectorFactory> factoriesMap;
 
   @Inject
-  public ExportStorageConnectorFactories(Map<String, ExportStorageConnectorFactory> connectorProviderMap)
+  public ExportStorageConnectorFactories(Map<String, ExportStorageConnectorFactory> factoriesMap)
   {
-    this.connectorProviderMap = connectorProviderMap;
+    this.factoriesMap = factoriesMap;
   }
 }

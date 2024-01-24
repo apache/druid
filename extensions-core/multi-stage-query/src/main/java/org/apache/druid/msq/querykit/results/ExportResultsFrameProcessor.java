@@ -30,6 +30,7 @@ import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -103,12 +104,12 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
     if (inputChannel.isFinished()) {
       return ReturnOrAwait.returnObject(Unit.instance());
     } else {
-      addFrame(inputChannel.read());
+      exportFrame(inputChannel.read());
       return ReturnOrAwait.awaitAll(1);
     }
   }
 
-  private void addFrame(final Frame frame) throws IOException
+  private void exportFrame(final Frame frame) throws IOException
   {
     final RowSignature signature = frameReader.signature();
 
@@ -116,7 +117,7 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
         new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY)
             .makeCursors(null, Intervals.ETERNITY, VirtualColumns.EMPTY, Granularities.ALL, false, null);
 
-    try (OutputStream stream = storageConnector.write(workerNumber + "/" + partitionNumber + "." + exportFormat.toString())) {
+    try (OutputStream stream = storageConnector.write(getExportFilePath(workerNumber, partitionNumber, exportFormat))) {
       ResultFormat.Writer formatter = exportFormat.createFormatter(stream, jsonMapper);
 
       SequenceUtils.forEach(
@@ -152,6 +153,11 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
           }
       );
     }
+  }
+
+  private static String getExportFilePath(int workerNumber, int partitionNumber, ResultFormat exportFormat)
+  {
+    return StringUtils.format("%s/%s.%s", workerNumber, partitionNumber, exportFormat.toString());
   }
 
   @Override

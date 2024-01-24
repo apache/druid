@@ -41,7 +41,6 @@ import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.storage.export.ExportStorageConnectorFactory;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.StringTuple;
@@ -208,6 +207,7 @@ import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
+import org.apache.druid.storage.export.ExportStorageConnectorFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
@@ -1887,12 +1887,12 @@ public class ControllerImpl implements Controller
         return queryDef;
       }
     } else if (querySpec.getDestination() instanceof ExportMSQDestination) {
-      ExportMSQDestination exportMSQDestination = (ExportMSQDestination) querySpec.getDestination();
-      final ExportStorageConnectorFactories exportStorageConnectorFactories = injector.getInstance(
-          ExportStorageConnectorFactories.class);
-      final ExportStorageConnectorFactory outputConfig = exportStorageConnectorFactories.getConnectorProviderMap()
-                                                                                        .get(exportMSQDestination.getStorageConnectorType());
-      final StorageConnectorProvider storageConnectorProvider = outputConfig.get(exportMSQDestination.getProperties(), injector);
+      final ExportMSQDestination exportMSQDestination = (ExportMSQDestination) querySpec.getDestination();
+      final ExportStorageConnectorFactory storageConnectorFactory = injector.getInstance(ExportStorageConnectorFactories.class)
+                                                                            .getFactories()
+                                                                            .get(exportMSQDestination.getStorageConnectorType());
+      final StorageConnectorProvider storageConnectorProvider =
+          storageConnectorFactory.get(exportMSQDestination.getProperties(), injector);
       final ResultFormat resultFormat = exportMSQDestination.getResultFormat();
 
       // If the statement is a REPLACE statement, delete the existing files at the destination.
@@ -1904,7 +1904,7 @@ public class ControllerImpl implements Controller
         catch (IOException e) {
           throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                               .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                              .build(e, "Count not delete existing files from ");
+                              .build(e, "Count not delete existing files from the export destination.");
         }
       }
 

@@ -25,9 +25,6 @@ import com.google.common.base.Preconditions;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Pair;
-import org.apache.druid.sql.destination.IngestDestination;
-import org.apache.druid.sql.destination.ExportDestination;
-import org.apache.druid.sql.destination.TableDestination;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
@@ -67,6 +64,9 @@ import org.apache.druid.sql.calcite.rel.Grouping;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlResults;
 import org.apache.druid.sql.calcite.table.RowSignatures;
+import org.apache.druid.sql.destination.ExportDestination;
+import org.apache.druid.sql.destination.IngestDestination;
+import org.apache.druid.sql.destination.TableDestination;
 import org.apache.druid.sql.http.ResultFormat;
 import org.joda.time.Interval;
 
@@ -212,6 +212,13 @@ public class MSQTaskQueryMaker implements QueryMaker
     if (targetDataSource instanceof ExportDestination) {
       ExportDestination exportDestination = ((ExportDestination) targetDataSource);
       ResultFormat format = ResultFormat.fromString(sqlQueryContext.getString(DruidSqlIngest.SQL_EXPORT_FILE_FORMAT));
+
+      if (replaceTimeChunks != null && !Intervals.ONLY_ETERNITY.equals(replaceTimeChunks)) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.UNSUPPORTED)
+                            .build("Currently export only works with OVERWRITE ALL clause");
+      }
+
       destination = new ExportMSQDestination(
           exportDestination.getDestinationType(),
           exportDestination.getProperties(),

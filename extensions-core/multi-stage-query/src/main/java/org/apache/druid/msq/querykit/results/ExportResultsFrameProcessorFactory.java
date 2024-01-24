@@ -90,7 +90,6 @@ public class ExportResultsFrameProcessorFactory extends BaseFrameProcessorFactor
       Consumer<Throwable> warningPublisher
   )
   {
-    // Expecting a single input slice from some prior stage.
     final StageInputSlice slice = (StageInputSlice) Iterables.getOnlyElement(inputSlices);
 
     if (inputSliceReader.numReadableInputs(slice) == 0) {

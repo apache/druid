@@ -31,7 +31,6 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Pair;
-import org.apache.druid.sql.destination.IngestDestination;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.error.InvalidSqlInput;
@@ -49,6 +48,7 @@ import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.run.SqlEngines;
+import org.apache.druid.sql.destination.IngestDestination;
 
 import java.util.HashSet;
 import java.util.List;

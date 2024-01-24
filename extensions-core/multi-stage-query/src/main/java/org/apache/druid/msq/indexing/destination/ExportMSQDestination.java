@@ -22,8 +22,6 @@ package org.apache.druid.msq.indexing.destination;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.sql.http.ResultFormat;
 import org.joda.time.Interval;
 
@@ -51,13 +49,7 @@ public class ExportMSQDestination implements MSQDestination
     this.storageConnectorType = storageConnectorType;
     this.properties = properties;
     this.resultFormat = resultFormat;
-    if (replaceTimeChunks == null || Intervals.ONLY_ETERNITY.equals(replaceTimeChunks)) {
-      this.replaceTimeChunks = replaceTimeChunks;
-    } else {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.UNSUPPORTED)
-                          .build("Currently export only works with ");
-    }
+    this.replaceTimeChunks = replaceTimeChunks;
   }
 
   @JsonProperty("storageConnectorType")
