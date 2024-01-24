@@ -86,7 +86,7 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
   private AzureEntityFactory entityFactory;
   private AzureCloudBlobIterableFactory azureCloudBlobIterableFactory;
   private AzureInputDataConfig inputDataConfig;
-  private AzureInputSourceConfig azureInputSourceConfig;
+  private AzureStorageAccountInputSourceConfig azureStorageAccountInputSourceConfig;
   private AzureAccountConfig azureAccountConfig;
 
   private InputSplit<List<CloudObjectLocation>> inputSplit;
@@ -116,7 +116,7 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
     inputDataConfig = createMock(AzureInputDataConfig.class);
     cloudBlobDruid1 = createMock(CloudBlobHolder.class);
     azureCloudBlobIterable = createMock(AzureCloudBlobIterable.class);
-    azureInputSourceConfig = createMock(AzureInputSourceConfig.class);
+    azureStorageAccountInputSourceConfig = createMock(AzureStorageAccountInputSourceConfig.class);
     azureAccountConfig = createMock(AzureAccountConfig.class);
     EasyMock.expect(azureAccountConfig.getAccount()).andReturn(DEFAULT_STORAGE_ACCOUNT).anyTimes();
   }
@@ -134,7 +134,7 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
         EMPTY_PREFIXES,
         EMPTY_OBJECTS,
         null,
-        azureInputSourceConfig,
+        azureStorageAccountInputSourceConfig,
         null
     );
   }
@@ -156,7 +156,7 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
         EMPTY_PREFIXES,
         objects,
         null,
-        azureInputSourceConfig,
+        azureStorageAccountInputSourceConfig,
         null
     );
 
@@ -192,7 +192,7 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
         prefixes,
         EMPTY_OBJECTS,
         null,
-        azureInputSourceConfig,
+        azureStorageAccountInputSourceConfig,
         null
     );
 
@@ -243,7 +243,7 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
         prefixes,
         EMPTY_OBJECTS,
         objectGlob,
-        azureInputSourceConfig,
+        azureStorageAccountInputSourceConfig,
         null
     );
 
@@ -274,7 +274,7 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
         prefixes,
         EMPTY_OBJECTS,
         null,
-        azureInputSourceConfig,
+        azureStorageAccountInputSourceConfig,
         null
     );
 
@@ -296,12 +296,12 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
         prefixes,
         EMPTY_OBJECTS,
         null,
-        azureInputSourceConfig,
+        azureStorageAccountInputSourceConfig,
         null
     );
     String azureStorageAccountInputSourceString = azureInputSource.toString();
     Assert.assertEquals(
-        "AzureStorageAccountInputSource{uris=[], prefixes=[azureStorage://STORAGE_ACCOUNT/CONTAINER/blob], objects=[], objectGlob=null, azureInputSourceConfig=" + azureInputSourceConfig + "}",
+        "AzureStorageAccountInputSource{uris=[], prefixes=[azureStorage://STORAGE_ACCOUNT/CONTAINER/blob], objects=[], objectGlob=null, azureStorageAccountInputSourceConfig=" + azureStorageAccountInputSourceConfig + "}",
         azureStorageAccountInputSourceString
     );
   }
@@ -319,7 +319,7 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
         prefixes,
         EMPTY_OBJECTS,
         null,
-        azureInputSourceConfig,
+        azureStorageAccountInputSourceConfig,
         new SystemFields(EnumSet.of(SystemField.URI, SystemField.BUCKET, SystemField.PATH))
     );
 
@@ -331,7 +331,7 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
             + "prefixes=[azureStorage://STORAGE_ACCOUNT/CONTAINER/blob], "
             + "objects=[], "
             + "objectGlob=null, "
-            + "azureInputSourceConfig=" + azureInputSourceConfig + ", "
+            + "azureStorageAccountInputSourceConfig=" + azureStorageAccountInputSourceConfig + ", "
             + "systemFields=[__file_uri, __file_bucket, __file_path]"
             + "}",
         azureStorageAccountInputSourceString
@@ -351,7 +351,7 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
         prefixes,
         EMPTY_OBJECTS,
         null,
-        azureInputSourceConfig,
+        azureStorageAccountInputSourceConfig,
         null
     );
     Assert.assertEquals(ImmutableSet.of(AzureStorageAccountInputSource.SCHEME), azureInputSource.getTypes());
@@ -369,7 +369,7 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
         ImmutableList.of(PREFIX_URI),
         EMPTY_OBJECTS,
         null,
-        azureInputSourceConfig,
+        azureStorageAccountInputSourceConfig,
         new SystemFields(EnumSet.of(SystemField.URI, SystemField.BUCKET, SystemField.PATH))
     );
 
@@ -403,7 +403,7 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
         .withNonnullFields("inputDataConfig")
         .withNonnullFields("objectGlob")
         .withNonnullFields("scheme")
-        .withNonnullFields("azureInputSourceConfig")
+        .withNonnullFields("azureStorageAccountInputSourceConfig")
         .withNonnullFields("azureAccountConfig")
         .withNonnullFields("azureIngestClientFactory")
         .verify();

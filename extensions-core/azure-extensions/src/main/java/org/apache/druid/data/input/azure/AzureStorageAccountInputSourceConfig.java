@@ -30,7 +30,7 @@ import java.util.Objects;
  * Contains properties for Azure input source.
  * Properties can be specified by ingestionSpec which will override system default.
  */
-public class AzureInputSourceConfig
+public class AzureStorageAccountInputSourceConfig
 {
   private final String sharedAccessStorageToken;
   private final String key;
@@ -39,7 +39,7 @@ public class AzureInputSourceConfig
   private final String tenantId;
 
   @JsonCreator
-  public AzureInputSourceConfig(
+  public AzureStorageAccountInputSourceConfig(
       @JsonProperty("sharedAccessStorageToken") @Nullable String sharedAccessStorageToken,
       @JsonProperty("key") @Nullable String key,
       @JsonProperty("appRegistrationClientId") @Nullable String appRegistrationClientId,
@@ -116,7 +116,7 @@ public class AzureInputSourceConfig
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    AzureInputSourceConfig that = (AzureInputSourceConfig) o;
+    AzureStorageAccountInputSourceConfig that = (AzureStorageAccountInputSourceConfig) o;
     return Objects.equals(key, that.key)
         && Objects.equals(sharedAccessStorageToken, that.sharedAccessStorageToken)
         && Objects.equals(appRegistrationClientId, that.appRegistrationClientId)

@@ -63,7 +63,7 @@ public class AzureStorageAccountInputSource extends CloudObjectInputSource
   private final AzureEntityFactory entityFactory;
   private final AzureCloudBlobIterableFactory azureCloudBlobIterableFactory;
   private final AzureInputDataConfig inputDataConfig;
-  private final AzureInputSourceConfig azureInputSourceConfig;
+  private final AzureStorageAccountInputSourceConfig azureStorageAccountInputSourceConfig;
   private final AzureAccountConfig azureAccountConfig;
 
   private final AzureIngestClientFactory azureIngestClientFactory;
@@ -78,7 +78,7 @@ public class AzureStorageAccountInputSource extends CloudObjectInputSource
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects,
       @JsonProperty("objectGlob") @Nullable String objectGlob,
-      @JsonProperty("properties") @Nullable AzureInputSourceConfig azureInputSourceConfig,
+      @JsonProperty("properties") @Nullable AzureStorageAccountInputSourceConfig azureStorageAccountInputSourceConfig,
       @JsonProperty(SYSTEM_FIELDS_PROPERTY) @Nullable SystemFields systemFields
   )
   {
@@ -89,11 +89,11 @@ public class AzureStorageAccountInputSource extends CloudObjectInputSource
         "AzureCloudBlobIterableFactory"
     );
     this.inputDataConfig = Preconditions.checkNotNull(inputDataConfig, "AzureInputDataConfig");
-    this.azureInputSourceConfig = azureInputSourceConfig;
+    this.azureStorageAccountInputSourceConfig = azureStorageAccountInputSourceConfig;
     this.azureAccountConfig = azureAccountConfig;
     this.azureIngestClientFactory = new AzureIngestClientFactory(
         azureAccountConfig,
-        azureInputSourceConfig
+        azureStorageAccountInputSourceConfig
     );
   }
 
@@ -117,7 +117,7 @@ public class AzureStorageAccountInputSource extends CloudObjectInputSource
         null,
         split.get(),
         getObjectGlob(),
-        azureInputSourceConfig,
+        azureStorageAccountInputSourceConfig,
         systemFields
     );
   }
@@ -199,9 +199,9 @@ public class AzureStorageAccountInputSource extends CloudObjectInputSource
   @Nullable
   @JsonProperty("properties")
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public AzureInputSourceConfig getAzureInputSourceConfig()
+  public AzureStorageAccountInputSourceConfig getAzureStorageAccountInputSourceConfig()
   {
-    return azureInputSourceConfig;
+    return azureStorageAccountInputSourceConfig;
   }
 
   @Override
@@ -220,7 +220,7 @@ public class AzureStorageAccountInputSource extends CloudObjectInputSource
     return entityFactory.equals(that.entityFactory) &&
         azureCloudBlobIterableFactory.equals(that.azureCloudBlobIterableFactory) &&
         inputDataConfig.equals(that.inputDataConfig) &&
-        azureInputSourceConfig.equals(that.azureInputSourceConfig) &&
+        azureStorageAccountInputSourceConfig.equals(that.azureStorageAccountInputSourceConfig) &&
         azureAccountConfig.equals(that.azureAccountConfig) &&
         azureIngestClientFactory.equals(that.azureIngestClientFactory);
   }
@@ -228,7 +228,7 @@ public class AzureStorageAccountInputSource extends CloudObjectInputSource
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), entityFactory, azureCloudBlobIterableFactory, inputDataConfig, azureInputSourceConfig, azureAccountConfig, azureIngestClientFactory);
+    return Objects.hash(super.hashCode(), entityFactory, azureCloudBlobIterableFactory, inputDataConfig, azureStorageAccountInputSourceConfig, azureAccountConfig, azureIngestClientFactory);
   }
 
   @Override
@@ -239,7 +239,7 @@ public class AzureStorageAccountInputSource extends CloudObjectInputSource
         ", prefixes=" + getPrefixes() +
         ", objects=" + getObjects() +
         ", objectGlob=" + getObjectGlob() +
-        ", azureInputSourceConfig=" + getAzureInputSourceConfig() +
+        ", azureStorageAccountInputSourceConfig=" + getAzureStorageAccountInputSourceConfig() +
         (systemFields.getFields().isEmpty() ? "" : ", systemFields=" + systemFields) +
         '}';
   }

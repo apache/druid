@@ -25,7 +25,7 @@ import com.azure.identity.ClientSecretCredentialBuilder;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.common.StorageSharedKeyCredential;
-import org.apache.druid.data.input.azure.AzureInputSourceConfig;
+import org.apache.druid.data.input.azure.AzureStorageAccountInputSourceConfig;
 
 import javax.annotation.Nullable;
 import java.time.Duration;
@@ -33,12 +33,12 @@ import java.time.Duration;
 
 public class AzureIngestClientFactory extends AzureClientFactory
 {
-  private final AzureInputSourceConfig azureInputSourceConfig;
+  private final AzureStorageAccountInputSourceConfig azureStorageAccountInputSourceConfig;
 
-  public AzureIngestClientFactory(AzureAccountConfig config, @Nullable AzureInputSourceConfig azureInputSourceConfig)
+  public AzureIngestClientFactory(AzureAccountConfig config, @Nullable AzureStorageAccountInputSourceConfig azureStorageAccountInputSourceConfig)
   {
     super(config);
-    this.azureInputSourceConfig = azureInputSourceConfig;
+    this.azureStorageAccountInputSourceConfig = azureStorageAccountInputSourceConfig;
   }
 
   @Override
@@ -47,20 +47,20 @@ public class AzureIngestClientFactory extends AzureClientFactory
     BlobServiceClientBuilder clientBuilder = new BlobServiceClientBuilder()
         .endpoint("https://" + storageAccount + "." + config.getBlobStorageEndpoint());
 
-    if (azureInputSourceConfig == null) {
+    if (azureStorageAccountInputSourceConfig == null) {
       // If properties is not passed in inputSpec, use default azure credentials.
       return super.buildNewClient(retryCount, storageAccount);
     }
 
-    if (azureInputSourceConfig.getKey() != null) {
-      clientBuilder.credential(new StorageSharedKeyCredential(storageAccount, azureInputSourceConfig.getKey()));
-    } else if (azureInputSourceConfig.getSharedAccessStorageToken() != null) {
-      clientBuilder.sasToken(azureInputSourceConfig.getSharedAccessStorageToken());
-    } else if (azureInputSourceConfig.getAppRegistrationClientId() != null && azureInputSourceConfig.getAppRegistrationClientSecret() != null) {
+    if (azureStorageAccountInputSourceConfig.getKey() != null) {
+      clientBuilder.credential(new StorageSharedKeyCredential(storageAccount, azureStorageAccountInputSourceConfig.getKey()));
+    } else if (azureStorageAccountInputSourceConfig.getSharedAccessStorageToken() != null) {
+      clientBuilder.sasToken(azureStorageAccountInputSourceConfig.getSharedAccessStorageToken());
+    } else if (azureStorageAccountInputSourceConfig.getAppRegistrationClientId() != null && azureStorageAccountInputSourceConfig.getAppRegistrationClientSecret() != null) {
       clientBuilder.credential(new ClientSecretCredentialBuilder()
-          .clientSecret(azureInputSourceConfig.getAppRegistrationClientSecret())
-          .clientId(azureInputSourceConfig.getAppRegistrationClientId())
-          .tenantId(azureInputSourceConfig.getTenantId())
+          .clientSecret(azureStorageAccountInputSourceConfig.getAppRegistrationClientSecret())
+          .clientId(azureStorageAccountInputSourceConfig.getAppRegistrationClientId())
+          .tenantId(azureStorageAccountInputSourceConfig.getTenantId())
           .build()
       );
     } else {

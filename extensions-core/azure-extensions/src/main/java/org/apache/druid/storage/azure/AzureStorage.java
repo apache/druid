@@ -62,11 +62,11 @@ public class AzureStorage
   private static final Logger log = new Logger(AzureStorage.class);
 
   private final AzureClientFactory azureClientFactory;
-  private String defaultStorageAccount;
+  private final String defaultStorageAccount;
 
   public AzureStorage(
       AzureClientFactory azureClientFactory,
-      String defaultStorageAccount
+      @Nullable String defaultStorageAccount
   )
   {
     this.azureClientFactory = azureClientFactory;

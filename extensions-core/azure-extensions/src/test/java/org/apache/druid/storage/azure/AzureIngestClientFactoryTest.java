@@ -24,7 +24,7 @@ import com.azure.core.http.policy.BearerTokenAuthenticationPolicy;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.common.StorageSharedKeyCredential;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.data.input.azure.AzureInputSourceConfig;
+import org.apache.druid.data.input.azure.AzureStorageAccountInputSourceConfig;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.EasyMockSupport;
@@ -49,7 +49,7 @@ public class AzureIngestClientFactoryTest extends EasyMockSupport
   private static AzureAccountConfig accountConfig;
 
   @Mock
-  private static AzureInputSourceConfig azureInputSourceConfig;
+  private static AzureStorageAccountInputSourceConfig azureStorageAccountInputSourceConfig;
 
   @Before
   public void setup()
@@ -60,14 +60,14 @@ public class AzureIngestClientFactoryTest extends EasyMockSupport
   @Test
   public void test_blobServiceClient_accountName()
   {
-    AzureInputSourceConfig azureInputSourceConfig = new AzureInputSourceConfig(
+    AzureStorageAccountInputSourceConfig azureStorageAccountInputSourceConfig = new AzureStorageAccountInputSourceConfig(
         null,
         KEY,
         null,
         null,
         null
     );
-    azureIngestClientFactory = new AzureIngestClientFactory(accountConfig, azureInputSourceConfig);
+    azureIngestClientFactory = new AzureIngestClientFactory(accountConfig, azureStorageAccountInputSourceConfig);
     replayAll();
     BlobServiceClient blobServiceClient = azureIngestClientFactory.getBlobServiceClient(3, ACCOUNT);
     verifyAll();
@@ -78,14 +78,14 @@ public class AzureIngestClientFactoryTest extends EasyMockSupport
   @Test
   public void test_blobServiceClientBuilder_key() throws MalformedURLException
   {
-    AzureInputSourceConfig azureInputSourceConfig = new AzureInputSourceConfig(
+    AzureStorageAccountInputSourceConfig azureStorageAccountInputSourceConfig = new AzureStorageAccountInputSourceConfig(
         null,
         KEY,
         null,
         null,
         null
     );
-    azureIngestClientFactory = new AzureIngestClientFactory(accountConfig, azureInputSourceConfig);
+    azureIngestClientFactory = new AzureIngestClientFactory(accountConfig, azureStorageAccountInputSourceConfig);
 
     replayAll();
     BlobServiceClient blobServiceClient = azureIngestClientFactory.getBlobServiceClient(3, ACCOUNT);
@@ -105,14 +105,14 @@ public class AzureIngestClientFactoryTest extends EasyMockSupport
   @Test
   public void test_blobServiceClientBuilder_sasToken()
   {
-    AzureInputSourceConfig azureInputSourceConfig = new AzureInputSourceConfig(
+    AzureStorageAccountInputSourceConfig azureStorageAccountInputSourceConfig = new AzureStorageAccountInputSourceConfig(
         TOKEN,
         null,
         null,
         null,
         null
     );
-    azureIngestClientFactory = new AzureIngestClientFactory(accountConfig, azureInputSourceConfig);
+    azureIngestClientFactory = new AzureIngestClientFactory(accountConfig, azureStorageAccountInputSourceConfig);
     replayAll();
     BlobServiceClient blobServiceClient = azureIngestClientFactory.getBlobServiceClient(3, ACCOUNT);
     verifyAll();
@@ -130,14 +130,14 @@ public class AzureIngestClientFactoryTest extends EasyMockSupport
   @Test
   public void test_blobServiceClientBuilder_useAppRegistration()
   {
-    AzureInputSourceConfig azureInputSourceConfig = new AzureInputSourceConfig(
+    AzureStorageAccountInputSourceConfig azureStorageAccountInputSourceConfig = new AzureStorageAccountInputSourceConfig(
         null,
         null,
         "clientId",
         "clientSecret",
         "tenantId"
     );
-    azureIngestClientFactory = new AzureIngestClientFactory(accountConfig, azureInputSourceConfig);
+    azureIngestClientFactory = new AzureIngestClientFactory(accountConfig, azureStorageAccountInputSourceConfig);
     replayAll();
     BlobServiceClient blobServiceClient = azureIngestClientFactory.getBlobServiceClient(3, ACCOUNT);
     verifyAll();
@@ -156,8 +156,8 @@ public class AzureIngestClientFactoryTest extends EasyMockSupport
   public void test_blobServiceClientBuilder_useAzureAccountConfig_asDefaultMaxTries()
   {
     // We should only call getKey twice (both times in the first call to getBlobServiceClient)
-    EasyMock.expect(azureInputSourceConfig.getKey()).andReturn(KEY).times(2);
-    azureIngestClientFactory = new AzureIngestClientFactory(accountConfig, azureInputSourceConfig);
+    EasyMock.expect(azureStorageAccountInputSourceConfig.getKey()).andReturn(KEY).times(2);
+    azureIngestClientFactory = new AzureIngestClientFactory(accountConfig, azureStorageAccountInputSourceConfig);
     EasyMock.expect(accountConfig.getMaxTries()).andReturn(5);
     replayAll();
     azureIngestClientFactory.getBlobServiceClient(null, ACCOUNT);
@@ -174,14 +174,14 @@ public class AzureIngestClientFactoryTest extends EasyMockSupport
   @Test
   public void test_blobServiceClientBuilder_fallbackToAzureAccountConfig()
   {
-    AzureInputSourceConfig azureInputSourceConfig = new AzureInputSourceConfig(
+    AzureStorageAccountInputSourceConfig azureStorageAccountInputSourceConfig = new AzureStorageAccountInputSourceConfig(
         null,
         null,
         null,
         null,
         null
     );
-    azureIngestClientFactory = new AzureIngestClientFactory(accountConfig, azureInputSourceConfig);
+    azureIngestClientFactory = new AzureIngestClientFactory(accountConfig, azureStorageAccountInputSourceConfig);
     EasyMock.expect(accountConfig.getKey()).andReturn(KEY).times(2);
     replayAll();
     azureIngestClientFactory.getBlobServiceClient(5, ACCOUNT);
