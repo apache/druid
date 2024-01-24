@@ -310,7 +310,9 @@ The Azure input source reads objects directly from Azure Blob store or Azure Dat
 specify objects as a list of file URI strings or prefixes. You can split the Azure input source for use with [Parallel task](./native-batch.md) indexing and each worker task reads one chunk of the split data.
 
 
-The `azure` schema is on a path towards deprecation, use the `azureStorage` schema instead.
+:::info
+The  old `azure` schema is deprecated. Update your specs to use the `azureStorage` schema described below instead.
+:::
 
 Sample specs:
 
