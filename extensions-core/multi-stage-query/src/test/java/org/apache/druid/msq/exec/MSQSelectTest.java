@@ -1199,6 +1199,77 @@ public class MSQSelectTest extends MSQTestBase
   }
 
   @Test
+  public void testWindowOnFooWithNoGroupByAndPartitionByAnother()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("m1", ColumnType.FLOAT)
+                                            .add("cc", ColumnType.DOUBLE)
+                                            .build();
+
+    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0, null);
+    final AggregatorFactory[] theAggs = {
+        new DoubleSumAggregatorFactory("w0", "m1")
+    };
+    WindowFramedAggregateProcessor proc = new WindowFramedAggregateProcessor(theFrame, theAggs);
+
+    final Map<String, Object> contextWithRowSignature =
+        ImmutableMap.<String, Object>builder()
+                    .putAll(context)
+                    .put(
+                        DruidQuery.CTX_SCAN_SIGNATURE,
+                        "[{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"m2\",\"type\":\"DOUBLE\"}]"
+                    )
+                    .build();
+
+    final WindowOperatorQuery query = new WindowOperatorQuery(
+        new QueryDataSource(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("m1", "m2")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(contextWithRowSignature)
+                .legacy(false)
+                .build()),
+        new LegacySegmentSpec(Intervals.ETERNITY),
+        context,
+        RowSignature.builder().add("m1", ColumnType.FLOAT).add("w0", ColumnType.DOUBLE).build(),
+        ImmutableList.of(
+            new NaiveSortOperatorFactory(ImmutableList.of(ColumnWithDirection.ascending("m2"))),
+            new NaivePartitioningOperatorFactory(ImmutableList.of("m2")),
+            new WindowOperatorFactory(proc)
+        ),
+        ImmutableList.of()
+    );
+    testSelectQuery()
+        .setSql("select m1,SUM(m1) OVER(PARTITION BY m2) cc from foo")
+        .setExpectedMSQSpec(MSQSpec.builder()
+                                   .query(query)
+                                   .columnMappings(
+                                       new ColumnMappings(ImmutableList.of(
+                                           new ColumnMapping("m1", "m1"),
+                                           new ColumnMapping("w0", "cc")
+                                       )
+                                       ))
+                                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                                   .destination(isDurableStorageDestination()
+                                                ? DurableStorageMSQDestination.INSTANCE
+                                                : TaskReportMSQDestination.INSTANCE)
+                                   .build())
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedResultRows(ImmutableList.of(
+            new Object[]{1.0f, 1.0},
+            new Object[]{2.0f, 2.0},
+            new Object[]{3.0f, 3.0},
+            new Object[]{4.0f, 4.0},
+            new Object[]{5.0f, 5.0},
+            new Object[]{6.0f, 6.0}
+        ))
+        .setQueryContext(context)
+        .verifyResults();
+  }
+
+  @Test
   public void testWindowOnFooWithNoGroupByAndPartitionAndVirtualColumns()
   {
     final Map<String, Object> contextWithRowSignature =
@@ -1275,6 +1346,7 @@ public class MSQSelectTest extends MSQTestBase
         .setQueryContext(context)
         .verifyResults();
   }
+
 
   @Test
   public void testWindowOnFooWithNoGroupByAndEmptyOver()

@@ -136,6 +136,10 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
       // Add partition boosting column.
       clusterByColumns.add(new KeyColumn(QueryKitUtils.PARTITION_BOOST_COLUMN, KeyOrder.ASCENDING));
       signatureBuilder.add(QueryKitUtils.PARTITION_BOOST_COLUMN, ColumnType.LONG);
+      if (originalQuery.getContext().containsKey("shuffleCol")) {
+        final ClusterBy windowClusterBy = (ClusterBy) originalQuery.getContext().get("shuffleCol");
+        clusterByColumns.addAll(windowClusterBy.getColumns());
+      }
 
       final ClusterBy clusterBy =
           QueryKitUtils.clusterByWithSegmentGranularity(new ClusterBy(clusterByColumns, 0), segmentGranularity);
