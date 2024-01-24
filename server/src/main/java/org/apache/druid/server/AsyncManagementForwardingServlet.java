@@ -113,7 +113,7 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
       handleEnabledRequest(response);
       return;
     } else {
-      handleBadRequest(
+      handleInvalidRequest(
           response,
           StringUtils.format("Unsupported proxy destination[%s]", request.getRequestURI()),
           HttpServletResponse.SC_BAD_REQUEST
@@ -122,7 +122,7 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
     }
 
     if (currentLeader == null) {
-      handleBadRequest(
+      handleInvalidRequest(
           response,
           StringUtils.format(
               "Unable to determine destination[%s]; is your coordinator/overlord running?",
@@ -191,7 +191,7 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
     super.onServerResponseHeaders(clientRequest, proxyResponse, serverResponse);
   }
 
-  private void handleBadRequest(HttpServletResponse response, String errorMessage, int statusCode) throws IOException
+  private void handleInvalidRequest(HttpServletResponse response, String errorMessage, int statusCode) throws IOException
   {
     if (!response.isCommitted()) {
       response.resetBuffer();
