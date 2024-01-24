@@ -2398,13 +2398,25 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 inlineInfo
                 info={
                   <PopoverText>
-                    <p>Blah blah blah blah</p>
+                    <p>
+                      Store arrays as multi-value string columns instead of arrays. Note that all
+                      detected array elements will be coerced to strings if you choose this option,
+                      and data will behave more like a string than an array at query time. See
+                      <ExternalLink href={`${getLink('DOCS')}/querying/arrays`}>
+                        array docs
+                      </ExternalLink>{' '}
+                      and{' '}
+                      <ExternalLink href={`${getLink('DOCS')}/querying/multi-value-dimensions`}>
+                        mvd docs
+                      </ExternalLink>{' '}
+                      for more details about the differences between arrays and multi-value strings.
+                    </p>
                   </PopoverText>
                 }
               >
                 <Switch
-                  label="Use ARRAYs instead of MVDs"
-                  checked={arrayMode === 'arrays'}
+                  label="Store ARRAYs as MVDs"
+                  className="legacy-switch"
                   onChange={() =>
                     this.setState({
                       newArrayMode: arrayMode === 'arrays' ? 'multi-values' : 'arrays',
