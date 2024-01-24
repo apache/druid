@@ -386,7 +386,7 @@ Sample specs:
 
 Note that the Azure input source skips all empty objects only when `prefixes` is specified.
 
-The `objects` property is:
+The `objects` property can one of the following:
 
 |Property|Description|Default|Required|
 |--------|-----------|-------|---------|
