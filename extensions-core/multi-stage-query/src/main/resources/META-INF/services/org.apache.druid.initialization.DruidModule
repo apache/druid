@@ -18,3 +18,4 @@ org.apache.druid.msq.guice.MSQIndexingModule
 org.apache.druid.msq.guice.MSQDurableStorageModule
 org.apache.druid.msq.guice.MSQSqlModule
 org.apache.druid.msq.guice.SqlTaskModule
+org.apache.druid.msq.guice.MSQCompactionDruidModule

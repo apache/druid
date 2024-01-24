@@ -16,4 +16,10 @@ public class CompactionClientNative implements CompactionClient
     FutureUtils.getUnchecked(overlordClient.runTask(taskPayload.getId(), taskPayload), true);
     return taskPayload.getId();
   }
+
+  @Override
+  public void setOverlordClient(OverlordClient overlordClient)
+  {
+    this.overlordClient = overlordClient;
+  }
 }

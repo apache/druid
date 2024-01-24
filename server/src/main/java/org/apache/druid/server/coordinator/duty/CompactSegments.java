@@ -94,10 +94,8 @@ public class CompactSegments implements CoordinatorCustomDuty
   // read by HTTP threads processing Coordinator API calls.
   private final AtomicReference<Map<String, AutoCompactionSnapshot>> autoCompactionSnapshotPerDataSource = new AtomicReference<>();
 
-  @JacksonInject private CompactionClient compactionClient;
+  private final CompactionClient compactionClient;
 
-  @Inject
-  @JsonCreator
   public CompactSegments(
       @JacksonInject CompactionSegmentSearchPolicy policy,
       @JacksonInject OverlordClient overlordClient
@@ -105,6 +103,22 @@ public class CompactSegments implements CoordinatorCustomDuty
   {
     this.policy = policy;
     this.overlordClient = overlordClient;
+    this.compactionClient = null;
+    resetCompactionSnapshot();
+  }
+
+  @Inject
+  @JsonCreator
+  public CompactSegments(
+      @JacksonInject CompactionSegmentSearchPolicy policy,
+      @JacksonInject OverlordClient overlordClient,
+      @JacksonInject CompactionClient compactionClient
+  )
+  {
+    this.policy = policy;
+    this.overlordClient = overlordClient;
+    this.compactionClient = compactionClient;
+    this.compactionClient.setOverlordClient(overlordClient);
     resetCompactionSnapshot();
   }
 

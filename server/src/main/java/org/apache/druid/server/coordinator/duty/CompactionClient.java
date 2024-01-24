@@ -20,8 +20,10 @@
 package org.apache.druid.server.coordinator.duty;
 
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
+import org.apache.druid.rpc.indexing.OverlordClient;
 
 public interface CompactionClient
 {
   String submitCompactionTask(ClientCompactionTaskQuery compactionParams);
+  void setOverlordClient(OverlordClient overlordClient);
 }

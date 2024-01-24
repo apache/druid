@@ -57,6 +57,7 @@ import org.apache.druid.server.coordinator.compact.CompactionSegmentSearchPolicy
 import org.apache.druid.server.coordinator.duty.BalanceSegments;
 import org.apache.druid.server.coordinator.duty.CollectSegmentAndServerStats;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
+import org.apache.druid.server.coordinator.duty.CompactionClient;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
@@ -137,6 +138,7 @@ public class DruidCoordinator
 
   private final ServiceEmitter emitter;
   private final OverlordClient overlordClient;
+  private final CompactionClient compactionClient;
   private final ScheduledExecutorFactory executorFactory;
   private final Map<String, ScheduledExecutorService> dutyGroupExecutors = new HashMap<>();
   private final LoadQueueTaskMaster taskMaster;
@@ -185,7 +187,8 @@ public class DruidCoordinator
       BalancerStrategyFactory balancerStrategyFactory,
       LookupCoordinatorManager lookupCoordinatorManager,
       @Coordinator DruidLeaderSelector coordLeaderSelector,
-      CompactionSegmentSearchPolicy compactionSegmentSearchPolicy
+      CompactionSegmentSearchPolicy compactionSegmentSearchPolicy,
+      CompactionClient compactionClient
   )
   {
     this.config = config;
@@ -193,6 +196,7 @@ public class DruidCoordinator
     this.serverInventoryView = serverInventoryView;
     this.emitter = emitter;
     this.overlordClient = overlordClient;
+    this.compactionClient = compactionClient;
     this.taskMaster = taskMaster;
     this.serviceAnnouncer = serviceAnnouncer;
     this.self = self;
@@ -561,7 +565,7 @@ public class DruidCoordinator
   {
     List<CompactSegments> compactSegmentsDutyFromCustomGroups = getCompactSegmentsDutyFromCustomGroups();
     if (compactSegmentsDutyFromCustomGroups.isEmpty()) {
-      return new CompactSegments(compactionSegmentSearchPolicy, overlordClient);
+      return new CompactSegments(compactionSegmentSearchPolicy, overlordClient, compactionClient);
     } else {
       if (compactSegmentsDutyFromCustomGroups.size() > 1) {
         log.warn(
