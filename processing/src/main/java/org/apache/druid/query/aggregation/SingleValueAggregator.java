@@ -34,28 +34,25 @@ public class SingleValueAggregator implements Aggregator
   @Nullable
   Object value;
 
-  private boolean isNullResult = true;
+  private boolean isNullResult = false;
 
   private boolean isAggregateInvoked = false;
 
   public SingleValueAggregator(ColumnValueSelector selector)
   {
     this.selector = selector;
-    isNullResult = selector.isNull();
-    if (!isNullResult) {
-      this.value = selector.getObject();
-    }
   }
 
   @Override
   public void aggregate()
   {
     if (isAggregateInvoked) {
-      throw InvalidInput.exception("Single Value Aggregator would not be applied to more than one row..");
+      throw InvalidInput.exception("Single Value Aggregator would not be applied to more than one row");
     }
     boolean isNotNull = !selector.isNull();
-    if (isNotNull && isNullResult) {
+    if (isNotNull) {
       isNullResult = false;
+      value = selector.getObject();
     }
     isAggregateInvoked = true;
   }
