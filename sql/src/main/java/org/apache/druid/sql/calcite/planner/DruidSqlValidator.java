@@ -63,16 +63,14 @@ class DruidSqlValidator extends BaseDruidSqlValidator
   {
     final SqlWindow targetWindow;
     switch (windowOrId.getKind()) {
-    case IDENTIFIER:
-      // Just verify the window exists in this query.  It will validate
-      // when the definition is processed
-      targetWindow = getWindowByName((SqlIdentifier) windowOrId, scope);
-      break;
-    case WINDOW:
-      targetWindow = (SqlWindow) windowOrId;
-      break;
-    default:
-      throw Util.unexpected(windowOrId.getKind());
+      case IDENTIFIER:
+        targetWindow = getWindowByName((SqlIdentifier) windowOrId, scope);
+        break;
+      case WINDOW:
+        targetWindow = (SqlWindow) windowOrId;
+        break;
+      default:
+        throw Util.unexpected(windowOrId.getKind());
     }
 
     if (plannerContext.queryContext().isWindowingStrictValidation()) {
