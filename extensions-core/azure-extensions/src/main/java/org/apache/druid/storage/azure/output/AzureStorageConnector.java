@@ -51,7 +51,7 @@ public class AzureStorageConnector extends ChunkingStorageConnector<AzureInputRa
 
   public AzureStorageConnector(
       final AzureOutputConfig config,
-      @Global final AzureStorage azureStorage
+      final AzureStorage azureStorage
   )
   {
     this.config = config;
