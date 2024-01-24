@@ -17,38 +17,25 @@
  * under the License.
  */
 
-package org.apache.druid.query;
+package org.apache.druid.query.aggregation.ddsketch;
 
-import org.apache.druid.java.util.emitter.core.Emitter;
-import org.apache.druid.java.util.emitter.core.Event;
+import com.datadoghq.sketch.ddsketch.DDSketch;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
 
-public class CachingEmitter implements Emitter
+import java.io.IOException;
+
+public class DDSketchJsonSerializer extends JsonSerializer<DDSketch>
 {
-  private Event lastEmittedEvent;
-
-  public Event getLastEmittedEvent()
-  {
-    return lastEmittedEvent;
-  }
-
   @Override
-  public void start()
+  public void serialize(
+      DDSketch ddSketch,
+      JsonGenerator jsonGenerator,
+      SerializerProvider serializerProvider
+  ) throws IOException
   {
+    jsonGenerator.writeBinary(DDSketchUtils.toBytes(ddSketch));
   }
 
-  @Override
-  public void emit(Event event)
-  {
-    lastEmittedEvent = event;
-  }
-
-  @Override
-  public void flush()
-  {
-  }
-
-  @Override
-  public void close()
-  {
-  }
 }

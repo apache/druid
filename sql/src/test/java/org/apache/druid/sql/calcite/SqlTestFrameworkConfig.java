@@ -20,10 +20,10 @@
 package org.apache.druid.sql.calcite;
 
 import org.apache.druid.query.topn.TopNQueryConfig;
+import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
 import org.junit.rules.ExternalResource;
-import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 
@@ -37,8 +37,8 @@ import java.util.Map;
 /**
  * Annotation to specify desired framework settings.
  *
- * This class provides junit rule facilities to build the framework accordingly to the annotation.
- * These rules also cache the previously created frameworks.
+ * This class provides junit rule facilities to build the framework accordingly
+ * to the annotation. These rules also cache the previously created frameworks.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD})
@@ -48,13 +48,15 @@ public @interface SqlTestFrameworkConfig
 
   int minTopNThreshold() default TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD;
 
+  ResultCacheMode resultCache() default ResultCacheMode.DISABLED;
+
   /**
    * @see {@link SqlTestFrameworkConfig}
    */
   class ClassRule extends ExternalResource
   {
 
-    Map<SqlTestFrameworkConfig, SqlTestFramework> frameworkMap = new HashMap<SqlTestFrameworkConfig, SqlTestFramework>();
+    Map<SqlTestFrameworkConfig, ConfigurationInstance> configMap = new HashMap<>();
 
     public MethodRule methodRule(BaseCalciteQueryTest testHost)
     {
@@ -64,17 +66,17 @@ public @interface SqlTestFrameworkConfig
     @Override
     protected void after()
     {
-      for (SqlTestFramework f : frameworkMap.values()) {
+      for (ConfigurationInstance f : configMap.values()) {
         f.close();
       }
-      frameworkMap.clear();
+      configMap.clear();
     }
   }
 
   /**
    * @see {@link SqlTestFrameworkConfig}
    */
-  class MethodRule implements TestRule
+  class MethodRule extends ExternalResource
   {
     private SqlTestFrameworkConfig config;
     private ClassRule classRule;
@@ -90,9 +92,10 @@ public @interface SqlTestFrameworkConfig
     public SqlTestFrameworkConfig defaultConfig()
     {
       try {
-        return getClass()
+        SqlTestFrameworkConfig annotation = MethodRule.class
             .getMethod("defaultConfig")
             .getAnnotation(SqlTestFrameworkConfig.class);
+        return annotation;
       }
       catch (NoSuchMethodException | SecurityException e) {
         throw new RuntimeException(e);
@@ -111,16 +114,40 @@ public @interface SqlTestFrameworkConfig
 
     public SqlTestFramework get()
     {
-      return classRule.frameworkMap.computeIfAbsent(config, this::createFramework);
+      return getConfigurationInstance().framework;
     }
 
-    private SqlTestFramework createFramework(SqlTestFrameworkConfig config)
+    private ConfigurationInstance getConfigurationInstance()
+    {
+      return classRule.configMap.computeIfAbsent(config, this::buildConfiguration);
+    }
+
+    ConfigurationInstance buildConfiguration(SqlTestFrameworkConfig config)
+    {
+      return new ConfigurationInstance(config, testHost);
+    }
+
+  }
+
+  class ConfigurationInstance
+  {
+
+    public SqlTestFramework framework;
+
+    ConfigurationInstance(SqlTestFrameworkConfig config, QueryComponentSupplier testHost)
     {
       SqlTestFramework.Builder builder = new SqlTestFramework.Builder(testHost)
           .catalogResolver(testHost.createCatalogResolver())
           .minTopNThreshold(config.minTopNThreshold())
-          .mergeBufferCount(config.numMergeBuffers());
-      return builder.build();
+          .mergeBufferCount(config.numMergeBuffers())
+          .withOverrideModule(config.resultCache().makeModule());
+      framework = builder.build();
+    }
+
+    public void close()
+    {
+      framework.close();
     }
   }
+
 }

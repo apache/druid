@@ -1404,8 +1404,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
               );
               rows.addAll(new FrameChannelSequence(inputChannelFactory.openChannel(
                   finalStage.getId(),
-                  pageInformation.getWorker(),
-                  pageInformation.getPartition()
+                  pageInformation.getWorker() == null ? 0 : pageInformation.getWorker(),
+                  pageInformation.getPartition() == null ? 0 : pageInformation.getPartition()
               )).flatMap(frame -> SqlStatementResourceHelper.getResultSequence(
                   msqControllerTask,
                   finalStage,

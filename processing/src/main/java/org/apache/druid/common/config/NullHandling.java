@@ -203,10 +203,11 @@ public class NullHandling
    * May be null or non-null based on the current SQL-compatible null handling mode.
    */
   @Nullable
-  @SuppressWarnings("unchecked")
   public static Object defaultValueForType(ValueType type)
   {
-    if (type == ValueType.FLOAT) {
+    if (sqlCompatible()) {
+      return null;
+    } else if (type == ValueType.FLOAT) {
       return defaultFloatValue();
     } else if (type == ValueType.DOUBLE) {
       return defaultDoubleValue();
