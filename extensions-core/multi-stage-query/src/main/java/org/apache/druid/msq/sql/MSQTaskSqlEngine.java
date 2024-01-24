@@ -116,6 +116,7 @@ public class MSQTaskSqlEngine implements SqlEngine
       case ALLOW_TOP_LEVEL_UNION_ALL:
         return false;
       case WINDOW_FUNCTIONS:
+      case WINDOW_LEAF_OPERATOR:
       case UNNEST:
       case CAN_SELECT:
       case CAN_INSERT:

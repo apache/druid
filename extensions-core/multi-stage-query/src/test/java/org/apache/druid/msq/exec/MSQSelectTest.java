@@ -69,8 +69,6 @@ import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.operator.ColumnWithDirection;
 import org.apache.druid.query.operator.NaivePartitioningOperatorFactory;
 import org.apache.druid.query.operator.NaiveSortOperatorFactory;
-import org.apache.druid.query.operator.OffsetLimit;
-import org.apache.druid.query.operator.ScanOperatorFactory;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.operator.window.WindowFrame;
 import org.apache.druid.query.operator.window.WindowFramedAggregateProcessor;
@@ -78,7 +76,6 @@ import org.apache.druid.query.operator.window.WindowOperatorFactory;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.LegacySegmentSpec;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
@@ -90,6 +87,7 @@ import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
@@ -137,6 +135,10 @@ public class MSQSelectTest extends MSQTestBase
                       StringUtils.toLowerCase(MSQSelectDestination.DURABLESTORAGE.getName())
                   )
                   .build();
+  @Parameterized.Parameter(0)
+  public String contextName;
+  @Parameterized.Parameter(1)
+  public Map<String, Object> context;
 
   @Parameterized.Parameters(name = "{index}:with context {0}")
   public static Collection<Object[]> data()
@@ -153,11 +155,14 @@ public class MSQSelectTest extends MSQTestBase
     return Arrays.asList(data);
   }
 
-  @Parameterized.Parameter(0)
-  public String contextName;
-
-  @Parameterized.Parameter(1)
-  public Map<String, Object> context;
+  private static Map<String, Object> enableMultiValueUnnesting(Map<String, Object> context, boolean value)
+  {
+    Map<String, Object> localContext = ImmutableMap.<String, Object>builder()
+                                                   .putAll(context)
+                                                   .put("groupByEnableMultiValueUnnesting", value)
+                                                   .build();
+    return localContext;
+  }
 
   @Test
   public void testCalculator()
@@ -1139,8 +1144,22 @@ public class MSQSelectTest extends MSQTestBase
     };
     WindowFramedAggregateProcessor proc = new WindowFramedAggregateProcessor(theFrame, theAggs);
 
+    final Map<String, Object> contextWithRowSignature =
+        ImmutableMap.<String, Object>builder()
+                    .putAll(context)
+                    .put(DruidQuery.CTX_SCAN_SIGNATURE, "[{\"name\":\"m1\",\"type\":\"FLOAT\"}]")
+                    .build();
+
     final WindowOperatorQuery query = new WindowOperatorQuery(
-        new TableDataSource(CalciteTests.DATASOURCE1),
+        new QueryDataSource(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("m1")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(contextWithRowSignature)
+                .legacy(false)
+                .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         context,
         RowSignature.builder().add("m1", ColumnType.FLOAT).add("w0", ColumnType.DOUBLE).build(),
@@ -1149,16 +1168,7 @@ public class MSQSelectTest extends MSQTestBase
             new NaivePartitioningOperatorFactory(ImmutableList.of("m1")),
             new WindowOperatorFactory(proc)
         ),
-        ImmutableList.of(
-            new ScanOperatorFactory(
-                null,
-                null,
-                new OffsetLimit(0, Long.MAX_VALUE),
-                ImmutableList.of("m1"),
-                null,
-                null
-            )
-        )
+        ImmutableList.of()
     );
     testSelectQuery()
         .setSql("select m1,SUM(m1) OVER(PARTITION BY m1) cc from foo")
@@ -1191,6 +1201,15 @@ public class MSQSelectTest extends MSQTestBase
   @Test
   public void testWindowOnFooWithNoGroupByAndPartitionAndVirtualColumns()
   {
+    final Map<String, Object> contextWithRowSignature =
+        ImmutableMap.<String, Object>builder()
+                    .putAll(context)
+                    .put(
+                        DruidQuery.CTX_SCAN_SIGNATURE,
+                        "[{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"v0\",\"type\":\"LONG\"}]"
+                    )
+                    .build();
+
     RowSignature rowSignature = RowSignature.builder()
                                             .add("ld", ColumnType.LONG)
                                             .add("m1", ColumnType.FLOAT)
@@ -1204,25 +1223,29 @@ public class MSQSelectTest extends MSQTestBase
     WindowFramedAggregateProcessor proc = new WindowFramedAggregateProcessor(theFrame, theAggs);
 
     final WindowOperatorQuery query = new WindowOperatorQuery(
-        new TableDataSource(CalciteTests.DATASOURCE1),
+        new QueryDataSource(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("m1", "v0")
+                .virtualColumns(expressionVirtualColumn("v0", "strlen(\"dim1\")", ColumnType.LONG))
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(contextWithRowSignature)
+                .legacy(false)
+                .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         context,
-        RowSignature.builder().add("v0", ColumnType.LONG).add("m1", ColumnType.FLOAT).add("w0", ColumnType.DOUBLE).build(),
+        RowSignature.builder()
+                    .add("v0", ColumnType.LONG)
+                    .add("m1", ColumnType.FLOAT)
+                    .add("w0", ColumnType.DOUBLE)
+                    .build(),
         ImmutableList.of(
             new NaiveSortOperatorFactory(ImmutableList.of(ColumnWithDirection.ascending("m1"))),
             new NaivePartitioningOperatorFactory(ImmutableList.of("m1")),
             new WindowOperatorFactory(proc)
         ),
-        ImmutableList.of(
-            new ScanOperatorFactory(
-                null,
-                null,
-                new OffsetLimit(0, Long.MAX_VALUE),
-                ImmutableList.of("m1", "v0"),
-                VirtualColumns.create(expressionVirtualColumn("v0", "strlen(\"dim1\")", ColumnType.LONG)),
-                null
-            )
-        )
+        ImmutableList.of()
     );
     testSelectQuery()
         .setSql("select STRLEN(dim1) as ld, m1, SUM(m1) OVER(PARTITION BY m1) cc from foo")
@@ -1256,6 +1279,13 @@ public class MSQSelectTest extends MSQTestBase
   @Test
   public void testWindowOnFooWithNoGroupByAndEmptyOver()
   {
+
+    final Map<String, Object> contextWithRowSignature =
+        ImmutableMap.<String, Object>builder()
+                    .putAll(context)
+                    .put(DruidQuery.CTX_SCAN_SIGNATURE, "[{\"name\":\"m1\",\"type\":\"FLOAT\"}]")
+                    .build();
+
     RowSignature rowSignature = RowSignature.builder()
                                             .add("m1", ColumnType.FLOAT)
                                             .add("cc", ColumnType.DOUBLE)
@@ -1268,7 +1298,15 @@ public class MSQSelectTest extends MSQTestBase
     WindowFramedAggregateProcessor proc = new WindowFramedAggregateProcessor(theFrame, theAggs);
 
     final WindowOperatorQuery query = new WindowOperatorQuery(
-        new TableDataSource(CalciteTests.DATASOURCE1),
+        new QueryDataSource(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("m1")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(contextWithRowSignature)
+                .legacy(false)
+                .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         context,
         RowSignature.builder().add("m1", ColumnType.FLOAT).add("w0", ColumnType.DOUBLE).build(),
@@ -1276,16 +1314,7 @@ public class MSQSelectTest extends MSQTestBase
             new NaivePartitioningOperatorFactory(ImmutableList.of()),
             new WindowOperatorFactory(proc)
         ),
-        ImmutableList.of(
-            new ScanOperatorFactory(
-                null,
-                null,
-                new OffsetLimit(0, Long.MAX_VALUE),
-                ImmutableList.of("m1"),
-                null,
-                null
-            )
-        )
+        ImmutableList.of()
     );
     testSelectQuery()
         .setSql("select m1,SUM(m1) OVER() cc from foo")
@@ -2050,7 +2079,6 @@ public class MSQSelectTest extends MSQTestBase
         .verifyResults();
   }
 
-
   @Test
   public void testExternSelectWithMultipleWorkers() throws IOException
   {
@@ -2494,7 +2522,6 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedResultRows(expectedMultiValueFooRowsGroup())
         .verifyResults();
   }
-
 
   @Test
   public void testGroupByWithMultiValueWithoutGroupByEnable()
@@ -2993,15 +3020,6 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setExpectedResultRows(ImmutableList.of(new Object[]{6L}))
         .verifyResults();
-  }
-
-  private static Map<String, Object> enableMultiValueUnnesting(Map<String, Object> context, boolean value)
-  {
-    Map<String, Object> localContext = ImmutableMap.<String, Object>builder()
-                                                   .putAll(context)
-                                                   .put("groupByEnableMultiValueUnnesting", value)
-                                                   .build();
-    return localContext;
   }
 
   @Test

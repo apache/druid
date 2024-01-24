@@ -1476,13 +1476,16 @@ public class DruidQuery
           .addAll(windowing.getOperators())
           .build();
     }
+    // if planning in native set to null
+    // if planning in MSQ set to empty list
+
     return new WindowOperatorQuery(
         dataSource,
         new LegacySegmentSpec(Intervals.ETERNITY),
         plannerContext.queryContextMap(),
         windowing.getSignature(),
         operators,
-        null
+        plannerContext.featureAvailable(EngineFeature.WINDOW_LEAF_OPERATOR) ? ImmutableList.of() : null
     );
   }
 

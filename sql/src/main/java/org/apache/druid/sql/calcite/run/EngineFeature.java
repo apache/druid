@@ -91,6 +91,11 @@ public enum EngineFeature
   WINDOW_FUNCTIONS,
 
   /**
+   * Used to ignore leaf operators when planning for MSQ engine
+   */
+  WINDOW_LEAF_OPERATOR,
+
+  /**
    * Queries can use {@link org.apache.calcite.sql.fun.SqlStdOperatorTable#UNNEST}.
    */
   UNNEST,

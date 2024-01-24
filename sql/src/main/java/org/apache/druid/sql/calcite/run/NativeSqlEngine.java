@@ -114,6 +114,7 @@ public class NativeSqlEngine implements SqlEngine
       case READ_EXTERNAL_DATA:
       case SCAN_ORDER_BY_NON_TIME:
       case SCAN_NEEDS_SIGNATURE:
+      case WINDOW_LEAF_OPERATOR:
         return false;
       default:
         throw SqlEngines.generateUnrecognizedFeatureException(NativeSqlEngine.class.getSimpleName(), feature);

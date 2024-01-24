@@ -66,6 +66,7 @@ public class ViewSqlEngine implements SqlEngine
       case ALLOW_TOP_LEVEL_UNION_ALL:
         return true;
       // Views can't sit on top of INSERT or REPLACE.
+      case WINDOW_LEAF_OPERATOR:
       case CAN_INSERT:
       case CAN_REPLACE:
         return false;
