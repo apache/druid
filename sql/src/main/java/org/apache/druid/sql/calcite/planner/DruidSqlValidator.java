@@ -79,7 +79,7 @@ class DruidSqlValidator extends BaseDruidSqlValidator
               !isValidRangeEndpoint(targetWindow.getUpperBound()))) {
         throw buildCalciteContextException(
             StringUtils.format(
-                "The query contains a window frame which might not always give correct results. To disregard this warning [%s] can be set in the query context.",
+                "The query contains a window frame which may return incorrect results. To disregard this warning, set [%s] to false in the query context.",
                 QueryContexts.WINDOWING_STRICT_VALIDATION
             ),
             windowOrId
