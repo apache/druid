@@ -117,10 +117,10 @@ export const SchemaTable = React.memo(function SchemaTable(props: SchemaTablePro
             : -1;
           const dimensionSpec = dimensions ? dimensions[dimensionSpecIndex] : undefined;
           const dimensionSpecUserType = dimensionSpec
-            ? getDimensionSpecUserType(dimensionSpec)
+            ? getDimensionSpecUserType(dimensionSpec, definedDimensions)
             : undefined;
           const dimensionSpecClassType = dimensionSpec
-            ? getDimensionSpecClassType(dimensionSpec)
+            ? getDimensionSpecClassType(dimensionSpec, definedDimensions)
             : undefined;
 
           const columnClassName = classNames(

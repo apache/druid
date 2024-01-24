@@ -112,11 +112,14 @@ export function getDimensionSpecColumnType(dimensionSpec: string | DimensionSpec
   }
 }
 
-export function getDimensionSpecUserType(dimensionSpec: string | DimensionSpec): string {
+export function getDimensionSpecUserType(
+  dimensionSpec: string | DimensionSpec,
+  identifyMv?: boolean,
+): string {
   if (typeof dimensionSpec === 'string') return 'string';
   switch (dimensionSpec.type) {
     case 'string':
-      return typeof dimensionSpec.multiValueHandling === 'string'
+      return identifyMv && typeof dimensionSpec.multiValueHandling === 'string'
         ? 'string (multi-value)'
         : 'string';
 
@@ -130,11 +133,12 @@ export function getDimensionSpecUserType(dimensionSpec: string | DimensionSpec):
 
 export function getDimensionSpecClassType(
   dimensionSpec: string | DimensionSpec,
+  identifyMv?: boolean,
 ): string | undefined {
   if (typeof dimensionSpec === 'string') return 'string';
   switch (dimensionSpec.type) {
     case 'string':
-      return typeof dimensionSpec.multiValueHandling === 'string'
+      return identifyMv && typeof dimensionSpec.multiValueHandling === 'string'
         ? MADE_UP_MV_COLUMN_TYPE
         : 'string';
 

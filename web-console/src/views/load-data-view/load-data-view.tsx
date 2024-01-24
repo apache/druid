@@ -283,12 +283,12 @@ function getTimestampSpec(sampleResponse: SampleResponse | null): TimestampSpec 
   return chooseByBestTimestamp(timestampSpecs) || CONSTANT_TIMESTAMP_SPEC;
 }
 
-function initializeSchemaWithSamepleIfNeeded(
+function initializeSchemaWithSampleIfNeeded(
   spec: Partial<IngestionSpec>,
   sample: SampleResponse,
 ): Partial<IngestionSpec> {
   if (deepGet(spec, 'spec.dataSchema.dimensionsSpec')) return spec;
-  return updateSchemaWithSample(spec, sample, 'fixed', 'arrays', getRollup(spec));
+  return updateSchemaWithSample(spec, sample, 'fixed', 'arrays', getRollup(spec, false));
 }
 
 type Step =
@@ -1999,7 +1999,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           disabled: !transformQueryState.data,
           onNextStep: () => {
             if (!transformQueryState.data) return false;
-            this.updateSpec(initializeSchemaWithSamepleIfNeeded(spec, transformQueryState.data));
+            this.updateSpec(initializeSchemaWithSampleIfNeeded(spec, transformQueryState.data));
             return true;
           },
         })}
@@ -2191,7 +2191,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         {this.renderNextBar({
           onNextStep: () => {
             if (!filterQueryState.data) return false;
-            this.updateSpec(initializeSchemaWithSamepleIfNeeded(spec, filterQueryState.data));
+            this.updateSpec(initializeSchemaWithSampleIfNeeded(spec, filterQueryState.data));
             return true;
           },
         })}
@@ -2375,7 +2375,40 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   label="Explicitly specify schema"
                 />
               </FormGroupWithInfo>
-              {schemaMode !== 'fixed' && (
+              {schemaMode === 'fixed' ? (
+                <FormGroupWithInfo
+                  inlineInfo
+                  info={
+                    <PopoverText>
+                      <p>
+                        Store arrays as multi-value string columns instead of arrays. Note that all
+                        detected array elements will be coerced to strings if you choose this
+                        option, and data will behave more like a string than an array at query time.
+                        See{' '}
+                        <ExternalLink href={`${getLink('DOCS')}/querying/arrays`}>
+                          array docs
+                        </ExternalLink>{' '}
+                        and{' '}
+                        <ExternalLink href={`${getLink('DOCS')}/querying/multi-value-dimensions`}>
+                          mvd docs
+                        </ExternalLink>{' '}
+                        for more details about the differences between arrays and multi-value
+                        strings.
+                      </p>
+                    </PopoverText>
+                  }
+                >
+                  <Switch
+                    label="Store ARRAYs as MVDs"
+                    className="legacy-switch"
+                    onChange={() =>
+                      this.setState({
+                        newArrayMode: arrayMode === 'arrays' ? 'multi-values' : 'arrays',
+                      })
+                    }
+                  />
+                </FormGroupWithInfo>
+              ) : (
                 <AutoForm
                   fields={[
                     {
@@ -2394,36 +2427,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   onChange={this.updateSpec}
                 />
               )}
-              <FormGroupWithInfo
-                inlineInfo
-                info={
-                  <PopoverText>
-                    <p>
-                      Store arrays as multi-value string columns instead of arrays. Note that all
-                      detected array elements will be coerced to strings if you choose this option,
-                      and data will behave more like a string than an array at query time. See
-                      <ExternalLink href={`${getLink('DOCS')}/querying/arrays`}>
-                        array docs
-                      </ExternalLink>{' '}
-                      and{' '}
-                      <ExternalLink href={`${getLink('DOCS')}/querying/multi-value-dimensions`}>
-                        mvd docs
-                      </ExternalLink>{' '}
-                      for more details about the differences between arrays and multi-value strings.
-                    </p>
-                  </PopoverText>
-                }
-              >
-                <Switch
-                  label="Store ARRAYs as MVDs"
-                  className="legacy-switch"
-                  onChange={() =>
-                    this.setState({
-                      newArrayMode: arrayMode === 'arrays' ? 'multi-values' : 'arrays',
-                    })
-                  }
-                />
-              </FormGroupWithInfo>
               <FormGroupWithInfo
                 inlineInfo
                 info={

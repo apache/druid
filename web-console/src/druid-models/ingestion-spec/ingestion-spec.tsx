@@ -327,9 +327,9 @@ export function getArrayMode(spec: Partial<IngestionSpec>): ArrayMode {
   }
 }
 
-export function getRollup(spec: Partial<IngestionSpec>): boolean {
+export function getRollup(spec: Partial<IngestionSpec>, valueIfUnset = true): boolean {
   const specRollup = deepGet(spec, 'spec.dataSchema.granularitySpec.rollup');
-  return typeof specRollup === 'boolean' ? specRollup : true;
+  return typeof specRollup === 'boolean' ? specRollup : valueIfUnset;
 }
 
 export function getSpecType(spec: Partial<IngestionSpec>): IngestionType {
