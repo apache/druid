@@ -1896,15 +1896,21 @@ public class ControllerImpl implements Controller
       final ResultFormat resultFormat = exportMSQDestination.getResultFormat();
 
       // If the statement is a REPLACE statement, delete the existing files at the destination.
-      if (Intervals.ONLY_ETERNITY.equals(exportMSQDestination.getReplaceTimeChunks())) {
-        StorageConnector storageConnector = storageConnectorProvider.get();
-        try {
-          storageConnector.deleteRecursively("");
-        }
-        catch (IOException e) {
-          throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                              .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                              .build(e, "Count not delete existing files from the export destination.");
+      if (exportMSQDestination.getReplaceTimeChunks() != null) {
+        if (Intervals.ONLY_ETERNITY.equals(exportMSQDestination.getReplaceTimeChunks())) {
+          StorageConnector storageConnector = storageConnectorProvider.get();
+          try {
+            storageConnector.deleteRecursively("");
+          }
+          catch (IOException e) {
+            throw DruidException.forPersona(DruidException.Persona.USER)
+                                .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                                .build(e, "Exception occurred while deleting existing files from export destination.");
+          }
+        } else {
+          throw DruidException.forPersona(DruidException.Persona.USER)
+                              .ofCategory(DruidException.Category.UNSUPPORTED)
+                              .build("Currently export only works with OVERWRITE ALL clause.");
         }
       }
 

@@ -21,6 +21,7 @@ package org.apache.druid.msq.querykit.results;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
@@ -117,7 +118,8 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
         new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY)
             .makeCursors(null, Intervals.ETERNITY, VirtualColumns.EMPTY, Granularities.ALL, false, null);
 
-    try (OutputStream stream = storageConnector.write(getExportFilePath(workerNumber, partitionNumber, exportFormat))) {
+    final String exportFilePath = getExportFilePath(workerNumber, partitionNumber, exportFormat);
+    try (OutputStream stream = storageConnector.write(exportFilePath)) {
       ResultFormat.Writer formatter = exportFormat.createFormatter(stream, jsonMapper);
 
       SequenceUtils.forEach(
@@ -148,7 +150,9 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
               formatter.writeResponseEnd();
             }
             catch (IOException e) {
-              throw new RuntimeException(e);
+              throw DruidException.forPersona(DruidException.Persona.USER)
+                                  .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                                  .build(e, "Exception occurred while writing file to the export location [%s].", exportFilePath);
             }
           }
       );
@@ -157,7 +161,7 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
 
   private static String getExportFilePath(int workerNumber, int partitionNumber, ResultFormat exportFormat)
   {
-    return StringUtils.format("%s/%s.%s", workerNumber, partitionNumber, exportFormat.toString());
+    return StringUtils.format("worker%s/partition%s.%s", workerNumber, partitionNumber, exportFormat.toString());
   }
 
   @Override

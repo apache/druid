@@ -30,6 +30,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * Destination used by tasks that write the results as files to an external destination. {@link #resultFormat} denotes
+ * the format of the file created and {@link #storageConnectorType} and {@link #properties} denotes the type of external
+ * destination.
+ * <br>
+ * {@link #replaceTimeChunks} denotes how existing files should be handled.
+ * - If the value is null, the results are appended to the existing files.
+ * - If the value is present, existing files will be deleted according to time intervals.
+ */
 public class ExportMSQDestination implements MSQDestination
 {
   public static final String TYPE = "export";

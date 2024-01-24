@@ -24,18 +24,21 @@ import org.apache.druid.storage.export.ExportStorageConnectorFactory;
 
 import java.util.Map;
 
+/**
+ * Holder for injected {@link ExportStorageConnectorFactory}.
+ */
 public class ExportStorageConnectorFactories
 {
-  public Map<String, ExportStorageConnectorFactory> getFactories()
-  {
-    return factoriesMap;
-  }
-
   private final Map<String, ExportStorageConnectorFactory> factoriesMap;
 
   @Inject
   public ExportStorageConnectorFactories(Map<String, ExportStorageConnectorFactory> factoriesMap)
   {
     this.factoriesMap = factoriesMap;
+  }
+
+  public Map<String, ExportStorageConnectorFactory> getFactories()
+  {
+    return factoriesMap;
   }
 }
