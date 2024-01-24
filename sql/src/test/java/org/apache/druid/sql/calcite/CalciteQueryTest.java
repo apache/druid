@@ -118,6 +118,7 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
+import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.hamcrest.CoreMatchers;
@@ -14816,6 +14817,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnSupportedRangeBounds()
   {
+    assumeFeatureAvailable(EngineFeature.WINDOW_FUNCTIONS);
+
     DruidException e = assertThrows(DruidException.class, () -> testBuilder()
         .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
         .sql("SELECT dim1,ROW_NUMBER() OVER (ORDER BY dim1 RANGE BETWEEN 3 PRECEDING AND 2 FOLLOWING) from druid.foo")
