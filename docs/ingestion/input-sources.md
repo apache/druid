@@ -407,8 +407,9 @@ Either set sharedAccessStorageToken OR key OR appRegistrationClientId/appRegistr
 |tenantId|The tenant ID of the Azure App registration to authenticate as|None|Yes if `appRegistrationClientId` is provided|
 
 <details closed>
-  <summary>The v1 'azure' input source</summary>
-The old `azure` input source did not support specifying which storage account to ingest from so it has been deprecated.
+  <summary>Show the deprecated 'azure' input source</summary>
+
+Note that the deprecated `azure` input source doesn't support specifying which storage account to ingest from. We recommend using the `azureStorage` instead.
 
 Sample specs:
 
