@@ -374,7 +374,6 @@ kubernetes
 kubexit
 k8s
 laning
-lastSegmentId
 lifecycle
 localhost
 log4j
@@ -504,7 +503,6 @@ Smoosh
 smoosh
 smooshed
 snapshotting
-sortOrder
 splittable
 ssl
 sslmode
@@ -1127,6 +1125,7 @@ LZ4LZFuncompressedLZ4LZ4LZFuncompressednoneLZ4autolongsautolongslongstypeconcise
 deaggregate
 druid-kinesis-indexing-service
 maxRecordsPerPoll
+maxBytesPerPoll
 maxRecordsPerPollrecordsPerFetchfetchDelayMillisreplicasfetchDelayMillisrecordsPerFetchfetchDelayMillismaxRecordsPerPollamazon-kinesis-client1
 numKinesisShards
 numProcessors
@@ -2378,6 +2377,13 @@ aggregateMultipleValues
 appRegistrationClientId
 appRegistrationClientSecret
 tenantId
+relativeError
+ddSketch
+DDSketch
+druid-ddsketch
+numBins
+
+- ../docs/development/extensions-contrib/spectator-histogram.md
 SpectatorHistogram
 PercentileBuckets
 spectatorHistogram
@@ -2385,3 +2391,8 @@ spectatorHistogramTimer
 spectatorHistogramDistribution
 percentileSpectatorHistogram
 percentilesSpectatorHistogram
+
+- ../docs/development/extensions-contrib/ddsketch-quantiles.md
+quantilesFromDDSketch
+quantileFromDDSketch
+collapsingLowestDense

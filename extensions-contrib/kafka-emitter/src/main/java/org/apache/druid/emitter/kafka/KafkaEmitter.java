@@ -23,7 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.emitter.kafka.KafkaEmitterConfig.EventType;
-import org.apache.druid.emitter.kafka.MemoryBoundLinkedBlockingQueue.ObjectContainer;
+import org.apache.druid.java.util.common.MemoryBoundLinkedBlockingQueue;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -84,7 +84,9 @@ public class KafkaEmitter implements Emitter
     this.alertQueue = new MemoryBoundLinkedBlockingQueue<>(queueMemoryBound);
     this.requestQueue = new MemoryBoundLinkedBlockingQueue<>(queueMemoryBound);
     this.segmentMetadataQueue = new MemoryBoundLinkedBlockingQueue<>(queueMemoryBound);
-    this.scheduler = Executors.newScheduledThreadPool(4);
+    // need one thread per scheduled task. Scheduled tasks are per eventType and 1 for reporting the lost events
+    int numOfThreads = config.getEventTypes().size() + 1;
+    this.scheduler = Executors.newScheduledThreadPool(numOfThreads);
     this.metricLost = new AtomicLong(0L);
     this.alertLost = new AtomicLong(0L);
     this.requestLost = new AtomicLong(0L);
@@ -174,7 +176,7 @@ public class KafkaEmitter implements Emitter
 
   private void sendToKafka(final String topic, MemoryBoundLinkedBlockingQueue<String> recordQueue, Callback callback)
   {
-    ObjectContainer<String> objectToSend;
+    MemoryBoundLinkedBlockingQueue.ObjectContainer<String> objectToSend;
     try {
       while (true) {
         objectToSend = recordQueue.take();
@@ -204,7 +206,7 @@ public class KafkaEmitter implements Emitter
 
         String resultJson = jsonMapper.writeValueAsString(map);
 
-        ObjectContainer<String> objectContainer = new ObjectContainer<>(
+        MemoryBoundLinkedBlockingQueue.ObjectContainer<String> objectContainer = new MemoryBoundLinkedBlockingQueue.ObjectContainer<>(
             resultJson,
             StringUtils.toUtf8(resultJson).length
         );
