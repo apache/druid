@@ -32,7 +32,6 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
-import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -485,7 +484,7 @@ public class NestedGroupByArrayQueryTest
     List<ResultRow> serdeAndBack =
         results.stream()
                .peek(
-                   row -> GroupByQueryEngineV2.convertRowTypesToOutputTypes(
+                   row -> GroupingEngine.convertRowTypesToOutputTypes(
                        query.getDimensions(),
                        row,
                        query.getResultRowDimensionStart()

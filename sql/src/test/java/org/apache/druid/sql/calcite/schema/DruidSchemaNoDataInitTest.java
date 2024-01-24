@@ -31,6 +31,7 @@ import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.NoopEscalator;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.TestTimelineServerView;
@@ -51,7 +52,7 @@ public class DruidSchemaNoDataInitTest extends CalciteTestBase
       final QueryRunnerFactoryConglomerate conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(closer);
       final BrokerSegmentMetadataCache cache = new BrokerSegmentMetadataCache(
           CalciteTests.createMockQueryLifecycleFactory(
-              new SpecificSegmentsQuerySegmentWalker(conglomerate),
+              SpecificSegmentsQuerySegmentWalker.createWalker(conglomerate),
               conglomerate
           ),
           new TestTimelineServerView(Collections.emptyList()),
@@ -67,7 +68,7 @@ public class DruidSchemaNoDataInitTest extends CalciteTestBase
 
       cache.start();
       cache.awaitInitialization();
-      final DruidSchema druidSchema = new DruidSchema(cache, null);
+      final DruidSchema druidSchema = new DruidSchema(cache, null, CatalogResolver.NULL_RESOLVER);
 
       Assert.assertEquals(ImmutableSet.of(), druidSchema.getTableNames());
     }

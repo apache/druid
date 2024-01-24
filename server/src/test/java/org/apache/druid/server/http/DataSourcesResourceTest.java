@@ -35,6 +35,7 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.SegmentLoadInfo;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.SegmentsMetadataManager;
@@ -590,7 +591,7 @@ public class DataSourcesResourceTest
     Interval theInterval = Intervals.of(interval.replace('_', '/'));
 
     OverlordClient overlordClient = EasyMock.createStrictMock(OverlordClient.class);
-    EasyMock.expect(overlordClient.runKillTask("api-issued", "datasource1", theInterval, null))
+    EasyMock.expect(overlordClient.runKillTask("api-issued", "datasource1", theInterval, null, null))
             .andReturn(Futures.immediateFuture("kill_task_1"));
     EasyMock.replay(overlordClient, server);
 
@@ -605,25 +606,31 @@ public class DataSourcesResourceTest
   }
 
   @Test
-  public void testMarkAsUnusedAllSegmentsInDataSource()
+  public void testMarkAsUnusedAllSegmentsInDataSourceBadRequest()
   {
     OverlordClient overlordClient = EasyMock.createStrictMock(OverlordClient.class);
     EasyMock.replay(overlordClient, server);
     DataSourcesResource dataSourcesResource =
         new DataSourcesResource(inventoryView, null, null, overlordClient, null, null, auditManager);
-    try {
-      Response response =
-          dataSourcesResource.markAsUnusedAllSegmentsOrKillUnusedSegmentsInInterval("datasource", "true", "???", request);
-      // 400 (Bad Request) or an IllegalArgumentException is expected.
-      Assert.assertEquals(400, response.getStatus());
-      Assert.assertNotNull(response.getEntity());
-      Assert.assertTrue(response.getEntity().toString().contains("java.lang.IllegalArgumentException"));
-    }
-    catch (IllegalArgumentException ignore) {
-      // expected
-    }
+    DruidExceptionMatcher.invalidInput().assertThrowsAndMatches(
+        () -> dataSourcesResource.markAsUnusedAllSegmentsOrKillUnusedSegmentsInInterval("datasource", "true", "???", request)
+    );
+  }
 
-    EasyMock.verify(overlordClient, server);
+  @Test
+  public void testMarkAsUnusedAllSegmentsInDataSource()
+  {
+    prepareRequestForAudit();
+
+    OverlordClient overlordClient = EasyMock.createStrictMock(OverlordClient.class);
+    EasyMock.replay(overlordClient, server);
+    DataSourcesResource dataSourcesResource =
+        new DataSourcesResource(inventoryView, segmentsMetadataManager, null, overlordClient, null, null, auditManager);
+    Response response = dataSourcesResource
+        .markAsUnusedAllSegmentsOrKillUnusedSegmentsInInterval("datasource", null, null, request);
+    Assert.assertEquals(200, response.getStatus());
+
+    EasyMock.verify(request);
   }
 
   @Test

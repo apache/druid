@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Callout, Classes, Code, Dialog, Intent } from '@blueprintjs/core';
+import { Button, Callout, Classes, Code, Dialog, Intent, Switch } from '@blueprintjs/core';
 import React, { useState } from 'react';
 
 import type { FormJsonTabs } from '../../components';
@@ -26,7 +26,7 @@ import {
   COMPACTION_CONFIG_FIELDS,
   compactionConfigHasLegacyInputSegmentSizeBytesSet,
 } from '../../druid-models';
-import { deepDelete, formatBytesCompact } from '../../utils';
+import { deepDelete, deepGet, deepSet, formatBytesCompact } from '../../utils';
 import { CompactionHistoryDialog } from '../compaction-history-dialog/compaction-history-dialog';
 
 import './compaction-config-dialog.scss';
@@ -96,11 +96,24 @@ export const CompactionConfigDialog = React.memo(function CompactionConfigDialog
       />
       <div className="content">
         {currentTab === 'form' ? (
-          <AutoForm
-            fields={COMPACTION_CONFIG_FIELDS}
-            model={currentConfig}
-            onChange={m => setCurrentConfig(m as CompactionConfig)}
-          />
+          <>
+            <AutoForm
+              fields={COMPACTION_CONFIG_FIELDS}
+              model={currentConfig}
+              onChange={m => setCurrentConfig(m as CompactionConfig)}
+            />
+            <Switch
+              label="Allow concurrent compactions (experimental)"
+              checked={typeof deepGet(currentConfig, 'taskContext.taskLockType') === 'string'}
+              onChange={() => {
+                setCurrentConfig(
+                  (typeof deepGet(currentConfig, 'taskContext.taskLockType') === 'string'
+                    ? deepDelete(currentConfig, 'taskContext.taskLockType')
+                    : deepSet(currentConfig, 'taskContext.taskLockType', 'REPLACE')) as any,
+                );
+              }}
+            />
+          </>
         ) : (
           <JsonInput
             value={currentConfig}

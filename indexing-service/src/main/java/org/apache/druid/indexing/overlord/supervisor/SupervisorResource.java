@@ -30,6 +30,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import org.apache.druid.audit.AuditEntry;
+import org.apache.druid.audit.AuditManager;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.http.security.SupervisorResourceFilter;
@@ -90,6 +92,7 @@ public class SupervisorResource
   private final TaskMaster taskMaster;
   private final AuthorizerMapper authorizerMapper;
   private final ObjectMapper objectMapper;
+  private final AuditManager auditManager;
   private final AuthConfig authConfig;
 
   @Inject
@@ -97,13 +100,15 @@ public class SupervisorResource
       TaskMaster taskMaster,
       AuthorizerMapper authorizerMapper,
       ObjectMapper objectMapper,
-      AuthConfig authConfig
+      AuthConfig authConfig,
+      AuditManager auditManager
   )
   {
     this.taskMaster = taskMaster;
     this.authorizerMapper = authorizerMapper;
     this.objectMapper = objectMapper;
     this.authConfig = authConfig;
+    this.auditManager = auditManager;
   }
 
   @POST
@@ -143,6 +148,19 @@ public class SupervisorResource
           }
 
           manager.createOrUpdateAndStartSupervisor(spec);
+
+          final String auditPayload
+              = StringUtils.format("Update supervisor[%s] for datasource[%s]", spec.getId(), spec.getDataSources());
+          auditManager.doAudit(
+              AuditEntry.builder()
+                        .key(spec.getId())
+                        .type("supervisor")
+                        .auditInfo(AuthorizationUtils.buildAuditInfo(req))
+                        .request(AuthorizationUtils.buildRequestInfo("overlord", req))
+                        .payload(auditPayload)
+                        .build()
+          );
+
           return Response.ok(ImmutableMap.of("id", spec.getId())).build();
         }
     );

@@ -340,7 +340,7 @@ The following Coordinator dynamic configs have been removed:
 * `emitBalancingStats`: Stats for errors encountered while balancing will always be emitted. Other debugging stats will not be emitted but can be logged by setting the appropriate `debugDimensions`.
 * `useBatchedSegmentSampler` and `percentOfSegmentsToConsiderPerMove`: Batched segment sampling is now the standard and will always be on.
 
-Use the new [smart segment loading](#smart-segment-loading) mode instead.
+Use the new [smart segment loading](https://druid.apache.org/docs/latest/configuration/#smart-segment-loading) mode instead.
 
 [#14524](https://github.com/apache/druid/pull/14524)
 
@@ -413,7 +413,7 @@ To restore old behavior, you can set `sqlFinalizeOuterSketches=true` in the quer
 
 #### Kill tasks mark segments as unused only if specified
 
-When you issue a kill task, Druid marks the underlying segments as unused only if explicitly specified. For more information, see the [API reference](https://druid.apache.org/docs/latest/operations/api-reference.html#coordinator).
+When you issue a kill task, Druid marks the underlying segments as unused only if explicitly specified. For more information, see the [API reference](https://druid.apache.org/docs/latest/api-reference/data-management-api).
 
 [#13104](https://github.com/apache/druid/pull/13104)
 

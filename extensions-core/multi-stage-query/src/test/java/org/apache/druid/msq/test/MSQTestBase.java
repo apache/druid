@@ -529,7 +529,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
         new PlannerConfig(),
         viewManager,
         new NoopDruidSchemaManager(),
-        CalciteTests.TEST_AUTHORIZER_MAPPER
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
+        CatalogResolver.NULL_RESOLVER
     );
 
     final SqlEngine engine = new MSQTaskSqlEngine(
@@ -1403,8 +1404,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
               );
               rows.addAll(new FrameChannelSequence(inputChannelFactory.openChannel(
                   finalStage.getId(),
-                  pageInformation.getWorker(),
-                  pageInformation.getPartition()
+                  pageInformation.getWorker() == null ? 0 : pageInformation.getWorker(),
+                  pageInformation.getPartition() == null ? 0 : pageInformation.getPartition()
               )).flatMap(frame -> SqlStatementResourceHelper.getResultSequence(
                   msqControllerTask,
                   finalStage,

@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
@@ -185,10 +186,13 @@ public class VirtualColumns implements Cacheable
    * is no guarantee that the column has indexes.
    */
   @Nullable
-  public ColumnIndexSupplier getIndexSupplier(String columnName, ColumnSelector columnSelector)
+  public ColumnIndexSupplier getIndexSupplier(
+      String columnName,
+      ColumnIndexSelector columnIndexSelector
+  )
   {
     final VirtualColumn virtualColumn = getVirtualColumnForSelector(columnName);
-    return virtualColumn.getIndexSupplier(columnName, columnSelector);
+    return virtualColumn.getIndexSupplier(columnName, columnIndexSelector);
   }
 
   /**

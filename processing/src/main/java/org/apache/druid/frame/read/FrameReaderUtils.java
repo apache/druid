@@ -117,24 +117,51 @@ public class FrameReaderUtils
   public static int compareMemoryUnsigned(
       final Memory memory1,
       final long position1,
-      final long length1,
+      final int length1,
       final Memory memory2,
       final long position2,
-      final long length2
+      final int length2
   )
   {
-    final long commonLength = Math.min(length1, length2);
+    final int commonLength = Math.min(length1, length2);
 
-    for (long i = 0; i < commonLength; i++) {
-      final byte byte1 = memory1.getByte(position1 + i);
-      final byte byte2 = memory2.getByte(position2 + i);
-      final int cmp = (byte1 & 0xFF) - (byte2 & 0xFF); // Unsigned comparison
+    for (int i = 0; i < commonLength; i += Long.BYTES) {
+      final int remaining = commonLength - i;
+      final long r1 = readComparableLong(memory1, position1 + i, remaining);
+      final long r2 = readComparableLong(memory2, position2 + i, remaining);
+      final int cmp = Long.compare(r1, r2);
       if (cmp != 0) {
         return cmp;
       }
     }
 
-    return Long.compare(length1, length2);
+    return Integer.compare(length1, length2);
+  }
+
+  public static long readComparableLong(final Memory memory, final long position, final int length)
+  {
+    long retVal = 0;
+    switch (length) {
+      case 7:
+        retVal |= (memory.getByte(position + 6) & 0xFFL) << 8;
+      case 6:
+        retVal |= (memory.getByte(position + 5) & 0xFFL) << 16;
+      case 5:
+        retVal |= (memory.getByte(position + 4) & 0xFFL) << 24;
+      case 4:
+        retVal |= (memory.getByte(position + 3) & 0xFFL) << 32;
+      case 3:
+        retVal |= (memory.getByte(position + 2) & 0xFFL) << 40;
+      case 2:
+        retVal |= (memory.getByte(position + 1) & 0xFFL) << 48;
+      case 1:
+        retVal |= (memory.getByte(position) & 0xFFL) << 56;
+        break;
+      default:
+        retVal = Long.reverseBytes(memory.getLong(position));
+    }
+
+    return retVal + Long.MIN_VALUE;
   }
 
   /**

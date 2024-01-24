@@ -311,6 +311,9 @@ public class CalciteMSQTestsHelper
                               .inputTmpDir(temporaryFolder.newFolder())
                               .buildMMappedIndex();
           break;
+        case CalciteTests.WIKIPEDIA_FIRST_LAST:
+          index = TestDataBuilder.makeWikipediaIndexWithAggregation(temporaryFolder.newFolder());
+          break;
         default:
           throw new ISE("Cannot query segment %s in test runner", segmentId);
 

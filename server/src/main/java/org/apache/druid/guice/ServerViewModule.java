@@ -29,16 +29,31 @@ import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.ServerInventoryViewProvider;
 import org.apache.druid.client.ServerView;
 
+import java.util.StringJoiner;
+
 /**
  */
 public class ServerViewModule implements Module
 {
+  public static final String SERVERVIEW_PREFIX = "druid.serverview";
+  public static final String TYPE = "type";
+  public static final String SERVERVIEW_TYPE_PROPERTY = "druid.serverview.type";
+  public static final String SERVERVIEW_TYPE_HTTP = "http";
+  public static final String SERVERVIEW_TYPE_BATCH = "batch";
+
+  // this value should be consistent with the default implementation used in
+  // {@code ServerInventoryViewProvider} & {@code FilteredServerInventoryViewProvider}
+  public static final String DEFAULT_SERVERVIEW_TYPE = "http";
+
   @Override
   public void configure(Binder binder)
   {
-    JsonConfigProvider.bind(binder, "druid.serverview", ServerInventoryViewProvider.class);
-    JsonConfigProvider.bind(binder, "druid.serverview", FilteredServerInventoryViewProvider.class);
-    JsonConfigProvider.bind(binder, "druid.serverview.http", HttpServerInventoryViewConfig.class);
+    JsonConfigProvider.bind(binder, SERVERVIEW_PREFIX, ServerInventoryViewProvider.class);
+    JsonConfigProvider.bind(binder, SERVERVIEW_PREFIX, FilteredServerInventoryViewProvider.class);
+    JsonConfigProvider.bind(
+        binder,
+        new StringJoiner(".", SERVERVIEW_PREFIX, SERVERVIEW_TYPE_HTTP).toString(),
+        HttpServerInventoryViewConfig.class);
     binder.bind(InventoryView.class).to(ServerInventoryView.class);
     binder.bind(ServerView.class).to(ServerInventoryView.class);
     binder.bind(ServerInventoryView.class).toProvider(ServerInventoryViewProvider.class).in(ManageLifecycle.class);

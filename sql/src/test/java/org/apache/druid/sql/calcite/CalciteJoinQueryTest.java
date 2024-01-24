@@ -610,6 +610,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
   @Test
   public void testJoinOnGroupByInsteadOfTimeseriesWithFloorOnTimeWithNoAggregateMultipleValues()
   {
@@ -756,6 +757,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
   public void testFilterAndGroupByLookupUsingJoinOperatorBackwards(Map<String, Object> queryContext)
@@ -1560,8 +1562,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{"", "a", "xa", "xa"},
-            new Object[]{"1", "a", "xa", "xa"}
+            new Object[]{"", "a", "xabc", "xabc"},
+            new Object[]{"1", "a", "xabc", "xabc"}
         )
     );
   }
@@ -2515,12 +2517,13 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"abc", "abc", "xabc"},
+            new Object[]{NULL_STRING, "6", "x6"},
             new Object[]{NULL_STRING, "a", "xa"},
-            new Object[]{NULL_STRING, "nosuchkey", "mysteryvalue"},
-            new Object[]{NULL_STRING, "6", "x6"}
+            new Object[]{NULL_STRING, "nosuchkey", "mysteryvalue"}
         )
     );
   }
+
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
   public void testSelectOnLookupUsingFullJoinOperator(Map<String, Object> queryContext)
@@ -2562,9 +2565,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
             new Object[]{"1", 4f, 1L, NULL_STRING, NULL_STRING},
             new Object[]{"def", 5f, 1L, NULL_STRING, NULL_STRING},
             new Object[]{"abc", 6f, 1L, "abc", "xabc"},
+            new Object[]{NULL_STRING, NULL_FLOAT, NULL_LONG, "6", "x6"},
             new Object[]{NULL_STRING, NULL_FLOAT, NULL_LONG, "a", "xa"},
-            new Object[]{NULL_STRING, NULL_FLOAT, NULL_LONG, "nosuchkey", "mysteryvalue"},
-            new Object[]{NULL_STRING, NULL_FLOAT, NULL_LONG, "6", "x6"}
+            new Object[]{NULL_STRING, NULL_FLOAT, NULL_LONG, "nosuchkey", "mysteryvalue"}
         )
     );
   }
@@ -2907,6 +2910,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
   public void testLeftJoinOnTwoInlineDataSourcesWithTimeFilter_withLeftDirectAccess(Map<String, Object> queryContext)
@@ -5333,36 +5337,28 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         .columns("j0.m1", "m1")
         .filters(or(
             and(
+                equality("dim2", "D", ColumnType.STRING),
+                in("dim1", ImmutableList.of("A", "C"), null)
+            ),
+            and(
+                equality("dim2", "C", ColumnType.STRING),
+                in("dim1", ImmutableList.of("A", "B"), null)
+            ),
+            and(
+                equality("dim2", "E", ColumnType.STRING),
+                in("dim1", ImmutableList.of("C", "H"), null)
+            ),
+            and(
+                equality("dim2", "Q", ColumnType.STRING),
+                in("dim1", ImmutableList.of("P", "S"), null)
+            ),
+            and(
                 equality("dim1", "A", ColumnType.STRING),
                 equality("dim2", "B", ColumnType.STRING)
             ),
             and(
-                equality("dim1", "C", ColumnType.STRING),
-                equality("dim2", "D", ColumnType.STRING)
-            ),
-            and(
-                equality("dim1", "A", ColumnType.STRING),
-                equality("dim2", "C", ColumnType.STRING)
-            ),
-            and(
-                equality("dim1", "C", ColumnType.STRING),
-                equality("dim2", "E", ColumnType.STRING)
-            ),
-            and(
                 equality("dim1", "D", ColumnType.STRING),
                 equality("dim2", "H", ColumnType.STRING)
-            ),
-            and(
-                equality("dim1", "A", ColumnType.STRING),
-                equality("dim2", "D", ColumnType.STRING)
-            ),
-            and(
-                equality("dim1", "B", ColumnType.STRING),
-                equality("dim2", "C", ColumnType.STRING)
-            ),
-            and(
-                equality("dim1", "H", ColumnType.STRING),
-                equality("dim2", "E", ColumnType.STRING)
             ),
             and(
                 equality("dim1", "I", ColumnType.STRING),
@@ -5385,10 +5381,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 equality("dim2", "S", ColumnType.STRING)
             ),
             and(
-                equality("dim1", "S", ColumnType.STRING),
-                equality("dim2", "Q", ColumnType.STRING)
-            ),
-            and(
                 equality("dim1", "X", ColumnType.STRING),
                 equality("dim2", "Y", ColumnType.STRING)
             ),
@@ -5399,10 +5391,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
             and(
                 equality("dim1", "U", ColumnType.STRING),
                 equality("dim2", "Z", ColumnType.STRING)
-            ),
-            and(
-                equality("dim1", "P", ColumnType.STRING),
-                equality("dim2", "Q", ColumnType.STRING)
             ),
             and(
                 equality("dim1", "X", ColumnType.STRING),
@@ -5456,36 +5444,28 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         .columns("j0.m1", "m1")
         .filters(or(
             and(
+                equality("dim2", "D", ColumnType.STRING),
+                in("dim1", ImmutableList.of("A", "C"), null)
+            ),
+            and(
+                equality("dim2", "C", ColumnType.STRING),
+                in("dim1", ImmutableList.of("A", "B"), null)
+            ),
+            and(
+                equality("dim2", "E", ColumnType.STRING),
+                in("dim1", ImmutableList.of("C", "H"), null)
+            ),
+            and(
+                equality("dim2", "Q", ColumnType.STRING),
+                in("dim1", ImmutableList.of("P", "S"), null)
+            ),
+            and(
                 equality("dim1", "1", ColumnType.STRING),
                 equality("dim2", "a", ColumnType.STRING)
             ),
             and(
-                equality("dim1", "C", ColumnType.STRING),
-                equality("dim2", "D", ColumnType.STRING)
-            ),
-            and(
-                equality("dim1", "A", ColumnType.STRING),
-                equality("dim2", "C", ColumnType.STRING)
-            ),
-            and(
-                equality("dim1", "C", ColumnType.STRING),
-                equality("dim2", "E", ColumnType.STRING)
-            ),
-            and(
                 equality("dim1", "D", ColumnType.STRING),
                 equality("dim2", "H", ColumnType.STRING)
-            ),
-            and(
-                equality("dim1", "A", ColumnType.STRING),
-                equality("dim2", "D", ColumnType.STRING)
-            ),
-            and(
-                equality("dim1", "B", ColumnType.STRING),
-                equality("dim2", "C", ColumnType.STRING)
-            ),
-            and(
-                equality("dim1", "H", ColumnType.STRING),
-                equality("dim2", "E", ColumnType.STRING)
             ),
             and(
                 equality("dim1", "I", ColumnType.STRING),
@@ -5508,10 +5488,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 equality("dim2", "S", ColumnType.STRING)
             ),
             and(
-                equality("dim1", "S", ColumnType.STRING),
-                equality("dim2", "Q", ColumnType.STRING)
-            ),
-            and(
                 equality("dim1", "X", ColumnType.STRING),
                 equality("dim2", "Y", ColumnType.STRING)
             ),
@@ -5522,10 +5498,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
             and(
                 equality("dim1", "U", ColumnType.STRING),
                 equality("dim2", "Z", ColumnType.STRING)
-            ),
-            and(
-                equality("dim1", "P", ColumnType.STRING),
-                equality("dim2", "Q", ColumnType.STRING)
             ),
             and(
                 equality("dim1", "X", ColumnType.STRING),

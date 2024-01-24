@@ -61,8 +61,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.emitter.core.Event;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -130,8 +129,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 @RunWith(Parameterized.class)
 public class IndexTaskTest extends IngestionTestBase
@@ -1368,12 +1365,9 @@ public class IndexTaskTest extends IngestionTestBase
   }
 
   @Test
-  public void testWaitForSegmentAvailabilityEmitsExpectedMetric() throws IOException, InterruptedException
+  public void testWaitForSegmentAvailabilityEmitsExpectedMetric() throws IOException
   {
     final File tmpDir = temporaryFolder.newFolder();
-
-    LatchableServiceEmitter latchEmitter = new LatchableServiceEmitter();
-    latchEmitter.latch = new CountDownLatch(1);
 
     TaskToolbox mockToolbox = EasyMock.createMock(TaskToolbox.class);
 
@@ -1414,8 +1408,9 @@ public class IndexTaskTest extends IngestionTestBase
     EasyMock.expect(mockToolbox.getSegmentHandoffNotifierFactory())
             .andReturn(new NoopSegmentHandoffNotifierFactory())
             .once();
+    final StubServiceEmitter emitter = new StubServiceEmitter("IndexTaskTest", "localhost");
     EasyMock.expect(mockToolbox.getEmitter())
-            .andReturn(latchEmitter).anyTimes();
+            .andReturn(emitter).anyTimes();
 
     EasyMock.expect(mockDataSegment1.getDataSource()).andReturn("MockDataSource").once();
 
@@ -1423,7 +1418,7 @@ public class IndexTaskTest extends IngestionTestBase
     EasyMock.replay(mockDataSegment1, mockDataSegment2);
 
     Assert.assertTrue(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, 30000));
-    latchEmitter.latch.await(300000, TimeUnit.MILLISECONDS);
+    emitter.verifyEmitted("task/segmentAvailability/wait/time", 1);
     EasyMock.verify(mockToolbox);
     EasyMock.verify(mockDataSegment1, mockDataSegment2);
   }
@@ -3023,27 +3018,6 @@ public class IndexTaskTest extends IngestionTestBase
           ),
           tuningConfig
       );
-    }
-  }
-
-  /**
-   * Used to test that expected metric is emitted by AbstractBatchIndexTask#waitForSegmentAvailability
-   */
-  private static class LatchableServiceEmitter extends ServiceEmitter
-  {
-    private CountDownLatch latch;
-
-    private LatchableServiceEmitter()
-    {
-      super("", "", null);
-    }
-
-    @Override
-    public void emit(Event event)
-    {
-      if (latch != null && "task/segmentAvailability/wait/time".equals(event.toMap().get("metric"))) {
-        latch.countDown();
-      }
     }
   }
 
