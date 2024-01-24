@@ -46,7 +46,7 @@ optional arguments:
   --save_mode {append,overwrite}
                         Specify write mode (append/overwrite) (default: append)
   --save_path SAVE_PATH
-                        Save path for Delta table (default: /Users/abhishek/Desktop/opensource-druid/druid/extensions-contrib/druid-deltalake-extensions/src/test/resources/people-delta-table4)
+                        Save path for Delta table (default: <DRUID_BASE_PATH>/druid/extensions-contrib/druid-deltalake-extensions/src/test/resources/people-delta-table)
   --num_records NUM_RECORDS
                         Specify number of Delta records to write (default: 10)
 ```
