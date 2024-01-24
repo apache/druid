@@ -25,7 +25,6 @@ import com.google.inject.Inject;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.druid.catalog.model.table.IngestDestination;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -36,6 +35,7 @@ import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
 import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
+import org.apache.druid.sql.destination.IngestDestination;
 
 import java.util.Map;
 import java.util.Set;

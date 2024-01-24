@@ -35,7 +35,7 @@ import com.google.inject.Binder;
 import com.google.inject.Provides;
 import com.google.inject.multibindings.MapBinder;
 import org.apache.commons.lang.StringUtils;
-import org.apache.druid.catalog.model.table.export.ExportSourceConfig;
+import org.apache.druid.storage.export.ExportStorageConnectorFactory;
 import org.apache.druid.common.aws.AWSClientConfig;
 import org.apache.druid.common.aws.AWSEndpointConfig;
 import org.apache.druid.common.aws.AWSProxyConfig;
@@ -45,7 +45,7 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.storage.s3.output.S3StorageExportConfig;
+import org.apache.druid.storage.s3.output.S3ExportStorageConnectorFactory;
 
 import java.util.List;
 
@@ -117,8 +117,8 @@ public class S3StorageDruidModule implements DruidModule
     JsonConfigProvider.bind(binder, "druid.storage", S3StorageConfig.class);
     JsonConfigProvider.bind(binder, "druid.storage.sse.kms", S3SSEKmsConfig.class);
     JsonConfigProvider.bind(binder, "druid.storage.sse.custom", S3SSECustomConfig.class);
-    MapBinder<String, ExportSourceConfig> mapbinder = MapBinder.newMapBinder(binder, String.class, ExportSourceConfig.class);
-    mapbinder.addBinding("s3").to(S3StorageExportConfig.class);
+    MapBinder<String, ExportStorageConnectorFactory> mapbinder = MapBinder.newMapBinder(binder, String.class, ExportStorageConnectorFactory.class);
+    mapbinder.addBinding("s3").to(S3ExportStorageConnectorFactory.class);
 
     Binders.taskLogsBinder(binder).addBinding(SCHEME).to(S3TaskLogs.class);
     JsonConfigProvider.bind(binder, "druid.indexer.logs", S3TaskLogsConfig.class);

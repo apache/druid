@@ -120,7 +120,7 @@ public enum EngineFeature
    */
   ALLOW_TOP_LEVEL_UNION_ALL,
   /**
-   * Queries can write to an {@link ExternalDataSource}.
+   * Queries can write to an external datasource using {@link org.apache.druid.sql.destination.ExportDestination}
    */
   WRITE_EXTERNAL_DATA;
 }

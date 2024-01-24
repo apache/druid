@@ -21,9 +21,9 @@ package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.catalog.model.table.export.TableDestination;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.sql.destination.TableDestination;
 import org.junit.Assert;
 import org.junit.Test;
 

@@ -41,7 +41,7 @@ import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.catalog.model.table.export.ExportSourceConfig;
+import org.apache.druid.storage.export.ExportStorageConnectorFactory;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.StringTuple;
@@ -1888,9 +1888,10 @@ public class ControllerImpl implements Controller
       }
     } else if (querySpec.getDestination() instanceof ExportMSQDestination) {
       ExportMSQDestination exportMSQDestination = (ExportMSQDestination) querySpec.getDestination();
-      final ExportSourceHandlers exportSourceHandlers = injector.getInstance(ExportSourceHandlers.class);
-      final ExportSourceConfig outputConfig = exportSourceHandlers.getConnectorProviderMap()
-                                                                  .get(exportMSQDestination.getStorageConnectorType());
+      final ExportStorageConnectorFactories exportStorageConnectorFactories = injector.getInstance(
+          ExportStorageConnectorFactories.class);
+      final ExportStorageConnectorFactory outputConfig = exportStorageConnectorFactories.getConnectorProviderMap()
+                                                                                        .get(exportMSQDestination.getStorageConnectorType());
       final StorageConnectorProvider storageConnectorProvider = outputConfig.get(exportMSQDestination.getProperties(), injector);
       final ResultFormat resultFormat = exportMSQDestination.getResultFormat();
 

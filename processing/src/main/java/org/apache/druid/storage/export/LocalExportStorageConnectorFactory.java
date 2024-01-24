@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.catalog.model.table.export;
+package org.apache.druid.storage.export;
 
 import com.google.inject.Injector;
 import org.apache.druid.storage.StorageConnectorProvider;
@@ -26,7 +26,7 @@ import org.apache.druid.storage.local.LocalFileStorageConnectorProvider;
 import java.io.File;
 import java.util.Map;
 
-public class LocalStorageExportConfig implements ExportSourceConfig
+public class LocalExportStorageConnectorFactory implements ExportStorageConnectorFactory
 {
   @Override
   public StorageConnectorProvider get(Map<String, String> properties, Injector injector)

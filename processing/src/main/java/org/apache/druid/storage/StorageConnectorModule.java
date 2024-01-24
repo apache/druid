@@ -23,7 +23,10 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.storage.export.ExportStorageConnectorFactory;
+import org.apache.druid.storage.export.LocalExportStorageConnectorFactory;
 import org.apache.druid.storage.local.LocalFileStorageConnectorProvider;
 
 import java.util.List;
@@ -42,6 +45,7 @@ public class StorageConnectorModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-
+    MapBinder<String, ExportStorageConnectorFactory> mapbinder = MapBinder.newMapBinder(binder, String.class, ExportStorageConnectorFactory.class);
+    mapbinder.addBinding("local").to(LocalExportStorageConnectorFactory.class);
   }
 }

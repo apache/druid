@@ -17,12 +17,11 @@
  * under the License.
  */
 
-package org.apache.druid.catalog.model.table.export;
+package org.apache.druid.sql.destination;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import org.apache.druid.catalog.model.table.IngestDestination;
 
 import java.util.Map;
 

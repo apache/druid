@@ -17,24 +17,14 @@
  * under the License.
  */
 
-package org.apache.druid.msq.exec;
+package org.apache.druid.storage.export;
 
-import com.google.inject.Inject;
-import org.apache.druid.catalog.model.table.export.ExportSourceConfig;
+import com.google.inject.Injector;
+import org.apache.druid.storage.StorageConnectorProvider;
 
 import java.util.Map;
 
-public class ExportSourceHandlers
+public interface ExportStorageConnectorFactory
 {
-  public Map<String, ExportSourceConfig> getConnectorProviderMap()
-  {
-    return connectorProviderMap;
-  }
-
-  private final Map<String, ExportSourceConfig> connectorProviderMap;
-
-  @Inject
-  public ExportSourceHandlers(Map<String, ExportSourceConfig> connectorProviderMap) {
-    this.connectorProviderMap = connectorProviderMap;
-  }
+  StorageConnectorProvider get(Map<String, String> properties, Injector injector);
 }

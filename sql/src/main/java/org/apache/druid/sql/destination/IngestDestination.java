@@ -17,11 +17,14 @@
  * under the License.
  */
 
-package org.apache.druid.catalog.model.table;
+package org.apache.druid.sql.destination;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.guice.annotations.UnstableApi;
 
+/**
+ * Represents the destination to which the ingested data is written to.
+ */
 @UnstableApi
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 public interface IngestDestination

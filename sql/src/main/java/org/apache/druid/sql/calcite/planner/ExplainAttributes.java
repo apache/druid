@@ -21,8 +21,8 @@ package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.catalog.model.table.IngestDestination;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.sql.destination.IngestDestination;
 
 import javax.annotation.Nullable;
 import java.util.List;

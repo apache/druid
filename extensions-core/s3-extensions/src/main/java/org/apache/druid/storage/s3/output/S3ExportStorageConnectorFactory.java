@@ -20,14 +20,14 @@
 package org.apache.druid.storage.s3.output;
 
 import com.google.inject.Injector;
-import org.apache.druid.catalog.model.table.export.ExportSourceConfig;
+import org.apache.druid.storage.export.ExportStorageConnectorFactory;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.storage.StorageConnectorProvider;
 
 import java.io.File;
 import java.util.Map;
 
-public class S3StorageExportConfig implements ExportSourceConfig
+public class S3ExportStorageConnectorFactory implements ExportStorageConnectorFactory
 {
   @Override
   public StorageConnectorProvider get(Map<String, String> properties, Injector injector)

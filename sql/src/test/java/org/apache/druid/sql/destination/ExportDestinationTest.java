@@ -17,14 +17,27 @@
  * under the License.
  */
 
-package org.apache.druid.catalog.model.table.export;
+package org.apache.druid.sql.destination;
 
-import com.google.inject.Injector;
-import org.apache.druid.storage.StorageConnectorProvider;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.junit.Assert;
+import org.junit.Test;
 
-import java.util.Map;
+import java.io.IOException;
 
-public interface ExportSourceConfig
+public class ExportDestinationTest
 {
-  StorageConnectorProvider get(Map<String, String> properties, Injector injector);
+  @Test
+  public void testSerde() throws IOException
+  {
+    ExportDestination exportDestination = new ExportDestination("s3", ImmutableMap.of("bucketName", "bucket1", "prefix", "basepath/export"));
+
+    ObjectMapper objectMapper = new DefaultObjectMapper();
+    byte[] bytes = objectMapper.writeValueAsBytes(exportDestination);
+
+    ExportDestination deserialized = objectMapper.readValue(bytes, ExportDestination.class);
+    Assert.assertEquals(exportDestination, deserialized);
+  }
 }

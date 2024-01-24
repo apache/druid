@@ -21,12 +21,12 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.runtime.Hook;
-import org.apache.druid.catalog.model.table.IngestDestination;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.run.QueryMaker;
+import org.apache.druid.sql.destination.IngestDestination;
 
 /**
  * QueryMaker used by {@link CalciteInsertDmlTest}.

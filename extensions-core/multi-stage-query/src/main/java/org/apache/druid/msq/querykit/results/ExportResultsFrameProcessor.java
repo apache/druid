@@ -116,7 +116,7 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
         new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY)
             .makeCursors(null, Intervals.ETERNITY, VirtualColumns.EMPTY, Granularities.ALL, false, null);
 
-    try (OutputStream stream = storageConnector.write(workerNumber + "/" + partitionNumber)) {
+    try (OutputStream stream = storageConnector.write(workerNumber + "/" + partitionNumber + "." + exportFormat.toString())) {
       ResultFormat.Writer formatter = exportFormat.createFormatter(stream, jsonMapper);
 
       SequenceUtils.forEach(
