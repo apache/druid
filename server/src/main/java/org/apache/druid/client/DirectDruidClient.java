@@ -78,6 +78,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -551,7 +552,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             if (!responseFuture.isDone()) {
               log.error("Error cancelling query[%s]", query);
             }
-            StatusResponseHolder response = responseFuture.get();
+            StatusResponseHolder response = responseFuture.get(5, TimeUnit.SECONDS);
             if (response.getStatus().getCode() >= 500) {
               log.error("Error cancelling query[%s]: queriable node returned status[%d] [%s].",
                   query,
@@ -561,6 +562,9 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           }
           catch (ExecutionException | InterruptedException e) {
             log.error(e, "Error cancelling query[%s]", query);
+          }
+          catch (TimeoutException e) {
+            log.error(e, "Timed out cancelling query[%s]", query);
           }
         };
         queryCancellationExecutor.schedule(checkRunnable, 5, TimeUnit.SECONDS);
@@ -579,5 +583,15 @@ public class DirectDruidClient<T> implements QueryRunner<T>
            "host='" + host + '\'' +
            ", isSmile=" + isSmile +
            '}';
+  }
+
+  @Override
+  public void close() throws Exception
+  {
+    queryCancellationExecutor.shutdown();
+    if (!queryCancellationExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+      queryCancellationExecutor.shutdownNow();
+      log.warn("Timed out waiting for query cancellation executor to terminate, forcing shutdown");
+    }
   }
 }

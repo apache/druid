@@ -25,16 +25,22 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.context.ResponseContext;
 
 @ExtensionPoint
-public interface QueryRunner<T>
+public interface QueryRunner<T> extends AutoCloseable
 {
   /**
    * Runs the given query and returns results in a time-ordered sequence.
    */
   Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext);
-  
+
   @VisibleForTesting
   default Sequence<T> run(QueryPlus<T> queryPlus)
   {
     return this.run(queryPlus, ResponseContext.createEmpty());
+  }
+
+  @Override
+  default void close() throws Exception
+  {
+    // do nothing
   }
 }
