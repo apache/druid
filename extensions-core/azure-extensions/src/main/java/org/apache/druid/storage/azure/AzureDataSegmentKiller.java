@@ -91,7 +91,6 @@ public class AzureDataSegmentKiller implements DataSegmentKiller
           k -> new ArrayList<>()
       );
       keysToDelete.add(blobPath);
-      keysToDelete.add(DataSegmentKiller.descriptorPath(blobPath));
     }
 
     boolean shouldThrowException = false;
