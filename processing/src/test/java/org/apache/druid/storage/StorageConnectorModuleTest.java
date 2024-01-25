@@ -31,12 +31,12 @@ import java.io.File;
 public class StorageConnectorModuleTest
 {
   private static final String JSON = "{\n"
-                                     + "        \"type\": \"local\",\n"
+                                     + "        \"type\": \"localStorage\",\n"
                                      + "        \"basePath\": \"/tmp\"\n"
                                      + "}";
 
   private static final String JSON_WITHOUT_PATH = "{\n"
-                                                  + "        \"type\": \"local\"\n"
+                                                  + "        \"type\": \"localStorage\"\n"
                                                   + "}";
 
   final ObjectMapper objectMapper = new ObjectMapper()
