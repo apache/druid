@@ -115,7 +115,6 @@ public class DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
         segmentAnnouncer,
         emitter,
         queryProcessingPool,
-        joinableFactory,
         cache,
         cacheConfig,
         cachePopulatorStats,
