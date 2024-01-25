@@ -88,7 +88,11 @@ public @interface NotYetSupported
     T_ALLTYPES_ISSUES(AssertionError.class, "(t_alltype|allTypsUniq|fewRowsAllData).parquet.*Verifier.verify"),
     RESULT_MISMATCH(AssertionError.class, "(assertResultsEquals|AssertionError: column content mismatch)"),
     UNSUPPORTED_NULL_ORDERING(DruidException.class, "(A|DE)SCENDING ordering with NULLS (LAST|FIRST)"),
-    CANNOT_TRANSLATE(DruidException.class, "Cannot translate reference");
+    CANNOT_TRANSLATE(DruidException.class, "Cannot translate reference"),
+    MISSING_UNION_CONVERSION(DruidException.class, "Missing conversions? (is|are) LogicalUnion"),
+    MISSING_WINDOW_CONVERSION(DruidException.class, "Missing conversions? is Window"),
+    MISSING_JOIN_CONVERSION(DruidException.class, "Missing conversions? is (Logical)?Join"),
+    ;
 
     public Class<? extends Throwable> throwableClass;
     public String regex;
