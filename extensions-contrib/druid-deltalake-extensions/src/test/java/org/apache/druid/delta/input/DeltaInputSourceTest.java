@@ -37,13 +37,10 @@ import java.util.stream.Stream;
 public class DeltaInputSourceTest
 {
   @Test
-  public void testReadDeltaLakeFilesSample() throws IOException
+  public void testSampleDeltaTable() throws IOException
   {
     final DeltaInputSource deltaInputSource = new DeltaInputSource(DeltaTestUtil.DELTA_TABLE_PATH, null);
-    Assert.assertNotNull(deltaInputSource);
-
-    InputSourceReader inputSourceReader = deltaInputSource.reader(DeltaTestUtil.SCHEMA, null, null);
-    Assert.assertNotNull(inputSourceReader);
+    final InputSourceReader inputSourceReader = deltaInputSource.reader(DeltaTestUtil.SCHEMA, null, null);
 
     List<InputRowListPlusRawValues> actualSampledRows = sampleAllRows(inputSourceReader);
     Assert.assertEquals(DeltaTestUtil.EXPECTED_ROWS.size(), actualSampledRows.size());
@@ -62,17 +59,13 @@ public class DeltaInputSourceTest
   }
 
   @Test
-  public void testReadDeltaLakeFilesRead() throws IOException
+  public void testReadAllDeltaTable() throws IOException
   {
     final DeltaInputSource deltaInputSource = new DeltaInputSource(DeltaTestUtil.DELTA_TABLE_PATH, null);
-    Assert.assertNotNull(deltaInputSource);
-
-    InputSourceReader inputSourceReader = deltaInputSource.reader(DeltaTestUtil.SCHEMA, null, null);
-    Assert.assertNotNull(inputSourceReader);
+    final InputSourceReader inputSourceReader = deltaInputSource.reader(DeltaTestUtil.SCHEMA, null, null);
 
     List<InputRow> actualReadRows = readAllRows(inputSourceReader);
     Assert.assertEquals(DeltaTestUtil.EXPECTED_ROWS.size(), actualReadRows.size());
-
 
     for (int idx = 0; idx < DeltaTestUtil.EXPECTED_ROWS.size(); idx++) {
       Map<String, Object> expectedRow = DeltaTestUtil.EXPECTED_ROWS.get(idx);
@@ -89,36 +82,30 @@ public class DeltaInputSourceTest
   }
 
   @Test
-  public void testReadDeltaLakeNoSplits() throws IOException
+  public void testReadDeltaTableWithNoSplits()
   {
     final DeltaInputSource deltaInputSource = new DeltaInputSource(DeltaTestUtil.DELTA_TABLE_PATH, null);
-    Assert.assertNotNull(deltaInputSource);
-
-    Stream<InputSplit<DeltaSplit>> splits = deltaInputSource.createSplits(null, null);
+    final Stream<InputSplit<DeltaSplit>> splits = deltaInputSource.createSplits(null, null);
     Assert.assertNotNull(splits);
     Assert.assertEquals(1, splits.count());
   }
 
   @Test
-  public void testReadDeltaLakeWithSplits() throws IOException
+  public void testReadDeltaLakeWithSplits()
   {
     final DeltaInputSource deltaInputSource = new DeltaInputSource(DeltaTestUtil.DELTA_TABLE_PATH, null);
-    Assert.assertNotNull(deltaInputSource);
+    final List<InputSplit<DeltaSplit>> splits1 = deltaInputSource.createSplits(null, null)
+                                                                   .collect(Collectors.toList());
+    Assert.assertEquals(1, splits1.size());
 
-    Stream<InputSplit<DeltaSplit>> splits1 = deltaInputSource.createSplits(null, null);
-    List<InputSplit<DeltaSplit>> splitsCollect1 = splits1.collect(Collectors.toList());
-    Assert.assertEquals(1, splitsCollect1.size());
-
-    DeltaInputSource deltaInputSourceWithSplit = new DeltaInputSource(
+    final DeltaInputSource deltaInputSourceWithSplit = new DeltaInputSource(
         DeltaTestUtil.DELTA_TABLE_PATH,
-        splitsCollect1.get(0).get()
+        splits1.get(0).get()
     );
-    Assert.assertNotNull(deltaInputSourceWithSplit);
-    Stream<InputSplit<DeltaSplit>> splits2 = deltaInputSourceWithSplit.createSplits(null, null);
-    List<InputSplit<DeltaSplit>> splitsCollect2 = splits2.collect(Collectors.toList());
-    Assert.assertEquals(1, splitsCollect2.size());
-
-    Assert.assertEquals(splitsCollect1.get(0).get(), splitsCollect2.get(0).get());
+    final List<InputSplit<DeltaSplit>> splits2 = deltaInputSourceWithSplit.createSplits(null, null)
+                                                                            .collect(Collectors.toList());
+    Assert.assertEquals(1, splits2.size());
+    Assert.assertEquals(splits1.get(0).get(), splits2.get(0).get());
   }
 
   private List<InputRowListPlusRawValues> sampleAllRows(InputSourceReader reader) throws IOException
@@ -132,7 +119,7 @@ public class DeltaInputSourceTest
 
   private List<InputRow> readAllRows(InputSourceReader reader) throws IOException
   {
-    List<InputRow> rows = new ArrayList<>();
+    final List<InputRow> rows = new ArrayList<>();
     try (CloseableIterator<InputRow> iterator = reader.read()) {
       iterator.forEachRemaining(rows::add);
     }

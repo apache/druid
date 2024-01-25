@@ -183,7 +183,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
   }
 
   @Override
-  public int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec) throws IOException
+  public int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
   {
     return Ints.checkedCast(createSplits(inputFormat, splitHintSpec).count());
   }
