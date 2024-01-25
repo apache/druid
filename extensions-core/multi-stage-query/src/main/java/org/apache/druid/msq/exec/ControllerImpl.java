@@ -1888,11 +1888,18 @@ public class ControllerImpl implements Controller
       }
     } else if (querySpec.getDestination() instanceof ExportMSQDestination) {
       final ExportMSQDestination exportMSQDestination = (ExportMSQDestination) querySpec.getDestination();
-      final ExportStorageConnectorFactory storageConnectorFactory = injector.getInstance(ExportStorageConnectorFactories.class)
-                                                                            .getFactories()
-                                                                            .get(exportMSQDestination.getStorageConnectorType());
+      final Map<String, ExportStorageConnectorFactory> storageConnectorFactories = injector.getInstance(ExportStorageConnectorFactories.class)
+                                                                                           .getFactories();
+      if (!storageConnectorFactories.containsKey(exportMSQDestination.getStorageConnectorType())) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                            .build("No storage connector found for storage connector type:[%s].", exportMSQDestination.getStorageConnectorType());
+      }
+
       final StorageConnectorProvider storageConnectorProvider =
-          storageConnectorFactory.get(exportMSQDestination.getProperties(), injector);
+          storageConnectorFactories.get(exportMSQDestination.getStorageConnectorType())
+                                   .get(exportMSQDestination.getProperties(), injector);
+
       final ResultFormat resultFormat = exportMSQDestination.getResultFormat();
 
       // If the statement is a REPLACE statement, delete the existing files at the destination.

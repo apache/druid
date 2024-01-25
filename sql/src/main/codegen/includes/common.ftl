@@ -109,43 +109,32 @@ SqlTypeNameSpec DruidType() :
 
 // Parses the supported file formats for export.
 String FileFormat() :
-{}
 {
-  (
-    <CSV>
-    {
-      return "CSV";
-    }
-  )
+  SqlNode format;
+}
+{
+  format = SimpleIdentifier()
+  {
+    return format.toString();
+  }
 }
 
 SqlIdentifier ExternalDestination() :
 {
   final Span s;
+  SqlIdentifier destinationType;
   Map<String, String> properties = new HashMap();
 }
 {
-  (
-    <S3> [ <LPAREN> [properties = ExternProperties()] <RPAREN>]
-    {
-      s = span();
-      return new ExternalDestinationSqlIdentifier(
-        "s3",
-        s.pos(),
-        properties
-      );
-    }
-    |
-    <LOCAL> [ <LPAREN> [properties = ExternProperties()] <RPAREN>]
-    {
-      s = span();
-      return new ExternalDestinationSqlIdentifier(
-        "local",
-        s.pos(),
-        properties
-      );
-    }
-  )
+  destinationType = SimpleIdentifier() [ <LPAREN> [properties = ExternProperties()] <RPAREN>]
+  {
+    s = span();
+    return new ExternalDestinationSqlIdentifier(
+      destinationType.toString(),
+      s.pos(),
+      properties
+    );
+  }
 }
 
 Map<String, String> ExternProperties() :
@@ -163,4 +152,12 @@ Map<String, String> ExternProperties() :
     }
     return properties;
   }
+}
+
+SqlNode testRule():
+{
+  final SqlNode e;
+}
+{
+  e = SimpleIdentifier() { return e; }
 }

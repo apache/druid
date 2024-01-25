@@ -26,6 +26,12 @@ import org.apache.druid.storage.local.LocalFileStorageConnectorProvider;
 import java.io.File;
 import java.util.Map;
 
+/**
+ * Provides a {@link StorageConnectorProvider} which allows writing to the local machine. Not meaningful for production,
+ * and is used for tests or debugging purposes.
+ * <br>
+ * Not to be bound in Guice modules.
+ */
 public class LocalExportStorageConnectorFactory implements ExportStorageConnectorFactory
 {
   @Override

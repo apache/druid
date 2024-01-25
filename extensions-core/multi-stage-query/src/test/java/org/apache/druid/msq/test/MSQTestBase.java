@@ -34,6 +34,7 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
+import com.google.inject.multibindings.MapBinder;
 import com.google.inject.util.Modules;
 import com.google.inject.util.Providers;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
@@ -176,7 +177,10 @@ import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.sql.guice.SqlBindings;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
+import org.apache.druid.storage.export.ExportStorageConnectorFactory;
+import org.apache.druid.storage.export.LocalExportStorageConnectorFactory;
 import org.apache.druid.storage.local.LocalFileStorageConnector;
+import org.apache.druid.storage.local.LocalFileStorageConnectorProvider;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.PruneLoadSpec;
 import org.apache.druid.timeline.SegmentId;
@@ -476,6 +480,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
           }
 
           binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
+          MapBinder<String, ExportStorageConnectorFactory> mapbinder = MapBinder.newMapBinder(binder, String.class, ExportStorageConnectorFactory.class);
+          mapbinder.addBinding(LocalFileStorageConnectorProvider.TYPE_NAME).to(LocalExportStorageConnectorFactory.class);
         },
         // Requirement of WorkerMemoryParameters.createProductionInstanceForWorker(injector)
         binder -> binder.bind(AppenderatorsManager.class).toProvider(() -> null),
@@ -895,7 +901,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     public Builder setExpectedSegment(Set<SegmentId> expectedSegments)
     {
-      Preconditions.checkArgument(!expectedSegments.isEmpty(), "Segments cannot be empty");
+      Preconditions.checkArgument(expectedSegments != null, "Segments cannot be null");
       this.expectedSegments = expectedSegments;
       return asBuilder();
     }

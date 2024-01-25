@@ -70,15 +70,11 @@ data: {
       "OVERWRITE"
       "PARTITIONED"
       "EXTERN"
-      "S3"
-      "CSV"
     ]
 
     nonReservedKeywordsToAdd: [
       "OVERWRITE"
       "EXTERN"
-      "S3"
-      "CSV"
     ]
 
     # List of methods for parsing custom SQL statements.

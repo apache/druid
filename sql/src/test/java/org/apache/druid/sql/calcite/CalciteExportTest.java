@@ -139,4 +139,20 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
         )
         .verify();
   }
+
+  @Test
+  public void testUnsupportedExportFormat()
+  {
+    testIngestionQuery()
+        .sql("REPLACE INTO testTable "
+             + "AS JSON "
+             + "OVERWRITE ALL "
+             + "SELECT dim2 FROM foo "
+             + "PARTITIONED BY ALL")
+        .expectValidationError(
+            DruidException.class,
+            "The AS <format> clause should only be specified while exporting rows into an EXTERN destination."
+        )
+        .verify();
+  }
 }
