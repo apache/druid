@@ -51,7 +51,9 @@ import java.util.Map;
 /**
  * Utility class to serialize and deserialize {@link Row} object.
  * Code borrowed from <a href="https://github.com/delta-io/delta/blob/master/kernel/examples/table-reader/src/main/java/io/delta/kernel/examples/utils/RowSerDe.java">
- * RowSerde.java</a>.
+ * RowSerde.java</a>. The only differences between the two classes are the code style and exception handling in
+ * {@link #convertRowToJsonObject}, where we use {@link org.apache.druid.error.DruidException} instead of
+ * {@link UnsupportedOperationException}.
  *
  */
 public class RowSerde

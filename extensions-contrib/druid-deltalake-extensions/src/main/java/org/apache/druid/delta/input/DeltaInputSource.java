@@ -90,6 +90,15 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
     return false;
   }
 
+  /**
+   * Instantiates a {@link DeltaInputSourceReader} to read the Delta table rows. If a {@link DeltaSplit} is supplied,
+   * the Delta files and schema are obtained from it to instantiate the reader. Otherwise, a Delta table client is
+   * instantiated with the supplied configuration to read the table.
+   * @param inputRowSchema     schema for {@link org.apache.druid.data.input.InputRow}
+   * @param inputFormat        unused parameter. The input format is always parquet
+   * @param temporaryDirectory unused parameter
+   * @return
+   */
   @Override
   public InputSourceReader reader(
       InputRowSchema inputRowSchema,
@@ -97,8 +106,9 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
       File temporaryDirectory
   )
   {
-    Configuration hadoopConf = new Configuration();
-    TableClient tableClient = DefaultTableClient.create(hadoopConf);
+    // TODO: allow hadoop configurations such as credentials to be set here.
+    final Configuration conf = new Configuration();
+    final TableClient tableClient = DefaultTableClient.create(conf);
     try {
       final Row scanState;
       final List<Row> scanRowList;
@@ -110,17 +120,17 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
                                 .map(row -> deserialize(tableClient, row))
                                 .collect(Collectors.toList());
       } else {
-        Table table = Table.forPath(tableClient, tablePath);
-        Snapshot latestSnapshot = table.getLatestSnapshot(tableClient);
+        final Table table = Table.forPath(tableClient, tablePath);
+        final Snapshot latestSnapshot = table.getLatestSnapshot(tableClient);
+        final Scan scan = latestSnapshot.getScanBuilder(tableClient).build();
+        final CloseableIterator<FilteredColumnarBatch> scanFiles = scan.getScanFiles(tableClient);
 
-        Scan scan = latestSnapshot.getScanBuilder(tableClient).build();
         scanState = scan.getScanState(tableClient);
-        CloseableIterator<FilteredColumnarBatch> scanFiles = scan.getScanFiles(tableClient);
         scanRowList = new ArrayList<>();
 
         while (scanFiles.hasNext()) {
-          FilteredColumnarBatch scanFileBatch = scanFiles.next();
-          CloseableIterator<Row> scanFileRows = scanFileBatch.getRows();
+          final FilteredColumnarBatch scanFileBatch = scanFiles.next();
+          final CloseableIterator<Row> scanFileRows = scanFileBatch.getRows();
           scanFileRows.forEachRemaining(scanRowList::add);
         }
       }
@@ -145,12 +155,12 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
   @Override
   public Stream<InputSplit<DeltaSplit>> createSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
   {
-    if (null != deltaSplit) {
+    if (deltaSplit != null) {
       // can't split a split
       return Stream.of(new InputSplit<>(deltaSplit));
     }
 
-    TableClient tableClient = DefaultTableClient.create(new Configuration());
+    final TableClient tableClient = DefaultTableClient.create(new Configuration());
     final Snapshot latestSnapshot;
     final Table table;
     try {
@@ -160,18 +170,18 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
     catch (TableNotFoundException e) {
       throw new RuntimeException(e);
     }
-    Scan scan = latestSnapshot.getScanBuilder(tableClient).build();
+    final Scan scan = latestSnapshot.getScanBuilder(tableClient).build();
     // scan files iterator for the current snapshot
-    CloseableIterator<FilteredColumnarBatch> scanFilesIterator = scan.getScanFiles(tableClient);
+    final CloseableIterator<FilteredColumnarBatch> scanFilesIterator = scan.getScanFiles(tableClient);
 
-    Row scanState = scan.getScanState(tableClient);
-    String scanStateStr = RowSerde.serializeRowToJson(scanState);
+    final Row scanState = scan.getScanState(tableClient);
+    final String scanStateStr = RowSerde.serializeRowToJson(scanState);
 
     Iterator<DeltaSplit> deltaSplitIterator = Iterators.transform(
         scanFilesIterator,
         scanFile -> {
-          CloseableIterator<Row> rows = scanFile.getRows();
-          List<String> fileRows = new ArrayList<>();
+          final CloseableIterator<Row> rows = scanFile.getRows();
+          final List<String> fileRows = new ArrayList<>();
           while (rows.hasNext()) {
             fileRows.add(RowSerde.serializeRowToJson(rows.next()));
           }

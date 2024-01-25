@@ -207,13 +207,17 @@ public class DeltaInputRow implements InputRow
       final byte[] arr = dataRow.getBinary(columnOrdinal);
       final char[] charArray = new char[arr.length];
       for (int i = 0; i < arr.length; i++) {
-        charArray[i] = (char) (arr[i] & 0xff);
+        charArray[i] = (char) (arr[i]);
       }
       return String.valueOf(charArray);
     } else if (dataType instanceof DecimalType) {
       return dataRow.getDecimal(columnOrdinal).longValue();
     } else {
-      throw InvalidInput.exception("Unsupported data type[%s]", dataType);
+      throw InvalidInput.exception(
+          "Unsupported data type[%s] for fieldName[%s].",
+          dataType,
+          dataRow.getSchema().fieldNames().get(columnOrdinal)
+      );
     }
   }
 }
