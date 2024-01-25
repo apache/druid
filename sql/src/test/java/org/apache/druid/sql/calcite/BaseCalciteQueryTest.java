@@ -114,7 +114,6 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -299,7 +298,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public QueryLogHook queryLogHook;
 
-  public QueryComponentSupplier baseComponentSupplier;
+  private QueryComponentSupplier baseComponentSupplier;
   public PlannerComponentSupplier basePlannerComponentSupplier = new StandardPlannerComponentSupplier();
 
   public BaseCalciteQueryTest()
@@ -633,20 +632,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   @ClassRule
   public static SqlTestFrameworkConfig.ClassRule queryFrameworkClassRule = new SqlTestFrameworkConfig.ClassRule();
 
-  @Rule
+  @Rule(order = 3)
   public SqlTestFrameworkConfig.MethodRule queryFrameworkRule = queryFrameworkClassRule.methodRule(this);
 
   public SqlTestFramework queryFramework()
   {
     return queryFrameworkRule.get();
-  }
-
-  @Before
-  public void before() throws Exception
-  {
-    baseComponentSupplier = new StandardComponentSupplier(
-        temporaryFolder.newFolder()
-    );
   }
 
   @Override
@@ -676,6 +667,14 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   @Override
   public void gatherProperties(Properties properties)
   {
+    try {
+      baseComponentSupplier = new StandardComponentSupplier(
+          temporaryFolder.newFolder()
+      );
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
     baseComponentSupplier.gatherProperties(properties);
   }
 
