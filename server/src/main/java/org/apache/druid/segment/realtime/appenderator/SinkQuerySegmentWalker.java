@@ -58,7 +58,6 @@ import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.segment.realtime.plumber.SinkSegmentReference;
@@ -368,41 +367,6 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   String getDataSource()
   {
     return dataSource;
-  }
-
-  /**
-   * Decorates a {@link FireHydrant} query runner to emit query/segmentAndCache/time, query/segment/time, and
-   * query/wait/time. Also adds CPU time to cpuTimeAccumulator. Because each hydrant (persist file or in-memory
-   * {@link IncrementalIndex}) is submitted to the executor separately, it reports its own metrics, even though
-   * it isn't a full segment.
-   */
-  private <T> QueryRunner<T> withHydrantMetrics(
-      final QueryRunner<T> hydrantRunner,
-      final QueryToolChest<T, ? extends Query<T>> queryToolChest,
-      final SegmentId sinkSegmentId,
-      final AtomicLong cpuTimeAccumulator
-  )
-  {
-    String sinkSegmentIdString = sinkSegmentId.toString();
-    return CPUTimeMetricQueryRunner.safeBuild(
-        new MetricsEmittingQueryRunner<>(
-            emitter,
-            queryToolChest,
-            new MetricsEmittingQueryRunner<>(
-                emitter,
-                queryToolChest,
-                hydrantRunner,
-                QueryMetrics::reportSegmentTime,
-                queryMetrics -> queryMetrics.segment(sinkSegmentIdString)
-            ),
-            QueryMetrics::reportSegmentAndCacheTime,
-            queryMetrics -> queryMetrics.segment(sinkSegmentIdString)
-        ).withWaitMeasuredFromNow(),
-        queryToolChest,
-        emitter,
-        cpuTimeAccumulator,
-        false
-    );
   }
 
   public VersionedIntervalTimeline<String, Sink> getSinkTimeline()
