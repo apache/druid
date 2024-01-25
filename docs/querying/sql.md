@@ -196,8 +196,8 @@ LIMIT 15
 |`#ar.wikipedia`|185.99.32.50|deleted|0|
 |`#ar.wikipedia`|197.18.109.148|added|0|
 |`#ar.wikipedia`|197.18.109.148|deleted|24|
-|`#ar.wikipedia`|2001:16A2:3C7:6C00:917E:AD28:FAD3:FD5C|added|1|
-|`#ar.wikipedia`|2001:16A2:3C7:6C00:917E:AD28:FAD3:FD5C|deleted|0|
+|`#ar.wikipedia`|`2001:16A2:3C7:6C00:917E:AD28:FAD3:FD5C`|added|1|
+|`#ar.wikipedia`|`2001:16A2:3C7:6C00:917E:AD28:FAD3:FD5C`|deleted|0|
 |`#ar.wikipedia`|41.108.33.83|added|0|
 
 </details>
