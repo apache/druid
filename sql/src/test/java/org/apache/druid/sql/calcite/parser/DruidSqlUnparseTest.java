@@ -99,9 +99,9 @@ public class DruidSqlUnparseTest
   @Test
   public void testUnparseExternalSqlIdentifier() throws ParseException
   {
-    String sqlQuery = "REPLACE INTO EXTERN( s3(bucket=bucket1,prefix=prefix1) ) AS CSV OVERWRITE ALL SELECT dim2 FROM foo PARTITIONED BY ALL";
+    String sqlQuery = "REPLACE INTO EXTERN( s3(bucket='bucket1',prefix='prefix1') ) AS CSV OVERWRITE ALL SELECT dim2 FROM foo PARTITIONED BY ALL";
     String prettySqlQuery = "REPLACE INTO EXTERN(S3(bucket = \"bucket1\", prefix = \"prefix1\"))\n"
-                            + "AS CSV\n"
+                            + "AS csv\n"
                             + "OVERWRITE ALL\n"
                             + "SELECT \"dim2\"\n"
                             + "    FROM \"foo\"\n"
