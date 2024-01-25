@@ -33,10 +33,13 @@ import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.data.input.impl.systemfield.SystemField;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.druid.storage.azure.AzureAccountConfig;
 import org.apache.druid.storage.azure.AzureCloudBlobIterable;
 import org.apache.druid.storage.azure.AzureCloudBlobIterableFactory;
+import org.apache.druid.storage.azure.AzureIngestClientFactory;
 import org.apache.druid.storage.azure.AzureInputDataConfig;
 import org.apache.druid.storage.azure.AzureStorage;
 import org.apache.druid.storage.azure.blob.CloudBlobHolder;
@@ -57,17 +60,18 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class AzureInputSourceTest extends EasyMockSupport
+public class AzureStorageAccountInputSourceTest extends EasyMockSupport
 {
-  private static final String CONTAINER_NAME = "container";
   private static final String BLOB_NAME = "blob";
   private static final URI PREFIX_URI;
   private final List<URI> EMPTY_URIS = ImmutableList.of();
   private final List<URI> EMPTY_PREFIXES = ImmutableList.of();
   private final List<CloudObjectLocation> EMPTY_OBJECTS = ImmutableList.of();
+  private static final String STORAGE_ACCOUNT = "STORAGE_ACCOUNT";
+  private static final String DEFAULT_STORAGE_ACCOUNT = "DEFAULT_STORAGE_ACCOUNT";
   private static final String CONTAINER = "CONTAINER";
   private static final String BLOB_PATH = "BLOB_PATH.csv";
-  private static final CloudObjectLocation CLOUD_OBJECT_LOCATION_1 = new CloudObjectLocation(CONTAINER, BLOB_PATH);
+  private static final CloudObjectLocation CLOUD_OBJECT_LOCATION_1 = new CloudObjectLocation(STORAGE_ACCOUNT, CONTAINER + "/" + BLOB_PATH);
   private static final int MAX_LISTING_LENGTH = 10;
 
   private static final InputFormat INPUT_FORMAT = new JsonInputFormat(
@@ -82,17 +86,19 @@ public class AzureInputSourceTest extends EasyMockSupport
   private AzureEntityFactory entityFactory;
   private AzureCloudBlobIterableFactory azureCloudBlobIterableFactory;
   private AzureInputDataConfig inputDataConfig;
+  private AzureStorageAccountInputSourceConfig azureStorageAccountInputSourceConfig;
+  private AzureAccountConfig azureAccountConfig;
 
   private InputSplit<List<CloudObjectLocation>> inputSplit;
   private AzureEntity azureEntity1;
   private CloudBlobHolder cloudBlobDruid1;
   private AzureCloudBlobIterable azureCloudBlobIterable;
 
-  private AzureInputSource azureInputSource;
+  private AzureStorageAccountInputSource azureInputSource;
 
   static {
     try {
-      PREFIX_URI = new URI(AzureInputSource.SCHEME + "://" + CONTAINER_NAME + "/" + BLOB_NAME);
+      PREFIX_URI = new URI(AzureStorageAccountInputSource.SCHEME + "://" + STORAGE_ACCOUNT + "/" + CONTAINER + "/" + BLOB_NAME);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -110,21 +116,25 @@ public class AzureInputSourceTest extends EasyMockSupport
     inputDataConfig = createMock(AzureInputDataConfig.class);
     cloudBlobDruid1 = createMock(CloudBlobHolder.class);
     azureCloudBlobIterable = createMock(AzureCloudBlobIterable.class);
+    azureStorageAccountInputSourceConfig = createMock(AzureStorageAccountInputSourceConfig.class);
+    azureAccountConfig = createMock(AzureAccountConfig.class);
+    EasyMock.expect(azureAccountConfig.getAccount()).andReturn(DEFAULT_STORAGE_ACCOUNT).anyTimes();
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void test_constructor_emptyUrisEmptyPrefixesEmptyObjects_throwsIllegalArgumentException()
   {
     replayAll();
-    azureInputSource = new AzureInputSource(
-        storage,
+    azureInputSource = new AzureStorageAccountInputSource(
         entityFactory,
         azureCloudBlobIterableFactory,
         inputDataConfig,
+        azureAccountConfig,
         EMPTY_URIS,
         EMPTY_PREFIXES,
         EMPTY_OBJECTS,
         null,
+        azureStorageAccountInputSourceConfig,
         null
     );
   }
@@ -132,20 +142,21 @@ public class AzureInputSourceTest extends EasyMockSupport
   @Test
   public void test_createEntity_returnsExpectedEntity()
   {
-    EasyMock.expect(entityFactory.create(CLOUD_OBJECT_LOCATION_1, storage, AzureInputSource.SCHEME)).andReturn(azureEntity1);
+    EasyMock.expect(entityFactory.create(EasyMock.eq(CLOUD_OBJECT_LOCATION_1), EasyMock.anyObject(AzureStorage.class), EasyMock.eq(AzureStorageAccountInputSource.SCHEME))).andReturn(azureEntity1);
     EasyMock.expect(inputSplit.get()).andReturn(ImmutableList.of(CLOUD_OBJECT_LOCATION_1)).times(2);
     replayAll();
 
     List<CloudObjectLocation> objects = ImmutableList.of(CLOUD_OBJECT_LOCATION_1);
-    azureInputSource = new AzureInputSource(
-        storage,
+    azureInputSource = new AzureStorageAccountInputSource(
         entityFactory,
         azureCloudBlobIterableFactory,
         inputDataConfig,
+        azureAccountConfig,
         EMPTY_URIS,
         EMPTY_PREFIXES,
         objects,
         null,
+        azureStorageAccountInputSourceConfig,
         null
     );
 
@@ -163,23 +174,25 @@ public class AzureInputSourceTest extends EasyMockSupport
     List<CloudBlobHolder> expectedCloudBlobs = ImmutableList.of(cloudBlobDruid1);
     Iterator<CloudBlobHolder> expectedCloudBlobsIterator = expectedCloudBlobs.iterator();
     EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_LISTING_LENGTH);
-    EasyMock.expect(azureCloudBlobIterableFactory.create(prefixes, MAX_LISTING_LENGTH, storage)).andReturn(
+    EasyMock.expect(azureCloudBlobIterableFactory.create(EasyMock.eq(prefixes), EasyMock.eq(MAX_LISTING_LENGTH), EasyMock.anyObject(AzureStorage.class))).andReturn(
         azureCloudBlobIterable);
     EasyMock.expect(azureCloudBlobIterable.iterator()).andReturn(expectedCloudBlobsIterator);
+    EasyMock.expect(cloudBlobDruid1.getStorageAccount()).andReturn(STORAGE_ACCOUNT).anyTimes();
     EasyMock.expect(cloudBlobDruid1.getContainerName()).andReturn(CONTAINER).anyTimes();
     EasyMock.expect(cloudBlobDruid1.getName()).andReturn(BLOB_PATH).anyTimes();
     EasyMock.expect(cloudBlobDruid1.getBlobLength()).andReturn(100L).anyTimes();
     replayAll();
 
-    azureInputSource = new AzureInputSource(
-        storage,
+    azureInputSource = new AzureStorageAccountInputSource(
         entityFactory,
         azureCloudBlobIterableFactory,
         inputDataConfig,
+        azureAccountConfig,
         EMPTY_URIS,
         prefixes,
         EMPTY_OBJECTS,
         null,
+        azureStorageAccountInputSourceConfig,
         null
     );
 
@@ -189,7 +202,7 @@ public class AzureInputSourceTest extends EasyMockSupport
     );
 
     List<List<CloudObjectLocation>> actualCloudLocationList = cloudObjectStream.map(InputSplit::get)
-                                                                               .collect(Collectors.toList());
+        .collect(Collectors.toList());
     verifyAll();
     Assert.assertEquals(expectedCloudLocations, actualCloudLocationList);
   }
@@ -211,24 +224,26 @@ public class AzureInputSourceTest extends EasyMockSupport
     );
 
     EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_LISTING_LENGTH);
-    EasyMock.expect(azureCloudBlobIterableFactory.create(prefixes, MAX_LISTING_LENGTH, storage)).andReturn(
+    EasyMock.expect(azureCloudBlobIterableFactory.create(EasyMock.eq(prefixes), EasyMock.eq(MAX_LISTING_LENGTH), EasyMock.anyObject(AzureStorage.class))).andReturn(
         azureCloudBlobIterable);
     EasyMock.expect(azureCloudBlobIterable.iterator()).andReturn(expectedCloudBlobsIterator);
+    EasyMock.expect(cloudBlobDruid1.getStorageAccount()).andReturn(STORAGE_ACCOUNT).anyTimes();
     EasyMock.expect(cloudBlobDruid1.getBlobLength()).andReturn(100L).anyTimes();
     EasyMock.expect(cloudBlobDruid1.getContainerName()).andReturn(CONTAINER).anyTimes();
     EasyMock.expect(cloudBlobDruid1.getName()).andReturn(BLOB_PATH).anyTimes();
 
     replayAll();
 
-    azureInputSource = new AzureInputSource(
-        storage,
+    azureInputSource = new AzureStorageAccountInputSource(
         entityFactory,
         azureCloudBlobIterableFactory,
         inputDataConfig,
+        azureAccountConfig,
         EMPTY_URIS,
         prefixes,
         EMPTY_OBJECTS,
         objectGlob,
+        azureStorageAccountInputSourceConfig,
         null
     );
 
@@ -238,7 +253,7 @@ public class AzureInputSourceTest extends EasyMockSupport
     );
 
     List<List<CloudObjectLocation>> actualCloudLocationList = cloudObjectStream.map(InputSplit::get)
-                                                                               .collect(Collectors.toList());
+        .collect(Collectors.toList());
     verifyAll();
     Assert.assertEquals(expectedCloudLocations, actualCloudLocationList);
   }
@@ -250,15 +265,16 @@ public class AzureInputSourceTest extends EasyMockSupport
     EasyMock.expect(inputSplit.get()).andReturn(ImmutableList.of(CLOUD_OBJECT_LOCATION_1));
     replayAll();
 
-    azureInputSource = new AzureInputSource(
-        storage,
+    azureInputSource = new AzureStorageAccountInputSource(
         entityFactory,
         azureCloudBlobIterableFactory,
         inputDataConfig,
+        azureAccountConfig,
         EMPTY_URIS,
         prefixes,
         EMPTY_OBJECTS,
         null,
+        azureStorageAccountInputSourceConfig,
         null
     );
 
@@ -271,22 +287,22 @@ public class AzureInputSourceTest extends EasyMockSupport
   public void test_toString_returnsExpectedString()
   {
     List<URI> prefixes = ImmutableList.of(PREFIX_URI);
-    azureInputSource = new AzureInputSource(
-        storage,
+    azureInputSource = new AzureStorageAccountInputSource(
         entityFactory,
         azureCloudBlobIterableFactory,
         inputDataConfig,
+        azureAccountConfig,
         EMPTY_URIS,
         prefixes,
         EMPTY_OBJECTS,
         null,
+        azureStorageAccountInputSourceConfig,
         null
     );
-
-    String actualToString = azureInputSource.toString();
+    String azureStorageAccountInputSourceString = azureInputSource.toString();
     Assert.assertEquals(
-        "AzureInputSource{uris=[], prefixes=[azure://container/blob], objects=[], objectGlob=null}",
-        actualToString
+        "AzureStorageAccountInputSource{uris=[], prefixes=[azureStorage://STORAGE_ACCOUNT/CONTAINER/blob], objects=[], objectGlob=null, azureStorageAccountInputSourceConfig=" + azureStorageAccountInputSourceConfig + "}",
+        azureStorageAccountInputSourceString
     );
   }
 
@@ -294,28 +310,31 @@ public class AzureInputSourceTest extends EasyMockSupport
   public void test_toString_withAllSystemFields_returnsExpectedString()
   {
     List<URI> prefixes = ImmutableList.of(PREFIX_URI);
-    azureInputSource = new AzureInputSource(
-        storage,
+    azureInputSource = new AzureStorageAccountInputSource(
         entityFactory,
         azureCloudBlobIterableFactory,
         inputDataConfig,
+        azureAccountConfig,
         EMPTY_URIS,
         prefixes,
         EMPTY_OBJECTS,
         null,
+        azureStorageAccountInputSourceConfig,
         new SystemFields(EnumSet.of(SystemField.URI, SystemField.BUCKET, SystemField.PATH))
     );
 
-    String actualToString = azureInputSource.toString();
+    String azureStorageAccountInputSourceString = azureInputSource.toString();
+
     Assert.assertEquals(
-        "AzureInputSource{"
-        + "uris=[], "
-        + "prefixes=[azure://container/blob], "
-        + "objects=[], "
-        + "objectGlob=null, "
-        + "systemFields=[__file_uri, __file_bucket, __file_path]"
-        + "}",
-        actualToString
+        "AzureStorageAccountInputSource{"
+            + "uris=[], "
+            + "prefixes=[azureStorage://STORAGE_ACCOUNT/CONTAINER/blob], "
+            + "objects=[], "
+            + "objectGlob=null, "
+            + "azureStorageAccountInputSourceConfig=" + azureStorageAccountInputSourceConfig + ", "
+            + "systemFields=[__file_uri, __file_bucket, __file_path]"
+            + "}",
+        azureStorageAccountInputSourceString
     );
   }
 
@@ -323,32 +342,34 @@ public class AzureInputSourceTest extends EasyMockSupport
   public void test_getTypes_returnsExpectedTypes()
   {
     List<URI> prefixes = ImmutableList.of(PREFIX_URI);
-    azureInputSource = new AzureInputSource(
-        storage,
+    azureInputSource = new AzureStorageAccountInputSource(
         entityFactory,
         azureCloudBlobIterableFactory,
         inputDataConfig,
+        azureAccountConfig,
         EMPTY_URIS,
         prefixes,
         EMPTY_OBJECTS,
         null,
+        azureStorageAccountInputSourceConfig,
         null
     );
-    Assert.assertEquals(ImmutableSet.of(AzureInputSource.SCHEME), azureInputSource.getTypes());
+    Assert.assertEquals(ImmutableSet.of(AzureStorageAccountInputSource.SCHEME), azureInputSource.getTypes());
   }
 
   @Test
   public void test_systemFields()
   {
-    azureInputSource = (AzureInputSource) new AzureInputSource(
-        storage,
+    azureInputSource = (AzureStorageAccountInputSource) new AzureStorageAccountInputSource(
         entityFactory,
         azureCloudBlobIterableFactory,
         inputDataConfig,
+        azureAccountConfig,
         EMPTY_URIS,
         ImmutableList.of(PREFIX_URI),
         EMPTY_OBJECTS,
         null,
+        azureStorageAccountInputSourceConfig,
         new SystemFields(EnumSet.of(SystemField.URI, SystemField.BUCKET, SystemField.PATH))
     );
 
@@ -358,32 +379,56 @@ public class AzureInputSourceTest extends EasyMockSupport
     );
 
     final AzureEntity entity = new AzureEntity(
-        new CloudObjectLocation("foo", "bar"),
+        new CloudObjectLocation("foo", "container/bar"),
         storage,
-        AzureInputSource.SCHEME,
+        AzureStorageAccountInputSource.SCHEME,
         (containerName, blobPath, storage) -> null
     );
 
-    Assert.assertEquals("azure://foo/bar", azureInputSource.getSystemFieldValue(entity, SystemField.URI));
+    Assert.assertEquals("azureStorage://foo/container/bar", azureInputSource.getSystemFieldValue(entity, SystemField.URI));
     Assert.assertEquals("foo", azureInputSource.getSystemFieldValue(entity, SystemField.BUCKET));
-    Assert.assertEquals("bar", azureInputSource.getSystemFieldValue(entity, SystemField.PATH));
+    Assert.assertEquals("container/bar", azureInputSource.getSystemFieldValue(entity, SystemField.PATH));
   }
 
   @Test
   public void abidesEqualsContract()
   {
-    EqualsVerifier.forClass(AzureInputSource.class)
-                  .usingGetClass()
-                  .withPrefabValues(Logger.class, new Logger(AzureStorage.class), new Logger(AzureStorage.class))
-                  .withPrefabValues(BlobContainerClient.class, new BlobContainerClientBuilder().buildClient(), new BlobContainerClientBuilder().buildClient())
-                  .withPrefabValues(AzureStorage.class, new AzureStorage(null, null), new AzureStorage(null, null))
-                  .withNonnullFields("storage")
-                  .withNonnullFields("entityFactory")
-                  .withNonnullFields("azureCloudBlobIterableFactory")
-                  .withNonnullFields("inputDataConfig")
-                  .withNonnullFields("objectGlob")
-                  .withNonnullFields("scheme")
-                  .verify();
+    EqualsVerifier.forClass(AzureStorageAccountInputSource.class)
+        .usingGetClass()
+        .withPrefabValues(Logger.class, new Logger(AzureStorage.class), new Logger(AzureStorage.class))
+        .withPrefabValues(BlobContainerClient.class, new BlobContainerClientBuilder().buildClient(), new BlobContainerClientBuilder().buildClient())
+        .withPrefabValues(AzureIngestClientFactory.class, new AzureIngestClientFactory(null, null), new AzureIngestClientFactory(null, null))
+        .withIgnoredFields("entityFactory")
+        .withIgnoredFields("azureCloudBlobIterableFactory")
+        .withNonnullFields("inputDataConfig")
+        .withNonnullFields("objectGlob")
+        .withNonnullFields("scheme")
+        .withNonnullFields("azureStorageAccountInputSourceConfig")
+        .withNonnullFields("azureAccountConfig")
+        .withNonnullFields("azureIngestClientFactory")
+        .verify();
+  }
+
+  @Test
+  public void test_getContainerAndPathFromObjectLocation()
+  {
+    Pair<String, String> storageLocation = AzureStorageAccountInputSource.getContainerAndPathFromObjectLocation(
+        CLOUD_OBJECT_LOCATION_1
+    );
+    Assert.assertEquals(CONTAINER, storageLocation.lhs);
+    Assert.assertEquals(BLOB_PATH, storageLocation.rhs);
+
+  }
+
+  @Test
+  public void test_getContainerAndPathFromObjectLocatio_nullpath()
+  {
+    Pair<String, String> storageLocation = AzureStorageAccountInputSource.getContainerAndPathFromObjectLocation(
+        new CloudObjectLocation(STORAGE_ACCOUNT, CONTAINER)
+    );
+    Assert.assertEquals(CONTAINER, storageLocation.lhs);
+    Assert.assertEquals("", storageLocation.rhs);
+
   }
 
   @After

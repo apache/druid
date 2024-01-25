@@ -2378,6 +2378,9 @@ markUnused
 markUsed
 segmentId
 aggregateMultipleValues
+appRegistrationClientId
+appRegistrationClientSecret
+tenantId
 relativeError
 ddSketch
 DDSketch
