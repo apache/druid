@@ -23,7 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
-import org.apache.druid.server.http.DataSegmentDto;
+import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
@@ -142,7 +142,7 @@ public interface SegmentsMetadataManager
    * @param sortOrder     an optional order with which to return the matching segments by id, start time, end time.
    *                      If none is specified, the order of the results is not guarenteed.
    */
-  Iterable<DataSegmentDto> iterateAllUnusedSegmentsForDatasource(
+  Iterable<DataSegmentPlus> iterateAllUnusedSegmentsForDatasource(
       String datasource,
       @Nullable Interval interval,
       @Nullable Integer limit,

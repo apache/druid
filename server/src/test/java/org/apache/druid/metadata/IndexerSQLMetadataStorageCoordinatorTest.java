@@ -42,7 +42,7 @@ import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
-import org.apache.druid.server.http.DataSegmentDto;
+import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
@@ -1256,7 +1256,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertEquals(segments.size(), actualUnusedSegments.size());
     Assert.assertTrue(segments.containsAll(actualUnusedSegments));
 
-    final ImmutableList<DataSegmentDto> actualUnusedSegmentDtos = retrieveUnusedSegmentDtos(
+    final ImmutableList<DataSegmentPlus> actualUnusedSegmentDtos = retrieveUnusedSegmentDtos(
         segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
         null,
         null,
@@ -1284,7 +1284,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertEquals(segments.size(), actualUnusedSegments.size());
     Assert.assertTrue(segments.containsAll(actualUnusedSegments));
 
-    final ImmutableList<DataSegmentDto> actualUnusedSegmentDtos = retrieveUnusedSegmentDtos(
+    final ImmutableList<DataSegmentPlus> actualUnusedSegmentDtos = retrieveUnusedSegmentDtos(
         ImmutableList.of(),
         null,
         null,
@@ -1316,7 +1316,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertEquals(expectedSegmentsAscOrder.size(), actualUnusedSegments.size());
     Assert.assertTrue(expectedSegmentsAscOrder.containsAll(actualUnusedSegments));
 
-    ImmutableList<DataSegmentDto> actualUnusedSegmentDtos = retrieveUnusedSegmentDtos(
+    ImmutableList<DataSegmentPlus> actualUnusedSegmentDtos = retrieveUnusedSegmentDtos(
         ImmutableList.of(),
         null,
         lastSegmentId,
@@ -1389,7 +1389,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertEquals(segments.size(), actualUnusedSegments.size());
     Assert.assertTrue(segments.containsAll(actualUnusedSegments));
 
-    final ImmutableList<DataSegmentDto> actualUnusedSegmentDtos = retrieveUnusedSegmentDtos(
+    final ImmutableList<DataSegmentPlus> actualUnusedSegmentDtos = retrieveUnusedSegmentDtos(
         ImmutableList.of(),
         segments.size(),
         null,
@@ -1419,7 +1419,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertEquals(requestedLimit, actualUnusedSegments.size());
     Assert.assertTrue(actualUnusedSegments.containsAll(expectedSegments));
 
-    final ImmutableList<DataSegmentDto> actualUnusedSegmentDtos = retrieveUnusedSegmentDtos(
+    final ImmutableList<DataSegmentPlus> actualUnusedSegmentDtos = retrieveUnusedSegmentDtos(
         ImmutableList.of(),
         requestedLimit,
         null,
@@ -1453,7 +1453,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertEquals(segments.size() - 5, actualUnusedSegments.size());
     Assert.assertEquals(actualUnusedSegments, expectedSegments);
 
-    final ImmutableList<DataSegmentDto> actualUnusedSegmentDtos = retrieveUnusedSegmentDtos(
+    final ImmutableList<DataSegmentPlus> actualUnusedSegmentDtos = retrieveUnusedSegmentDtos(
         ImmutableList.of(),
         requestedLimit,
         lastSegmentId,
@@ -1487,7 +1487,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertEquals(requestedLimit - 4, actualUnusedSegments.size());
     Assert.assertEquals(actualUnusedSegments, expectedSegments);
 
-    final ImmutableList<DataSegmentDto> actualUnusedSegmentDtos = retrieveUnusedSegmentDtos(
+    final ImmutableList<DataSegmentPlus> actualUnusedSegmentDtos = retrieveUnusedSegmentDtos(
         segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
         requestedLimit,
         lastSegmentId,
@@ -1515,7 +1515,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertEquals(segments.size(), actualUnusedSegments.size());
     Assert.assertTrue(actualUnusedSegments.containsAll(segments));
 
-    final ImmutableList<DataSegmentDto> actualUnusedSegmentDtos = retrieveUnusedSegmentDtos(
+    final ImmutableList<DataSegmentPlus> actualUnusedSegmentDtos = retrieveUnusedSegmentDtos(
         segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
         segments.size() + 1,
         null,
@@ -1545,7 +1545,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
     Assert.assertEquals(0, actualUnusedSegments.size());
 
-    final ImmutableList<DataSegmentDto> actualUnusedSegmentDtos = retrieveUnusedSegmentDtos(
+    final ImmutableList<DataSegmentPlus> actualUnusedSegmentDtos = retrieveUnusedSegmentDtos(
         ImmutableList.of(outOfRangeInterval),
         null,
         null,
@@ -1573,7 +1573,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
     Assert.assertEquals(5, actualUnusedSegments1.size());
 
-    ImmutableList<DataSegmentDto> actualUnusedSegmentDtos = retrieveUnusedSegmentDtos(
+    ImmutableList<DataSegmentPlus> actualUnusedSegmentDtos = retrieveUnusedSegmentDtos(
         ImmutableList.of(interval),
         null,
         null,
@@ -1634,7 +1634,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
     Assert.assertEquals(oddYearSegments.size(), actualUnusedSegments1.size());
 
-    final ImmutableList<DataSegmentDto> actualUnusedSegmentDtos1 = retrieveUnusedSegmentDtos(
+    final ImmutableList<DataSegmentPlus> actualUnusedSegmentDtos1 = retrieveUnusedSegmentDtos(
         ImmutableList.of(interval),
         null,
         null,
@@ -1652,7 +1652,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
     Assert.assertEquals(segments.size(), actualUnusedSegments2.size());
 
-    final ImmutableList<DataSegmentDto> actualUnusedSegmentDtos2 = retrieveUnusedSegmentDtos(
+    final ImmutableList<DataSegmentPlus> actualUnusedSegmentDtos2 = retrieveUnusedSegmentDtos(
         ImmutableList.of(interval),
         null,
         null,
@@ -3503,7 +3503,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
   }
 
-  private ImmutableList<DataSegmentDto> retrieveUnusedSegmentDtos(
+  private ImmutableList<DataSegmentPlus> retrieveUnusedSegmentDtos(
       final List<Interval> intervals,
       final Integer limit,
       final String lastSegmentId,
@@ -3513,14 +3513,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   {
     return derbyConnector.inReadOnlyTransaction(
         (handle, status) -> {
-          try (final CloseableIterator<DataSegmentDto> iterator =
+          try (final CloseableIterator<DataSegmentPlus> iterator =
                    SqlSegmentsMetadataQuery.forHandle(
                            handle,
                            derbyConnector,
                            derbyConnectorRule.metadataTablesConfigSupplier().get(),
                            mapper
                        )
-                       .retrieveUnusedSegmentDtos(DS.WIKI, intervals, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)) {
+                       .retrieveUnusedSegmentsPlus(DS.WIKI, intervals, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)) {
             return ImmutableList.copyOf(iterator);
           }
         }
@@ -3529,13 +3529,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
   private void verifyContainsAllSegmentDtos(
       List<DataSegment> expectedSegments,
-      List<DataSegmentDto> actualUnusedSegments,
+      List<DataSegmentPlus> actualUnusedSegments,
       DateTime usedStatusLastUpdatedTime)
   {
     Map<SegmentId, DataSegment> expectedIdToSegment = expectedSegments.stream().collect(Collectors.toMap(DataSegment::getId, Function.identity()));
-    Map<SegmentId, DataSegmentDto> actualIdToSegmentDto = actualUnusedSegments.stream().collect(Collectors.toMap(DataSegmentDto::getId, Function.identity()));
+    Map<SegmentId, DataSegmentPlus> actualIdToSegmentDto = actualUnusedSegments.stream()
+        .collect(Collectors.toMap(d -> d.getDataSegment().getId(), Function.identity()));
     Assert.assertTrue(expectedIdToSegment.entrySet().stream().allMatch(e -> {
-      DataSegmentDto segmentDto = actualIdToSegmentDto.get(e.getKey());
+      DataSegmentPlus segmentDto = actualIdToSegmentDto.get(e.getKey());
       return segmentDto != null
              && !segmentDto.getCreatedDate().isAfter(usedStatusLastUpdatedTime)
              && segmentDto.getUsedStatusLastUpdatedDate() != null
@@ -3545,15 +3546,15 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
   private void verifyEqualsAllSegmentDtos(
       List<DataSegment> expectedSegments,
-      List<DataSegmentDto> actualUnusedSegments,
+      List<DataSegmentPlus> actualUnusedSegments,
       DateTime usedStatusLastUpdatedTime
   )
   {
     Assert.assertEquals(expectedSegments.size(), actualUnusedSegments.size());
     for (int i = 0; i < expectedSegments.size(); i++) {
       DataSegment expectedSegment = expectedSegments.get(i);
-      DataSegmentDto actualSegmentDto = actualUnusedSegments.get(i);
-      Assert.assertEquals(expectedSegment.getId(), actualSegmentDto.getId());
+      DataSegmentPlus actualSegmentDto = actualUnusedSegments.get(i);
+      Assert.assertEquals(expectedSegment.getId(), actualSegmentDto.getDataSegment().getId());
       Assert.assertTrue(!actualSegmentDto.getCreatedDate().isAfter(usedStatusLastUpdatedTime)
                         && actualSegmentDto.getUsedStatusLastUpdatedDate() != null
                         && actualSegmentDto.getUsedStatusLastUpdatedDate().equals(usedStatusLastUpdatedTime));

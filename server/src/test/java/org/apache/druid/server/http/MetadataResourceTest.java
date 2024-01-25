@@ -76,8 +76,8 @@ public class MetadataResourceTest
           .eachOfSizeInMb(500)
           .toArray(new DataSegment[0]);
 
-  private final List<DataSegmentDto> segmentDtos = Arrays.stream(segments)
-          .map(s -> new DataSegmentDto(s, DateTime.now(), DateTime.now()))
+  private final List<DataSegmentPlus> segmentDtos = Arrays.stream(segments)
+          .map(s -> new DataSegmentPlus(s, DateTime.now(), DateTime.now()))
           .collect(Collectors.toList());
   private HttpServletRequest request;
   private SegmentsMetadataManager segmentsMetadataManager;
@@ -286,7 +286,7 @@ public class MetadataResourceTest
         null,
         null
     );
-    List<DataSegmentDto> resultList = extractResponseList(response);
+    List<DataSegmentPlus> resultList = extractResponseList(response);
     Assert.assertTrue(resultList.isEmpty());
 
     // test valid datasource with bad limit - fails with expected invalid limit message
@@ -345,7 +345,7 @@ public class MetadataResourceTest
     Assert.assertEquals(Collections.singletonList(segmentDtos.get(3)), resultList);
   }
 
-  Answer<Iterable<DataSegmentDto>> mockIterateAllUnusedSegmentsForDatasource()
+  Answer<Iterable<DataSegmentPlus>> mockIterateAllUnusedSegmentsForDatasource()
   {
     return invocationOnMock -> {
       String dataSourceName = invocationOnMock.getArgument(0);
@@ -358,15 +358,16 @@ public class MetadataResourceTest
       }
 
       return segmentDtos.stream()
-          .filter(d -> d.getDataSource().equals(dataSourceName)
+          .filter(d -> d.getDataSegment().getDataSource().equals(dataSourceName)
                        && (interval == null
-                           || (d.getInterval().getStartMillis() >= interval.getStartMillis()
-                               && d.getInterval().getEndMillis() <= interval.getEndMillis()))
+                           || (d.getDataSegment().getInterval().getStartMillis() >= interval.getStartMillis()
+                               && d.getDataSegment().getInterval().getEndMillis() <= interval.getEndMillis()))
                        && (lastSegmentId == null
-                           || (sortOrder == null && d.getId().toString().compareTo(lastSegmentId) > 0)
-                           || (sortOrder == SortOrder.ASC && d.getId().toString().compareTo(lastSegmentId) > 0)
-                           || (sortOrder == SortOrder.DESC && d.getId().toString().compareTo(lastSegmentId) < 0)))
-          .sorted((o1, o2) -> Comparators.intervalsByStartThenEnd().compare(o1.getInterval(), o2.getInterval()))
+                           || (sortOrder == null && d.getDataSegment().getId().toString().compareTo(lastSegmentId) > 0)
+                           || (sortOrder == SortOrder.ASC && d.getDataSegment().getId().toString().compareTo(lastSegmentId) > 0)
+                           || (sortOrder == SortOrder.DESC && d.getDataSegment().getId().toString().compareTo(lastSegmentId) < 0)))
+          .sorted((o1, o2) -> Comparators.intervalsByStartThenEnd()
+              .compare(o1.getDataSegment().getInterval(), o2.getDataSegment().getInterval()))
           .limit(limit != null
               ? limit
               : segments.length)

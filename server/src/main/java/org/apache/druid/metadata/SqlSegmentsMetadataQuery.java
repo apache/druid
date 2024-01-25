@@ -32,11 +32,12 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.druid.server.http.DataSegmentDto;
+import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+import org.joda.time.chrono.ISOChronology;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.PreparedBatch;
 import org.skife.jdbi.v2.Query;
@@ -196,7 +197,7 @@ public class SqlSegmentsMetadataQuery
 
    * Returns a closeable iterator. You should close it when you are done.
    */
-  public CloseableIterator<DataSegmentDto> retrieveUnusedSegmentDtos(
+  public CloseableIterator<DataSegmentPlus> retrieveUnusedSegmentsPlus(
       final String dataSource,
       final Collection<Interval> intervals,
       @Nullable final Integer limit,
@@ -205,7 +206,7 @@ public class SqlSegmentsMetadataQuery
       @Nullable final DateTime maxUsedStatusLastUpdatedTime
   )
   {
-    return retrieveSegmentDtos(
+    return retrieveSegmentsPlus(
         dataSource,
         intervals,
         IntervalMode.CONTAINS,
@@ -489,7 +490,7 @@ public class SqlSegmentsMetadataQuery
     }
   }
 
-  private CloseableIterator<DataSegmentDto> retrieveSegmentDtos(
+  private CloseableIterator<DataSegmentPlus> retrieveSegmentsPlus(
       final String dataSource,
       final Collection<Interval> intervals,
       final IntervalMode matchMode,
@@ -502,15 +503,15 @@ public class SqlSegmentsMetadataQuery
   {
     if (intervals.isEmpty() || intervals.size() <= MAX_INTERVALS_PER_BATCH) {
       return CloseableIterators.withEmptyBaggage(
-          retrieveSegmentDtosInIntervalsBatch(dataSource, intervals, matchMode, used, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)
+          retrieveSegmentsPlusInIntervalsBatch(dataSource, intervals, matchMode, used, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)
       );
     } else {
       final List<List<Interval>> intervalsLists = Lists.partition(new ArrayList<>(intervals), MAX_INTERVALS_PER_BATCH);
-      final List<Iterator<DataSegmentDto>> resultingIterators = new ArrayList<>();
+      final List<Iterator<DataSegmentPlus>> resultingIterators = new ArrayList<>();
       Integer limitPerBatch = limit;
 
       for (final List<Interval> intervalList : intervalsLists) {
-        final UnmodifiableIterator<DataSegmentDto> iterator = retrieveSegmentDtosInIntervalsBatch(
+        final UnmodifiableIterator<DataSegmentPlus> iterator = retrieveSegmentsPlusInIntervalsBatch(
             dataSource,
             intervalList,
             matchMode,
@@ -523,7 +524,7 @@ public class SqlSegmentsMetadataQuery
         if (limitPerBatch != null) {
           // If limit is provided, we need to shrink the limit for subsequent batches or circuit break if
           // we have reached what was requested for.
-          final List<DataSegmentDto> dataSegments = ImmutableList.copyOf(iterator);
+          final List<DataSegmentPlus> dataSegments = ImmutableList.copyOf(iterator);
           resultingIterators.add(dataSegments.iterator());
           if (dataSegments.size() >= limitPerBatch) {
             break;
@@ -565,7 +566,7 @@ public class SqlSegmentsMetadataQuery
     return filterDataSegmentIteratorByInterval(resultIterator, intervals, matchMode);
   }
 
-  private UnmodifiableIterator<DataSegmentDto> retrieveSegmentDtosInIntervalsBatch(
+  private UnmodifiableIterator<DataSegmentPlus> retrieveSegmentsPlusInIntervalsBatch(
       final String dataSource,
       final Collection<Interval> intervals,
       final IntervalMode matchMode,
@@ -589,9 +590,9 @@ public class SqlSegmentsMetadataQuery
         true
     );
 
-    final ResultIterator<DataSegmentDto> resultIterator = getDataSegmentDtoResultIterator(sql);
+    final ResultIterator<DataSegmentPlus> resultIterator = getDataSegmentPlusResultIterator(sql);
 
-    return filterDataSegmentDtoIteratorByInterval(resultIterator, intervals, matchMode);
+    return filterDataSegmentPlusIteratorByInterval(resultIterator, intervals, matchMode);
   }
 
   private Query<Map<String, Object>> buildSegmentQuery(
@@ -603,13 +604,13 @@ public class SqlSegmentsMetadataQuery
       @Nullable final String lastSegmentId,
       @Nullable final SortOrder sortOrder,
       @Nullable final DateTime maxUsedStatusLastUpdatedTime,
-      boolean isDto
+      final boolean includeExtraInfo
   )
   {
     // Check if the intervals all support comparing as strings. If so, bake them into the SQL.
     final boolean compareAsString = intervals.stream().allMatch(Intervals::canCompareEndpointsAsStrings);
     final StringBuilder sb = new StringBuilder();
-    if (isDto) {
+    if (includeExtraInfo) {
       sb.append("SELECT payload, created_date, used_status_last_updated FROM %s WHERE used = :used AND dataSource = :dataSource");
     } else {
       sb.append("SELECT payload FROM %s WHERE used = :used AND dataSource = :dataSource");
@@ -675,12 +676,12 @@ public class SqlSegmentsMetadataQuery
         .iterator();
   }
 
-  private ResultIterator<DataSegmentDto> getDataSegmentDtoResultIterator(Query<Map<String, Object>> sql)
+  private ResultIterator<DataSegmentPlus> getDataSegmentPlusResultIterator(Query<Map<String, Object>> sql)
   {
-    return sql.map((index, r, ctx) -> new DataSegmentDto(
+    return sql.map((index, r, ctx) -> new DataSegmentPlus(
             JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
-            DateTime.parse(r.getString(2)),
-            DateTime.parse(r.getString(3))
+            new DateTime(r.getString(2), ISOChronology.getInstanceUTC()),
+            new DateTime(r.getString(3), ISOChronology.getInstanceUTC())
         ))
         .iterator();
   }
@@ -712,8 +713,8 @@ public class SqlSegmentsMetadataQuery
     );
   }
 
-  private UnmodifiableIterator<DataSegmentDto> filterDataSegmentDtoIteratorByInterval(
-      ResultIterator<DataSegmentDto> resultIterator,
+  private UnmodifiableIterator<DataSegmentPlus> filterDataSegmentPlusIteratorByInterval(
+      ResultIterator<DataSegmentPlus> resultIterator,
       final Collection<Interval> intervals,
       final IntervalMode matchMode
   )
@@ -728,7 +729,7 @@ public class SqlSegmentsMetadataQuery
             // might not be string-comparable. (Consider a query interval like "2000-01-01/3000-01-01" and a
             // segment interval like "20010/20011".)
             for (Interval interval : intervals) {
-              if (matchMode.apply(interval, dataSegment.getInterval())) {
+              if (matchMode.apply(interval, dataSegment.getDataSegment().getInterval())) {
                 return true;
               }
             }

@@ -363,7 +363,7 @@ public class MetadataResource
     SortOrder theSortOrder = sortOrder == null ? null : SortOrder.fromValue(sortOrder);
 
     final Interval theInterval = interval != null ? Intervals.of(interval.replace('_', '/')) : null;
-    Iterable<DataSegmentDto> unusedSegments = segmentsMetadataManager.iterateAllUnusedSegmentsForDatasource(
+    Iterable<DataSegmentPlus> unusedSegments = segmentsMetadataManager.iterateAllUnusedSegmentsForDatasource(
         dataSource,
         theInterval,
         limit,
@@ -371,13 +371,13 @@ public class MetadataResource
         theSortOrder
     );
 
-    final Function<DataSegmentDto, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
-        AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSource()));
+    final Function<DataSegmentPlus, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
+        AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSegment().getDataSource()));
 
-    final Iterable<DataSegmentDto> authorizedSegments =
+    final Iterable<DataSegmentPlus> authorizedSegments =
         AuthorizationUtils.filterAuthorizedResources(req, unusedSegments, raGenerator, authorizerMapper);
 
-    final List<DataSegmentDto> retVal = new ArrayList<>();
+    final List<DataSegmentPlus> retVal = new ArrayList<>();
     authorizedSegments.iterator().forEachRemaining(retVal::add);
     return Response.status(Response.Status.OK).entity(retVal).build();
   }

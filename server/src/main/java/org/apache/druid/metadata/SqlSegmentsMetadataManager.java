@@ -47,7 +47,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.server.http.DataSegmentDto;
+import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentId;
@@ -977,7 +977,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
    * Returns an iterable.
    */
   @Override
-  public Iterable<DataSegmentDto> iterateAllUnusedSegmentsForDatasource(
+  public Iterable<DataSegmentPlus> iterateAllUnusedSegmentsForDatasource(
       final String datasource,
       @Nullable final Interval interval,
       @Nullable final Integer limit,
@@ -994,8 +994,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
               interval == null
                   ? Intervals.ONLY_ETERNITY
                   : Collections.singletonList(interval);
-          try (final CloseableIterator<DataSegmentDto> iterator =
-                   queryTool.retrieveUnusedSegmentDtos(datasource, intervals, limit, lastSegmentId, sortOrder, null)) {
+          try (final CloseableIterator<DataSegmentPlus> iterator =
+                   queryTool.retrieveUnusedSegmentsPlus(datasource, intervals, limit, lastSegmentId, sortOrder, null)) {
             return ImmutableList.copyOf(iterator);
           }
         }
