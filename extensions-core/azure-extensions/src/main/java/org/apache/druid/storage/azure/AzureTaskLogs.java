@@ -23,6 +23,7 @@ import com.azure.storage.blob.models.BlobStorageException;
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
 import org.apache.druid.common.utils.CurrentTimeMillisSupplier;
+import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -53,7 +54,7 @@ public class AzureTaskLogs implements TaskLogs
       AzureTaskLogsConfig config,
       AzureInputDataConfig inputDataConfig,
       AzureAccountConfig accountConfig,
-      AzureStorage azureStorage,
+      @Global AzureStorage azureStorage,
       AzureCloudBlobIterableFactory azureCloudBlobIterableFactory,
       CurrentTimeMillisSupplier timeSupplier)
   {
@@ -100,24 +101,38 @@ public class AzureTaskLogs implements TaskLogs
   }
 
   @Override
+  public void pushTaskPayload(String taskid, File taskPayloadFile)
+  {
+    final String taskKey = getTaskPayloadKey(taskid);
+    log.info("Pushing task payload [%s] to location [%s]", taskPayloadFile, taskKey);
+    pushTaskFile(taskPayloadFile, taskKey);
+  }
+
+  @Override
+  public Optional<InputStream> streamTaskPayload(String taskid) throws IOException
+  {
+    return streamTaskFile(0, getTaskPayloadKey(taskid));
+  }
+
+  @Override
   public Optional<InputStream> streamTaskLog(final String taskid, final long offset) throws IOException
   {
-    return streamTaskFile(taskid, offset, getTaskLogKey(taskid));
+    return streamTaskFile(offset, getTaskLogKey(taskid));
   }
 
   @Override
   public Optional<InputStream> streamTaskReports(String taskid) throws IOException
   {
-    return streamTaskFile(taskid, 0, getTaskReportsKey(taskid));
+    return streamTaskFile(0, getTaskReportsKey(taskid));
   }
 
   @Override
   public Optional<InputStream> streamTaskStatus(String taskid) throws IOException
   {
-    return streamTaskFile(taskid, 0, getTaskStatusKey(taskid));
+    return streamTaskFile(0, getTaskStatusKey(taskid));
   }
 
-  private Optional<InputStream> streamTaskFile(final String taskid, final long offset, String taskKey)
+  private Optional<InputStream> streamTaskFile(final long offset, String taskKey)
       throws IOException
   {
     final String container = config.getContainer();
@@ -164,6 +179,11 @@ public class AzureTaskLogs implements TaskLogs
   private String getTaskStatusKey(String taskid)
   {
     return StringUtils.format("%s/%s/status.json", config.getPrefix(), taskid);
+  }
+
+  private String getTaskPayloadKey(String taskid)
+  {
+    return StringUtils.format("%s/%s/task.json", config.getPrefix(), taskid);
   }
 
   @Override

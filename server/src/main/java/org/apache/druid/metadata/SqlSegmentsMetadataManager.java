@@ -687,7 +687,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
           }
 
           try (final CloseableIterator<DataSegment> iterator =
-                   queryTool.retrieveUnusedSegments(dataSourceName, intervals, null, null, null)) {
+                   queryTool.retrieveUnusedSegments(dataSourceName, intervals, null, null, null, null)) {
             while (iterator.hasNext()) {
               final DataSegment dataSegment = iterator.next();
               timeline.addSegments(Iterators.singletonIterator(dataSegment));
@@ -994,7 +994,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                   ? Intervals.ONLY_ETERNITY
                   : Collections.singletonList(interval);
           try (final CloseableIterator<DataSegment> iterator =
-                   queryTool.retrieveUnusedSegments(datasource, intervals, limit, lastSegmentId, sortOrder)) {
+                   queryTool.retrieveUnusedSegments(datasource, intervals, limit, lastSegmentId, sortOrder, null)) {
             return ImmutableList.copyOf(iterator);
           }
         }
@@ -1138,7 +1138,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       @Nullable final DateTime minStartTime,
       final DateTime maxEndTime,
       final int limit,
-      DateTime maxUsedFlagLastUpdatedTime
+      DateTime maxUsedStatusLastUpdatedTime
   )
   {
     // Note that we handle the case where used_status_last_updated IS NULL here to allow smooth transition to Druid version that uses used_status_last_updated column
@@ -1162,7 +1162,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                 .setMaxRows(limit)
                 .bind("dataSource", dataSource)
                 .bind("end", maxEndTime.toString())
-                .bind("used_status_last_updated", maxUsedFlagLastUpdatedTime.toString())
+                .bind("used_status_last_updated", maxUsedStatusLastUpdatedTime.toString())
                 .map(
                     new BaseResultSetMapper<Interval>()
                     {
@@ -1181,7 +1181,6 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
             }
 
             Iterator<Interval> iter = sql.iterator();
-
 
             List<Interval> result = Lists.newArrayListWithCapacity(limit);
             for (int i = 0; i < limit && iter.hasNext(); i++) {

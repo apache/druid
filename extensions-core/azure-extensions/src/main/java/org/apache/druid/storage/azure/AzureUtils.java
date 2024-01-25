@@ -126,7 +126,7 @@ public class AzureUtils
         azureCloudBlobIterableFactory.create(ImmutableList.of(new CloudObjectLocation(
             bucket,
             prefix
-        ).toUri("azure")), config.getMaxListingLength());
+        ).toUri("azure")), config.getMaxListingLength(), storage);
     Iterator<CloudBlobHolder> iterator = azureCloudBlobIterable.iterator();
 
     while (iterator.hasNext()) {
