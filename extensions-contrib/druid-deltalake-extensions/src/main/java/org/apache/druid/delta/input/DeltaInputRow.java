@@ -191,7 +191,12 @@ public class DeltaInputRow implements InputRow
     } else if (dataType instanceof StringType) {
       return dataRow.getString(columnOrdinal);
     } else if (dataType instanceof BinaryType) {
-      return new String(dataRow.getBinary(columnOrdinal));
+      final byte[] arr = dataRow.getBinary(columnOrdinal);
+      final char[] charArray = new char[arr.length];
+      for (int i = 0; i < arr.length; i++) {
+        charArray[i] = (char) (arr[i] & 0xff);
+      }
+      return String.valueOf(charArray);
     } else if (dataType instanceof DecimalType) {
       return dataRow.getDecimal(columnOrdinal).longValue();
     } else {

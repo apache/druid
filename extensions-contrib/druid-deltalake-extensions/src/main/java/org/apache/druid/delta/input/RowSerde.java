@@ -45,7 +45,6 @@ import io.delta.kernel.types.StructType;
 import io.delta.kernel.types.TimestampType;
 import org.apache.druid.error.InvalidInput;
 
-import java.io.UncheckedIOException;
 import java.util.HashMap;
 import java.util.Map;
 

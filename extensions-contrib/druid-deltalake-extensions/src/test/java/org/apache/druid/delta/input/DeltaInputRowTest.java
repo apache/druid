@@ -68,7 +68,8 @@ public class DeltaInputRowTest
           for (String dimension : DeltaTestUtil.DIMENSIONS) {
             Assert.assertEquals(expectedRow.get(dimension), deltaInputRow.getDimension(dimension).get(0));
           }
-          long expectedMillis = ((Long) expectedRow.get(DeltaTestUtil.SCHEMA.getTimestampSpec().getTimestampColumn()) / 1_000_000) * 1000;
+          long expectedMillis = ((Long) expectedRow.get(DeltaTestUtil.SCHEMA.getTimestampSpec().getTimestampColumn())
+                                 / 1_000_000) * 1000;
           Assert.assertEquals(expectedMillis, deltaInputRow.getTimestampFromEpoch());
           totalRecordCount += 1;
         }

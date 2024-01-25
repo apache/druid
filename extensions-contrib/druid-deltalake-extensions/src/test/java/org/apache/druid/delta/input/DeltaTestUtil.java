@@ -152,7 +152,7 @@ public class DeltaTestUtil
     final Snapshot snapshot = table.getLatestSnapshot(tableClient);
     final StructType readSchema = snapshot.getSchema(tableClient);
     final ScanBuilder scanBuilder = snapshot.getScanBuilder(tableClient)
-                                      .withReadSchema(tableClient, readSchema);
+                                            .withReadSchema(tableClient, readSchema);
     return scanBuilder.build();
   }
 }
