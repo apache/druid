@@ -51,6 +51,7 @@ import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Encodes the row and schema information from the Delta Lake.
@@ -123,6 +124,18 @@ public class DeltaInputRow implements InputRow
   public int compareTo(Row o)
   {
     return this.getTimestamp().compareTo(o.getTimestamp());
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    return o instanceof DeltaInputRow && compareTo((DeltaInputRow) o) == 0;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(row, schema, fieldNameToOrdinal, delegateRow);
   }
 
   @Override
