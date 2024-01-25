@@ -109,7 +109,7 @@ public class AzureStorageTest
     Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(CONTAINER);
     Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(3, storageAccountCustom);
 
-    PagedIterable<BlobItem> returnedIterator = azureStorage.listBlobsWithPrefixInContainerSegmented(
+    azureStorage.listBlobsWithPrefixInContainerSegmented(
         storageAccountCustom,
         CONTAINER,
         "",

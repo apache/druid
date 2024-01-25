@@ -217,9 +217,7 @@ public class AzureStorageAccountInputSource extends CloudObjectInputSource
       return false;
     }
     AzureStorageAccountInputSource that = (AzureStorageAccountInputSource) o;
-    return entityFactory.equals(that.entityFactory) &&
-        azureCloudBlobIterableFactory.equals(that.azureCloudBlobIterableFactory) &&
-        inputDataConfig.equals(that.inputDataConfig) &&
+    return inputDataConfig.equals(that.inputDataConfig) &&
         azureStorageAccountInputSourceConfig.equals(that.azureStorageAccountInputSourceConfig) &&
         azureAccountConfig.equals(that.azureAccountConfig) &&
         azureIngestClientFactory.equals(that.azureIngestClientFactory);
@@ -228,7 +226,7 @@ public class AzureStorageAccountInputSource extends CloudObjectInputSource
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), entityFactory, azureCloudBlobIterableFactory, inputDataConfig, azureStorageAccountInputSourceConfig, azureAccountConfig, azureIngestClientFactory);
+    return Objects.hash(super.hashCode(), inputDataConfig, azureStorageAccountInputSourceConfig, azureAccountConfig, azureIngestClientFactory);
   }
 
   @Override
