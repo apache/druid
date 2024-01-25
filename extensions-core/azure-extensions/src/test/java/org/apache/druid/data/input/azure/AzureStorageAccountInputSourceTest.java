@@ -420,6 +420,17 @@ public class AzureStorageAccountInputSourceTest extends EasyMockSupport
 
   }
 
+  @Test
+  public void test_getContainerAndPathFromObjectLocatio_nullpath()
+  {
+    Pair<String, String> storageLocation = AzureStorageAccountInputSource.getContainerAndPathFromObjectLocation(
+        new CloudObjectLocation(STORAGE_ACCOUNT, CONTAINER)
+    );
+    Assert.assertEquals(CONTAINER, storageLocation.lhs);
+    Assert.assertEquals("", storageLocation.rhs);
+
+  }
+
   @After
   public void cleanup()
   {

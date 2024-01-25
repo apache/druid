@@ -246,6 +246,7 @@ public class AzureStorageAccountInputSource extends CloudObjectInputSource
   public static Pair<String, String> getContainerAndPathFromObjectLocation(CloudObjectLocation location)
   {
     String[] pathParts = location.getPath().split("/", 2);
-    return Pair.of(pathParts[0], pathParts[1]);
+    // If there is no path specified, use a empty path as azure will throw a exception that is more clear than a index error.
+    return Pair.of(pathParts[0], pathParts.length == 2 ? pathParts[1] : "");
   }
 }
