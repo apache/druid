@@ -21,14 +21,14 @@ package org.apache.druid.query.aggregation;
 
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.NullableTypeStrategy;
+import org.apache.druid.segment.column.TypeStrategies;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 
 /**
  *
@@ -39,7 +39,7 @@ public class SingleValueBufferAggregator implements BufferAggregator
 
   final ColumnType columnType;
 
-  private int stringByteArrayLength = 0;
+  final NullableTypeStrategy typeStrategy;
 
   private boolean isAggregateInvoked = false;
 
@@ -47,6 +47,7 @@ public class SingleValueBufferAggregator implements BufferAggregator
   {
     this.selector = selector;
     this.columnType = columnType;
+    this.typeStrategy = columnType.getNullableStrategy();
   }
 
   @Override
@@ -61,36 +62,34 @@ public class SingleValueBufferAggregator implements BufferAggregator
     if (isAggregateInvoked) {
       throw InvalidInput.exception("Single Value Aggregator would not be applied to more than one row");
     }
-    boolean isNotNull;
-    if (columnType.is(ValueType.STRING)) {
-      isNotNull = (selector.getObject() != null);
-    } else {
-      isNotNull = !selector.isNull();
-    }
-    if (isNotNull) {
-      if (buf.get(position) == NullHandling.IS_NULL_BYTE) {
-        buf.put(position, NullHandling.IS_NOT_NULL_BYTE);
-      }
-      updatevalue(buf, position + Byte.BYTES);
+
+    int written = typeStrategy.write(
+        buf,
+        position,
+        getSelectorObject(),
+        SingleValueAggregatorFactory.DEFAULT_MAX_STRING_SIZE + Byte.BYTES
+    );
+    if (written < 0) {
+      throw new ISE("Single Value Aggregator value exceeds buffer limit");
     }
     isAggregateInvoked = true;
   }
 
-  private void updatevalue(ByteBuffer buf, int position)
+  @Nullable
+  private Object getSelectorObject()
   {
-    if (columnType.is(ValueType.LONG)) {
-      buf.putLong(position, selector.getLong());
-    } else if (columnType.is(ValueType.FLOAT)) {
-      buf.putFloat(position, selector.getFloat());
-    } else if (columnType.is(ValueType.DOUBLE)) {
-      buf.putDouble(position, selector.getDouble());
-    } else if (columnType.is(ValueType.STRING)) {
-      byte[] bytes = DimensionHandlerUtils.convertObjectToString(selector.getObject()).getBytes(StandardCharsets.UTF_8);
-      int size = bytes.length;
-      for (int ii = 0; ii < size; ++ii) {
-        buf.put(position + ii * Integer.BYTES, bytes[ii]);
-      }
-      stringByteArrayLength = size;
+    if (columnType.isNumeric() && selector.isNull()) {
+      return null;
+    }
+    switch (columnType.getType()) {
+      case LONG:
+        return selector.getLong();
+      case FLOAT:
+        return selector.getFloat();
+      case DOUBLE:
+        return selector.getDouble();
+      default:
+        return selector.getObject();
     }
   }
 
@@ -98,52 +97,34 @@ public class SingleValueBufferAggregator implements BufferAggregator
   @Override
   public Object get(ByteBuffer buf, int position)
   {
-    if (columnType.is(ValueType.LONG)) {
-      return getLong(buf, position);
-    } else if (columnType.is(ValueType.FLOAT)) {
-      return getFloat(buf, position);
-    } else if (columnType.is(ValueType.DOUBLE)) {
-      return getDouble(buf, position);
-    } else if (columnType.is(ValueType.STRING)) {
-      if (buf.get(position) == NullHandling.IS_NULL_BYTE) {
-        return null;
-      }
-      byte[] bytes = new byte[stringByteArrayLength];
-      for (int ii = 0; ii < stringByteArrayLength; ++ii) {
-        bytes[ii] = buf.get(position + Byte.BYTES + ii * Integer.BYTES);
-      }
-      return new String(bytes, StandardCharsets.UTF_8);
-    }
-
-    return null;
+    return typeStrategy.read(buf, position);
   }
 
   @Override
   public float getFloat(ByteBuffer buf, int position)
   {
-    if (buf.get(position) == NullHandling.IS_NULL_BYTE) {
+    if (TypeStrategies.isNullableNull(buf, position)) {
       throw new IllegalStateException("Cannot return float for Null Value");
     }
-    return buf.getFloat(position + Byte.BYTES);
+    return TypeStrategies.readNotNullNullableFloat(buf, position);
   }
 
   @Override
   public double getDouble(ByteBuffer buf, int position)
   {
-    if (buf.get(position) == NullHandling.IS_NULL_BYTE) {
+    if (TypeStrategies.isNullableNull(buf, position)) {
       throw new IllegalStateException("Cannot return double for Null Value");
     }
-    return buf.getDouble(position + Byte.BYTES);
+    return TypeStrategies.readNotNullNullableDouble(buf, position);
   }
-
 
   @Override
   public long getLong(ByteBuffer buf, int position)
   {
-    if (buf.get(position) == NullHandling.IS_NULL_BYTE) {
+    if (TypeStrategies.isNullableNull(buf, position)) {
       throw new IllegalStateException("Cannot return long for Null Value");
     }
-    return buf.getLong(position + Byte.BYTES);
+    return TypeStrategies.readNotNullNullableLong(buf, position);
   }
 
   @Override

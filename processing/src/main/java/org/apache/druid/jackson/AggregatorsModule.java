@@ -43,7 +43,7 @@ import org.apache.druid.query.aggregation.SerializablePairLongDoubleComplexMetri
 import org.apache.druid.query.aggregation.SerializablePairLongFloatComplexMetricSerde;
 import org.apache.druid.query.aggregation.SerializablePairLongLongComplexMetricSerde;
 import org.apache.druid.query.aggregation.SerializablePairLongStringComplexMetricSerde;
-import org.apache.druid.query.aggregation.SingleValueAggregatoractory;
+import org.apache.druid.query.aggregation.SingleValueAggregatorFactory;
 import org.apache.druid.query.aggregation.any.DoubleAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.any.FloatAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.any.LongAnyAggregatorFactory;
@@ -143,7 +143,7 @@ public class AggregatorsModule extends SimpleModule
       @JsonSubTypes.Type(name = "stringAny", value = StringAnyAggregatorFactory.class),
       @JsonSubTypes.Type(name = "grouping", value = GroupingAggregatorFactory.class),
       @JsonSubTypes.Type(name = "expression", value = ExpressionLambdaAggregatorFactory.class),
-      @JsonSubTypes.Type(name = "singleValue", value = SingleValueAggregatoractory.class)
+      @JsonSubTypes.Type(name = "singleValue", value = SingleValueAggregatorFactory.class)
   })
   public interface AggregatorFactoryMixin
   {

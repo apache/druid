@@ -24,7 +24,7 @@ import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.SingleValueAggregatoractory;
+import org.apache.druid.query.aggregation.SingleValueAggregatorFactory;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -71,7 +71,7 @@ public class SingleValueSqlAggregator extends SimpleSqlAggregator
       case FLOAT:
       case DOUBLE:
       case STRING:
-        return new SingleValueAggregatoractory(name, fieldName, aggregationType);
+        return new SingleValueAggregatorFactory(name, fieldName, aggregationType);
       default:
         // This error refers to the Druid type. But, we're in SQL validation.
         // It should refer to the SQL type.

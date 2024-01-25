@@ -38,7 +38,7 @@ import java.util.List;
 import java.util.Objects;
 
 @JsonTypeName("singleValue")
-public class SingleValueAggregatoractory extends AggregatorFactory
+public class SingleValueAggregatorFactory extends AggregatorFactory
 {
 
   @JsonProperty
@@ -56,7 +56,7 @@ public class SingleValueAggregatoractory extends AggregatorFactory
   public static final int DEFAULT_MAX_STRING_SIZE = 1024;
 
   @JsonCreator
-  public SingleValueAggregatoractory(
+  public SingleValueAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") final String fieldName,
       @JsonProperty("columnType") final ColumnType columnType
@@ -102,7 +102,7 @@ public class SingleValueAggregatoractory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new SingleValueAggregatoractory(name, name, columnType);
+    return new SingleValueAggregatorFactory(name, name, columnType);
   }
 
   @Override
@@ -174,7 +174,7 @@ public class SingleValueAggregatoractory extends AggregatorFactory
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    SingleValueAggregatoractory that = (SingleValueAggregatoractory) o;
+    SingleValueAggregatorFactory that = (SingleValueAggregatorFactory) o;
     return Objects.equals(name, that.name)
            && Objects.equals(fieldName, that.fieldName)
            && Objects.equals(columnType, that.columnType);
