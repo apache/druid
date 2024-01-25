@@ -202,8 +202,6 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
             return (T) new NestedArrayValueIndexes();
           } else if (clazz.equals(ArrayElementIndexes.class)) {
             return (T) new NestedArrayElementIndexes();
-          } else if (clazz.equals(DruidPredicateIndexes.class)) {
-            return (T) new NestedVariantPredicateIndexes();
           }
           return null;
         default:
@@ -1394,6 +1392,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
             final DruidObjectPredicate<String> stringPredicate = matcherFactory.makeStringPredicate();
             final DruidLongPredicate longPredicate = matcherFactory.makeLongPredicate();
             final DruidDoublePredicate doublePredicate = matcherFactory.makeDoublePredicate();
+
             final Supplier<DruidObjectPredicate<Object[]>> arrayPredicateSupplier = Suppliers.memoize(
                 () -> matcherFactory.makeArrayPredicate(singleType)
             );
