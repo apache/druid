@@ -48,7 +48,8 @@ public class Pac4jFilter implements Filter
 {
   private static final Logger LOGGER = new Logger(Pac4jFilter.class);
 
-  private static final HttpActionAdapter<Object, JEEContext> HTTP_ACTION_ADAPTER = new JEEHttpActionAdapter();
+  // JEE_HTTP_ACTION_ADAPTER updates the response in the context according to the HTTPAction.
+  private static final HttpActionAdapter<Object, JEEContext> JEE_HTTP_ACTION_ADAPTER = new JEEHttpActionAdapter();
 
   private final Config pac4jConfig;
   private final SecurityLogic<Object, JEEContext> securityLogic;
@@ -95,7 +96,7 @@ public class Pac4jFilter implements Filter
       callbackLogic.perform(
           context,
           pac4jConfig,
-          HTTP_ACTION_ADAPTER,
+          JEE_HTTP_ACTION_ADAPTER,
           "/",
           true, false, false, null);
     } else {
@@ -110,7 +111,7 @@ public class Pac4jFilter implements Filter
               return profiles.iterator().next().getId();
             }
           },
-          HTTP_ACTION_ADAPTER,
+          JEE_HTTP_ACTION_ADAPTER,
           null, "none", null, null);
 
       if (uid != null) {
