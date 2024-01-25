@@ -37,7 +37,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.joda.time.chrono.ISOChronology;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.PreparedBatch;
 import org.skife.jdbi.v2.Query;
@@ -680,8 +679,8 @@ public class SqlSegmentsMetadataQuery
   {
     return sql.map((index, r, ctx) -> new DataSegmentPlus(
             JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
-            new DateTime(r.getString(2), ISOChronology.getInstanceUTC()),
-            new DateTime(r.getString(3), ISOChronology.getInstanceUTC())
+            DateTimes.of(r.getString(2)),
+            DateTimes.of(r.getString(3))
         ))
         .iterator();
   }
