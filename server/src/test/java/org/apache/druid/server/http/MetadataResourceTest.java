@@ -27,6 +27,7 @@ import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -45,7 +46,6 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentStatusInCluster;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -77,7 +77,7 @@ public class MetadataResourceTest
           .toArray(new DataSegment[0]);
 
   private final List<DataSegmentPlus> segmentDtos = Arrays.stream(segments)
-          .map(s -> new DataSegmentPlus(s, DateTime.now(), DateTime.now()))
+          .map(s -> new DataSegmentPlus(s, DateTimes.nowUtc(), DateTimes.nowUtc()))
           .collect(Collectors.toList());
   private HttpServletRequest request;
   private SegmentsMetadataManager segmentsMetadataManager;
