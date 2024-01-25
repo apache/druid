@@ -38,7 +38,7 @@ If you want to append data to a datasource while compaction is running, you need
 
 In the **Compaction config** for a datasource, enable  **Allow concurrent compactions (experimental)**.
 
-For details on accessing the compaction config in the UI, see [Enable automatic compaction with the web console](automatic-compaction.md#web-console).
+For details on accessing the compaction config in the UI, see [Enable automatic compaction with the web console](../data-management/automatic-compaction.md#web-console).
 
 ### Update the compaction settings with the API
  
@@ -82,19 +82,15 @@ We recommend that you use the `useConcurrentLocks` context parameter so that Dru
 
 <details><summary>Click here to read more about the lock types.</summary>
 
-When setting task lock types manually, you need to ensure the following: 
+Druid uses task lock
 
-- The append task (with `appendToExisting` set to `true`) has `taskLockType` set to `APPEND` in the task context.
-- The replace task (with `appendToExisting` set to `false`) has `taskLockType` set to `REPLACE` in the task context.
+When setting task lock types manually, be aware of the following:
+
+- There are two task lock types: `APPEND` and `REPLACE`. The type of lock you use is determined by what you're trying to accomplish.
 - The segment granularity of the append task is equal to or finer than the segment granularity of the replace task.
-
-Additionally, keep the following in mind:
-
-- Concurrent append and replace fails if the task with the `APPEND` lock uses a coarser segment granularity than the task with the `REPLACE` lock. For example, if the `APPEND` task uses a segment granularity of YEAR and the `REPLACE` task uses a segment granularity of MONTH, you should not use concurrent append and replace.
-
+- Concurrent append and replace fails if the task with `APPEND` lock uses a coarser segment granularity than the task with the `REPLACE` lock. For example, if the `APPEND` task uses a segment granularity of YEAR and the `REPLACE` task uses a segment granularity of MONTH, you should not use concurrent append and replace.
 -  Only a single task can hold a `REPLACE` lock on a given interval of a datasource.
-  
-- Multiple tasks can hold `APPEND` locks on a given interval of a datasource and append data to that interval simultaneously.
+  - Multiple tasks can hold `APPEND` locks on a given interval of a datasource and append data to that interval simultaneously.
 
 #### Add a task lock type to your ingestion job
 
@@ -135,7 +131,7 @@ If you have multiple ingestion jobs that append all targeting the same datasourc
 "useSharedLock": "true"
 ```
 
-Keep in mind that `taskLockType` takes precedence over `useSharedLock`. Do not use it with `REPLACE` task locks.
+Keep in mind that `taskLockType` takes precedence over `useSharedLock`. Do not use `useSharedLock` with `REPLACE` task locks.
 
 
 Set  `taskLockType` to `REPLACE` if you're replacing data. For example, if you use any of the following partitioning types, use `REPLACE`:

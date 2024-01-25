@@ -131,17 +131,24 @@ maximize performance and minimize disk usage of the `compact` tasks launched by 
 
 For more details on each of the specs in an auto-compaction configuration, see [Automatic compaction dynamic configuration](../configuration/index.md#automatic-compaction-dynamic-configuration).
 
-### Avoid conflicts with ingestion
+### Set frequency of compaction runs
+
+If you want the Coordinator to check for compaction more frequently than its indexing period, create a separate group to handle compaction duties.
+Set the time period of the duty group in the `coordinator/runtime.properties` file.
+The following example shows how to create a duty group named `compaction` and set the auto-compaction period to 1 minute:
+```
+druid.coordinator.dutyGroups=["compaction"]
+druid.coordinator.compaction.duties=["compactSegments"]
+druid.coordinator.compaction.period=PT60S
+```
+
+## Avoid conflicts with ingestion
 
 Compaction tasks may be interrupted when they interfere with ingestion. For example, this occurs when an ingestion task needs to write data to a segment for a time interval locked for compaction. If there are continuous failures that prevent compaction from making progress, consider one of the following strategies:
 
 * Enable [concurrent append and replace tasks](#enable-concurrent-append-and-replace) on your datasource and on the ingestion tasks.
 * Set `skipOffsetFromLatest` to reduce the chance of conflicts between ingestion and compaction. See more details in [Skip latest segments from compaction](#skip-latest-segments-from-compaction).
 * Increase the priority value of compaction tasks relative to ingestion tasks. Only recommended for advanced users. This approach can cause ingestion jobs to fail or lag. To change the priority of compaction tasks, set `taskPriority` to the desired priority value in the auto-compaction configuration. For details on the priority values of different task types, see [Lock priority](../ingestion/tasks.md#lock-priority).
-
-The Coordinator compacts segments from newest to oldest. In the auto-compaction configuration, you can set a time period, relative to the end time of the most recent segment, for segments that should not be compacted. Assign this value to `skipOffsetFromLatest`. Note that this offset is not relative to the current time but to the latest segment time. For example, if you want to skip over segments from five days prior to the end time of the most recent segment, assign `"skipOffsetFromLatest": "P5D"`.
-
-To set `skipOffsetFromLatest`, consider how frequently you expect the stream to receive late arriving data. If your stream only occasionally receives late arriving data, the auto-compaction system robustly compacts your data even though data is ingested outside the `skipOffsetFromLatest` window. For most realtime streaming ingestion use cases, it is reasonable to set `skipOffsetFromLatest` to a few hours or a day.
 
 ### Enable concurrent append and replace
 
@@ -156,16 +163,12 @@ You'll also need to update your ingestion jobs to include a task lock.
 
 For information on how to do this, see [Concurrent append and replace](../ingestion/concurrent-append-replace.md).
 
-### Set frequency of compaction runs
+### Skip compaction for latest segments
 
-If you want the Coordinator to check for compaction more frequently than its indexing period, create a separate group to handle compaction duties.
-Set the time period of the duty group in the `coordinator/runtime.properties` file.
-The following example shows how to create a duty group named `compaction` and set the auto-compaction period to 1 minute:
-```
-druid.coordinator.dutyGroups=["compaction"]
-druid.coordinator.compaction.duties=["compactSegments"]
-druid.coordinator.compaction.period=PT60S
-```
+The Coordinator compacts segments from newest to oldest. In the auto-compaction configuration, you can set a time period, relative to the end time of the most recent segment, for segments that should not be compacted. Assign this value to `skipOffsetFromLatest`. Note that this offset is not relative to the current time but to the latest segment time. For example, if you want to skip over segments from five days prior to the end time of the most recent segment, assign `"skipOffsetFromLatest": "P5D"`.
+
+To set `skipOffsetFromLatest`, consider how frequently you expect the stream to receive late arriving data. If your stream only occasionally receives late arriving data, the auto-compaction system robustly compacts your data even though data is ingested outside the `skipOffsetFromLatest` window. For most realtime streaming ingestion use cases, it is reasonable to set `skipOffsetFromLatest` to a few hours or a day.
+
 
 ## View automatic compaction statistics
 
