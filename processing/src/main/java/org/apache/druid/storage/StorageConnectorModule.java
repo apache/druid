@@ -46,6 +46,6 @@ public class StorageConnectorModule implements DruidModule
   public void configure(Binder binder)
   {
     MapBinder<String, ExportStorageConnectorFactory> mapbinder = MapBinder.newMapBinder(binder, String.class, ExportStorageConnectorFactory.class);
-    mapbinder.addBinding("local").to(LocalExportStorageConnectorFactory.class);
+    mapbinder.addBinding(LocalFileStorageConnectorProvider.TYPE_NAME).to(LocalExportStorageConnectorFactory.class);
   }
 }

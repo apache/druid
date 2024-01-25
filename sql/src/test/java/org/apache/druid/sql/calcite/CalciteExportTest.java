@@ -100,7 +100,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
              + "SELECT dim2 FROM foo")
         .expectValidationError(
             DruidException.class,
-            "External write statemetns requires a AS clause to specify the format, but none was found."
+            "Exporting rows into an EXTERN destination requires an AS clause to specify the format, but none was found."
         )
         .verify();
   }
@@ -121,6 +121,22 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
         )
         .expectResources(dataSourceRead("foo"), dataSourceWrite("csv"))
         .expectTarget("csv", RowSignature.builder().add("dim2", ColumnType.STRING).build())
+        .verify();
+  }
+
+  @Test
+  public void testNormalInsertWithFormat()
+  {
+    testIngestionQuery()
+        .sql("REPLACE INTO testTable "
+             + "AS CSV "
+             + "OVERWRITE ALL "
+             + "SELECT dim2 FROM foo "
+             + "PARTITIONED BY ALL")
+        .expectValidationError(
+            DruidException.class,
+            "The AS <format> clause should only be specified while exporting rows into an EXTERN destination."
+        )
         .verify();
   }
 }

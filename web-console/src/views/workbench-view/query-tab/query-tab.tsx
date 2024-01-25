@@ -428,11 +428,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
                 )}
               </div>
             ) : (
-                <ExecutionStagesPane
-                  execution={execution}
-                  onErrorClick={() => onDetails(statsTaskId!, 'error')}
-                  onWarningClick={() => onDetails(statsTaskId!, 'warnings')}
-                  goToTask={goToTask}
+              <div>Unknown query execution state</div>
                 />
             ))}
           {executionState.error && (

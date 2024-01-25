@@ -30,9 +30,11 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Objects;
 
-@JsonTypeName("local")
+@JsonTypeName(LocalFileStorageConnectorProvider.TYPE_NAME)
 public class LocalFileStorageConnectorProvider implements StorageConnectorProvider
 {
+  public static final String TYPE_NAME = "local";
+
   @JsonProperty
   final File basePath;
 

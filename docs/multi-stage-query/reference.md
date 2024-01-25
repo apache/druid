@@ -45,8 +45,11 @@ making it easy to reuse the same SQL statement for each ingest: just specify the
 
 ### `EXTERN` Function
 
-Use the `EXTERN` function to read external data. The function has two variations.
+Use the `EXTERN` function to read external data or write to an external source.
 
+#### `EXTERN` as an input source
+
+The function has two variations.
 Function variation 1, with the input schema expressed as JSON:
 
 ```sql
@@ -89,6 +92,63 @@ Example: `(timestamp VARCHAR, metricType VARCHAR, value BIGINT)`. The optional `
 can precede the column list: `EXTEND (timestamp VARCHAR...)`.
 
 For more information, see [Read external data with EXTERN](concepts.md#read-external-data-with-extern).
+
+#### `EXTERN` to export to a destination
+
+`EXTERN` can be used as a destination, which will export the data to the specified location and format. EXTERN when
+used in this way accepts one argument. Please note that partitioning (`PARTITIONED BY`) and clustering (`CLUSTERED BY`)
+is not currently supported with export statements.
+
+INSERT statements and REPLACE statements are both supported with an `EXTERN` destination. The statments require an `AS`
+clause that determines the format.
+Currently, only `CSV` is supported as a format.
+
+INSERT statements append the results to the existing files at the destination.
+```sql
+INSERT INTO
+  EXTERN(<destination function>)
+AS CSV
+SELECT
+  <column>
+FROM <table>
+```
+
+REPLACE statements have an additional OVERWRITE clause. As partitioning is not yet supported, only `OVERWRITE ALL`
+is allowed. REPLACE deletes any existing files at the destination and creates new files with the results of the query.
+
+```sql
+REPLACE INTO
+  EXTERN(<destination function>)
+AS CSV
+OVERWRITE ALL
+SELECT
+  <column>
+FROM <table>
+```
+
+Exporting is currently supported to Amazon S3 storage. The S3 extension is required to be loaded for this.
+This can be done passing the function `S3` to the `EXTERN` function.
+
+```sql
+INSERT INTO
+  EXTERN(S3(bucket=<...>, prefix=<...>, tempDir=<...>))
+AS CSV
+SELECT
+  <column>
+FROM <table>
+```
+
+Supported arguments to the function:
+
+| Parameter   | Required | Description                                                                                                                                                                                                                                                                                | Default |
+|-------------|---------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| --|
+| `bucket`    | Yes | The S3 bucket to which the files are exported to.                                                                                                                                                                                                                                          | n/a |
+| `prefix`    | Yes | Path prepended to all the paths uploaded to the bucket to namespace the connector's files. Provide a unique value for the prefix and do not share the same prefix between different clusters. If the location includes other files or directories, then they might get cleaned up as well. | n/a |
+| `tempDir`   | Yes | Directory path on the local disk to store temporary files required while uploading the data                                                                                                                                                                                                | n/a |
+| `maxRetry`  | No | Defines the max number times to attempt S3 API calls to avoid failures due to transient errors.                                                                                                                                                                                            | 10 |
+| `chunkSize` | No | Defines the size of each chunk to temporarily store in `tempDir`. The chunk size must be between 5 MiB and 5 GiB. A large chunk size reduces the API calls to S3, however it requires more disk space to store the temporary chunks.                                                       | 100MiB |
+
+For more information, see [Read external data with EXTERN](concepts.md#write-to-an-external-destination-with-extern).
 
 ### `INSERT`
 

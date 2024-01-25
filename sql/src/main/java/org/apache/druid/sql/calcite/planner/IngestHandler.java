@@ -133,7 +133,7 @@ public abstract class IngestHandler extends QueryHandler
     if (ingestNode().getTargetTable() instanceof ExternalDestinationSqlIdentifier) {
       if (exportFileFormat == null) {
         throw InvalidSqlInput.exception(
-            "External write statemetns requires a AS clause to specify the format, but none was found.",
+            "Exporting rows into an EXTERN destination requires an AS clause to specify the format, but none was found.",
             operationName()
         );
       } else {
@@ -142,6 +142,11 @@ public abstract class IngestHandler extends QueryHandler
             exportFileFormat
         );
       }
+    } else if (exportFileFormat != null) {
+      throw InvalidSqlInput.exception(
+          "The AS <format> clause should only be specified while exporting rows into an EXTERN destination.",
+          operationName()
+      );
     }
 
     try {

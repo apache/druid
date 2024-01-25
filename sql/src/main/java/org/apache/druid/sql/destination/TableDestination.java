@@ -25,11 +25,14 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 
 import java.util.Objects;
 
+/**
+ * Destination that represents an ingestion to a druid table.
+ */
 @JsonTypeName(TableDestination.TYPE_KEY)
 public class TableDestination implements IngestDestination
 {
   public static final String TYPE_KEY = "table";
-  String tableName;
+  private final String tableName;
 
   @JsonCreator
   public TableDestination(@JsonProperty("tableName") String tableName)

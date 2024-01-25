@@ -22,7 +22,7 @@ package org.apache.druid.msq.querykit.results;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.google.common.collect.Iterables;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.frame.processor.OutputChannels;
@@ -42,6 +42,7 @@ import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.querykit.BaseFrameProcessorFactory;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.storage.StorageConnectorProvider;
+import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -50,7 +51,6 @@ import java.util.function.Consumer;
 @JsonTypeName("exportResults")
 public class ExportResultsFrameProcessorFactory extends BaseFrameProcessorFactory
 {
-
   private final StorageConnectorProvider storageConnectorProvider;
   private final ResultFormat exportFormat;
 
@@ -90,7 +90,10 @@ public class ExportResultsFrameProcessorFactory extends BaseFrameProcessorFactor
       Consumer<Throwable> warningPublisher
   )
   {
-    final StageInputSlice slice = (StageInputSlice) Iterables.getOnlyElement(inputSlices);
+    final StageInputSlice slice = (StageInputSlice) CollectionUtils.getOnlyElement(
+        inputSlices,
+        x -> DruidException.defensive().build("Expected only a single input slice but found [%s]", inputSlices)
+    );
 
     if (inputSliceReader.numReadableInputs(slice) == 0) {
       return new ProcessorsAndChannels<>(ProcessorManagers.none(), OutputChannels.none());

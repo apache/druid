@@ -24,7 +24,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 
 import java.util.Map;
+import java.util.Objects;
 
+/**
+ * Destination that represents an ingestion to an external source.
+ */
 @JsonTypeName(ExportDestination.TYPE_KEY)
 public class ExportDestination implements IngestDestination
 {
@@ -55,5 +59,36 @@ public class ExportDestination implements IngestDestination
   public String getDestinationName()
   {
     return "EXTERN";
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ExportDestination that = (ExportDestination) o;
+    return Objects.equals(destinationType, that.destinationType) && Objects.equals(
+        properties,
+        that.properties
+    );
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(destinationType, properties);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "ExportDestination{" +
+           "destinationType='" + destinationType + '\'' +
+           ", properties=" + properties +
+           '}';
   }
 }
