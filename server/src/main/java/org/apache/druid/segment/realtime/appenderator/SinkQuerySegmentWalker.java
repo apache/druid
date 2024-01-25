@@ -22,7 +22,6 @@ package org.apache.druid.segment.realtime.appenderator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterables;
 import org.apache.druid.client.CachingQueryRunner;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
@@ -30,7 +29,6 @@ import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -53,13 +51,12 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.query.SinkQueryRunners;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
+import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.segment.realtime.plumber.SinkSegmentReference;
@@ -69,13 +66,19 @@ import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.Interval;
 
-import java.io.Closeable;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Query handler for indexing tasks.
@@ -92,7 +95,6 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   private final ServiceEmitter emitter;
   private final QueryRunnerFactoryConglomerate conglomerate;
   private final QueryProcessingPool queryProcessingPool;
-  private final JoinableFactoryWrapper joinableFactoryWrapper;
   private final Cache cache;
   private final CacheConfig cacheConfig;
   private final CachePopulatorStats cachePopulatorStats;
@@ -106,7 +108,6 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
       ServiceEmitter emitter,
       QueryRunnerFactoryConglomerate conglomerate,
       QueryProcessingPool queryProcessingPool,
-      JoinableFactoryWrapper joinableFactoryWrapper,
       Cache cache,
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats
@@ -118,7 +119,6 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     this.emitter = Preconditions.checkNotNull(emitter, "emitter");
     this.conglomerate = Preconditions.checkNotNull(conglomerate, "conglomerate");
     this.queryProcessingPool = Preconditions.checkNotNull(queryProcessingPool, "queryProcessingPool");
-    this.joinableFactoryWrapper = joinableFactoryWrapper;
     this.cache = Preconditions.checkNotNull(cache, "cache");
     this.cacheConfig = Preconditions.checkNotNull(cacheConfig, "cacheConfig");
     this.cachePopulatorStats = Preconditions.checkNotNull(cachePopulatorStats, "cachePopulatorStats");
@@ -186,110 +186,163 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     // We compute the join cache key here itself so it doesn't need to be re-computed for every segment
     final Optional<byte[]> cacheKeyPrefix = Optional.ofNullable(query.getDataSource().getCacheKey());
 
-    Iterable<QueryRunner<T>> perSegmentRunners = Iterables.transform(
-        specs,
-        newDescriptor -> {
-          final SegmentDescriptor descriptor = newIdToBasePendingSegment.getOrDefault(newDescriptor, newDescriptor);
-          final PartitionChunk<Sink> chunk = sinkTimeline.findChunk(
-              descriptor.getInterval(),
-              descriptor.getVersion(),
-              descriptor.getPartitionNumber()
-          );
+    // We need to report data for each Sink all-or-nothing, which means we need to acquire references for all
+    // subsegments (FireHydrants) of a segment (Sink) at once. To ensure they are properly released even when a
+    // query fails or is canceled, we acquire *all* sink reference upfront, and release them all when the main
+    // QueryRunner returned by this method is closed. (We can't do the acquisition and releasing at the level of
+    // each FireHydrant's runner, since then it wouldn't be properly all-or-nothing on a per-Sink basis.)
+    final List<SinkSegmentReference> allSegmentReferences = new ArrayList<>();
+    final Map<SegmentDescriptor, SegmentId> segmentIdMap = new HashMap<>();
+    final LinkedHashMap<SegmentDescriptor, List<QueryRunner<T>>> allRunners = new LinkedHashMap<>();
 
-          if (chunk == null) {
-            return new ReportTimelineMissingSegmentQueryRunner<>(descriptor);
-          }
-
-          final Sink theSink = chunk.getObject();
-          final SegmentId sinkSegmentId = theSink.getSegment().getId();
-          final List<SinkSegmentReference> segmentReferences =
-              theSink.acquireSegmentReferences(segmentMapFn, skipIncrementalSegment);
-
-          if (segmentReferences == null) {
-            // We failed to acquire references for all subsegments. Bail and report the entire sink missing.
-            return new ReportTimelineMissingSegmentQueryRunner<>(descriptor);
-          } else if (segmentReferences.isEmpty()) {
-            return new NoopQueryRunner<>();
-          }
-
-          final Closeable releaser = () -> CloseableUtils.closeAll(segmentReferences);
-
-          try {
-            Iterable<QueryRunner<T>> perHydrantRunners = new SinkQueryRunners<>(
-                Iterables.transform(
-                    segmentReferences,
-                    segmentReference -> {
-                      QueryRunner<T> runner = factory.createRunner(segmentReference.getSegment());
-
-                      // 1) Only use caching if data is immutable
-                      // 2) Hydrants are not the same between replicas, make sure cache is local
-                      if (segmentReference.isImmutable() && cache.isLocal()) {
-                        StorageAdapter storageAdapter = segmentReference.getSegment().asStorageAdapter();
-                        long segmentMinTime = storageAdapter.getMinTime().getMillis();
-                        long segmentMaxTime = storageAdapter.getMaxTime().getMillis();
-                        Interval actualDataInterval = Intervals.utc(segmentMinTime, segmentMaxTime + 1);
-                        runner = new CachingQueryRunner<>(
-                            makeHydrantCacheIdentifier(sinkSegmentId, segmentReference.getHydrantNumber()),
-                            cacheKeyPrefix,
-                            descriptor,
-                            actualDataInterval,
-                            objectMapper,
-                            cache,
-                            toolChest,
-                            runner,
-                            // Always populate in foreground regardless of config
-                            new ForegroundCachePopulator(
-                                objectMapper,
-                                cachePopulatorStats,
-                                cacheConfig.getMaxEntrySize()
-                            ),
-                            cacheConfig
-                        );
-                      }
-                      return new Pair<>(segmentReference.getSegment().getDataInterval(), runner);
-                    }
-                )
-            );
-            return QueryRunnerHelper.makeClosingQueryRunner(
-                new SpecificSegmentQueryRunner<>(
-                    withPerSinkMetrics(
-                        new BySegmentQueryRunner<>(
-                            sinkSegmentId,
-                            descriptor.getInterval().getStart(),
-                            factory.mergeRunners(
-                                DirectQueryProcessingPool.INSTANCE,
-                                perHydrantRunners
-                            )
-                        ),
-                        toolChest,
-                        sinkSegmentId,
-                        cpuTimeAccumulator
-                    ),
-                    new SpecificSegmentSpec(descriptor)
-                ),
-                releaser
-            );
-          }
-          catch (Throwable e) {
-            throw CloseableUtils.closeAndWrapInCatch(e, releaser);
-          }
-        }
-    );
-    final QueryRunner<T> mergedRunner =
-        toolChest.mergeResults(
-            factory.mergeRunners(
-                queryProcessingPool,
-                perSegmentRunners
-            )
+    try {
+      for (final SegmentDescriptor newDescriptor : specs) {
+        final SegmentDescriptor descriptor = newIdToBasePendingSegment.getOrDefault(newDescriptor, newDescriptor);
+        final PartitionChunk<Sink> chunk = sinkTimeline.findChunk(
+            descriptor.getInterval(),
+            descriptor.getVersion(),
+            descriptor.getPartitionNumber()
         );
 
-    return CPUTimeMetricQueryRunner.safeBuild(
-        new FinalizeResultsQueryRunner<>(mergedRunner, toolChest),
-        toolChest,
-        emitter,
-        cpuTimeAccumulator,
-        true
-    );
+        if (chunk == null) {
+          allRunners.put(
+              descriptor,
+              Collections.singletonList(new ReportTimelineMissingSegmentQueryRunner<>(descriptor))
+          );
+          continue;
+        }
+
+        final Sink theSink = chunk.getObject();
+        final SegmentId sinkSegmentId = theSink.getSegment().getId();
+        segmentIdMap.put(descriptor, sinkSegmentId);
+        final List<SinkSegmentReference> sinkSegmentReferences =
+            theSink.acquireSegmentReferences(segmentMapFn, skipIncrementalSegment);
+
+        if (sinkSegmentReferences == null) {
+          // We failed to acquire references for all subsegments. Bail and report the entire sink missing.
+          allRunners.put(
+              descriptor,
+              Collections.singletonList(new ReportTimelineMissingSegmentQueryRunner<>(descriptor))
+          );
+        } else if (sinkSegmentReferences.isEmpty()) {
+          allRunners.put(descriptor, Collections.singletonList(new NoopQueryRunner<>()));
+        } else {
+          allSegmentReferences.addAll(sinkSegmentReferences);
+
+          allRunners.put(
+              descriptor,
+              sinkSegmentReferences.stream().map(
+                  segmentReference -> {
+                    QueryRunner<T> runner = new MetricsEmittingQueryRunner<>(
+                        emitter,
+                        factory.getToolchest(),
+                        factory.createRunner(segmentReference.getSegment()),
+                        QueryMetrics::reportSegmentTime,
+                        queryMetrics -> queryMetrics.segment(sinkSegmentId.toString())
+                    );
+
+                    // 1) Only use caching if data is immutable
+                    // 2) Hydrants are not the same between replicas, make sure cache is local
+                    if (segmentReference.isImmutable() && cache.isLocal()) {
+                      StorageAdapter storageAdapter = segmentReference.getSegment().asStorageAdapter();
+                      long segmentMinTime = storageAdapter.getMinTime().getMillis();
+                      long segmentMaxTime = storageAdapter.getMaxTime().getMillis();
+                      Interval actualDataInterval = Intervals.utc(segmentMinTime, segmentMaxTime + 1);
+                      runner = new CachingQueryRunner<>(
+                          makeHydrantCacheIdentifier(sinkSegmentId, segmentReference.getHydrantNumber()),
+                          cacheKeyPrefix,
+                          descriptor,
+                          actualDataInterval,
+                          objectMapper,
+                          cache,
+                          toolChest,
+                          runner,
+                          // Always populate in foreground regardless of config
+                          new ForegroundCachePopulator(
+                              objectMapper,
+                              cachePopulatorStats,
+                              cacheConfig.getMaxEntrySize()
+                          ),
+                          cacheConfig
+                      );
+                    }
+
+                    // Regardless of whether caching is enabled, do reportSegmentAndCacheTime outside the
+                    // *possible* caching.
+                    runner = new MetricsEmittingQueryRunner<>(
+                        emitter,
+                        factory.getToolchest(),
+                        runner,
+                        QueryMetrics::reportSegmentAndCacheTime,
+                        queryMetrics -> queryMetrics.segment(sinkSegmentId.toString())
+                    ).withWaitMeasuredFromNow();
+
+                    // Emit CPU time metrics.
+                    runner = CPUTimeMetricQueryRunner.safeBuild(
+                        runner,
+                        toolChest,
+                        emitter,
+                        cpuTimeAccumulator,
+                        false
+                    );
+
+                    // Run with specific segment descriptor.
+                    runner = new SpecificSegmentQueryRunner<>(
+                        runner,
+                        new SpecificSegmentSpec(descriptor)
+                    );
+
+                    return runner;
+                  }
+              ).collect(Collectors.toList())
+          );
+        }
+      }
+
+      final QueryRunner<T> mergedRunner;
+
+      if (query.context().isBySegment()) {
+        // bySegment: merge all hydrants for a Sink first, then merge Sinks. Necessary to keep results for the
+        // same segment together, but causes additional memory usage due to the extra layer of materialization,
+        // so we only do this if we need to.
+        mergedRunner = factory.mergeRunners(
+            queryProcessingPool,
+            allRunners.entrySet().stream().map(
+                entry -> new BySegmentQueryRunner<>(
+                    segmentIdMap.get(entry.getKey()),
+                    entry.getKey().getInterval().getStart(),
+                    factory.mergeRunners(
+                        DirectQueryProcessingPool.INSTANCE,
+                        entry.getValue()
+                    )
+                )
+            ).collect(Collectors.toList())
+        );
+      } else {
+        // Not bySegment: merge all hydrants at the same level, rather than grouped by Sink (segment).
+        mergedRunner = factory.mergeRunners(
+            queryProcessingPool,
+            allRunners.values().stream().flatMap(Collection::stream).collect(Collectors.toList())
+        );
+      }
+
+      // 1) Merge results using the toolChest, finalize if necessary.
+      // 2) Measure CPU time of that operation.
+      // 3) Release all sink segment references.
+      return QueryRunnerHelper.makeClosingQueryRunner(
+          CPUTimeMetricQueryRunner.safeBuild(
+              new FinalizeResultsQueryRunner<>(toolChest.mergeResults(mergedRunner), toolChest),
+              toolChest,
+              emitter,
+              cpuTimeAccumulator,
+              true
+          ),
+          () -> CloseableUtils.closeAll(allSegmentReferences)
+      );
+    }
+    catch (Throwable e) {
+      throw CloseableUtils.closeAndWrapInCatch(e, () -> CloseableUtils.closeAll(allSegmentReferences));
+    }
   }
 
   public void registerNewVersionOfPendingSegment(
@@ -310,20 +363,18 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   }
 
   /**
-   * Decorates a Sink's query runner to emit query/segmentAndCache/time, query/segment/time, query/wait/time once
-   * each for the whole Sink. Also adds CPU time to cpuTimeAccumulator.
+   * Decorates a {@link FireHydrant} query runner to emit query/segmentAndCache/time, query/segment/time, and
+   * query/wait/time. Also adds CPU time to cpuTimeAccumulator. Because each hydrant (persist file or in-memory
+   * {@link IncrementalIndex}) is submitted to the executor separately, it reports its own metrics, even though
+   * it isn't a full segment.
    */
-  private <T> QueryRunner<T> withPerSinkMetrics(
-      final QueryRunner<T> sinkRunner,
+  private <T> QueryRunner<T> withHydrantMetrics(
+      final QueryRunner<T> hydrantRunner,
       final QueryToolChest<T, ? extends Query<T>> queryToolChest,
       final SegmentId sinkSegmentId,
       final AtomicLong cpuTimeAccumulator
   )
   {
-    // Note: reportSegmentAndCacheTime and reportSegmentTime are effectively the same here. They don't split apart
-    // cache vs. non-cache due to the fact that Sinks may be partially cached and partially uncached. Making this
-    // better would need to involve another accumulator like the cpuTimeAccumulator that we could share with the
-    // sinkRunner.
     String sinkSegmentIdString = sinkSegmentId.toString();
     return CPUTimeMetricQueryRunner.safeBuild(
         new MetricsEmittingQueryRunner<>(
@@ -332,7 +383,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
             new MetricsEmittingQueryRunner<>(
                 emitter,
                 queryToolChest,
-                sinkRunner,
+                hydrantRunner,
                 QueryMetrics::reportSegmentTime,
                 queryMetrics -> queryMetrics.segment(sinkSegmentIdString)
             ),
