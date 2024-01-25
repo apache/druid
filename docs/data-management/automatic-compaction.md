@@ -136,7 +136,7 @@ For more details on each of the specs in an auto-compaction configuration, see [
 Compaction tasks may be interrupted when they interfere with ingestion. For example, this occurs when an ingestion task needs to write data to a segment for a time interval locked for compaction. If there are continuous failures that prevent compaction from making progress, consider one of the following strategies:
 
 * Enable [concurrent append and replace tasks](#enable-concurrent-append-and-replace) on your datasource and on the ingestion tasks.
-* Set `skipOffsetFromLatest` to reduce the chance of conflicts between ingestion and compaction. See more details in this section below.
+* Set `skipOffsetFromLatest` to reduce the chance of conflicts between ingestion and compaction. See more details in [Skip latest segments from compaction](#skip-latest-segments-from-compaction).
 * Increase the priority value of compaction tasks relative to ingestion tasks. Only recommended for advanced users. This approach can cause ingestion jobs to fail or lag. To change the priority of compaction tasks, set `taskPriority` to the desired priority value in the auto-compaction configuration. For details on the priority values of different task types, see [Lock priority](../ingestion/tasks.md#lock-priority).
 
 The Coordinator compacts segments from newest to oldest. In the auto-compaction configuration, you can set a time period, relative to the end time of the most recent segment, for segments that should not be compacted. Assign this value to `skipOffsetFromLatest`. Note that this offset is not relative to the current time but to the latest segment time. For example, if you want to skip over segments from five days prior to the end time of the most recent segment, assign `"skipOffsetFromLatest": "P5D"`.
@@ -149,7 +149,7 @@ You can use concurrent append and replace to safely replace the existing data in
 
 To do this, you need to update your datasource to allow concurrent append and replace tasks:
 
-* If you're using the API, include the following `taskContext` in your API call: `"useConcurrentLocks": "true"`
+* If you're using the API, include the following `taskContext` property in your API call: `"useConcurrentLocks": "true"`
 * If you're using the UI, enable **Allow concurrent compactions (experimental)** in the **Compaction config** for your datasource.
 
 You'll also need to update your ingestion jobs to include a task lock.

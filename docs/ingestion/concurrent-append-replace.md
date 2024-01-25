@@ -26,17 +26,19 @@ title: Concurrent append and replace
 Concurrent append and replace is an [experimental feature](../development/experimental.md) available for JSON-based batch and streaming. It is not currently available for SQL-based ingestion.
 :::
 
-This feature allows you to safely replace the existing data in an interval of a datasource while new data is being appended to that interval. One of the most common applications of this is appending new data (using say streaming ingestion) to an interval while compaction of that interval is already in progress. 
+Concurrent append and replace safely replaces the existing data in an interval of a datasource while new data is being appended to that interval. One of the most common applications of this feature is appending new data (using say streaming ingestion) to an interval while compaction of that interval is already in progress. 
 
-To set up concurrent append and replace, you need to use the context flag `useConcurrentLocks`. Druid will then determine the correct lock type for you, either append or replace. Although can set the type of lock manually, we don't recommend it. 
+To set up concurrent append and replace, use the context flag `useConcurrentLocks`. Druid will then determine the correct lock type for you, either append or replace. Although you can set the type of lock manually, we don't recommend it. 
 
 ## Update the compaction settings 
 
-If want to append data to a datasource while compaction is running, you need to enable concurrent append and replace for the datasource by updating the compaction settings.
+If you want to append data to a datasource while compaction is running, you need to enable concurrent append and replace for the datasource by updating the compaction settings.
 
 ### Update the compaction settings with the UI
 
 In the **Compaction config** for a datasource, enable  **Allow concurrent compactions (experimental)**.
+
+For details on accessing the compaction config in the UI, see [Enable automatic compaction with the web console](automatic-compaction.md#web-console).
 
 ### Update the compaction settings with the API
  
@@ -57,7 +59,7 @@ curl --location --request POST 'http://localhost:8081/druid/coordinator/v1/confi
 
 You also need to configure the ingestion job to allow concurrent tasks.
 
-You can provide the context parameter through the API like any other parameter for ingestion job or through the UI.
+You can provide the context parameter like any other parameter for ingestion jobs through the API or the UI.
 
 ### Add a task lock using the Druid console
 
@@ -70,7 +72,7 @@ Add the following JSON snippet to your supervisor or ingestion spec if you're us
 ```json
 "context": {
    "useConcurrentLocks": true
-}   
+}
 ```
  
 
@@ -88,7 +90,7 @@ When setting task lock types manually, you need to ensure the following:
 
 Additionally, keep the following in mind:
 
-- Concurrent append and replace fails if the task with `APPEND` lock uses a coarser segment granularity than the task with the `REPLACE` lock. For example, if the `APPEND` task uses a segment granularity of YEAR and the `REPLACE` task uses a segment granularity of MONTH, you should not use concurrent append and replace.
+- Concurrent append and replace fails if the task with the `APPEND` lock uses a coarser segment granularity than the task with the `REPLACE` lock. For example, if the `APPEND` task uses a segment granularity of YEAR and the `REPLACE` task uses a segment granularity of MONTH, you should not use concurrent append and replace.
 
 -  Only a single task can hold a `REPLACE` lock on a given interval of a datasource.
   
@@ -96,10 +98,10 @@ Additionally, keep the following in mind:
 
 #### Add a task lock type to your ingestion job
 
-Next, you need to configure the task lock type for your ingestion job: 
+You configure the task lock type for your ingestion job as follows:
 
-- For streaming jobs, the context parameter goes in your supervisor spec, and the lock type is always `APPEND`
-- For legacy JSON-based batch ingestion, the context parameter goes in your ingestion spec, and the lock type can be either `APPEND` or `REPLACE`. 
+- For streaming jobs, the `taskLockType` context parameter goes in your supervisor spec, and the lock type is always `APPEND`.
+- For classic JSON-based batch ingestion, the `taskLockType` context parameter goes in your ingestion spec, and the lock type can be either `APPEND` or `REPLACE`. 
  
 You can provide the context parameter through the API like any other parameter for ingestion job or through the UI.
 
