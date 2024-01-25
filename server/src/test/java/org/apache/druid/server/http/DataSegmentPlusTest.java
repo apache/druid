@@ -19,10 +19,6 @@
 
 package org.apache.druid.server.http;
 
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Map;
-
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.JsonToken;
@@ -50,6 +46,10 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Map;
+
 public class DataSegmentPlusTest
 {
   private static final ObjectMapper MAPPER = new TestObjectMapper();
@@ -68,7 +68,7 @@ public class DataSegmentPlusTest
     );
   }
   @Test
-  public void testConfigEquals()
+  public void testEquals()
   {
     EqualsVerifier.forClass(DataSegmentPlus.class)
         .withNonnullFields("dataSegment", "createdDate")
@@ -77,7 +77,8 @@ public class DataSegmentPlusTest
   }
 
   @Test
-  public void testSerde() throws JsonProcessingException {
+  public void testSerde() throws JsonProcessingException
+  {
     final Interval interval = Intervals.of("2011-10-01/2011-10-02");
     final ImmutableMap<String, Object> loadSpec = ImmutableMap.of("something", "or_other");
 

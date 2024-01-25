@@ -19,8 +19,6 @@
 
 package org.apache.druid.server.http;
 
-import java.util.Objects;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.guice.annotations.UnstableApi;
@@ -29,6 +27,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 /**
  * Encapsulates additional metadata about a {@link DataSegment}
@@ -72,7 +71,8 @@ public class DataSegmentPlus
   }
 
   @JsonProperty
-  public DataSegment getDataSegment() {
+  public DataSegment getDataSegment()
+  {
     return dataSegment;
   }
 
