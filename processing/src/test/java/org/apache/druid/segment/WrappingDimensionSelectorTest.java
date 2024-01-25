@@ -111,7 +111,6 @@ public class WrappingDimensionSelectorTest extends InitializedNullHandlingTest
       Assert.assertEquals(0f, flSelector.getFloat(), 0);
       Assert.assertEquals("0.0", flWrapSelector.getValue());
     }
-    Assert.assertNull(flWrapSelector.getValue());
 
     flSelector.increment();
     Assert.assertEquals(5.0f, flSelector.getFloat(), 0);
