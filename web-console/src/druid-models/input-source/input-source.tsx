@@ -182,7 +182,18 @@ export function issueWithInputSource(inputSource: InputSource | undefined): stri
   }
 }
 
-const KNOWN_TYPES = ['inline', 'druid', 'http', 'local', 's3', 'azure', 'delta', 'google', 'hdfs', 'sql'];
+const KNOWN_TYPES = [
+  'inline',
+  'druid',
+  'http',
+  'local',
+  's3',
+  'azure',
+  'delta',
+  'google',
+  'hdfs',
+  'sql',
+];
 export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
   // inline
 

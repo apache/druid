@@ -926,9 +926,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         return (
           <>
             <p>Load data from Delta Lake.</p>
-            <p>
-              Data must be stored in the Delta Lake format.
-            </p>
+            <p>Data must be stored in the Delta Lake format.</p>
           </>
         );
 
