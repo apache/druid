@@ -84,8 +84,8 @@ public class DataSegmentPlusTest
 
     String createdDateStr = "2024-01-20T00:00:00.701Z";
     String usedStatusLastUpdatedDateStr = "2024-01-20T01:00:00.701Z";
-    DateTime createdDate = DateTime.parse(createdDateStr);
-    DateTime usedStatusLastUpdatedDate = DateTime.parse(usedStatusLastUpdatedDateStr);
+    DateTime createdDate = DateTimes.of(createdDateStr);
+    DateTime usedStatusLastUpdatedDate = DateTimes.of(usedStatusLastUpdatedDateStr);
     DataSegmentPlus segmentPlus = new DataSegmentPlus(
         new DataSegment(
             "something",
