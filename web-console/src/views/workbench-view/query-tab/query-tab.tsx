@@ -429,7 +429,6 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
               </div>
             ) : (
               <div>Unknown query execution state</div>
-                />
             ))}
           {executionState.error && (
             <QueryErrorPane
