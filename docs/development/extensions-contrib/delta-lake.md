@@ -30,7 +30,7 @@ you ingest data stored in a Delta Lake table into Apache Druid. To use the Delta
 See [Loading extensions](../../configuration/extensions.md#loading-extensions) for more information.
 
 The Delta input source reads the configured Delta Lake table and extracts all the underlying delta files in the table's latest snapshot.
-Delta Lake files are versioned Parquet format.
+These Delta Lake files are in versioned Parquet format
 
 ## Known limitations
 

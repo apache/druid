@@ -63,6 +63,7 @@ DRUIDVERSION
 DataSketches
 DateTime
 DateType
+DeltaLakeInputSource
 dimensionsSpec
 DimensionSpec
 DimensionSpecs
@@ -79,6 +80,7 @@ downsamples
 downsampling
 Dropwizard
 dropwizard
+druid-deltalake-extensions
 DruidInputSource
 DruidSQL
 DynamicConfigProvider
@@ -525,6 +527,7 @@ SVG
 symlink
 syntaxes
 systemFields
+tablePath
 tiering
 timeseries
 Timeseries
@@ -571,6 +574,7 @@ varchar
 vectorizable
 vectorize
 vectorizeVirtualColumns
+versioned
 versioning
 virtualColumns
 w.r.t.
