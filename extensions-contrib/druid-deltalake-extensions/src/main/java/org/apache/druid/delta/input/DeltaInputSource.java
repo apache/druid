@@ -57,7 +57,9 @@ import java.util.stream.Stream;
 /**
  * Input source to ingest data from a Delta Lake.
  * This input source reads the latest snapshot from a Delta table specified by {@code tablePath} parameter.
- * Note: the kernel table API only supports reading from the latest snapshot.
+ * We leverage the Delta Kernel APIs to interact with a Delta table. The Kernel API abstracts away the
+ * complexities of the Delta protocol itself.
+ * Note: currently, the Kernel table API only supports reading from the latest snapshot.
  */
 public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
 {

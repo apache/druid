@@ -23,7 +23,10 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -106,6 +109,20 @@ public class DeltaInputSourceTest
                                                                             .collect(Collectors.toList());
     Assert.assertEquals(1, splits2.size());
     Assert.assertEquals(splits1.get(0).get(), splits2.get(0).get());
+  }
+
+  @Test
+  public void testNullTablePath()
+  {
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> new DeltaInputSource(null, null)
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageIs(
+            "tablePath cannot be null"
+        )
+    );
   }
 
   private List<InputRowListPlusRawValues> sampleAllRows(InputSourceReader reader) throws IOException

@@ -25,7 +25,7 @@ title: "Delta Lake extension"
 ## Delta Lake Ingest extension
 
 
-Delta Lake is an open source storage layer that brings reliability to data lakes. [DeltaLakeInputSource](../../ingestion/input-sources.md#deltalake-input-source) lets
+Delta Lake is an open source storage layer that brings reliability to data lakes. [DeltaLakeInputSource](../../ingestion/input-sources.md#delta-lake-input-source) lets
 you ingest data stored in a Delta Lake table into Apache Druid. To use the Delta Lake extension, add the `druid-deltalake-extensions` to the list of loaded extensions.
 See [Loading extensions](../../configuration/extensions.md#loading-extensions) for more information.
 
