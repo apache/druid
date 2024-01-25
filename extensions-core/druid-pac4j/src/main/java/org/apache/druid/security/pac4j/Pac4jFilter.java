@@ -29,12 +29,8 @@ import org.pac4j.core.engine.CallbackLogic;
 import org.pac4j.core.engine.DefaultCallbackLogic;
 import org.pac4j.core.engine.DefaultSecurityLogic;
 import org.pac4j.core.engine.SecurityLogic;
-import org.pac4j.core.exception.TechnicalException;
-import org.pac4j.core.exception.http.HttpAction;
-import org.pac4j.core.exception.http.RedirectionAction;
-import org.pac4j.core.exception.http.WithContentAction;
-import org.pac4j.core.exception.http.WithLocationAction;
 import org.pac4j.core.http.adapter.HttpActionAdapter;
+import org.pac4j.core.http.adapter.JEEHttpActionAdapter;
 import org.pac4j.core.profile.UserProfile;
 
 import javax.servlet.Filter;
@@ -52,33 +48,11 @@ public class Pac4jFilter implements Filter
 {
   private static final Logger LOGGER = new Logger(Pac4jFilter.class);
 
-  private static final HttpActionAdapter<String, JEEContext> HTTP_ACTION_ADAPTER = (HttpAction action, JEEContext context) -> {
-    if (action instanceof RedirectionAction) {
-      int code = action.getCode();
-      HttpServletResponse response = context.getNativeResponse();
-      response.setStatus(code);
-      if (action instanceof WithLocationAction) {
-        WithLocationAction withLocationAction = (WithLocationAction) action;
-        context.setResponseHeader("Location", withLocationAction.getLocation());
-      } else if (action instanceof WithContentAction) {
-        WithContentAction withContentAction = (WithContentAction) action;
-        String content = withContentAction.getContent();
-        if (content != null) {
-          try {
-            response.getWriter().write(content);
-          }
-          catch (IOException var8) {
-            throw new TechnicalException(var8);
-          }
-        }
-      }
-    }
-    return null;
-  };
+  private static final HttpActionAdapter<Object, JEEContext> HTTP_ACTION_ADAPTER = new JEEHttpActionAdapter();
 
   private final Config pac4jConfig;
-  private final SecurityLogic<String, JEEContext> securityLogic;
-  private final CallbackLogic<String, JEEContext> callbackLogic;
+  private final SecurityLogic<Object, JEEContext> securityLogic;
+  private final CallbackLogic<Object, JEEContext> callbackLogic;
   private final SessionStore<JEEContext> sessionStore;
 
   private final String name;
@@ -125,7 +99,7 @@ public class Pac4jFilter implements Filter
           "/",
           true, false, false, null);
     } else {
-      String uid = securityLogic.perform(
+      Object uid = securityLogic.perform(
           context,
           pac4jConfig,
           (JEEContext ctx, Collection<UserProfile> profiles, Object... parameters) -> {
@@ -137,10 +111,10 @@ public class Pac4jFilter implements Filter
             }
           },
           HTTP_ACTION_ADAPTER,
-          null, null, null, null);
+          null, "none", null, null);
 
       if (uid != null) {
-        AuthenticationResult authenticationResult = new AuthenticationResult(uid, authorizerName, name, null);
+        AuthenticationResult authenticationResult = new AuthenticationResult(uid.toString(), authorizerName, name, null);
         servletRequest.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
         filterChain.doFilter(servletRequest, servletResponse);
       }
