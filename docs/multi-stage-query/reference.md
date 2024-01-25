@@ -99,7 +99,7 @@ For more information, see [Read external data with EXTERN](concepts.md#read-exte
 used in this way accepts one argument. Please note that partitioning (`PARTITIONED BY`) and clustering (`CLUSTERED BY`)
 is not currently supported with export statements.
 
-INSERT statements and REPLACE statements are both supported with an `EXTERN` destination. The statments require an `AS`
+INSERT statements and REPLACE statements are both supported with an `EXTERN` destination. The statements require an `AS`
 clause that determines the format.
 Currently, only `CSV` is supported as a format.
 
