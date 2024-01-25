@@ -64,7 +64,6 @@ export interface Field<M> {
   min?: number;
   max?: number;
   zeroMeansUndefined?: boolean;
-  nullMeansUndefined?: boolean;
   height?: string;
   disabled?: Functor<M, boolean>;
   defined?: Functor<M, boolean | undefined>;
@@ -85,6 +84,7 @@ export interface Field<M> {
 }
 
 function toNumberOrUndefined(n: unknown): number | undefined {
+  if (n == null) return
   const r = Number(n);
   return isNaN(r) ? undefined : r;
 }
@@ -261,7 +261,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
 
     return (
       <FancyNumericInput
-        value={toNumberOrUndefined(modelValue === null && field.nullMeansUndefined ? undefined : modelValue)}
+        value={toNumberOrUndefined(modelValue)}
         defaultValue={toNumberOrUndefined(defaultValue)}
         onValueChange={valueAsNumber => {
           this.fieldChange(
