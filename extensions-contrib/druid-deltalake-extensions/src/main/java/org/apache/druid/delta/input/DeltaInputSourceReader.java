@@ -57,14 +57,15 @@ public class DeltaInputSourceReader implements InputSourceReader
   }
 
   @Override
-  public CloseableIterator<InputRow> read(InputStats inputStats) throws IOException
+  public CloseableIterator<InputRow> read(InputStats inputStats)
   {
     return new DeltaInputSourceIterator(filteredColumnarBatchCloseableIterator, inputRowSchema);
   }
 
   @Override
-  public CloseableIterator<InputRowListPlusRawValues> sample() throws IOException
+  public CloseableIterator<InputRowListPlusRawValues> sample()
   {
+
     CloseableIterator<InputRow> inner = read();
     return new CloseableIterator<InputRowListPlusRawValues>()
     {

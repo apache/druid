@@ -144,7 +144,6 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
 
   @Override
   public Stream<InputSplit<DeltaSplit>> createSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
-      throws IOException
   {
     if (null != deltaSplit) {
       // can't split a split
