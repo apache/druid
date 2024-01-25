@@ -681,9 +681,6 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
   private DruidException buildSQLPlanningError(RelOptPlanner.CannotPlanException exception)
   {
     String errorMessage = handlerContext.plannerContext().getPlanningError();
-    if (null == errorMessage && exception instanceof UnsupportedSQLQueryException) {
-      errorMessage = exception.getMessage();
-    }
     if (errorMessage == null) {
       throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                           .ofCategory(DruidException.Category.UNSUPPORTED)
