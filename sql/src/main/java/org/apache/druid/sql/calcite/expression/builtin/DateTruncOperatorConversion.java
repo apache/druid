@@ -27,9 +27,7 @@ import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.segment.column.RowSignature;
@@ -102,7 +100,11 @@ public class DateTruncOperatorConversion implements SqlOperatorConversion
           final Period truncPeriod = TRUNC_PERIOD_MAP.get(StringUtils.toLowerCase(truncType));
 
           if (truncPeriod == null) {
-           throw InvalidSqlInput.exception("Operator[%s] cannot truncate to[%s]", calciteOperator().getName(), truncType);
+            throw InvalidSqlInput.exception(
+                "Operator[%s] cannot truncate to[%s]",
+                calciteOperator().getName(),
+                truncType
+            );
           }
 
           return DruidExpression.ofFunctionCall(
