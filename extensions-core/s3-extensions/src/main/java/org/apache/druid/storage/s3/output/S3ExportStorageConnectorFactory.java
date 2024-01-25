@@ -20,7 +20,7 @@
 package org.apache.druid.storage.s3.output;
 
 import com.google.inject.Injector;
-import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.storage.export.ExportStorageConnectorFactory;
 
@@ -32,12 +32,17 @@ public class S3ExportStorageConnectorFactory implements ExportStorageConnectorFa
   @Override
   public StorageConnectorProvider get(Map<String, String> properties, Injector injector)
   {
+    String chunkSize = properties.getOrDefault(S3StorageConnectorProvider.CHUNK_SIZE_FIELD_NAME, null);
+    Integer maxRetries = QueryContexts.getAsInt(
+        S3StorageConnectorProvider.MAX_RETRY_FIELD_NAME,
+        properties.getOrDefault(S3StorageConnectorProvider.MAX_RETRY_FIELD_NAME, null));
+
     return new S3StorageConnectorProvider(
-        properties.get("bucket"),
-        properties.get("prefix"),
-        new File(properties.get("tempDir")),
-        HumanReadableBytes.valueOf(Integer.parseInt(properties.get("chunkSize"))),
-        Integer.parseInt(properties.get("maxRetry")),
+        properties.get(S3StorageConnectorProvider.BUCKET_FIELD_NAME),
+        properties.get(S3StorageConnectorProvider.PREFIX_FIELD_NAME),
+        new File(properties.get(S3StorageConnectorProvider.TEMP_DIR_FIELD_NAME)),
+        QueryContexts.getAsHumanReadableBytes(S3StorageConnectorProvider.CHUNK_SIZE_FIELD_NAME, chunkSize, null),
+        maxRetries,
         injector
         );
   }

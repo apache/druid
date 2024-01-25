@@ -126,7 +126,7 @@ SqlIdentifier ExternalDestination() :
   Map<String, String> properties = new HashMap();
 }
 {
-  destinationType = SimpleIdentifier() [ <LPAREN> [properties = ExternProperties()] <RPAREN>]
+  destinationType = SimpleIdentifier() [ <LPAREN> properties = ExternProperties() <RPAREN>]
   {
     s = span();
     return new ExternalDestinationSqlIdentifier(
@@ -141,15 +141,25 @@ Map<String, String> ExternProperties() :
 {
   final Span s;
   final Map<String, String> properties = new HashMap();
+  SqlIdentifier identifier;
+  String value;
   SqlNodeList commaList = SqlNodeList.EMPTY;
 }
 {
-  commaList = ExpressionCommaList(span(), ExprContext.ACCEPT_NON_QUERY)
-  {
-    for (SqlNode sqlNode : commaList) {
-      List<SqlNode> sqlNodeList = ((SqlBasicCall) sqlNode).getOperandList();
-      properties.put(((SqlIdentifier) sqlNodeList.get(0)).getSimple(), ((SqlIdentifier) sqlNodeList.get(1)).getSimple());
+  (
+    identifier = SimpleIdentifier() <EQ> value = SimpleStringLiteral()
+    {
+      properties.put(identifier.toString(), value);
     }
+  )
+  (
+    <COMMA>
+    identifier = SimpleIdentifier() <EQ> value = SimpleStringLiteral()
+    {
+      properties.put(identifier.toString(), value);
+    }
+  )*
+  {
     return properties;
   }
 }

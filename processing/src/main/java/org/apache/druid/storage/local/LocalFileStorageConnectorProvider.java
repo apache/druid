@@ -33,13 +33,14 @@ import java.util.Objects;
 @JsonTypeName(LocalFileStorageConnectorProvider.TYPE_NAME)
 public class LocalFileStorageConnectorProvider implements StorageConnectorProvider
 {
-  public static final String TYPE_NAME = "local";
+  public static final String TYPE_NAME = "localStorage";
+  public static final String BASE_PATH_FIELD_NAME = "basePath";
 
   @JsonProperty
   final File basePath;
 
   @JsonCreator
-  public LocalFileStorageConnectorProvider(@JsonProperty(value = "basePath", required = true) File basePath)
+  public LocalFileStorageConnectorProvider(@JsonProperty(value = BASE_PATH_FIELD_NAME, required = true) File basePath)
   {
     this.basePath = basePath;
   }

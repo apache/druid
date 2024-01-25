@@ -37,6 +37,6 @@ public class LocalExportStorageConnectorFactory implements ExportStorageConnecto
   @Override
   public StorageConnectorProvider get(Map<String, String> properties, Injector injector)
   {
-    return new LocalFileStorageConnectorProvider(new File(properties.get("basePath")));
+    return new LocalFileStorageConnectorProvider(new File(properties.get(LocalFileStorageConnectorProvider.BASE_PATH_FIELD_NAME)));
   }
 }

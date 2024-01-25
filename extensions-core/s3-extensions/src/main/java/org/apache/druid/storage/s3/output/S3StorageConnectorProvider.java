@@ -36,6 +36,11 @@ import java.io.File;
 @JsonTypeName(S3StorageDruidModule.SCHEME)
 public class S3StorageConnectorProvider extends S3OutputConfig implements StorageConnectorProvider
 {
+  public static final String BUCKET_FIELD_NAME = "bucket";
+  public static final String PREFIX_FIELD_NAME = "prefix";
+  public static final String TEMP_DIR_FIELD_NAME = "tempDir";
+  public static final String CHUNK_SIZE_FIELD_NAME = "chunkSize";
+  public static final String MAX_RETRY_FIELD_NAME = "maxRetry";
   @JacksonInject
   ServerSideEncryptingAmazonS3 s3;
 

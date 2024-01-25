@@ -25,7 +25,7 @@ public class MSQExportTest extends MSQTestBase
 
     File exportDir = temporaryFolder.newFolder("export/");
     testIngestQuery().setSql(
-                         "insert into extern(local(basePath = \"" + exportDir.getAbsolutePath() + "\")) as csv select  __time, dim1 from foo")
+                         "insert into extern(localStorage(basePath = '" + exportDir.getAbsolutePath() + "')) as csv select  __time, dim1 from foo")
                      .setExpectedDataSource("foo1")
                      .setQueryContext(DEFAULT_MSQ_CONTEXT)
                      .setExpectedRowSignature(rowSignature)
@@ -43,7 +43,7 @@ public class MSQExportTest extends MSQTestBase
                                             .add("cnt", ColumnType.LONG).build();
 
     testIngestQuery().setSql(
-                         "insert into extern(hdfs(basePath = \"/var\")) as csv select  __time, dim1 from foo")
+                         "insert into extern(hdfs(basePath = '/var')) as csv select  __time, dim1 from foo")
                      .setExpectedDataSource("foo1")
                      .setQueryContext(DEFAULT_MSQ_CONTEXT)
                      .setExpectedRowSignature(rowSignature)

@@ -33,7 +33,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   public void testReplaceIntoExtern()
   {
     testIngestionQuery()
-        .sql("REPLACE INTO EXTERN(s3(bucket=\"bucket1\",prefix=\"prefix1\",tempDir=\"/tempdir\",chunkSize=\"5242880\",maxRetry=\"1\")) "
+        .sql("REPLACE INTO EXTERN(s3(bucket='bucket1',prefix='prefix1',tempDir='/tempdir',chunkSize='5242880',maxRetry='1')) "
              + "AS CSV "
              + "OVERWRITE ALL "
              + "SELECT dim2 FROM foo")
@@ -57,7 +57,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   public void testExportWithPartitionedBy()
   {
     testIngestionQuery()
-        .sql("REPLACE INTO EXTERN(s3(bucket=\"bucket1\",prefix=\"prefix1\",tempDir=\"/tempdir\",chunkSize=\"5242880\",maxRetry=\"1\")) "
+        .sql("REPLACE INTO EXTERN(s3(bucket='bucket1',prefix='prefix1',tempDir='/tempdir',chunkSize='5242880',maxRetry='1')) "
              + "AS CSV "
              + "OVERWRITE ALL "
              + "SELECT dim2 FROM foo "
@@ -73,7 +73,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   public void testInsertIntoExtern()
   {
     testIngestionQuery()
-        .sql("INSERT INTO EXTERN(s3(bucket=\"bucket1\",prefix=\"prefix1\",tempDir=\"/tempdir\",chunkSize=\"5242880\",maxRetry=\"1\")) "
+        .sql("INSERT INTO EXTERN(s3(bucket='bucket1',prefix='prefix1',tempDir='/tempdir',chunkSize='5242880',maxRetry='1')) "
              + "AS CSV "
              + "SELECT dim2 FROM foo")
         .expectQuery(
@@ -96,7 +96,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   public void testExportWithoutFormat()
   {
     testIngestionQuery()
-        .sql("INSERT INTO EXTERN(s3(bucket=\"bucket1\",prefix=\"prefix1\",tempDir=\"/tempdir\",chunkSize=\"5242880\",maxRetry=\"1\")) "
+        .sql("INSERT INTO EXTERN(s3(bucket='bucket1',prefix='prefix1',tempDir='/tempdir',chunkSize='5242880',maxRetry='1')) "
              + "SELECT dim2 FROM foo")
         .expectValidationError(
             DruidException.class,
