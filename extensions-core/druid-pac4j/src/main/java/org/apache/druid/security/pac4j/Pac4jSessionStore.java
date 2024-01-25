@@ -64,7 +64,7 @@ public class Pac4jSessionStore<T extends WebContext> implements SessionStore<T>
         "CBC",
         "PKCS5Padding",
         "PBKDF2WithHmacSHA256",
-        8,
+        128,
         65536,
         128
     );
