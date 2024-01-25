@@ -29,6 +29,7 @@ import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -51,6 +52,7 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.SinkQueryRunners;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
@@ -67,7 +69,6 @@ import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -322,7 +323,14 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
         // Not bySegment: merge all hydrants at the same level, rather than grouped by Sink (segment).
         mergedRunner = factory.mergeRunners(
             queryProcessingPool,
-            allRunners.values().stream().flatMap(Collection::stream).collect(Collectors.toList())
+            new SinkQueryRunners<>(
+                allRunners.entrySet().stream().flatMap(
+                    entry ->
+                        entry.getValue().stream().map(
+                            runner ->
+                                Pair.of(entry.getKey().getInterval(), runner)
+                        )
+                ).collect(Collectors.toList()))
         );
       }
 
