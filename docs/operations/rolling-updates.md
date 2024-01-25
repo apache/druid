@@ -33,6 +33,8 @@ following order:
 5. Overlord (Note that you can upgrade the Overlord before any MiddleManager processes if you use [autoscaling-based replacement](#autoscaling-based-replacement).)
 6. Coordinator ( or merged Coordinator+Overlord )
 
+If you need to do a rolling downgrade, reverse the order and start with the Coordinator.
+
 For information about the latest release, see [Druid releases](https://github.com/apache/druid/releases).
 
 ## Historical
