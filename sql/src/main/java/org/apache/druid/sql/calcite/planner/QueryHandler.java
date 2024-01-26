@@ -57,6 +57,7 @@ import org.apache.calcite.util.Pair;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -238,6 +239,17 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       DruidException de = Throwables.getCauseOfType(e, DruidException.class);
       if (de != null) {
         throw de;
+      }
+
+      // Exceptions during rule evaluations could be wrapped inside a RuntimeException by VolcanoRuleCall class.
+      // This block will extract a user-friendly message from the exception chain. 
+      if (e.getMessage() != null
+          && e.getCause() != null
+          && e.getCause().getMessage() != null
+          && e.getMessage().startsWith("Error while applying rule")) {
+        throw DruidException.forPersona(DruidException.Persona.ADMIN)
+                            .ofCategory(DruidException.Category.UNCATEGORIZED)
+                            .build(e, "%s", e.getCause().getMessage());
       }
       throw DruidPlanner.translateException(e);
     }
