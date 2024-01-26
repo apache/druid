@@ -1308,39 +1308,25 @@ public class EqualityFilterTests
         "5" .. 765.432,   12345L
      */
 
-      if (canTestNumericNullsAsDefaultValues) {
-        assertFilterMatches(new EqualityFilter("nested.d0", ColumnType.DOUBLE, 0.0, null), ImmutableList.of("0", "2"));
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("nested.d0", ColumnType.DOUBLE, 0.0, null)),
-            ImmutableList.of("1", "3", "4", "5")
-        );
-        assertFilterMatches(new EqualityFilter("nested.l0", ColumnType.LONG, 0L, null), ImmutableList.of("0", "3"));
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("nested.l0", ColumnType.LONG, 0L, null)),
-            ImmutableList.of("1", "2", "4", "5")
-        );
+      // nested columns do not coerce null to default values
 
-        assertFilterMatches(new EqualityFilter("nested.d0", ColumnType.STRING, "0", null), ImmutableList.of("0", "2"));
-        assertFilterMatches(new EqualityFilter("nested.l0", ColumnType.STRING, "0", null), ImmutableList.of("0", "3"));
-      } else {
-        assertFilterMatches(new EqualityFilter("nested.d0", ColumnType.DOUBLE, 0.0, null), ImmutableList.of("0"));
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("nested.d0", ColumnType.DOUBLE, 0.0, null)),
-            NullHandling.sqlCompatible()
-            ? ImmutableList.of("1", "3", "4", "5")
-            : ImmutableList.of("1", "2", "3", "4", "5")
-        );
-        assertFilterMatches(new EqualityFilter("nested.l0", ColumnType.LONG, 0L, null), ImmutableList.of("0"));
-        assertFilterMatches(
-            NotDimFilter.of(new EqualityFilter("nested.l0", ColumnType.LONG, 0L, null)),
-            NullHandling.sqlCompatible()
-            ? ImmutableList.of("1", "2", "4", "5")
-            : ImmutableList.of("1", "2", "3", "4", "5")
-        );
+      assertFilterMatches(new EqualityFilter("nested.d0", ColumnType.DOUBLE, 0.0, null), ImmutableList.of("0"));
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("nested.d0", ColumnType.DOUBLE, 0.0, null)),
+          NullHandling.sqlCompatible()
+          ? ImmutableList.of("1", "3", "4", "5")
+          : ImmutableList.of("1", "2", "3", "4", "5")
+      );
+      assertFilterMatches(new EqualityFilter("nested.l0", ColumnType.LONG, 0L, null), ImmutableList.of("0"));
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("nested.l0", ColumnType.LONG, 0L, null)),
+          NullHandling.sqlCompatible()
+          ? ImmutableList.of("1", "2", "4", "5")
+          : ImmutableList.of("1", "2", "3", "4", "5")
+      );
 
-        assertFilterMatches(new EqualityFilter("nested.l0", ColumnType.STRING, "0", null), ImmutableList.of("0"));
-        assertFilterMatches(new EqualityFilter("nested.l0", ColumnType.STRING, "0", null), ImmutableList.of("0"));
-      }
+      assertFilterMatches(new EqualityFilter("nested.l0", ColumnType.STRING, "0", null), ImmutableList.of("0"));
+      assertFilterMatches(new EqualityFilter("nested.l0", ColumnType.STRING, "0", null), ImmutableList.of("0"));
 
       assertFilterMatches(new EqualityFilter("nested.d0", ColumnType.DOUBLE, 10.1, null), ImmutableList.of("1"));
       assertFilterMatches(new EqualityFilter("nested.d0", ColumnType.DOUBLE, 120.0245, null), ImmutableList.of("3"));
@@ -1350,7 +1336,7 @@ public class EqualityFilterTests
       // different type matcher
       assertFilterMatches(
           new EqualityFilter("nested.d0", ColumnType.LONG, 0L, null),
-          canTestNumericNullsAsDefaultValues ? ImmutableList.of("0", "2") : ImmutableList.of("0")
+          ImmutableList.of("0")
       );
       assertFilterMatches(new EqualityFilter("d0", ColumnType.LONG, 60L, null), ImmutableList.of("4"));
 
@@ -1366,8 +1352,6 @@ public class EqualityFilterTests
       assertFilterMatches(new EqualityFilter("nested.l0", ColumnType.DOUBLE, 40.0, null), ImmutableList.of("2"));
       assertFilterMatches(new EqualityFilter("nested.l0", ColumnType.DOUBLE, 9001.1, null), ImmutableList.of());
       assertFilterMatches(new EqualityFilter("nested.l0", ColumnType.DOUBLE, 9001.0, null), ImmutableList.of("4"));
-
-
 
       /*
           dim0 .. arrayString               arrayLong             arrayDouble
