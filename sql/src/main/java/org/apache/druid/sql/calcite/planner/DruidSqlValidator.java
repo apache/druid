@@ -91,10 +91,7 @@ class DruidSqlValidator extends BaseDruidSqlValidator
         lowerBound.getKind() == upperBound.getKind()) {
       // this limitation can be lifted when https://github.com/apache/druid/issues/15739 is addressed
       throw buildCalciteContextException(
-          StringUtils.format(
-              "Query bounds with both lower and upper bounds as PRECEDING or FOLLOWING is not supported.",
-              QueryContexts.WINDOWING_STRICT_VALIDATION
-          ),
+          "Query bounds with both lower and upper bounds as PRECEDING or FOLLOWING is not supported.",
           windowOrId
       );
     }
