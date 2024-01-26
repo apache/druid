@@ -67,6 +67,7 @@ public class DateTruncOperatorConversion implements SqlOperatorConversion
       .operatorBuilder("DATE_TRUNC")
       .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.TIMESTAMP)
       .requiredOperandCount(2)
+      .literalOperands(0)
       .returnTypeCascadeNullable(SqlTypeName.TIMESTAMP)
       .functionCategory(SqlFunctionCategory.TIMEDATE)
       .build();
@@ -91,10 +92,6 @@ public class DateTruncOperatorConversion implements SqlOperatorConversion
         inputExpressions -> {
           final DruidExpression arg = inputExpressions.get(1);
           final Expr truncTypeExpr = plannerContext.parseExpression(inputExpressions.get(0).getExpression());
-
-          if (!truncTypeExpr.isLiteral()) {
-            throw InvalidSqlInput.exception("Operator[%s] truncType must be a literal", calciteOperator().getName());
-          }
 
           final String truncType = (String) truncTypeExpr.getLiteralValue();
           final Period truncPeriod = TRUNC_PERIOD_MAP.get(StringUtils.toLowerCase(truncType));
