@@ -38,7 +38,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Used for removing segment files stored in Azure based deep storage
@@ -97,11 +96,6 @@ public class AzureDataSegmentKiller implements DataSegmentKiller
     boolean shouldThrowException = false;
     for (Map.Entry<String, List<String>> containerToKeys : containerToKeysToDelete.entrySet()) {
       shouldThrowException = deleteBlobKeys(containerToKeys.getValue(), containerToKeys.getKey());
-    }
-
-    for (Map.Entry<String, List<String>> containerToKeys : containerToKeysToDelete.entrySet()) {
-      List<String> keysToDelete = containerToKeys.getValue().stream().map(DataSegmentKiller::descriptorPath).collect(Collectors.toList());
-      deleteBlobKeys(keysToDelete, containerToKeys.getKey()); // ignore failures to delete descriptor.json since they will frequently be missing
     }
 
     if (shouldThrowException) {
