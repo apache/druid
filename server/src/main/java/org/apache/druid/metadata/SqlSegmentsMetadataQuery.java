@@ -175,7 +175,7 @@ public class SqlSegmentsMetadataQuery
   }
 
   /**
-   * Retrieves segments for a given datasource that are marked unused and that are *fully contained by* any interval
+   * Similar to {@link #retrieveUnusedSegments}, but also retrieves associated metadata for the segments for a given datasource that are marked unused and that are *fully contained by* any interval
    * in a particular collection of intervals. If the collection of intervals is empty, this method will retrieve all
    * unused segments.
    *

@@ -30,12 +30,13 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
- * Encapsulates additional metadata about a {@link DataSegment}
- * </p>
- * createdDate:               The time when the segment was created
- * usedStatusLastUpdatedDate: The time when the segment's used status was last updated
+ * Encapsulates a {@link DataSegment} and additional metadata about it:
+ * <li> {@code createdDate}: The time when the segment was created </li>
+ * <li> {@code usedStatusLastUpdatedDate}: The time when the segments used status was last updated </li>
  *
+ * <p>
  * The class closesly resembles the row structure of the {@link MetadataStorageTablesConfig#getSegmentsTable()}
+ * </p>
  */
 @UnstableApi
 public class DataSegmentPlus
