@@ -31,9 +31,11 @@ import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.druid.data.input.azure.AzureEntityFactory;
 import org.apache.druid.data.input.azure.AzureInputSource;
+import org.apache.druid.data.input.azure.AzureStorageAccountInputSource;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
 
@@ -46,10 +48,6 @@ public class AzureStorageDruidModule implements DruidModule
 {
 
   public static final String SCHEME = "azure";
-  public static final String
-      STORAGE_CONNECTION_STRING_WITH_KEY = "DefaultEndpointsProtocol=%s;AccountName=%s;AccountKey=%s;EndpointSuffix=%s;";
-  public static final String
-      STORAGE_CONNECTION_STRING_WITH_TOKEN = "DefaultEndpointsProtocol=%s;AccountName=%s;SharedAccessSignature=%s;EndpointSuffix=%s;";
   public static final String INDEX_ZIP_FILE_NAME = "index.zip";
 
   @Override
@@ -77,7 +75,8 @@ public class AzureStorageDruidModule implements DruidModule
           }
         },
         new SimpleModule().registerSubtypes(
-            new NamedType(AzureInputSource.class, SCHEME)
+            new NamedType(AzureInputSource.class, SCHEME),
+            new NamedType(AzureStorageAccountInputSource.class, AzureStorageAccountInputSource.SCHEME)
         )
     );
   }
@@ -135,11 +134,13 @@ public class AzureStorageDruidModule implements DruidModule
   }
 
   @Provides
+  @Global
   @LazySingleton
   public AzureStorage getAzureStorageContainer(
-      final AzureClientFactory azureClientFactory
+      final AzureClientFactory azureClientFactory,
+      final AzureAccountConfig azureAccountConfig
   )
   {
-    return new AzureStorage(azureClientFactory);
+    return new AzureStorage(azureClientFactory, azureAccountConfig.getAccount());
   }
 }

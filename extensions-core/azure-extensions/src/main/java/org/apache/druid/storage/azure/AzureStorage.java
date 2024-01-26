@@ -61,12 +61,15 @@ public class AzureStorage
   private static final Logger log = new Logger(AzureStorage.class);
 
   private final AzureClientFactory azureClientFactory;
+  private final String defaultStorageAccount;
 
   public AzureStorage(
-      AzureClientFactory azureClientFactory
+      AzureClientFactory azureClientFactory,
+      @Nullable String defaultStorageAccount
   )
   {
     this.azureClientFactory = azureClientFactory;
+    this.defaultStorageAccount = defaultStorageAccount;
   }
 
   public List<String> emptyCloudBlobDirectory(final String containerName, final String virtualDirPath)
@@ -216,18 +219,27 @@ public class AzureStorage
   @VisibleForTesting
   BlobServiceClient getBlobServiceClient(Integer maxAttempts)
   {
-    return azureClientFactory.getBlobServiceClient(maxAttempts);
+    return azureClientFactory.getBlobServiceClient(maxAttempts, defaultStorageAccount);
   }
 
   @VisibleForTesting
+  BlobServiceClient getBlobServiceClient(String storageAccount, Integer maxAttempts)
+  {
+    return azureClientFactory.getBlobServiceClient(maxAttempts, storageAccount);
+  }
+
+  // This method is used in AzureCloudBlobIterator in a method where one azureStorage instance might need to list from multiple
+  // storage accounts, so storageAccount is a valid parameter.
+  @VisibleForTesting
   PagedIterable<BlobItem> listBlobsWithPrefixInContainerSegmented(
+      final String storageAccount,
       final String containerName,
       final String prefix,
       int maxResults,
       Integer maxAttempts
   ) throws BlobStorageException
   {
-    BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName, maxAttempts);
+    BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(storageAccount, containerName, maxAttempts);
     return blobContainerClient.listBlobs(
         new ListBlobsOptions().setPrefix(prefix).setMaxResultsPerPage(maxResults),
         Duration.ofMillis(DELTA_BACKOFF_MS)
@@ -242,5 +254,10 @@ public class AzureStorage
   private BlobContainerClient getOrCreateBlobContainerClient(final String containerName, final Integer maxRetries)
   {
     return getBlobServiceClient(maxRetries).createBlobContainerIfNotExists(containerName);
+  }
+
+  private BlobContainerClient getOrCreateBlobContainerClient(final String storageAccount, final String containerName, final Integer maxRetries)
+  {
+    return getBlobServiceClient(storageAccount, maxRetries).createBlobContainerIfNotExists(containerName);
   }
 }
