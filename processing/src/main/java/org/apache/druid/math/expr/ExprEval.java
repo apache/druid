@@ -366,7 +366,7 @@ public abstract class ExprEval<T>
       case DOUBLE:
         return ExprEval.of(Evals.asDouble(value));
       case LONG:
-        return ofLongBoolean(value);
+        return ExprEval.of(Evals.asLong(value));
       case STRING:
         return ExprEval.of(String.valueOf(value));
       default:
@@ -379,7 +379,7 @@ public abstract class ExprEval<T>
    */
   public static ExprEval ofLongBoolean(boolean value)
   {
-    return value ? LongExprEval.TRUE : LongExprEval.FALSE;
+    return ExprEval.of(Evals.asLong(value));
   }
 
   public static ExprEval ofComplex(ExpressionType outputType, @Nullable Object value)
@@ -932,8 +932,6 @@ public abstract class ExprEval<T>
 
   private static class LongExprEval extends NumericExprEval
   {
-    private static final LongExprEval TRUE = new LongExprEval(Evals.asLong(true));
-    private static final LongExprEval FALSE = new LongExprEval(Evals.asLong(false));
     private static final LongExprEval OF_NULL = new LongExprEval(null);
 
     private LongExprEval(@Nullable Number value)
