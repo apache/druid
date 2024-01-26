@@ -29,6 +29,7 @@ import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperatorTable;
+import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.SqlWindow;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
@@ -73,10 +74,22 @@ class DruidSqlValidator extends BaseDruidSqlValidator
         throw Util.unexpected(windowOrId.getKind());
     }
 
+
+    @Nullable
+    SqlNode lowerBound = targetWindow.getLowerBound();
+    @Nullable
+    SqlNode upperBound = targetWindow.getUpperBound();
+    if (!isValidEndpoint(lowerBound) || !isValidEndpoint(upperBound)) {
+      throw buildCalciteContextException(
+          "Window frames with expression based lower/upper bounds are not supported.",
+          windowOrId
+      );
+    }
+
     if (plannerContext.queryContext().isWindowingStrictValidation()) {
       if (!targetWindow.isRows() &&
-          (!isValidRangeEndpoint(targetWindow.getLowerBound()) ||
-              !isValidRangeEndpoint(targetWindow.getUpperBound()))) {
+          (!isValidRangeEndpoint(lowerBound) || !isValidRangeEndpoint(upperBound))) {
+        // this limitation can be lifted when https://github.com/apache/druid/issues/15767 is addressed
         throw buildCalciteContextException(
             StringUtils.format(
                 "The query contains a window frame which may return incorrect results. To disregard this warning, set [%s] to false in the query context.",
@@ -89,6 +102,26 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     super.validateWindow(windowOrId, scope, call);
   }
 
+  /**
+   * Checks if the given endpoint is acceptable.
+   */
+  private boolean isValidEndpoint(@Nullable SqlNode bound)
+  {
+    if (isValidRangeEndpoint(bound)) {
+      return true;
+    }
+    if (bound.getKind() == SqlKind.FOLLOWING || bound.getKind() == SqlKind.PRECEDING) {
+      final SqlNode boundVal = ((SqlCall) bound).operand(0);
+      if (SqlUtil.isLiteral(boundVal)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Checks if the given endpoint is valid for a RANGE window frame.
+   */
   private boolean isValidRangeEndpoint(@Nullable SqlNode bound)
   {
     return bound == null
