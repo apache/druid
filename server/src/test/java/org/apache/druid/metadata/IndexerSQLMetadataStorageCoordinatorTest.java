@@ -1634,14 +1634,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
     Assert.assertEquals(oddYearSegments.size(), actualUnusedSegments1.size());
 
-    final ImmutableList<DataSegmentPlus> actualUnusedSegmentDtos1 = retrieveUnusedSegmentsPlus(
+    final ImmutableList<DataSegmentPlus> actualUnusedSegmentsPlus1 = retrieveUnusedSegmentsPlus(
         ImmutableList.of(interval),
         null,
         null,
         null,
         maxUsedStatusLastUpdatedTime1
     );
-    Assert.assertEquals(oddYearSegments.size(), actualUnusedSegmentDtos1.size());
+    Assert.assertEquals(oddYearSegments.size(), actualUnusedSegmentsPlus1.size());
 
     final ImmutableList<DataSegment> actualUnusedSegments2 = retrieveUnusedSegments(
         ImmutableList.of(interval),
@@ -1652,14 +1652,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     );
     Assert.assertEquals(segments.size(), actualUnusedSegments2.size());
 
-    final ImmutableList<DataSegmentPlus> actualUnusedSegmentDtos2 = retrieveUnusedSegmentsPlus(
+    final ImmutableList<DataSegmentPlus> actualUnusedSegmentsPlus2 = retrieveUnusedSegmentsPlus(
         ImmutableList.of(interval),
         null,
         null,
         null,
         maxUsedStatusLastUpdatedTime2
     );
-    Assert.assertEquals(segments.size(), actualUnusedSegmentDtos2.size());
+    Assert.assertEquals(segments.size(), actualUnusedSegmentsPlus2.size());
   }
 
   @Test
@@ -3529,35 +3529,35 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
   private void verifyContainsAllSegmentsPlus(
       List<DataSegment> expectedSegments,
-      List<DataSegmentPlus> actualUnusedSegments,
+      List<DataSegmentPlus> actualUnusedSegmentsPlus,
       DateTime usedStatusLastUpdatedTime)
   {
     Map<SegmentId, DataSegment> expectedIdToSegment = expectedSegments.stream().collect(Collectors.toMap(DataSegment::getId, Function.identity()));
-    Map<SegmentId, DataSegmentPlus> actualIdToSegmentDto = actualUnusedSegments.stream()
+    Map<SegmentId, DataSegmentPlus> actualIdToSegmentPlus = actualUnusedSegmentsPlus.stream()
         .collect(Collectors.toMap(d -> d.getDataSegment().getId(), Function.identity()));
     Assert.assertTrue(expectedIdToSegment.entrySet().stream().allMatch(e -> {
-      DataSegmentPlus segmentDto = actualIdToSegmentDto.get(e.getKey());
-      return segmentDto != null
-             && !segmentDto.getCreatedDate().isAfter(usedStatusLastUpdatedTime)
-             && segmentDto.getUsedStatusLastUpdatedDate() != null
-             && segmentDto.getUsedStatusLastUpdatedDate().equals(usedStatusLastUpdatedTime);
+      DataSegmentPlus segmentPlus = actualIdToSegmentPlus.get(e.getKey());
+      return segmentPlus != null
+             && !segmentPlus.getCreatedDate().isAfter(usedStatusLastUpdatedTime)
+             && segmentPlus.getUsedStatusLastUpdatedDate() != null
+             && segmentPlus.getUsedStatusLastUpdatedDate().equals(usedStatusLastUpdatedTime);
     }));
   }
 
   private void verifyEqualsAllSegmentsPlus(
       List<DataSegment> expectedSegments,
-      List<DataSegmentPlus> actualUnusedSegments,
+      List<DataSegmentPlus> actualUnusedSegmentsPlus,
       DateTime usedStatusLastUpdatedTime
   )
   {
-    Assert.assertEquals(expectedSegments.size(), actualUnusedSegments.size());
+    Assert.assertEquals(expectedSegments.size(), actualUnusedSegmentsPlus.size());
     for (int i = 0; i < expectedSegments.size(); i++) {
       DataSegment expectedSegment = expectedSegments.get(i);
-      DataSegmentPlus actualSegmentDto = actualUnusedSegments.get(i);
-      Assert.assertEquals(expectedSegment.getId(), actualSegmentDto.getDataSegment().getId());
-      Assert.assertTrue(!actualSegmentDto.getCreatedDate().isAfter(usedStatusLastUpdatedTime)
-                        && actualSegmentDto.getUsedStatusLastUpdatedDate() != null
-                        && actualSegmentDto.getUsedStatusLastUpdatedDate().equals(usedStatusLastUpdatedTime));
+      DataSegmentPlus actualSegmentPlus = actualUnusedSegmentsPlus.get(i);
+      Assert.assertEquals(expectedSegment.getId(), actualSegmentPlus.getDataSegment().getId());
+      Assert.assertTrue(!actualSegmentPlus.getCreatedDate().isAfter(usedStatusLastUpdatedTime)
+                        && actualSegmentPlus.getUsedStatusLastUpdatedDate() != null
+                        && actualSegmentPlus.getUsedStatusLastUpdatedDate().equals(usedStatusLastUpdatedTime));
     }
   }
 
