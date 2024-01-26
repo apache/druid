@@ -63,25 +63,13 @@ public class CombineAndSimplifyBounds extends BottomUpTransform
       return filter;
     } else if (filter instanceof AndDimFilter) {
       final List<DimFilter> children = getAndFilterChildren((AndDimFilter) filter);
-      final DimFilter one = doSimplifyAnd(children);
-      final DimFilter two = negate(doSimplifyOr(negateAll(children)));
-      return computeCost(one) <= computeCost(two) ? one : two;
+      return doSimplifyAnd(children);
     } else if (filter instanceof OrDimFilter) {
       final List<DimFilter> children = getOrFilterChildren((OrDimFilter) filter);
-      final DimFilter one = doSimplifyOr(children);
-      final DimFilter two = negate(doSimplifyAnd(negateAll(children)));
-      return computeCost(one) <= computeCost(two) ? one : two;
+      return doSimplifyOr(children);
     } else if (filter instanceof NotDimFilter) {
       final DimFilter field = ((NotDimFilter) filter).getField();
-      final DimFilter candidate;
-      if (field instanceof OrDimFilter) {
-        candidate = doSimplifyAnd(negateAll(getOrFilterChildren((OrDimFilter) field)));
-      } else if (field instanceof AndDimFilter) {
-        candidate = doSimplifyOr(negateAll(getAndFilterChildren((AndDimFilter) field)));
-      } else {
-        candidate = negate(field);
-      }
-      return computeCost(filter) <= computeCost(candidate) ? filter : candidate;
+      return negate(field);
     } else {
       return filter;
     }
@@ -210,7 +198,18 @@ public class CombineAndSimplifyBounds extends BottomUpTransform
             childrenToAdd.add(Bounds.toFilter(boundRefKey, range));
           }
         }
+      } else if (disjunction && rangeSet.asRanges().size() == 2) {
+        if (Range.all().equals(rangeSet.span())) {
+          // 2 ranges in disjunction - spanning ALL
+          // complementer must be a negated range
+          for (final ObjectIntPair<BoundDimFilter> boundAndChildIndex : filterList) {
+            childrenToRemove.add(boundAndChildIndex.rightInt());
+          }
+          RangeSet<BoundValue> newRange = RangeSets.intersectRanges(rangeSet.complement().asRanges());
+          childrenToAdd.add(new NotDimFilter(Bounds.toFilter(boundRefKey, newRange.span())));
+        }
       }
+
     }
 
     // Consolidate groups of numeric ranges in "ranges", using the leastRestrictiveNumericTypes computed earlier.
@@ -268,6 +267,18 @@ public class CombineAndSimplifyBounds extends BottomUpTransform
             childrenToAdd.add(Filtration.matchEverything());
           } else {
             childrenToAdd.add(Ranges.toFilter(rangeRefKey, range));
+          }
+        }
+      } else {
+        if (disjunction && rangeSet.asRanges().size() == 2) {
+          if (Range.all().equals(rangeSet.span())) {
+            // 2 ranges in disjunction - spanning ALL
+            // complementer must be a negated range
+            for (final ObjectIntPair<RangeFilter> rangeAndChildIndex : filterList) {
+              childrenToRemove.add(rangeAndChildIndex.rightInt());
+            }
+            RangeSet<RangeValue> newRange = RangeSets.intersectRanges(rangeSet.complement().asRanges());
+            childrenToAdd.add(new NotDimFilter(Ranges.toFilter(rangeRefKey, newRange.span())));
           }
         }
       }
@@ -343,36 +354,6 @@ public class CombineAndSimplifyBounds extends BottomUpTransform
       return negated != null ? negated : new NotDimFilter(filter);
     } else {
       return new NotDimFilter(filter);
-    }
-  }
-
-  private static List<DimFilter> negateAll(final List<DimFilter> children)
-  {
-    final List<DimFilter> newChildren = Lists.newArrayListWithCapacity(children.size());
-    for (final DimFilter child : children) {
-      newChildren.add(negate(child));
-    }
-    return newChildren;
-  }
-
-  private static int computeCost(final DimFilter filter)
-  {
-    if (filter instanceof NotDimFilter) {
-      return computeCost(((NotDimFilter) filter).getField());
-    } else if (filter instanceof AndDimFilter) {
-      int cost = 0;
-      for (DimFilter field : ((AndDimFilter) filter).getFields()) {
-        cost += computeCost(field);
-      }
-      return cost;
-    } else if (filter instanceof OrDimFilter) {
-      int cost = 0;
-      for (DimFilter field : ((OrDimFilter) filter).getFields()) {
-        cost += computeCost(field);
-      }
-      return cost;
-    } else {
-      return 1;
     }
   }
 }
