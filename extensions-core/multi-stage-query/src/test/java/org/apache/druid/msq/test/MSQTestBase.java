@@ -179,6 +179,7 @@ import org.apache.druid.sql.guice.SqlBindings;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.storage.export.ExportStorageConnectorFactory;
+import org.apache.druid.storage.export.LocalExportStorageConnectorFactory;
 import org.apache.druid.storage.local.LocalFileStorageConnector;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.PruneLoadSpec;
@@ -482,7 +483,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
           MapBinder<String, ExportStorageConnectorFactory> mapbinder
               = MapBinder.newMapBinder(binder, String.class, ExportStorageConnectorFactory.class);
-          mapbinder.addBinding(TestExportStorageConnector.TYPE).toInstance((properties, injector) -> () -> testExportStorageConnector);
+          mapbinder.addBinding(LocalExportStorageConnectorFactory.TYPE_NAME).to(LocalExportStorageConnectorFactory.class);
+          mapbinder.addBinding(TestExportStorageConnector.TYPE_NAME).toInstance((properties, injector) -> () -> testExportStorageConnector);
         },
         // Requirement of WorkerMemoryParameters.createProductionInstanceForWorker(injector)
         binder -> binder.bind(AppenderatorsManager.class).toProvider(() -> null),

@@ -22,14 +22,13 @@ package org.apache.druid.msq.export;
 import org.apache.druid.storage.StorageConnector;
 
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Iterator;
 
 public class TestExportStorageConnector implements StorageConnector
 {
-  public static final String TYPE = "testStorage";
+  public static final String TYPE_NAME = "testStorage";
   private final ByteArrayOutputStream byteArrayOutputStream;
 
   public TestExportStorageConnector()
@@ -49,7 +48,7 @@ public class TestExportStorageConnector implements StorageConnector
   }
 
   @Override
-  public InputStream read(String path) throws IOException
+  public InputStream read(String path)
   {
     throw new UnsupportedOperationException();
   }
@@ -61,9 +60,8 @@ public class TestExportStorageConnector implements StorageConnector
   }
 
   @Override
-  public OutputStream write(String path) throws IOException
+  public OutputStream write(String path)
   {
-
     return byteArrayOutputStream;
   }
 

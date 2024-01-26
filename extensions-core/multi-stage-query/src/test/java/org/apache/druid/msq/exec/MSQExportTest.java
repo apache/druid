@@ -49,7 +49,7 @@ public class MSQExportTest extends MSQTestBase
                                             .add("cnt", ColumnType.LONG).build();
 
     testIngestQuery().setSql(
-                         "insert into extern(" + TestExportStorageConnector.TYPE + "()) as csv select cnt, dim1 from foo")
+                         "insert into extern(" + TestExportStorageConnector.TYPE_NAME + "()) as csv select cnt, dim1 from foo")
                      .setExpectedDataSource("foo1")
                      .setQueryContext(DEFAULT_MSQ_CONTEXT)
                      .setExpectedRowSignature(rowSignature)
