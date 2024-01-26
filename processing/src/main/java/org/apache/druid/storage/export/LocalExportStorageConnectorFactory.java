@@ -34,6 +34,7 @@ import java.util.Map;
  */
 public class LocalExportStorageConnectorFactory implements ExportStorageConnectorFactory
 {
+  public static final String TYPE_NAME = "localStorage";
   @Override
   public StorageConnectorProvider get(Map<String, String> properties, Injector injector)
   {
