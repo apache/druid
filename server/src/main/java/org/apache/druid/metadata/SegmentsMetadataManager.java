@@ -127,11 +127,11 @@ public interface SegmentsMetadataManager
   );
 
   /**
-   * Returns an iterable to go over un-used segments for a given datasource over an optional interval.
-   * The order in which segments are iterated is from earliest start-time, with ties being broken with earliest end-time
-   * first. Note: the iteration may not be as trivially cheap as,
-   * for example, iteration over an ArrayList. Try (to some reasonable extent) to organize the code so that it
-   * iterates the returned iterable only once rather than several times.
+   * Returns an iterable to go over un-used segments and their associated metadata for a given datasource over an
+   * optional interval. The order in which segments are iterated is from earliest start-time, with ties being broken
+   * with earliest end-time first. Note: the iteration may not be as trivially cheap as for example, iteration over an
+   * ArrayList. Try (to some reasonable extent) to organize the code so that it iterates the returned iterable only
+   * once rather than several times.
    *
    * @param datasource    the name of the datasource.
    * @param interval      an optional interval to search over. If none is specified, {@link org.apache.druid.java.util.common.Intervals#ETERNITY}

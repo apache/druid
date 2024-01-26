@@ -19,21 +19,15 @@
 
 package org.apache.druid.server.http;
 
-import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.TestObjectMapper;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -46,13 +40,12 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Map;
 
 public class DataSegmentPlusTest
 {
-  private static final ObjectMapper MAPPER = new TestObjectMapper();
+  private static final ObjectMapper MAPPER = new DefaultObjectMapper();
   private static final int TEST_VERSION = 0x9;
 
   @Before
@@ -61,11 +54,6 @@ public class DataSegmentPlusTest
     InjectableValues.Std injectableValues = new InjectableValues.Std();
     injectableValues.addValue(DataSegment.PruneSpecsHolder.class, DataSegment.PruneSpecsHolder.DEFAULT);
     MAPPER.setInjectableValues(injectableValues);
-    MAPPER.registerModule(
-        new SimpleModule()
-            .addDeserializer(DateTime.class, new DateTimeDeserializer())
-            .addSerializer(DateTime.class, ToStringSerializer.instance)
-    );
   }
   @Test
   public void testEquals()
@@ -157,32 +145,5 @@ public class DataSegmentPlusTest
     // verify extra metadata
     Assert.assertEquals(segmentPlus.getCreatedDate(), deserializedSegmentPlus.getCreatedDate());
     Assert.assertEquals(segmentPlus.getUsedStatusLastUpdatedDate(), deserializedSegmentPlus.getUsedStatusLastUpdatedDate());
-  }
-
-  // Copied from org.apache.druid.jackson.JodaStuff
-  private static class DateTimeDeserializer extends StdDeserializer<DateTime>
-  {
-    public DateTimeDeserializer()
-    {
-      super(DateTime.class);
-    }
-
-    @Override
-    public DateTime deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException
-    {
-      JsonToken t = jp.getCurrentToken();
-      if (t == JsonToken.VALUE_NUMBER_INT) {
-        return DateTimes.utc(jp.getLongValue());
-      }
-      if (t == JsonToken.VALUE_STRING) {
-        String str = jp.getText().trim();
-        if (str.length() == 0) { // [JACKSON-360]
-          return null;
-        }
-        // make sure to preserve time zone information when parsing timestamps
-        return DateTimes.ISO_DATE_OR_TIME_WITH_OFFSET.parse(str);
-      }
-      throw ctxt.mappingException(getValueClass());
-    }
   }
 }

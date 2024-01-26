@@ -175,9 +175,9 @@ public class SqlSegmentsMetadataQuery
   }
 
   /**
-   * Similar to {@link #retrieveUnusedSegments}, but also retrieves associated metadata for the segments for a given datasource that are marked unused and that are *fully contained by* any interval
-   * in a particular collection of intervals. If the collection of intervals is empty, this method will retrieve all
-   * unused segments.
+   * Similar to {@link #retrieveUnusedSegments}, but also retrieves associated metadata for the segments for a given
+   * datasource that are marked unused and that are *fully contained by* any interval in a particular collection of
+   * intervals. If the collection of intervals is empty, this method will retrieve all unused segments.
    *
    * This call does not return any information about realtime segments.
    *
@@ -548,7 +548,7 @@ public class SqlSegmentsMetadataQuery
       @Nullable final DateTime maxUsedStatusLastUpdatedTime
   )
   {
-    final Query<Map<String, Object>> sql = buildSegmentQuery(
+    final Query<Map<String, Object>> sql = buildSegmentsTableQuery(
         dataSource,
         intervals,
         matchMode,
@@ -577,7 +577,7 @@ public class SqlSegmentsMetadataQuery
   )
   {
 
-    final Query<Map<String, Object>> sql = buildSegmentQuery(
+    final Query<Map<String, Object>> sql = buildSegmentsTableQuery(
         dataSource,
         intervals,
         matchMode,
@@ -594,7 +594,7 @@ public class SqlSegmentsMetadataQuery
     return filterDataSegmentPlusIteratorByInterval(resultIterator, intervals, matchMode);
   }
 
-  private Query<Map<String, Object>> buildSegmentQuery(
+  private Query<Map<String, Object>> buildSegmentsTableQuery(
       final String dataSource,
       final Collection<Interval> intervals,
       final IntervalMode matchMode,

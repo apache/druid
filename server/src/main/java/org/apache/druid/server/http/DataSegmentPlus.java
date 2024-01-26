@@ -31,9 +31,8 @@ import java.util.Objects;
 
 /**
  * Encapsulates a {@link DataSegment} and additional metadata about it:
- * <li> {@code createdDate}: The time when the segment was created </li>
- * <li> {@code usedStatusLastUpdatedDate}: The time when the segments used status was last updated </li>
- *
+ * {@link DataSegmentPlus#createdDate}:               The time when the segment was created </li>
+ * {@link DataSegmentPlus#usedStatusLastUpdatedDate}: The time when the segments used status was last updated </li>
  * <p>
  * The class closesly resembles the row structure of the {@link MetadataStorageTablesConfig#getSegmentsTable()}
  * </p>

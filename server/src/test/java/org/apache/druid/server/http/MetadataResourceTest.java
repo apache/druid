@@ -76,7 +76,7 @@ public class MetadataResourceTest
           .eachOfSizeInMb(500)
           .toArray(new DataSegment[0]);
 
-  private final List<DataSegmentPlus> segmentDtos = Arrays.stream(segments)
+  private final List<DataSegmentPlus> segmentsPlus = Arrays.stream(segments)
           .map(s -> new DataSegmentPlus(s, DateTimes.nowUtc(), DateTimes.nowUtc()))
           .collect(Collectors.toList());
   private HttpServletRequest request;
@@ -307,7 +307,7 @@ public class MetadataResourceTest
     response = metadataResource.getUnusedSegmentsInDataSource(request, DATASOURCE1, null, null, null, null);
 
     resultList = extractResponseList(response);
-    Assert.assertEquals(segmentDtos, resultList);
+    Assert.assertEquals(segmentsPlus, resultList);
 
     // test valid datasource with interval filter - returns all unused segments for that datasource within interval
     int numDays = 2;
@@ -317,7 +317,7 @@ public class MetadataResourceTest
     resultList = extractResponseList(response);
     Assert.assertEquals(NUM_PARTITIONS * numDays, resultList.size());
     Assert.assertEquals(
-        Arrays.asList(segmentDtos.get(0), segmentDtos.get(1), segmentDtos.get(2), segmentDtos.get(3)),
+        Arrays.asList(segmentsPlus.get(0), segmentsPlus.get(1), segmentsPlus.get(2), segmentsPlus.get(3)),
         resultList
     );
 
@@ -328,7 +328,7 @@ public class MetadataResourceTest
 
     resultList = extractResponseList(response);
     Assert.assertEquals(limit, resultList.size());
-    Assert.assertEquals(Arrays.asList(segmentDtos.get(0), segmentDtos.get(1), segmentDtos.get(2)), resultList);
+    Assert.assertEquals(Arrays.asList(segmentsPlus.get(0), segmentsPlus.get(1), segmentsPlus.get(2)), resultList);
 
     // test valid datasource with interval filter limit and offset - returns unused segments for that datasource within
     // interval upto limit starting at offset
@@ -342,7 +342,7 @@ public class MetadataResourceTest
     );
 
     resultList = extractResponseList(response);
-    Assert.assertEquals(Collections.singletonList(segmentDtos.get(3)), resultList);
+    Assert.assertEquals(Collections.singletonList(segmentsPlus.get(3)), resultList);
   }
 
   Answer<Iterable<DataSegmentPlus>> mockIterateAllUnusedSegmentsForDatasource()
@@ -357,7 +357,7 @@ public class MetadataResourceTest
         return ImmutableList.of();
       }
 
-      return segmentDtos.stream()
+      return segmentsPlus.stream()
           .filter(d -> d.getDataSegment().getDataSource().equals(dataSourceName)
                        && (interval == null
                            || (d.getDataSegment().getInterval().getStartMillis() >= interval.getStartMillis()

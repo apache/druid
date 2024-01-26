@@ -958,8 +958,9 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   /**
-   * Retrieves segments for a given datasource that are marked unused and that are *fully contained by* an optionally
-   * specified interval. If the interval specified is null, this method will retrieve all unused segments.
+   * Retrieves segments and their associated metadata for a given datasource that are marked unused and that are
+   * *fully contained by* an optionally specified interval. If the interval specified is null, this method will
+   * retrieve all unused segments.
    *
    * This call does not return any information about realtime segments.
    *
