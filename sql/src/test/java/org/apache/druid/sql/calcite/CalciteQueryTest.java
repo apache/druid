@@ -14838,6 +14838,27 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     assertThat(e, invalidSqlIs("Window frames with expression based lower/upper bounds are not supported. (line [1], column [31])"));
   }
 
+
+  @Test
+  public void testUnSupportedWindowBoundTypes()
+  {
+    assumeFeatureAvailable(EngineFeature.WINDOW_FUNCTIONS);
+
+    DruidException e;
+    e = assertThrows(DruidException.class, () -> testBuilder()
+        .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
+        .sql("SELECT dim1,ROW_NUMBER() OVER (ORDER BY dim1 ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING) from druid.foo")
+        .run());
+    assertThat(e, invalidSqlIs("Query bounds with both lower and upper bounds as PRECEDING or FOLLOWING is not supported. (line [1], column [31])"));
+
+    e = assertThrows(DruidException.class, () -> testBuilder()
+        .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
+        .sql("SELECT dim1,ROW_NUMBER() OVER (ORDER BY dim1 ROWS BETWEEN 1 FOLLOWING AND 1 FOLLOWING) from druid.foo")
+        .run());
+    assertThat(e, invalidSqlIs("Query bounds with both lower and upper bounds as PRECEDING or FOLLOWING is not supported. (line [1], column [31])"));
+  }
+
+
   @Test
   public void testWindowingErrorWithoutFeatureFlag()
   {

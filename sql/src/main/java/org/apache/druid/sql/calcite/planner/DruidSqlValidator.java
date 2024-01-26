@@ -86,6 +86,19 @@ class DruidSqlValidator extends BaseDruidSqlValidator
       );
     }
 
+    if (isPrecedingOrFollowing(lowerBound) &&
+        isPrecedingOrFollowing(upperBound) &&
+        lowerBound.getKind() == upperBound.getKind()) {
+      // this limitation can be lifted when https://github.com/apache/druid/issues/15739 is addressed
+      throw buildCalciteContextException(
+          StringUtils.format(
+              "Query bounds with both lower and upper bounds as PRECEDING or FOLLOWING is not supported.",
+              QueryContexts.WINDOWING_STRICT_VALIDATION
+          ),
+          windowOrId
+      );
+    }
+
     if (plannerContext.queryContext().isWindowingStrictValidation()) {
       if (!targetWindow.isRows() &&
           (!isValidRangeEndpoint(lowerBound) || !isValidRangeEndpoint(upperBound))) {
@@ -99,7 +112,17 @@ class DruidSqlValidator extends BaseDruidSqlValidator
         );
       }
     }
+
     super.validateWindow(windowOrId, scope, call);
+  }
+
+  private boolean isPrecedingOrFollowing(@Nullable SqlNode bound)
+  {
+    if (bound == null) {
+      return false;
+    }
+    SqlKind kind = bound.getKind();
+    return kind == SqlKind.PRECEDING || kind == SqlKind.FOLLOWING;
   }
 
   /**
