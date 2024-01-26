@@ -49,6 +49,7 @@ public class AzureStorageTest
   BlobContainerClient blobContainerClient = Mockito.mock(BlobContainerClient.class);
   AzureClientFactory azureClientFactory = Mockito.mock(AzureClientFactory.class);
 
+  private final String STORAGE_ACCOUNT = "storageAccount";
   private final String CONTAINER = "container";
   private final String BLOB_NAME = "blobName";
   private final Integer MAX_ATTEMPTS = 3;
@@ -56,7 +57,7 @@ public class AzureStorageTest
   @Before
   public void setup() throws BlobStorageException
   {
-    azureStorage = new AzureStorage(azureClientFactory);
+    azureStorage = new AzureStorage(azureClientFactory, STORAGE_ACCOUNT);
   }
 
   @Test
@@ -71,7 +72,7 @@ public class AzureStorageTest
         ArgumentMatchers.any()
     );
     Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(CONTAINER);
-    Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(MAX_ATTEMPTS);
+    Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(MAX_ATTEMPTS, STORAGE_ACCOUNT);
 
     Assert.assertEquals(ImmutableList.of(BLOB_NAME), azureStorage.listDir(CONTAINER, "", MAX_ATTEMPTS));
   }
@@ -88,9 +89,33 @@ public class AzureStorageTest
         ArgumentMatchers.any()
     );
     Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(CONTAINER);
-    Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(null);
+    Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(null, STORAGE_ACCOUNT);
 
     Assert.assertEquals(ImmutableList.of(BLOB_NAME), azureStorage.listDir(CONTAINER, "", null));
+  }
+
+  @Test
+  public void testListBlobsWithPrefixInContainerSegmented() throws BlobStorageException
+  {
+    String storageAccountCustom = "customStorageAccount";
+    BlobItem blobItem = new BlobItem().setName(BLOB_NAME).setProperties(new BlobItemProperties().setContentLength(10L));
+    SettableSupplier<PagedResponse<BlobItem>> supplier = new SettableSupplier<>();
+    supplier.set(new TestPagedResponse<>(ImmutableList.of(blobItem)));
+    PagedIterable<BlobItem> pagedIterable = new PagedIterable<>(supplier);
+    Mockito.doReturn(pagedIterable).when(blobContainerClient).listBlobs(
+        ArgumentMatchers.any(),
+        ArgumentMatchers.any()
+    );
+    Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(CONTAINER);
+    Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(3, storageAccountCustom);
+
+    azureStorage.listBlobsWithPrefixInContainerSegmented(
+        storageAccountCustom,
+        CONTAINER,
+        "",
+        1,
+        3
+    );
   }
 
   @Test
@@ -107,7 +132,7 @@ public class AzureStorageTest
 
     Mockito.doReturn(containerUrl).when(blobContainerClient).getBlobContainerUrl();
     Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(CONTAINER);
-    Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(null);
+    Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(null, STORAGE_ACCOUNT);
     Mockito.doReturn(blobBatchClient).when(azureClientFactory).getBlobBatchClient(blobContainerClient);
     Mockito.doReturn(pagedIterable).when(blobBatchClient).deleteBlobs(
         captor.capture(), ArgumentMatchers.eq(DeleteSnapshotsOptionType.INCLUDE)

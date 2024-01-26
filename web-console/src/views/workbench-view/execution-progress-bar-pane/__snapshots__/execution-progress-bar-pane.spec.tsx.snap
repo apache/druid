@@ -21,7 +21,7 @@ exports[`ExecutionProgressBarPane matches snapshot 1`] = `
     intent="primary"
   />
   <Unknown>
-    
+    Segments loaded successfully in 0:00:05
   </Unknown>
 </div>
 `;
