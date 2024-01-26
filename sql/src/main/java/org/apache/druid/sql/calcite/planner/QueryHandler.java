@@ -57,7 +57,6 @@ import org.apache.calcite.util.Pair;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.EmittingLogger;
