@@ -27,13 +27,13 @@ For rolling Apache Druid cluster updates with no downtime, we recommend updating
 following order:
 
 1. Historical
-2. Middle Manager and Indexers (if any)
+2. Middle Manager and Indexer (if any)
 3. Broker
-4. Routers
+4. Router
 5. Overlord (Note that you can upgrade the Overlord before any MiddleManager processes if you use [autoscaling-based replacement](#autoscaling-based-replacement).)
 6. Coordinator ( or merged Coordinator+Overlord )
 
-If you need to do a rolling downgrade, reverse the order and start with the Coordinator.
+If you need to do a rolling downgrade, reverse the order and start with the Coordinator processes.
 
 For information about the latest release, see [Druid releases](https://github.com/apache/druid/releases).
 
