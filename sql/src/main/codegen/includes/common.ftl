@@ -126,7 +126,7 @@ SqlIdentifier ExternalDestination() :
   Map<String, String> properties = new HashMap();
 }
 {
-  destinationType = SimpleIdentifier() [ <LPAREN> properties = ExternProperties() <RPAREN>]
+  destinationType = SimpleIdentifier() [ <LPAREN> [ properties = ExternProperties() ] <RPAREN>]
   {
     s = span();
     return new ExternalDestinationSqlIdentifier(

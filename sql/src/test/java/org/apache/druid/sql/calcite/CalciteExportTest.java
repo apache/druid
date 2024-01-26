@@ -106,6 +106,29 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   }
 
   @Test
+  public void testExportSourceWithNoArguments()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO EXTERN(testLocal()) "
+             + "AS CSV "
+             + "SELECT dim2 FROM foo")
+        .expectQuery(
+            Druids.newScanQueryBuilder()
+                  .dataSource(
+                      "foo"
+                  )
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .columns("dim2")
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .build()
+        )
+        .expectResources(dataSourceRead("foo"))
+        .expectTarget("EXTERN", RowSignature.builder().add("dim2", ColumnType.STRING).build())
+        .verify();
+  }
+
+  @Test
   public void testSelectFromTableNamedExport()
   {
     testIngestionQuery()

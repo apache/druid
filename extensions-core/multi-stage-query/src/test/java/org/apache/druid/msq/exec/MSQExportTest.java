@@ -22,15 +22,21 @@ package org.apache.druid.msq.exec;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.msq.export.TestExportStorageConnector;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.http.ResultFormat;
 import org.hamcrest.CoreMatchers;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 
-import java.io.File;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MSQExportTest extends MSQTestBase
 {
@@ -42,15 +48,19 @@ public class MSQExportTest extends MSQTestBase
                                             .add("dim1", ColumnType.STRING)
                                             .add("cnt", ColumnType.LONG).build();
 
-    File exportDir = temporaryFolder.newFolder("export/");
     testIngestQuery().setSql(
-                         "insert into extern(localStorage(basePath = '" + exportDir.getAbsolutePath() + "')) as csv select  __time, dim1 from foo")
+                         "insert into extern(" + TestExportStorageConnector.TYPE + "()) as csv select cnt, dim1 from foo")
                      .setExpectedDataSource("foo1")
                      .setQueryContext(DEFAULT_MSQ_CONTEXT)
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedSegment(ImmutableSet.of())
                      .setExpectedResultRows(ImmutableList.of())
                      .verifyResults();
+
+    Assert.assertEquals(
+        expectedFooFileContents(),
+        new String(testExportStorageConnector.getByteArrayOutputStream().toByteArray(), Charset.defaultCharset())
+    );
   }
 
   @Test
@@ -74,5 +84,30 @@ public class MSQExportTest extends MSQTestBase
                              "No storage connector found for storage connector type:[hdfs]."
                          )))
                      ).verifyExecutionError();
+  }
+
+  private String expectedFooFileContents() throws IOException
+  {
+    List<Object[]> expectedRows = new ArrayList<>(ImmutableList.of(
+        new Object[]{0, "1", null},
+        new Object[]{1, "1", 10.1},
+        new Object[]{2, "1", 2},
+        new Object[]{3, "1", 1},
+        new Object[]{4, "1", "def"},
+        new Object[]{5, "1", "abc"}
+    ));
+
+    ByteArrayOutputStream expectedResult = new ByteArrayOutputStream();
+    ResultFormat.Writer formatter = ResultFormat.CSV.createFormatter(expectedResult, objectMapper);
+    formatter.writeResponseStart();
+    for (Object[] row : expectedRows) {
+      formatter.writeRowStart();
+      for (Object object : row) {
+        formatter.writeRowField("", object);
+      }
+      formatter.writeRowEnd();
+    }
+    formatter.writeResponseEnd();
+    return new String(expectedResult.toByteArray(), Charset.defaultCharset());
   }
 }
