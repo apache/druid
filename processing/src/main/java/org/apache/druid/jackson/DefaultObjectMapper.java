@@ -46,12 +46,12 @@ public class DefaultObjectMapper extends ObjectMapper
 
   public DefaultObjectMapper()
   {
-    this((JsonFactory) null, null);
+    this(null, null);
   }
 
   public DefaultObjectMapper(String serviceName)
   {
-    this((JsonFactory) null, serviceName);
+    this(null, serviceName);
   }
 
   public DefaultObjectMapper(DefaultObjectMapper mapper)

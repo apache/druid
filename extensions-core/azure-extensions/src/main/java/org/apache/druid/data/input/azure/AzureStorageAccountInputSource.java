@@ -24,6 +24,7 @@ import com.azure.storage.blob.specialized.BlockBlobClient;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
@@ -35,8 +36,10 @@ import org.apache.druid.data.input.impl.CloudObjectSplitWidget;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.data.input.impl.systemfield.SystemField;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
-import org.apache.druid.guice.annotations.Global;
+import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.storage.azure.AzureAccountConfig;
 import org.apache.druid.storage.azure.AzureCloudBlobIterableFactory;
+import org.apache.druid.storage.azure.AzureIngestClientFactory;
 import org.apache.druid.storage.azure.AzureInputDataConfig;
 import org.apache.druid.storage.azure.AzureStorage;
 
@@ -53,36 +56,45 @@ import java.util.Set;
  * Abstracts the Azure storage system where input data is stored. Allows users to retrieve entities in
  * the storage system that match either a particular uri, prefix, or object.
  */
-public class AzureInputSource extends CloudObjectInputSource
+public class AzureStorageAccountInputSource extends CloudObjectInputSource
 {
-  public static final String SCHEME = "azure";
+  public static final String SCHEME = "azureStorage";
 
-  private final AzureStorage storage;
   private final AzureEntityFactory entityFactory;
   private final AzureCloudBlobIterableFactory azureCloudBlobIterableFactory;
   private final AzureInputDataConfig inputDataConfig;
+  private final AzureStorageAccountInputSourceConfig azureStorageAccountInputSourceConfig;
+  private final AzureAccountConfig azureAccountConfig;
+
+  private final AzureIngestClientFactory azureIngestClientFactory;
 
   @JsonCreator
-  public AzureInputSource(
-      @JacksonInject @Global AzureStorage storage,
+  public AzureStorageAccountInputSource(
       @JacksonInject AzureEntityFactory entityFactory,
       @JacksonInject AzureCloudBlobIterableFactory azureCloudBlobIterableFactory,
       @JacksonInject AzureInputDataConfig inputDataConfig,
+      @JacksonInject AzureAccountConfig azureAccountConfig,
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects,
       @JsonProperty("objectGlob") @Nullable String objectGlob,
+      @JsonProperty("properties") @Nullable AzureStorageAccountInputSourceConfig azureStorageAccountInputSourceConfig,
       @JsonProperty(SYSTEM_FIELDS_PROPERTY) @Nullable SystemFields systemFields
   )
   {
     super(SCHEME, uris, prefixes, objects, objectGlob, systemFields);
-    this.storage = Preconditions.checkNotNull(storage, "AzureStorage");
     this.entityFactory = Preconditions.checkNotNull(entityFactory, "AzureEntityFactory");
     this.azureCloudBlobIterableFactory = Preconditions.checkNotNull(
         azureCloudBlobIterableFactory,
         "AzureCloudBlobIterableFactory"
     );
     this.inputDataConfig = Preconditions.checkNotNull(inputDataConfig, "AzureInputDataConfig");
+    this.azureStorageAccountInputSourceConfig = azureStorageAccountInputSourceConfig;
+    this.azureAccountConfig = azureAccountConfig;
+    this.azureIngestClientFactory = new AzureIngestClientFactory(
+        azureAccountConfig,
+        azureStorageAccountInputSourceConfig
+    );
   }
 
   @JsonIgnore
@@ -96,15 +108,16 @@ public class AzureInputSource extends CloudObjectInputSource
   @Override
   public SplittableInputSource<List<CloudObjectLocation>> withSplit(InputSplit<List<CloudObjectLocation>> split)
   {
-    return new AzureInputSource(
-        storage,
+    return new AzureStorageAccountInputSource(
         entityFactory,
         azureCloudBlobIterableFactory,
         inputDataConfig,
+        azureAccountConfig,
         null,
         null,
         split.get(),
         getObjectGlob(),
+        azureStorageAccountInputSourceConfig,
         systemFields
     );
   }
@@ -112,15 +125,15 @@ public class AzureInputSource extends CloudObjectInputSource
   @Override
   public Object getSystemFieldValue(InputEntity entity, SystemField field)
   {
-    final AzureEntity googleEntity = (AzureEntity) entity;
+    final AzureEntity azureEntity = (AzureEntity) entity;
 
     switch (field) {
       case URI:
-        return googleEntity.getUri().toString();
+        return azureEntity.getUri().toString();
       case BUCKET:
-        return googleEntity.getLocation().getBucket();
+        return azureEntity.getLocation().getBucket();
       case PATH:
-        return googleEntity.getLocation().getPath();
+        return azureEntity.getLocation().getPath();
       default:
         return null;
     }
@@ -129,7 +142,11 @@ public class AzureInputSource extends CloudObjectInputSource
   @Override
   protected AzureEntity createEntity(CloudObjectLocation location)
   {
-    return entityFactory.create(location, storage, SCHEME);
+    return entityFactory.create(
+        location,
+        new AzureStorage(azureIngestClientFactory, location.getBucket()),
+        SCHEME
+    );
   }
 
   @Override
@@ -141,12 +158,12 @@ public class AzureInputSource extends CloudObjectInputSource
       public Iterator<LocationWithSize> getDescriptorIteratorForPrefixes(List<URI> prefixes)
       {
         return Iterators.transform(
-            azureCloudBlobIterableFactory.create(getPrefixes(), inputDataConfig.getMaxListingLength(), storage).iterator(),
+            azureCloudBlobIterableFactory.create(prefixes, inputDataConfig.getMaxListingLength(), new AzureStorage(azureIngestClientFactory, null)).iterator(),
             blob -> {
               try {
                 return new LocationWithSize(
-                    blob.getContainerName(),
-                    blob.getName(),
+                    blob.getStorageAccount(),
+                    blob.getContainerName() + "/" + blob.getName(),
                     blob.getBlobLength()
                 );
               }
@@ -161,9 +178,11 @@ public class AzureInputSource extends CloudObjectInputSource
       public long getObjectSize(CloudObjectLocation location)
       {
         try {
-          final BlockBlobClient blobWithAttributes = storage.getBlockBlobReferenceWithAttributes(
-              location.getBucket(),
-              location.getPath()
+          AzureStorage azureStorage = new AzureStorage(azureIngestClientFactory, location.getBucket());
+          Pair<String, String> locationInfo = getContainerAndPathFromObjectLocation(location);
+          final BlockBlobClient blobWithAttributes = azureStorage.getBlockBlobReferenceWithAttributes(
+              locationInfo.lhs,
+              locationInfo.rhs
           );
 
           return blobWithAttributes.getProperties().getBlobSize();
@@ -175,6 +194,14 @@ public class AzureInputSource extends CloudObjectInputSource
     }
 
     return new SplitWidget();
+  }
+
+  @Nullable
+  @JsonProperty("properties")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public AzureStorageAccountInputSourceConfig getAzureStorageAccountInputSourceConfig()
+  {
+    return azureStorageAccountInputSourceConfig;
   }
 
   @Override
@@ -189,28 +216,37 @@ public class AzureInputSource extends CloudObjectInputSource
     if (!super.equals(o)) {
       return false;
     }
-    AzureInputSource that = (AzureInputSource) o;
-    return storage.equals(that.storage) &&
-           entityFactory.equals(that.entityFactory) &&
-           azureCloudBlobIterableFactory.equals(that.azureCloudBlobIterableFactory) &&
-           inputDataConfig.equals(that.inputDataConfig);
+    AzureStorageAccountInputSource that = (AzureStorageAccountInputSource) o;
+    return inputDataConfig.equals(that.inputDataConfig) &&
+        azureStorageAccountInputSourceConfig.equals(that.azureStorageAccountInputSourceConfig) &&
+        azureAccountConfig.equals(that.azureAccountConfig) &&
+        azureIngestClientFactory.equals(that.azureIngestClientFactory);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), storage, entityFactory, azureCloudBlobIterableFactory, inputDataConfig);
+    return Objects.hash(super.hashCode(), inputDataConfig, azureStorageAccountInputSourceConfig, azureAccountConfig, azureIngestClientFactory);
   }
 
   @Override
   public String toString()
   {
-    return "AzureInputSource{" +
-           "uris=" + getUris() +
-           ", prefixes=" + getPrefixes() +
-           ", objects=" + getObjects() +
-           ", objectGlob=" + getObjectGlob() +
-           (systemFields.getFields().isEmpty() ? "" : ", systemFields=" + systemFields) +
-           '}';
+    return "AzureStorageAccountInputSource{" +
+        "uris=" + getUris() +
+        ", prefixes=" + getPrefixes() +
+        ", objects=" + getObjects() +
+        ", objectGlob=" + getObjectGlob() +
+        ", azureStorageAccountInputSourceConfig=" + getAzureStorageAccountInputSourceConfig() +
+        (systemFields.getFields().isEmpty() ? "" : ", systemFields=" + systemFields) +
+        '}';
+  }
+
+  // Returns a <containerName, path> pair given a location using the azureStorage schema.
+  public static Pair<String, String> getContainerAndPathFromObjectLocation(CloudObjectLocation location)
+  {
+    String[] pathParts = location.getPath().split("/", 2);
+    // If there is no path specified, use a empty path as azure will throw a exception that is more clear than a index error.
+    return Pair.of(pathParts[0], pathParts.length == 2 ? pathParts[1] : "");
   }
 }
