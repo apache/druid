@@ -14811,6 +14811,30 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+  @Test
+  public void testGroupByDateTrunc()
+  {
+    testQuery(
+        "select DATE_TRUNC('HOUR', __time), COUNT(*) from druid.foo group by DATE_TRUNC('HOUR', __time)",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                           .dataSource(CalciteTests.DATASOURCE1)
+                           .intervals(querySegmentSpec(Filtration.eternity()))
+                           .granularity(Granularities.HOUR)
+                           .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                           .context(QUERY_CONTEXT_DEFAULT)
+                           .build()
+        ),
+        ImmutableList.of(
+            new Object[]{946684800000L, 1L},
+            new Object[]{946771200000L, 1L},
+            new Object[]{946857600000L, 1L},
+            new Object[]{978307200000L, 1L},
+            new Object[]{978393600000L, 1L},
+            new Object[]{978480000000L, 1L}
+        )
+    );
+  }
 
   @Test
   public void testLatestByOnStringColumnWithoutMaxBytesSpecified()

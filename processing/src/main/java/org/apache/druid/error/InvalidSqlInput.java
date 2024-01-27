@@ -19,6 +19,12 @@
 
 package org.apache.druid.error;
 
+/**
+ * This exception class should be used instead of
+ * {@link org.apache.druid.java.util.common.ISE} or {@link org.apache.druid.java.util.common.IAE} when processing is
+ * to be halted during planning. There is wiring in place to bubble up the error message to the user when wrapped
+ * in this exception class.
+ */
 public class InvalidSqlInput extends InvalidInput
 {
   public static DruidException exception(String msg, Object... args)
