@@ -24,6 +24,7 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.utils.CollectionUtils;
 
 import java.util.Map;
@@ -65,7 +66,7 @@ public class ExternalDestinationSqlIdentifier extends SqlIdentifier
     SqlWriter.Frame frame = writer.startFunCall(getDestinationType());
     for (Map.Entry<String, String> property : properties.entrySet()) {
       writer.sep(",");
-      writer.print(String.format("%s = '%s'", property.getKey(), property.getValue()));
+      writer.print(StringUtils.format("%s = '%s'", property.getKey(), property.getValue()));
     }
     writer.endFunCall(frame);
     writer.endFunCall(externFrame);
