@@ -56,9 +56,7 @@ public class RetrieveUsedSegmentsActionSerdeTest
     List<Interval> intervals = ImmutableList.of(Intervals.of("2014/2015"), Intervals.of("2016/2017"));
     RetrieveUsedSegmentsAction expected = new RetrieveUsedSegmentsAction(
         "dataSource",
-        null,
-        intervals,
-        Segments.ONLY_VISIBLE
+        intervals
     );
 
     RetrieveUsedSegmentsAction actual =
