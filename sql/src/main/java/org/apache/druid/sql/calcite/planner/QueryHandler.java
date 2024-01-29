@@ -78,6 +78,7 @@ import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.utils.Throwables;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -682,34 +683,10 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
 
   protected abstract QueryMaker buildQueryMaker(RelRoot rootQueryRel) throws ValidationException;
 
-  private DruidException buildSQLPlanningError(RelOptPlanner.CannotPlanException exception)
+  private DruidException buildSQLPlanningError(Exception exception)
   {
     String errorMessage = handlerContext.plannerContext().getPlanningError();
     if (null == errorMessage && exception instanceof UnsupportedSQLQueryException) {
-      errorMessage = exception.getMessage();
-    }
-    if (errorMessage == null) {
-      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                          .ofCategory(DruidException.Category.UNSUPPORTED)
-                          .build(exception, "Unhandled Query Planning Failure, see broker logs for details");
-    } else {
-      // Planning errors are more like hints: it isn't guaranteed that the planning error is actually what went wrong.
-      // For this reason, we consider these as targetting a more expert persona, i.e. the admin instead of the actual
-      // user.
-      throw DruidException.forPersona(DruidException.Persona.ADMIN)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build(
-                              exception,
-                              "Query could not be planned. A possible reason is [%s]",
-                              errorMessage
-                          );
-    }
-  }
-
-  private DruidException buildSQLPlanningError(CannotBuildQueryException exception)
-  {
-    String errorMessage = handlerContext.plannerContext().getPlanningError();
-    if (null == errorMessage) {
       errorMessage = exception.getMessage();
     }
     if (errorMessage == null) {
