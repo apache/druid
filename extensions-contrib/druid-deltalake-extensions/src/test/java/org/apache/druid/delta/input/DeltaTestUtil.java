@@ -62,137 +62,145 @@ public class DeltaTestUtil
   public static final List<Map<String, Object>> EXPECTED_ROWS = new ArrayList<>(
       ImmutableList.of(
           ImmutableMap.of(
-              "birthday", 944265600L,
-              "id", 4662990160L,
+              "birthday", 1057881600L,
               "name", "Employee1",
-              "age", (short) 24,
-              "salary", 63807.010056944906,
-              "yoe", 5
-          ),
-          ImmutableMap.of(
-              "id", 7436924672L,
-              "birthday", 909878400L,
-              "name", "Employee2",
-              "age", (short) 25,
-              "salary", 86178.47568217944,
-              "yoe", 10,
-              "is_fulltime", false
-          ),
-          ImmutableMap.of(
-              "id", 1127302418L,
-              "birthday", 901238400L,
-              "name", "Employee3",
-              "age", (short) 25,
-              "salary", 59001.92470779706,
-              "yoe", 10,
-              "is_fulltime", false
-          ),
-          ImmutableMap.of(
-              "id", 1810758014L,
-              "birthday", 789177600L,
-              "name", "Employee4",
-              "age", (short) 29,
-              "salary", 97151.7200456219,
-              "bonus", 2880.2966f,
-              "yoe", 10,
-              "is_fulltime", true,
-              "last_vacation_time", 1706309461000L
-          ),
-          ImmutableMap.of(
-              "id", 2675583494L,
-              "birthday", 950400000L,
-              "name", "Employee5",
-              "age", (short) 23,
-              "salary", 84092.96929134917,
-              "yoe", 6,
-              "is_fulltime", false
-          ),
-          ImmutableMap.of(
-              "id", 8109925563L,
-              "birthday", 1030320000L,
-              "name", "Employee1",
-              "age", (short) 21,
-              "salary", 98126.11562963494,
-              "yoe", 6
-          ),
-          ImmutableMap.of(
-              "id", 348540417L,
-              "birthday", 1028764800L,
-              "name", "Employee2",
-              "salary", 88318.68501168216,
-              "age", (short) 21,
-              "yoe", 6
-          ),
-          ImmutableMap.of(
-              "birthday", 772675200L,
-              "is_fulltime", false,
-              "name", "Employee3",
-              "id", 644036573L,
-              "salary", 70031.88789434545,
-              "age", (short) 29,
-              "yoe", 14
-          ),
-          ImmutableMap.of(
-              "birthday", 940118400L,
-              "name", "Employee4",
-              "id", 8451974441L,
-              "salary", 90127.23134932564,
-              "age", (short) 24,
+              "id", 867799346L,
+              "salary", 87642.55209817083,
+              "age", (short) 20,
               "yoe", 4
           ),
           ImmutableMap.of(
-              "birthday", 872294400L,
+              "birthday", 1035417600L,
               "is_fulltime", false,
-              "name", "Employee5",
-              "id", 1257915386L,
-              "salary", 55170.21435756755,
-              "age", (short) 26,
-              "yoe", 5
-          ),
-          ImmutableMap.of(
-              "birthday", 1023148800L,
-              "is_fulltime", false,
-              "name", "Employee6",
-              "id", 2034724452L,
-              "salary", 97643.72021601905,
+              "name", "Employee2",
+              "id", 9963151889L,
+              "salary", 79404.63969727767,
               "age", (short) 21,
-              "yoe", 1
+              "yoe", 2
           ),
           ImmutableMap.of(
-              "birthday", 1090627200L,
-              "is_fulltime", true,
-              "bonus", 3610.4019f,
-              "name", "Employee7",
-              "id", 1124457317L,
-              "salary", 60433.78056730033,
-              "last_vacation_time", 1706478632000L,
-              "age", (short) 19,
-              "yoe", 4
-          ),
-          ImmutableMap.of(
-              "birthday", 867542400L,
-              "is_fulltime", false,
-              "name", "Employee8",
-              "id", 8289790572L,
-              "salary", 89266.9066406803,
-              "age", (short) 26,
-              "yoe", 1
-          ),
-          ImmutableMap.of(
-              "birthday", 777945600L,
-              "name", "Employee9",
-              "id", 4197550591L,
-              "salary", 82030.03829290869,
-              "age", (short) 29,
+              "birthday", 890179200L,
+              "name", "Employee3",
+              "id", 2766777393L,
+              "salary", 92418.21424435009,
+              "age", (short) 25,
               "yoe", 9
           ),
           ImmutableMap.of(
-              "birthday", 1105747200L,
-              "name", "Employee10",
-              "id", 1628304468L,
-              "salary", 87309.74810429095,
+              "birthday", 1073001600L,
+              "name", "Employee4",
+              "id", 6320361986L,
+              "salary", 97907.76612488469,
+              "age", (short) 20,
+              "yoe", 3
+          ),
+          ImmutableMap.of(
+              "birthday", 823996800L,
+              "is_fulltime", true,
+              "bonus", 4982.215f,
+              "name", "Employee5",
+              "id", 7068152260L,
+              "salary", 79037.77202099308,
+              "last_vacation_time", 1706256972000L,
+              "age", (short) 27,
+              "yoe", 9
+          ),
+          ImmutableMap.of(
+              "birthday", 937526400L,
+              "is_fulltime", false,
+              "name", "Employee1",
+              "id", 4693651733L,
+              "salary", 83845.11357786917,
+              "age", (short) 24,
+              "yoe", 3
+          ),
+          ImmutableMap.of(
+              "birthday", 810777600L,
+              "is_fulltime", false,
+              "name", "Employee2",
+              "id", 7132772589L,
+              "salary", 90140.44051385639,
+              "age", (short) 28,
+              "yoe", 8
+          ),
+          ImmutableMap.of(
+              "birthday", 1104969600L,
+              "is_fulltime", true,
+              "bonus", 3699.0881f,
+              "name", "Employee3",
+              "id", 6627278510L,
+              "salary", 58857.27649436368,
+              "last_vacation_time", 1706458554000L,
               "age", (short) 19,
+              "yoe", 4
+          ),
+          ImmutableMap.of(
+              "birthday", 763257600L,
+              "is_fulltime", true,
+              "bonus", 2334.6675f,
+              "name", "Employee4",
+              "id", 4786204912L,
+              "salary", 93646.81222022788,
+              "last_vacation_time", 1706390154000L,
+              "age", (short) 29,
+              "yoe", 5
+          ),
+          ImmutableMap.of(
+              "birthday", 1114646400L,
+              "name", "Employee5",
+              "id", 2773939764L,
+              "salary", 66300.05339373322,
+              "age", (short) 18,
+              "yoe", 3
+          ),
+          ImmutableMap.of(
+              "birthday", 913334400L,
+              "is_fulltime", false,
+              "name", "Employee6",
+              "id", 8333438088L,
+              "salary", 59219.5257906128,
+              "age", (short) 25,
+              "yoe", 4
+          ),
+          ImmutableMap.of(
+              "birthday", 893894400L,
+              "is_fulltime", false,
+              "name", "Employee7",
+              "id", 8397454007L,
+              "salary", 61909.733851830584,
+              "age", (short) 25,
+              "yoe", 8
+          ),
+          ImmutableMap.of(
+              "birthday", 1038873600L,
+              "is_fulltime", true,
+              "bonus", 3000.0154f,
+              "name", "Employee8",
+              "id", 8925359945L,
+              "salary", 76588.05471316943,
+              "last_vacation_time", 1706195754000L,
+              "age", (short) 21,
               "yoe", 1
+          ),
+          ImmutableMap.of(
+              "birthday", 989798400L,
+              "is_fulltime", true,
+              "bonus", 4463.3833f,
+              "name", "Employee9",
+              "id", 8154788551L,
+              "salary", 59787.98539015684,
+              "last_vacation_time", 1706181354000L,
+              "age", (short) 22,
+              "yoe", 4
+          ),
+          ImmutableMap.of(
+              "birthday", 912297600L,
+              "is_fulltime", false,
+              "name", "Employee10",
+              "id", 5884382356L,
+              "salary", 51565.91965119349,
+              "age", (short) 25,
+              "yoe", 9
           )
       )
   );

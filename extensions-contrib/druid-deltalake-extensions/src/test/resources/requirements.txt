@@ -1,3 +1,2 @@
 delta-spark==3.0.0
-pyspark==3.2.0
-argparse==1.4.0
+pyspark==3.5.0
