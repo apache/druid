@@ -29,7 +29,7 @@ public class DeltaTimeUtils
   private static final ZoneId ZONE_ID = ZoneId.systemDefault();
 
   /**
-   * TimestampType data in Delta Lake tables is stored internally as the number of
+   * {@link io.delta.kernel.types.TimestampType} data in Delta Lake tables is stored internally as the number of
    * microseconds since epoch.
    *
    * @param microSecsSinceEpochUTC microseconds since epoch
@@ -46,7 +46,7 @@ public class DeltaTimeUtils
   }
 
   /**
-   * DateType data in Delta Lake tables is stored internally as the number of
+   * {@link io.delta.kernel.types.DateType} data in Delta Lake tables is stored internally as the number of
    * days since epoch.
    *
    * @param daysSinceEpochUTC number of days since epoch

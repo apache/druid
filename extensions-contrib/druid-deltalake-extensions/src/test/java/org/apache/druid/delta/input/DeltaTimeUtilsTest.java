@@ -28,7 +28,7 @@ import java.time.Instant;
 public class DeltaTimeUtilsTest
 {
   @Test
-  public void getTimestampValue()
+  public void testTimestampValue()
   {
     Assert.assertEquals(
         Instant.parse("2018-02-02T00:28:02.000Z"),
@@ -50,7 +50,7 @@ public class DeltaTimeUtilsTest
   }
 
   @Test
-  public void getDateTimeValue()
+  public void testDateTimeValue()
   {
     Assert.assertEquals(
         Instant.parse("2020-02-01T00:00:00.000Z"),

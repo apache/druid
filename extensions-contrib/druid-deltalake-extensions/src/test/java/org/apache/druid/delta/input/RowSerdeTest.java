@@ -33,7 +33,7 @@ public class RowSerdeTest
   public void testSerializeDeserializeRoundtrip() throws TableNotFoundException
   {
     final DefaultTableClient tableClient = DefaultTableClient.create(new Configuration());
-    final Scan scan = DeltaTestUtil.getScan(tableClient);
+    final Scan scan = DeltaTestUtils.getScan(tableClient);
     final Row scanState = scan.getScanState(tableClient);
 
     final String rowJson = RowSerde.serializeRowToJson(scanState);

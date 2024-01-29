@@ -45,11 +45,17 @@ import java.util.stream.Collectors;
 
 /**
  * Refer to extensions-contrib/druid-deltalake-extensions/src/test/resources/README.md to generate the
- * sample Delta Table used in the unit tests.
+ * sample Delta Lake table used in the unit tests.
  */
-public class DeltaTestUtil
+public class DeltaTestUtils
 {
+  /**
+   * The Delta table path used by unit tests.
+   */
   public static final String DELTA_TABLE_PATH = "src/test/resources/employee-delta-table";
+  /**
+   * The list of dimensions in the Delta table {@link #DELTA_TABLE_PATH}.
+   */
   public static final List<String> DIMENSIONS = ImmutableList.of(
       "id",
       "birthday",
@@ -62,6 +68,9 @@ public class DeltaTestUtil
       "last_vacation_time"
   );
 
+  /**
+   * The expected set of rows from the first checkpoint file {@code DELTA_TABLE_PATH/_delta_log/00000000000000000000.json}
+   */
   private static final List<Map<String, Object>> SPLIT_0_EXPECTED_ROWS = new ArrayList<>(
       ImmutableList.of(
           ImmutableMap.of(
@@ -111,6 +120,9 @@ public class DeltaTestUtil
       )
   );
 
+  /**
+   * The expected rows from second checkpoint file {@code DELTA_TABLE_PATH/_delta_log/00000000000000000001.json}
+   */
   private static final List<Map<String, Object>> SPLIT_1_EXPECTED_ROWS = new ArrayList<>(
       ImmutableList.of(
           ImmutableMap.of(
@@ -213,6 +225,9 @@ public class DeltaTestUtil
       )
   );
 
+  /**
+   * Mapping of checkpoint file identifier to the list of expected rows in that checkpoint.
+   */
   public static final Map<Integer, List<Map<String, Object>>> SPLIT_TO_EXPECTED_ROWS = new HashMap<>(
       ImmutableMap.of(
           0, SPLIT_0_EXPECTED_ROWS,
@@ -220,10 +235,16 @@ public class DeltaTestUtil
       )
   );
 
+  /**
+   * Complete set of expected rows across all checkpoint files for {@link #DELTA_TABLE_PATH}.
+   */
   public static final List<Map<String, Object>> EXPECTED_ROWS = SPLIT_TO_EXPECTED_ROWS.values().stream()
                                                                                       .flatMap(List::stream)
                                                                                       .collect(Collectors.toList());
 
+  /**
+   * The Druid schema used for ingestion of {@link #DELTA_TABLE_PATH}.
+   */
   public static final InputRowSchema SCHEMA = new InputRowSchema(
       new TimestampSpec("birthday", "posix", null),
       new DimensionsSpec(
@@ -242,6 +263,9 @@ public class DeltaTestUtil
       ColumnsFilter.all()
   );
 
+  /**
+   * A simple wrapper that builds the table scan for {@link #DELTA_TABLE_PATH} meant to be used in tests.
+   */
   public static Scan getScan(final TableClient tableClient) throws TableNotFoundException
   {
     final Table table = Table.forPath(tableClient, DELTA_TABLE_PATH);

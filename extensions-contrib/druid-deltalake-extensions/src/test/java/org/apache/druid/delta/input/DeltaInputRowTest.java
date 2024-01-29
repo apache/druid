@@ -40,7 +40,7 @@ public class DeltaInputRowTest
   public void testDeltaInputRow() throws TableNotFoundException, IOException
   {
     final TableClient tableClient = DefaultTableClient.create(new Configuration());
-    final Scan scan = DeltaTestUtil.getScan(tableClient);
+    final Scan scan = DeltaTestUtils.getScan(tableClient);
 
     CloseableIterator<FilteredColumnarBatch> scanFileIter = scan.getScanFiles(tableClient);
     int totalRecordCount = 0;
@@ -57,14 +57,14 @@ public class DeltaInputRowTest
           Row next = dataReadResult.getRows().next();
           DeltaInputRow deltaInputRow = new DeltaInputRow(
               next,
-              DeltaTestUtil.SCHEMA
+              DeltaTestUtils.SCHEMA
           );
           Assert.assertNotNull(deltaInputRow);
-          Assert.assertEquals(DeltaTestUtil.DIMENSIONS, deltaInputRow.getDimensions());
+          Assert.assertEquals(DeltaTestUtils.DIMENSIONS, deltaInputRow.getDimensions());
 
-          Map<String, Object> expectedRow = DeltaTestUtil.EXPECTED_ROWS.get(totalRecordCount);
+          Map<String, Object> expectedRow = DeltaTestUtils.EXPECTED_ROWS.get(totalRecordCount);
           for (String key : expectedRow.keySet()) {
-            if (DeltaTestUtil.SCHEMA.getTimestampSpec().getTimestampColumn().equals(key)) {
+            if (DeltaTestUtils.SCHEMA.getTimestampSpec().getTimestampColumn().equals(key)) {
               final long expectedMillis = ((Long) expectedRow.get(key)) * 1000;
               Assert.assertEquals(expectedMillis, deltaInputRow.getTimestampFromEpoch());
             } else {
@@ -75,6 +75,6 @@ public class DeltaInputRowTest
         }
       }
     }
-    Assert.assertEquals(DeltaTestUtil.EXPECTED_ROWS.size(), totalRecordCount);
+    Assert.assertEquals(DeltaTestUtils.EXPECTED_ROWS.size(), totalRecordCount);
   }
 }
