@@ -91,8 +91,7 @@ public @interface NotYetSupported
     CANNOT_TRANSLATE(DruidException.class, "Cannot translate reference"),
     MISSING_UNION_CONVERSION(DruidException.class, "Missing conversions? (is|are) LogicalUnion"),
     MISSING_WINDOW_CONVERSION(DruidException.class, "Missing conversions? is Window"),
-    MISSING_JOIN_CONVERSION(DruidException.class, "Missing conversions? is (Logical)?Join"),
-    ;
+    MISSING_JOIN_CONVERSION(DruidException.class, "Missing conversions? is (Logical)?Join");
 
     public Class<? extends Throwable> throwableClass;
     public String regex;
