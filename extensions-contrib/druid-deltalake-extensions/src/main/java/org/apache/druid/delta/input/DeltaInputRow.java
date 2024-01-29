@@ -44,7 +44,6 @@ import org.apache.druid.error.InvalidInput;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -59,8 +58,6 @@ public class DeltaInputRow implements InputRow
   private final StructType schema;
   private final Object2IntMap<String> fieldNameToOrdinal = new Object2IntOpenHashMap<>();
   private final InputRow delegateRow;
-
-  private static final ZoneId ZONE_ID = ZoneId.systemDefault();
 
   public DeltaInputRow(io.delta.kernel.data.Row row, InputRowSchema inputRowSchema)
   {

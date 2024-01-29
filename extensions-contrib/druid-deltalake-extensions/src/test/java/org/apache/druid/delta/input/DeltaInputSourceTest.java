@@ -25,6 +25,7 @@ import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
@@ -35,7 +36,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class DeltaInputSourceTest
 {
@@ -57,6 +57,7 @@ public class DeltaInputSourceTest
       Assert.assertNotNull(actualSampledRawVals);
       Assert.assertNotNull(actualSampledRow.getRawValuesList());
       Assert.assertEquals(1, actualSampledRow.getRawValuesList().size());
+
       for (String key : expectedRow.keySet()) {
         if (DeltaTestUtil.SCHEMA.getTimestampSpec().getTimestampColumn().equals(key)) {
           final long expectedMillis = (Long) expectedRow.get(key);
@@ -72,52 +73,63 @@ public class DeltaInputSourceTest
   public void testReadAllDeltaTable() throws IOException
   {
     final DeltaInputSource deltaInputSource = new DeltaInputSource(DeltaTestUtil.DELTA_TABLE_PATH, null);
-    final InputSourceReader inputSourceReader = deltaInputSource.reader(DeltaTestUtil.SCHEMA, null, null);
-
-    List<InputRow> actualReadRows = readAllRows(inputSourceReader);
+    final InputSourceReader inputSourceReader = deltaInputSource.reader(
+        DeltaTestUtil.SCHEMA,
+        null,
+        null
+    );
+    final List<InputRow> actualReadRows = readAllRows(inputSourceReader);
     Assert.assertEquals(DeltaTestUtil.EXPECTED_ROWS.size(), actualReadRows.size());
 
-    for (int idx = 0; idx < DeltaTestUtil.EXPECTED_ROWS.size(); idx++) {
-      Map<String, Object> expectedRow = DeltaTestUtil.EXPECTED_ROWS.get(idx);
-      InputRow actualInputRow = actualReadRows.get(idx);
-      for (String key : expectedRow.keySet()) {
-        if (DeltaTestUtil.SCHEMA.getTimestampSpec().getTimestampColumn().equals(key)) {
-          final long expectedMillis = (Long) expectedRow.get(key) * 1000;
-          Assert.assertEquals(expectedMillis, actualInputRow.getTimestampFromEpoch());
-        } else {
-          Assert.assertEquals(expectedRow.get(key), actualInputRow.getRaw(key));
-        }
-      }
-    }
+    validateRows(DeltaTestUtil.EXPECTED_ROWS, actualReadRows);
   }
 
   @Test
-  public void testReadDeltaTableWithNoSplits()
-  {
-    final DeltaInputSource deltaInputSource = new DeltaInputSource(DeltaTestUtil.DELTA_TABLE_PATH, null);
-    final Stream<InputSplit<DeltaSplit>> splits = deltaInputSource.createSplits(null, null);
-    Assert.assertNotNull(splits);
-    Assert.assertEquals(2, splits.count());
-  }
-
-  @Test
-  public void testReadDeltaLakeWithSplits()
+  public void testDeltaLakeWithCreateSplits()
   {
     final DeltaInputSource deltaInputSource = new DeltaInputSource(DeltaTestUtil.DELTA_TABLE_PATH, null);
     final List<InputSplit<DeltaSplit>> splits = deltaInputSource.createSplits(null, null)
                                                                 .collect(Collectors.toList());
-    Assert.assertEquals(2, splits.size());
+    Assert.assertEquals(DeltaTestUtil.SPLIT_TO_ROWS.size(), splits.size());
 
     for (InputSplit<DeltaSplit> split : splits) {
       final DeltaSplit deltaSplit = split.get();
-      final DeltaInputSource deltaInputSourceWithSplitx = new DeltaInputSource(
+      final DeltaInputSource deltaInputSourceWithSplit = new DeltaInputSource(
           DeltaTestUtil.DELTA_TABLE_PATH,
           deltaSplit
       );
-      List<InputSplit<DeltaSplit>> splitsResult = deltaInputSourceWithSplitx.createSplits(null, null)
-                                                                            .collect(Collectors.toList());
+      List<InputSplit<DeltaSplit>> splitsResult = deltaInputSourceWithSplit.createSplits(null, null)
+                                                                           .collect(Collectors.toList());
       Assert.assertEquals(1, splitsResult.size());
       Assert.assertEquals(deltaSplit, splitsResult.get(0).get());
+    }
+  }
+
+  @Test
+  public void testDeltaLakeWithReadSplits() throws IOException
+  {
+    final DeltaInputSource deltaInputSource = new DeltaInputSource(DeltaTestUtil.DELTA_TABLE_PATH, null);
+    final List<InputSplit<DeltaSplit>> splits = deltaInputSource.createSplits(null, null)
+                                                                .collect(Collectors.toList());
+    Assert.assertEquals(DeltaTestUtil.SPLIT_TO_ROWS.size(), splits.size());
+
+    for (int i = 0; i < splits.size(); i++) {
+      final InputSplit<DeltaSplit> split = splits.get(i);
+      final DeltaSplit deltaSplit = split.get();
+      final DeltaInputSource deltaInputSourceWithSplit = new DeltaInputSource(
+          DeltaTestUtil.DELTA_TABLE_PATH,
+          deltaSplit
+      );
+      final InputSourceReader inputSourceReader = deltaInputSourceWithSplit.reader(
+          DeltaTestUtil.SCHEMA,
+          null,
+          null
+      );
+      final List<InputRow> actualRowsInSplit = readAllRows(inputSourceReader);
+      final List<Map<String, Object>> expectedRowsInSplit = DeltaTestUtil.SPLIT_TO_ROWS.get(i);
+      Assert.assertEquals(expectedRowsInSplit.size(), actualRowsInSplit.size());
+
+      validateRows(expectedRowsInSplit, actualRowsInSplit);
     }
   }
 
@@ -183,5 +195,22 @@ public class DeltaInputSourceTest
       iterator.forEachRemaining(rows::add);
     }
     return rows;
+  }
+
+  private void validateRows(final List<Map<String, Object>> expectedRows, final List<InputRow> actualReadRows)
+  {
+    for (int idx = 0; idx < expectedRows.size(); idx++) {
+      final Map<String, Object> expectedRow = expectedRows.get(idx);
+      final InputRow actualInputRow = actualReadRows.get(idx);
+      for (String key : expectedRow.keySet()) {
+        if (DeltaTestUtil.SCHEMA.getTimestampSpec().getTimestampColumn().equals(key)) {
+          final long expectedMillis = (Long) expectedRow.get(key) * 1000;
+          Assert.assertEquals(expectedMillis, actualInputRow.getTimestampFromEpoch());
+          Assert.assertEquals(DateTimes.utc(expectedMillis), actualInputRow.getTimestamp());
+        } else {
+          Assert.assertEquals(expectedRow.get(key), actualInputRow.getRaw(key));
+        }
+      }
+    }
   }
 }

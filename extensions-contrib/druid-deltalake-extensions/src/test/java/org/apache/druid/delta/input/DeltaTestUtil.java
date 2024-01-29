@@ -38,8 +38,10 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Refer to extensions-contrib/druid-deltalake-extensions/src/test/resources/README.md to generate the
@@ -59,7 +61,8 @@ public class DeltaTestUtil
       "is_fulltime",
       "last_vacation_time"
   );
-  public static final List<Map<String, Object>> EXPECTED_ROWS = new ArrayList<>(
+
+  private static final List<Map<String, Object>> SPLIT_ROWS_0 = new ArrayList<>(
       ImmutableList.of(
           ImmutableMap.of(
               "birthday", 1057881600L,
@@ -104,7 +107,12 @@ public class DeltaTestUtil
               "last_vacation_time", 1706256972000L,
               "age", (short) 27,
               "yoe", 9
-          ),
+          )
+      )
+  );
+
+  private static final List<Map<String, Object>> SPLIT_ROWS_1 = new ArrayList<>(
+      ImmutableList.of(
           ImmutableMap.of(
               "birthday", 937526400L,
               "is_fulltime", false,
@@ -204,6 +212,17 @@ public class DeltaTestUtil
           )
       )
   );
+
+  public static final Map<Integer, List<Map<String, Object>>> SPLIT_TO_ROWS = new HashMap<>(
+      ImmutableMap.of(
+          0, SPLIT_ROWS_0,
+          1, SPLIT_ROWS_1
+      )
+  );
+
+  public static final List<Map<String, Object>> EXPECTED_ROWS = SPLIT_TO_ROWS.values().stream()
+                                                                             .flatMap(List::stream)
+                                                                             .collect(Collectors.toList());
 
   public static final InputRowSchema SCHEMA = new InputRowSchema(
       new TimestampSpec("birthday", "posix", null),
