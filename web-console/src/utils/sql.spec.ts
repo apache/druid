@@ -85,6 +85,7 @@ describe('sql', () => {
               "column": 14,
               "row": 1,
             },
+            "index": 0,
             "sql": "SELECT *
         FROM wikipedia",
             "startOffset": 0,
@@ -99,6 +100,7 @@ describe('sql', () => {
               "column": 7,
               "row": 5,
             },
+            "index": 1,
             "sql": "SELECT *
         FROM w2
         LIMIT 5",
@@ -132,6 +134,7 @@ describe('sql', () => {
               "column": 15,
               "row": 5,
             },
+            "index": 0,
             "sql": "SELECT
           \\"channel\\",
           COUNT(*) AS \\"Count\\"
@@ -150,6 +153,7 @@ describe('sql', () => {
               "column": 31,
               "row": 3,
             },
+            "index": 1,
             "sql": "SELECT * FROM \\"wikipedia\\"",
             "startOffset": 48,
             "startRowColumn": Object {
@@ -184,6 +188,7 @@ describe('sql', () => {
               "column": 15,
               "row": 8,
             },
+            "index": 0,
             "sql": "WITH w1 AS (
           SELECT channel, page FROM \\"wikipedia\\"
         )
@@ -205,6 +210,7 @@ describe('sql', () => {
               "column": 39,
               "row": 1,
             },
+            "index": 1,
             "sql": "SELECT channel, page FROM \\"wikipedia\\"",
             "startOffset": 15,
             "startRowColumn": Object {
@@ -218,6 +224,7 @@ describe('sql', () => {
               "column": 15,
               "row": 8,
             },
+            "index": 2,
             "sql": "SELECT
           page,
           COUNT(*) AS \\"cnt\\"
@@ -264,6 +271,7 @@ describe('sql', () => {
               "column": 18,
               "row": 15,
             },
+            "index": 0,
             "sql": "REPLACE INTO \\"wikipedia\\" OVERWRITE ALL
         WITH \\"ext\\" AS (
           SELECT *
@@ -292,6 +300,7 @@ describe('sql', () => {
               "column": 10,
               "row": 14,
             },
+            "index": 1,
             "sql": "WITH \\"ext\\" AS (
           SELECT *
           FROM TABLE(
@@ -318,6 +327,7 @@ describe('sql', () => {
               "column": 70,
               "row": 8,
             },
+            "index": 2,
             "sql": "SELECT *
           FROM TABLE(
             EXTERN(
@@ -337,6 +347,7 @@ describe('sql', () => {
               "column": 10,
               "row": 14,
             },
+            "index": 3,
             "sql": "SELECT
           TIME_PARSE(\\"timestamp\\") AS \\"__time\\",
           \\"isRobot\\",
@@ -384,6 +395,7 @@ describe('sql', () => {
               "column": 22,
               "row": 17,
             },
+            "index": 0,
             "sql": "EXPLAIN PLAN FOR
         INSERT INTO \\"wikipedia\\"
         WITH \\"ext\\" AS (
@@ -414,6 +426,7 @@ describe('sql', () => {
               "column": 22,
               "row": 17,
             },
+            "index": 1,
             "sql": "INSERT INTO \\"wikipedia\\"
         WITH \\"ext\\" AS (
           SELECT *
@@ -443,6 +456,7 @@ describe('sql', () => {
               "column": 10,
               "row": 15,
             },
+            "index": 2,
             "sql": "WITH \\"ext\\" AS (
           SELECT *
           FROM TABLE(
@@ -469,6 +483,7 @@ describe('sql', () => {
               "column": 70,
               "row": 9,
             },
+            "index": 3,
             "sql": "SELECT *
           FROM TABLE(
             EXTERN(
@@ -488,6 +503,7 @@ describe('sql', () => {
               "column": 10,
               "row": 15,
             },
+            "index": 4,
             "sql": "SELECT
           TIME_PARSE(\\"timestamp\\") AS \\"__time\\",
           \\"isRobot\\",
@@ -526,6 +542,7 @@ describe('sql', () => {
               "column": 14,
               "row": 2,
             },
+            "index": 0,
             "sql": "EXPLAIN PLAN FOR
         SELECT *
         FROM wikipedia",
@@ -541,6 +558,7 @@ describe('sql', () => {
               "column": 14,
               "row": 2,
             },
+            "index": 1,
             "sql": "SELECT *
         FROM wikipedia",
             "startOffset": 17,
@@ -555,6 +573,7 @@ describe('sql', () => {
               "column": 7,
               "row": 7,
             },
+            "index": 2,
             "sql": "EXPLAIN PLAN FOR
         SELECT *
         FROM w2
@@ -571,6 +590,7 @@ describe('sql', () => {
               "column": 7,
               "row": 7,
             },
+            "index": 3,
             "sql": "SELECT *
         FROM w2
         LIMIT 5",

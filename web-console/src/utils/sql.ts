@@ -109,6 +109,7 @@ export function findSqlQueryPrefix(text: string): string | undefined {
 }
 
 export interface QuerySlice {
+  index: number;
   startOffset: number;
   startRowColumn: RowColumn;
   endOffset: number;
@@ -130,6 +131,7 @@ export function findAllSqlQueriesInText(text: string): QuerySlice[] {
       if (sql) {
         const endIndex = m.index + sql.length;
         found.push({
+          index: found.length,
           startOffset: offset + m.index,
           startRowColumn: offsetToRowColumn(text, offset + m.index)!,
           endOffset: offset + endIndex,
