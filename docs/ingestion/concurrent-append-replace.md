@@ -26,7 +26,7 @@ title: Concurrent append and replace
 Concurrent append and replace is an [experimental feature](../development/experimental.md) available for JSON-based batch and streaming. It is not currently available for SQL-based ingestion.
 :::
 
-Concurrent append and replace safely replaces the existing data in an interval of a datasource while new data is being appended to that interval. One of the most common applications of this feature is appending new data (using say streaming ingestion) to an interval while compaction of that interval is already in progress. 
+Concurrent append and replace safely replaces the existing data in an interval of a datasource while new data is being appended to that interval. One of the most common applications of this feature is appending new data (such as with streaming ingestion) to an interval while compaction of that interval is already in progress. Druid segments the data ingested during this time dynamically. The subsequent compaction run segments the data into the  granularity you specified.
 
 To set up concurrent append and replace, use the context flag `useConcurrentLocks`. Druid will then determine the correct lock type for you, either append or replace. Although you can set the type of lock manually, we don't recommend it. 
 
@@ -50,12 +50,12 @@ curl --location --request POST 'http://localhost:8081/druid/coordinator/v1/confi
 --data-raw '{
     "dataSource": "YOUR_DATASOURCE",
     "taskContext": {
-        "useConcurrentLocks": "true"
+        "useConcurrentLocks": true
     }
 }'
 ```
 
-## Add a task lock to your ingestion job
+## Configure a task lock type for your ingestion job
 
 You also need to configure the ingestion job to allow concurrent tasks.
 
@@ -82,7 +82,7 @@ We recommend that you use the `useConcurrentLocks` context parameter so that Dru
 
 <details><summary>Click here to read more about the lock types.</summary>
 
-Druid uses task lock
+Druid uses task locks to make sure that multiple conflicting operations don't happen at once.
 
 When setting task lock types manually, be aware of the following:
 

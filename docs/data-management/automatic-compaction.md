@@ -156,10 +156,10 @@ You can use concurrent append and replace to safely replace the existing data in
 
 To do this, you need to update your datasource to allow concurrent append and replace tasks:
 
-* If you're using the API, include the following `taskContext` property in your API call: `"useConcurrentLocks": "true"`
+* If you're using the API, include the following `taskContext` property in your API call: `"useConcurrentLocks": true`
 * If you're using the UI, enable **Allow concurrent compactions (experimental)** in the **Compaction config** for your datasource.
 
-You'll also need to update your ingestion jobs to include a task lock.
+You'll also need to update your ingestion jobs for the datasource to include the task context `"useConcurrentLocks": true`.
 
 For information on how to do this, see [Concurrent append and replace](../ingestion/concurrent-append-replace.md).
 
