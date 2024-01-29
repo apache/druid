@@ -420,7 +420,7 @@ name: JsonPath
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.3.0
+version: 2.9.0
 libraries:
   - com.jayway.jsonpath: json-path
 
