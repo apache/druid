@@ -1478,7 +1478,9 @@ public class DruidQuery
     }
     // if planning in native set to null
     // if planning in MSQ set to empty list
-
+    // This would cause MSQ queries to plan as
+    // Window over an inner scan and avoid
+    // leaf operators
     return new WindowOperatorQuery(
         dataSource,
         new LegacySegmentSpec(Intervals.ETERNITY),

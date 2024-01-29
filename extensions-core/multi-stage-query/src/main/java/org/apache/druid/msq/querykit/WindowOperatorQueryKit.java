@@ -79,7 +79,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
     if (nextShuffleSpec != null) {
       final ClusterBy windowClusterBy = nextShuffleSpec.clusterBy();
       originalQuery = (WindowOperatorQuery) originalQuery.withOverriddenContext(ImmutableMap.of(
-          DataSourcePlan.NEXT_SHUFFLE_COL,
+          DataSourcePlan.NEXT_WINDOW_SHUFFLE_COL,
           windowClusterBy
       ));
     } else {
