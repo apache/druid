@@ -191,6 +191,14 @@ public class TableInputSpecSlicer implements InputSpecSlicer
     return retVal;
   }
 
+  /**
+   * Creates a list of {@link WeightedInputInstance} from the prunedServedSegments parameter.
+   * The function selects a data server from the servers hosting the segment, and then groups segments on the basis of
+   * data servers.
+   * The returned value is a list of {@link WeightedInputInstance}, each of which denotes either a {@link DataSegmentWithInterval},
+   * in the case of a segment or a {@link DataServerRequest} for a request to a data server. A data server request fetches
+   * the results of all relevent segments from the data server.
+   */
   private static List<WeightedInputInstance> createWeightedSegmentSet(List<DataSegmentWithInterval> prunedServedSegments)
   {
     // Create a map of server to segment for loaded segments.

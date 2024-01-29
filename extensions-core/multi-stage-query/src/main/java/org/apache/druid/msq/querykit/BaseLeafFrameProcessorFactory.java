@@ -205,16 +205,18 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
             factory
         ),
         objects -> {
-          if (objects.isEmpty()) {
+          if (objects == null || objects.isEmpty()) {
             return ProcessorManagers.none();
           }
           List<InputSlice> handedOffSegments = new ArrayList<>();
           for (Object o : objects) {
-            if (o instanceof SegmentsInputSlice) {
+            if (o != null && o instanceof SegmentsInputSlice) {
               SegmentsInputSlice slice = (SegmentsInputSlice) o;
               handedOffSegments.add(slice);
             }
           }
+
+          // Fetch any handed off segments from deep storage.
           return new BaseLeafFrameProcessorManager(
               readBaseInputs(stageDefinition, handedOffSegments, inputSliceReader, counters, warningPublisher),
               segmentMapFunction,

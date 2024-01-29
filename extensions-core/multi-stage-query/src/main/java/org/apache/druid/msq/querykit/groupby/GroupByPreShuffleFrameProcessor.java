@@ -78,7 +78,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   private FrameWriter frameWriter;
   private long currentAllocatorCapacity; // Used for generating FrameRowTooLargeException if needed
   private SegmentsInputSlice handedOffSegments = null;
-  private Yielder<Yielder<ResultRow>> yielderYielder;
+  private Yielder<Yielder<ResultRow>> currentResultsYielder;
 
   public GroupByPreShuffleFrameProcessor(
       final GroupByQuery query,
@@ -108,7 +108,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   protected ReturnOrAwait<SegmentsInputSlice> runWithDataServerQuery(DataServerQueryHandler dataServerQueryHandler) throws IOException
   {
     if (resultYielder == null || resultYielder.isDone()) {
-      if (yielderYielder == null) {
+      if (currentResultsYielder == null) {
         final DataServerQueryResult<ResultRow> dataServerQueryResult =
             dataServerQueryHandler.fetchRowsFromDataServer(
                 groupingEngine.prepareGroupByQuery(query),
@@ -123,19 +123,19 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
           );
         }
         List<Yielder<ResultRow>> yielders = dataServerQueryResult.getResultsYielders();
-        yielderYielder = Yielders.each(Sequences.simple(yielders));
+        currentResultsYielder = Yielders.each(Sequences.simple(yielders));
       }
-      if (yielderYielder.isDone()) {
+      if (currentResultsYielder.isDone()) {
         return ReturnOrAwait.returnObject(handedOffSegments);
       } else {
-        resultYielder = yielderYielder.get();
-        yielderYielder = yielderYielder.next(null);
+        resultYielder = currentResultsYielder.get();
+        currentResultsYielder = currentResultsYielder.next(null);
       }
     }
 
     populateFrameWriterAndFlushIfNeeded();
 
-    if ((resultYielder == null || resultYielder.isDone()) && yielderYielder.isDone()) {
+    if ((resultYielder == null || resultYielder.isDone()) && currentResultsYielder.isDone()) {
       return ReturnOrAwait.returnObject(handedOffSegments);
     } else {
       return ReturnOrAwait.runAgain();

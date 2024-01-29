@@ -109,8 +109,16 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
     return frameWriterFactoryHolder.get();
   }
 
+  /**
+   * Runs the leaf processor using a segment described by the {@link SegmentWithDescriptor} as the input. This may result
+   * in calls to fetch the segment from an external source.
+   */
   protected abstract ReturnOrAwait<Unit> runWithSegment(SegmentWithDescriptor segment) throws IOException;
 
+  /**
+   * Runs the leaf processor using the results from a data server as the input. The query and data server details are
+   * described by {@link DataServerQueryHandler}.
+   */
   protected abstract ReturnOrAwait<SegmentsInputSlice> runWithDataServerQuery(DataServerQueryHandler dataServerQueryHandler) throws IOException;
 
   protected abstract ReturnOrAwait<Unit> runWithInputChannel(
