@@ -207,10 +207,6 @@
           <artifactId>slf4j-reload4j</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>com.google.re2j</groupId>
-          <artifactId>re2j</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>com.google.code.gson</groupId>
           <artifactId>gson</artifactId>
         </exclusion>

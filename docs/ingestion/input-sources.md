@@ -1114,7 +1114,16 @@ This input source provides the following filters: `and`, `equals`, `interval`, a
 |type|Set this value to `not`.|yes|
 |filter|The iceberg filter on which logical NOT is applied|yes|
 
+`range` Filter:
 
+|Property|Description|Required|
+ |--------|-----------|---------|
+|type|Set this value to `range`.|yes|
+|filterColumn|The column name from the iceberg table schema based on which range filtering needs to happen.|yes|
+|lower|Lower bound value to match.|no. At least one of `lower` or `upper` must not be null.|
+|upper|Upper bound value to match. |no. At least one of `lower` or `upper` must not be null.|
+|lowerOpen|Boolean indicating if lower bound is open in the interval of values defined by the range (">" instead of ">="). |no|
+|upperOpen|Boolean indicating if upper bound is open on the interval of values defined by range ("<" instead of "<="). |no|
 
 The [secondary partitioning method](native-batch.md#partitionsspec) determines the requisite number of concurrent worker tasks that run in parallel to complete ingestion with the Combining input source.
 Set this value in `maxNumConcurrentSubTasks` in `tuningConfig` based on the secondary partitioning method:
