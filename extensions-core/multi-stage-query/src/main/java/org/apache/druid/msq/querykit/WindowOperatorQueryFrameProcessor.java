@@ -113,13 +113,13 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
   @Override
   protected ReturnOrAwait<Unit> runWithSegment(SegmentWithDescriptor segment)
   {
-    return null;
+    throw new RuntimeException("Window stage can run only on the output of a previous stage");
   }
 
   @Override
   protected ReturnOrAwait<Unit> runWithLoadedSegment(SegmentWithDescriptor segment)
   {
-    return null;
+    throw new RuntimeException("Window stage can run only on the output of a previous stage");
   }
 
   // previous stage output
