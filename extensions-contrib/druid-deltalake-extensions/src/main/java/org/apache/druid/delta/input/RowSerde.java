@@ -44,7 +44,12 @@ import io.delta.kernel.types.StructField;
 import io.delta.kernel.types.StructType;
 import io.delta.kernel.types.TimestampType;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.jackson.DefaultObjectMapper;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -58,7 +63,7 @@ import java.util.Map;
  */
 public class RowSerde
 {
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+  private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
 
   private RowSerde()
   {
@@ -128,9 +133,16 @@ public class RowSerde
       } else if (fieldType instanceof DoubleType) {
         value = row.getDouble(fieldId);
       } else if (fieldType instanceof DateType) {
-        value = row.getInt(fieldId);
+        final int daysSinceEpochUTC = row.getInt(fieldId);
+        value = LocalDate.ofEpochDay(daysSinceEpochUTC).atStartOfDay(ZoneId.systemDefault()).toEpochSecond();
       } else if (fieldType instanceof TimestampType) {
-        value = row.getLong(fieldId);
+        final long microSecsSinceEpochUTC = row.getLong(fieldId);
+        LocalDateTime dateTime = LocalDateTime.ofEpochSecond(
+            microSecsSinceEpochUTC / 1_000_000 /* epochSecond */,
+            (int) (1000 * microSecsSinceEpochUTC % 1_000_000) /* nanoOfSecond */,
+            ZoneOffset.UTC
+        );
+        value = dateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
       } else if (fieldType instanceof StringType) {
         value = row.getString(fieldId);
       } else if (fieldType instanceof ArrayType) {
@@ -141,7 +153,7 @@ public class RowSerde
         Row subRow = row.getStruct(fieldId);
         value = convertRowToJsonObject(subRow);
       } else {
-        throw InvalidInput.exception("Unsupported fieldType[%s] for fieldId[%s]", fieldType, fieldId);
+        throw InvalidInput.exception("Unsupported fieldType[%s] for fieldName[%s]", fieldType, name);
       }
 
       rowObject.put(name, value);

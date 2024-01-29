@@ -19,8 +19,10 @@ import os
 
 import argparse
 import delta
-import mimesis
 import pyspark
+from pyspark.sql.types import StructType, StructField, ShortType, StringType, TimestampType, LongType, IntegerType, DoubleType, FloatType, DateType, BooleanType
+from datetime import datetime, timedelta
+import random
 
 
 def config_spark_with_delta_lake():
@@ -38,31 +40,63 @@ def config_spark_with_delta_lake():
 
 
 def create_dataset(num_records):
-    fake = mimesis.Generic()
-    output = []
+    """
+    Generate a mock employee dataset with different datatypes for testing purposes.
 
-    for _ in range(num_records):
-        data = {
-            "name": fake.person.name(),
-            "surname": fake.person.surname(),
-            "birthday": fake.datetime.datetime(1980, 2010),
-            "email": fake.person.email(),
-            "country": fake.address.country(),
-            "state": fake.address.state(),
-            "city": fake.address.city(),
-        }
-        output.append(data)
+    Parameters:
+    - num_records (int): Number of records to generate.
 
-    return output
+    Returns:
+    - Tuple: A tuple containing a list of records and the corresponding schema.
+      - List of Records: Each record is a tuple representing a row of data.
+      - StructType: The schema defining the structure of the records.
+
+    Example:
+    ```python
+    data, schema = create_dataset(10)
+    ```
+    """
+    schema = StructType([
+        StructField("id", LongType(), False),
+        StructField("birthday", DateType(), False),
+        StructField("name", StringType(), True),
+        StructField("age", ShortType(), True),
+        StructField("salary", DoubleType(), True),
+        StructField("bonus", FloatType(), True),
+        StructField("yoe", IntegerType(), True),
+        StructField("is_fulltime", BooleanType(), True),
+        StructField("last_vacation_time", TimestampType(), True)
+    ])
+
+    data = []
+    current_date = datetime.now()
+
+    for i in range(num_records):
+        birthday = current_date - timedelta(days=random.randint(365 * 18, 365 * 30))
+        age = (current_date - birthday).days // 365
+        is_fulltime = random.choice([True, False, None])
+        record = (
+            random.randint(1, 10000000000),
+            birthday,
+            f"Employee{i+1}",
+            age,
+            random.uniform(50000, 100000),
+            random.uniform(1000, 5000) if is_fulltime else None,
+            random.randint(1, min(20, age - 15)),
+            is_fulltime,
+            datetime.now() - timedelta(hours=random.randint(1, 90)) if is_fulltime else None,
+        )
+        data.append(record)
+    return data, schema
 
 
 def main():
     parser = argparse.ArgumentParser(description="Script to write a Delta Lake table.",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    parser.add_argument('--save_mode', choices=('append', 'overwrite'), default="append",
+    parser.add_argument('--save_mode', choices=('append', 'overwrite'), default="overwrite",
                         help="Specify write mode (append/overwrite)")
-    parser.add_argument('--save_path', default=os.path.join(os.getcwd(), "people-delta-table4"),
+    parser.add_argument('--save_path', default=os.path.join(os.getcwd(), "employee-delta-table2"),
                         help="Save path for Delta table")
     parser.add_argument('--num_records', type=int, default=10,
                         help="Specify number of Delta records to write")
@@ -75,9 +109,8 @@ def main():
 
     spark = config_spark_with_delta_lake()
 
-    df = spark.createDataFrame(create_dataset(num_records=num_records))
-    df = df.select(df.name, df.surname, df.birthday, df.email, df.country, df.state, df.city)
-
+    data, schema = create_dataset(num_records=num_records)
+    df = spark.createDataFrame(data, schema=schema)
     df.write.format("delta").mode(save_mode).save(save_path)
 
     df.show()

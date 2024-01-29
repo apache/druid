@@ -31,6 +31,10 @@ import io.delta.kernel.types.StructType;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.DoubleDimensionSchema;
+import org.apache.druid.data.input.impl.FloatDimensionSchema;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 
 import java.util.ArrayList;
@@ -43,106 +47,169 @@ import java.util.Map;
  */
 public class DeltaTestUtil
 {
-  public static final String DELTA_TABLE_PATH = "src/test/resources/people-delta-table";
-  public static final List<String> DIMENSIONS = ImmutableList.of("city", "state", "surname", "email", "country");
+  public static final String DELTA_TABLE_PATH = "src/test/resources/employee-delta-table";
+  public static final List<String> DIMENSIONS = ImmutableList.of(
+      "id",
+      "birthday",
+      "name",
+      "age",
+      "salary",
+      "bonus",
+      "yoe",
+      "is_fulltime",
+      "last_vacation_time"
+  );
   public static final List<Map<String, Object>> EXPECTED_ROWS = new ArrayList<>(
       ImmutableList.of(
           ImmutableMap.of(
-              "birthday", 1049418130358332L,
-              "country", "Panama",
-              "city", "Eastpointe",
-              "surname", "Francis",
-              "name", "Darren",
-              "state", "Minnesota",
-              "email", "rating1998@yandex.com"
+              "birthday", 944265600L,
+              "id", 4662990160L,
+              "name", "Employee1",
+              "age", (short) 24,
+              "salary", 63807.010056944906,
+              "yoe", 5
           ),
           ImmutableMap.of(
-              "birthday", 1283743763753323L,
-              "country", "Aruba",
-              "city", "Wheaton",
-              "surname", "Berger",
-              "name", "Madelene",
-              "state", "New York",
-              "email", "invitations2036@duck.com"
+              "id", 7436924672L,
+              "birthday", 909878400L,
+              "name", "Employee2",
+              "age", (short) 25,
+              "salary", 86178.47568217944,
+              "yoe", 10,
+              "is_fulltime", false
           ),
           ImmutableMap.of(
-              "birthday", 1013053015543401L,
-              "country", "Anguilla",
-              "city", "Sahuarita",
-              "surname", "Mccall",
-              "name", "Anibal",
-              "state", "Oklahoma",
-              "email", "modifications2025@yahoo.com"
+              "id", 1127302418L,
+              "birthday", 901238400L,
+              "name", "Employee3",
+              "age", (short) 25,
+              "salary", 59001.92470779706,
+              "yoe", 10,
+              "is_fulltime", false
           ),
           ImmutableMap.of(
-              "birthday", 569564422313618L,
-              "country", "Luxembourg",
-              "city", "Santa Rosa",
-              "surname", "Jackson",
-              "name", "Anibal",
-              "state", "New Hampshire",
-              "email", "medication1855@gmail.com"
+              "id", 1810758014L,
+              "birthday", 789177600L,
+              "name", "Employee4",
+              "age", (short) 29,
+              "salary", 97151.7200456219,
+              "bonus", 2880.2966f,
+              "yoe", 10,
+              "is_fulltime", true,
+              "last_vacation_time", 1706309461000L
           ),
           ImmutableMap.of(
-              "birthday", 667560498632507L,
-              "country", "Anguilla",
-              "city", "Morristown",
-              "surname", "Tanner",
-              "name", "Loree",
-              "state", "New Hampshire",
-              "email", "transport1961@duck.com"
+              "id", 2675583494L,
+              "birthday", 950400000L,
+              "name", "Employee5",
+              "age", (short) 23,
+              "salary", 84092.96929134917,
+              "yoe", 6,
+              "is_fulltime", false
           ),
           ImmutableMap.of(
-              "birthday", 826120534655077L,
-              "country", "Panama",
-              "city", "Greenville",
-              "surname", "Gamble",
-              "name", "Bernardo",
-              "state", "North Carolina",
-              "email", "limitations1886@yandex.com"
+              "id", 8109925563L,
+              "birthday", 1030320000L,
+              "name", "Employee1",
+              "age", (short) 21,
+              "salary", 98126.11562963494,
+              "yoe", 6
           ),
           ImmutableMap.of(
-              "birthday", 1284652116668688L,
-              "country", "China",
-              "city", "Albert Lea",
-              "surname", "Cherry",
-              "name", "Philip",
-              "state", "Nevada",
-              "email", "const1874@outlook.com"
+              "id", 348540417L,
+              "birthday", 1028764800L,
+              "name", "Employee2",
+              "salary", 88318.68501168216,
+              "age", (short) 21,
+              "yoe", 6
           ),
           ImmutableMap.of(
-              "birthday", 1154549284242934L,
-              "country", "Barbados",
-              "city", "Mount Pleasant",
-              "surname", "Beasley",
-              "name", "Shaneka",
-              "state", "Montana",
-              "email", "msg1894@example.com"
+              "birthday", 772675200L,
+              "is_fulltime", false,
+              "name", "Employee3",
+              "id", 644036573L,
+              "salary", 70031.88789434545,
+              "age", (short) 29,
+              "yoe", 14
           ),
           ImmutableMap.of(
-              "birthday", 1034695930678172L,
-              "country", "Honduras",
-              "city", "Hutchinson",
-              "surname", "Vinson",
-              "name", "Keneth",
-              "state", "Connecticut",
-              "email", "questions2074@gmail.com"
+              "birthday", 940118400L,
+              "name", "Employee4",
+              "id", 8451974441L,
+              "salary", 90127.23134932564,
+              "age", (short) 24,
+              "yoe", 4
           ),
           ImmutableMap.of(
-              "birthday", 1166606855236945L,
-              "country", "Senegal",
-              "city", "Galt",
-              "surname", "Schwartz",
-              "name", "Hee",
-              "state", "New Jersey",
-              "email", "statements2016@protonmail.com"
+              "birthday", 872294400L,
+              "is_fulltime", false,
+              "name", "Employee5",
+              "id", 1257915386L,
+              "salary", 55170.21435756755,
+              "age", (short) 26,
+              "yoe", 5
+          ),
+          ImmutableMap.of(
+              "birthday", 1023148800L,
+              "is_fulltime", false,
+              "name", "Employee6",
+              "id", 2034724452L,
+              "salary", 97643.72021601905,
+              "age", (short) 21,
+              "yoe", 1
+          ),
+          ImmutableMap.of(
+              "birthday", 1090627200L,
+              "is_fulltime", true,
+              "bonus", 3610.4019f,
+              "name", "Employee7",
+              "id", 1124457317L,
+              "salary", 60433.78056730033,
+              "last_vacation_time", 1706478632000L,
+              "age", (short) 19,
+              "yoe", 4
+          ),
+          ImmutableMap.of(
+              "birthday", 867542400L,
+              "is_fulltime", false,
+              "name", "Employee8",
+              "id", 8289790572L,
+              "salary", 89266.9066406803,
+              "age", (short) 26,
+              "yoe", 1
+          ),
+          ImmutableMap.of(
+              "birthday", 777945600L,
+              "name", "Employee9",
+              "id", 4197550591L,
+              "salary", 82030.03829290869,
+              "age", (short) 29,
+              "yoe", 9
+          ),
+          ImmutableMap.of(
+              "birthday", 1105747200L,
+              "name", "Employee10",
+              "id", 1628304468L,
+              "salary", 87309.74810429095,
+              "age", (short) 19,
+              "yoe", 1
           )
       )
   );
 
   public static final InputRowSchema SCHEMA = new InputRowSchema(
-      new TimestampSpec("birthday", "auto", null),
-      new DimensionsSpec(DimensionsSpec.getDefaultSchemas(DIMENSIONS)),
+      new TimestampSpec("birthday", "posix", null),
+      new DimensionsSpec(ImmutableList.of(
+          new LongDimensionSchema("id"),
+          new LongDimensionSchema("birthday"),
+          new StringDimensionSchema("name"),
+          new LongDimensionSchema("age"),
+          new DoubleDimensionSchema("salary"),
+          new FloatDimensionSchema("bonus"),
+          new LongDimensionSchema("yoe"),
+          new StringDimensionSchema("is_fulltime"),
+          new LongDimensionSchema("last_vacation_time")
+      )),
       ColumnsFilter.all()
   );
 

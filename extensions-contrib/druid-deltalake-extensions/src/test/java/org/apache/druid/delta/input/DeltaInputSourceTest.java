@@ -19,12 +19,15 @@
 
 package org.apache.druid.delta.input;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
@@ -52,12 +55,23 @@ public class DeltaInputSourceTest
       Map<String, Object> expectedRow = DeltaTestUtil.EXPECTED_ROWS.get(idx);
       InputRowListPlusRawValues actualSampledRow = actualSampledRows.get(idx);
       Assert.assertNull(actualSampledRow.getParseException());
-      Assert.assertEquals(
-          expectedRow,
-          actualSampledRow.getRawValues()
-      );
+
+      Map<String, Object> actualSampledRawVals = actualSampledRow.getRawValues();
+      Assert.assertNotNull(actualSampledRawVals);
       Assert.assertNotNull(actualSampledRow.getRawValuesList());
-      Assert.assertEquals(expectedRow, actualSampledRow.getRawValuesList().get(0));
+      Assert.assertEquals(1, actualSampledRow.getRawValuesList().size());
+      ObjectMapper objectMapper = new DefaultObjectMapper();
+      objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+      System.out.println("JSON:" + objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(actualSampledRawVals));
+      for (String key : expectedRow.keySet()) {
+        if (DeltaTestUtil.SCHEMA.getTimestampSpec().getTimestampColumn().equals(key)) {
+          final long expectedMillis = (Long) expectedRow.get(key);
+          Assert.assertEquals(expectedMillis, actualSampledRawVals.get(key));
+
+        } else {
+          Assert.assertEquals(expectedRow.get(key), actualSampledRawVals.get(key));
+        }
+      }
     }
   }
 
@@ -75,10 +89,10 @@ public class DeltaInputSourceTest
       InputRow actualInputRow = actualReadRows.get(idx);
       for (String key : expectedRow.keySet()) {
         if (DeltaTestUtil.SCHEMA.getTimestampSpec().getTimestampColumn().equals(key)) {
-          final long expectedMillis = ((Long) expectedRow.get(key) / 1_000_000) * 1000;
+          final long expectedMillis = (Long) expectedRow.get(key) * 1000;
           Assert.assertEquals(expectedMillis, actualInputRow.getTimestampFromEpoch());
         } else {
-          Assert.assertEquals(expectedRow.get(key), actualInputRow.getDimension(key).get(0));
+          Assert.assertEquals(expectedRow.get(key), actualInputRow.getRaw(key));
         }
       }
     }
@@ -90,25 +104,28 @@ public class DeltaInputSourceTest
     final DeltaInputSource deltaInputSource = new DeltaInputSource(DeltaTestUtil.DELTA_TABLE_PATH, null);
     final Stream<InputSplit<DeltaSplit>> splits = deltaInputSource.createSplits(null, null);
     Assert.assertNotNull(splits);
-    Assert.assertEquals(1, splits.count());
+    Assert.assertEquals(2, splits.count());
   }
 
   @Test
   public void testReadDeltaLakeWithSplits()
   {
     final DeltaInputSource deltaInputSource = new DeltaInputSource(DeltaTestUtil.DELTA_TABLE_PATH, null);
-    final List<InputSplit<DeltaSplit>> splits1 = deltaInputSource.createSplits(null, null)
+    final List<InputSplit<DeltaSplit>> splits = deltaInputSource.createSplits(null, null)
                                                                    .collect(Collectors.toList());
-    Assert.assertEquals(1, splits1.size());
+    Assert.assertEquals(2, splits.size());
 
-    final DeltaInputSource deltaInputSourceWithSplit = new DeltaInputSource(
-        DeltaTestUtil.DELTA_TABLE_PATH,
-        splits1.get(0).get()
-    );
-    final List<InputSplit<DeltaSplit>> splits2 = deltaInputSourceWithSplit.createSplits(null, null)
-                                                                            .collect(Collectors.toList());
-    Assert.assertEquals(1, splits2.size());
-    Assert.assertEquals(splits1.get(0).get(), splits2.get(0).get());
+    for (int idx = 0; idx < splits.size(); idx++) {
+      final DeltaSplit split = splits.get(idx).get();
+      final DeltaInputSource deltaInputSourceWithSplitx = new DeltaInputSource(
+          DeltaTestUtil.DELTA_TABLE_PATH,
+          split
+      );
+      List<InputSplit<DeltaSplit>> splitsResult = deltaInputSourceWithSplitx.createSplits(null, null)
+                                                                       .collect(Collectors.toList());
+      Assert.assertEquals(1, splitsResult.size());
+      Assert.assertEquals(split, splitsResult.get(0).get());
+    }
   }
 
   @Test
