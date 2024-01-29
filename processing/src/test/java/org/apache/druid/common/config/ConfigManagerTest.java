@@ -20,12 +20,9 @@
 package org.apache.druid.common.config;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
-import org.apache.druid.audit.AuditManager;
-import org.apache.druid.audit.NoopAuditManager;
 import org.apache.druid.metadata.MetadataCASUpdate;
 import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
@@ -37,7 +34,6 @@ import org.junit.Test;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-@SuppressWarnings("ALL")
 public class ConfigManagerTest
 {
   private static final String CONFIG_KEY = "configX";
@@ -47,7 +43,6 @@ public class ConfigManagerTest
 
   private MetadataStorageConnector dbConnector;
   private MetadataStorageTablesConfig metadataStorageTablesConfig;
-  private AuditManager mockAuditManager;
   private TestConfigManagerConfig configManagerConfig;
 
   private ConfigSerde<TestConfig> configConfigSerdeFromClass;
@@ -79,8 +74,7 @@ public class ConfigManagerTest
     jacksonConfigManager = new JacksonConfigManager(
         configManager,
         new ObjectMapper(),
-        new ObjectMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL),
-        new NoopAuditManager()
+        null
     );
     configConfigSerdeFromClass = jacksonConfigManager.create(TestConfig.class, null);
   }

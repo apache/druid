@@ -18,6 +18,7 @@
 
 import {
   C,
+  dedupe,
   L,
   RefName,
   SqlColumnDeclaration,
@@ -119,6 +120,8 @@ export function convertSpecToSql(spec: any): QueryWithContext {
       ),
     );
   }
+
+  columnDeclarations = dedupe(columnDeclarations, d => d.getColumnName());
 
   const transforms: Transform[] = deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || [];
   if (!Array.isArray(transforms)) {
@@ -346,14 +349,14 @@ export function convertSpecToSql(spec: any): QueryWithContext {
 
 function convertQueryGranularity(
   timeExpression: string,
-  queryGranularity: { type: string } | string | undefined,
+  queryGranularity: { type: unknown } | string | undefined,
 ) {
   if (!queryGranularity) return timeExpression;
 
   const effectiveQueryGranularity =
     typeof queryGranularity === 'string'
       ? queryGranularity
-      : typeof queryGranularity.type === 'string'
+      : typeof queryGranularity?.type === 'string'
       ? queryGranularity.type
       : undefined;
 

@@ -22,8 +22,8 @@ package org.apache.druid.security.basic.authentication;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.security.basic.BasicAuthUtils;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentials;
+import org.apache.druid.security.basic.authentication.validator.PasswordHashGenerator;
 
 import javax.naming.directory.SearchResult;
 import java.security.Principal;
@@ -94,7 +94,7 @@ public class LdapUserPrincipal implements Principal
 
   public boolean hasSameCredentials(char[] password)
   {
-    byte[] recalculatedHash = BasicAuthUtils.hashPassword(
+    byte[] recalculatedHash = PasswordHashGenerator.computePasswordHash(
         password,
         this.credentials.getSalt(),
         this.credentials.getIterations()
@@ -138,6 +138,7 @@ public class LdapUserPrincipal implements Principal
         name,
         searchResult,
         createdAt,
-        lastVerified);
+        lastVerified
+    );
   }
 }

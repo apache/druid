@@ -21,12 +21,12 @@ package org.apache.druid.query.aggregation.first;
 
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.query.aggregation.SerializablePairLongFloat;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.vector.BaseFloatVectorValueSelector;
 import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.NoFilterVectorOffset;
@@ -48,24 +48,32 @@ public class FloatFirstVectorAggregationTest extends InitializedNullHandlingTest
 {
   private static final double EPSILON = 1e-5;
   private static final float[] VALUES = new float[]{7.2f, 15.6f, 2.1f, 150.0f};
-  private static final boolean[] NULLS = new boolean[]{false, false, true, false};
-  private long[] times = {2436, 6879, 7888, 8224};
-
+  private static final long[] LONG_VALUES = new long[]{1L, 2L, 3L, 4L};
+  private static final float[] FLOAT_VALUES = new float[]{1.0f, 2.0f, 3.0f, 4.0f};
+  private static final double[] DOUBLE_VALUES = new double[]{1.0, 2.0, 3.0, 4.0};
+  private static final boolean[] NULLS = new boolean[]{false, false, false, false};
   private static final String NAME = "NAME";
   private static final String FIELD_NAME = "FIELD_NAME";
+  private static final String FIELD_NAME_LONG = "LONG_NAME";
   private static final String TIME_COL = "__time";
+  private final long[] times = {2345001L, 2345100L, 2345200L, 2345300L};
+  private final SerializablePairLongFloat[] pairs = {
+      new SerializablePairLongFloat(2345001L, 1.2F),
+      new SerializablePairLongFloat(2345100L, 2.2F),
+      new SerializablePairLongFloat(2345200L, 3.2F),
+      new SerializablePairLongFloat(2345300L, 4.2F)
+  };
 
 
-  private VectorValueSelector selector;
 
+  private VectorObjectSelector selector;
   private BaseLongVectorValueSelector timeSelector;
   private ByteBuffer buf;
-
   private FloatFirstVectorAggregator target;
 
   private FloatFirstAggregatorFactory floatFirstAggregatorFactory;
-
   private VectorColumnSelectorFactory selectorFactory;
+  private VectorValueSelector nonFloatValueSelector;
 
   @Before
   public void setup()
@@ -87,41 +95,80 @@ public class FloatFirstVectorAggregationTest extends InitializedNullHandlingTest
       @Override
       public boolean[] getNullVector()
       {
-        return NULLS;
+        return null;
       }
     };
-    selector = new BaseFloatVectorValueSelector(new NoFilterVectorOffset(VALUES.length, 0, VALUES.length)
+    selector = new VectorObjectSelector()
     {
+      @Override
+      public Object[] getObjectVector()
+      {
+        return pairs;
+      }
 
-    })
+      @Override
+      public int getMaxVectorSize()
+      {
+        return 4;
+      }
+
+      @Override
+      public int getCurrentVectorSize()
+      {
+        return 0;
+      }
+    };
+
+    nonFloatValueSelector = new BaseLongVectorValueSelector(new NoFilterVectorOffset(
+        LONG_VALUES.length,
+        0,
+        LONG_VALUES.length
+    ))
     {
+      @Override
+      public long[] getLongVector()
+      {
+        return LONG_VALUES;
+      }
 
       @Override
       public float[] getFloatVector()
       {
-        return VALUES;
+        return FLOAT_VALUES;
+      }
+
+      @Override
+      public double[] getDoubleVector()
+      {
+        return DOUBLE_VALUES;
       }
 
       @Nullable
       @Override
       public boolean[] getNullVector()
       {
-        if (!NullHandling.replaceWithDefault()) {
-          return NULLS;
-        }
-        return null;
+        return NULLS;
+      }
+
+      @Override
+      public int getMaxVectorSize()
+      {
+        return 4;
+      }
+
+      @Override
+      public int getCurrentVectorSize()
+      {
+        return 4;
       }
     };
-
-    target = new FloatFirstVectorAggregator(timeSelector, selector);
-    clearBufferForPositions(0, 0);
 
     selectorFactory = new VectorColumnSelectorFactory()
     {
       @Override
       public ReadableVectorInspector getReadableVectorInspector()
       {
-        return null;
+        return new NoFilterVectorOffset(VALUES.length, 0, VALUES.length);
       }
 
       @Override
@@ -142,7 +189,7 @@ public class FloatFirstVectorAggregationTest extends InitializedNullHandlingTest
         if (TIME_COL.equals(column)) {
           return timeSelector;
         } else if (FIELD_NAME.equals(column)) {
-          return selector;
+          return nonFloatValueSelector;
         } else {
           return null;
         }
@@ -151,7 +198,11 @@ public class FloatFirstVectorAggregationTest extends InitializedNullHandlingTest
       @Override
       public VectorObjectSelector makeObjectSelector(String column)
       {
-        return null;
+        if (FIELD_NAME.equals(column)) {
+          return selector;
+        } else {
+          return null;
+        }
       }
 
       @Nullable
@@ -160,10 +211,16 @@ public class FloatFirstVectorAggregationTest extends InitializedNullHandlingTest
       {
         if (FIELD_NAME.equals(column)) {
           return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT);
+        } else if (FIELD_NAME_LONG.equals(column)) {
+          return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.LONG);
         }
         return null;
       }
     };
+
+    target = new FloatFirstVectorAggregator(timeSelector, selector);
+    clearBufferForPositions(0, 0);
+
     floatFirstAggregatorFactory = new FloatFirstAggregatorFactory(NAME, FIELD_NAME, TIME_COL);
 
   }
@@ -191,8 +248,8 @@ public class FloatFirstVectorAggregationTest extends InitializedNullHandlingTest
     target.init(buf, 0);
     target.aggregate(buf, 0, 0, VALUES.length);
     Pair<Long, Float> result = (Pair<Long, Float>) target.get(buf, 0);
-    Assert.assertEquals(times[0], result.lhs.longValue());
-    Assert.assertEquals(VALUES[0], result.rhs, EPSILON);
+    Assert.assertEquals(pairs[0].lhs.longValue(), result.lhs.longValue());
+    Assert.assertEquals(pairs[0].rhs, result.rhs, EPSILON);
   }
 
   @Test
@@ -200,8 +257,8 @@ public class FloatFirstVectorAggregationTest extends InitializedNullHandlingTest
   {
     target.aggregate(buf, 0, 0, VALUES.length);
     Pair<Long, Float> result = (Pair<Long, Float>) target.get(buf, 0);
-    Assert.assertEquals(times[0], result.lhs.longValue());
-    Assert.assertEquals(VALUES[0], result.rhs, EPSILON);
+    Assert.assertEquals(pairs[0].lhs.longValue(), result.lhs.longValue());
+    Assert.assertEquals(pairs[0].rhs, result.rhs, EPSILON);
   }
 
   @Test
@@ -213,11 +270,11 @@ public class FloatFirstVectorAggregationTest extends InitializedNullHandlingTest
     target.aggregate(buf, 3, positions, null, positionOffset);
     for (int i = 0; i < positions.length; i++) {
       Pair<Long, Float> result = (Pair<Long, Float>) target.get(buf, positions[i] + positionOffset);
-      Assert.assertEquals(times[i], result.lhs.longValue());
+      Assert.assertEquals(pairs[i].getLhs().longValue(), result.lhs.longValue());
       if (!NullHandling.replaceWithDefault() && NULLS[i]) {
         Assert.assertNull(result.rhs);
       } else {
-        Assert.assertEquals(VALUES[i], result.rhs, EPSILON);
+        Assert.assertEquals(pairs[i].rhs, result.rhs, EPSILON);
       }
     }
   }
@@ -236,7 +293,7 @@ public class FloatFirstVectorAggregationTest extends InitializedNullHandlingTest
       if (!NullHandling.replaceWithDefault() && NULLS[rows[i]]) {
         Assert.assertNull(result.rhs);
       } else {
-        Assert.assertEquals(VALUES[rows[i]], result.rhs, EPSILON);
+        Assert.assertEquals(pairs[rows[i]].rhs, result.rhs, EPSILON);
       }
     }
   }

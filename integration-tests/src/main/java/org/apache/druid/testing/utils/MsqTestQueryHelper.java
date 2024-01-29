@@ -130,9 +130,11 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
     HttpResponseStatus httpResponseStatus = statusResponseHolder.getStatus();
     if (!httpResponseStatus.equals(HttpResponseStatus.ACCEPTED)) {
       throw new ISE(
-          "Unable to submit the task successfully. Received response status code [%d], and response content:\n[%s]",
-          httpResponseStatus,
-          statusResponseHolder.getContent()
+          StringUtils.format(
+              "Unable to submit the task successfully. Received response status code [%d], and response content:\n[%s]",
+              httpResponseStatus.getCode(),
+              statusResponseHolder.getContent()
+          )
       );
     }
     String content = statusResponseHolder.getContent();

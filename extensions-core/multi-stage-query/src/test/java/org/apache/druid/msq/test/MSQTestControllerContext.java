@@ -50,7 +50,6 @@ import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
@@ -104,20 +103,6 @@ public class MSQTestControllerContext implements ControllerContext
     this.injector = injector;
     this.taskActionClient = taskActionClient;
     coordinatorClient = Mockito.mock(CoordinatorClient.class);
-    Mockito.when(coordinatorClient.fetchUsedSegments(
-                     ArgumentMatchers.anyString(),
-                     ArgumentMatchers.anyList()
-                 )
-    ).thenAnswer(invocation ->
-                     Futures.immediateFuture(
-                         injector.getInstance(SpecificSegmentsQuerySegmentWalker.class)
-                                 .getSegments()
-                                 .stream()
-                                 .filter(dataSegment -> dataSegment.getDataSource()
-                                                                   .equals(invocation.getArguments()[0]))
-                                 .collect(Collectors.toList())
-                     )
-    );
 
     Mockito.when(coordinatorClient.fetchServerViewSegments(
                     ArgumentMatchers.anyString(),

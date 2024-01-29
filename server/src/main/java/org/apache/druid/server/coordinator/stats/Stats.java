@@ -57,6 +57,8 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("unneeded", "segment/unneeded/count");
     public static final CoordinatorStat OVERSHADOWED
         = CoordinatorStat.toDebugAndEmit("overshadowed", "segment/overshadowed/count");
+    public static final CoordinatorStat UNNEEDED_ETERNITY_TOMBSTONE
+        = CoordinatorStat.toDebugAndEmit("unneededEternityTombstone", "segment/unneededEternityTombstone/count");
   }
 
   public static class SegmentQueue

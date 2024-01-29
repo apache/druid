@@ -47,7 +47,7 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
   private final Memory dataRegion;
   private final int keyFieldCount;
   private final List<FieldReader> keyFieldReaders;
-  private final long firstFieldPosition;
+  private final int firstFieldPosition;
   private final int[] ascDescRunLengths;
 
   private FrameComparisonWidgetImpl(
@@ -56,7 +56,7 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
       final Memory rowOffsetRegion,
       final Memory dataRegion,
       final List<FieldReader> keyFieldReaders,
-      final long firstFieldPosition,
+      final int firstFieldPosition,
       final int[] ascDescRunLengths
   )
   {
@@ -218,8 +218,8 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
     final long rowPosition = getRowPositionInDataRegion(row);
     final long otherRowPosition = otherWidgetImpl.getRowPositionInDataRegion(otherRow);
 
-    long comparableBytesStartPositionInRow = firstFieldPosition;
-    long otherComparableBytesStartPositionInRow = otherWidgetImpl.firstFieldPosition;
+    int comparableBytesStartPositionInRow = firstFieldPosition;
+    int otherComparableBytesStartPositionInRow = otherWidgetImpl.firstFieldPosition;
 
     boolean ascending = true;
     int field = 0;
@@ -227,12 +227,12 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
     for (int numFields : ascDescRunLengths) {
       if (numFields > 0) {
         final int nextField = field + numFields;
-        final long comparableBytesEndPositionInRow = getFieldEndPositionInRow(rowPosition, nextField - 1);
-        final long otherComparableBytesEndPositionInRow =
+        final int comparableBytesEndPositionInRow = getFieldEndPositionInRow(rowPosition, nextField - 1);
+        final int otherComparableBytesEndPositionInRow =
             otherWidgetImpl.getFieldEndPositionInRow(otherRowPosition, nextField - 1);
 
-        final long comparableBytesLength = comparableBytesEndPositionInRow - comparableBytesStartPositionInRow;
-        final long otherComparableBytesLength =
+        final int comparableBytesLength = comparableBytesEndPositionInRow - comparableBytesStartPositionInRow;
+        final int otherComparableBytesLength =
             otherComparableBytesEndPositionInRow - otherComparableBytesStartPositionInRow;
 
         int cmp = FrameReaderUtils.compareMemoryUnsigned(
@@ -270,7 +270,7 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
     }
   }
 
-  long getFieldEndPositionInRow(final long rowPosition, final int fieldNumber)
+  int getFieldEndPositionInRow(final long rowPosition, final int fieldNumber)
   {
     assert fieldNumber >= 0 && fieldNumber < signature.size();
     return dataRegion.getInt(rowPosition + (long) fieldNumber * Integer.BYTES);

@@ -51,6 +51,7 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.topn.DimensionTopNMetricSpec;
 import org.apache.druid.query.topn.TopNQueryBuilder;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -343,10 +344,17 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(
+                      NullHandling.replaceWithDefault()
+                      ? VirtualColumns.EMPTY
+                      : VirtualColumns.create(
+                          expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING)
+                      )
+                  )
                   .filters(
                       NullHandling.replaceWithDefault()
                       ? not(selector("dim1", "z", new SubstringDimExtractionFn(0, 1)))
-                      : expressionFilter("(substring(\"dim1\", 0, 1) != 'z')")
+                      : not(equality("v0", "z", ColumnType.STRING))
                   )
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))

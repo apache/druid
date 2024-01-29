@@ -20,6 +20,7 @@
 package org.apache.druid.query.dimension;
 
 import com.google.common.base.Predicate;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -101,31 +102,26 @@ final class PredicateFilteredDimensionSelector extends AbstractDimensionSelector
   @Override
   public ValueMatcher makeValueMatcher(final DruidPredicateFactory predicateFactory)
   {
-    final Predicate<String> matcherPredicate = predicateFactory.makeStringPredicate();
-    final boolean predicateMatchesNull = matcherPredicate.apply(null);
+    final DruidObjectPredicate<String> matcherPredicate = predicateFactory.makeStringPredicate();
     return new ValueMatcher()
     {
       @Override
       public boolean matches(boolean includeUnknown)
       {
-        final boolean matchNull = includeUnknown && predicateFactory.isNullInputUnknown();
         final IndexedInts baseRow = selector.getRow();
         final int baseRowSize = baseRow.size();
         boolean nullRow = true;
         for (int i = 0; i < baseRowSize; ++i) {
           String rowValue = lookupName(baseRow.get(i));
-          if (matchNull && rowValue == null) {
-            return true;
-          }
           if (predicate.apply(rowValue)) {
-            if (matcherPredicate.apply(rowValue)) {
+            if (matcherPredicate.apply(rowValue).matches(includeUnknown)) {
               return true;
             }
             nullRow = false;
           }
         }
         // null should match empty rows in multi-value columns
-        return nullRow && (includeUnknown || predicateMatchesNull);
+        return nullRow && matcherPredicate.apply(null).matches(includeUnknown);
       }
 
       @Override

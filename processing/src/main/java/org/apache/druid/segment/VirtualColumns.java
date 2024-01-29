@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
@@ -185,10 +186,13 @@ public class VirtualColumns implements Cacheable
    * is no guarantee that the column has indexes.
    */
   @Nullable
-  public ColumnIndexSupplier getIndexSupplier(String columnName, ColumnSelector columnSelector)
+  public ColumnIndexSupplier getIndexSupplier(
+      String columnName,
+      ColumnIndexSelector columnIndexSelector
+  )
   {
     final VirtualColumn virtualColumn = getVirtualColumnForSelector(columnName);
-    return virtualColumn.getIndexSupplier(columnName, columnSelector);
+    return virtualColumn.getIndexSupplier(columnName, columnIndexSelector);
   }
 
   /**
@@ -394,8 +398,12 @@ public class VirtualColumns implements Cacheable
     return virtualColumn.makeVectorObjectSelector(columnName, columnSelector, offset);
   }
 
+  /**
+   * Get capabilities for the virtual column "columnName". If columnName is not a virtual column, returns null.
+   * Package-private since production callers want {@link #getColumnCapabilitiesWithFallback(ColumnInspector, String)}.
+   */
   @Nullable
-  public ColumnCapabilities getColumnCapabilities(ColumnInspector inspector, String columnName)
+  ColumnCapabilities getColumnCapabilitiesWithoutFallback(ColumnInspector inspector, String columnName)
   {
     final VirtualColumn virtualColumn = getVirtualColumn(columnName);
     if (virtualColumn != null) {
@@ -405,10 +413,14 @@ public class VirtualColumns implements Cacheable
     }
   }
 
+  /**
+   * Get capabilities for the column "columnName". If columnName is not a virtual column, delegates to the
+   * provided {@link ColumnInspector}.
+   */
   @Nullable
   public ColumnCapabilities getColumnCapabilitiesWithFallback(ColumnInspector inspector, String columnName)
   {
-    final ColumnCapabilities virtualColumnCapabilities = getColumnCapabilities(inspector, columnName);
+    final ColumnCapabilities virtualColumnCapabilities = getColumnCapabilitiesWithoutFallback(inspector, columnName);
     if (virtualColumnCapabilities != null) {
       return virtualColumnCapabilities;
     } else {

@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
-import org.apache.druid.server.audit.SQLAuditManager;
 import org.skife.jdbi.v2.IDBI;
 
 /**
@@ -45,7 +44,7 @@ public class SQLMetadataRuleManagerProvider implements MetadataRuleManagerProvid
       MetadataStorageTablesConfig dbTables,
       SQLMetadataConnector connector,
       Lifecycle lifecycle,
-      SQLAuditManager auditManager
+      AuditManager auditManager
   )
   {
     this.jsonMapper = jsonMapper;

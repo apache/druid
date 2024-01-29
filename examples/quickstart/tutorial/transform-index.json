@@ -20,7 +20,7 @@
       ],
       "granularitySpec" : {
         "type" : "uniform",
-        "segmentGranularity" : "week",
+        "segmentGranularity" : "day",
         "queryGranularity" : "minute",
         "intervals" : ["2018-01-01/2018-01-03"],
         "rollup" : true

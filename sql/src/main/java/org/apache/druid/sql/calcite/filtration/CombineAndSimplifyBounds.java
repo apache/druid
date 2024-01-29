@@ -24,7 +24,9 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
-import org.apache.druid.java.util.common.ISE;
+import it.unimi.dsi.fastutil.Pair;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.objects.ObjectIntPair;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
@@ -122,7 +124,7 @@ public class CombineAndSimplifyBounds extends BottomUpTransform
   }
 
   /**
-   * Simplify BoundDimFilters that are children of an OR or an AND.
+   * Simplify {@link BoundDimFilter} and {@link RangeFilter} that are children of an OR or an AND.
    *
    * @param children    the filters
    * @param disjunction true for OR, false for AND
@@ -132,22 +134,28 @@ public class CombineAndSimplifyBounds extends BottomUpTransform
   private static DimFilter doSimplify(final List<DimFilter> children, boolean disjunction)
   {
     // Copy the list of child filters. We'll modify the copy and eventually return it.
-    final List<DimFilter> newChildren = Lists.newArrayList(children);
+    // Filters we want to add and remove from "children".
+    final List<DimFilter> childrenToAdd = new ArrayList<>();
+    final IntOpenHashSet childrenToRemove = new IntOpenHashSet();
 
     // Group Bound filters by dimension, extractionFn, and comparator and compute a RangeSet for each one.
-    final Map<BoundRefKey, List<BoundDimFilter>> bounds = new HashMap<>();
+    // Each filter is paired with its position in the "children" array.
+    final Map<BoundRefKey, List<ObjectIntPair<BoundDimFilter>>> bounds = new HashMap<>();
     // Group range filters by dimension, extractionFn, and matchValueType and compute a RangeSet for each one.
-    final Map<RangeRefKey, List<RangeFilter>> ranges = new HashMap<>();
+    // Each filter is paired with its position in the "children" array.
+    final Map<RangeRefKey, List<ObjectIntPair<RangeFilter>>> ranges = new HashMap<>();
     final Map<String, ColumnType> leastRestrictiveNumericTypes = new HashMap<>();
 
     // all and/or filters have at least 1 child
     boolean allFalse = true;
-    for (final DimFilter child : newChildren) {
+    for (int childIndex = 0; childIndex < children.size(); childIndex++) {
+      final DimFilter child = children.get(childIndex);
       if (child instanceof BoundDimFilter) {
         final BoundDimFilter bound = (BoundDimFilter) child;
         final BoundRefKey boundRefKey = BoundRefKey.from(bound);
-        final List<BoundDimFilter> filterList = bounds.computeIfAbsent(boundRefKey, k -> new ArrayList<>());
-        filterList.add(bound);
+        final List<ObjectIntPair<BoundDimFilter>> filterList =
+            bounds.computeIfAbsent(boundRefKey, k -> new ArrayList<>());
+        filterList.add(ObjectIntPair.of(bound, childIndex));
         allFalse = false;
       } else if (child instanceof RangeFilter) {
         final RangeFilter range = (RangeFilter) child;
@@ -158,8 +166,9 @@ public class CombineAndSimplifyBounds extends BottomUpTransform
               (c, existingType) -> ColumnType.leastRestrictiveType(existingType, range.getMatchValueType())
           );
         }
-        final List<RangeFilter> filterList = ranges.computeIfAbsent(rangeRefKey, k -> new ArrayList<>());
-        filterList.add(range);
+        final List<ObjectIntPair<RangeFilter>> filterList =
+            ranges.computeIfAbsent(rangeRefKey, k -> new ArrayList<>());
+        filterList.add(ObjectIntPair.of(range, childIndex));
         allFalse = false;
       } else {
         allFalse = allFalse && (child instanceof FalseDimFilter);
@@ -171,97 +180,108 @@ public class CombineAndSimplifyBounds extends BottomUpTransform
       return Filtration.matchNothing();
     }
 
-    // Try to simplify filters within each group.
-    for (Map.Entry<BoundRefKey, List<BoundDimFilter>> entry : bounds.entrySet()) {
+    // Try to simplify "bound" filters within each group of "bounds".
+    for (Map.Entry<BoundRefKey, List<ObjectIntPair<BoundDimFilter>>> entry : bounds.entrySet()) {
       final BoundRefKey boundRefKey = entry.getKey();
-      final List<BoundDimFilter> filterList = entry.getValue();
+      final List<ObjectIntPair<BoundDimFilter>> filterList = entry.getValue();
 
       // Create a RangeSet for this group.
-      final RangeSet<BoundValue> rangeSet = disjunction
-                                            ? RangeSets.unionRanges(Bounds.toRanges(filterList))
-                                            : RangeSets.intersectRanges(Bounds.toRanges(filterList));
+      final RangeSet<BoundValue> rangeSet =
+          disjunction
+          ? RangeSets.unionRanges(Bounds.toRanges(Lists.transform(filterList, Pair::left)))
+          : RangeSets.intersectRanges(Bounds.toRanges(Lists.transform(filterList, Pair::left)));
 
       if (rangeSet.asRanges().size() < filterList.size()) {
         // We found a simplification. Remove the old filters and add new ones.
-        for (final BoundDimFilter bound : filterList) {
-          if (!newChildren.remove(bound)) {
-            // Don't expect this to happen, but include it as a sanity check.
-            throw new ISE("Tried to remove bound, but couldn't");
-          }
+        for (final ObjectIntPair<BoundDimFilter> boundAndChildIndex : filterList) {
+          childrenToRemove.add(boundAndChildIndex.rightInt());
         }
 
         if (rangeSet.asRanges().isEmpty()) {
           // range set matches nothing, equivalent to FALSE
-          newChildren.add(Filtration.matchNothing());
+          childrenToAdd.add(Filtration.matchNothing());
         }
 
         for (final Range<BoundValue> range : rangeSet.asRanges()) {
           if (!range.hasLowerBound() && !range.hasUpperBound()) {
             // range matches all, equivalent to TRUE
-            newChildren.add(Filtration.matchEverything());
+            childrenToAdd.add(Filtration.matchEverything());
           } else {
-            newChildren.add(Bounds.toFilter(boundRefKey, range));
+            childrenToAdd.add(Bounds.toFilter(boundRefKey, range));
           }
         }
       }
     }
 
-    // Try to consolidate numeric groups
-    final Map<RangeRefKey, List<RangeFilter>> consolidatedNumericRanges = Maps.newHashMapWithExpectedSize(ranges.size());
-    for (Map.Entry<RangeRefKey, List<RangeFilter>> entry : ranges.entrySet()) {
+    // Consolidate groups of numeric ranges in "ranges", using the leastRestrictiveNumericTypes computed earlier.
+    final Map<RangeRefKey, List<ObjectIntPair<RangeFilter>>> consolidatedRanges =
+        Maps.newHashMapWithExpectedSize(ranges.size());
+    for (Map.Entry<RangeRefKey, List<ObjectIntPair<RangeFilter>>> entry : ranges.entrySet()) {
+      boolean refKeyChanged = false;
       RangeRefKey refKey = entry.getKey();
       if (entry.getKey().getMatchValueType().isNumeric()) {
         ColumnType numericTypeToUse = leastRestrictiveNumericTypes.get(refKey.getColumn());
-        refKey = new RangeRefKey(refKey.getColumn(), numericTypeToUse);
-      }
-      final List<RangeFilter> filterList = consolidatedNumericRanges.computeIfAbsent(refKey, k -> new ArrayList<>());
-      for (RangeFilter filter : entry.getValue()) {
-
-        int pos = newChildren.indexOf(filter);
-        if (!newChildren.remove(filter)) {
-          // Don't expect this to happen, but include it as a sanity check.
-          throw new ISE("Tried to remove range, but couldn't");
+        if (!numericTypeToUse.equals(refKey.getMatchValueType())) {
+          refKeyChanged = true;
+          refKey = new RangeRefKey(refKey.getColumn(), numericTypeToUse);
         }
-        final RangeFilter rewrite = Ranges.toFilter(refKey, Ranges.toRange(filter, refKey.getMatchValueType()));
-        newChildren.add(pos, rewrite);
-        filterList.add(rewrite);
+      }
+      final List<ObjectIntPair<RangeFilter>> consolidatedFilterList =
+          consolidatedRanges.computeIfAbsent(refKey, k -> new ArrayList<>());
+
+      if (refKeyChanged) {
+        for (ObjectIntPair<RangeFilter> filterAndChildIndex : entry.getValue()) {
+          final RangeFilter rewrite =
+              Ranges.toFilter(refKey, Ranges.toRange(filterAndChildIndex.left(), refKey.getMatchValueType()));
+          consolidatedFilterList.add(ObjectIntPair.of(rewrite, filterAndChildIndex.rightInt()));
+        }
+      } else {
+        consolidatedFilterList.addAll(entry.getValue());
       }
     }
 
-    // Try to simplify filters within each group.
-    for (Map.Entry<RangeRefKey, List<RangeFilter>> entry : consolidatedNumericRanges.entrySet()) {
+    // Try to simplify "range" filters within each group of "consolidatedRanges" (derived from "ranges").
+    for (Map.Entry<RangeRefKey, List<ObjectIntPair<RangeFilter>>> entry : consolidatedRanges.entrySet()) {
       final RangeRefKey rangeRefKey = entry.getKey();
-      final List<RangeFilter> filterList = entry.getValue();
+      final List<ObjectIntPair<RangeFilter>> filterList = entry.getValue();
 
       // Create a RangeSet for this group.
-      final RangeSet<RangeValue> rangeSet = disjunction
-                                            ? RangeSets.unionRanges(Ranges.toRanges(filterList))
-                                            : RangeSets.intersectRanges(Ranges.toRanges(filterList));
+      final RangeSet<RangeValue> rangeSet =
+          disjunction
+          ? RangeSets.unionRanges(Ranges.toRanges(Lists.transform(filterList, Pair::left)))
+          : RangeSets.intersectRanges(Ranges.toRanges(Lists.transform(filterList, Pair::left)));
 
       if (rangeSet.asRanges().size() < filterList.size()) {
         // We found a simplification. Remove the old filters and add new ones.
-        for (final RangeFilter range : filterList) {
-          if (!newChildren.remove(range)) {
-            // Don't expect this to happen, but include it as a sanity check.
-            throw new ISE("Tried to remove range, but couldn't");
-          }
+        for (final ObjectIntPair<RangeFilter> rangeAndChildIndex : filterList) {
+          childrenToRemove.add(rangeAndChildIndex.rightInt());
         }
 
         if (rangeSet.asRanges().isEmpty()) {
           // range set matches nothing, equivalent to FALSE
-          newChildren.add(Filtration.matchNothing());
+          childrenToAdd.add(Filtration.matchNothing());
         }
 
         for (final Range<RangeValue> range : rangeSet.asRanges()) {
           if (!range.hasLowerBound() && !range.hasUpperBound()) {
             // range matches all, equivalent to TRUE
-            newChildren.add(Filtration.matchEverything());
+            childrenToAdd.add(Filtration.matchEverything());
           } else {
-            newChildren.add(Ranges.toFilter(rangeRefKey, range));
+            childrenToAdd.add(Ranges.toFilter(rangeRefKey, range));
           }
         }
       }
     }
+
+    // Create newChildren.
+    final List<DimFilter> newChildren =
+        new ArrayList<>(children.size() + childrenToAdd.size() - childrenToRemove.size());
+    for (int i = 0; i < children.size(); i++) {
+      if (!childrenToRemove.contains(i)) {
+        newChildren.add(children.get(i));
+      }
+    }
+    newChildren.addAll(childrenToAdd);
 
     // Finally: Go through newChildren, removing or potentially exiting early based on TRUE / FALSE marker filters.
     Preconditions.checkState(newChildren.size() > 0, "newChildren.size > 0");

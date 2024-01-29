@@ -19,16 +19,28 @@
 
 package org.apache.druid.benchmark.query;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.testutil.FrameTestUtil;
+import org.apache.druid.guice.ExpressionModule;
+import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.SegmentWranglerModule;
+import org.apache.druid.guice.StartupInjectorBuilder;
+import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchApproxCountDistinctSqlAggregator;
@@ -36,6 +48,7 @@ import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchApproxCo
 import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchApproxQuantileSqlAggregator;
 import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchObjectSqlAggregator;
 import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchApproxCountDistinctSqlAggregator;
+import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
@@ -45,11 +58,13 @@ import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.sql.calcite.aggregation.ApproxCountDistinctSqlAggregator;
+import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.CountSqlAggregator;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
@@ -64,8 +79,10 @@ import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.LookylooModule;
+import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
+import org.apache.druid.sql.calcite.util.testoperator.CalciteTestOperatorModule;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -82,6 +99,7 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -413,7 +431,24 @@ public class SqlBenchmark
       "SELECT APPROX_COUNT_DISTINCT_BUILTIN(dimZipf) FROM foo",
       "SELECT APPROX_COUNT_DISTINCT_DS_HLL(dimZipf) FROM foo",
       "SELECT APPROX_COUNT_DISTINCT_DS_HLL_UTF8(dimZipf) FROM foo",
-      "SELECT APPROX_COUNT_DISTINCT_DS_THETA(dimZipf) FROM foo"
+      "SELECT APPROX_COUNT_DISTINCT_DS_THETA(dimZipf) FROM foo",
+      // 32: LATEST aggregator long
+      "SELECT LATEST(long1) FROM foo",
+      // 33: LATEST aggregator double
+      "SELECT LATEST(double4) FROM foo",
+      // 34: LATEST aggregator double
+      "SELECT LATEST(float3) FROM foo",
+      // 35: LATEST aggregator double
+      "SELECT LATEST(float3), LATEST(long1), LATEST(double4) FROM foo",
+      // 36,37: filter numeric nulls
+      "SELECT SUM(long5) FROM foo WHERE long5 IS NOT NULL",
+      "SELECT string2, SUM(long5) FROM foo WHERE long5 IS NOT NULL GROUP BY 1",
+      // 38: EARLIEST aggregator long
+      "SELECT EARLIEST(long1) FROM foo",
+      // 39: EARLIEST aggregator double
+      "SELECT EARLIEST(double4) FROM foo",
+      // 40: EARLIEST aggregator float
+      "SELECT EARLIEST(float3) FROM foo"
   );
 
   @Param({"5000000"})
@@ -444,66 +479,112 @@ public class SqlBenchmark
   public void setup()
   {
     final GeneratorSchemaInfo schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get("basic");
-
-    final DataSegment dataSegment = DataSegment.builder()
-                                               .dataSource("foo")
-                                               .interval(schemaInfo.getDataInterval())
-                                               .version("1")
-                                               .shardSpec(new LinearShardSpec(0))
-                                               .size(0)
-                                               .build();
-
-    final PlannerConfig plannerConfig = new PlannerConfig();
-
+    final DataSegment dataSegment = schemaInfo.makeSegmentDescriptor("foo");
     final SegmentGenerator segmentGenerator = closer.register(new SegmentGenerator());
+
     log.info("Starting benchmark setup using cacheDir[%s], rows[%,d].", segmentGenerator.getCacheDir(), rowsPerSegment);
-    StringEncodingStrategy encodingStrategy;
-    if (stringEncoding.startsWith("front-coded")) {
-      String[] split = stringEncoding.split("-");
-      int bucketSize = Integer.parseInt(split[2]);
-      encodingStrategy = new StringEncodingStrategy.FrontCoded(bucketSize, FrontCodedIndexed.V1);
-    } else {
-      encodingStrategy = new StringEncodingStrategy.Utf8();
-    }
+
     final QueryableIndex index = segmentGenerator.generate(
         dataSegment,
         schemaInfo,
-        IndexSpec.builder().withStringDictionaryEncoding(encodingStrategy).build(),
+        IndexSpec.builder().withStringDictionaryEncoding(getStringEncodingStrategy()).build(),
         Granularities.NONE,
         rowsPerSegment
     );
 
-    final QueryRunnerFactoryConglomerate conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(closer);
+    final Pair<PlannerFactory, SqlEngine> sqlSystem = createSqlSystem(
+        ImmutableMap.of(dataSegment, index),
+        Collections.emptyMap(),
+        null,
+        closer
+    );
 
-    final SpecificSegmentsQuerySegmentWalker walker = new SpecificSegmentsQuerySegmentWalker(conglomerate);
-    addSegmentToWalker(walker, dataSegment, index);
-    closer.register(walker);
+    plannerFactory = sqlSystem.lhs;
+    engine = sqlSystem.rhs;
+  }
+
+  private StringEncodingStrategy getStringEncodingStrategy()
+  {
+    if (stringEncoding.startsWith("front-coded")) {
+      String[] split = stringEncoding.split("-");
+      int bucketSize = Integer.parseInt(split[2]);
+      return new StringEncodingStrategy.FrontCoded(bucketSize, FrontCodedIndexed.V1);
+    } else {
+      return new StringEncodingStrategy.Utf8();
+    }
+  }
+
+  public static Pair<PlannerFactory, SqlEngine> createSqlSystem(
+      final Map<DataSegment, QueryableIndex> segmentMap,
+      final Map<String, LookupExtractor> lookupMap,
+      @Nullable final String storageType,
+      final Closer closer
+  )
+  {
+    final QueryRunnerFactoryConglomerate conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(closer);
+    final SpecificSegmentsQuerySegmentWalker walker = SpecificSegmentsQuerySegmentWalker.createWalker(conglomerate);
+    final PlannerConfig plannerConfig = new PlannerConfig();
+
+    for (final Map.Entry<DataSegment, QueryableIndex> segmentEntry : segmentMap.entrySet()) {
+      addSegmentToWalker(walker, segmentEntry.getKey(), segmentEntry.getValue(), storageType);
+    }
+
+    // Child injector that adds additional lookups.
+    final Injector injector = new StartupInjectorBuilder()
+        .withEmptyProperties()
+        .add(
+            new ExpressionModule(),
+            new SegmentWranglerModule(),
+            new LookylooModule(),
+            new SqlAggregationModule(),
+            new CalciteTestOperatorModule(),
+            binder -> {
+              for (Map.Entry<String, LookupExtractor> entry : lookupMap.entrySet()) {
+                MapBinder.newMapBinder(binder, String.class, LookupExtractor.class)
+                         .addBinding(entry.getKey())
+                         .toProvider(entry::getValue)
+                         .in(LazySingleton.class);
+              }
+            }
+        )
+        .build();
 
     final DruidSchemaCatalog rootSchema =
-        CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
-    engine = CalciteTests.createMockSqlEngine(walker, conglomerate);
-    plannerFactory = new PlannerFactory(
+        QueryFrameworkUtils.createMockRootSchema(
+            injector,
+            conglomerate,
+            walker,
+            plannerConfig,
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER
+        );
+
+    final SqlEngine engine = CalciteTests.createMockSqlEngine(walker, conglomerate);
+
+    final PlannerFactory plannerFactory = new PlannerFactory(
         rootSchema,
-        createOperatorTable(),
-        CalciteTests.createExprMacroTable(),
+        createOperatorTable(injector),
+        injector.getInstance(ExprMacroTable.class),
         plannerConfig,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        CalciteTests.getJsonMapper(),
+        injector.getInstance(Key.get(ObjectMapper.class, Json.class)),
         CalciteTests.DRUID_SCHEMA_NAME,
         new CalciteRulesManager(ImmutableSet.of()),
-        CalciteTests.createJoinableFactoryWrapper(),
+        new JoinableFactoryWrapper(QueryFrameworkUtils.createDefaultJoinableFactory(injector)),
         CatalogResolver.NULL_RESOLVER,
         new AuthConfig()
     );
+
+    return Pair.of(plannerFactory, engine);
   }
 
-  private void addSegmentToWalker(
+  private static void addSegmentToWalker(
       final SpecificSegmentsQuerySegmentWalker walker,
       final DataSegment descriptor,
-      final QueryableIndex index
+      final QueryableIndex index,
+      @Nullable final String storageType
   )
   {
-    if (STORAGE_MMAP.equals(storageType)) {
+    if (storageType == null || STORAGE_MMAP.equals(storageType)) {
       walker.add(descriptor, new QueryableIndexSegment(index, descriptor.getId()));
     } else if (STORAGE_FRAME_ROW.equals(storageType)) {
       walker.add(
@@ -523,14 +604,16 @@ public class SqlBenchmark
               descriptor.getId()
           )
       );
+    } else {
+      throw new IAE("Invalid storageType[%s]", storageType);
     }
   }
 
-  private static DruidOperatorTable createOperatorTable()
+  private static DruidOperatorTable createOperatorTable(final Injector injector)
   {
     try {
       final Set<SqlOperatorConversion> extractionOperators = new HashSet<>();
-      extractionOperators.add(CalciteTests.INJECTOR.getInstance(QueryLookupOperatorConversion.class));
+      extractionOperators.add(injector.getInstance(QueryLookupOperatorConversion.class));
       final ApproxCountDistinctSqlAggregator countDistinctSqlAggregator =
           new ApproxCountDistinctSqlAggregator(new HllSketchApproxCountDistinctSqlAggregator());
       final Set<SqlAggregator> aggregators = new HashSet<>(
