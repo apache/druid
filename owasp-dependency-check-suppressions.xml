@@ -53,6 +53,13 @@
     <cve>CVE-2020-8908</cve>
   </suppress>
 
+  <suppress>
+    <notes><![CDATA[
+      file name: ion-java-1.0.2.jar
+    ]]></notes>
+    <cve>CVE-2024-21634</cve>
+  </suppress>
+
   <!-- CVE-2022-4244 is affecting plexus-utils package,
   plexus-interpolation is wrongly matched - https://github.com/jeremylong/DependencyCheck/issues/5973 -->
   <suppress base="true">

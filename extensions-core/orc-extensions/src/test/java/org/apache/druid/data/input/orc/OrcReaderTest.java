@@ -314,8 +314,8 @@ public class OrcReaderTest extends InitializedNullHandlingTest
         //deviation of [7,8,9] is 1/3, stddev is sqrt(1/3), approximately 0.8165
         Assert.assertEquals(0.8165, Double.parseDouble(Iterables.getOnlyElement(row.getDimension("stddev"))), 0.0001);
 
-        //append is not supported
-        Assert.assertEquals(Collections.emptyList(), row.getDimension("append"));
+        //Support for append has been added in json-path-2.9.0
+        //Assert.assertEquals(Collections.emptyList(), row.getDimension("append"));
       }
       Assert.assertEquals(1, actualRowCount);
     }
