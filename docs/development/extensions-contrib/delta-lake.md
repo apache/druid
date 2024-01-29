@@ -30,7 +30,12 @@ you ingest data stored in a Delta Lake table into Apache Druid. To use the Delta
 See [Loading extensions](../../configuration/extensions.md#loading-extensions) for more information.
 
 The Delta input source reads the configured Delta Lake table and extracts all the underlying delta files in the table's latest snapshot.
-These Delta Lake files are in versioned Parquet format
+These Delta Lake files are versioned Parquet files.
+
+## Version support
+
+The Delta Lake extension uses the Delta Kernel introduced in Delta Lake 3.0.0, which is compatible with Apache Spark 3.5.x.
+Older versions are unsupported, so consider upgrading to Delta Lake 3.0.x or higher to use this extension.
 
 ## Known limitations
 
