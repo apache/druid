@@ -549,11 +549,11 @@ export class Execution {
 
     switch (segmentStatus?.state) {
       case 'INIT':
-        label = 'Waiting for segments loading to start...';
+        label = 'Waiting for segment loading to start...';
         break;
 
       case 'WAITING':
-        label = 'Waiting for segments loading to complete...';
+        label = 'Waiting for segment loading to complete...';
         break;
 
       case 'SUCCESS':

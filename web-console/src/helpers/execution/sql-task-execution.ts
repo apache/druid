@@ -57,13 +57,7 @@ export interface SubmitTaskQueryOptions {
 export async function submitTaskQuery(
   options: SubmitTaskQueryOptions,
 ): Promise<Execution | IntermediateQueryState<Execution>> {
-  const { query, prefixLines, cancelToken, preserveOnTermination, onSubmitted } = options;
-
-  // setting waitUntilSegmentsLoad to true by default
-  const context = {
-    waitUntilSegmentsLoad: true,
-    ...(options.context || {}),
-  };
+  const { query, context, prefixLines, cancelToken, preserveOnTermination, onSubmitted } = options;
 
   let sqlQuery: string;
   let jsonQuery: Record<string, any>;
