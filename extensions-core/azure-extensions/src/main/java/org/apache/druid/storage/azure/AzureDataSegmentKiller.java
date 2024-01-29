@@ -115,7 +115,7 @@ public class AzureDataSegmentKiller implements DataSegmentKiller
     for (List<String> chunkOfKeys : keysChunks) {
       try {
         log.info(
-            "Removing from container: [%s] the following index files: [%s] from s3!",
+            "Removing from container [%s] the following files: [%s]",
             containerName,
             chunkOfKeys
         );
