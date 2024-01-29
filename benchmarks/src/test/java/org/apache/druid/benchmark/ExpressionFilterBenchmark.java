@@ -25,7 +25,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.DimFilter;
@@ -71,7 +70,6 @@ public class ExpressionFilterBenchmark
 {
   static {
     NullHandling.initializeForTests();
-    ExpressionProcessing.initializeForTests();
   }
 
   @Param({"1000000"})
