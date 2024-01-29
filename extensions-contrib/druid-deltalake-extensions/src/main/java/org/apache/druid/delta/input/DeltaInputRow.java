@@ -44,10 +44,7 @@ import org.apache.druid.error.InvalidInput;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -183,20 +180,11 @@ public class DeltaInputRow implements InputRow
     } else if (dataType instanceof IntegerType) {
       return dataRow.getInt(columnOrdinal);
     } else if (dataType instanceof DateType) {
-      // DateType data is stored internally as the number of days since 1970-01-01
-      int daysSinceEpochUTC = dataRow.getInt(columnOrdinal);
-      return LocalDate.ofEpochDay(daysSinceEpochUTC).atStartOfDay(ZONE_ID).toEpochSecond();
+      return DeltaTimeUtils.getDateTimeValue(dataRow.getInt(columnOrdinal));
     } else if (dataType instanceof LongType) {
       return dataRow.getLong(columnOrdinal);
     } else if (dataType instanceof TimestampType) {
-      // TimestampType data is stored internally as the number of microseconds since epoch
-      long microSecsSinceEpochUTC = dataRow.getLong(columnOrdinal);
-      LocalDateTime dateTime = LocalDateTime.ofEpochSecond(
-          microSecsSinceEpochUTC / 1_000_000 /* epochSecond */,
-          (int) (1000 * microSecsSinceEpochUTC % 1_000_000) /* nanoOfSecond */,
-          ZoneOffset.UTC
-      );
-      return dateTime.atZone(ZONE_ID).toInstant().toEpochMilli();
+      return DeltaTimeUtils.getTimestampValue(dataRow.getLong(columnOrdinal));
     } else if (dataType instanceof FloatType) {
       return dataRow.getFloat(columnOrdinal);
     } else if (dataType instanceof DoubleType) {
