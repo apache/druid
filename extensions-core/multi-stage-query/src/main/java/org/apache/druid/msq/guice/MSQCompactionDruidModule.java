@@ -18,18 +18,12 @@ public class MSQCompactionDruidModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    // Force eager initialization.
-//    LifecycleModule.register(binder, MSQCompaction.class);
-//    Jerseys.addResource(binder, MSQCompaction.class);
     binder.bind(CompactionClient.class).toProvider(MSQCompactionProvider.class).in(LazySingleton.class);
   }
 
   @Override
   public List<? extends Module> getJacksonModules()
   {
-//    return Collections.emptyList();
-//    return Collections.singletonList(new SimpleModule(this.getClass().getSimpleName()).registerSubtypes(
-//        MSQCompactionProvider.class));
     return Collections.emptyList();
   }
 
