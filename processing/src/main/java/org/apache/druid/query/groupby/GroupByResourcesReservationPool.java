@@ -43,13 +43,13 @@ public class GroupByResourcesReservationPool
     this.groupByQueryConfig = groupByQueryConfig;
   }
 
-  public void reserve(String uniqueId, GroupByQuery groupByQuery, boolean forMergeRunner)
+  public void reserve(String uniqueId, GroupByQuery groupByQuery, boolean willMergeRunner)
   {
     pool.compute(uniqueId, (id, existingResource) -> {
       if (existingResource != null) {
-        throw DruidException.defensive("Already present resource with given identifier [%s]", id);
+        throw DruidException.defensive("Resource with the given identifier [%s] is already present", id);
       }
-      return GroupingEngine.prepareResource(groupByQuery, mergeBufferPool, forMergeRunner, groupByQueryConfig);
+      return GroupingEngine.prepareResource(groupByQuery, mergeBufferPool, willMergeRunner, groupByQueryConfig);
     });
   }
 

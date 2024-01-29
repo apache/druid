@@ -323,10 +323,13 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
     };
 
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
+    GroupByResourcesReservationPool groupByResourcesReservationPool = new GroupByResourcesReservationPool(mergePool, config);
+    GroupByResourcesReservationPool tooSmallGroupByResourcesReservationPool = new GroupByResourcesReservationPool(tooSmallMergePool, config);
     final GroupingEngine groupingEngine = new GroupingEngine(
         druidProcessingConfig,
         configSupplier,
         bufferPool,
+        groupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
         NOOP_QUERYWATCHER
@@ -336,6 +339,7 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
         tooSmallDruidProcessingConfig,
         configSupplier,
         bufferPool2,
+        tooSmallGroupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
         NOOP_QUERYWATCHER
@@ -343,12 +347,12 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
 
     groupByFactory = new GroupByQueryRunnerFactory(
         groupingEngine,
-        new GroupByQueryQueryToolChest(groupingEngine, mergePool)
+        new GroupByQueryQueryToolChest(groupingEngine, groupByResourcesReservationPool)
     );
 
     tooSmallGroupByFactory = new GroupByQueryRunnerFactory(
         tooSmallEngine,
-        new GroupByQueryQueryToolChest(tooSmallEngine, tooSmallMergePool)
+        new GroupByQueryQueryToolChest(tooSmallEngine, tooSmallGroupByResourcesReservationPool)
     );
   }
 
@@ -405,7 +409,7 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
                                              queryPlus.withQuery(
                                                  queryPlus.getQuery().withOverriddenContext(
                                                      ImmutableMap.of(
-                                                         GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2,
+                                                         "NOOP",
                                                          true
                                                      )
                                                  )
@@ -419,7 +423,7 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
                                              queryPlus.withQuery(
                                                  queryPlus.getQuery().withOverriddenContext(
                                                      ImmutableMap.of(
-                                                         GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2,
+                                                         "NOOP",
                                                          true
                                                      )
                                                  )
@@ -458,7 +462,7 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
 
     Sequence<ResultRow> queryResult = theRunner3.run(
         QueryPlus.wrap(query.withOverriddenContext(
-            ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, false)
+            ImmutableMap.of("NOOP", false)
         )),
         ResponseContext.createEmpty()
     );
@@ -502,7 +506,7 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
           ).run(
               queryPlus.withQuery(
                   queryPlus.getQuery().withOverriddenContext(
-                      ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true)
+                      ImmutableMap.of("NOOP", true)
                   )
               ),
               responseContext
@@ -519,7 +523,7 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
           ).run(
               queryPlus.withQuery(
                   queryPlus.getQuery().withOverriddenContext(
-                      ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true)
+                      ImmutableMap.of("NOOP", true)
                   )
               ),
               responseContext
@@ -578,7 +582,7 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
 
     Sequence<ResultRow> queryResult = theRunner3.run(
         QueryPlus.wrap(query.withOverriddenContext(
-            ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, false)
+            ImmutableMap.of("NOOP", false)
         )),
         ResponseContext.createEmpty()
     );

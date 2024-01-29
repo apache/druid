@@ -43,6 +43,7 @@ import org.apache.druid.frame.segment.FrameCursorUtils;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.frame.write.FrameWriters;
+import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -125,7 +126,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       GroupingEngine groupingEngine,
       Supplier<GroupByQueryConfig> queryConfigSupplier,
       GroupByQueryMetricsFactory queryMetricsFactory,
-      GroupByResourcesReservationPool groupByResourcesReservationPool
+      @Merging GroupByResourcesReservationPool groupByResourcesReservationPool
   )
   {
     this.groupingEngine = groupingEngine;
@@ -142,7 +143,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
 
 
   @Override
-  public QueryRunner<ResultRow> mergeResults(final QueryRunner<ResultRow> runner, boolean forMergeRunner)
+  public QueryRunner<ResultRow> mergeResults(final QueryRunner<ResultRow> runner, boolean willMergeRunner)
   {
     return (queryPlus, responseContext) -> {
       if (queryPlus.getQuery().context().isBySegment()) {
@@ -150,7 +151,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       }
 
       final GroupByQuery groupByQuery = (GroupByQuery) queryPlus.getQuery();
-      return initAndMergeGroupByResults(groupByQuery, runner, responseContext, forMergeRunner);
+      return initAndMergeGroupByResults(groupByQuery, runner, responseContext, willMergeRunner);
     };
   }
 
@@ -170,12 +171,12 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       final GroupByQuery query,
       QueryRunner<ResultRow> runner,
       ResponseContext context,
-      boolean forMergeRunner
+      boolean willMergeRunner
   )
   {
     // .. 1. Historicals, Broker -> Which is using localWalker
     // MerginV2 ->
-    groupByResourcesReservationPool.reserve("UID", query, forMergeRunner);
+    groupByResourcesReservationPool.reserve("UID", query, willMergeRunner);
     final GroupByQueryResources resource = groupByResourcesReservationPool.fetch("UID");
     try {
       final Sequence<ResultRow> mergedSequence = mergeGroupByResults(
@@ -186,6 +187,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       );
       Closer closer = Closer.create();
       closer.register(resource);
+      closer.register(() -> groupByResourcesReservationPool.clean("UIDl"));
       return Sequences.withBaggage(mergedSequence, closer);
     }
     catch (Exception e) {

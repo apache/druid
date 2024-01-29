@@ -1164,15 +1164,17 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         bufferSupplier,
         processingConfig.getNumMergeBuffers()
     );
+    GroupByResourcesReservationPool groupByResourcesReservationPool = new GroupByResourcesReservationPool(mergeBufferPool, queryConfig);
     final GroupingEngine groupingEngine = new GroupingEngine(
         processingConfig,
         queryConfigSupplier,
         bufferPool,
+        groupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
-    final GroupByQueryQueryToolChest queryToolChest = new GroupByQueryQueryToolChest(groupingEngine, mergeBufferPool);
+    final GroupByQueryQueryToolChest queryToolChest = new GroupByQueryQueryToolChest(groupingEngine, groupByResourcesReservationPool);
     CacheStrategy<ResultRow, Object, GroupByQuery> cacheStrategy = queryToolChest.getCacheStrategy(query);
     Assert.assertTrue(
         "result level cache on broker server for GroupByStrategyV2 should be enabled",

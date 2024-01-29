@@ -90,9 +90,9 @@ public class FluentQueryRunner<T> implements QueryRunner<T>
     return from(postProcessing != null ? postProcessing.postProcess(baseRunner) : baseRunner);
   }
 
-  public FluentQueryRunner<T> mergeResults(boolean forMergeRunner)
+  public FluentQueryRunner<T> mergeResults(boolean willMergeRunner)
   {
-    return from(toolChest.mergeResults(baseRunner, forMergeRunner));
+    return from(toolChest.mergeResults(baseRunner, willMergeRunner));
   }
 
   public FluentQueryRunner<T> map(final Function<QueryRunner<T>, QueryRunner<T>> mapFn)

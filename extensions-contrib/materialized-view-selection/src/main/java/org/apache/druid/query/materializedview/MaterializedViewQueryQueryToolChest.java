@@ -66,7 +66,7 @@ public class MaterializedViewQueryQueryToolChest extends QueryToolChest
   }
 
   @Override
-  public QueryRunner mergeResults(QueryRunner runner, boolean forMergeRunner)
+  public QueryRunner mergeResults(QueryRunner runner, boolean willMergeRunner)
   {
     return new QueryRunner()
     {
@@ -75,7 +75,7 @@ public class MaterializedViewQueryQueryToolChest extends QueryToolChest
       {
         Query realQuery = getRealQuery(queryPlus.getQuery());
         return warehouse.getToolChest(realQuery)
-                        .mergeResults(runner, forMergeRunner)
+                        .mergeResults(runner, willMergeRunner)
                         .run(queryPlus.withQuery(realQuery), responseContext);
       }
     };

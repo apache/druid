@@ -240,10 +240,12 @@ public class GroupByMultiSegmentTest extends InitializedNullHandlingTest
     };
 
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
+    final GroupByResourcesReservationPool groupByResourcesReservationPool = new GroupByResourcesReservationPool(mergePool, config);
     final GroupingEngine groupingEngine = new GroupingEngine(
         druidProcessingConfig,
         configSupplier,
         bufferPool,
+        groupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
         NOOP_QUERYWATCHER
@@ -251,7 +253,7 @@ public class GroupByMultiSegmentTest extends InitializedNullHandlingTest
 
     groupByFactory = new GroupByQueryRunnerFactory(
         groupingEngine,
-        new GroupByQueryQueryToolChest(groupingEngine, mergePool)
+        new GroupByQueryQueryToolChest(groupingEngine, groupByResourcesReservationPool)
     );
   }
 

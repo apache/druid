@@ -351,10 +351,13 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
       );
     }
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
+    final GroupByResourcesReservationPool groupByResourcesReservationPool =
+        new GroupByResourcesReservationPool(bufferPools.getMergePool(), config);
     final GroupingEngine groupingEngine = new GroupingEngine(
         processingConfig,
         configSupplier,
         bufferPools.getProcessingPool(),
+        groupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         mapper,
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
@@ -363,7 +366,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         groupingEngine,
         () -> config,
         DefaultGroupByQueryMetricsFactory.instance(),
-        bufferPools.getMergePool()
+        groupByResourcesReservationPool
     );
     return new GroupByQueryRunnerFactory(groupingEngine, toolChest);
   }
@@ -5409,7 +5412,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                            .run(
                                queryPlus.withQuery(
                                    queryPlus.getQuery().withOverriddenContext(
-                                       ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true)
+                                       ImmutableMap.of("NOOP", true)
                                    )
                                ),
                                responseContext
@@ -5417,7 +5420,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             )
         ).run(QueryPlus.wrap(
             query.withOverriddenContext(
-                ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, false)
+                ImmutableMap.of("NOOP", false)
             )
         )),
         "merged"
@@ -5433,7 +5436,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                            .run(
                                queryPlus.withQuery(
                                    queryPlus.getQuery().withOverriddenContext(
-                                       ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true)
+                                       ImmutableMap.of("NOOP", true)
                                    )
                                ),
                                responseContext
@@ -5441,7 +5444,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             )
         ).run(QueryPlus.wrap(
             expressionQuery.withOverriddenContext(
-                ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, false)
+                ImmutableMap.of("NOOP", false)
             )
         )),
         "merged"
@@ -11250,7 +11253,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             ).run(
                 queryPlus.withQuery(
                     queryPlus.getQuery().withOverriddenContext(
-                        ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true)
+                        ImmutableMap.of("NOOP", true)
                     )
                 ),
                 responseContext
@@ -11270,7 +11273,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     TestHelper.assertExpectedObjects(
         allGranExpectedResults,
         mergedRunner.run(QueryPlus.wrap(allGranQuery.withOverriddenContext(
-            ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, false)
+            ImmutableMap.of("NOOP", false)
         ))),
         "merged"
     );
@@ -11326,7 +11329,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             ).run(
                 queryPlus.withQuery(
                     queryPlus.getQuery().withOverriddenContext(
-                        ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true)
+                        ImmutableMap.of("NOOP", true)
                     )
                 ),
                 responseContext
@@ -11346,7 +11349,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     Iterable<ResultRow> results =
         mergedRunner.run(
             QueryPlus.wrap(allGranQuery.withOverriddenContext(
-                ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, false)
+                ImmutableMap.of("NOOP", false)
             ))
         ).toList();
     TestHelper.assertExpectedObjects(allGranExpectedResults, results, "merged");
@@ -11390,8 +11393,6 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 )
             );
 
-            Object groupByResource = responseContext.remove(GroupByUtils.RESPONSE_KEY_GROUP_BY_MERGING_QUERY_RUNNER_BUFFERS);
-
             return factory.getToolchest().mergeResults(
                 (queryPlus3, responseContext1) -> new MergeSequence<>(
                     queryPlus3.getQuery().getResultOrdering(),
@@ -11405,16 +11406,11 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             ).run(
                 queryPlus.withQuery(
                     queryPlus.getQuery().withOverriddenContext(
-                        ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true)
+                        ImmutableMap.of("NOOP", true)
                     )
                 ),
                 responseContext
-            ).withBaggage(() -> {
-              responseContext.remove(GroupByUtils.RESPONSE_KEY_GROUP_BY_MERGING_QUERY_RUNNER_BUFFERS);
-              if (groupByResource != null) {
-                responseContext.add(GroupByUtils.RESPONSE_KEY_GROUP_BY_MERGING_QUERY_RUNNER_BUFFERS, groupByResource);
-              }
-            });
+            );
           }
         }
     );
@@ -11484,7 +11480,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             ).run(
                 queryPlus.withQuery(
                     queryPlus.getQuery().withOverriddenContext(
-                        ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true)
+                        ImmutableMap.of("NOOP", true)
                     )
                 ),
                 responseContext
@@ -11504,7 +11500,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     Iterable<ResultRow> results =
         mergedRunner.run(
                         QueryPlus.wrap(allGranQuery.withOverriddenContext(
-                            ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, false)
+                            ImmutableMap.of("NOOP", false)
                         ))
                     )
                     .toList();
@@ -11579,7 +11575,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             ).run(
                 queryPlus.withQuery(
                     queryPlus.getQuery().withOverriddenContext(
-                        ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true)
+                        ImmutableMap.of("NOOP", true)
                     )
                 ),
                 responseContext
@@ -11599,7 +11595,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     Iterable<ResultRow> results =
         mergedRunner.run(
             QueryPlus.wrap(allGranQuery.withOverriddenContext(
-                ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, false)
+                ImmutableMap.of("NOOP", false)
             ))
         ).toList();
     TestHelper.assertExpectedObjects(allGranExpectedResults, results, "merged");

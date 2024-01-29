@@ -286,10 +286,13 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
     };
 
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
+    GroupByResourcesReservationPool groupByResourcesReservationPool = new GroupByResourcesReservationPool(mergePool, config);
+    GroupByResourcesReservationPool groupByResourcesReservationPool2 = new GroupByResourcesReservationPool(mergePool2, config);
     final GroupingEngine engine1 = new GroupingEngine(
         druidProcessingConfig,
         configSupplier,
         bufferPool,
+        groupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
         NOOP_QUERYWATCHER
@@ -298,6 +301,7 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
         druidProcessingConfig,
         configSupplier,
         bufferPool,
+        groupByResourcesReservationPool2,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
         NOOP_QUERYWATCHER
@@ -305,12 +309,12 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
 
     groupByFactory = new GroupByQueryRunnerFactory(
         engine1,
-        new GroupByQueryQueryToolChest(engine1, mergePool)
+        new GroupByQueryQueryToolChest(engine1, groupByResourcesReservationPool)
     );
 
     groupByFactory2 = new GroupByQueryRunnerFactory(
         engine2,
-        new GroupByQueryQueryToolChest(engine2, mergePool2)
+        new GroupByQueryQueryToolChest(engine2, groupByResourcesReservationPool2)
     );
   }
 

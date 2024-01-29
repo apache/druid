@@ -118,7 +118,10 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
     return new ResultMergeQueryRunner<>(runner, this::createResultComparator, this::createMergeFn);
   }
 
-  public QueryRunner<ResultType> mergeResults(QueryRunner<ResultType> runner, boolean forMergeRunner)
+  /**
+   * TODO(laksh): Ideally, it should have been delegated, however this method was added later
+   */
+  public QueryRunner<ResultType> mergeResults(QueryRunner<ResultType> runner, boolean willMergeRunner)
   {
     return mergeResults(runner);
   }
