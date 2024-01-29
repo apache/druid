@@ -69,6 +69,28 @@
   </suppress>
 
   <suppress>
+    <notes><![CDATA[
+      file name: azure-core-1.45.1.jar
+    ]]></notes>
+    <cve>CVE-2023-36052</cve>
+  </suppress>
+
+  <suppress>
+    <notes><![CDATA[
+      file name: azure-core-http-netty-1.13.11.jar
+    ]]></notes>
+    <cve>CVE-2023-36052</cve>
+  </suppress>
+
+  <suppress>
+    <notes><![CDATA[
+      file name: azure-identity-1.11.1.jar
+    ]]></notes>
+    <cve>CVE-2023-36415</cve>
+    <cve>CVE-2023-36052</cve>
+  </suppress>
+
+  <suppress>
     <!-- This presumably applies to maven build system -->
     <notes><![CDATA[
      file name: maven-settings
