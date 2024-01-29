@@ -103,6 +103,9 @@ INSERT statements and REPLACE statements are both supported with an `EXTERN` des
 clause that determines the format.
 Currently, only `CSV` is supported as a format.
 
+Export statements support the context parameter `rowsPerPage` for the number of rows in each exported file. The default value
+is 100,000.
+
 INSERT statements append the results to the existing files at the destination.
 ```sql
 INSERT INTO
@@ -127,7 +130,7 @@ FROM <table>
 ```
 
 Exporting is currently supported to Amazon S3 storage. The S3 extension is required to be loaded for this.
-This can be done passing the function `S3` to the `EXTERN` function.
+This can be done passing the function `S3()` as an argument to the `EXTERN` function.
 
 ```sql
 INSERT INTO
