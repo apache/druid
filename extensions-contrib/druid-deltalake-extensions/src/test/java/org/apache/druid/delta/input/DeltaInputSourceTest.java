@@ -108,21 +108,21 @@ public class DeltaInputSourceTest
                                                                 .collect(Collectors.toList());
     Assert.assertEquals(2, splits.size());
 
-    for (int idx = 0; idx < splits.size(); idx++) {
-      final DeltaSplit split = splits.get(idx).get();
+    for (InputSplit<DeltaSplit> split : splits) {
+      final DeltaSplit deltaSplit = split.get();
       final DeltaInputSource deltaInputSourceWithSplitx = new DeltaInputSource(
           DeltaTestUtil.DELTA_TABLE_PATH,
-          split
+          deltaSplit
       );
       List<InputSplit<DeltaSplit>> splitsResult = deltaInputSourceWithSplitx.createSplits(null, null)
                                                                             .collect(Collectors.toList());
       Assert.assertEquals(1, splitsResult.size());
-      Assert.assertEquals(split, splitsResult.get(0).get());
+      Assert.assertEquals(deltaSplit, splitsResult.get(0).get());
     }
   }
 
   @Test
-  public void testNullTablePath()
+  public void testNullTable()
   {
     MatcherAssert.assertThat(
         Assert.assertThrows(
@@ -130,7 +130,39 @@ public class DeltaInputSourceTest
             () -> new DeltaInputSource(null, null)
         ),
         DruidExceptionMatcher.invalidInput().expectMessageIs(
-            "tablePath cannot be null"
+            "tablePath cannot be null."
+        )
+    );
+  }
+
+  @Test
+  public void testSplitNonExistentTable()
+  {
+    final DeltaInputSource deltaInputSource = new DeltaInputSource("non-existent-table", null);
+
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> deltaInputSource.createSplits(null, null)
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageIs(
+            "tablePath[non-existent-table] not found."
+        )
+    );
+  }
+
+  @Test
+  public void testReadNonExistentTable()
+  {
+    final DeltaInputSource deltaInputSource = new DeltaInputSource("non-existent-table", null);
+
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> deltaInputSource.reader(null, null, null)
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageIs(
+            "tablePath[non-existent-table] not found."
         )
     );
   }

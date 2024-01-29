@@ -79,7 +79,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
   )
   {
     if (tablePath == null) {
-      throw InvalidInput.exception("tablePath cannot be null");
+      throw InvalidInput.exception("tablePath cannot be null.");
     }
     this.tablePath = tablePath;
     this.deltaSplit = deltaSplit;
@@ -170,7 +170,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
       latestSnapshot = table.getLatestSnapshot(tableClient);
     }
     catch (TableNotFoundException e) {
-      throw new RuntimeException(e);
+      throw InvalidInput.exception(e, "tablePath[%s] not found.", tablePath);
     }
     final Scan scan = latestSnapshot.getScanBuilder(tableClient).build();
     // scan files iterator for the current snapshot
