@@ -45,7 +45,7 @@ making it easy to reuse the same SQL statement for each ingest: just specify the
 
 ### `EXTERN` Function
 
-Use the `EXTERN` function to read external data or write to an external source.
+Use the `EXTERN` function to read external data or write to an external location.
 
 #### `EXTERN` as an input source
 
@@ -95,13 +95,13 @@ For more information, see [Read external data with EXTERN](concepts.md#read-exte
 
 #### `EXTERN` to export to a destination
 
-`EXTERN` can be used as a destination, which will export the data to the specified location and format. EXTERN when
-used in this way accepts one argument. Please note that partitioning (`PARTITIONED BY`) and clustering (`CLUSTERED BY`)
-is not currently supported with export statements.
+`EXTERN` can be used to specify a destination, where the data needs to be exported.
+This variation of EXTERN requires one argument, the details of the destination as specified below.
+This variation additionally requires an `AS` clause to specify the format of the exported rows.
 
-INSERT statements and REPLACE statements are both supported with an `EXTERN` destination. The statements require an `AS`
-clause that determines the format.
-Currently, only `CSV` is supported as a format.
+INSERT statements and REPLACE statements are both supported with an `EXTERN` destination.
+Only `CSV` format is supported at the moment.
+Please note that partitioning (`PARTITIONED BY`) and clustering (`CLUSTERED BY`) is not currently supported with export statements.
 
 Export statements support the context parameter `rowsPerPage` for the number of rows in each exported file. The default value
 is 100,000.
@@ -117,7 +117,8 @@ FROM <table>
 ```
 
 REPLACE statements have an additional OVERWRITE clause. As partitioning is not yet supported, only `OVERWRITE ALL`
-is allowed. REPLACE deletes any existing files at the destination and creates new files with the results of the query.
+is allowed. REPLACE deletes any currently existing files at the specified directory, and creates new files with the results of the query.
+
 
 ```sql
 REPLACE INTO
@@ -129,8 +130,7 @@ SELECT
 FROM <table>
 ```
 
-Exporting is currently supported to Amazon S3 storage. The S3 extension is required to be loaded for this.
-This can be done passing the function `S3()` as an argument to the `EXTERN` function.
+Exporting is currently supported for Amazon S3 storage. This can be done passing the function `S3()` as an argument to the `EXTERN` function. The `druid-s3-extensions` should be loaded.
 
 ```sql
 INSERT INTO

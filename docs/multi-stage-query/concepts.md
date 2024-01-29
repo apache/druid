@@ -118,10 +118,7 @@ for dimension-based pruning, see [Clustering](#clustering).
 ### Write to an external destination with `EXTERN`
 
 Query tasks can write data to an external destination through the `EXTERN` function, when it is used with the `INTO`
-clause, such as `REPLACE INTO EXTERN(...)`
-
-The EXTERN function takes arguments which specifies where to the files should be created.
-
+clause, such as `REPLACE INTO EXTERN(...)` The EXTERN function takes arguments which specifies where to the files should be created.
 The format can be specified using an `AS` clause.
 
 For more information about the syntax, see [`EXTERN`](./reference.md#extern-function).
