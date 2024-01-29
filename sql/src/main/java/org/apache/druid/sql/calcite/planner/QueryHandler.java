@@ -66,6 +66,7 @@ import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.rel.DruidConvention;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.DruidRel;
@@ -219,6 +220,9 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
         // Druid convention is used whenever there are no tables that require BINDABLE.
         return planForDruid();
       }
+    }
+    catch (CannotBuildQueryException e) {
+      throw buildSQLPlanningError(e);
     }
     catch (RelOptPlanner.CannotPlanException e) {
       throw buildSQLPlanningError(e);
@@ -682,6 +686,30 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
   {
     String errorMessage = handlerContext.plannerContext().getPlanningError();
     if (null == errorMessage && exception instanceof UnsupportedSQLQueryException) {
+      errorMessage = exception.getMessage();
+    }
+    if (errorMessage == null) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.UNSUPPORTED)
+                          .build(exception, "Unhandled Query Planning Failure, see broker logs for details");
+    } else {
+      // Planning errors are more like hints: it isn't guaranteed that the planning error is actually what went wrong.
+      // For this reason, we consider these as targetting a more expert persona, i.e. the admin instead of the actual
+      // user.
+      throw DruidException.forPersona(DruidException.Persona.ADMIN)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build(
+                              exception,
+                              "Query could not be planned. A possible reason is [%s]",
+                              errorMessage
+                          );
+    }
+  }
+
+  private DruidException buildSQLPlanningError(CannotBuildQueryException exception)
+  {
+    String errorMessage = handlerContext.plannerContext().getPlanningError();
+    if (null == errorMessage) {
       errorMessage = exception.getMessage();
     }
     if (errorMessage == null) {

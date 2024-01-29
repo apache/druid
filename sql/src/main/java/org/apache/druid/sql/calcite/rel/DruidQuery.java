@@ -1027,6 +1027,9 @@ public class DruidQuery
       return scanAndSortQuery;
     }
 
+    // if(plannerContext.getPlanningError()!=null) {
+    // throw new CannotBuildQueryException(plannerContext.getPlanningError());
+    // }
     throw new CannotBuildQueryException("Cannot convert query parts into an actual query");
   }
 
