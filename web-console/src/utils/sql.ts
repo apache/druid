@@ -109,10 +109,10 @@ export function findSqlQueryPrefix(text: string): string | undefined {
 }
 
 export function cleanSqlQueryPrefix(text: string): string {
-  const matchReplace = text.match(/\s+REPLACE$/i);
+  const matchReplace = text.match(/\sREPLACE$/i);
   if (matchReplace) {
     // This query likely grabbed a "REPLACE" (which is not a reserved keyword) from the next query over, see if we can delete it
-    const textWithoutReplace = text.slice(0, -matchReplace[0].length);
+    const textWithoutReplace = text.slice(0, -matchReplace[0].length).trimEnd();
     if (SqlQuery.maybeParse(textWithoutReplace)) {
       return textWithoutReplace;
     }
