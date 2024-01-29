@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.TestObjectMapper;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -43,7 +43,7 @@ import java.util.Set;
 public class JsonConfiguratorTest
 {
   private static final String PROP_PREFIX = "test.property.prefix.";
-  private final ObjectMapper mapper = new TestObjectMapper();
+  private final ObjectMapper jsonMapper = new DefaultObjectMapper();
   private final Properties properties = new Properties();
 
   @Rule
@@ -55,7 +55,7 @@ public class JsonConfiguratorTest
   @Before
   public void setUp()
   {
-    mapper.registerSubtypes(MappableObject.class);
+    jsonMapper.registerSubtypes(MappableObject.class);
   }
 
   final Validator validator = new Validator()
@@ -118,7 +118,7 @@ public class JsonConfiguratorTest
   @Test
   public void testSimpleConfigurate()
   {
-    final JsonConfigurator configurator = new JsonConfigurator(mapper, validator);
+    final JsonConfigurator configurator = new JsonConfigurator(jsonMapper, validator);
     properties.setProperty(PROP_PREFIX + "prop1", "prop1");
     properties.setProperty(PROP_PREFIX + "prop1List", "[\"prop2\"]");
     final MappableObject obj = configurator.configurate(properties, PROP_PREFIX, MappableObject.class);
@@ -129,7 +129,7 @@ public class JsonConfiguratorTest
   @Test
   public void testMissingConfigList()
   {
-    final JsonConfigurator configurator = new JsonConfigurator(mapper, validator);
+    final JsonConfigurator configurator = new JsonConfigurator(jsonMapper, validator);
     properties.setProperty(PROP_PREFIX + "prop1", "prop1");
     final MappableObject obj = configurator.configurate(properties, PROP_PREFIX, MappableObject.class);
     Assert.assertEquals("prop1", obj.prop1);
@@ -139,7 +139,7 @@ public class JsonConfiguratorTest
   @Test
   public void testMissingConfig()
   {
-    final JsonConfigurator configurator = new JsonConfigurator(mapper, validator);
+    final JsonConfigurator configurator = new JsonConfigurator(jsonMapper, validator);
     properties.setProperty(PROP_PREFIX + "prop1List", "[\"prop2\"]");
     final MappableObject obj = configurator.configurate(properties, PROP_PREFIX, MappableObject.class);
     Assert.assertNull(obj.prop1);
@@ -149,7 +149,7 @@ public class JsonConfiguratorTest
   @Test
   public void testQuotedConfig()
   {
-    final JsonConfigurator configurator = new JsonConfigurator(mapper, validator);
+    final JsonConfigurator configurator = new JsonConfigurator(jsonMapper, validator);
     properties.setProperty(PROP_PREFIX + "prop1", "testing \"prop1\"");
     final MappableObject obj = configurator.configurate(properties, PROP_PREFIX, MappableObject.class);
     Assert.assertEquals("testing \"prop1\"", obj.prop1);
@@ -159,7 +159,7 @@ public class JsonConfiguratorTest
   @Test
   public void testPropertyWithDot()
   {
-    final JsonConfigurator configurator = new JsonConfigurator(mapper, validator);
+    final JsonConfigurator configurator = new JsonConfigurator(jsonMapper, validator);
     properties.setProperty(PROP_PREFIX + "prop2.prop.2", "testing");
     properties.setProperty(PROP_PREFIX + "prop1", "prop1");
     final MappableObject obj = configurator.configurate(properties, PROP_PREFIX, MappableObject.class);
@@ -176,7 +176,7 @@ public class JsonConfiguratorTest
     List<String> list = ImmutableList.of("list", "of", "strings");
     environmentVariables.set("MY_VAR", "value2");
 
-    final JsonConfigurator configurator = new JsonConfigurator(mapper, validator);
+    final JsonConfigurator configurator = new JsonConfigurator(jsonMapper, validator);
     properties.setProperty(PROP_PREFIX + "prop1", "${sys:my.property}");
     properties.setProperty(PROP_PREFIX + "prop1List", "${file:UTF-8:src/test/resources/list.json}");
     properties.setProperty(PROP_PREFIX + "prop2.prop.2", "${env:MY_VAR}");
@@ -197,7 +197,7 @@ public class JsonConfiguratorTest
     System.setProperty("json.path", "src/test/resources/list.json");
     environmentVariables.set("PROP2_NAME", "MY_VAR");
 
-    final JsonConfigurator configurator = new JsonConfigurator(mapper, validator);
+    final JsonConfigurator configurator = new JsonConfigurator(jsonMapper, validator);
     properties.setProperty(PROP_PREFIX + "prop1", "${sys:${env:SYS_PROP}}");
     properties.setProperty(PROP_PREFIX + "prop1List", "${file:UTF-8:${sys:json.path}}");
     properties.setProperty(PROP_PREFIX + "prop2.prop.2", "${env:${env:PROP2_NAME}}");
@@ -212,7 +212,7 @@ public class JsonConfiguratorTest
   {
     List<String> list = ImmutableList.of("list", "of", "strings");
 
-    final JsonConfigurator configurator = new JsonConfigurator(mapper, validator);
+    final JsonConfigurator configurator = new JsonConfigurator(jsonMapper, validator);
     properties.setProperty(PROP_PREFIX + "prop1", "${sys:my.property:-value1}");
     properties.setProperty(PROP_PREFIX + "prop1List", "${unknown:-[\"list\", \"of\", \"strings\"]}");
     properties.setProperty(PROP_PREFIX + "prop2.prop.2", "${MY_VAR:-value2}");
@@ -225,7 +225,7 @@ public class JsonConfiguratorTest
   @Test
   public void testPropertyInterpolationUndefinedException()
   {
-    final JsonConfigurator configurator = new JsonConfigurator(mapper, validator);
+    final JsonConfigurator configurator = new JsonConfigurator(jsonMapper, validator);
     properties.setProperty(PROP_PREFIX + "prop1", "${sys:my.property}");
 
     Assert.assertThrows(

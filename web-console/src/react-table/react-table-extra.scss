@@ -26,6 +26,10 @@
     .rt-td.padded,
     .rt-expandable {
       padding: $table-cell-v-padding $table-cell-h-padding;
+
+      .default-aggregated {
+        padding: 0;
+      }
     }
   }
 
