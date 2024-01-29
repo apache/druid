@@ -241,8 +241,10 @@ describe('sql', () => {
       `);
     });
 
-    it('works with replace query', () => {
+    it('works with select query followed by a replace query', () => {
       const text = sane`
+        SELECT * FROM "wiki"
+
         REPLACE INTO "wikipedia" OVERWRITE ALL
         WITH "ext" AS (
           SELECT *
@@ -266,12 +268,26 @@ describe('sql', () => {
       expect(found).toMatchInlineSnapshot(`
         Array [
           Object {
-            "endOffset": 379,
+            "endOffset": 29,
             "endRowColumn": Object {
-              "column": 18,
-              "row": 15,
+              "column": 7,
+              "row": 2,
             },
             "index": 0,
+            "sql": "SELECT * FROM \\"wiki\\"",
+            "startOffset": 0,
+            "startRowColumn": Object {
+              "column": 0,
+              "row": 0,
+            },
+          },
+          Object {
+            "endOffset": 401,
+            "endRowColumn": Object {
+              "column": 18,
+              "row": 17,
+            },
+            "index": 1,
             "sql": "REPLACE INTO \\"wikipedia\\" OVERWRITE ALL
         WITH \\"ext\\" AS (
           SELECT *
@@ -288,19 +304,19 @@ describe('sql', () => {
           \\"channel\\"
         FROM \\"ext\\"
         PARTITIONED BY DAY",
-            "startOffset": 0,
+            "startOffset": 22,
             "startRowColumn": Object {
               "column": 0,
-              "row": 0,
+              "row": 2,
             },
           },
           Object {
-            "endOffset": 360,
+            "endOffset": 382,
             "endRowColumn": Object {
               "column": 10,
-              "row": 14,
+              "row": 16,
             },
-            "index": 1,
+            "index": 2,
             "sql": "WITH \\"ext\\" AS (
           SELECT *
           FROM TABLE(
@@ -315,19 +331,19 @@ describe('sql', () => {
           \\"isRobot\\",
           \\"channel\\"
         FROM \\"ext\\"",
-            "startOffset": 39,
+            "startOffset": 61,
             "startRowColumn": Object {
               "column": 0,
-              "row": 1,
+              "row": 3,
             },
           },
           Object {
-            "endOffset": 276,
+            "endOffset": 298,
             "endRowColumn": Object {
               "column": 70,
-              "row": 8,
+              "row": 10,
             },
-            "index": 2,
+            "index": 3,
             "sql": "SELECT *
           FROM TABLE(
             EXTERN(
@@ -335,28 +351,28 @@ describe('sql', () => {
               '{\\"type\\":\\"json\\"}'
             )
           ) EXTEND (\\"isRobot\\" VARCHAR, \\"channel\\" VARCHAR, \\"timestamp\\" VARCHAR)",
-            "startOffset": 57,
+            "startOffset": 79,
             "startRowColumn": Object {
               "column": 2,
-              "row": 2,
+              "row": 4,
             },
           },
           Object {
-            "endOffset": 360,
+            "endOffset": 382,
             "endRowColumn": Object {
               "column": 10,
-              "row": 14,
+              "row": 16,
             },
-            "index": 3,
+            "index": 4,
             "sql": "SELECT
           TIME_PARSE(\\"timestamp\\") AS \\"__time\\",
           \\"isRobot\\",
           \\"channel\\"
         FROM \\"ext\\"",
-            "startOffset": 279,
+            "startOffset": 301,
             "startRowColumn": Object {
               "column": 0,
-              "row": 10,
+              "row": 12,
             },
           },
         ]
