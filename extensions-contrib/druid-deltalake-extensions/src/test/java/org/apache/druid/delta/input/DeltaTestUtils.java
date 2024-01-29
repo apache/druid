@@ -21,6 +21,7 @@ package org.apache.druid.delta.input;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import io.delta.kernel.Scan;
 import io.delta.kernel.ScanBuilder;
 import io.delta.kernel.Snapshot;
@@ -261,6 +262,50 @@ public class DeltaTestUtils
           )
       ),
       ColumnsFilter.all()
+  );
+
+
+  /**
+   * Similar to {@link #SCHEMA}, but with a smaller set of columns with an inclusion filter applied.
+   */
+  public static final InputRowSchema SUB_SCHEMA_1 = new InputRowSchema(
+      new TimestampSpec("birthday", "posix", null),
+      new DimensionsSpec(
+          ImmutableList.of(
+              new LongDimensionSchema("id"),
+              new LongDimensionSchema("birthday"),
+              new StringDimensionSchema("name"),
+              new LongDimensionSchema("age"),
+              new DoubleDimensionSchema("salary"),
+              new FloatDimensionSchema("bonus"),
+              new LongDimensionSchema("yoe"),
+              new StringDimensionSchema("is_fulltime"),
+              new LongDimensionSchema("last_vacation_time")
+          )
+      ),
+      ColumnsFilter.inclusionBased(ImmutableSet.of("id", "birthday", "name", "is_fulltime"))
+  );
+
+  /**
+   * Similar to {@link #SCHEMA}, but with a smaller set of columns with an exclusion filter applied. A non-existent
+   * column is added to the exclusion filter - it should silently get thrown away.
+   */
+  public static final InputRowSchema SUB_SCHEMA_2 = new InputRowSchema(
+      new TimestampSpec("birthday", "posix", null),
+      new DimensionsSpec(
+          ImmutableList.of(
+              new LongDimensionSchema("id"),
+              new LongDimensionSchema("birthday"),
+              new StringDimensionSchema("name"),
+              new LongDimensionSchema("age"),
+              new DoubleDimensionSchema("salary"),
+              new FloatDimensionSchema("bonus"),
+              new LongDimensionSchema("yoe"),
+              new StringDimensionSchema("is_fulltime"),
+              new LongDimensionSchema("last_vacation_time")
+          )
+      ),
+      ColumnsFilter.exclusionBased(ImmutableSet.of("last_vacation_time", "bonus", "non_existent_column"))
   );
 
   /**

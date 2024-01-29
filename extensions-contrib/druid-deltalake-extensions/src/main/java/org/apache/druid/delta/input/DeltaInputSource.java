@@ -32,7 +32,10 @@ import io.delta.kernel.data.FilteredColumnarBatch;
 import io.delta.kernel.data.Row;
 import io.delta.kernel.defaults.client.DefaultTableClient;
 import io.delta.kernel.internal.util.Utils;
+import io.delta.kernel.types.StructField;
+import io.delta.kernel.types.StructType;
 import io.delta.kernel.utils.CloseableIterator;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
@@ -96,10 +99,10 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
    * Instantiates a {@link DeltaInputSourceReader} to read the Delta table rows. If a {@link DeltaSplit} is supplied,
    * the Delta files and schema are obtained from it to instantiate the reader. Otherwise, a Delta table client is
    * instantiated with the supplied configuration to read the table.
+   *
    * @param inputRowSchema     schema for {@link org.apache.druid.data.input.InputRow}
    * @param inputFormat        unused parameter. The input format is always parquet
    * @param temporaryDirectory unused parameter
-   * @return
    */
   @Override
   public InputSourceReader reader(
@@ -124,7 +127,11 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
       } else {
         final Table table = Table.forPath(tableClient, tablePath);
         final Snapshot latestSnapshot = table.getLatestSnapshot(tableClient);
-        final Scan scan = latestSnapshot.getScanBuilder(tableClient).build();
+        final StructType prunedSchema = pruneSchema(
+            latestSnapshot.getSchema(tableClient),
+            inputRowSchema.getColumnsFilter()
+        );
+        final Scan scan = latestSnapshot.getScanBuilder(tableClient).withReadSchema(tableClient, prunedSchema).build();
         final CloseableIterator<FilteredColumnarBatch> scanFiles = scan.getScanFiles(tableClient);
 
         scanState = scan.getScanState(tableClient);
@@ -212,5 +219,28 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
   private Row deserialize(TableClient tableClient, String row)
   {
     return RowSerde.deserializeRowFromJson(tableClient, row);
+  }
+
+  /**
+   * Utility method to return a pruned schema that contains the given {@code columns} from
+   * {@code baseSchema} applied by {@code columnsFilter}. This will serve as an optimization
+   * for table scans if we're interested in reading only a subset of columns from the Delta Lake table.
+   */
+  private StructType pruneSchema(final StructType baseSchema, final ColumnsFilter columnsFilter)
+  {
+    final List<String> columnNames = baseSchema.fieldNames();
+    final List<String> fiteredColumnNames = columnNames
+        .stream()
+        .filter(columnsFilter::apply)
+        .collect(Collectors.toList());
+
+    if (fiteredColumnNames.equals(columnNames)) {
+      return baseSchema;
+    }
+    final List<StructField> selectedFields = fiteredColumnNames
+        .stream()
+        .map(baseSchema::get)
+        .collect(Collectors.toList());
+    return new StructType(selectedFields);
   }
 }

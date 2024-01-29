@@ -21,6 +21,7 @@ package org.apache.druid.delta.input;
 
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.error.DruidException;
@@ -81,7 +82,37 @@ public class DeltaInputSourceTest
     final List<InputRow> actualReadRows = readAllRows(inputSourceReader);
     Assert.assertEquals(DeltaTestUtils.EXPECTED_ROWS.size(), actualReadRows.size());
 
-    validateRows(DeltaTestUtils.EXPECTED_ROWS, actualReadRows);
+    validateRows(DeltaTestUtils.EXPECTED_ROWS, actualReadRows, DeltaTestUtils.SCHEMA);
+  }
+
+  @Test
+  public void testReadAllDeltaTableSubSchema1() throws IOException
+  {
+    final DeltaInputSource deltaInputSource = new DeltaInputSource(DeltaTestUtils.DELTA_TABLE_PATH, null);
+    final InputSourceReader inputSourceReader = deltaInputSource.reader(
+        DeltaTestUtils.SUB_SCHEMA_1,
+        null,
+        null
+    );
+    final List<InputRow> actualReadRows = readAllRows(inputSourceReader);
+    Assert.assertEquals(DeltaTestUtils.EXPECTED_ROWS.size(), actualReadRows.size());
+
+    validateRows(DeltaTestUtils.EXPECTED_ROWS, actualReadRows, DeltaTestUtils.SUB_SCHEMA_1);
+  }
+
+  @Test
+  public void testReadAllDeltaTableInvalidSubSchema2() throws IOException
+  {
+    final DeltaInputSource deltaInputSource = new DeltaInputSource(DeltaTestUtils.DELTA_TABLE_PATH, null);
+    final InputSourceReader inputSourceReader = deltaInputSource.reader(
+        DeltaTestUtils.SUB_SCHEMA_2,
+        null,
+        null
+    );
+    final List<InputRow> actualReadRows = readAllRows(inputSourceReader);
+    Assert.assertEquals(DeltaTestUtils.EXPECTED_ROWS.size(), actualReadRows.size());
+
+    validateRows(DeltaTestUtils.EXPECTED_ROWS, actualReadRows, DeltaTestUtils.SUB_SCHEMA_2);
   }
 
   @Test
@@ -129,7 +160,7 @@ public class DeltaInputSourceTest
       final List<Map<String, Object>> expectedRowsInSplit = DeltaTestUtils.SPLIT_TO_EXPECTED_ROWS.get(idx);
       Assert.assertEquals(expectedRowsInSplit.size(), actualRowsInSplit.size());
 
-      validateRows(expectedRowsInSplit, actualRowsInSplit);
+      validateRows(expectedRowsInSplit, actualRowsInSplit, DeltaTestUtils.SCHEMA);
     }
   }
 
@@ -197,18 +228,26 @@ public class DeltaInputSourceTest
     return rows;
   }
 
-  private void validateRows(final List<Map<String, Object>> expectedRows, final List<InputRow> actualReadRows)
+  private void validateRows(
+      final List<Map<String, Object>> expectedRows,
+      final List<InputRow> actualReadRows,
+      final InputRowSchema schema
+  )
   {
     for (int idx = 0; idx < expectedRows.size(); idx++) {
       final Map<String, Object> expectedRow = expectedRows.get(idx);
       final InputRow actualInputRow = actualReadRows.get(idx);
       for (String key : expectedRow.keySet()) {
-        if (DeltaTestUtils.SCHEMA.getTimestampSpec().getTimestampColumn().equals(key)) {
-          final long expectedMillis = (Long) expectedRow.get(key) * 1000;
-          Assert.assertEquals(expectedMillis, actualInputRow.getTimestampFromEpoch());
-          Assert.assertEquals(DateTimes.utc(expectedMillis), actualInputRow.getTimestamp());
+        if (!schema.getColumnsFilter().apply(key)) {
+          Assert.assertNull(actualInputRow.getRaw(key));
         } else {
-          Assert.assertEquals(expectedRow.get(key), actualInputRow.getRaw(key));
+          if (schema.getTimestampSpec().getTimestampColumn().equals(key)) {
+            final long expectedMillis = (Long) expectedRow.get(key) * 1000;
+            Assert.assertEquals(expectedMillis, actualInputRow.getTimestampFromEpoch());
+            Assert.assertEquals(DateTimes.utc(expectedMillis), actualInputRow.getTimestamp());
+          } else {
+            Assert.assertEquals(expectedRow.get(key), actualInputRow.getRaw(key));
+          }
         }
       }
     }
