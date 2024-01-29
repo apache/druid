@@ -20,19 +20,26 @@
 ### Generate Delta Table for Unit Tests
 
 To test Delta Lake ingestion, use the Python script `create_delta_table.py` to generate a sample Delta table.
-Set up the required dependencies by installing those specified in `requirements.txt`.
+Create a conda env `delta_test` with all the requirements specified in `requirements.txt` installed in the
+environment:
 ```shell
-pip install -r requirements.txt
+conda create --name delta_test --file requirements.txt
 ```
 
-Specifically, `pyspark` and `delta-spark` requirements are needed to generate Delta records. Once all the dependencies are installed,
-you can run the python script:
+To activate the environment:
+
+```shell
+conda activate delta_test
+```
+
+From the conda environment, you can run the python script:
+
 ```python
 python3 create_delta_table.py
 ```
 
 By default, the script uses `append` mode to generate 10 random records and writes the
-Delta table to `resources/people-delta-table`. You can override the defaults by supplying the command line arguments:
+Delta table to `resources/employee-delta-table`. You can override the defaults by supplying the command line arguments:
 
 ```shell
 python3 create_delta_table.py -h
@@ -46,7 +53,7 @@ optional arguments:
   --save_mode {append,overwrite}
                         Specify write mode (append/overwrite) (default: append)
   --save_path SAVE_PATH
-                        Save path for Delta table (default: <DRUID_BASE_PATH>/druid/extensions-contrib/druid-deltalake-extensions/src/test/resources/people-delta-table)
+                        Save path for Delta table (default: <DRUID_BASE_PATH>/druid/extensions-contrib/druid-deltalake-extensions/src/test/resources/employee-delta-table)
   --num_records NUM_RECORDS
                         Specify number of Delta records to write (default: 10)
 ```

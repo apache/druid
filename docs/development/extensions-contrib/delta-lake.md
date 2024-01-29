@@ -35,4 +35,4 @@ These Delta Lake files are in versioned Parquet format
 ## Known limitations
 
 - This extension only reads from the latest Delta table snapshot as the kernel API only supports that.
-- Column filtering isn't supported yet. So the extension will reads all the columns in the configured table.
+- Column filtering isn't supported yet. So the extension will read all the columns in the configured table.
