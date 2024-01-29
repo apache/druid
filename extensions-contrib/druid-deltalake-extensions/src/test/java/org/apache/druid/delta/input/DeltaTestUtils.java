@@ -246,7 +246,7 @@ public class DeltaTestUtils
   /**
    * The Druid schema used for ingestion of {@link #DELTA_TABLE_PATH}.
    */
-  public static final InputRowSchema SCHEMA = new InputRowSchema(
+  public static final InputRowSchema FULL_SCHEMA = new InputRowSchema(
       new TimestampSpec("birthday", "posix", null),
       new DimensionsSpec(
           ImmutableList.of(
@@ -264,11 +264,10 @@ public class DeltaTestUtils
       ColumnsFilter.all()
   );
 
-
   /**
-   * Similar to {@link #SCHEMA}, but with a smaller set of columns with an inclusion filter applied.
+   * Similar to {@link #FULL_SCHEMA}, but with a smaller set of columns with an inclusion filter applied.
    */
-  public static final InputRowSchema SUB_SCHEMA_1 = new InputRowSchema(
+  public static final InputRowSchema SCHEMA_1 = new InputRowSchema(
       new TimestampSpec("birthday", "posix", null),
       new DimensionsSpec(
           ImmutableList.of(
@@ -287,10 +286,10 @@ public class DeltaTestUtils
   );
 
   /**
-   * Similar to {@link #SCHEMA}, but with a smaller set of columns with an exclusion filter applied. A non-existent
+   * Similar to {@link #FULL_SCHEMA}, but with a smaller set of columns with an exclusion filter applied. A non-existent
    * column is added to the exclusion filter - it should silently get thrown away.
    */
-  public static final InputRowSchema SUB_SCHEMA_2 = new InputRowSchema(
+  public static final InputRowSchema SCHEMA_2 = new InputRowSchema(
       new TimestampSpec("birthday", "posix", null),
       new DimensionsSpec(
           ImmutableList.of(

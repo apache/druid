@@ -44,7 +44,7 @@ public class DeltaInputSourceTest
   public void testSampleDeltaTable() throws IOException
   {
     final DeltaInputSource deltaInputSource = new DeltaInputSource(DeltaTestUtils.DELTA_TABLE_PATH, null);
-    final InputSourceReader inputSourceReader = deltaInputSource.reader(DeltaTestUtils.SCHEMA, null, null);
+    final InputSourceReader inputSourceReader = deltaInputSource.reader(DeltaTestUtils.FULL_SCHEMA, null, null);
 
     List<InputRowListPlusRawValues> actualSampledRows = sampleAllRows(inputSourceReader);
     Assert.assertEquals(DeltaTestUtils.EXPECTED_ROWS.size(), actualSampledRows.size());
@@ -60,7 +60,7 @@ public class DeltaInputSourceTest
       Assert.assertEquals(1, actualSampledRow.getRawValuesList().size());
 
       for (String key : expectedRow.keySet()) {
-        if (DeltaTestUtils.SCHEMA.getTimestampSpec().getTimestampColumn().equals(key)) {
+        if (DeltaTestUtils.FULL_SCHEMA.getTimestampSpec().getTimestampColumn().equals(key)) {
           final long expectedMillis = (Long) expectedRow.get(key);
           Assert.assertEquals(expectedMillis, actualSampledRawVals.get(key));
         } else {
@@ -75,14 +75,14 @@ public class DeltaInputSourceTest
   {
     final DeltaInputSource deltaInputSource = new DeltaInputSource(DeltaTestUtils.DELTA_TABLE_PATH, null);
     final InputSourceReader inputSourceReader = deltaInputSource.reader(
-        DeltaTestUtils.SCHEMA,
+        DeltaTestUtils.FULL_SCHEMA,
         null,
         null
     );
     final List<InputRow> actualReadRows = readAllRows(inputSourceReader);
     Assert.assertEquals(DeltaTestUtils.EXPECTED_ROWS.size(), actualReadRows.size());
 
-    validateRows(DeltaTestUtils.EXPECTED_ROWS, actualReadRows, DeltaTestUtils.SCHEMA);
+    validateRows(DeltaTestUtils.EXPECTED_ROWS, actualReadRows, DeltaTestUtils.FULL_SCHEMA);
   }
 
   @Test
@@ -90,29 +90,29 @@ public class DeltaInputSourceTest
   {
     final DeltaInputSource deltaInputSource = new DeltaInputSource(DeltaTestUtils.DELTA_TABLE_PATH, null);
     final InputSourceReader inputSourceReader = deltaInputSource.reader(
-        DeltaTestUtils.SUB_SCHEMA_1,
+        DeltaTestUtils.SCHEMA_1,
         null,
         null
     );
     final List<InputRow> actualReadRows = readAllRows(inputSourceReader);
     Assert.assertEquals(DeltaTestUtils.EXPECTED_ROWS.size(), actualReadRows.size());
 
-    validateRows(DeltaTestUtils.EXPECTED_ROWS, actualReadRows, DeltaTestUtils.SUB_SCHEMA_1);
+    validateRows(DeltaTestUtils.EXPECTED_ROWS, actualReadRows, DeltaTestUtils.SCHEMA_1);
   }
 
   @Test
-  public void testReadAllDeltaTableInvalidSubSchema2() throws IOException
+  public void testReadAllDeltaTableWithSubSchema2() throws IOException
   {
     final DeltaInputSource deltaInputSource = new DeltaInputSource(DeltaTestUtils.DELTA_TABLE_PATH, null);
     final InputSourceReader inputSourceReader = deltaInputSource.reader(
-        DeltaTestUtils.SUB_SCHEMA_2,
+        DeltaTestUtils.SCHEMA_2,
         null,
         null
     );
     final List<InputRow> actualReadRows = readAllRows(inputSourceReader);
     Assert.assertEquals(DeltaTestUtils.EXPECTED_ROWS.size(), actualReadRows.size());
 
-    validateRows(DeltaTestUtils.EXPECTED_ROWS, actualReadRows, DeltaTestUtils.SUB_SCHEMA_2);
+    validateRows(DeltaTestUtils.EXPECTED_ROWS, actualReadRows, DeltaTestUtils.SCHEMA_2);
   }
 
   @Test
@@ -152,7 +152,7 @@ public class DeltaInputSourceTest
           deltaSplit
       );
       final InputSourceReader inputSourceReader = deltaInputSourceWithSplit.reader(
-          DeltaTestUtils.SCHEMA,
+          DeltaTestUtils.FULL_SCHEMA,
           null,
           null
       );
@@ -160,7 +160,7 @@ public class DeltaInputSourceTest
       final List<Map<String, Object>> expectedRowsInSplit = DeltaTestUtils.SPLIT_TO_EXPECTED_ROWS.get(idx);
       Assert.assertEquals(expectedRowsInSplit.size(), actualRowsInSplit.size());
 
-      validateRows(expectedRowsInSplit, actualRowsInSplit, DeltaTestUtils.SCHEMA);
+      validateRows(expectedRowsInSplit, actualRowsInSplit, DeltaTestUtils.FULL_SCHEMA);
     }
   }
 

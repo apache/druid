@@ -96,7 +96,7 @@ def main():
 
     parser.add_argument('--save_mode', choices=('append', 'overwrite'), default="overwrite",
                         help="Specify write mode (append/overwrite)")
-    parser.add_argument('--save_path', default=os.path.join(os.getcwd(), "employee-delta-table2"),
+    parser.add_argument('--save_path', default=os.path.join(os.getcwd(), "employee-delta-table"),
                         help="Save path for Delta table")
     parser.add_argument('--num_records', type=int, default=10,
                         help="Specify number of Delta records to write")

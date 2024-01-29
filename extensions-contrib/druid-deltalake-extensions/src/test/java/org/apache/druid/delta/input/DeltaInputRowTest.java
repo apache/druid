@@ -57,14 +57,14 @@ public class DeltaInputRowTest
           Row next = dataReadResult.getRows().next();
           DeltaInputRow deltaInputRow = new DeltaInputRow(
               next,
-              DeltaTestUtils.SCHEMA
+              DeltaTestUtils.FULL_SCHEMA
           );
           Assert.assertNotNull(deltaInputRow);
           Assert.assertEquals(DeltaTestUtils.DIMENSIONS, deltaInputRow.getDimensions());
 
           Map<String, Object> expectedRow = DeltaTestUtils.EXPECTED_ROWS.get(totalRecordCount);
           for (String key : expectedRow.keySet()) {
-            if (DeltaTestUtils.SCHEMA.getTimestampSpec().getTimestampColumn().equals(key)) {
+            if (DeltaTestUtils.FULL_SCHEMA.getTimestampSpec().getTimestampColumn().equals(key)) {
               final long expectedMillis = ((Long) expectedRow.get(key)) * 1000;
               Assert.assertEquals(expectedMillis, deltaInputRow.getTimestampFromEpoch());
             } else {
