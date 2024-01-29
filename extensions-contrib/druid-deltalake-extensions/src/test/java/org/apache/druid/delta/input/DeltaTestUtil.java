@@ -62,7 +62,7 @@ public class DeltaTestUtil
       "last_vacation_time"
   );
 
-  private static final List<Map<String, Object>> SPLIT_ROWS_0 = new ArrayList<>(
+  private static final List<Map<String, Object>> SPLIT_0_EXPECTED_ROWS = new ArrayList<>(
       ImmutableList.of(
           ImmutableMap.of(
               "birthday", 1057881600L,
@@ -111,7 +111,7 @@ public class DeltaTestUtil
       )
   );
 
-  private static final List<Map<String, Object>> SPLIT_ROWS_1 = new ArrayList<>(
+  private static final List<Map<String, Object>> SPLIT_1_EXPECTED_ROWS = new ArrayList<>(
       ImmutableList.of(
           ImmutableMap.of(
               "birthday", 937526400L,
@@ -213,30 +213,32 @@ public class DeltaTestUtil
       )
   );
 
-  public static final Map<Integer, List<Map<String, Object>>> SPLIT_TO_ROWS = new HashMap<>(
+  public static final Map<Integer, List<Map<String, Object>>> SPLIT_TO_EXPECTED_ROWS = new HashMap<>(
       ImmutableMap.of(
-          0, SPLIT_ROWS_0,
-          1, SPLIT_ROWS_1
+          0, SPLIT_0_EXPECTED_ROWS,
+          1, SPLIT_1_EXPECTED_ROWS
       )
   );
 
-  public static final List<Map<String, Object>> EXPECTED_ROWS = SPLIT_TO_ROWS.values().stream()
-                                                                             .flatMap(List::stream)
-                                                                             .collect(Collectors.toList());
+  public static final List<Map<String, Object>> EXPECTED_ROWS = SPLIT_TO_EXPECTED_ROWS.values().stream()
+                                                                                      .flatMap(List::stream)
+                                                                                      .collect(Collectors.toList());
 
   public static final InputRowSchema SCHEMA = new InputRowSchema(
       new TimestampSpec("birthday", "posix", null),
-      new DimensionsSpec(ImmutableList.of(
-          new LongDimensionSchema("id"),
-          new LongDimensionSchema("birthday"),
-          new StringDimensionSchema("name"),
-          new LongDimensionSchema("age"),
-          new DoubleDimensionSchema("salary"),
-          new FloatDimensionSchema("bonus"),
-          new LongDimensionSchema("yoe"),
-          new StringDimensionSchema("is_fulltime"),
-          new LongDimensionSchema("last_vacation_time")
-      )),
+      new DimensionsSpec(
+          ImmutableList.of(
+              new LongDimensionSchema("id"),
+              new LongDimensionSchema("birthday"),
+              new StringDimensionSchema("name"),
+              new LongDimensionSchema("age"),
+              new DoubleDimensionSchema("salary"),
+              new FloatDimensionSchema("bonus"),
+              new LongDimensionSchema("yoe"),
+              new StringDimensionSchema("is_fulltime"),
+              new LongDimensionSchema("last_vacation_time")
+          )
+      ),
       ColumnsFilter.all()
   );
 

@@ -90,7 +90,7 @@ public class DeltaInputSourceTest
     final DeltaInputSource deltaInputSource = new DeltaInputSource(DeltaTestUtil.DELTA_TABLE_PATH, null);
     final List<InputSplit<DeltaSplit>> splits = deltaInputSource.createSplits(null, null)
                                                                 .collect(Collectors.toList());
-    Assert.assertEquals(DeltaTestUtil.SPLIT_TO_ROWS.size(), splits.size());
+    Assert.assertEquals(DeltaTestUtil.SPLIT_TO_EXPECTED_ROWS.size(), splits.size());
 
     for (InputSplit<DeltaSplit> split : splits) {
       final DeltaSplit deltaSplit = split.get();
@@ -111,7 +111,7 @@ public class DeltaInputSourceTest
     final DeltaInputSource deltaInputSource = new DeltaInputSource(DeltaTestUtil.DELTA_TABLE_PATH, null);
     final List<InputSplit<DeltaSplit>> splits = deltaInputSource.createSplits(null, null)
                                                                 .collect(Collectors.toList());
-    Assert.assertEquals(DeltaTestUtil.SPLIT_TO_ROWS.size(), splits.size());
+    Assert.assertEquals(DeltaTestUtil.SPLIT_TO_EXPECTED_ROWS.size(), splits.size());
 
     for (int i = 0; i < splits.size(); i++) {
       final InputSplit<DeltaSplit> split = splits.get(i);
@@ -126,7 +126,7 @@ public class DeltaInputSourceTest
           null
       );
       final List<InputRow> actualRowsInSplit = readAllRows(inputSourceReader);
-      final List<Map<String, Object>> expectedRowsInSplit = DeltaTestUtil.SPLIT_TO_ROWS.get(i);
+      final List<Map<String, Object>> expectedRowsInSplit = DeltaTestUtil.SPLIT_TO_EXPECTED_ROWS.get(i);
       Assert.assertEquals(expectedRowsInSplit.size(), actualRowsInSplit.size());
 
       validateRows(expectedRowsInSplit, actualRowsInSplit);
