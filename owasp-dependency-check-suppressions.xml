@@ -65,7 +65,7 @@
 
   <suppress>
     <notes><![CDATA[
-     file name: json-path-2.3.0.jar
+     file name: json-path-2.9.0.jar
      ]]></notes>
     <packageUrl regex="true">^pkg:maven/net\.minidev/json\-path@.*$</packageUrl>
     <cve>CVE-2022-45688</cve>
