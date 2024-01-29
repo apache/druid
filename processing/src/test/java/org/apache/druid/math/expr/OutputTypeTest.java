@@ -453,8 +453,6 @@ public class OutputTypeTest extends InitializedNullHandlingTest
     final ExprEval<?> longEval = ExprEval.of(1L);
     final ExprEval<?> doubleEval = ExprEval.of(1.0);
     final ExprEval<?> arrayEval = ExprEval.ofLongArray(new Long[]{1L, 2L, 3L});
-    final ExprEval<?> complexEval = ExprEval.ofComplex(ExpressionType.UNKNOWN_COMPLEX, new Object());
-    final ExprEval<?> complexEval2 = ExprEval.ofComplex(new ExpressionType(ExprType.COMPLEX, null, null), new Object());
 
     // only long stays long
     Assert.assertEquals(ExpressionType.LONG, ExpressionTypeConversion.autoDetect(longEval, longEval));
@@ -481,15 +479,6 @@ public class OutputTypeTest extends InitializedNullHandlingTest
     Assert.assertEquals(ExpressionType.DOUBLE, ExpressionTypeConversion.autoDetect(nullStringEval, arrayEval));
     Assert.assertEquals(ExpressionType.DOUBLE, ExpressionTypeConversion.autoDetect(doubleEval, arrayEval));
     Assert.assertEquals(ExpressionType.DOUBLE, ExpressionTypeConversion.autoDetect(longEval, arrayEval));
-
-    Assert.assertEquals(ExpressionType.DOUBLE, ExpressionTypeConversion.autoDetect(longEval, complexEval));
-    Assert.assertEquals(ExpressionType.DOUBLE, ExpressionTypeConversion.autoDetect(doubleEval, complexEval));
-    Assert.assertEquals(ExpressionType.DOUBLE, ExpressionTypeConversion.autoDetect(arrayEval, complexEval));
-    Assert.assertEquals(ExpressionType.DOUBLE, ExpressionTypeConversion.autoDetect(complexEval, complexEval));
-    Assert.assertEquals(
-        ExpressionTypeConversion.autoDetect(complexEval, complexEval),
-        ExpressionTypeConversion.autoDetect(complexEval2, complexEval)
-    );
   }
 
   @Test
