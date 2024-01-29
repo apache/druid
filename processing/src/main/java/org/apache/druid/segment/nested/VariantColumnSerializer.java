@@ -27,6 +27,7 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
@@ -34,6 +35,7 @@ import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
@@ -81,10 +83,13 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
   private ByteBuffer columnNameBytes = null;
   private boolean hasNulls;
   @Nullable
+  private final ExpressionType expectedExpressionType;
+  @Nullable
   private final Byte variantTypeSetByte;
 
   public VariantColumnSerializer(
       String name,
+      @Nullable ColumnType logicalType,
       @Nullable Byte variantTypeSetByte,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
@@ -92,6 +97,7 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
   )
   {
     this.name = name;
+    this.expectedExpressionType = logicalType != null ? ExpressionType.fromColumnTypeStrict(logicalType) : null;
     this.variantTypeSetByte = variantTypeSetByte;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.indexSpec = indexSpec;
@@ -228,8 +234,24 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
     }
 
     ExprEval eval = ExprEval.bestEffortOf(StructuredData.unwrap(selector.getObject()));
+    if (expectedExpressionType != null) {
+      try {
+        eval = eval.castTo(expectedExpressionType);
+      }
+      catch (IAE invalidCast) {
+        // write null
+        intermediateValueWriter.write(0);
+        hasNulls = true;
+        return;
+      }
+    }
     if (eval.isArray()) {
       Object[] array = eval.asArray();
+      if (array == null) {
+        intermediateValueWriter.write(0);
+        hasNulls = true;
+        return;
+      }
       int[] globalIds = new int[array.length];
       for (int i = 0; i < array.length; i++) {
         if (array[i] == null) {

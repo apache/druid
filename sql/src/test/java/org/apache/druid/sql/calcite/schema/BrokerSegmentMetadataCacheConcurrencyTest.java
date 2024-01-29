@@ -51,6 +51,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.segment.metadata.AbstractSegmentMetadataCache;
 import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
+import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -100,7 +101,7 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
   {
     super.setUp();
     tmpDir = temporaryFolder.newFolder();
-    walker = new SpecificSegmentsQuerySegmentWalker(conglomerate);
+    walker = SpecificSegmentsQuerySegmentWalker.createWalker(conglomerate);
     inventoryView = new TestServerInventoryView();
     serverView = newBrokerServerView(inventoryView);
     inventoryView.init();
@@ -187,6 +188,12 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
 
           @Override
           public ServerView.CallbackAction serverSegmentRemoved(DruidServerMetadata server, DataSegment segment)
+          {
+            return ServerView.CallbackAction.CONTINUE;
+          }
+
+          @Override
+          public ServerView.CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
           {
             return ServerView.CallbackAction.CONTINUE;
           }
@@ -297,6 +304,12 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
 
           @Override
           public ServerView.CallbackAction serverSegmentRemoved(DruidServerMetadata server, DataSegment segment)
+          {
+            return ServerView.CallbackAction.CONTINUE;
+          }
+
+          @Override
+          public ServerView.CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
           {
             return ServerView.CallbackAction.CONTINUE;
           }

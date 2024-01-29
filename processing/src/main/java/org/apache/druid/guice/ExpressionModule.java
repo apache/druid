@@ -32,6 +32,7 @@ import org.apache.druid.query.expression.HyperUniqueExpressions;
 import org.apache.druid.query.expression.IPv4AddressMatchExprMacro;
 import org.apache.druid.query.expression.IPv4AddressParseExprMacro;
 import org.apache.druid.query.expression.IPv4AddressStringifyExprMacro;
+import org.apache.druid.query.expression.IPv6AddressMatchExprMacro;
 import org.apache.druid.query.expression.LikeExprMacro;
 import org.apache.druid.query.expression.NestedDataExpressions;
 import org.apache.druid.query.expression.RegexpExtractExprMacro;
@@ -59,6 +60,7 @@ public class ExpressionModule implements Module
                    .add(IPv4AddressMatchExprMacro.class)
                    .add(IPv4AddressParseExprMacro.class)
                    .add(IPv4AddressStringifyExprMacro.class)
+                   .add(IPv6AddressMatchExprMacro.class)
                    .add(LikeExprMacro.class)
                    .add(RegexpExtractExprMacro.class)
                    .add(RegexpLikeExprMacro.class)
@@ -83,6 +85,7 @@ public class ExpressionModule implements Module
                    .add(NestedDataExpressions.JsonPathsExprMacro.class)
                    .add(NestedDataExpressions.JsonValueExprMacro.class)
                    .add(NestedDataExpressions.JsonQueryExprMacro.class)
+                   .add(NestedDataExpressions.JsonQueryArrayExprMacro.class)
                    .add(NestedDataExpressions.ToJsonStringExprMacro.class)
                    .add(NestedDataExpressions.ParseJsonExprMacro.class)
                    .add(NestedDataExpressions.TryParseJsonExprMacro.class)

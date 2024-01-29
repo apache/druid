@@ -105,30 +105,6 @@ public class CastedLiteralOperandTypeCheckers
         }
       };
 
-  public static boolean isLiteral(SqlNode node, boolean allowCast)
-  {
-    assert node != null;
-    if (node instanceof SqlLiteral) {
-      return true;
-    }
-    if (!allowCast) {
-      return false;
-    }
-    switch (node.getKind()) {
-      case CAST:
-        // "CAST(e AS type)" is literal if "e" is literal
-        return isLiteral(((SqlCall) node).operand(0), true);
-      case MAP_VALUE_CONSTRUCTOR:
-      case ARRAY_VALUE_CONSTRUCTOR:
-        return ((SqlCall) node).getOperandList().stream()
-                               .allMatch(o -> isLiteral(o, true));
-      case DEFAULT:
-        return true; // DEFAULT is always NULL
-      default:
-        return false;
-    }
-  }
-
   /**
    * Fetches primitive literals from the casts, including NULL literal.
    * It throws if the entered node isn't a primitive literal, which can be cast multiple times.

@@ -21,14 +21,19 @@ package org.apache.druid.query.operator.window;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.Lists;
+import org.apache.druid.query.operator.ColumnWithDirection;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class WindowFrame
 {
   public static WindowFrame unbounded()
   {
-    return new WindowFrame(PeerType.ROWS, true, 0, true, 0);
+    return new WindowFrame(PeerType.ROWS, true, 0, true, 0, null);
   }
 
   @SuppressWarnings("unused")
@@ -44,6 +49,7 @@ public class WindowFrame
   private final int lowerOffset;
   private final boolean upperUnbounded;
   private final int upperOffset;
+  private final List<ColumnWithDirection> orderBy;
 
   @JsonCreator
   public WindowFrame(
@@ -51,7 +57,8 @@ public class WindowFrame
       @JsonProperty("lowUnbounded") boolean lowerUnbounded,
       @JsonProperty("lowOffset") int lowerOffset,
       @JsonProperty("uppUnbounded") boolean upperUnbounded,
-      @JsonProperty("uppOffset") int upperOffset
+      @JsonProperty("uppOffset") int upperOffset,
+      @JsonProperty("orderBy") List<ColumnWithDirection> orderBy
   )
   {
     this.peerType = peerType;
@@ -59,6 +66,7 @@ public class WindowFrame
     this.lowerOffset = lowerOffset;
     this.upperUnbounded = upperUnbounded;
     this.upperOffset = upperOffset;
+    this.orderBy = orderBy;
   }
 
   @JsonProperty("peerType")
@@ -91,6 +99,12 @@ public class WindowFrame
     return upperOffset;
   }
 
+  @JsonProperty("orderBy")
+  public List<ColumnWithDirection> getOrderBy()
+  {
+    return orderBy;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -105,13 +119,14 @@ public class WindowFrame
            && lowerOffset == that.lowerOffset
            && upperUnbounded == that.upperUnbounded
            && upperOffset == that.upperOffset
-           && peerType == that.peerType;
+           && peerType == that.peerType
+           && Objects.equals(orderBy, that.orderBy);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(peerType, lowerUnbounded, lowerOffset, upperUnbounded, upperOffset);
+    return Objects.hash(peerType, lowerUnbounded, lowerOffset, upperUnbounded, upperOffset, orderBy);
   }
 
   @Override
@@ -123,6 +138,42 @@ public class WindowFrame
            ", lowerOffset=" + lowerOffset +
            ", upperUnbounded=" + upperUnbounded +
            ", upperOffset=" + upperOffset +
+           ", orderBy=" + orderBy +
            '}';
+  }
+
+  public static WindowFrame forOrderBy(ColumnWithDirection... orderBy)
+  {
+    return new WindowFrame(PeerType.RANGE, true, 0, false, 0, Lists.newArrayList(orderBy));
+  }
+
+  public List<String> getOrderByColNames()
+  {
+    if (orderBy == null) {
+      return Collections.emptyList();
+    }
+    return orderBy.stream().map(ColumnWithDirection::getColumn).collect(Collectors.toList());
+  }
+
+  /**
+   * Calculates the applicable lower offset if the max number of rows is known.
+   */
+  public int getLowerOffsetClamped(int maxRows)
+  {
+    if (lowerUnbounded) {
+      return maxRows;
+    }
+    return Math.min(maxRows, lowerOffset);
+  }
+
+  /**
+   * Calculates the applicable upper offset if the max number of rows is known.
+   */
+  public int getUpperOffsetClamped(int maxRows)
+  {
+    if (upperUnbounded) {
+      return maxRows;
+    }
+    return Math.min(maxRows, upperOffset);
   }
 }

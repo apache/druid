@@ -23,14 +23,15 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.pac4j.core.config.Config;
-import org.pac4j.core.context.J2EContext;
+import org.pac4j.core.context.JEEContext;
 import org.pac4j.core.context.session.SessionStore;
 import org.pac4j.core.engine.CallbackLogic;
 import org.pac4j.core.engine.DefaultCallbackLogic;
 import org.pac4j.core.engine.DefaultSecurityLogic;
 import org.pac4j.core.engine.SecurityLogic;
+import org.pac4j.core.exception.http.HttpAction;
 import org.pac4j.core.http.adapter.HttpActionAdapter;
-import org.pac4j.core.profile.CommonProfile;
+import org.pac4j.core.profile.UserProfile;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -47,12 +48,12 @@ public class Pac4jFilter implements Filter
 {
   private static final Logger LOGGER = new Logger(Pac4jFilter.class);
 
-  private static final HttpActionAdapter<String, J2EContext> NOOP_HTTP_ACTION_ADAPTER = (int code, J2EContext ctx) -> null;
+  private static final HttpActionAdapter<String, JEEContext> NOOP_HTTP_ACTION_ADAPTER = (HttpAction code, JEEContext ctx) -> null;
 
   private final Config pac4jConfig;
-  private final SecurityLogic<String, J2EContext> securityLogic;
-  private final CallbackLogic<String, J2EContext> callbackLogic;
-  private final SessionStore<J2EContext> sessionStore;
+  private final SecurityLogic<String, JEEContext> securityLogic;
+  private final CallbackLogic<String, JEEContext> callbackLogic;
+  private final SessionStore<JEEContext> sessionStore;
 
   private final String name;
   private final String authorizerName;
@@ -88,7 +89,7 @@ public class Pac4jFilter implements Filter
 
     HttpServletRequest httpServletRequest = (HttpServletRequest) servletRequest;
     HttpServletResponse httpServletResponse = (HttpServletResponse) servletResponse;
-    J2EContext context = new J2EContext(httpServletRequest, httpServletResponse, sessionStore);
+    JEEContext context = new JEEContext(httpServletRequest, httpServletResponse, sessionStore);
 
     if (Pac4jCallbackResource.SELF_URL.equals(httpServletRequest.getRequestURI())) {
       callbackLogic.perform(
@@ -101,7 +102,7 @@ public class Pac4jFilter implements Filter
       String uid = securityLogic.perform(
           context,
           pac4jConfig,
-          (J2EContext ctx, Collection<CommonProfile> profiles, Object... parameters) -> {
+          (JEEContext ctx, Collection<UserProfile> profiles, Object... parameters) -> {
             if (profiles.isEmpty()) {
               LOGGER.warn("No profiles found after OIDC auth.");
               return null;

@@ -34,6 +34,7 @@ import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.PartialShardSpec;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -43,7 +44,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Stream;
 
 public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataStorageCoordinator
 {
@@ -89,7 +89,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public List<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource, Interval interval)
+  public List<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource, List<Interval> intervals)
   {
     return ImmutableList.of();
   }
@@ -105,30 +105,20 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public List<DataSegment> retrieveUnusedSegmentsForInterval(String dataSource, Interval interval)
-  {
-    synchronized (unusedSegments) {
-      return ImmutableList.copyOf(unusedSegments);
-    }
-  }
-
-  @Override
   public List<DataSegment> retrieveUnusedSegmentsForInterval(
       String dataSource,
       Interval interval,
-      @Nullable Integer limit
+      @Nullable Integer limit,
+      @Nullable DateTime maxUsedStatusLastUpdatedTime
   )
   {
     synchronized (unusedSegments) {
-      Stream<DataSegment> resultStream = unusedSegments.stream();
-
-      resultStream = resultStream.filter(ds -> !nuked.contains(ds));
-
-      if (limit != null) {
-        resultStream = resultStream.limit(limit);
-      }
-
-      return ImmutableList.copyOf(resultStream.iterator());
+      return ImmutableList.copyOf(
+          unusedSegments.stream()
+                        .filter(ds -> !nuked.contains(ds))
+                        .limit(limit != null ? limit : Long.MAX_VALUE)
+                        .iterator()
+      );
     }
   }
 
@@ -275,6 +265,12 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   public DataSegment retrieveSegmentForId(final String id, boolean includeUnused)
   {
     return null;
+  }
+
+  @Override
+  public int deleteUpgradeSegmentsForTask(final String taskId)
+  {
+    throw new UnsupportedOperationException();
   }
 
   public Set<DataSegment> getPublished()

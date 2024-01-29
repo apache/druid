@@ -51,7 +51,7 @@ public class InlineInputSourceDefnTest extends BaseExternTableTest
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(ImmutableMap.of("type", InlineInputSource.TYPE_KEY))
         .inputFormat(CSV_FORMAT)
-        .column("x", Columns.VARCHAR)
+        .column("x", Columns.STRING)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
     assertThrows(IAE.class, () -> resolved.validate());
@@ -63,7 +63,7 @@ public class InlineInputSourceDefnTest extends BaseExternTableTest
     // No format: not valid. For inline, format must be provided to match data
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(new InlineInputSource("a\n")))
-        .column("x", Columns.VARCHAR)
+        .column("x", Columns.STRING)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
     assertThrows(IAE.class, () -> resolved.validate());
@@ -86,7 +86,7 @@ public class InlineInputSourceDefnTest extends BaseExternTableTest
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(new InlineInputSource("a\n")))
         .inputFormat(CSV_FORMAT)
-        .column("x", Columns.VARCHAR)
+        .column("x", Columns.STRING)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
     resolved.validate();
@@ -130,8 +130,8 @@ public class InlineInputSourceDefnTest extends BaseExternTableTest
     args.put(InlineInputSourceDefn.DATA_PROPERTY, Arrays.asList("a,b", "c,d"));
     args.put(FormattedInputSourceDefn.FORMAT_PARAMETER, CsvFormatDefn.TYPE_KEY);
     final List<ColumnSpec> columns = Arrays.asList(
-        new ColumnSpec("a", Columns.VARCHAR, null),
-        new ColumnSpec("b", Columns.VARCHAR, null)
+        new ColumnSpec("a", Columns.STRING, null),
+        new ColumnSpec("b", Columns.STRING, null)
     );
 
     final TableFunction fn = defn.adHocTableFn();
@@ -157,8 +157,8 @@ public class InlineInputSourceDefnTest extends BaseExternTableTest
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(new InlineInputSource("a,b\nc,d\n")))
         .inputFormat(CSV_FORMAT)
-        .column("a", Columns.VARCHAR)
-        .column("b", Columns.VARCHAR)
+        .column("a", Columns.STRING)
+        .column("b", Columns.STRING)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
     resolved.validate();
@@ -183,8 +183,8 @@ public class InlineInputSourceDefnTest extends BaseExternTableTest
 
     // Cannot supply columns with the function
     List<ColumnSpec> columns = Arrays.asList(
-        new ColumnSpec("a", Columns.VARCHAR, null),
-        new ColumnSpec("b", Columns.VARCHAR, null)
+        new ColumnSpec("a", Columns.STRING, null),
+        new ColumnSpec("b", Columns.STRING, null)
     );
     assertThrows(IAE.class, () -> fn.apply("x", new HashMap<>(), columns, mapper));
   }
@@ -198,8 +198,8 @@ public class InlineInputSourceDefnTest extends BaseExternTableTest
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(new InlineInputSource("a,b\nc,d")))
         .inputFormat(formatToMap(format))
-        .column("a", Columns.VARCHAR)
-        .column("b", Columns.VARCHAR)
+        .column("a", Columns.STRING)
+        .column("b", Columns.STRING)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
     resolved.validate();

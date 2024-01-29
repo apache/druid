@@ -71,6 +71,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
 
   private static int coordinatorPort;
   private static int overlordPort;
+  private static boolean isValidLeader;
 
   private Server coordinator;
   private Server overlord;
@@ -109,6 +110,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
 
     coordinator.start();
     overlord.start();
+    isValidLeader = true;
   }
 
   @After
@@ -119,6 +121,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
 
     COORDINATOR_EXPECTED_REQUEST.reset();
     OVERLORD_EXPECTED_REQUEST.reset();
+    isValidLeader = true;
   }
 
   @Override
@@ -318,10 +321,64 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
   }
 
   @Test
+  public void testProxyEnebledCheck() throws Exception
+  {
+    HttpURLConnection connection = ((HttpURLConnection)
+        new URL(StringUtils.format("http://localhost:%d/proxy/enabled", port)).openConnection());
+    connection.setRequestMethod("GET");
+
+    Assert.assertEquals(200, connection.getResponseCode());
+    byte[] bytes = new byte[connection.getContentLength()];
+    Assert.assertEquals(connection.getInputStream().read(bytes), connection.getContentLength());
+    Assert.assertEquals(ImmutableMap.of("enabled", true), new ObjectMapper().readValue(bytes, Map.class));
+    Assert.assertFalse("coordinator called", COORDINATOR_EXPECTED_REQUEST.called);
+    Assert.assertFalse("overlord called", OVERLORD_EXPECTED_REQUEST.called);
+  }
+
+  @Test
   public void testBadProxyDestination() throws Exception
   {
     HttpURLConnection connection = ((HttpURLConnection)
         new URL(StringUtils.format("http://localhost:%d/proxy/other/status", port)).openConnection());
+    connection.setRequestMethod("GET");
+
+    Assert.assertEquals(400, connection.getResponseCode());
+    Assert.assertFalse("coordinator called", COORDINATOR_EXPECTED_REQUEST.called);
+    Assert.assertFalse("overlord called", OVERLORD_EXPECTED_REQUEST.called);
+  }
+
+  @Test
+  public void testCoordinatorLeaderUnknown() throws Exception
+  {
+    isValidLeader = false;
+    HttpURLConnection connection = ((HttpURLConnection)
+        new URL(StringUtils.format("http://localhost:%d/druid/coordinator", port)).openConnection());
+    connection.setRequestMethod("GET");
+
+    Assert.assertEquals(503, connection.getResponseCode());
+    Assert.assertFalse("coordinator called", COORDINATOR_EXPECTED_REQUEST.called);
+    Assert.assertFalse("overlord called", OVERLORD_EXPECTED_REQUEST.called);
+  }
+
+  @Test
+  public void testOverlordLeaderUnknown() throws Exception
+  {
+    isValidLeader = false;
+    HttpURLConnection connection = ((HttpURLConnection)
+        new URL(StringUtils.format("http://localhost:%d/druid/indexer", port)).openConnection());
+    connection.setRequestMethod("GET");
+
+    Assert.assertEquals(503, connection.getResponseCode());
+    Assert.assertFalse("coordinator called", COORDINATOR_EXPECTED_REQUEST.called);
+    Assert.assertFalse("overlord called", OVERLORD_EXPECTED_REQUEST.called);
+    isValidLeader = true;
+  }
+
+  @Test
+  public void testUnsupportedProxyDestination() throws Exception
+  {
+    HttpURLConnection connection = ((HttpURLConnection)
+        new URL(StringUtils.format("http://localhost:%d/proxy/other/status2", port)).openConnection());
     connection.setRequestMethod("GET");
 
     Assert.assertEquals(400, connection.getResponseCode());
@@ -407,7 +464,11 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
         @Override
         public String getCurrentLeader()
         {
-          return StringUtils.format("http://localhost:%d", coordinatorPort);
+          if (isValidLeader) {
+            return StringUtils.format("http://localhost:%d", coordinatorPort);
+          } else {
+            return null;
+          }
         }
       };
 
@@ -416,7 +477,11 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
         @Override
         public String getCurrentLeader()
         {
-          return StringUtils.format("http://localhost:%d", overlordPort);
+          if (isValidLeader) {
+            return StringUtils.format("http://localhost:%d", overlordPort);
+          } else {
+            return null;
+          }
         }
       };
 

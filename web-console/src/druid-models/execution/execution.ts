@@ -21,6 +21,7 @@ import { Column, QueryResult, SqlExpression, SqlQuery, SqlWithQuery } from '@dru
 import {
   deepGet,
   deleteKeys,
+  formatDuration,
   formatInteger,
   nonEmptyArray,
   oneOf,
@@ -31,7 +32,12 @@ import type { DruidEngine } from '../druid-engine/druid-engine';
 import { validDruidEngine } from '../druid-engine/druid-engine';
 import type { QueryContext } from '../query-context/query-context';
 import { Stages } from '../stages/stages';
-import type { MsqTaskPayloadResponse, MsqTaskReportResponse, TaskStatus } from '../task/task';
+import type {
+  MsqTaskPayloadResponse,
+  MsqTaskReportResponse,
+  SegmentLoadWaiterStatus,
+  TaskStatus,
+} from '../task/task';
 
 const IGNORE_CONTEXT_KEYS = [
   '__asyncIdentity__',
@@ -164,18 +170,6 @@ function formatPendingMessage(
   }
 }
 
-interface SegmentStatus {
-  duration: number;
-  onDemandSegments: number;
-  pendingSegments: number;
-  precachedSegments: number;
-  startTime: Date;
-  state: 'INIT' | 'WAITING' | 'SUCCESS';
-  totalSegments: number;
-  unknownSegments: number;
-  usedSegments: number;
-}
-
 export interface ExecutionValue {
   engine: DruidEngine;
   id: string;
@@ -194,7 +188,7 @@ export interface ExecutionValue {
   warnings?: ExecutionError[];
   capacityInfo?: CapacityInfo;
   _payload?: MsqTaskPayloadResponse;
-  segmentStatus?: SegmentStatus;
+  segmentStatus?: SegmentLoadWaiterStatus;
 }
 
 export class Execution {
@@ -305,7 +299,7 @@ export class Execution {
     const startTime = new Date(deepGet(taskReport, 'multiStageQuery.payload.status.startTime'));
     const durationMs = deepGet(taskReport, 'multiStageQuery.payload.status.durationMs');
 
-    const segmentLoaderStatus = deepGet(
+    const segmentLoaderStatus: SegmentLoadWaiterStatus = deepGet(
       taskReport,
       'multiStageQuery.payload.status.segmentLoadWaiterStatus',
     );
@@ -388,7 +382,7 @@ export class Execution {
   public readonly error?: ExecutionError;
   public readonly warnings?: ExecutionError[];
   public readonly capacityInfo?: CapacityInfo;
-  public readonly segmentStatus?: SegmentStatus;
+  public readonly segmentStatus?: SegmentLoadWaiterStatus;
 
   public readonly _payload?: { payload: any; task: string };
 
@@ -563,7 +557,7 @@ export class Execution {
         break;
 
       case 'SUCCESS':
-        label = 'Segments loaded successfully in ' + segmentStatus.duration + 'ms.';
+        label = `Segments loaded successfully in ${formatDuration(segmentStatus.duration)}`;
         break;
 
       default:

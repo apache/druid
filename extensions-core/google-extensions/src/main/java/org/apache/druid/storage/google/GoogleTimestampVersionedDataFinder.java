@@ -19,8 +19,6 @@
 
 package org.apache.druid.storage.google;
 
-import com.google.api.services.storage.model.Objects;
-import com.google.api.services.storage.model.StorageObject;
 import com.google.inject.Inject;
 import org.apache.druid.data.SearchableVersionedDataFinder;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
@@ -49,21 +47,27 @@ public class GoogleTimestampVersionedDataFinder extends GoogleDataSegmentPuller
       long mostRecent = Long.MIN_VALUE;
       URI latest = null;
       final CloudObjectLocation baseLocation = new CloudObjectLocation(descriptorBase);
-      final Objects objects = storage.list(baseLocation.getBucket()).setPrefix(baseLocation.getPath()).setMaxResults(MAX_LISTING_KEYS).execute();
-      for (StorageObject storageObject : objects.getItems()) {
-        if (GoogleUtils.isDirectoryPlaceholder(storageObject)) {
+      final GoogleStorageObjectPage googleStorageObjectPage = storage.list(
+          baseLocation.getBucket(),
+          baseLocation.getPath(),
+          MAX_LISTING_KEYS,
+          null
+      );
+      for (GoogleStorageObjectMetadata objectMetadata : googleStorageObjectPage.getObjectList()) {
+        if (GoogleUtils.isDirectoryPlaceholder(objectMetadata)) {
           continue;
         }
         // remove path prefix from file name
-        final CloudObjectLocation objectLocation = new CloudObjectLocation(storageObject.getBucket(),
-            storageObject.getName()
+        final CloudObjectLocation objectLocation = new CloudObjectLocation(
+            objectMetadata.getBucket(),
+            objectMetadata.getName()
         );
         final String keyString = StringUtils
-            .maybeRemoveLeadingSlash(storageObject.getName().substring(baseLocation.getPath().length()));
+            .maybeRemoveLeadingSlash(objectMetadata.getName().substring(baseLocation.getPath().length()));
         if (pattern != null && !pattern.matcher(keyString).matches()) {
           continue;
         }
-        final long latestModified = storageObject.getUpdated().getValue();
+        final long latestModified = objectMetadata.getLastUpdateTime();
         if (latestModified >= mostRecent) {
           mostRecent = latestModified;
           latest = objectLocation.toUri(GoogleStorageDruidModule.SCHEME_GS);
@@ -72,7 +76,7 @@ public class GoogleTimestampVersionedDataFinder extends GoogleDataSegmentPuller
       return latest;
     }
     catch (IOException e) {
-      throw new RuntimeException(e);
+      throw new RuntimeException();
     }
   }
 }

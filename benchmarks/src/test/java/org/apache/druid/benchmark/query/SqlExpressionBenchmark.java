@@ -19,22 +19,32 @@
 
 package org.apache.druid.benchmark.query;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Yielder;
+import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.segment.AutoTypeColumnSchema;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
+import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.security.AuthConfig;
@@ -70,6 +80,7 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * Benchmark that tests various SQL queries.
@@ -197,23 +208,11 @@ public class SqlExpressionBenchmark
       "SELECT TIME_SHIFT(MILLIS_TO_TIMESTAMP(long4), 'PT1H', 1), string2, SUM(long1 * double4) FROM foo GROUP BY 1,2 ORDER BY 3",
       // 37: time shift + expr agg (group by), uniform distribution high cardinality
       "SELECT TIME_SHIFT(MILLIS_TO_TIMESTAMP(long5), 'PT1H', 1), string2, SUM(long1 * double4) FROM foo GROUP BY 1,2 ORDER BY 3",
-      // 38: LATEST aggregator long
-      "SELECT LATEST(long1) FROM foo",
-      // 39: LATEST aggregator double
-      "SELECT LATEST(double4) FROM foo",
-      // 40: LATEST aggregator double
-      "SELECT LATEST(float3) FROM foo",
-      // 41: LATEST aggregator double
-      "SELECT LATEST(float3), LATEST(long1), LATEST(double4) FROM foo",
-      // 42,43: filter numeric nulls
-      "SELECT SUM(long5) FROM foo WHERE long5 IS NOT NULL",
-      "SELECT string2, SUM(long5) FROM foo WHERE long5 IS NOT NULL GROUP BY 1",
-      // 44: EARLIEST aggregator long
-      "SELECT EARLIEST(long1) FROM foo",
-      // 45: EARLIEST aggregator double
-      "SELECT EARLIEST(double4) FROM foo",
-      // 46: EARLIEST aggregator float
-      "SELECT EARLIEST(float3) FROM foo"
+      // 38,39: array element filtering
+      "SELECT string1, long1 FROM foo WHERE ARRAY_CONTAINS(\"multi-string3\", 100) GROUP BY 1,2",
+      "SELECT string1, long1 FROM foo WHERE ARRAY_OVERLAP(\"multi-string3\", ARRAY[100, 200]) GROUP BY 1,2",
+      // 40: regex filtering
+      "SELECT string4, COUNT(*) FROM foo WHERE REGEXP_EXTRACT(string1, '^1') IS NOT NULL OR REGEXP_EXTRACT('Z' || string2, '^Z2') IS NOT NULL GROUP BY 1"
   );
 
   @Param({"5000000"})
@@ -224,6 +223,12 @@ public class SqlExpressionBenchmark
       "force"
   })
   private String vectorize;
+
+  @Param({
+      "explicit",
+      "auto"
+  })
+  private String schema;
 
   @Param({
       // non-expression reference
@@ -268,14 +273,7 @@ public class SqlExpressionBenchmark
       "37",
       "38",
       "39",
-      "40",
-      "41",
-      "42",
-      "43",
-      "44",
-      "45",
-      "46",
-      "47"
+      "40"
   })
   private String query;
 
@@ -300,20 +298,38 @@ public class SqlExpressionBenchmark
     final PlannerConfig plannerConfig = new PlannerConfig();
 
     final SegmentGenerator segmentGenerator = closer.register(new SegmentGenerator());
-    log.info("Starting benchmark setup using cacheDir[%s], rows[%,d].", segmentGenerator.getCacheDir(), rowsPerSegment);
-    final QueryableIndex index = segmentGenerator.generate(dataSegment, schemaInfo, Granularities.NONE, rowsPerSegment);
+    log.info("Starting benchmark setup using cacheDir[%s], rows[%,d], schema[%s].", segmentGenerator.getCacheDir(), rowsPerSegment, schema);
+    final QueryableIndex index;
+    if ("auto".equals(schema)) {
+      List<DimensionSchema> columnSchemas = schemaInfo.getDimensionsSpec()
+                                                      .getDimensions()
+                                                      .stream()
+                                                      .map(x -> new AutoTypeColumnSchema(x.getName(), null))
+                                                      .collect(Collectors.toList());
+      index = segmentGenerator.generate(
+          dataSegment,
+          schemaInfo,
+          DimensionsSpec.builder().setDimensions(columnSchemas).build(),
+          TransformSpec.NONE,
+          IndexSpec.DEFAULT,
+          Granularities.NONE,
+          rowsPerSegment
+      );
+    } else {
+      index = segmentGenerator.generate(dataSegment, schemaInfo, Granularities.NONE, rowsPerSegment);
+    }
 
     final QueryRunnerFactoryConglomerate conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(
         closer,
         PROCESSING_CONFIG
     );
 
-    final SpecificSegmentsQuerySegmentWalker walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
+    final SpecificSegmentsQuerySegmentWalker walker = SpecificSegmentsQuerySegmentWalker.createWalker(conglomerate).add(
         dataSegment,
         index
     );
     closer.register(walker);
-
+    final ObjectMapper jsonMapper = CalciteTests.getJsonMapper();
     final DruidSchemaCatalog rootSchema =
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     engine = CalciteTests.createMockSqlEngine(walker, conglomerate);
@@ -323,7 +339,7 @@ public class SqlExpressionBenchmark
         CalciteTests.createExprMacroTable(),
         plannerConfig,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        CalciteTests.getJsonMapper(),
+        jsonMapper,
         CalciteTests.DRUID_SCHEMA_NAME,
         new CalciteRulesManager(ImmutableSet.of()),
         CalciteTests.createJoinableFactoryWrapper(),
@@ -339,6 +355,35 @@ public class SqlExpressionBenchmark
     }
     catch (Throwable ignored) {
       // the show must go on
+    }
+    final String sql = QUERIES.get(Integer.parseInt(query));
+
+    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, "EXPLAIN PLAN FOR " + sql, ImmutableMap.of("useNativeQueryExplain", true))) {
+      final PlannerResult plannerResult = planner.plan();
+      final Sequence<Object[]> resultSequence = plannerResult.run().getResults();
+      final Object[] planResult = resultSequence.toList().get(0);
+      log.info("Native query plan:\n" +
+               jsonMapper.writerWithDefaultPrettyPrinter()
+                         .writeValueAsString(jsonMapper.readValue((String) planResult[0], List.class))
+      );
+    }
+    catch (JsonMappingException e) {
+      throw new RuntimeException(e);
+    }
+    catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
+
+    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, ImmutableMap.of())) {
+      final PlannerResult plannerResult = planner.plan();
+      final Sequence<Object[]> resultSequence = plannerResult.run().getResults();
+      final Yielder<Object[]> yielder = Yielders.each(resultSequence);
+      int rowCounter = 0;
+      while (!yielder.isDone()) {
+        rowCounter++;
+        yielder.next(yielder.get());
+      }
+      log.info("Total result row count:" + rowCounter);
     }
   }
 

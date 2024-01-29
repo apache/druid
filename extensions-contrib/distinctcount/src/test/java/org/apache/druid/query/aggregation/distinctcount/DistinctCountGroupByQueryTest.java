@@ -88,7 +88,6 @@ public class DistinctCountGroupByQueryTest extends InitializedNullHandlingTest
                 .withMetrics(new CountAggregatorFactory("cnt"))
                 .build()
         )
-        .setConcurrentEventAdd(true)
         .setMaxRowCount(1000)
         .build();
 

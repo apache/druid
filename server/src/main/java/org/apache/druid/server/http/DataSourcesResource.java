@@ -30,6 +30,8 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.commons.lang.StringUtils;
+import org.apache.druid.audit.AuditEntry;
+import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
@@ -56,6 +58,7 @@ import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
+import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -110,6 +113,7 @@ public class DataSourcesResource
   private final OverlordClient overlordClient;
   private final AuthorizerMapper authorizerMapper;
   private final DruidCoordinator coordinator;
+  private final AuditManager auditManager;
 
   @Inject
   public DataSourcesResource(
@@ -118,7 +122,8 @@ public class DataSourcesResource
       MetadataRuleManager metadataRuleManager,
       @Nullable OverlordClient overlordClient,
       AuthorizerMapper authorizerMapper,
-      DruidCoordinator coordinator
+      DruidCoordinator coordinator,
+      AuditManager auditManager
   )
   {
     this.serverInventoryView = serverInventoryView;
@@ -127,6 +132,7 @@ public class DataSourcesResource
     this.overlordClient = overlordClient;
     this.authorizerMapper = authorizerMapper;
     this.coordinator = coordinator;
+    this.auditManager = auditManager;
   }
 
   @GET
@@ -176,9 +182,9 @@ public class DataSourcesResource
     return Response.ok(getSimpleDatasource(dataSourceName)).build();
   }
 
-  private interface MarkSegments
+  private interface SegmentUpdateOperation
   {
-    int markSegments() throws UnknownSegmentIdsException;
+    int perform() throws UnknownSegmentIdsException;
   }
 
   @POST
@@ -187,9 +193,9 @@ public class DataSourcesResource
   @ResourceFilters(DatasourceResourceFilter.class)
   public Response markAsUsedAllNonOvershadowedSegments(@PathParam("dataSourceName") final String dataSourceName)
   {
-    MarkSegments markSegments = () -> segmentsMetadataManager.markAsUsedAllNonOvershadowedSegmentsInDataSource(
+    SegmentUpdateOperation operation = () -> segmentsMetadataManager.markAsUsedAllNonOvershadowedSegmentsInDataSource(
         dataSourceName);
-    return doMarkSegments("markAsUsedAllNonOvershadowedSegments", dataSourceName, markSegments);
+    return performSegmentUpdate(dataSourceName, operation);
   }
 
   @POST
@@ -201,7 +207,7 @@ public class DataSourcesResource
       MarkDataSourceSegmentsPayload payload
   )
   {
-    MarkSegments markSegments = () -> {
+    SegmentUpdateOperation operation = () -> {
       final Interval interval = payload.getInterval();
       if (interval != null) {
         return segmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(dataSourceName, interval);
@@ -210,7 +216,7 @@ public class DataSourcesResource
         return segmentsMetadataManager.markAsUsedNonOvershadowedSegments(dataSourceName, segmentIds);
       }
     };
-    return doMarkSegmentsWithPayload("markAsUsedNonOvershadowedSegments", dataSourceName, payload, markSegments);
+    return performSegmentUpdate(dataSourceName, payload, operation);
   }
 
   @POST
@@ -220,13 +226,15 @@ public class DataSourcesResource
   @Consumes(MediaType.APPLICATION_JSON)
   public Response markSegmentsAsUnused(
       @PathParam("dataSourceName") final String dataSourceName,
-      final MarkDataSourceSegmentsPayload payload
+      final MarkDataSourceSegmentsPayload payload,
+      @Context final HttpServletRequest req
   )
   {
-    MarkSegments markSegments = () -> {
+    SegmentUpdateOperation operation = () -> {
       final Interval interval = payload.getInterval();
+      final int numUpdatedSegments;
       if (interval != null) {
-        return segmentsMetadataManager.markAsUnusedSegmentsInInterval(dataSourceName, interval);
+        numUpdatedSegments = segmentsMetadataManager.markAsUnusedSegmentsInInterval(dataSourceName, interval);
       } else {
         final Set<SegmentId> segmentIds =
             payload.getSegmentIds()
@@ -235,22 +243,31 @@ public class DataSourcesResource
                    .filter(Objects::nonNull)
                    .collect(Collectors.toSet());
 
-        // Note: segments for the "wrong" datasource are ignored.
-        return segmentsMetadataManager.markSegmentsAsUnused(
+        // Filter out segmentIds that do not belong to this datasource
+        numUpdatedSegments = segmentsMetadataManager.markSegmentsAsUnused(
             segmentIds.stream()
                       .filter(segmentId -> segmentId.getDataSource().equals(dataSourceName))
                       .collect(Collectors.toSet())
         );
       }
+      auditManager.doAudit(
+          AuditEntry.builder()
+                    .key(dataSourceName)
+                    .type("segment.markUnused")
+                    .payload(payload)
+                    .auditInfo(AuthorizationUtils.buildAuditInfo(req))
+                    .request(AuthorizationUtils.buildRequestInfo("coordinator", req))
+                    .build()
+      );
+      return numUpdatedSegments;
     };
-    return doMarkSegmentsWithPayload("markSegmentsAsUnused", dataSourceName, payload, markSegments);
+    return performSegmentUpdate(dataSourceName, payload, operation);
   }
 
-  private Response doMarkSegmentsWithPayload(
-      String method,
+  private Response performSegmentUpdate(
       String dataSourceName,
       MarkDataSourceSegmentsPayload payload,
-      MarkSegments markSegments
+      SegmentUpdateOperation operation
   )
   {
     if (payload == null || !payload.isValid()) {
@@ -266,7 +283,7 @@ public class DataSourcesResource
       return logAndCreateDataSourceNotFoundResponse(dataSourceName);
     }
 
-    return doMarkSegments(method, dataSourceName, markSegments);
+    return performSegmentUpdate(dataSourceName, operation);
   }
 
   private static Response logAndCreateDataSourceNotFoundResponse(String dataSourceName)
@@ -275,21 +292,21 @@ public class DataSourcesResource
     return Response.noContent().build();
   }
 
-  private static Response doMarkSegments(String method, String dataSourceName, MarkSegments markSegments)
+  private static Response performSegmentUpdate(String dataSourceName, SegmentUpdateOperation operation)
   {
     try {
-      int numChangedSegments = markSegments.markSegments();
+      int numChangedSegments = operation.perform();
       return Response.ok(ImmutableMap.of("numChangedSegments", numChangedSegments)).build();
     }
     catch (UnknownSegmentIdsException e) {
-      log.warn("Segment ids %s are not found", e.getUnknownSegmentIds());
+      log.warn("Could not find segmentIds[%s]", e.getUnknownSegmentIds());
       return Response
           .status(Response.Status.NOT_FOUND)
           .entity(ImmutableMap.of("message", e.getMessage()))
           .build();
     }
     catch (Exception e) {
-      log.error(e, "Error occurred during [%s] call, data source: [%s]", method, dataSourceName);
+      log.error(e, "Error occurred while updating segments for data source[%s]", dataSourceName);
       return Response
           .serverError()
           .entity(ImmutableMap.of("error", "Exception occurred.", "message", Throwables.getRootCause(e).toString()))
@@ -312,7 +329,8 @@ public class DataSourcesResource
   public Response markAsUnusedAllSegmentsOrKillUnusedSegmentsInInterval(
       @PathParam("dataSourceName") final String dataSourceName,
       @QueryParam("kill") final String kill,
-      @QueryParam("interval") final String interval
+      @QueryParam("interval") final String interval,
+      @Context HttpServletRequest req
   )
   {
     if (overlordClient == null) {
@@ -321,10 +339,25 @@ public class DataSourcesResource
 
     boolean killSegments = kill != null && Boolean.valueOf(kill);
     if (killSegments) {
-      return killUnusedSegmentsInInterval(dataSourceName, interval);
+      return killUnusedSegmentsInInterval(dataSourceName, interval, req);
     } else {
-      MarkSegments markSegments = () -> segmentsMetadataManager.markAsUnusedAllSegmentsInDataSource(dataSourceName);
-      return doMarkSegments("markAsUnusedAllSegments", dataSourceName, markSegments);
+      SegmentUpdateOperation operation = () -> segmentsMetadataManager.markAsUnusedAllSegmentsInDataSource(dataSourceName);
+      final Response response = performSegmentUpdate(dataSourceName, operation);
+
+      final int responseCode = response.getStatus();
+      if (responseCode >= 200 && responseCode < 300) {
+        auditManager.doAudit(
+            AuditEntry.builder()
+                      .key(dataSourceName)
+                      .type("segment.markUnused")
+                      .payload(response.getEntity())
+                      .auditInfo(AuthorizationUtils.buildAuditInfo(req))
+                      .request(AuthorizationUtils.buildRequestInfo("coordinator", req))
+                      .build()
+        );
+      }
+
+      return response;
     }
   }
 
@@ -334,7 +367,8 @@ public class DataSourcesResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response killUnusedSegmentsInInterval(
       @PathParam("dataSourceName") final String dataSourceName,
-      @PathParam("interval") final String interval
+      @PathParam("interval") final String interval,
+      @Context final HttpServletRequest req
   )
   {
     if (overlordClient == null) {
@@ -345,7 +379,19 @@ public class DataSourcesResource
     }
     final Interval theInterval = Intervals.of(interval.replace('_', '/'));
     try {
-      FutureUtils.getUnchecked(overlordClient.runKillTask("api-issued", dataSourceName, theInterval, null), true);
+      final String killTaskId = FutureUtils.getUnchecked(
+          overlordClient.runKillTask("api-issued", dataSourceName, theInterval, null, null),
+          true
+      );
+      auditManager.doAudit(
+          AuditEntry.builder()
+                    .key(dataSourceName)
+                    .type("segment.kill")
+                    .payload(ImmutableMap.of("killTaskId", killTaskId, "interval", theInterval))
+                    .auditInfo(AuthorizationUtils.buildAuditInfo(req))
+                    .request(AuthorizationUtils.buildRequestInfo("coordinator", req))
+                    .build()
+      );
       return Response.ok().build();
     }
     catch (Exception e) {

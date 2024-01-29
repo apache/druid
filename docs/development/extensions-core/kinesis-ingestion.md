@@ -241,11 +241,9 @@ The following table outlines the configuration options for `ioConfig`:
 |`completionTimeout`|ISO 8601 period|The length of time to wait before Druid declares a publishing task has failed and terminates it. If this is set too low, your tasks may never publish. The publishing clock for a task begins roughly after `taskDuration` elapses.|No|PT6H|
 |`lateMessageRejectionPeriod`|ISO 8601 period|Configure tasks to reject messages with timestamps earlier than this period before the task is created. For example, if `lateMessageRejectionPeriod` is set to `PT1H` and the supervisor creates a task at `2016-01-01T12:00Z`, messages with timestamps earlier than `2016-01-01T11:00Z` are dropped. This may help prevent concurrency issues if your data stream has late messages and you have multiple pipelines that need to operate on the same segments, such as a streaming and a nightly batch ingestion pipeline.|No||
 |`earlyMessageRejectionPeriod`|ISO 8601 period|Configure tasks to reject messages with timestamps later than this period after the task reached its `taskDuration`. For example, if `earlyMessageRejectionPeriod` is set to `PT1H`, the `taskDuration` is set to `PT1H` and the supervisor creates a task at `2016-01-01T12:00Z`. Messages with timestamps later than `2016-01-01T14:00Z` are dropped. **Note:** Tasks sometimes run past their task duration, for example, in cases of supervisor failover. Setting `earlyMessageRejectionPeriod` too low may cause messages to be dropped unexpectedly whenever a task runs past its originally configured task duration.|No||
-|`recordsPerFetch`|Integer|The number of records to request per call to fetch records from Kinesis.|No| See [Determine fetch settings](#determine-fetch-settings) for defaults.|
 |`fetchDelayMillis`|Integer|Time in milliseconds to wait between subsequent calls to fetch records from Kinesis. See [Determine fetch settings](#determine-fetch-settings).|No|0|
 |`awsAssumedRoleArn`|String|The AWS assumed role to use for additional permissions.|No||
 |`awsExternalId`|String|The AWS external ID to use for additional permissions.|No||
-|`deaggregate`|Boolean|Whether to use the deaggregate function of the Kinesis Client Library (KCL).|No||
 |`autoScalerConfig`|Object|Defines autoscaling behavior for Kinesis ingest tasks. See [Task autoscaler properties](#task-autoscaler-properties) for more information.|No|null|
 
 ### Task autoscaler properties
@@ -406,7 +404,7 @@ The following table outlines the configuration options for `tuningConfig`:
 |`chatRetries`|Integer|The number of times Druid retries HTTP requests to indexing tasks before considering tasks unresponsive.|No|8|
 |`httpTimeout`|ISO 8601 period|The period of time to wait for a HTTP response from an indexing task.|No|PT10S|
 |`shutdownTimeout`|ISO 8601 period|The period of time to wait for the supervisor to attempt a graceful shutdown of tasks before exiting.|No|PT80S|
-|`recordBufferSize`|Integer|The size of the buffer (number of events) Druid uses between the Kinesis fetch threads and the main ingestion thread.|No|See [Determine fetch settings](#determine-fetch-settings) for defaults.|
+|`recordBufferSizeBytes`|Integer| The size of the buffer (heap memory bytes) Druid uses between the Kinesis fetch threads and the main ingestion thread.|No| See [Determine fetch settings](#determine-fetch-settings) for defaults.|
 |`recordBufferOfferTimeout`|Integer|The number of milliseconds to wait for space to become available in the buffer before timing out.|No|5000|
 |`recordBufferFullWait`|Integer|The number of milliseconds to wait for the buffer to drain before Druid attempts to fetch records from Kinesis again.|No|5000|
 |`fetchThreads`|Integer|The size of the pool of threads fetching data from Kinesis. There is no benefit in having more threads than Kinesis shards.|No| `procs * 2`, where `procs` is the number of processors available to the task.|
@@ -414,7 +412,7 @@ The following table outlines the configuration options for `tuningConfig`:
 |`logParseExceptions`|Boolean|If `true`, Druid logs an error message when a parsing exception occurs, containing information about the row where the error occurred.|No|`false`|
 |`maxParseExceptions`|Integer|The maximum number of parse exceptions that can occur before the task halts ingestion and fails. Overridden if `reportParseExceptions` is set.|No|unlimited|
 |`maxSavedParseExceptions`|Integer|When a parse exception occurs, Druid keeps track of the most recent parse exceptions. `maxSavedParseExceptions` limits the number of saved exception instances. These saved exceptions are available after the task finishes in the [task completion report](../../ingestion/tasks.md#task-reports). Overridden if `reportParseExceptions` is set.|No|0|
-|`maxRecordsPerPoll`|Integer|The maximum number of records to be fetched from buffer per poll. The actual maximum will be `Max(maxRecordsPerPoll, Max(bufferSize, 1))`.|No| See [Determine fetch settings](#determine-fetch-settings) for defaults.|
+|`maxBytesPerPoll`|Integer| The maximum number of bytes to be fetched from buffer per poll. At least one record is polled from the buffer regardless of this config.|No| 1000000 bytes|
 |`repartitionTransitionDuration`|ISO 8601 period|When shards are split or merged, the supervisor recomputes shard to task group mappings. The supervisor also signals any running tasks created under the old mappings to stop early at current time + `repartitionTransitionDuration`. Stopping the tasks early allows Druid to begin reading from the new shards more quickly. The repartition transition wait time controlled by this property gives the stream additional time to write records to the new shards after the split or merge, which helps avoid issues with [empty shard handling](https://github.com/apache/druid/issues/7600).|No|PT2M|
 |`offsetFetchPeriod`|ISO 8601 period|Determines how often the supervisor queries Kinesis and the indexing tasks to fetch current offsets and calculate lag. If the user-specified value is below the minimum value of PT5S, the supervisor ignores the value and uses the minimum value instead.|No|PT30S|
 |`useListShards`|Boolean|Indicates if `listShards` API of AWS Kinesis SDK can be used to prevent `LimitExceededException` during ingestion. You must set the necessary `IAM` permissions.|No|`false`|
@@ -656,25 +654,22 @@ For more detail, see [Segment size optimization](../../operations/segment-optimi
 
 Kinesis indexing tasks fetch records using `fetchThreads` threads.
 If `fetchThreads` is higher than the number of Kinesis shards, the excess threads are unused.
-Each fetch thread fetches up to `recordsPerFetch` records at once from a Kinesis shard, with a delay between fetches
+Each fetch thread fetches up to 10 MB of records at once from a Kinesis shard, with a delay between fetches
 of `fetchDelayMillis`.
-The records fetched by each thread are pushed into a shared queue of size `recordBufferSize`.
+The records fetched by each thread are pushed into a shared queue of size `recordBufferSizeBytes`.
 The main runner thread for each task polls up to `maxRecordsPerPoll` records from the queue at once.
-
-When using Kinesis Producer Library's aggregation feature, that is when [`deaggregate`](#deaggregation) is set,
-each of these parameters refers to aggregated records rather than individual records.
 
 The default values for these parameters are:
 
 - `fetchThreads`: Twice the number of processors available to the task. The number of processors available to the task
 is the total number of processors on the server, divided by `druid.worker.capacity` (the number of task slots on that
-particular server).
+particular server). This value is further limited so that the total data record data fetched at a given time does not
+exceed 5% of the max heap configured, assuming that each thread fetches 10 MB of records at once. If the value specified
+for this configuration is higher than this limit, no failure occurs, but a warning is logged, and the value is
+implicitly lowered to the max allowed by this constraint.
 - `fetchDelayMillis`: 0 (no delay between fetches).
-- `recordsPerFetch`: 100 MB or an estimated 5% of available heap, whichever is smaller, divided by `fetchThreads`.
-For estimation purposes, Druid uses a figure of 10 KB for regular records and 1 MB for [aggregated records](#deaggregation).
-- `recordBufferSize`: 100 MB or an estimated 10% of available heap, whichever is smaller.
-For estimation purposes, Druid uses a figure of 10 KB for regular records and 1 MB for [aggregated records](#deaggregation).
-- `maxRecordsPerPoll`: 100 for regular records, 1 for [aggregated records](#deaggregation).
+- `recordBufferSizeBytes`: 100 MB or an estimated 10% of available heap, whichever is smaller.
+- `maxBytesPerPoll`: 1000000.
 
 Kinesis places the following restrictions on calls to fetch records:
 
@@ -697,9 +692,9 @@ Kinesis stream.
 The Kinesis indexing service supports de-aggregation of multiple rows packed into a single record by the Kinesis
 Producer Library's aggregate method for more efficient data transfer.
 
-To enable this feature, set `deaggregate` to true in your `ioConfig` when submitting a supervisor spec.
-
 ## Resharding
+
+[Resharding](https://docs.aws.amazon.com/streams/latest/dev/kinesis-using-sdk-java-resharding.html) is an advanced operation that lets you adjust the number of shards in a stream to adapt to changes in the rate of data flowing through a stream.
 
 When changing the shard count for a Kinesis stream, there is a window of time around the resharding operation with early shutdown of Kinesis ingestion tasks and possible task failures.
 
@@ -710,6 +705,10 @@ This window with early task shutdowns and possible task failures concludes when:
 
 - All closed shards have been fully read and the Kinesis ingestion tasks have published the data from those shards, committing the "closed" state to metadata storage.
 - Any remaining tasks that had inactive shards in the assignment have been shut down. These tasks would have been created before the closed shards were completely drained.
+
+Note that when the supervisor is running and detects new partitions, tasks read new partitions from the earliest offsets, irrespective of the `useEarliestSequence` setting. This is because these new shards were immediately discovered and are therefore unlikely to experience a lag.
+
+If resharding occurs when the supervisor is suspended and `useEarliestSequence` is set to `false`, resuming the supervisor causes tasks to read the new shards from the latest sequence. This is by design so that the consumer can catch up quickly with any lag accumulated while the supervisor was suspended. 
 
 ## Kinesis known issues
 

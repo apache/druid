@@ -20,6 +20,7 @@
 package org.apache.druid.segment.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -27,21 +28,31 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.InternalQueryConfig;
+import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.metadata.metadata.AllColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
+import org.apache.druid.segment.IndexBuilder;
+import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
+import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryResponse;
@@ -53,18 +64,23 @@ import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -110,7 +126,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         config,
         new NoopEscalator(),
         new InternalQueryConfig(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -362,6 +379,136 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
   }
 
   @Test
+  public void testAllDatasourcesRebuiltOnDatasourceRemoval() throws IOException, InterruptedException
+  {
+    CountDownLatch addSegmentLatch = new CountDownLatch(7);
+    CoordinatorSegmentMetadataCache schema = new CoordinatorSegmentMetadataCache(
+        getQueryLifecycleFactory(walker),
+        serverView,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
+        new NoopEscalator(),
+        new InternalQueryConfig(),
+        new NoopServiceEmitter(),
+        CentralizedDatasourceSchemaConfig.create()
+    )
+    {
+      @Override
+      public void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      {
+        super.addSegment(server, segment);
+        addSegmentLatch.countDown();
+      }
+
+      @Override
+      public void removeSegment(final DataSegment segment)
+      {
+        super.removeSegment(segment);
+      }
+
+      @Override
+      public void markDataSourceAsNeedRebuild(String datasource)
+      {
+        super.markDataSourceAsNeedRebuild(datasource);
+        markDataSourceLatch.countDown();
+      }
+
+      @Override
+      @VisibleForTesting
+      public void refresh(
+          final Set<SegmentId> segmentsToRefresh,
+          final Set<String> dataSourcesToRebuild) throws IOException
+      {
+        super.refresh(segmentsToRefresh, dataSourcesToRebuild);
+      }
+    };
+
+    schema.start();
+    schema.awaitInitialization();
+
+    final Map<SegmentId, AvailableSegmentMetadata> segmentMetadatas = schema.getSegmentMetadataSnapshot();
+    List<DataSegment> segments = segmentMetadatas.values()
+                                                       .stream()
+                                                       .map(AvailableSegmentMetadata::getSegment)
+                                                       .collect(Collectors.toList());
+    Assert.assertEquals(6, segments.size());
+
+    // verify that dim3 column isn't present in schema for datasource foo
+    DataSourceInformation fooDs = schema.getDatasource("foo");
+    Assert.assertTrue(fooDs.getRowSignature().getColumnNames().stream().noneMatch("dim3"::equals));
+
+    // segments contains two segments with datasource "foo" and one with datasource "foo2"
+    // let's remove the only segment with datasource "foo2"
+    final DataSegment segmentToRemove = segments.stream()
+                                                .filter(segment -> segment.getDataSource().equals("foo2"))
+                                                .findFirst()
+                                                .orElse(null);
+    Assert.assertNotNull(segmentToRemove);
+    schema.removeSegment(segmentToRemove);
+
+    // we will add a segment to another datasource and
+    // check if columns in this segment is reflected in the datasource schema
+    DataSegment newSegment =
+        DataSegment.builder()
+                   .dataSource(DATASOURCE1)
+                   .interval(Intervals.of("2002/P1Y"))
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(0))
+                   .size(0)
+                   .build();
+
+    final File tmpDir = temporaryFolder.newFolder();
+
+    List<InputRow> rows = ImmutableList.of(
+        createRow(ImmutableMap.of("t", "2002-01-01", "m1", "1.0", "dim1", "", "dim3", "c1")),
+        createRow(ImmutableMap.of("t", "2002-01-02", "m1", "2.0", "dim1", "10.1", "dim3", "c2")),
+        createRow(ImmutableMap.of("t", "2002-01-03", "m1", "3.0", "dim1", "2", "dim3", "c3"))
+    );
+
+    QueryableIndex index = IndexBuilder.create()
+                                       .tmpDir(new File(tmpDir, "1"))
+                                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                                       .schema(
+                                           new IncrementalIndexSchema.Builder()
+                                               .withMetrics(
+                                                   new CountAggregatorFactory("cnt"),
+                                                   new DoubleSumAggregatorFactory("m1", "m1"),
+                                                   new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
+                                               )
+                                               .withRollup(false)
+                                               .build()
+                                       )
+                                       .rows(rows)
+                                       .buildMMappedIndex();
+
+    walker.add(newSegment, index);
+    serverView.addSegment(newSegment, ServerType.HISTORICAL);
+
+    Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
+
+    Set<String> dataSources = segments.stream().map(DataSegment::getDataSource).collect(Collectors.toSet());
+    dataSources.remove("foo2");
+
+    // LinkedHashSet to ensure we encounter the remove datasource first
+    Set<String> dataSourcesToRefresh = new LinkedHashSet<>();
+    dataSourcesToRefresh.add("foo2");
+    dataSourcesToRefresh.addAll(dataSources);
+
+    segments = schema.getSegmentMetadataSnapshot().values()
+                    .stream()
+                    .map(AvailableSegmentMetadata::getSegment)
+                    .collect(Collectors.toList());
+
+    schema.refresh(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()), dataSourcesToRefresh);
+    Assert.assertEquals(6, schema.getSegmentMetadataSnapshot().size());
+
+    fooDs = schema.getDatasource("foo");
+
+    // check if the new column present in the added segment is present in the datasource schema
+    // ensuring that the schema is rebuilt
+    Assert.assertTrue(fooDs.getRowSignature().getColumnNames().stream().anyMatch("dim3"::equals));
+  }
+
+  @Test
   public void testNullAvailableSegmentMetadata() throws IOException, InterruptedException
   {
     CoordinatorSegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
@@ -451,7 +598,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -492,7 +640,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -537,7 +686,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -579,7 +729,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -618,7 +769,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -674,7 +826,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -733,7 +886,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -766,7 +920,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -812,7 +967,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -882,7 +1038,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         internalQueryConfig,
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        CentralizedDatasourceSchemaConfig.create()
     );
 
     Map<String, Object> queryContext = ImmutableMap.of(
@@ -1049,7 +1206,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
-        emitter
+        emitter,
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -1079,5 +1237,293 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     emitter.verifyEmitted("metadatacache/refresh/time", ImmutableMap.of(DruidMetrics.DATASOURCE, dataSource), 1);
     emitter.verifyEmitted("metadatacache/refresh/count", ImmutableMap.of(DruidMetrics.DATASOURCE, dataSource), 1);
+  }
+
+  @Test
+  public void testMergeOrCreateRowSignatureDeltaSchemaNoPreviousSignature() throws InterruptedException
+  {
+    CoordinatorSegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
+
+    EmittingLogger.registerEmitter(new StubServiceEmitter("coordinator", "dummy"));
+
+    Assert.assertFalse(schema.mergeOrCreateRowSignature(
+        segment1.getId(),
+        null,
+        new SegmentSchemas.SegmentSchema(
+            DATASOURCE1,
+            segment1.getId().toString(),
+            true,
+            20,
+            ImmutableList.of("dim1"),
+            Collections.emptyList(),
+            ImmutableMap.of("dim1", ColumnType.STRING)
+        )
+    ).isPresent());
+  }
+
+  @Test
+  public void testMergeOrCreateRowSignatureDeltaSchema() throws InterruptedException
+  {
+    CoordinatorSegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
+
+    AvailableSegmentMetadata availableSegmentMetadata = schema.getAvailableSegmentMetadata(DATASOURCE1, segment1.getId());
+
+    Optional<RowSignature> mergedSignature = schema.mergeOrCreateRowSignature(
+        segment1.getId(),
+        availableSegmentMetadata.getRowSignature(),
+        new SegmentSchemas.SegmentSchema(
+            DATASOURCE1,
+            segment1.getId().toString(),
+            true,
+            1000,
+            ImmutableList.of("dim2"),
+            ImmutableList.of("m1"),
+            ImmutableMap.of("dim2", ColumnType.STRING, "m1", ColumnType.STRING)
+        )
+    );
+
+    Assert.assertTrue(mergedSignature.isPresent());
+    RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
+    rowSignatureBuilder.add("__time", ColumnType.LONG);
+    rowSignatureBuilder.add("dim1", ColumnType.STRING);
+    rowSignatureBuilder.add("cnt", ColumnType.LONG);
+    rowSignatureBuilder.add("m1", ColumnType.STRING);
+    rowSignatureBuilder.add("unique_dim1", ColumnType.ofComplex("hyperUnique"));
+    rowSignatureBuilder.add("dim2", ColumnType.STRING);
+    Assert.assertEquals(rowSignatureBuilder.build(), mergedSignature.get());
+  }
+
+  @Test
+  public void testMergeOrCreateRowSignatureDeltaSchemaNewUpdateColumnOldNewColumn() throws InterruptedException
+  {
+    CoordinatorSegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
+
+    EmittingLogger.registerEmitter(new StubServiceEmitter("coordinator", "dummy"));
+
+    AvailableSegmentMetadata availableSegmentMetadata = schema.getAvailableSegmentMetadata(DATASOURCE1, segment1.getId());
+
+    Optional<RowSignature> mergedSignature = schema.mergeOrCreateRowSignature(
+        segment1.getId(),
+        availableSegmentMetadata.getRowSignature(),
+        new SegmentSchemas.SegmentSchema(
+            DATASOURCE1,
+            segment1.getId().toString(),
+            true,
+            1000,
+            ImmutableList.of("m1"), // m1 is a new column in the delta update, but it already exists
+            ImmutableList.of("m2"), // m2 is a column to be updated in the delta update, but it doesn't exist
+            ImmutableMap.of("m1", ColumnType.LONG, "m2", ColumnType.STRING)
+        )
+    );
+
+    Assert.assertTrue(mergedSignature.isPresent());
+    RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
+    rowSignatureBuilder.add("__time", ColumnType.LONG);
+    rowSignatureBuilder.add("dim1", ColumnType.STRING);
+    rowSignatureBuilder.add("cnt", ColumnType.LONG);
+    // type for m1 is updated
+    rowSignatureBuilder.add("m1", ColumnType.DOUBLE);
+    rowSignatureBuilder.add("unique_dim1", ColumnType.ofComplex("hyperUnique"));
+    // m2 is added
+    rowSignatureBuilder.add("m2", ColumnType.STRING);
+    Assert.assertEquals(rowSignatureBuilder.build(), mergedSignature.get());
+  }
+
+  @Test
+  public void testMergeOrCreateRowSignatureAbsoluteSchema() throws InterruptedException
+  {
+    CoordinatorSegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
+
+    AvailableSegmentMetadata availableSegmentMetadata = schema.getAvailableSegmentMetadata(DATASOURCE1, segment1.getId());
+
+    Optional<RowSignature> mergedSignature = schema.mergeOrCreateRowSignature(
+        segment1.getId(),
+        availableSegmentMetadata.getRowSignature(),
+        new SegmentSchemas.SegmentSchema(
+            DATASOURCE1,
+            segment1.getId().toString(),
+            false,
+            1000,
+            ImmutableList.of("__time", "cnt", "dim2"),
+            ImmutableList.of(),
+            ImmutableMap.of("__time", ColumnType.LONG, "dim2", ColumnType.STRING, "cnt", ColumnType.LONG)
+        )
+    );
+
+    Assert.assertTrue(mergedSignature.isPresent());
+    RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
+    rowSignatureBuilder.add("__time", ColumnType.LONG);
+    rowSignatureBuilder.add("cnt", ColumnType.LONG);
+    rowSignatureBuilder.add("dim2", ColumnType.STRING);
+    Assert.assertEquals(rowSignatureBuilder.build(), mergedSignature.get());
+  }
+
+  @Test
+  public void testRealtimeSchemaAnnouncement() throws InterruptedException, IOException
+  {
+    // test schema update is applied and realtime segments are not refereshed via segment metadata query
+    CountDownLatch schemaAddedLatch = new CountDownLatch(1);
+
+    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = new CentralizedDatasourceSchemaConfig();
+    centralizedDatasourceSchemaConfig.setEnabled(true);
+    centralizedDatasourceSchemaConfig.setAnnounceRealtimeSegmentSchema(true);
+
+    CoordinatorSegmentMetadataCache schema = new CoordinatorSegmentMetadataCache(
+        getQueryLifecycleFactory(walker),
+        serverView,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
+        new NoopEscalator(),
+        new InternalQueryConfig(),
+        new NoopServiceEmitter(),
+        centralizedDatasourceSchemaConfig
+    ) {
+      @Override
+      void updateSchemaForSegments(SegmentSchemas segmentSchemas)
+      {
+        super.updateSchemaForSegments(segmentSchemas);
+        schemaAddedLatch.countDown();
+      }
+    };
+
+    schema.start();
+    schema.awaitInitialization();
+
+    AvailableSegmentMetadata availableSegmentMetadata = schema.getAvailableSegmentMetadata(DATASOURCE3, realtimeSegment1.getId());
+    Assert.assertNull(availableSegmentMetadata.getRowSignature());
+
+    // refresh all segments, verify that realtime segments isn't referesh
+    schema.refresh(walker.getSegments().stream().map(DataSegment::getId).collect(Collectors.toSet()), new HashSet<>());
+
+    Assert.assertNull(schema.getDatasource(DATASOURCE3));
+    Assert.assertNotNull(schema.getDatasource(DATASOURCE1));
+    Assert.assertNotNull(schema.getDatasource(DATASOURCE2));
+    Assert.assertNotNull(schema.getDatasource(SOME_DATASOURCE));
+
+    serverView.addSegmentSchemas(
+        new SegmentSchemas(Collections.singletonList(
+            new SegmentSchemas.SegmentSchema(
+                DATASOURCE3,
+                realtimeSegment1.getId().toString(),
+                false,
+                1000,
+                ImmutableList.of("__time", "dim1", "cnt", "m1", "unique_dim1", "dim2"),
+                ImmutableList.of(),
+                ImmutableMap.of(
+                    "__time",
+                    ColumnType.LONG,
+                    "dim1",
+                    ColumnType.STRING,
+                    "cnt",
+                    ColumnType.LONG,
+                    "m1",
+                    ColumnType.STRING,
+                    "unique_dim1",
+                    ColumnType.ofComplex("hyperUnique"),
+                    "dim2",
+                    ColumnType.STRING
+                )
+            )
+        )));
+
+    Assert.assertTrue(schemaAddedLatch.await(1, TimeUnit.SECONDS));
+
+    availableSegmentMetadata = schema.getAvailableSegmentMetadata(DATASOURCE3, realtimeSegment1.getId());
+
+    RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
+    rowSignatureBuilder.add("__time", ColumnType.LONG);
+    rowSignatureBuilder.add("dim1", ColumnType.STRING);
+    rowSignatureBuilder.add("cnt", ColumnType.LONG);
+    rowSignatureBuilder.add("m1", ColumnType.STRING);
+    rowSignatureBuilder.add("unique_dim1", ColumnType.ofComplex("hyperUnique"));
+    rowSignatureBuilder.add("dim2", ColumnType.STRING);
+    Assert.assertEquals(rowSignatureBuilder.build(), availableSegmentMetadata.getRowSignature());
+  }
+
+  @Test
+  public void testRealtimeSchemaAnnouncementDataSourceSchemaUpdated() throws InterruptedException
+  {
+    // test schema update is applied and realtime segments are not refereshed via segment metadata query
+    CountDownLatch refresh1Latch = new CountDownLatch(1);
+    CountDownLatch refresh2Latch = new CountDownLatch(1);
+
+    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = new CentralizedDatasourceSchemaConfig();
+    centralizedDatasourceSchemaConfig.setEnabled(true);
+    centralizedDatasourceSchemaConfig.setAnnounceRealtimeSegmentSchema(true);
+
+    CoordinatorSegmentMetadataCache schema = new CoordinatorSegmentMetadataCache(
+        getQueryLifecycleFactory(walker),
+        serverView,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
+        new NoopEscalator(),
+        new InternalQueryConfig(),
+        new NoopServiceEmitter(),
+        centralizedDatasourceSchemaConfig
+    ) {
+      @Override
+      public void refresh(Set<SegmentId> segmentsToRefresh, Set<String> dataSourcesToRebuild)
+          throws IOException
+      {
+        super.refresh(segmentsToRefresh, dataSourcesToRebuild);
+        if (refresh1Latch.getCount() == 0) {
+          refresh2Latch.countDown();
+        } else {
+          refresh1Latch.countDown();
+        }
+      }
+    };
+
+    schema.start();
+    schema.awaitInitialization();
+    Assert.assertTrue(refresh1Latch.await(10, TimeUnit.SECONDS));
+
+    AvailableSegmentMetadata availableSegmentMetadata = schema.getAvailableSegmentMetadata(DATASOURCE3, realtimeSegment1.getId());
+    Assert.assertNull(availableSegmentMetadata.getRowSignature());
+
+    Assert.assertNull(schema.getDatasource(DATASOURCE3));
+    Assert.assertNotNull(schema.getDatasource(DATASOURCE1));
+    Assert.assertNotNull(schema.getDatasource(DATASOURCE2));
+    Assert.assertNotNull(schema.getDatasource(SOME_DATASOURCE));
+
+    serverView.addSegmentSchemas(
+        new SegmentSchemas(Collections.singletonList(
+            new SegmentSchemas.SegmentSchema(
+                DATASOURCE3,
+                realtimeSegment1.getId().toString(),
+                false,
+                1000,
+                ImmutableList.of("__time", "dim1", "cnt", "m1", "unique_dim1", "dim2"),
+                ImmutableList.of(),
+                ImmutableMap.of(
+                    "__time",
+                    ColumnType.LONG,
+                    "dim1",
+                    ColumnType.STRING,
+                    "cnt",
+                    ColumnType.LONG,
+                    "m1",
+                    ColumnType.STRING,
+                    "unique_dim1",
+                    ColumnType.ofComplex("hyperUnique"),
+                    "dim2",
+                    ColumnType.STRING
+                )
+            )
+        )));
+
+    Assert.assertTrue(refresh2Latch.await(10, TimeUnit.SECONDS));
+
+    Assert.assertNotNull(schema.getDatasource(DATASOURCE3));
+    Assert.assertNotNull(schema.getDatasource(DATASOURCE1));
+    Assert.assertNotNull(schema.getDatasource(DATASOURCE2));
+    Assert.assertNotNull(schema.getDatasource(SOME_DATASOURCE));
+
+    RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
+    rowSignatureBuilder.add("__time", ColumnType.LONG);
+    rowSignatureBuilder.add("dim1", ColumnType.STRING);
+    rowSignatureBuilder.add("cnt", ColumnType.LONG);
+    rowSignatureBuilder.add("m1", ColumnType.STRING);
+    rowSignatureBuilder.add("unique_dim1", ColumnType.ofComplex("hyperUnique"));
+    rowSignatureBuilder.add("dim2", ColumnType.STRING);
+    Assert.assertEquals(rowSignatureBuilder.build(), schema.getDatasource(DATASOURCE3).getRowSignature());
   }
 }

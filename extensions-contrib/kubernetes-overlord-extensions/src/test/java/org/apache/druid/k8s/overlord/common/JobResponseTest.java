@@ -39,7 +39,7 @@ class JobResponseTest
         .endStatus()
         .build();
 
-    JobResponse response = new JobResponse(job);
+    JobResponse response = new JobResponse(job, PeonPhase.SUCCEEDED);
 
     Assertions.assertEquals(58000L, response.getJobDuration());
   }
@@ -56,7 +56,7 @@ class JobResponseTest
         .endStatus()
         .build();
 
-    JobResponse response = new JobResponse(job);
+    JobResponse response = new JobResponse(job, PeonPhase.SUCCEEDED);
 
     Assertions.assertEquals(-1, response.getJobDuration());
   }
@@ -70,7 +70,7 @@ class JobResponseTest
         .endMetadata()
         .build();
 
-    JobResponse response = new JobResponse(job);
+    JobResponse response = new JobResponse(job, PeonPhase.SUCCEEDED);
 
     Assertions.assertEquals(-1, response.getJobDuration());
   }
@@ -78,7 +78,7 @@ class JobResponseTest
   @Test
   void testNullJob()
   {
-    JobResponse response = new JobResponse(null);
+    JobResponse response = new JobResponse(null, PeonPhase.SUCCEEDED);
     long duration = response.getJobDuration();
     Assertions.assertEquals(-1, duration);
   }

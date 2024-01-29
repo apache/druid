@@ -21,13 +21,8 @@ package org.apache.druid.k8s.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.overlord.TaskRunnerListener;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.tasklogs.TaskLogs;
-
-import java.util.List;
-import java.util.concurrent.Executor;
 
 public class KubernetesPeonLifecycleFactory implements PeonLifecycleFactory
 {
@@ -47,15 +42,14 @@ public class KubernetesPeonLifecycleFactory implements PeonLifecycleFactory
   }
 
   @Override
-  public KubernetesPeonLifecycle build(Task task, KubernetesPeonLifecycle.TaskStateListener stateListener, List<Pair<TaskRunnerListener, Executor>> listeners)
+  public KubernetesPeonLifecycle build(Task task, KubernetesPeonLifecycle.TaskStateListener stateListener)
   {
     return new KubernetesPeonLifecycle(
         task,
         client,
         taskLogs,
         mapper,
-        stateListener,
-        listeners
+        stateListener
     );
   }
 }

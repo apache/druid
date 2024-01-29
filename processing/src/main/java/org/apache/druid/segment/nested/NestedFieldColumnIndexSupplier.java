@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.nested;
 
-import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
@@ -44,6 +43,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.IntListUtils;
 import org.apache.druid.segment.column.ColumnConfig;
@@ -54,6 +54,7 @@ import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.SimpleBitmapColumnIndex;
+import org.apache.druid.segment.index.SimpleImmutableBitmapDelegatingIterableIndex;
 import org.apache.druid.segment.index.SimpleImmutableBitmapIndex;
 import org.apache.druid.segment.index.SimpleImmutableBitmapIterableIndex;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
@@ -290,7 +291,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     if (ColumnIndexSupplier.skipComputingRangeIndexes(columnConfig, numRows, size)) {
       return null;
     }
-    return new SimpleImmutableBitmapIterableIndex()
+    return new SimpleImmutableBitmapDelegatingIterableIndex()
     {
       @Override
       public Iterable<ImmutableBitmap> getBitmapIterable()
@@ -374,15 +375,6 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
       {
         final FixedIndexed<Integer> localDictionary = localDictionarySupplier.get();
         final Indexed<ByteBuffer> stringDictionary = globalStringDictionarySupplier.get();
-        @Override
-        public double estimateSelectivity(int totalRows)
-        {
-          final int globalId = stringDictionary.indexOf(StringUtils.toUtf8ByteBuffer(value));
-          if (globalId < 0) {
-            return 0.0;
-          }
-          return (double) getBitmap(localDictionary.indexOf(globalId)).size() / totalRows;
-        }
 
         @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
@@ -410,7 +402,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     @Override
     public BitmapColumnIndex forSortedValues(SortedSet<String> values)
     {
-      return new SimpleImmutableBitmapIterableIndex()
+      return new SimpleImmutableBitmapDelegatingIterableIndex()
       {
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable()
@@ -498,7 +490,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
         boolean startStrict,
         @Nullable String endValue,
         boolean endStrict,
-        Predicate<String> matcher
+        DruidObjectPredicate<String> matcher
     )
     {
       final FixedIndexed<Integer> localDictionary = localDictionarySupplier.get();
@@ -516,7 +508,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
       if (ColumnIndexSupplier.skipComputingRangeIndexes(columnConfig, numRows, end - start)) {
         return null;
       }
-      return new SimpleImmutableBitmapIterableIndex()
+      return new SimpleImmutableBitmapDelegatingIterableIndex()
       {
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable()
@@ -532,7 +524,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
 
             private int findNext()
             {
-              while (currIndex < end && !matcher.apply(StringUtils.fromUtf8Nullable(stringDictionary.get(localDictionary.get(currIndex))))) {
+              while (currIndex < end && !matcher.apply(StringUtils.fromUtf8Nullable(stringDictionary.get(localDictionary.get(currIndex)))).matches(false)) {
                 currIndex++;
               }
 
@@ -590,12 +582,12 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
       return new SimpleImmutableBitmapIterableIndex()
       {
         @Override
-        public Iterable<ImmutableBitmap> getBitmapIterable()
+        public Iterable<ImmutableBitmap> getBitmapIterable(boolean includeUnknown)
         {
           return () -> new Iterator<ImmutableBitmap>()
           {
             final Indexed<ByteBuffer> stringDictionary = globalStringDictionarySupplier.get();
-            final Predicate<String> stringPredicate = matcherFactory.makeStringPredicate();
+            final DruidObjectPredicate<String> stringPredicate = matcherFactory.makeStringPredicate();
 
             // in the future, this could use an int iterator
             final Iterator<Integer> iterator = localDictionary.iterator();
@@ -629,7 +621,8 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
             {
               while (!nextSet && iterator.hasNext()) {
                 Integer nextValue = iterator.next();
-                nextSet = stringPredicate.apply(StringUtils.fromUtf8Nullable(stringDictionary.get(nextValue)));
+                nextSet = stringPredicate.apply(StringUtils.fromUtf8Nullable(stringDictionary.get(nextValue)))
+                                         .matches(includeUnknown);
                 if (nextSet) {
                   next = index;
                 }
@@ -637,16 +630,6 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
               }
             }
           };
-        }
-
-        @Nullable
-        @Override
-        protected ImmutableBitmap getUnknownsBitmap()
-        {
-          if (matcherFactory.isNullInputUnknown() && localDictionary.get(0) == 0) {
-            return bitmaps.get(0);
-          }
-          return null;
         }
       };
     }
@@ -664,22 +647,6 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
 
         final FixedIndexed<Integer> localDictionary = localDictionarySupplier.get();
         final FixedIndexed<Long> longDictionary = globalLongDictionarySupplier.get();
-        @Override
-        public double estimateSelectivity(int totalRows)
-        {
-          if (longValue == null) {
-            if (inputNull) {
-              return (double) getBitmap(localDictionary.indexOf(0)).size() / totalRows;
-            } else {
-              return 0.0;
-            }
-          }
-          final int globalId = longDictionary.indexOf(longValue);
-          if (globalId < 0) {
-            return 0.0;
-          }
-          return (double) getBitmap(localDictionary.indexOf(globalId + adjustLongId)).size() / totalRows;
-        }
 
         @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
@@ -714,7 +681,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     @Override
     public BitmapColumnIndex forSortedValues(SortedSet<String> values)
     {
-      return new SimpleImmutableBitmapIterableIndex()
+      return new SimpleImmutableBitmapDelegatingIterableIndex()
       {
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable()
@@ -846,7 +813,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
       return new SimpleImmutableBitmapIterableIndex()
       {
         @Override
-        public Iterable<ImmutableBitmap> getBitmapIterable()
+        public Iterable<ImmutableBitmap> getBitmapIterable(boolean includeUnknown)
         {
           return () -> new Iterator<ImmutableBitmap>()
           {
@@ -887,9 +854,9 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
               while (!nextSet && iterator.hasNext()) {
                 Integer nextValue = iterator.next();
                 if (nextValue == 0) {
-                  nextSet = longPredicate.applyNull();
+                  nextSet = longPredicate.applyNull().matches(includeUnknown);
                 } else {
-                  nextSet = longPredicate.applyLong(longDictionary.get(nextValue - adjustLongId));
+                  nextSet = longPredicate.applyLong(longDictionary.get(nextValue - adjustLongId)).matches(includeUnknown);
                 }
                 if (nextSet) {
                   next = index;
@@ -898,16 +865,6 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
               }
             }
           };
-        }
-
-        @Nullable
-        @Override
-        protected ImmutableBitmap getUnknownsBitmap()
-        {
-          if (matcherFactory.isNullInputUnknown() && localDictionary.get(0) == 0) {
-            return bitmaps.get(0);
-          }
-          return null;
         }
       };
     }
@@ -924,22 +881,6 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
       {
         final FixedIndexed<Integer> localDictionary = localDictionarySupplier.get();
         final FixedIndexed<Double> doubleDictionary = globalDoubleDictionarySupplier.get();
-        @Override
-        public double estimateSelectivity(int totalRows)
-        {
-          if (doubleValue == null) {
-            if (inputNull) {
-              return (double) getBitmap(localDictionary.indexOf(0)).size() / totalRows;
-            } else {
-              return 0.0;
-            }
-          }
-          final int globalId = doubleDictionary.indexOf(doubleValue);
-          if (globalId < 0) {
-            return 0.0;
-          }
-          return (double) getBitmap(localDictionary.indexOf(globalId + adjustDoubleId)).size() / totalRows;
-        }
 
         @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
@@ -974,7 +915,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     @Override
     public BitmapColumnIndex forSortedValues(SortedSet<String> values)
     {
-      return new SimpleImmutableBitmapIterableIndex()
+      return new SimpleImmutableBitmapDelegatingIterableIndex()
       {
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable()
@@ -1090,7 +1031,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
       return new SimpleImmutableBitmapIterableIndex()
       {
         @Override
-        public Iterable<ImmutableBitmap> getBitmapIterable()
+        public Iterable<ImmutableBitmap> getBitmapIterable(boolean includeUnknown)
         {
           return () -> new Iterator<ImmutableBitmap>()
           {
@@ -1131,9 +1072,10 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
               while (!nextSet && iterator.hasNext()) {
                 Integer nextValue = iterator.next();
                 if (nextValue == 0) {
-                  nextSet = doublePredicate.applyNull();
+                  nextSet = doublePredicate.applyNull().matches(includeUnknown);
                 } else {
-                  nextSet = doublePredicate.applyDouble(doubleDictionary.get(nextValue - adjustDoubleId));
+                  nextSet = doublePredicate.applyDouble(doubleDictionary.get(nextValue - adjustDoubleId))
+                                           .matches(includeUnknown);
                 }
                 if (nextSet) {
                   next = index;
@@ -1142,16 +1084,6 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
               }
             }
           };
-        }
-
-        @Nullable
-        @Override
-        protected ImmutableBitmap getUnknownsBitmap()
-        {
-          if (matcherFactory.isNullInputUnknown() && localDictionary.get(0) == 0) {
-            bitmaps.get(0);
-          }
-          return null;
         }
       };
     }
@@ -1213,7 +1145,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     @Override
     public BitmapColumnIndex forValue(@Nullable String value)
     {
-      return new SimpleImmutableBitmapIterableIndex()
+      return new SimpleImmutableBitmapDelegatingIterableIndex()
       {
         @Override
         protected Iterable<ImmutableBitmap> getBitmapIterable()
@@ -1250,7 +1182,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     @Override
     public BitmapColumnIndex forSortedValues(SortedSet<String> values)
     {
-      return new SimpleImmutableBitmapIterableIndex()
+      return new SimpleImmutableBitmapDelegatingIterableIndex()
       {
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable()
@@ -1320,11 +1252,11 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
       return new SimpleImmutableBitmapIterableIndex()
       {
         @Override
-        public Iterable<ImmutableBitmap> getBitmapIterable()
+        public Iterable<ImmutableBitmap> getBitmapIterable(boolean includeUnknown)
         {
           return () -> new Iterator<ImmutableBitmap>()
           {
-            final Predicate<String> stringPredicate = matcherFactory.makeStringPredicate();
+            final DruidObjectPredicate<String> stringPredicate = matcherFactory.makeStringPredicate();
             final DruidLongPredicate longPredicate = matcherFactory.makeLongPredicate();
             final DruidDoublePredicate doublePredicate = matcherFactory.makeDoublePredicate();
 
@@ -1361,11 +1293,14 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
               while (!nextSet && iterator.hasNext()) {
                 Integer nextValue = iterator.next();
                 if (nextValue >= adjustDoubleId) {
-                  nextSet = doublePredicate.applyDouble(doubleDictionary.get(nextValue - adjustDoubleId));
+                  nextSet = doublePredicate.applyDouble(doubleDictionary.get(nextValue - adjustDoubleId))
+                                           .matches(includeUnknown);
                 } else if (nextValue >= adjustLongId) {
-                  nextSet = longPredicate.applyLong(longDictionary.get(nextValue - adjustLongId));
+                  nextSet = longPredicate.applyLong(longDictionary.get(nextValue - adjustLongId))
+                                         .matches(includeUnknown);
                 } else {
-                  nextSet = stringPredicate.apply(StringUtils.fromUtf8Nullable(stringDictionary.get(nextValue)));
+                  nextSet = stringPredicate.apply(StringUtils.fromUtf8Nullable(stringDictionary.get(nextValue)))
+                                           .matches(includeUnknown);
                 }
                 if (nextSet) {
                   next = index;
@@ -1374,16 +1309,6 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
               }
             }
           };
-        }
-
-        @Nullable
-        @Override
-        protected ImmutableBitmap getUnknownsBitmap()
-        {
-          if (matcherFactory.isNullInputUnknown() && localDictionary.get(0) == 0) {
-            return bitmaps.get(0);
-          }
-          return null;
         }
       };
     }

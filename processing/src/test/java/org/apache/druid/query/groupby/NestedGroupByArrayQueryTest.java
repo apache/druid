@@ -32,7 +32,6 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
-import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -53,6 +52,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
@@ -438,6 +438,30 @@ public class NestedGroupByArrayQueryTest
     );
   }
 
+  @Test
+  public void testGroupByEmptyIshArrays()
+  {
+    GroupByQuery groupQuery = GroupByQuery.builder()
+                                          .setDataSource("test_datasource")
+                                          .setGranularity(Granularities.ALL)
+                                          .setInterval(Intervals.ETERNITY)
+                                          .setDimensions(DefaultDimensionSpec.of("arrayNoType", ColumnType.LONG_ARRAY))
+                                          .setAggregatorSpecs(new CountAggregatorFactory("count"))
+                                          .setContext(getContext())
+                                          .build();
+
+
+    runResults(
+        groupQuery,
+        ImmutableList.of(
+            new Object[]{null, 4L},
+            new Object[]{new ComparableList<>(Collections.emptyList()), 18L},
+            new Object[]{new ComparableList<>(Collections.singletonList(null)), 4L},
+            new Object[]{new ComparableList<>(Arrays.asList(null, null)), 2L}
+        )
+    );
+  }
+
   private void runResults(
       GroupByQuery groupQuery,
       List<Object[]> expectedResults
@@ -460,7 +484,7 @@ public class NestedGroupByArrayQueryTest
     List<ResultRow> serdeAndBack =
         results.stream()
                .peek(
-                   row -> GroupByQueryEngineV2.convertRowTypesToOutputTypes(
+                   row -> GroupingEngine.convertRowTypesToOutputTypes(
                        query.getDimensions(),
                        row,
                        query.getResultRowDimensionStart()

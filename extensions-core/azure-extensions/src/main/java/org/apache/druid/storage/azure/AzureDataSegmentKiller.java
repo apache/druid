@@ -19,9 +19,10 @@
 
 package org.apache.druid.storage.azure;
 
+import com.azure.storage.blob.models.BlobStorageException;
 import com.google.common.base.Predicates;
 import com.google.inject.Inject;
-import com.microsoft.azure.storage.StorageException;
+import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -30,7 +31,6 @@ import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.nio.file.Paths;
 import java.util.Map;
 
@@ -52,7 +52,7 @@ public class AzureDataSegmentKiller implements DataSegmentKiller
       AzureDataSegmentConfig segmentConfig,
       AzureInputDataConfig inputDataConfig,
       AzureAccountConfig accountConfig,
-      final AzureStorage azureStorage,
+      @Global final AzureStorage azureStorage,
       AzureCloudBlobIterableFactory azureCloudBlobIterableFactory
   )
   {
@@ -76,13 +76,8 @@ public class AzureDataSegmentKiller implements DataSegmentKiller
     try {
       azureStorage.emptyCloudBlobDirectory(containerName, dirPath);
     }
-    catch (StorageException e) {
-      Object extendedInfo =
-          e.getExtendedErrorInformation() == null ? null : e.getExtendedErrorInformation().getErrorMessage();
-      throw new SegmentLoadingException(e, "Couldn't kill segment[%s]: [%s]", segment.getId(), extendedInfo);
-    }
-    catch (URISyntaxException e) {
-      throw new SegmentLoadingException(e, "Couldn't kill segment[%s]: [%s]", segment.getId(), e.getReason());
+    catch (BlobStorageException e) {
+      throw new SegmentLoadingException(e, "Couldn't kill segment[%s]: [%s]", segment.getId(), e.getMessage());
     }
   }
 

@@ -19,10 +19,10 @@
 
 package org.apache.druid.query.filter.vector;
 
-import com.google.common.base.Predicate;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.column.ColumnType;
@@ -32,7 +32,6 @@ import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 
 import javax.annotation.Nullable;
 import java.util.BitSet;
-import java.util.Objects;
 
 public class SingleValueStringVectorValueMatcher implements VectorValueMatcherFactory
 {
@@ -51,7 +50,7 @@ public class SingleValueStringVectorValueMatcher implements VectorValueMatcherFa
     final ConstantMatcherType constantMatcherType = ValueMatchers.toConstantMatcherTypeIfPossible(
         selector,
         false,
-        s -> Objects.equals(s, etnValue)
+        etnValue == null ? DruidObjectPredicate.isNull() : DruidObjectPredicate.equalTo(etnValue)
     );
     if (constantMatcherType != null) {
       return constantMatcherType.asVectorMatcher(selector);
@@ -96,7 +95,7 @@ public class SingleValueStringVectorValueMatcher implements VectorValueMatcherFa
         }
       };
     } else {
-      return makeMatcher(s -> Objects.equals(s, etnValue));
+      return makeMatcher(DruidObjectPredicate.equalTo(etnValue));
     }
   }
 
@@ -117,7 +116,7 @@ public class SingleValueStringVectorValueMatcher implements VectorValueMatcherFa
     return makeMatcher(predicateFactory.makeStringPredicate());
   }
 
-  private VectorValueMatcher makeMatcher(final Predicate<String> predicate)
+  private VectorValueMatcher makeMatcher(final DruidObjectPredicate<String> predicate)
   {
     final ConstantMatcherType constantMatcherType = ValueMatchers.toConstantMatcherTypeIfPossible(
         selector,
@@ -155,7 +154,7 @@ public class SingleValueStringVectorValueMatcher implements VectorValueMatcherFa
               matches = matchingIds.get(id);
             } else {
               final String val = selector.lookupName(id);
-              matches = (includeUnknown && val == null) || predicate.apply(val);
+              matches = predicate.apply(val).matches(includeUnknown);
               checkedIds.set(id);
               if (matches) {
                 matchingIds.set(id);
@@ -188,7 +187,7 @@ public class SingleValueStringVectorValueMatcher implements VectorValueMatcherFa
           for (int i = 0; i < mask.getSelectionSize(); i++) {
             final int rowNum = mask.getSelection()[i];
             final String val = selector.lookupName(vector[rowNum]);
-            if ((includeUnknown && val == null) || predicate.apply(val)) {
+            if (predicate.apply(val).matches(includeUnknown)) {
               selection[numRows++] = rowNum;
             }
           }

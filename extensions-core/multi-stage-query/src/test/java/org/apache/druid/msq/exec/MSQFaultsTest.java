@@ -20,28 +20,38 @@
 package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.indexing.error.InsertCannotAllocateSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
 import org.apache.druid.msq.indexing.error.InsertTimeNullFault;
 import org.apache.druid.msq.indexing.error.InsertTimeOutOfBoundsFault;
+import org.apache.druid.msq.indexing.error.TooManyBucketsFault;
 import org.apache.druid.msq.indexing.error.TooManyClusteredByColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyInputFilesFault;
 import org.apache.druid.msq.indexing.error.TooManyPartitionsFault;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestFileUtils;
+import org.apache.druid.msq.test.MSQTestTaskActionClient;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.LinearShardSpec;
+import org.hamcrest.CoreMatchers;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import java.io.File;
@@ -125,18 +135,95 @@ public class MSQFaultsTest extends MSQTestBase
                      .verifyResults();
   }
 
-
   @Test
-  public void testInsertCannotBeEmptyFault()
+  public void testInsertCannotBeEmptyFaultWithInsertQuery()
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
                                             .add("dim1", ColumnType.STRING)
                                             .add("cnt", ColumnType.LONG).build();
 
-    //Insert with a condition which results in 0 rows being inserted
+    // Insert with a condition which results in 0 rows being inserted
     testIngestQuery().setSql(
-                         "insert into foo1 select  __time, dim1 , count(*) as cnt from foo where dim1 is not null and __time < TIMESTAMP '1971-01-01 00:00:00' group by 1, 2 PARTITIONED by day clustered by dim1")
+                         "INSERT INTO foo1 "
+                         + " SELECT  __time, dim1 , count(*) AS cnt"
+                         + " FROM foo WHERE dim1 IS NOT NULL AND __time < TIMESTAMP '1971-01-01 00:00:00'"
+                         + " GROUP BY 1, 2"
+                         + " PARTITIONED BY ALL"
+                         + " CLUSTERED BY dim1")
+                     .setQueryContext(FAIL_EMPTY_INSERT_ENABLED_MSQ_CONTEXT)
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedMSQFault(new InsertCannotBeEmptyFault("foo1"))
+                     .verifyResults();
+  }
+
+  @Test
+  public void testInsertCannotBeEmptyFaultWithReplaceQuery()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("cnt", ColumnType.LONG).build();
+
+    // Insert with a condition which results in 0 rows being inserted
+    testIngestQuery().setSql(
+                         "REPLACE INTO foo1"
+                         + " OVERWRITE ALL"
+                         + " SELECT  __time, dim1 , count(*) AS cnt"
+                         + " FROM foo"
+                         + " WHERE dim1 IS NOT NULL AND __time < TIMESTAMP '1971-01-01 00:00:00'"
+                         + " GROUP BY 1, 2"
+                         + " PARTITIONED BY day"
+                         + " CLUSTERED BY dim1")
+                     .setQueryContext(FAIL_EMPTY_INSERT_ENABLED_MSQ_CONTEXT)
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedMSQFault(new InsertCannotBeEmptyFault("foo1"))
+                     .verifyResults();
+  }
+
+  @Test
+  public void testInsertCannotBeEmptyFaultWithInsertLimitQuery()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("cnt", ColumnType.LONG).build();
+
+    // Insert with a condition which results in 0 rows being inserted -- do nothing!
+    testIngestQuery().setSql(
+                         "INSERT INTO foo1 "
+                         + " SELECT  __time, dim1"
+                         + " FROM foo WHERE dim1 IS NOT NULL AND __time < TIMESTAMP '1971-01-01 00:00:00'"
+                         + " LIMIT 100"
+                         + " PARTITIONED BY ALL"
+                         + " CLUSTERED BY dim1")
+                     .setQueryContext(FAIL_EMPTY_INSERT_ENABLED_MSQ_CONTEXT)
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedMSQFault(new InsertCannotBeEmptyFault("foo1"))
+                     .verifyResults();
+  }
+
+  @Test
+  public void testInsertCannotBeEmptyFaultWithReplaceLimitQuery()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("cnt", ColumnType.LONG).build();
+
+    // Insert with a condition which results in 0 rows being inserted -- do nothing!
+    testIngestQuery().setSql(
+                         "REPLACE INTO foo1 "
+                         + " OVERWRITE ALL"
+                         + " SELECT  __time, dim1"
+                         + " FROM foo WHERE dim1 IS NOT NULL AND __time < TIMESTAMP '1971-01-01 00:00:00'"
+                         + " LIMIT 100"
+                         + " PARTITIONED BY ALL"
+                         + " CLUSTERED BY dim1")
+                     .setQueryContext(FAIL_EMPTY_INSERT_ENABLED_MSQ_CONTEXT)
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedMSQFault(new InsertCannotBeEmptyFault("foo1"))
@@ -401,6 +488,97 @@ public class MSQFaultsTest extends MSQTestBase
           "TaskLock must be of type [EXCLUSIVE] or [REPLACE] for a REPLACE query"
       );
     }
+  }
+
+  @Test
+  public void testReplaceTombstonesWithTooManyBucketsThrowsFault()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("cnt", ColumnType.LONG).build();
+
+    // Create a datasegment which lies partially outside the generated segment
+    DataSegment existingDataSegment = DataSegment.builder()
+                                                 .interval(Intervals.of("2001-01-01T/2003-01-04T"))
+                                                 .size(50)
+                                                 .version(MSQTestTaskActionClient.VERSION)
+                                                 .dataSource("foo1")
+                                                 .build();
+
+    Mockito.doReturn(ImmutableSet.of(existingDataSegment))
+           .when(testTaskActionClient)
+           .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
+
+    String expectedError = new TooManyBucketsFault(Limits.MAX_PARTITION_BUCKETS).getErrorMessage();
+
+
+    testIngestQuery().setSql(
+                         "REPLACE INTO foo1 "
+                         + "OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' and __time < TIMESTAMP '2002-01-01 00:00:00'"
+                         + "SELECT  __time, dim1 , count(*) as cnt "
+                         + "FROM foo "
+                         + "WHERE dim1 IS NOT NULL "
+                         + "GROUP BY 1, 2 "
+                         + "PARTITIONED by TIME_FLOOR(__time, 'PT1s') "
+                         + "CLUSTERED by dim1")
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedShardSpec(DimensionRangeShardSpec.class)
+                     .setExpectedExecutionErrorMatcher(
+                         CoreMatchers.allOf(
+                             CoreMatchers.instanceOf(ISE.class),
+                             ThrowableMessageMatcher.hasMessage(
+                                 CoreMatchers.containsString(expectedError)
+                             )
+                         )
+                     )
+                     .verifyExecutionError();
+  }
+
+  @Test
+  public void testReplaceTombstonesWithTooManyBucketsThrowsFault2()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("cnt", ColumnType.LONG).build();
+
+    // Create a datasegment which lies partially outside the generated segment
+    DataSegment existingDataSegment = DataSegment.builder()
+                                                 .interval(Intervals.of("2000-01-01T/2003-01-04T"))
+                                                 .size(50)
+                                                 .version(MSQTestTaskActionClient.VERSION)
+                                                 .dataSource("foo1")
+                                                 .build();
+
+    Mockito.doReturn(ImmutableSet.of(existingDataSegment))
+           .when(testTaskActionClient)
+           .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
+
+    String expectedError = new TooManyBucketsFault(Limits.MAX_PARTITION_BUCKETS).getErrorMessage();
+
+
+    testIngestQuery().setSql(
+                         "REPLACE INTO foo1 "
+                         + "OVERWRITE ALL "
+                         + "SELECT  __time, dim1 , count(*) as cnt "
+                         + "FROM foo "
+                         + "GROUP BY 1, 2 "
+                         + "PARTITIONED by HOUR "
+                         + "CLUSTERED by dim1")
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedShardSpec(DimensionRangeShardSpec.class)
+                     .setExpectedExecutionErrorMatcher(
+                         CoreMatchers.allOf(
+                             CoreMatchers.instanceOf(ISE.class),
+                             ThrowableMessageMatcher.hasMessage(
+                                 CoreMatchers.containsString(expectedError)
+                             )
+                         )
+                     )
+                     .verifyExecutionError();
   }
 
   private void testLockTypes(TaskLockType contextTaskLockType, String sql, String errorMessage)

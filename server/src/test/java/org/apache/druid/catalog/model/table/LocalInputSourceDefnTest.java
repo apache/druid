@@ -61,8 +61,8 @@ public class LocalInputSourceDefnTest extends BaseExternTableTest
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(ImmutableMap.of("type", LocalInputSource.TYPE_KEY))
         .inputFormat(CSV_FORMAT)
-        .column("x", Columns.VARCHAR)
-        .column("y", Columns.BIGINT)
+        .column("x", Columns.STRING)
+        .column("y", Columns.LONG)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
     assertThrows(IAE.class, () -> resolved.validate());
@@ -75,8 +75,8 @@ public class LocalInputSourceDefnTest extends BaseExternTableTest
     LocalInputSource inputSource = new LocalInputSource(new File("/tmp"), "*");
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(inputSource))
-        .column("x", Columns.VARCHAR)
-        .column("y", Columns.BIGINT)
+        .column("x", Columns.STRING)
+        .column("y", Columns.LONG)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
     assertThrows(IAE.class, () -> resolved.validate());
@@ -129,8 +129,8 @@ public class LocalInputSourceDefnTest extends BaseExternTableTest
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(inputSource))
         .inputFormat(CSV_FORMAT)
-        .column("x", Columns.VARCHAR)
-        .column("y", Columns.BIGINT)
+        .column("x", Columns.STRING)
+        .column("y", Columns.LONG)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
     resolved.validate();
@@ -150,8 +150,8 @@ public class LocalInputSourceDefnTest extends BaseExternTableTest
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(inputSource))
         .inputFormat(CSV_FORMAT)
-        .column("x", Columns.VARCHAR)
-        .column("y", Columns.BIGINT)
+        .column("x", Columns.STRING)
+        .column("y", Columns.LONG)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
     resolved.validate();
@@ -169,8 +169,8 @@ public class LocalInputSourceDefnTest extends BaseExternTableTest
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(source)
         .inputFormat(CSV_FORMAT)
-        .column("x", Columns.VARCHAR)
-        .column("y", Columns.BIGINT)
+        .column("x", Columns.STRING)
+        .column("y", Columns.LONG)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
     assertThrows(IAE.class, () -> resolved.validate());
@@ -321,8 +321,8 @@ public class LocalInputSourceDefnTest extends BaseExternTableTest
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(inputSource))
         .inputFormat(CSV_FORMAT)
-        .column("x", Columns.VARCHAR)
-        .column("y", Columns.BIGINT)
+        .column("x", Columns.STRING)
+        .column("y", Columns.LONG)
         .build();
 
     // Check validation
@@ -373,8 +373,8 @@ public class LocalInputSourceDefnTest extends BaseExternTableTest
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(inputSource))
         .inputFormat(CSV_FORMAT)
-        .column("x", Columns.VARCHAR)
-        .column("y", Columns.BIGINT)
+        .column("x", Columns.STRING)
+        .column("y", Columns.LONG)
         .build();
 
     // Check validation
@@ -418,8 +418,8 @@ public class LocalInputSourceDefnTest extends BaseExternTableTest
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(BASE_DIR_ONLY)
         .inputFormat(CSV_FORMAT)
-        .column("x", Columns.VARCHAR)
-        .column("y", Columns.BIGINT)
+        .column("x", Columns.STRING)
+        .column("y", Columns.LONG)
         .build();
 
     // Check validation
