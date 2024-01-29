@@ -29,7 +29,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-//@JsonTypeName()
 public class MSQCompaction implements CompactionClient
 {
   public MSQCompaction(){
@@ -48,30 +47,8 @@ public class MSQCompaction implements CompactionClient
   public String submitCompactionTask(ClientCompactionTaskQuery compactionParams)
   {
 
-/*
-    GroupByQuery.Builder builder = new GroupByQuery.Builder().setGranularity(compactionParams.getGranularitySpec()
-                                                                                             .getSegmentGranularity())
-                                                             .setInterval(compactionParams.getIoConfig()
-                                                                                          .getInputSpec()
-                                                                                          .getInterval())
-                                                             .setDataSource(compactionParams.getDataSource())
-                                                             .setDimensions(compactionParams.getDimensionsSpec()
-                                                                                            .getDimensions()
-                                                                                            .stream()
-                                                                                            .map(d -> new DefaultDimensionSpec(
-                                                                                                d.getName(),
-                                                                                                d.getName()
-                                                                                            ))
-                                                                                            .collect(Collectors.toList()));
+RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
 
-    if (compactionParams.getMetricsSpec() != null) {
-      builder.setAggregatorSpecs(compactionParams.getMetricsSpec());
-    }
-*/
-//    String escapedJson = "[{\"name\":\"added\",\"type\":\"LONG\"},{\"name\":\"channel\",\"type\":\"STRING\"},{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"comment\",\"type\":\"STRING\"},{\"name\":\"countryIsoCode\",\"type\":\"STRING\"},{\"name\":\"countryName\",\"type\":\"STRING\"},{\"name\":\"deleted\",\"type\":\"LONG\"},{\"name\":\"delta\",\"type\":\"LONG\"},{\"name\":\"isAnonymous\",\"type\":\"STRING\"},{\"name\":\"isMinor\",\"type\":\"STRING\"},{\"name\":\"isNew\",\"type\":\"STRING\"},{\"name\":\"isRobot\",\"type\":\"STRING\"},{\"name\":\"isUnpatrolled\",\"type\":\"STRING\"},{\"name\":\"metroCode\",\"type\":\"LONG\"},{\"name\":\"namespace\",\"type\":\"STRING\"},{\"name\":\"page\",\"type\":\"STRING\"},{\"name\":\"regionIsoCode\",\"type\":\"STRING\"},{\"name\":\"regionName\",\"type\":\"STRING\"},{\"name\":\"user\",\"type\":\"STRING\"},{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"time\",\"type\":\"LONG\"}]";
-    RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
-
-//    rowSignatureBuilder.addTimeColumn();
     List<String> columns = new ArrayList<>();
 
     for (DimensionSchema ds : compactionParams.getDimensionsSpec().getDimensions()) {
@@ -83,25 +60,35 @@ public class MSQCompaction implements CompactionClient
                                                .getInputSpec()
                                                .getInterval();
 
-    MultipleIntervalSegmentSpec multipleIntervalSegmentSpecFull = new MultipleIntervalSegmentSpec(Collections.singletonList(
-        Intervals.ETERNITY));
-    MultipleIntervalSegmentSpec multipleIntervalSegmentSpecQuery = new MultipleIntervalSegmentSpec(Collections.singletonList(compactionParams.getIoConfig()
-                                                                                                                                             .getInputSpec()
-                                                                                                                                             .getInterval()));
+    MultipleIntervalSegmentSpec multipleIntervalSegmentSpecQuery = new MultipleIntervalSegmentSpec(Collections.singletonList(
+        replaceInterval));
 
+    String escapedSignatureJson = "[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"added\",\"type\":\"LONG\"},"
+                         + "{\"name\":\"channel\",\"type\":\"STRING\"},{\"name\":\"cityName\",\"type\":\"STRING\"},"
+                         + "{\"name\":\"comment\",\"type\":\"STRING\"},{\"name\":\"countryIsoCode\",\"type\":\"STRING\"},"
+                         + "{\"name\":\"countryName\",\"type\":\"STRING\"},{\"name\":\"deleted\",\"type\":\"LONG\"},"
+                         + "{\"name\":\"delta\",\"type\":\"LONG\"},{\"name\":\"isAnonymous\",\"type\":\"STRING\"},"
+                         + "{\"name\":\"isMinor\",\"type\":\"STRING\"},{\"name\":\"isNew\",\"type\":\"STRING\"},"
+                         + "{\"name\":\"isRobot\",\"type\":\"STRING\"},{\"name\":\"isUnpatrolled\",\"type\":\"STRING\"},"
+                         + "{\"name\":\"metroCode\",\"type\":\"LONG\"},{\"name\":\"namespace\",\"type\":\"STRING\"},"
+                         + "{\"name\":\"page\",\"type\":\"STRING\"},{\"name\":\"regionIsoCode\",\"type\":\"STRING\"},"
+                         + "{\"name\":\"regionName\",\"type\":\"STRING\"},{\"name\":\"user\",\"type\":\"STRING\"}]";
 
-    String escapedJson = "[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"added\",\"type\":\"LONG\"},{\"name\":\"channel\",\"type\":\"STRING\"},{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"comment\",\"type\":\"STRING\"},{\"name\":\"countryIsoCode\",\"type\":\"STRING\"},{\"name\":\"countryName\",\"type\":\"STRING\"},{\"name\":\"deleted\",\"type\":\"LONG\"},{\"name\":\"delta\",\"type\":\"LONG\"},{\"name\":\"isAnonymous\",\"type\":\"STRING\"},{\"name\":\"isMinor\",\"type\":\"STRING\"},{\"name\":\"isNew\",\"type\":\"STRING\"},{\"name\":\"isRobot\",\"type\":\"STRING\"},{\"name\":\"isUnpatrolled\",\"type\":\"STRING\"},{\"name\":\"metroCode\",\"type\":\"LONG\"},{\"name\":\"namespace\",\"type\":\"STRING\"},{\"name\":\"page\",\"type\":\"STRING\"},{\"name\":\"regionIsoCode\",\"type\":\"STRING\"},{\"name\":\"regionName\",\"type\":\"STRING\"},{\"name\":\"user\",\"type\":\"STRING\"}]";
     Druids.ScanQueryBuilder builder = new Druids.ScanQueryBuilder()
         .dataSource(compactionParams.getDataSource())
         .columns(columns)
-//        .columns("__time", "added", "channel", "cityName", "comment", "countryIsoCode", "countryName", "deleted", "delta", "isAnonymous", "isMinor", "isNew", "isRobot", "isUnpatrolled", "metroCode", "namespace", "page", "regionIsoCode", "regionName", "user")
         .intervals(multipleIntervalSegmentSpecQuery)
         .legacy(false)
         .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-        .context(ImmutableMap.of(DruidQuery.CTX_SCAN_SIGNATURE, escapedJson, DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS, replaceInterval.toString(), "sqlInsertSegmentGranularity", "\"HOUR\""));
+        .context(ImmutableMap.of(
+            DruidQuery.CTX_SCAN_SIGNATURE,
+            escapedSignatureJson,
+            DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS,
+            replaceInterval.toString(),
+            "sqlInsertSegmentGranularity",
+            "\"HOUR\""
+        ));
 
-
-// QuerySegmentSpec (intervals) for SQL initiated reingest: MultipleIntervalSegmentSpec{intervals=[-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z]}
     Query<?> query = builder.build();
 
 
@@ -119,16 +106,9 @@ public class MSQCompaction implements CompactionClient
                              .columnMappings(ColumnMappings.identity(rowSignatureBuilder.build()))
                              .destination(msqDestination)
                              .tuningConfig(MSQTuningConfig.defaultConfig())
-
                              .build();
 
-
     final String taskId = compactionParams.getId();
-
-//    Map<String, Object> context = compactionParams.getContext();
-//    context.put(DruidQuery.CTX_SCAN_SIGNATURE, msqSpec.getColumnMappings());
-
-
 
     MSQControllerTask controllerTask =
         new MSQControllerTask(

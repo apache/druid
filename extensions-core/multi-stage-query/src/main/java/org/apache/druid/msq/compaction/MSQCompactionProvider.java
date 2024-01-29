@@ -1,7 +1,5 @@
 package org.apache.druid.msq.compaction;
 
-import com.fasterxml.jackson.annotation.JsonTypeName;
-import org.apache.druid.msq.guice.MSQCompactionDruidModule;
 import org.apache.druid.server.coordinator.duty.CompactionClient;
 import org.apache.druid.server.coordinator.duty.CompactionClientProvider;
 
