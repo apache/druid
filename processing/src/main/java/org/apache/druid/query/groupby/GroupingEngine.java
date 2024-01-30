@@ -950,7 +950,10 @@ public class GroupingEngine
     List<AggregatorFactory> aggSpec = q.getAggregatorSpecs();
     ResultRow resultRow = ResultRow.create(q.getResultRowSizeWithPostAggregators());
     for (int i = 0; i < aggSpec.size(); i++) {
-      resultRow.set(i, aggSpec.get(i).factorize(new AllNullColumnSelectorFactory()).get());
+      resultRow.set(
+          q.getResultRowAggregatorStart() + i,
+          aggSpec.get(i).factorize(new AllNullColumnSelectorFactory()).get()
+      );
     }
     Map<String, Object> map = resultRow.toMap(q);
     for (int i = 0; i < q.getPostAggregatorSpecs().size(); i++) {
