@@ -1313,14 +1313,14 @@ public class TaskLockboxTest
         Intervals.of("2017/2018")
     );
 
-    LockFilterPolicy requestForExclusiveLowerPriorityLock = new LockFilterPolicy(
+    LockFilterPolicy requestForReplaceLowerPriorityLock = new LockFilterPolicy(
         task.getDataSource(),
         25,
         ImmutableMap.of(Tasks.TASK_LOCK_TYPE, TaskLockType.REPLACE.name())
     );
 
     Map<String, List<Interval>> conflictingIntervals =
-        lockbox.getLockedIntervals(ImmutableList.of(requestForExclusiveLowerPriorityLock));
+        lockbox.getLockedIntervals(ImmutableList.of(requestForReplaceLowerPriorityLock));
     Assert.assertTrue(conflictingIntervals.isEmpty());
   }
 
