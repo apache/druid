@@ -21,6 +21,7 @@ package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.export.TestExportStorageConnector;
 import org.apache.druid.msq.test.MSQTestBase;
@@ -116,11 +117,12 @@ public class MSQExportTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedSegment(ImmutableSet.of())
                      .setExpectedResultRows(ImmutableList.of())
-                     .setExpectedExecutionErrorMatcher(
+                     .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
+                         CoreMatchers.instanceOf(ISE.class),
                          ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "Could not resolve type id 'hdfs' as a subtype"
-                         ))
-                     ).verifyExecutionError();
+                             "No storage connector found for storage connector type:[hdfs]."
+                         ))))
+                     .verifyExecutionError();
   }
 
   private List<Object[]> expectedFooFileContents()

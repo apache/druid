@@ -1887,10 +1887,19 @@ public class ControllerImpl implements Controller
       }
     } else if (querySpec.getDestination() instanceof ExportMSQDestination) {
       final ExportMSQDestination exportMSQDestination = (ExportMSQDestination) querySpec.getDestination();
-      final StorageConnectorProvider storageConnectorProvider = jsonMapper.convertValue(
-          exportMSQDestination.getProperties(),
-          StorageConnectorProvider.class
-      );
+      final StorageConnectorProvider storageConnectorProvider;
+      try {
+        storageConnectorProvider = jsonMapper.convertValue(
+            exportMSQDestination.getProperties(),
+            StorageConnectorProvider.class
+        );
+      }
+      catch (IllegalArgumentException e) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                            .build("No storage connector found for storage connector type:[%s].", exportMSQDestination.getStorageConnectorType());
+      }
+
       final ResultFormat resultFormat = exportMSQDestination.getResultFormat();
 
       // If the statement is a 'REPLACE' statement, delete the existing files at the destination.

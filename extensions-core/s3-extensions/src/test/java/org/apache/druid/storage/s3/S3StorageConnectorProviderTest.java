@@ -21,7 +21,6 @@ package org.apache.druid.storage.s3;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -113,12 +112,6 @@ public class S3StorageConnectorProviderTest
         ProvisionException.class,
         () -> getStorageConnectorProvider(properties)
     );
-  }
-
-  @Test
-  public void name()
-  {
-    ImmutableMap<String, String> stringStringImmutableMap = ImmutableMap.of("type", "local", "basePath", "/path");
   }
 
   private StorageConnectorProvider getStorageConnectorProvider(Properties properties)

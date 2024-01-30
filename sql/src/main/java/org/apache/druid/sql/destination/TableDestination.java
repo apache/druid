@@ -46,6 +46,12 @@ public class TableDestination implements IngestDestination
     return tableName;
   }
 
+  @JsonProperty("tableName")
+  public String getTableName()
+  {
+    return tableName;
+  }
+
   @Override
   public String toString()
   {
