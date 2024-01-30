@@ -108,7 +108,21 @@ export function findSqlQueryPrefix(text: string): string | undefined {
   }
 }
 
+export function cleanSqlQueryPrefix(text: string): string {
+  const matchReplace = text.match(/\sREPLACE$/i);
+  if (matchReplace) {
+    // This query likely grabbed a "REPLACE" (which is not a reserved keyword) from the next query over, see if we can delete it
+    const textWithoutReplace = text.slice(0, -matchReplace[0].length).trimEnd();
+    if (SqlQuery.maybeParse(textWithoutReplace)) {
+      return textWithoutReplace;
+    }
+  }
+
+  return text;
+}
+
 export interface QuerySlice {
+  index: number;
   startOffset: number;
   startRowColumn: RowColumn;
   endOffset: number;
@@ -130,11 +144,12 @@ export function findAllSqlQueriesInText(text: string): QuerySlice[] {
       if (sql) {
         const endIndex = m.index + sql.length;
         found.push({
+          index: found.length,
           startOffset: offset + m.index,
           startRowColumn: offsetToRowColumn(text, offset + m.index)!,
           endOffset: offset + endIndex,
           endRowColumn: offsetToRowColumn(text, offset + endIndex)!,
-          sql,
+          sql: cleanSqlQueryPrefix(sql),
         });
       }
       remainingText = remainingText.slice(advanceBy);
