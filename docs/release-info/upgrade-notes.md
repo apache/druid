@@ -26,6 +26,42 @@ The upgrade notes assume that you are upgrading from the Druid version that imme
 
 For the full release notes for a specific version, see the [releases page](https://github.com/apache/druid/releases).
 
+## 29.0.0
+
+### Upgrade notes
+
+#### Enabled empty ingest queries
+
+Druid 29.0.0 introduced a new MSQ query parameter `failOnEmptyInsert` that allows empty ingest queries by default. Previously, ingest queries that produced no data would fail with the `InsertCannotBeEmpty` MSQ fault.
+
+When `failOnEmptyInsert` is `false`, the MSQ task engine allows empty ingest queries. An empty INSERT query is essentially a no-operation query, and an empty REPLACE query deletes all data that matches the OVERWRITE clause.
+
+To revert to the original behavior, set the MSQ query parameter `failOnEmptyInsert` to `true`.
+
+[#15495](https://github.com/apache/druid/pull/15495)
+
+#### MSQ task engine partitions
+
+During an upgrade to Druid 29.0.0, GROUP BY queries that use the MSQ task engine may fail if some of the workers are on an older version while others are on a newer version.
+
+[#15474](https://github.com/apache/druid/pull/15474)
+
+### Incompatible changes
+
+#### Changed `equals` filter for native queries
+
+Native query equals filter on mixed type `auto` columns which contain arrays must now be filtered as their presenting type, so if any rows are arrays (for example, the segment metadata and `information_schema` reports the type as some array type), then the native queries must also filter as if they are some array type. 
+
+[#15503](https://github.com/apache/druid/pull/15503)
+
+#### Changed property name for centralized datasource schemas 
+
+The property `druid.coordinator.centralizedTableSchema.enabled` has been renamed to `druid.centralizedDatasourceSchema.enabled` to better align with Druid terminology.
+
+This is only a name change and did not change any functionality.
+
+[#15476](https://github.com/apache/druid/pull/15476)
+
 ## 28.0.0
 
 ### Upgrade notes
