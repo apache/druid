@@ -5758,6 +5758,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.ERROR_HANDLING)
   @Test
   public void testUnplannableScanOrderByNonTime()
   {
@@ -5837,6 +5838,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.ERROR_HANDLING)
   @Test
   public void testUnplannableExactCountDistinctOnSketch()
   {

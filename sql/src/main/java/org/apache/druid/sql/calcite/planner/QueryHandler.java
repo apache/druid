@@ -66,7 +66,6 @@ import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.rel.DruidConvention;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.DruidRel;
@@ -78,7 +77,6 @@ import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.utils.Throwables;
 
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -221,9 +219,6 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
         // Druid convention is used whenever there are no tables that require BINDABLE.
         return planForDruid();
       }
-    }
-    catch (CannotBuildQueryException e) {
-      throw buildSQLPlanningError(e);
     }
     catch (RelOptPlanner.CannotPlanException e) {
       throw buildSQLPlanningError(e);
@@ -683,7 +678,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
 
   protected abstract QueryMaker buildQueryMaker(RelRoot rootQueryRel) throws ValidationException;
 
-  private DruidException buildSQLPlanningError(Exception exception)
+  private DruidException buildSQLPlanningError(RelOptPlanner.CannotPlanException exception)
   {
     String errorMessage = handlerContext.plannerContext().getPlanningError();
     if (null == errorMessage && exception instanceof UnsupportedSQLQueryException) {
