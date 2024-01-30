@@ -21,8 +21,8 @@ package org.apache.druid.sql.destination;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.storage.StorageConnectorProvider;
 
-import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -32,25 +32,17 @@ import java.util.Objects;
 public class ExportDestination implements IngestDestination
 {
   public static final String TYPE_KEY = "external";
-  private final String destination;
-  private final Map<String, String> properties;
+  private final StorageConnectorProvider storageConnectorProvider;
 
-  public ExportDestination(@JsonProperty("destination") String destination, @JsonProperty("properties") Map<String, String> properties)
+  public ExportDestination(@JsonProperty("storageConnectorProvider") StorageConnectorProvider storageConnectorProvider)
   {
-    this.destination = destination;
-    this.properties = properties;
+    this.storageConnectorProvider = storageConnectorProvider;
   }
 
-  @JsonProperty("destination")
-  public String getDestination()
+  @JsonProperty("storageConnectorProvider")
+  public StorageConnectorProvider getStorageConnectorProvider()
   {
-    return destination;
-  }
-
-  @JsonProperty("properties")
-  public Map<String, String> getProperties()
-  {
-    return properties;
+    return storageConnectorProvider;
   }
 
   @Override
@@ -69,24 +61,20 @@ public class ExportDestination implements IngestDestination
       return false;
     }
     ExportDestination that = (ExportDestination) o;
-    return Objects.equals(destination, that.destination) && Objects.equals(
-        properties,
-        that.properties
-    );
+    return Objects.equals(storageConnectorProvider, that.storageConnectorProvider);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(destination, properties);
+    return Objects.hash(storageConnectorProvider);
   }
 
   @Override
   public String toString()
   {
     return "ExportDestination{" +
-           "destination='" + destination + '\'' +
-           ", properties=" + properties +
+           "storageConnectorProvider=" + storageConnectorProvider +
            '}';
   }
 }

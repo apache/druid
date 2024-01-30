@@ -17,37 +17,34 @@
  * under the License.
  */
 
-package org.apache.druid.msq.indexing.destination;
+package org.apache.druid.sql.calcite.export;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import org.apache.druid.msq.querykit.ShuffleSpecFactories;
-import org.apache.druid.msq.querykit.ShuffleSpecFactory;
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.collect.ImmutableList;
+import com.google.inject.Binder;
+import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.storage.StorageConnectorProvider;
 
-public class TaskReportMSQDestination implements MSQDestination
+import java.util.List;
+
+public class TestExportModule implements DruidModule
 {
-  public static final TaskReportMSQDestination INSTANCE = new TaskReportMSQDestination();
-  public static final String TYPE = "taskReport";
-
-  private TaskReportMSQDestination()
+  @Override
+  public List<? extends Module> getJacksonModules()
   {
-    // Singleton.
-  }
-
-  @JsonCreator
-  public static TaskReportMSQDestination instance()
-  {
-    return INSTANCE;
+    return ImmutableList.of(
+        new SimpleModule(StorageConnectorProvider.class.getSimpleName())
+            .registerSubtypes(
+                new NamedType(TestExportStorageConnectorProvider.class, TestExportStorageConnector.TYPE_NAME)
+            )
+    );
   }
 
   @Override
-  public String toString()
+  public void configure(Binder binder)
   {
-    return "TaskReportMSQDestination{}";
-  }
 
-  @Override
-  public ShuffleSpecFactory getShuffleSpecFactory(int targetSize)
-  {
-    return ShuffleSpecFactories.singlePartition();
   }
 }

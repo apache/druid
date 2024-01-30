@@ -220,8 +220,7 @@ public class MSQTaskQueryMaker implements QueryMaker
       }
 
       destination = new ExportMSQDestination(
-          exportDestination.getDestination(),
-          exportDestination.getProperties(),
+          exportDestination.getStorageConnectorProvider(),
           format,
           replaceTimeChunks
       );

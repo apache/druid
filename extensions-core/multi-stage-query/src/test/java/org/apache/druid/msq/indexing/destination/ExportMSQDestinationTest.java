@@ -20,14 +20,15 @@
 package org.apache.druid.msq.indexing.destination;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.storage.StorageConnectorModule;
+import org.apache.druid.storage.local.LocalFileStorageConnectorProvider;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.IOException;
 
 public class ExportMSQDestinationTest
@@ -36,8 +37,7 @@ public class ExportMSQDestinationTest
   public void testSerde() throws IOException
   {
     ExportMSQDestination exportDestination = new ExportMSQDestination(
-        "local",
-        ImmutableMap.of("basePath", "/path"),
+        new LocalFileStorageConnectorProvider(new File("/path")),
         ResultFormat.CSV,
         Intervals.ONLY_ETERNITY
     );

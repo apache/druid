@@ -20,6 +20,8 @@
 package org.apache.druid.msq.indexing.destination;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import org.apache.druid.msq.querykit.ShuffleSpecFactories;
+import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 
 public class DurableStorageMSQDestination implements MSQDestination
 {
@@ -45,4 +47,9 @@ public class DurableStorageMSQDestination implements MSQDestination
     return "DurableStorageDestination{}";
   }
 
+  @Override
+  public ShuffleSpecFactory getShuffleSpecFactory(int targetSize)
+  {
+    return ShuffleSpecFactories.getGlobalSortWithTargetSize(targetSize);
+  }
 }

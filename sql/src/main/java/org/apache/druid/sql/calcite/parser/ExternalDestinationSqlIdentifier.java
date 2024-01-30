@@ -19,14 +19,17 @@
 
 package org.apache.druid.sql.calcite.parser;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.utils.CollectionUtils;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -43,7 +46,6 @@ public class ExternalDestinationSqlIdentifier extends SqlIdentifier
   )
   {
     super(name, pos);
-    properties.put("type", getDestinationType());
     this.properties = properties;
   }
 
@@ -88,5 +90,25 @@ public class ExternalDestinationSqlIdentifier extends SqlIdentifier
   public Object clone()
   {
     throw DruidException.defensive("Function is deprecated, please use clone(SqlNode) instead.");
+  }
+
+  public StorageConnectorProvider toStorageConnectorProvider(ObjectMapper objectMapper)
+  {
+    final HashMap<String, String> storageConnectorProperties = new HashMap<>(properties);
+    storageConnectorProperties.put("type", getDestinationType());
+
+    final StorageConnectorProvider storageConnectorProvider;
+    try {
+      storageConnectorProvider = objectMapper.convertValue(
+          storageConnectorProperties,
+          StorageConnectorProvider.class
+      );
+    }
+    catch (IllegalArgumentException e) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build("No storage connector found for storage connector type:[%s].", getDestinationType());
+    }
+    return storageConnectorProvider;
   }
 }

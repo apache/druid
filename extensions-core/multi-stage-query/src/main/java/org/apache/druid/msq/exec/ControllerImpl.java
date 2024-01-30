@@ -33,7 +33,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
-import com.google.inject.Injector;
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -167,7 +166,6 @@ import org.apache.druid.msq.querykit.DataSegmentTimelineView;
 import org.apache.druid.msq.querykit.MultiQueryKit;
 import org.apache.druid.msq.querykit.QueryKit;
 import org.apache.druid.msq.querykit.QueryKitUtils;
-import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.msq.querykit.groupby.GroupByQueryKit;
 import org.apache.druid.msq.querykit.results.ExportResultsFrameProcessorFactory;
@@ -656,8 +654,7 @@ public class ControllerImpl implements Controller
         id(),
         makeQueryControllerToolKit(),
         task.getQuerySpec(),
-        context.jsonMapper(),
-        context.injector()
+        context.jsonMapper()
     );
 
     QueryValidator.validateQueryDef(queryDef);
@@ -1749,8 +1746,7 @@ public class ControllerImpl implements Controller
       final String queryId,
       @SuppressWarnings("rawtypes") final QueryKit toolKit,
       final MSQSpec querySpec,
-      final ObjectMapper jsonMapper,
-      final Injector injector
+      final ObjectMapper jsonMapper
   )
   {
     final MSQTuningConfig tuningConfig = querySpec.getTuningConfig();
@@ -1759,7 +1755,8 @@ public class ControllerImpl implements Controller
     final ShuffleSpecFactory shuffleSpecFactory;
 
     if (MSQControllerTask.isIngestion(querySpec)) {
-      shuffleSpecFactory = ShuffleSpecFactories.getGlobalSortWithTargetSize(tuningConfig.getRowsPerSegment());
+      shuffleSpecFactory = querySpec.getDestination()
+                                    .getShuffleSpecFactory(tuningConfig.getRowsPerSegment());
 
       if (!columnMappings.hasUniqueOutputColumnNames()) {
         // We do not expect to hit this case in production, because the SQL validator checks that column names
@@ -1780,21 +1777,10 @@ public class ControllerImpl implements Controller
       } else {
         queryToPlan = querySpec.getQuery();
       }
-    } else if (querySpec.getDestination() instanceof TaskReportMSQDestination) {
-      shuffleSpecFactory = ShuffleSpecFactories.singlePartition();
-      queryToPlan = querySpec.getQuery();
-    } else if (querySpec.getDestination() instanceof DurableStorageMSQDestination) {
-      shuffleSpecFactory = ShuffleSpecFactories.getGlobalSortWithTargetSize(
-          MultiStageQueryContext.getRowsPerPage(querySpec.getQuery().context())
-      );
-      queryToPlan = querySpec.getQuery();
-    } else if (querySpec.getDestination() instanceof ExportMSQDestination) {
-      shuffleSpecFactory = ShuffleSpecFactories.getGlobalSortWithTargetSize(
-          MultiStageQueryContext.getRowsPerPage(querySpec.getQuery().context())
-      );
-      queryToPlan = querySpec.getQuery();
     } else {
-      throw new ISE("Unsupported destination [%s]", querySpec.getDestination());
+      shuffleSpecFactory = querySpec.getDestination()
+                                    .getShuffleSpecFactory(MultiStageQueryContext.getRowsPerPage(querySpec.getQuery().context()));
+      queryToPlan = querySpec.getQuery();
     }
 
     final QueryDefinition queryDef;
@@ -1887,18 +1873,7 @@ public class ControllerImpl implements Controller
       }
     } else if (querySpec.getDestination() instanceof ExportMSQDestination) {
       final ExportMSQDestination exportMSQDestination = (ExportMSQDestination) querySpec.getDestination();
-      final StorageConnectorProvider storageConnectorProvider;
-      try {
-        storageConnectorProvider = jsonMapper.convertValue(
-            exportMSQDestination.getProperties(),
-            StorageConnectorProvider.class
-        );
-      }
-      catch (IllegalArgumentException e) {
-        throw DruidException.forPersona(DruidException.Persona.USER)
-                            .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                            .build("No storage connector found for storage connector type:[%s].", exportMSQDestination.getStorageConnectorType());
-      }
+      final StorageConnectorProvider storageConnectorProvider = exportMSQDestination.getStorageConnectorProvider();
 
       final ResultFormat resultFormat = exportMSQDestination.getResultFormat();
 

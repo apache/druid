@@ -21,18 +21,15 @@ package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.msq.export.TestExportStorageConnector;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.calcite.export.TestExportStorageConnector;
 import org.apache.druid.sql.http.ResultFormat;
-import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Test;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -100,29 +97,6 @@ public class MSQExportTest extends MSQTestBase
         expectedFooFileContents().size(),
         Objects.requireNonNull(new File(exportDir.getAbsolutePath(), "worker0").listFiles()).length
     );
-  }
-
-  @Test
-  public void testWithUnsupportedStorageConnector()
-  {
-    RowSignature rowSignature = RowSignature.builder()
-                                            .add("__time", ColumnType.LONG)
-                                            .add("dim1", ColumnType.STRING)
-                                            .add("cnt", ColumnType.LONG).build();
-
-    testIngestQuery().setSql(
-                         "insert into extern(hdfs(basePath = '/var')) as csv select  __time, dim1 from foo")
-                     .setExpectedDataSource("foo1")
-                     .setQueryContext(DEFAULT_MSQ_CONTEXT)
-                     .setExpectedRowSignature(rowSignature)
-                     .setExpectedSegment(ImmutableSet.of())
-                     .setExpectedResultRows(ImmutableList.of())
-                     .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(ISE.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "No storage connector found for storage connector type:[hdfs]."
-                         ))))
-                     .verifyExecutionError();
   }
 
   private List<Object[]> expectedFooFileContents()

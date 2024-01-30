@@ -22,17 +22,19 @@ package org.apache.druid.msq.indexing.destination;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.msq.querykit.ShuffleSpecFactories;
+import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.sql.http.ResultFormat;
+import org.apache.druid.storage.StorageConnectorProvider;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 /**
  * Destination used by tasks that write the results as files to an external destination. {@link #resultFormat} denotes
- * the format of the file created and {@link #storageConnectorType} and {@link #properties} denotes the type of external
+ * the format of the file created and {@link #storageConnectorProvider} denotes the type of external
  * destination.
  * <br>
  * {@link #replaceTimeChunks} denotes how existing files should be handled.
@@ -42,35 +44,28 @@ import java.util.Objects;
 public class ExportMSQDestination implements MSQDestination
 {
   public static final String TYPE = "export";
-  private final String storageConnectorType;
-  private final Map<String, String> properties;
+  private final StorageConnectorProvider storageConnectorProvider;
   private final ResultFormat resultFormat;
   @Nullable
   private final List<Interval> replaceTimeChunks;
 
   @JsonCreator
-  public ExportMSQDestination(@JsonProperty("storageConnectorType") String storageConnectorType,
-                              @JsonProperty("properties") Map<String, String> properties,
-                              @JsonProperty("resultFormat") ResultFormat resultFormat,
-                              @JsonProperty("replaceTimeChunks") @Nullable List<Interval> replaceTimeChunks
+  public ExportMSQDestination(
+      @JsonProperty("storageConnectorProvider") StorageConnectorProvider storageConnectorProvider,
+      @JsonProperty("resultFormat") ResultFormat resultFormat,
+      @JsonProperty("replaceTimeChunks") @Nullable List<Interval> replaceTimeChunks
   )
   {
-    this.storageConnectorType = storageConnectorType;
-    this.properties = properties;
+    this.storageConnectorProvider = storageConnectorProvider;
     this.resultFormat = resultFormat;
     this.replaceTimeChunks = replaceTimeChunks;
   }
 
-  @JsonProperty("storageConnectorType")
-  public String getStorageConnectorType()
-  {
-    return storageConnectorType;
-  }
 
-  @JsonProperty("properties")
-  public Map<String, String> getProperties()
+  @JsonProperty("storageConnectorProvider")
+  public StorageConnectorProvider getStorageConnectorProvider()
   {
-    return properties;
+    return storageConnectorProvider;
   }
 
   @JsonProperty("resultFormat")
@@ -97,26 +92,30 @@ public class ExportMSQDestination implements MSQDestination
       return false;
     }
     ExportMSQDestination that = (ExportMSQDestination) o;
-    return Objects.equals(storageConnectorType, that.storageConnectorType) && Objects.equals(
-        properties,
-        that.properties
-    ) && resultFormat == that.resultFormat && Objects.equals(replaceTimeChunks, that.replaceTimeChunks);
+    return Objects.equals(storageConnectorProvider, that.storageConnectorProvider)
+           && resultFormat == that.resultFormat
+           && Objects.equals(replaceTimeChunks, that.replaceTimeChunks);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(storageConnectorType, properties, resultFormat, replaceTimeChunks);
+    return Objects.hash(storageConnectorProvider, resultFormat, replaceTimeChunks);
   }
 
   @Override
   public String toString()
   {
     return "ExportMSQDestination{" +
-           "storageConnectorType='" + storageConnectorType + '\'' +
-           ", properties=" + properties +
+           "storageConnectorProvider=" + storageConnectorProvider +
            ", resultFormat=" + resultFormat +
            ", replaceTimeChunks=" + replaceTimeChunks +
            '}';
+  }
+
+  @Override
+  public ShuffleSpecFactory getShuffleSpecFactory(int targetSize)
+  {
+    return ShuffleSpecFactories.getGlobalSortWithTargetSize(targetSize);
   }
 }

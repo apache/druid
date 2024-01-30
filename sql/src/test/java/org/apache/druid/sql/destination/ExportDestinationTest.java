@@ -20,11 +20,13 @@
 package org.apache.druid.sql.destination;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.storage.StorageConnectorModule;
+import org.apache.druid.storage.local.LocalFileStorageConnectorProvider;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.IOException;
 
 public class ExportDestinationTest
@@ -32,9 +34,10 @@ public class ExportDestinationTest
   @Test
   public void testSerde() throws IOException
   {
-    ExportDestination exportDestination = new ExportDestination("s3", ImmutableMap.of("bucketName", "bucket1", "prefix", "basepath/export"));
+    ExportDestination exportDestination = new ExportDestination(new LocalFileStorageConnectorProvider(new File("/basepath/export")));
 
     ObjectMapper objectMapper = new DefaultObjectMapper();
+    objectMapper.registerModules(new StorageConnectorModule().getJacksonModules());
     byte[] bytes = objectMapper.writeValueAsBytes(exportDestination);
 
     ExportDestination deserialized = objectMapper.readValue(bytes, ExportDestination.class);

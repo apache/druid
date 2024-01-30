@@ -20,21 +20,30 @@
 package org.apache.druid.sql.calcite;
 
 import org.apache.druid.error.DruidException;
+import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.calcite.export.TestExportModule;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.destination.ExportDestination;
 import org.junit.Test;
 
 public class CalciteExportTest extends CalciteIngestionDmlTest
 {
+  @Override
+  public void configureGuice(DruidInjectorBuilder builder)
+  {
+    super.configureGuice(builder);
+    builder.addModule(new TestExportModule());
+  }
+
   @Test
   public void testReplaceIntoExtern()
   {
     testIngestionQuery()
-        .sql("REPLACE INTO EXTERN(s3(bucket='bucket1',prefix='prefix1',tempDir='/tempdir',chunkSize='5242880',maxRetry='1')) "
+        .sql("REPLACE INTO EXTERN(testStorage()) "
              + "AS CSV "
              + "OVERWRITE ALL "
              + "SELECT dim2 FROM foo")
@@ -58,7 +67,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   public void testExportWithPartitionedBy()
   {
     testIngestionQuery()
-        .sql("REPLACE INTO EXTERN(s3(bucket='bucket1',prefix='prefix1',tempDir='/tempdir',chunkSize='5242880',maxRetry='1')) "
+        .sql("REPLACE INTO EXTERN(testStorage()) "
              + "AS CSV "
              + "OVERWRITE ALL "
              + "SELECT dim2 FROM foo "
@@ -74,7 +83,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   public void testInsertIntoExtern()
   {
     testIngestionQuery()
-        .sql("INSERT INTO EXTERN(s3(bucket='bucket1',prefix='prefix1',tempDir='/tempdir',chunkSize='5242880',maxRetry='1')) "
+        .sql("INSERT INTO EXTERN(testStorage()) "
              + "AS CSV "
              + "SELECT dim2 FROM foo")
         .expectQuery(
@@ -97,7 +106,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   public void testExportWithoutFormat()
   {
     testIngestionQuery()
-        .sql("INSERT INTO EXTERN(s3(bucket='bucket1',prefix='prefix1',tempDir='/tempdir',chunkSize='5242880',maxRetry='1')) "
+        .sql("INSERT INTO EXTERN(testStorage(bucket='bucket1',prefix='prefix1',tempDir='/tempdir',chunkSize='5242880',maxRetry='1')) "
              + "SELECT dim2 FROM foo")
         .expectValidationError(
             DruidException.class,
@@ -107,25 +116,14 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testExportSourceWithNoArguments()
+  public void testWithUnsupportedStorageConnector()
   {
     testIngestionQuery()
-        .sql("INSERT INTO EXTERN(testLocal()) "
-             + "AS CSV "
-             + "SELECT dim2 FROM foo")
-        .expectQuery(
-            Druids.newScanQueryBuilder()
-                  .dataSource(
-                      "foo"
-                  )
-                  .intervals(querySegmentSpec(Filtration.eternity()))
-                  .columns("dim2")
-                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
-                  .build()
+        .sql("insert into extern(nonExistent()) as csv select  __time, dim1 from foo")
+        .expectValidationError(
+            DruidException.class,
+            "No storage connector found for storage connector type:[nonExistent]."
         )
-        .expectResources(dataSourceRead("foo"))
-        .expectTarget(ExportDestination.TYPE_KEY, RowSignature.builder().add("dim2", ColumnType.STRING).build())
         .verify();
   }
 

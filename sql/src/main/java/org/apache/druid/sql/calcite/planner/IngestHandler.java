@@ -52,6 +52,7 @@ import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.destination.ExportDestination;
 import org.apache.druid.sql.destination.IngestDestination;
 import org.apache.druid.sql.destination.TableDestination;
+import org.apache.druid.storage.StorageConnectorProvider;
 
 import java.util.List;
 import java.util.regex.Pattern;
@@ -107,46 +108,54 @@ public abstract class IngestHandler extends QueryHandler
 
   protected abstract DruidSqlIngest ingestNode();
 
+  private void validateExport()
+  {
+    if (!handlerContext.plannerContext().featureAvailable(EngineFeature.WRITE_EXTERNAL_DATA)) {
+      throw InvalidSqlInput.exception(
+          "Writing to external sources are not supported by requested SQL engine [%s], consider using MSQ.",
+          handlerContext.engine().name()
+      );
+    }
+
+    if (ingestNode().getPartitionedBy() != null) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.UNSUPPORTED)
+                          .build("Export statements do not support a PARTITIONED BY or CLUSTERED BY clause.");
+    }
+
+    final String exportFileFormat = ingestNode().getExportFileFormat();
+    if (exportFileFormat == null) {
+      throw InvalidSqlInput.exception(
+          "Exporting rows into an EXTERN destination requires an AS clause to specify the format, but none was found.",
+          operationName()
+      );
+    } else {
+      handlerContext.plannerContext().queryContextMap().put(
+          DruidSqlIngest.SQL_EXPORT_FILE_FORMAT,
+          exportFileFormat
+      );
+    }
+  }
+
   @Override
   public void validate()
   {
     if (ingestNode().getTargetTable() instanceof ExternalDestinationSqlIdentifier) {
-      if (!handlerContext.plannerContext().featureAvailable(EngineFeature.WRITE_EXTERNAL_DATA)) {
+      validateExport();
+    } else {
+      if (ingestNode().getPartitionedBy() == null) {
         throw InvalidSqlInput.exception(
-            "Writing to external sources are not supported by requested SQL engine [%s], consider using MSQ.",
-            handlerContext.engine().name()
-        );
-      }
-      if (ingestNode().getPartitionedBy() != null) {
-        throw DruidException.forPersona(DruidException.Persona.USER)
-                            .ofCategory(DruidException.Category.UNSUPPORTED)
-                            .build("Export statements do not support a PARTITIONED BY or CLUSTERED BY clause.");
-      }
-    } else if (ingestNode().getPartitionedBy() == null) {
-      throw InvalidSqlInput.exception(
-          "Operation [%s] requires a PARTITIONED BY to be explicitly defined, but none was found.",
-          operationName()
-      );
-    }
-
-    String exportFileFormat = ingestNode().getExportFileFormat();
-    if (ingestNode().getTargetTable() instanceof ExternalDestinationSqlIdentifier) {
-      if (exportFileFormat == null) {
-        throw InvalidSqlInput.exception(
-            "Exporting rows into an EXTERN destination requires an AS clause to specify the format, but none was found.",
+            "Operation [%s] requires a PARTITIONED BY to be explicitly defined, but none was found.",
             operationName()
         );
-      } else {
-        handlerContext.plannerContext().queryContextMap().put(
-            DruidSqlIngest.SQL_EXPORT_FILE_FORMAT,
-            exportFileFormat
+      }
+
+      if (ingestNode().getExportFileFormat() != null) {
+        throw InvalidSqlInput.exception(
+            "The AS <format> clause should only be specified while exporting rows into an EXTERN destination.",
+            operationName()
         );
       }
-    } else if (exportFileFormat != null) {
-      throw InvalidSqlInput.exception(
-          "The AS <format> clause should only be specified while exporting rows into an EXTERN destination.",
-          operationName()
-      );
     }
 
     try {
@@ -215,7 +224,8 @@ public abstract class IngestHandler extends QueryHandler
           .build("Operation [%s] requires a target table", operationName());
     } else if (tableIdentifier instanceof ExternalDestinationSqlIdentifier) {
       ExternalDestinationSqlIdentifier externalDestination = ((ExternalDestinationSqlIdentifier) tableIdentifier);
-      dataSource = new ExportDestination(externalDestination.getDestinationType(), externalDestination.getProperties());
+      StorageConnectorProvider storageConnectorProvider = externalDestination.toStorageConnectorProvider(handlerContext.jsonMapper());
+      dataSource = new ExportDestination(storageConnectorProvider);
     } else if (tableIdentifier.names.size() == 1) {
       // Unqualified name.
       String tableName = Iterables.getOnlyElement(tableIdentifier.names);

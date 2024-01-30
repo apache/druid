@@ -40,6 +40,7 @@ import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -61,6 +62,7 @@ public class MSQTaskSqlEngine implements SqlEngine
       ImmutableSet.<String>builder()
                   .addAll(NativeSqlEngine.SYSTEM_CONTEXT_PARAMETERS)
                   .add(QueryKitUtils.CTX_TIME_COLUMN_NAME)
+                  .add(DruidSqlIngest.SQL_EXPORT_FILE_FORMAT)
                   .add(MultiStageQueryContext.CTX_IS_REINDEX)
                   .build();
 

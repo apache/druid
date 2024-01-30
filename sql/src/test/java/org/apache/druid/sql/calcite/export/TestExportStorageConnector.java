@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.msq.export;
+package org.apache.druid.sql.calcite.export;
 
 import org.apache.druid.storage.StorageConnector;
 
