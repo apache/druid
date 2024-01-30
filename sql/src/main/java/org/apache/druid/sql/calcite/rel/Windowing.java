@@ -34,6 +34,7 @@ import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexWindowBound;
 import org.apache.calcite.util.mapping.Mappings;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.QueryException;
@@ -358,12 +359,23 @@ public class Windowing
       if (group.lowerBound.isUnbounded() && group.upperBound.isUnbounded()) {
         return WindowFrame.unbounded();
       }
+      int lowerOffset = figureOutOffset(group.lowerBound);
+      int upperOffset = figureOutOffset(group.upperBound);
+      if (group.lowerBound.isPreceding()) {
+        lowerOffset = -lowerOffset;
+      }
+      if (group.upperBound.isPreceding()) {
+        upperOffset = -upperOffset;
+      }
+      if (lowerOffset >= upperOffset) {
+        throw InvalidInput.exception("The first value of range should be lesser than the second value");
+      }
       return new WindowFrame(
           group.isRows ? WindowFrame.PeerType.ROWS : WindowFrame.PeerType.RANGE,
           group.lowerBound.isUnbounded(),
-          figureOutOffset(group.lowerBound),
+          lowerOffset,
           group.upperBound.isUnbounded(),
-          figureOutOffset(group.upperBound),
+          upperOffset,
           group.isRows ? null : getOrdering()
       );
     }
