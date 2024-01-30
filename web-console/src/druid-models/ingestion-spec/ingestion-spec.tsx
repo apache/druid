@@ -302,6 +302,7 @@ export function getArrayMode(spec: Partial<IngestionSpec>): ArrayMode {
         spec,
         'spec.dataSchema.dimensionsSpec.dimensions',
       );
+
       if (
         dimensions.some(
           d =>
@@ -325,6 +326,23 @@ export function getArrayMode(spec: Partial<IngestionSpec>): ArrayMode {
       return 'arrays';
     }
   }
+}
+
+export function showArrayModeToggle(spec: Partial<IngestionSpec>): boolean {
+  const schemaMode = getSchemaMode(spec);
+  if (schemaMode !== 'fixed') return false;
+
+  const dimensions: (DimensionSpec | string)[] = deepGet(
+    spec,
+    'spec.dataSchema.dimensionsSpec.dimensions',
+  );
+
+  return dimensions.some(
+    d =>
+      typeof d === 'object' &&
+      ((d.type === 'auto' && String(d.castToType).startsWith('ARRAY')) ||
+        (d.type === 'string' && typeof d.multiValueHandling === 'string')),
+  );
 }
 
 export function getRollup(spec: Partial<IngestionSpec>, valueIfUnset = true): boolean {

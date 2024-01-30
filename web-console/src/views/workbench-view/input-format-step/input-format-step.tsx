@@ -16,13 +16,21 @@
  * limitations under the License.
  */
 
-import { Button, Callout, FormGroup, Icon, Intent, Tag } from '@blueprintjs/core';
+import { Button, Callout, FormGroup, Icon, Intent, Switch, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import type { SqlExpression } from '@druid-toolkit/query';
 import { C, SqlColumnDeclaration, SqlType } from '@druid-toolkit/query';
 import React, { useState } from 'react';
 
-import { AutoForm, CenterMessage, LearnMore, Loader } from '../../../components';
+import {
+  AutoForm,
+  CenterMessage,
+  ExternalLink,
+  FormGroupWithInfo,
+  LearnMore,
+  Loader,
+  PopoverText,
+} from '../../../components';
 import type { InputFormat, InputSource } from '../../../druid-models';
 import {
   BATCH_INPUT_FORMAT_FIELDS,
@@ -52,6 +60,7 @@ export interface InputFormatAndMore {
   inputFormat: InputFormat;
   signature: SqlColumnDeclaration[];
   timeExpression: SqlExpression | undefined;
+  forceMultiValue: boolean;
 }
 
 interface PossibleTimeExpression {
@@ -78,6 +87,7 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
     AutoForm.isValidModel(initInputFormat, BATCH_INPUT_FORMAT_FIELDS) ? initInputFormat : undefined,
   );
   const [selectTimestamp, setSelectTimestamp] = useState(true);
+  const [forceMultiValue, setForceMultiValue] = useState(false);
 
   const [previewState] = useQueryManager<InputFormat, SampleResponse>({
     query: inputFormatToSample,
@@ -165,8 +175,11 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
             ),
           ),
           timeExpression: selectTimestamp ? possibleTimeExpression?.timeExpression : undefined,
+          forceMultiValue,
         }
       : undefined;
+
+  const hasArrays = inputFormatAndMore?.signature.some(d => d.columnType.isArray());
 
   return (
     <div className="input-format-step">
@@ -219,6 +232,34 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
           )}
         </div>
         <div className="bottom-controls">
+          {hasArrays && (
+            <FormGroupWithInfo
+              inlineInfo
+              info={
+                <PopoverText>
+                  <p>
+                    Store arrays as multi-value string columns instead of arrays. Note that all
+                    detected array elements will be coerced to strings if you choose this option,
+                    and data will behave more like a string than an array at query time. See{' '}
+                    <ExternalLink href={`${getLink('DOCS')}/querying/arrays`}>
+                      array docs
+                    </ExternalLink>{' '}
+                    and{' '}
+                    <ExternalLink href={`${getLink('DOCS')}/querying/multi-value-dimensions`}>
+                      mvd docs
+                    </ExternalLink>{' '}
+                    for more details about the differences between arrays and multi-value strings.
+                  </p>
+                </PopoverText>
+              }
+            >
+              <Switch
+                label="Store ARRAYs as MVDs"
+                className="legacy-switch"
+                onChange={() => setForceMultiValue(!forceMultiValue)}
+              />
+            </FormGroupWithInfo>
+          )}
           {possibleTimeExpression && (
             <FormGroup>
               <Callout>

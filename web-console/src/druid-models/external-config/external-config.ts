@@ -19,6 +19,7 @@
 import type { SqlQuery } from '@druid-toolkit/query';
 import {
   C,
+  F,
   filterMap,
   L,
   SqlColumnDeclaration,
@@ -127,13 +128,17 @@ export function externalConfigToTableExpression(config: ExternalConfig): SqlExpr
 export function externalConfigToInitDimensions(
   config: ExternalConfig,
   timeExpression: SqlExpression | undefined,
+  forceMultiValue: boolean,
 ): SqlExpression[] {
   return (timeExpression ? [timeExpression.as('__time')] : [])
     .concat(
       filterMap(config.signature, columnDeclaration => {
         const columnName = columnDeclaration.getColumnName();
         if (timeExpression && timeExpression.containsColumnName(columnName)) return;
-        return C(columnName);
+        return C(columnName).applyIf(
+          forceMultiValue && columnDeclaration.columnType.isArray(),
+          ex => F('ARRAY_TO_MV', ex).as(columnName),
+        );
       }),
     )
     .slice(0, MULTI_STAGE_QUERY_MAX_COLUMNS);

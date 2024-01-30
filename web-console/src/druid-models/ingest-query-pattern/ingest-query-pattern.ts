@@ -62,6 +62,7 @@ export function externalConfigToIngestQueryPattern(
   config: ExternalConfig,
   timeExpression: SqlExpression | undefined,
   partitionedByHint: string | undefined,
+  forceMultiValue: boolean,
 ): IngestQueryPattern {
   return {
     destinationTableName: guessDataSourceNameFromInputSource(config.inputSource) || 'data',
@@ -69,7 +70,7 @@ export function externalConfigToIngestQueryPattern(
     mainExternalName: 'ext',
     mainExternalConfig: config,
     filters: [],
-    dimensions: externalConfigToInitDimensions(config, timeExpression),
+    dimensions: externalConfigToInitDimensions(config, timeExpression, forceMultiValue),
     partitionedBy: partitionedByHint || (timeExpression ? 'day' : 'all'),
     clusteredBy: [],
   };

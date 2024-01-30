@@ -120,6 +120,7 @@ import {
   possibleDruidFormatForValues,
   PRIMARY_PARTITION_RELATED_FORM_FIELDS,
   removeTimestampTransform,
+  showArrayModeToggle,
   splitFilter,
   STREAMING_INPUT_FORMAT_FIELDS,
   TIME_COLUMN,
@@ -2375,7 +2376,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   label="Explicitly specify schema"
                 />
               </FormGroupWithInfo>
-              {schemaMode === 'fixed' ? (
+              {showArrayModeToggle(spec) && (
                 <FormGroupWithInfo
                   inlineInfo
                   info={
@@ -2401,6 +2402,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   <Switch
                     label="Store ARRAYs as MVDs"
                     className="legacy-switch"
+                    checked={arrayMode === 'multi-values'}
                     onChange={() =>
                       this.setState({
                         newArrayMode: arrayMode === 'arrays' ? 'multi-values' : 'arrays',
@@ -2408,7 +2410,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                     }
                   />
                 </FormGroupWithInfo>
-              ) : (
+              )}
+              {schemaMode !== 'fixed' && (
                 <AutoForm
                   fields={[
                     {

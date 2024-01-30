@@ -320,8 +320,4 @@ $actual-icon-height: 400px;
   .parse-metadata {
     border-top: 1px solid $gray1;
   }
-
-  .legacy-switch.bp4-control.bp4-switch input:checked ~ .bp4-control-indicator {
-    background: $orange5;
-  }
 }

@@ -32,6 +32,7 @@ export interface ConnectExternalDataDialogProps {
     config: ExternalConfig,
     timeExpression: SqlExpression | undefined,
     partitionedByHint: string | undefined,
+    forceMultiValue: boolean,
   ): void;
   onClose(): void;
 }
@@ -66,11 +67,12 @@ export const ConnectExternalDataDialog = React.memo(function ConnectExternalData
             inputSource={inputSource}
             initInputFormat={inputFormat}
             doneButton
-            onSet={({ inputFormat, signature, timeExpression }) => {
+            onSet={({ inputFormat, signature, timeExpression, forceMultiValue }) => {
               onSetExternalConfig(
                 { inputSource, inputFormat, signature },
                 timeExpression,
                 partitionedByHint,
+                forceMultiValue,
               );
               onClose();
             }}

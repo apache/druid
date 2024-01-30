@@ -91,10 +91,16 @@ export class WorkbenchQuery {
     externalConfig: ExternalConfig,
     timeExpression: SqlExpression | undefined,
     partitionedByHint: string | undefined,
+    forceMultiValue: boolean,
   ): WorkbenchQuery {
     return new WorkbenchQuery({
       queryString: ingestQueryPatternToQuery(
-        externalConfigToIngestQueryPattern(externalConfig, timeExpression, partitionedByHint),
+        externalConfigToIngestQueryPattern(
+          externalConfig,
+          timeExpression,
+          partitionedByHint,
+          forceMultiValue,
+        ),
       ).toString(),
       queryContext: {
         arrayIngestMode: 'array',
