@@ -122,7 +122,11 @@ const Redirects=[
       "/docs/latest/development/extensions-core/kafka-supervisor-operations.html",
       "/docs/latest/development/extensions-core/kafka-supervisor-reference.html"
     ],
-    "to": "/docs/latest/development/extensions-core/kafka-ingestion"
+    "to": "/docs/latest/ingestion/kafka-ingestion"
+  },
+  {
+    "from": "/docs/latest/development/extensions-core/kinesis-ingestion.html",
+    "to": "/docs/latest/ingestion/kinesis-ingestion"
   },
   {
     "from": "/docs/latest/development/extensions-contrib/orc.html",

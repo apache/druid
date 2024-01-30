@@ -37,7 +37,7 @@ The following table lists the properties of a supervisor object:
 |---|---|---|
 |`id`|String|Unique identifier.|
 |`state`|String|Generic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. See [Supervisor reference](../ingestion/supervisor.md#status-report) for more information.|
-|`detailedState`|String|Detailed state of the supervisor. This property contains a more descriptive, implementation-specific state that may provide more insight into the supervisor's activities than the `state` property. See [Apache Kafka ingestion](../development/extensions-core/kafka-ingestion.md) and [Amazon Kinesis ingestion](../development/extensions-core/kinesis-ingestion.md) for supervisor-specific states.|
+|`detailedState`|String|Detailed state of the supervisor. This property contains a more descriptive, implementation-specific state that may provide more insight into the supervisor's activities than the `state` property. See [Apache Kafka ingestion](../ingestion/kafka-ingestion.md) and [Amazon Kinesis ingestion](../ingestion/kinesis-ingestion.md) for supervisor-specific states.|
 |`healthy`|Boolean|Supervisor health indicator.|
 |`spec`|Object|Container object for the supervisor configuration.|
 |`suspended`|Boolean|Indicates whether the supervisor is in a suspended state.|
@@ -2215,7 +2215,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 Creates a new supervisor spec or updates an existing one with new configuration and schema information. When updating a supervisor spec, the datasource must remain the same as the previous supervisor.
 
-You can define a supervisor spec for [Apache Kafka](../development/extensions-core/kinesis-ingestion.md#supervisor-spec) or [Amazon Kinesis](../development/extensions-core/kinesis-ingestion.md#supervisor-spec) streaming ingestion methods.
+You can define a supervisor spec for [Apache Kafka](../ingestion/kafka-ingestion.md#supervisor-spec) or [Amazon Kinesis](../ingestion/kinesis-ingestion.md#supervisor-spec) streaming ingestion methods.
 
 The following table lists the properties of a supervisor spec:
 

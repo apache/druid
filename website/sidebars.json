@@ -82,8 +82,8 @@
         "items": [
           "ingestion/streaming",
           "ingestion/supervisor",
-          "development/extensions-core/kafka-ingestion",
-          "development/extensions-core/kinesis-ingestion"
+          "ingestion/kafka-ingestion",
+          "ingestion/kinesis-ingestion"
         ]
       },
       {

@@ -114,14 +114,14 @@ Druid has an architectural separation between ingestion and querying, as describ
 
 On the ingestion side, Druid's primary [ingestion methods](../ingestion/index.md#ingestion-methods) are all pull-based and offer transactional guarantees. This means that you are guaranteed that ingestion using these methods will publish in an all-or-nothing manner:
 
-- Supervised "seekable-stream" ingestion methods like [Kafka](../development/extensions-core/kafka-ingestion.md) and [Kinesis](../development/extensions-core/kinesis-ingestion.md). With these methods, Druid commits stream offsets to its [metadata store](#metadata-storage) alongside segment metadata, in the same transaction. Note that ingestion of data that has not yet been published can be rolled back if ingestion tasks fail. In this case, partially-ingested data is
+- Supervised "seekable-stream" ingestion methods like [Kafka](../ingestion/kafka-ingestion.md) and [Kinesis](../ingestion/kinesis-ingestion.md). With these methods, Druid commits stream offsets to its [metadata store](#metadata-storage) alongside segment metadata, in the same transaction. Note that ingestion of data that has not yet been published can be rolled back if ingestion tasks fail. In this case, partially-ingested data is
 discarded, and Druid will resume ingestion from the last committed set of stream offsets. This ensures exactly-once publishing behavior.
 - [Hadoop-based batch ingestion](../ingestion/hadoop.md). Each task publishes all segment metadata in a single transaction.
 - [Native batch ingestion](../ingestion/native-batch.md). In parallel mode, the supervisor task publishes all segment metadata in a single transaction after the subtasks are finished. In simple (single-task) mode, the single task publishes all segment metadata in a single transaction after it is complete.
 
 Additionally, some ingestion methods offer an _idempotency_ guarantee. This means that repeated executions of the same ingestion will not cause duplicate data to be ingested:
 
-- Supervised "seekable-stream" ingestion methods like [Kafka](../development/extensions-core/kafka-ingestion.md) and [Kinesis](../development/extensions-core/kinesis-ingestion.md) are idempotent due to the fact that stream offsets and segment metadata are stored together and updated in lock-step.
+- Supervised "seekable-stream" ingestion methods like [Kafka](../ingestion/kafka-ingestion.md) and [Kinesis](../ingestion/kinesis-ingestion.md) are idempotent due to the fact that stream offsets and segment metadata are stored together and updated in lock-step.
 - [Hadoop-based batch ingestion](../ingestion/hadoop.md) is idempotent unless one of your input sources is the same Druid datasource that you are ingesting into. In this case, running the same task twice is non-idempotent, because you are adding to existing data instead of overwriting it.
 - [Native batch ingestion](../ingestion/native-batch.md) is idempotent unless
 [`appendToExisting`](../ingestion/native-batch.md) is true, or one of your input sources is the same Druid datasource that you are ingesting into. In either of these two cases, running the same task twice is non-idempotent, because you are adding to existing data instead of overwriting it.

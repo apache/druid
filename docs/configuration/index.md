@@ -516,7 +516,7 @@ These properties specify the JDBC connection and other configuration around the 
 |`druid.metadata.storage.connector.password`|The [Password Provider](../operations/password-provider.md) or String password used to connect with.|none|
 |`druid.metadata.storage.connector.createTables`|If Druid requires a table and it doesn't exist, create it?|true|
 |`druid.metadata.storage.tables.base`|The base name for tables.|`druid`|
-|`druid.metadata.storage.tables.dataSource`|The table to use to look for datasources created by [Kafka Indexing Service](../development/extensions-core/kafka-ingestion.md).|`druid_dataSource`|
+|`druid.metadata.storage.tables.dataSource`|The table to use to look for datasources created by [Kafka Indexing Service](../ingestion/kafka-ingestion.md).|`druid_dataSource`|
 |`druid.metadata.storage.tables.pendingSegments`|The table to use to look for pending segments.|`druid_pendingSegments`|
 |`druid.metadata.storage.tables.segments`|The table to use to look for segments.|`druid_segments`|
 |`druid.metadata.storage.tables.rules`|The table to use to look for segment load/drop rules.|`druid_rules`|
@@ -1159,7 +1159,7 @@ If autoscaling is enabled, you can set these additional configs:
 |`druid.supervisor.idleConfig.enabled`|If `true`, supervisor can become idle if there is no data on input stream/topic for some time.|false|
 |`druid.supervisor.idleConfig.inactiveAfterMillis`|Supervisor is marked as idle if all existing data has been read from input topic and no new data has been published for `inactiveAfterMillis` milliseconds.|`600_000`|
 
-The `druid.supervisor.idleConfig.*` specification in the Overlord runtime properties defines the default behavior for the entire cluster. See [Idle Configuration in Kafka Supervisor IOConfig](../development/extensions-core/kinesis-ingestion.md#io-configuration) to override it for an individual supervisor.
+The `druid.supervisor.idleConfig.*` specification in the Overlord runtime properties defines the default behavior for the entire cluster. See [Idle Configuration in Kafka Supervisor IOConfig](../ingestion/kinesis-ingestion.md#io-configuration) to override it for an individual supervisor.
 
 #### Overlord dynamic configuration
 

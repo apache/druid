@@ -24,8 +24,8 @@ title: "Streaming ingestion"
 
 Apache Druid accepts data streams from the following external streaming sources:
 
-* Apache Kafka through the bundled [Kafka indexing service](../development/extensions-core/kafka-ingestion.md) extension.
-* Amazon Kinesis through the bundled [Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md) extension.
+* Apache Kafka through the bundled [Kafka indexing service](kafka-ingestion.md) extension.
+* Amazon Kinesis through the bundled [Kinesis indexing service](kinesis-ingestion.md) extension.
 
 Each indexing service provides real-time data ingestion with exactly-once stream processing guarantee.
 To use either of the streaming ingestion methods, you must first load the associated extension on both the Overlord and the MiddleManager. See [Loading extensions](../configuration/extensions.md#loading-extensions) for more information.

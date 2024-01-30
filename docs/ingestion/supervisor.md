@@ -35,7 +35,7 @@ Druid starts a new supervisor for a datasource when you create a supervisor spec
 You can create and manage supervisor specs using the data loader in the Druid web console or by calling the [Supervisor API](../api-reference/supervisor-api.md).
 Once started, the supervisor persists in the configured metadata database. There can only be one supervisor per datasource, and submitting a second supervisor spec for the same datasource overwrites the previous one.
 
-When an Overlord gains leadership, either by being started or as a result of another Overlord failing, it spawns a supervisor for each supervisor spec in the metadata database. The supervisor then discovers running indexing tasks and attempts to adopt them if they are compatible with the supervisor's configuration. If they are not compatible, the tasks are terminated and the supervisor creates a new set of tasks. This way, the supervisors persist across Overlord restarts and failovers.
+When an Overlord gains leadership, either by being started or as a result of another Overlord failing, it spawns a supervisor for each supervisor spec in the metadata database. The supervisor then discovers running indexing tasks and attempts to adopt them if they are compatible with the supervisor's configuration. If they are not compatible, the tasks are terminated and the supervisor creates a new set of tasks. This way, the supervised tasks persist across Overlord restarts and failovers.
 
 ### Schema and configuration changes
 
@@ -113,5 +113,5 @@ time-to-publish (generate segment, push to deep storage, load on Historical) is 
 See the following topics for more information:
 
 * [Supervisor API](../api-reference/supervisor-api.md) for how to manage and monitor supervisors using the API.
-* [Apache Kafka ingestion](../development/extensions-core/kafka-ingestion.md) to learn about ingesting data from an Apache Kafka stream.
-* [Amazon Kinesis ingestion](../development/extensions-core/kinesis-ingestion.md) to learn about ingesting data from an Amazon Kinesis stream.
+* [Apache Kafka ingestion](../ingestion/kafka-ingestion.md) to learn about ingesting data from an Apache Kafka stream.
+* [Amazon Kinesis ingestion](../ingestion/kinesis-ingestion.md) to learn about ingesting data from an Amazon Kinesis stream.

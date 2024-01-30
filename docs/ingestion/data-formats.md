@@ -798,8 +798,8 @@ Each entry in the `fields` list can have the following components:
 ## Parser
 
 :::info
- The Parser is deprecated for [native batch tasks](./native-batch.md), [Kafka indexing service](../development/extensions-core/kafka-ingestion.md),
-and [Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md).
+ The Parser is deprecated for [native batch tasks](./native-batch.md), [Kafka indexing service](../ingestion/kafka-ingestion.md),
+and [Kinesis indexing service](../ingestion/kinesis-ingestion.md).
 Consider using the [input format](#input-format) instead for these types of ingestion.
 :::
 
@@ -1564,8 +1564,8 @@ Multiple Instances:
 ## ParseSpec
 
 :::info
- The Parser is deprecated for [native batch tasks](./native-batch.md), [Kafka indexing service](../development/extensions-core/kafka-ingestion.md),
-and [Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md).
+ The Parser is deprecated for [native batch tasks](./native-batch.md), [Kafka indexing service](../ingestion/kafka-ingestion.md),
+and [Kinesis indexing service](../ingestion/kinesis-ingestion.md).
 Consider using the [input format](#input-format) instead for these types of ingestion.
 :::
 
