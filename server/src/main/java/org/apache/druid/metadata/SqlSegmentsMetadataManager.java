@@ -47,6 +47,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentId;
@@ -957,8 +958,9 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   /**
-   * Retrieves segments for a given datasource that are marked unused and that are *fully contained by* an optionally
-   * specified interval. If the interval specified is null, this method will retrieve all unused segments.
+   * Retrieves segments and their associated metadata for a given datasource that are marked unused and that are
+   * *fully contained by* an optionally specified interval. If the interval specified is null, this method will
+   * retrieve all unused segments.
    *
    * This call does not return any information about realtime segments.
    *
@@ -976,7 +978,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
    * Returns an iterable.
    */
   @Override
-  public Iterable<DataSegment> iterateAllUnusedSegmentsForDatasource(
+  public Iterable<DataSegmentPlus> iterateAllUnusedSegmentsForDatasource(
       final String datasource,
       @Nullable final Interval interval,
       @Nullable final Integer limit,
@@ -993,8 +995,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
               interval == null
                   ? Intervals.ONLY_ETERNITY
                   : Collections.singletonList(interval);
-          try (final CloseableIterator<DataSegment> iterator =
-                   queryTool.retrieveUnusedSegments(datasource, intervals, limit, lastSegmentId, sortOrder, null)) {
+          try (final CloseableIterator<DataSegmentPlus> iterator =
+                   queryTool.retrieveUnusedSegmentsPlus(datasource, intervals, limit, lastSegmentId, sortOrder, null)) {
             return ImmutableList.copyOf(iterator);
           }
         }

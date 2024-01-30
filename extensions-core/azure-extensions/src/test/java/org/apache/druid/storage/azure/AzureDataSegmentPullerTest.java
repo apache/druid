@@ -62,12 +62,12 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
       final InputStream zipStream = new FileInputStream(pulledFile);
       final AzureAccountConfig config = new AzureAccountConfig();
 
-      EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_PATH)).andReturn(new AzureByteSource(azureStorage, CONTAINER_NAME, BLOB_PATH));
+      EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_PATH, azureStorage)).andReturn(new AzureByteSource(azureStorage, CONTAINER_NAME, BLOB_PATH));
       EasyMock.expect(azureStorage.getBlockBlobInputStream(0L, CONTAINER_NAME, BLOB_PATH)).andReturn(zipStream);
 
       replayAll();
 
-      AzureDataSegmentPuller puller = new AzureDataSegmentPuller(byteSourceFactory, config);
+      AzureDataSegmentPuller puller = new AzureDataSegmentPuller(byteSourceFactory, azureStorage, config);
 
       FileUtils.FileCopyResult result = puller.getSegmentFiles(CONTAINER_NAME, BLOB_PATH, toDir);
 
@@ -95,12 +95,12 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
       final InputStream zipStream = new FileInputStream(pulledFile);
       final AzureAccountConfig config = new AzureAccountConfig();
 
-      EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_PATH)).andReturn(new AzureByteSource(azureStorage, CONTAINER_NAME, BLOB_PATH));
+      EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_PATH, azureStorage)).andReturn(new AzureByteSource(azureStorage, CONTAINER_NAME, BLOB_PATH));
       EasyMock.expect(azureStorage.getBlockBlobInputStream(0L, CONTAINER_NAME, BLOB_PATH)).andReturn(zipStream);
 
       replayAll();
 
-      AzureDataSegmentPuller puller = new AzureDataSegmentPuller(byteSourceFactory, config);
+      AzureDataSegmentPuller puller = new AzureDataSegmentPuller(byteSourceFactory, azureStorage, config);
 
       FileUtils.FileCopyResult result = puller.getSegmentFiles(CONTAINER_NAME, BLOB_PATH_HADOOP, toDir);
 
@@ -125,7 +125,7 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
 
     final File outDir = FileUtils.createTempDir();
     try {
-      EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_PATH)).andReturn(new AzureByteSource(azureStorage, CONTAINER_NAME, BLOB_PATH));
+      EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_PATH, azureStorage)).andReturn(new AzureByteSource(azureStorage, CONTAINER_NAME, BLOB_PATH));
       EasyMock.expect(azureStorage.getBlockBlobInputStream(0L, CONTAINER_NAME, BLOB_PATH)).andThrow(
           new RuntimeException(
               "error"
@@ -134,7 +134,7 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
 
       replayAll();
 
-      AzureDataSegmentPuller puller = new AzureDataSegmentPuller(byteSourceFactory, config);
+      AzureDataSegmentPuller puller = new AzureDataSegmentPuller(byteSourceFactory, azureStorage, config);
 
       puller.getSegmentFiles(CONTAINER_NAME, BLOB_PATH, outDir);
     }
@@ -159,7 +159,7 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
       HttpResponse httpResponse = createMock(HttpResponse.class);
       EasyMock.expect(httpResponse.getStatusCode()).andReturn(500).anyTimes();
       EasyMock.replay(httpResponse);
-      EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_PATH)).andReturn(new AzureByteSource(azureStorage, CONTAINER_NAME, BLOB_PATH));
+      EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_PATH, azureStorage)).andReturn(new AzureByteSource(azureStorage, CONTAINER_NAME, BLOB_PATH));
       EasyMock.expect(azureStorage.getBlockBlobInputStream(0L, CONTAINER_NAME, BLOB_PATH)).andThrow(
           new BlobStorageException("", httpResponse, null)
       ).atLeastOnce();
@@ -167,7 +167,7 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
       EasyMock.replay(azureStorage);
       EasyMock.replay(byteSourceFactory);
 
-      AzureDataSegmentPuller puller = new AzureDataSegmentPuller(byteSourceFactory, config);
+      AzureDataSegmentPuller puller = new AzureDataSegmentPuller(byteSourceFactory, azureStorage, config);
 
       puller.getSegmentFiles(CONTAINER_NAME, BLOB_PATH, outDir);
 

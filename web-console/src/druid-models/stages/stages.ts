@@ -33,6 +33,9 @@ export type StageInput =
   | {
       type: 'table';
       dataSource: string;
+      intervals: string[];
+      filter?: any;
+      filterFields?: string[];
     }
   | {
       type: 'external';
