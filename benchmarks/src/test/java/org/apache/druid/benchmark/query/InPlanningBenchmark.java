@@ -20,7 +20,6 @@
 package org.apache.druid.benchmark.query;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -87,7 +86,7 @@ import java.util.stream.IntStream;
 @Measurement(iterations = 5)
 public class InPlanningBenchmark
 {
-  private static final Logger log = new Logger(SqlExpressionBenchmark.class);
+  private static final Logger log = new Logger(InPlanningBenchmark.class);
 
   static {
     NullHandling.initializeForTests();
@@ -128,21 +127,16 @@ public class InPlanningBenchmark
   private int inSubQueryThreshold;
 
   @Param({
-      "auto"
-  })
-  private String schema;
-
-  @Param({
       "1", "10", "100", "1000", "10000", "100000", "1000000"
   })
-  private Integer inClauseExprCount;
+  private Integer inClauseLiteralsCount;
   private SqlEngine engine;
   @Nullable
   private PlannerFactory plannerFactory;
-  private Closer closer = Closer.create();
+  private final Closer closer = Closer.create();
 
   @Setup(Level.Trial)
-  public void setup()
+  public void setup() throws JsonProcessingException
   {
     final GeneratorSchemaInfo schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get("in-testbench");
 
@@ -158,30 +152,26 @@ public class InPlanningBenchmark
 
     final SegmentGenerator segmentGenerator = closer.register(new SegmentGenerator());
     log.info(
-        "Starting benchmark setup using cacheDir[%s], rows[%,d], schema[%s].",
+        "Starting benchmark setup using cacheDir[%s], rows[%,d], schema[auto].",
         segmentGenerator.getCacheDir(),
-        rowsPerSegment,
-        schema
+        rowsPerSegment
     );
     final QueryableIndex index;
-    if ("auto".equals(schema)) {
-      List<DimensionSchema> columnSchemas = schemaInfo.getDimensionsSpec()
-                                                      .getDimensions()
-                                                      .stream()
-                                                      .map(x -> new AutoTypeColumnSchema(x.getName(), null))
-                                                      .collect(Collectors.toList());
-      index = segmentGenerator.generate(
-          dataSegment,
-          schemaInfo,
-          DimensionsSpec.builder().setDimensions(columnSchemas).build(),
-          TransformSpec.NONE,
-          IndexSpec.DEFAULT,
-          Granularities.NONE,
-          rowsPerSegment
-      );
-    } else {
-      index = segmentGenerator.generate(dataSegment, schemaInfo, Granularities.NONE, rowsPerSegment);
-    }
+    List<DimensionSchema> columnSchemas = schemaInfo.getDimensionsSpec()
+                                                    .getDimensions()
+                                                    .stream()
+                                                    .map(x -> new AutoTypeColumnSchema(x.getName(), null))
+                                                    .collect(Collectors.toList());
+    index = segmentGenerator.generate(
+        dataSegment,
+        schemaInfo,
+        DimensionsSpec.builder().setDimensions(columnSchemas).build(),
+        TransformSpec.NONE,
+        IndexSpec.DEFAULT,
+        Granularities.NONE,
+        rowsPerSegment
+    );
+
 
     final QueryRunnerFactoryConglomerate conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(
         closer,
@@ -196,7 +186,9 @@ public class InPlanningBenchmark
     final ObjectMapper jsonMapper = CalciteTests.getJsonMapper();
     final DruidSchemaCatalog rootSchema =
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
+
     engine = CalciteTests.createMockSqlEngine(walker, conglomerate);
+
     plannerFactory = new PlannerFactory(
         rootSchema,
         CalciteTests.createOperatorTable(),
@@ -211,34 +203,16 @@ public class InPlanningBenchmark
         new AuthConfig()
     );
 
-    StringBuilder sqlBuilder = new StringBuilder().append("explain plan for select long1 from foo where long1 in (");
-    IntStream.range(1, inClauseExprCount - 1).forEach(i -> sqlBuilder.append(i).append(","));
-    sqlBuilder.append(inClauseExprCount).append(")");
-    final String sql = sqlBuilder.toString();
+    String prefix = ("explain plan for select long1 from foo where long1 in ");
+    final String sql = createQuery(prefix, inClauseLiteralsCount);
 
-    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(
-        engine,
-        sql,
-        ImmutableMap.of(
-            "inSubQueryThreshold",
-            inSubQueryThreshold,
-            "useCache",
-            false
-        )
-    )) {
-      final PlannerResult plannerResult = planner.plan();
-      final Sequence<Object[]> resultSequence = plannerResult.run().getResults();
-      final Object[] planResult = resultSequence.toList().get(0);
-      log.info("Query plan:\n" +
-               jsonMapper.writerWithDefaultPrettyPrinter()
-                         .writeValueAsString(jsonMapper.readValue((String) planResult[0], List.class))
+    final Sequence<Object[]> resultSequence = getPlan(sql, null);
+    final Object[] planResult = resultSequence.toList().get(0);
+    if (inClauseLiteralsCount <= 100) {
+      log.debug("Plan for query [ " + sql + " ]: \n" +
+                jsonMapper.writerWithDefaultPrettyPrinter()
+                          .writeValueAsString(jsonMapper.readValue((String) planResult[0], List.class))
       );
-    }
-    catch (JsonMappingException e) {
-      throw new RuntimeException(e);
-    }
-    catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
     }
   }
 
@@ -252,20 +226,9 @@ public class InPlanningBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void queryInSql(Blackhole blackhole)
   {
-    final Map<String, Object> context = ImmutableMap.of(
-        "inSubQueryThreshold", inSubQueryThreshold, "useCache", false
-    );
-    StringBuilder sqlBuilder = new StringBuilder().append("explain plan for select long1 from foo where long1 in (");
-    IntStream.range(1, inClauseExprCount - 1).forEach(i -> sqlBuilder.append(i).append(","));
-    sqlBuilder.append(inClauseExprCount).append(")");
-    final String sql = sqlBuilder.toString();
-
-    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, context)) {
-      final PlannerResult plannerResult = planner.plan();
-      final Sequence<Object[]> resultSequence = plannerResult.run().getResults();
-      final Object[] lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);
-      blackhole.consume(lastRow);
-    }
+    String prefix = "explain plan for select long1 from foo where long1 in ";
+    final String sql = createQuery(prefix, inClauseLiteralsCount);
+    getPlan(sql, blackhole);
   }
 
   @Benchmark
@@ -273,21 +236,10 @@ public class InPlanningBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void queryEqualOrInSql(Blackhole blackhole)
   {
-    final Map<String, Object> context = ImmutableMap.of(
-        "inSubQueryThreshold", inSubQueryThreshold, "useCache", false
-    );
-    StringBuilder sqlBuilder = new StringBuilder().append(
-        "explain plan for select long1 from foo where string1 = '7' or long1 in (");
-    IntStream.range(1, inClauseExprCount - 1).forEach(i -> sqlBuilder.append(i).append(","));
-    sqlBuilder.append(inClauseExprCount).append(")");
-    final String sql = sqlBuilder.toString();
-
-    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, context)) {
-      final PlannerResult plannerResult = planner.plan();
-      final Sequence<Object[]> resultSequence = plannerResult.run().getResults();
-      final Object[] lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);
-      blackhole.consume(lastRow);
-    }
+    String prefix =
+        "explain plan for select long1 from foo where string1 = '7' or long1 in ";
+    final String sql = createQuery(prefix, inClauseLiteralsCount);
+    getPlan(sql, blackhole);
   }
 
 
@@ -296,21 +248,10 @@ public class InPlanningBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void queryMultiEqualOrInSql(Blackhole blackhole)
   {
-    final Map<String, Object> context = ImmutableMap.of(
-        "inSubQueryThreshold", inSubQueryThreshold, "useCache", false
-    );
-    StringBuilder sqlBuilder = new StringBuilder().append(
-        "explain plan for select long1 from foo where string1 = '7' or string1 = '8' or long1 in (");
-    IntStream.range(1, inClauseExprCount - 1).forEach(i -> sqlBuilder.append(i).append(","));
-    sqlBuilder.append(inClauseExprCount).append(")");
-    final String sql = sqlBuilder.toString();
-
-    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, context)) {
-      final PlannerResult plannerResult = planner.plan();
-      final Sequence<Object[]> resultSequence = plannerResult.run().getResults();
-      final Object[] lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);
-      blackhole.consume(lastRow);
-    }
+    String prefix =
+        "explain plan for select long1 from foo where string1 = '7' or string1 = '8' or long1 in ";
+    final String sql = createQuery(prefix, inClauseLiteralsCount);
+    getPlan(sql, blackhole);
   }
 
   @Benchmark
@@ -318,20 +259,35 @@ public class InPlanningBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void queryJoinEqualOrInSql(Blackhole blackhole)
   {
+
+    String prefix =
+        "explain plan for select foo.long1, fooright.string1 from foo inner join foo as fooright on foo.string1 = fooright.string1 where fooright.string1 = '7' or foo.long1 in ";
+    final String sql = createQuery(prefix, inClauseLiteralsCount);
+    getPlan(sql, blackhole);
+  }
+
+  private String createQuery(String prefix, int inClauseLiteralsCount)
+  {
+    StringBuilder sqlBuilder = new StringBuilder();
+    sqlBuilder.append(prefix).append('(');
+    IntStream.range(1, inClauseLiteralsCount - 1).forEach(i -> sqlBuilder.append(i).append(","));
+    sqlBuilder.append(inClauseLiteralsCount).append(")");
+    return sqlBuilder.toString();
+  }
+
+  private Sequence<Object[]> getPlan(String sql, @Nullable Blackhole blackhole)
+  {
     final Map<String, Object> context = ImmutableMap.of(
-        "inSubQueryThreshold", inSubQueryThreshold, "useCache", false
-    );
-    StringBuilder sqlBuilder = new StringBuilder().append(
-        "explain plan for select foo.long1, fooright.string1 from foo inner join foo as fooright on foo.string1 = fooright.string1 where fooright.string1 = '7' or foo.long1 in (");
-    IntStream.range(1, inClauseExprCount - 1).forEach(i -> sqlBuilder.append(i).append(","));
-    sqlBuilder.append(inClauseExprCount).append(")");
-    final String sql = sqlBuilder.toString();
+        "inSubQueryThreshold", inSubQueryThreshold, "useCache", false);
 
     try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, context)) {
       final PlannerResult plannerResult = planner.plan();
       final Sequence<Object[]> resultSequence = plannerResult.run().getResults();
-      final Object[] lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);
-      blackhole.consume(lastRow);
+      if (blackhole != null) {
+        final Object[] lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);
+        blackhole.consume(lastRow);
+      }
+      return resultSequence;
     }
   }
 }
