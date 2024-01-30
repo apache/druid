@@ -177,11 +177,11 @@ public class DeltaInputRow implements InputRow
     } else if (dataType instanceof IntegerType) {
       return dataRow.getInt(columnOrdinal);
     } else if (dataType instanceof DateType) {
-      return DeltaTimeUtils.getDateTimeValue(dataRow.getInt(columnOrdinal));
+      return DeltaTimeUtils.getSecondsFromDate(dataRow.getInt(columnOrdinal));
     } else if (dataType instanceof LongType) {
       return dataRow.getLong(columnOrdinal);
     } else if (dataType instanceof TimestampType) {
-      return DeltaTimeUtils.getTimestampValue(dataRow.getLong(columnOrdinal));
+      return DeltaTimeUtils.getMillisFromTimestamp(dataRow.getLong(columnOrdinal));
     } else if (dataType instanceof FloatType) {
       return dataRow.getFloat(columnOrdinal);
     } else if (dataType instanceof DoubleType) {

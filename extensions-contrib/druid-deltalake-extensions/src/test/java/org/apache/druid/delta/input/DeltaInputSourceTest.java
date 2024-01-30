@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -40,6 +41,12 @@ import java.util.stream.Collectors;
 
 public class DeltaInputSourceTest
 {
+  @Before
+  public void setUp()
+  {
+    System.setProperty("user.timezone", "UTC");
+  }
+
   @Test
   public void testSampleDeltaTable() throws IOException
   {

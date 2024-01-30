@@ -35,7 +35,7 @@ public class DeltaTimeUtils
    * @param microSecsSinceEpochUTC microseconds since epoch
    * @return Datetime millis correpsonding to {@code microSecsSinceEpochUTC}
    */
-  public static long getTimestampValue(final long microSecsSinceEpochUTC)
+  public static long getMillisFromTimestamp(final long microSecsSinceEpochUTC)
   {
     final LocalDateTime dateTime = LocalDateTime.ofEpochSecond(
         microSecsSinceEpochUTC / 1_000_000 /* epochSecond */,
@@ -52,7 +52,7 @@ public class DeltaTimeUtils
    * @param daysSinceEpochUTC number of days since epoch
    * @return number of seconds corresponding to {@code daysSinceEpochUTC}.
    */
-  public static long getDateTimeValue(final int daysSinceEpochUTC)
+  public static long getSecondsFromDate(final int daysSinceEpochUTC)
   {
     return LocalDate.ofEpochDay(daysSinceEpochUTC).atStartOfDay(ZONE_ID).toEpochSecond();
   }

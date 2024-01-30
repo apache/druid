@@ -129,9 +129,9 @@ public class RowSerde
       } else if (fieldType instanceof DoubleType) {
         value = row.getDouble(fieldId);
       } else if (fieldType instanceof DateType) {
-        value = DeltaTimeUtils.getDateTimeValue(row.getInt(fieldId));
+        value = DeltaTimeUtils.getSecondsFromDate(row.getInt(fieldId));
       } else if (fieldType instanceof TimestampType) {
-        value = DeltaTimeUtils.getTimestampValue(row.getLong(fieldId));
+        value = DeltaTimeUtils.getMillisFromTimestamp(row.getLong(fieldId));
       } else if (fieldType instanceof StringType) {
         value = row.getString(fieldId);
       } else if (fieldType instanceof ArrayType) {
