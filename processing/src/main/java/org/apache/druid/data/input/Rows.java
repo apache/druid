@@ -44,7 +44,7 @@ import java.util.stream.Collectors;
  */
 public final class Rows
 {
-  private static final boolean BYTEA_AS_UTF8 = true;
+  private static final boolean BYTEA_AS_UTF8 = false;
 
   /**
    * @param timeStamp rollup up timestamp to be used to create group key
