@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.destination;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 
@@ -33,19 +32,19 @@ import java.util.Objects;
 public class ExportDestination implements IngestDestination
 {
   public static final String TYPE_KEY = "external";
-  private final String destinationType;
+  private final String destination;
   private final Map<String, String> properties;
 
-  public ExportDestination(@JsonProperty("destinationType") String destinationType, @JsonProperty("properties") Map<String, String> properties)
+  public ExportDestination(@JsonProperty("destination") String destination, @JsonProperty("properties") Map<String, String> properties)
   {
-    this.destinationType = destinationType;
+    this.destination = destination;
     this.properties = properties;
   }
 
-  @JsonProperty("destinationType")
-  public String getDestinationType()
+  @JsonProperty("destination")
+  public String getDestination()
   {
-    return destinationType;
+    return destination;
   }
 
   @JsonProperty("properties")
@@ -55,10 +54,9 @@ public class ExportDestination implements IngestDestination
   }
 
   @Override
-  @JsonIgnore
-  public String getDestinationName()
+  public String getType()
   {
-    return "EXTERN";
+    return TYPE_KEY;
   }
 
   @Override
@@ -71,7 +69,7 @@ public class ExportDestination implements IngestDestination
       return false;
     }
     ExportDestination that = (ExportDestination) o;
-    return Objects.equals(destinationType, that.destinationType) && Objects.equals(
+    return Objects.equals(destination, that.destination) && Objects.equals(
         properties,
         that.properties
     );
@@ -80,14 +78,14 @@ public class ExportDestination implements IngestDestination
   @Override
   public int hashCode()
   {
-    return Objects.hash(destinationType, properties);
+    return Objects.hash(destination, properties);
   }
 
   @Override
   public String toString()
   {
     return "ExportDestination{" +
-           "destinationType='" + destinationType + '\'' +
+           "destination='" + destination + '\'' +
            ", properties=" + properties +
            '}';
   }

@@ -44,8 +44,6 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.storage.export.ExportStorageConnectorFactory;
-import org.apache.druid.storage.s3.output.S3ExportStorageConnectorFactory;
 
 import java.util.List;
 
@@ -117,8 +115,6 @@ public class S3StorageDruidModule implements DruidModule
     JsonConfigProvider.bind(binder, "druid.storage", S3StorageConfig.class);
     JsonConfigProvider.bind(binder, "druid.storage.sse.kms", S3SSEKmsConfig.class);
     JsonConfigProvider.bind(binder, "druid.storage.sse.custom", S3SSECustomConfig.class);
-    MapBinder<String, ExportStorageConnectorFactory> mapbinder = MapBinder.newMapBinder(binder, String.class, ExportStorageConnectorFactory.class);
-    mapbinder.addBinding(SCHEME).to(S3ExportStorageConnectorFactory.class);
 
     Binders.taskLogsBinder(binder).addBinding(SCHEME).to(S3TaskLogs.class);
     JsonConfigProvider.bind(binder, "druid.indexer.logs", S3TaskLogsConfig.class);

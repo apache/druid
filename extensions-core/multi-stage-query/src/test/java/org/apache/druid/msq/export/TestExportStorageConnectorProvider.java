@@ -17,14 +17,18 @@
  * under the License.
  */
 
-package org.apache.druid.storage.export;
+package org.apache.druid.msq.export;
 
-import com.google.inject.Injector;
+import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
 
-import java.util.Map;
-
-public interface ExportStorageConnectorFactory
+public class TestExportStorageConnectorProvider implements StorageConnectorProvider
 {
-  StorageConnectorProvider get(Map<String, String> properties, Injector injector);
+  private static final StorageConnector STORAGE_CONNECTOR = new TestExportStorageConnector();
+
+  @Override
+  public StorageConnector get()
+  {
+    return STORAGE_CONNECTOR;
+  }
 }

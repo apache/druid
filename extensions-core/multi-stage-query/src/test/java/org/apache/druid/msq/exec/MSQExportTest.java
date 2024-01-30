@@ -21,9 +21,10 @@ package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.export.TestExportStorageConnector;
 import org.apache.druid.msq.test.MSQTestBase;
+import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.http.ResultFormat;
@@ -33,16 +34,22 @@ import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 public class MSQExportTest extends MSQTestBase
 {
   @Test
   public void testExport() throws IOException
   {
+    TestExportStorageConnector storageConnector = (TestExportStorageConnector) exportStorageConnectorProvider.get();
+
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
                                             .add("dim1", ColumnType.STRING)
@@ -57,9 +64,40 @@ public class MSQExportTest extends MSQTestBase
                      .setExpectedResultRows(ImmutableList.of())
                      .verifyResults();
 
+    List<Object[]> objects = expectedFooFileContents();
+
     Assert.assertEquals(
-        expectedFooFileContents(),
-        new String(testExportStorageConnector.getByteArrayOutputStream().toByteArray(), Charset.defaultCharset())
+        convertResultsToString(objects),
+        new String(storageConnector.getByteArrayOutputStream().toByteArray(), Charset.defaultCharset())
+    );
+  }
+
+  @Test
+  public void testNumberOfRowsPerFile() throws IOException
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("cnt", ColumnType.LONG).build();
+
+    File exportDir = temporaryFolder.newFolder("export/");
+
+    Map<String, Object> queryContext = new HashMap<>(DEFAULT_MSQ_CONTEXT);
+    queryContext.put(MultiStageQueryContext.CTX_ROWS_PER_PAGE, 1);
+
+    testIngestQuery().setSql(
+                         StringUtils.format("insert into extern(localStorage(basePath='%s')) as csv select cnt, dim1 from foo", exportDir.getAbsolutePath())
+                     )
+                     .setExpectedDataSource("foo1")
+                     .setQueryContext(queryContext)
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedSegment(ImmutableSet.of())
+                     .setExpectedResultRows(ImmutableList.of())
+                     .verifyResults();
+
+    Assert.assertEquals(
+        expectedFooFileContents().size(),
+        Objects.requireNonNull(new File(exportDir.getAbsolutePath(), "worker0").listFiles()).length
     );
   }
 
@@ -78,17 +116,16 @@ public class MSQExportTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedSegment(ImmutableSet.of())
                      .setExpectedResultRows(ImmutableList.of())
-                     .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(ISE.class),
+                     .setExpectedExecutionErrorMatcher(
                          ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "No storage connector found for storage connector type:[hdfs]."
-                         )))
+                             "Could not resolve type id 'hdfs' as a subtype"
+                         ))
                      ).verifyExecutionError();
   }
 
-  private String expectedFooFileContents() throws IOException
+  private List<Object[]> expectedFooFileContents()
   {
-    List<Object[]> expectedRows = new ArrayList<>(ImmutableList.of(
+    return new ArrayList<>(ImmutableList.of(
         new Object[]{0, "1", null},
         new Object[]{1, "1", 10.1},
         new Object[]{2, "1", 2},
@@ -96,7 +133,10 @@ public class MSQExportTest extends MSQTestBase
         new Object[]{4, "1", "def"},
         new Object[]{5, "1", "abc"}
     ));
+  }
 
+  private String convertResultsToString(List<Object[]> expectedRows) throws IOException
+  {
     ByteArrayOutputStream expectedResult = new ByteArrayOutputStream();
     ResultFormat.Writer formatter = ResultFormat.CSV.createFormatter(expectedResult, objectMapper);
     formatter.writeResponseStart();

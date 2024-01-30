@@ -220,7 +220,7 @@ public class MSQTaskQueryMaker implements QueryMaker
       }
 
       destination = new ExportMSQDestination(
-          exportDestination.getDestinationType(),
+          exportDestination.getDestination(),
           exportDestination.getProperties(),
           format,
           replaceTimeChunks
@@ -249,7 +249,7 @@ public class MSQTaskQueryMaker implements QueryMaker
       );
 
       final DataSourceMSQDestination dataSourceMSQDestination = new DataSourceMSQDestination(
-          targetDataSource.getDestinationName(),
+          targetDataSource.getType(),
           segmentGranularityObject,
           segmentSortOrder,
           replaceTimeChunks

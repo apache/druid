@@ -207,7 +207,6 @@ import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
-import org.apache.druid.storage.export.ExportStorageConnectorFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
@@ -1888,21 +1887,13 @@ public class ControllerImpl implements Controller
       }
     } else if (querySpec.getDestination() instanceof ExportMSQDestination) {
       final ExportMSQDestination exportMSQDestination = (ExportMSQDestination) querySpec.getDestination();
-      final Map<String, ExportStorageConnectorFactory> storageConnectorFactories = injector.getInstance(ExportStorageConnectorFactories.class)
-                                                                                           .getFactories();
-      if (!storageConnectorFactories.containsKey(exportMSQDestination.getStorageConnectorType())) {
-        throw DruidException.forPersona(DruidException.Persona.USER)
-                            .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                            .build("No storage connector found for storage connector type:[%s].", exportMSQDestination.getStorageConnectorType());
-      }
-
-      final StorageConnectorProvider storageConnectorProvider =
-          storageConnectorFactories.get(exportMSQDestination.getStorageConnectorType())
-                                   .get(exportMSQDestination.getProperties(), injector);
-
+      final StorageConnectorProvider storageConnectorProvider = jsonMapper.convertValue(
+          exportMSQDestination.getProperties(),
+          StorageConnectorProvider.class
+      );
       final ResultFormat resultFormat = exportMSQDestination.getResultFormat();
 
-      // If the statement is a REPLACE statement, delete the existing files at the destination.
+      // If the statement is a 'REPLACE' statement, delete the existing files at the destination.
       if (exportMSQDestination.getReplaceTimeChunks() != null) {
         if (Intervals.ONLY_ETERNITY.equals(exportMSQDestination.getReplaceTimeChunks())) {
           StorageConnector storageConnector = storageConnectorProvider.get();

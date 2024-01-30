@@ -23,11 +23,11 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.guice.annotations.UnstableApi;
 
 /**
- * Represents the destination to which the ingested data is written to.
+ * Represents the destination where the data is ingested.
  */
 @UnstableApi
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 public interface IngestDestination
 {
-  String getDestinationName();
+  String getType();
 }

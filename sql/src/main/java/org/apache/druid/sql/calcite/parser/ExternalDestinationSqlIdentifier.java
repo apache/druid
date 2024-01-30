@@ -43,6 +43,7 @@ public class ExternalDestinationSqlIdentifier extends SqlIdentifier
   )
   {
     super(name, pos);
+    properties.put("type", getDestinationType());
     this.properties = properties;
   }
 

@@ -58,9 +58,8 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
   private final FrameReader frameReader;
   private final StorageConnector storageConnector;
   private final ObjectMapper jsonMapper;
-  private final int partitionNumber;
-  private final int workerNumber;
   private final ChannelCounters channelCounter;
+  final String exportFilePath;
 
   public ExportResultsFrameProcessor(
       ReadableFrameChannel inputChannel,
@@ -78,9 +77,8 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
     this.frameReader = frameReader;
     this.storageConnector = storageConnector;
     this.jsonMapper = jsonMapper;
-    this.partitionNumber = partitionNumber;
-    this.workerNumber = workerNumber;
     this.channelCounter = channelCounter;
+    this.exportFilePath = getExportFilePath(workerNumber, partitionNumber, exportFormat);
   }
 
   @Override
@@ -118,15 +116,14 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
         new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY)
             .makeCursors(null, Intervals.ETERNITY, VirtualColumns.EMPTY, Granularities.ALL, false, null);
 
-    final String exportFilePath = getExportFilePath(workerNumber, partitionNumber, exportFormat);
     try (OutputStream stream = storageConnector.write(exportFilePath)) {
       ResultFormat.Writer formatter = exportFormat.createFormatter(stream, jsonMapper);
+      formatter.writeResponseStart();
 
       SequenceUtils.forEach(
           cursorSequence,
           cursor -> {
             try {
-              formatter.writeResponseStart();
               final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 
               //noinspection rawtypes
@@ -147,7 +144,6 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
                 formatter.writeRowEnd();
                 cursor.advance();
               }
-              formatter.writeResponseEnd();
             }
             catch (IOException e) {
               throw DruidException.forPersona(DruidException.Persona.USER)
@@ -156,6 +152,7 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
             }
           }
       );
+      formatter.writeResponseEnd();
     }
   }
 

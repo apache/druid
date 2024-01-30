@@ -34,7 +34,6 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
-import com.google.inject.multibindings.MapBinder;
 import com.google.inject.util.Modules;
 import com.google.inject.util.Providers;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
@@ -89,6 +88,7 @@ import org.apache.druid.msq.exec.LoadedSegmentDataProvider;
 import org.apache.druid.msq.exec.LoadedSegmentDataProviderFactory;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.export.TestExportStorageConnector;
+import org.apache.druid.msq.export.TestExportStorageConnectorProvider;
 import org.apache.druid.msq.guice.MSQDurableStorageModule;
 import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.msq.guice.MSQIndexingModule;
@@ -178,9 +178,8 @@ import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.sql.guice.SqlBindings;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
-import org.apache.druid.storage.export.ExportStorageConnectorFactory;
-import org.apache.druid.storage.export.LocalExportStorageConnectorFactory;
 import org.apache.druid.storage.local.LocalFileStorageConnector;
+import org.apache.druid.storage.local.LocalFileStorageConnectorProvider;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.PruneLoadSpec;
 import org.apache.druid.timeline.SegmentId;
@@ -310,7 +309,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   protected SqlStatementFactory sqlStatementFactory;
   protected AuthorizerMapper authorizerMapper;
   private IndexIO indexIO;
-  protected TestExportStorageConnector testExportStorageConnector = new TestExportStorageConnector();
+  protected TestExportStorageConnectorProvider exportStorageConnectorProvider = new TestExportStorageConnectorProvider();
   // Contains the metadata of loaded segments
   protected List<ImmutableSegmentLoadInfo> loadedSegmentsMetadata = new ArrayList<>();
   // Mocks the return of data from data servers
@@ -480,11 +479,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
           }
 
           binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
-
-          MapBinder<String, ExportStorageConnectorFactory> mapbinder
-              = MapBinder.newMapBinder(binder, String.class, ExportStorageConnectorFactory.class);
-          mapbinder.addBinding(LocalExportStorageConnectorFactory.TYPE_NAME).to(LocalExportStorageConnectorFactory.class);
-          mapbinder.addBinding(TestExportStorageConnector.TYPE_NAME).toInstance((properties, injector) -> () -> testExportStorageConnector);
         },
         // Requirement of WorkerMemoryParameters.createProductionInstanceForWorker(injector)
         binder -> binder.bind(AppenderatorsManager.class).toProvider(() -> null),
@@ -517,6 +511,13 @@ public class MSQTestBase extends BaseCalciteQueryTest
         .build();
 
     objectMapper = setupObjectMapper(injector);
+    objectMapper.registerModule(
+        new SimpleModule(StorageConnector.class.getSimpleName())
+            .registerSubtypes(
+                new NamedType(TestExportStorageConnectorProvider.class, TestExportStorageConnector.TYPE_NAME),
+                new NamedType(LocalFileStorageConnectorProvider.class, "localStorage")
+            )
+    );
     objectMapper.registerModules(sqlModule.getJacksonModules());
 
     doReturn(mock(Request.class)).when(brokerClient).makeRequest(any(), anyString());

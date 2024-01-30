@@ -64,7 +64,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
              + "PARTITIONED BY ALL")
         .expectValidationError(
             DruidException.class,
-            "Export statements do not currently support a PARTITIONED BY or CLUSTERED BY clause."
+            "Export statements do not support a PARTITIONED BY or CLUSTERED BY clause."
         )
         .verify();
   }

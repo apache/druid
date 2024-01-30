@@ -120,7 +120,7 @@ public abstract class IngestHandler extends QueryHandler
       if (ingestNode().getPartitionedBy() != null) {
         throw DruidException.forPersona(DruidException.Persona.USER)
                             .ofCategory(DruidException.Category.UNSUPPORTED)
-                            .build("Export statements do not currently support a PARTITIONED BY or CLUSTERED BY clause.");
+                            .build("Export statements do not support a PARTITIONED BY or CLUSTERED BY clause.");
       }
     } else if (ingestNode().getPartitionedBy() == null) {
       throw InvalidSqlInput.exception(
