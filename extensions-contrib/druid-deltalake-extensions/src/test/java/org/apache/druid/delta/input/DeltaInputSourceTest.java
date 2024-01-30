@@ -87,8 +87,6 @@ public class DeltaInputSourceTest
         null
     );
     final List<InputRow> actualReadRows = readAllRows(inputSourceReader);
-    Assert.assertEquals(DeltaTestUtils.EXPECTED_ROWS.size(), actualReadRows.size());
-
     validateRows(DeltaTestUtils.EXPECTED_ROWS, actualReadRows, DeltaTestUtils.FULL_SCHEMA);
   }
 
@@ -102,8 +100,6 @@ public class DeltaInputSourceTest
         null
     );
     final List<InputRow> actualReadRows = readAllRows(inputSourceReader);
-    Assert.assertEquals(DeltaTestUtils.EXPECTED_ROWS.size(), actualReadRows.size());
-
     validateRows(DeltaTestUtils.EXPECTED_ROWS, actualReadRows, DeltaTestUtils.SCHEMA_1);
   }
 
@@ -117,8 +113,6 @@ public class DeltaInputSourceTest
         null
     );
     final List<InputRow> actualReadRows = readAllRows(inputSourceReader);
-    Assert.assertEquals(DeltaTestUtils.EXPECTED_ROWS.size(), actualReadRows.size());
-
     validateRows(DeltaTestUtils.EXPECTED_ROWS, actualReadRows, DeltaTestUtils.SCHEMA_2);
   }
 
@@ -165,8 +159,6 @@ public class DeltaInputSourceTest
       );
       final List<InputRow> actualRowsInSplit = readAllRows(inputSourceReader);
       final List<Map<String, Object>> expectedRowsInSplit = DeltaTestUtils.SPLIT_TO_EXPECTED_ROWS.get(idx);
-      Assert.assertEquals(expectedRowsInSplit.size(), actualRowsInSplit.size());
-
       validateRows(expectedRowsInSplit, actualRowsInSplit, DeltaTestUtils.FULL_SCHEMA);
     }
   }
@@ -241,6 +233,8 @@ public class DeltaInputSourceTest
       final InputRowSchema schema
   )
   {
+    Assert.assertEquals(expectedRows.size(), actualReadRows.size());
+
     for (int idx = 0; idx < expectedRows.size(); idx++) {
       final Map<String, Object> expectedRow = expectedRows.get(idx);
       final InputRow actualInputRow = actualReadRows.get(idx);
