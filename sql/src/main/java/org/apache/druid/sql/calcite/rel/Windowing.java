@@ -367,7 +367,7 @@ public class Windowing
       if (group.upperBound.isPreceding()) {
         upperOffset = -upperOffset;
       }
-      if (lowerOffset >= upperOffset) {
+      if (lowerOffset > upperOffset) {
         final String first, second;
         int val;
         if (group.lowerBound.isPreceding()) {

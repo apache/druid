@@ -187,7 +187,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
                   groupToRowIndex(relativeGroupId(1))
               ),
               Interval.of(
-                  groupToRowIndex(relativeGroupId(-lowerOffset)),
+                  groupToRowIndex(relativeGroupId(lowerOffset < 0 ? lowerOffset : -lowerOffset)),
                   groupToRowIndex(relativeGroupId(upperOffset))
               )
           );

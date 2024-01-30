@@ -18,7 +18,7 @@ expectedOperators:
       frame:
         peerType: "RANGE"
         lowUnbounded: false
-        lowOffset: 3
+        lowOffset: -3
         uppUnbounded: false
         uppOffset: 2
         orderBy:

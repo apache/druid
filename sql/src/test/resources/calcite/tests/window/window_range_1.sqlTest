@@ -3,24 +3,14 @@ type: "operatorValidation"
 sql: |
   WITH virtual_table as (select m2 ,sum(m1) as summ1
   from foo group by 1 order by summ1 DESC)
-  select m2,summ1,sum(summ1) OVER (order by m2 rows between 1 PRECEDING and 2 PRECEDING) as sumfinal
+  select m2,summ1,sum(summ1) OVER (order by m2 rows between 1 PRECEDING and 2 FOLLOWING) as sumfinal
   from virtual_table order by 1
 
-expectedOperators:
-  - type: "naivePartition"
-    partitionColumns: []
-  - type: "window"
-    processor:
-      type: "framedAgg"
-      frame: { peerType: "ROWS", lowUnbounded: true, lowOffset: 0, uppUnbounded: true, uppOffset: 0 }
-      aggregations:
-        - type: "doubleSum"
-          name: "w0"
-          fieldName: "m1"
+
 expectedResults:
-  - [1.0,21.0]
-  - [2.0,21.0]
-  - [3.0,21.0]
-  - [4.0,21.0]
-  - [5.0,21.0]
-  - [6.0,21.0]
+  - [1.0,1.0,6.0]
+  - [2.0,2.0,10.0]
+  - [3.0,3.0,14.0]
+  - [4.0,4.0,18.0]
+  - [5.0,5.0,15.0]
+  - [6.0,6.0,11.0]
