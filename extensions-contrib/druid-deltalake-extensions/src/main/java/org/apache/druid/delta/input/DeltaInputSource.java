@@ -111,7 +111,6 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
       File temporaryDirectory
   )
   {
-    // TODO: allow hadoop configurations such as credentials to be set here.
     final Configuration conf = new Configuration();
     final TableClient tableClient = DefaultTableClient.create(conf);
     try {
@@ -125,7 +124,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
                                 .map(row -> deserialize(tableClient, row))
                                 .collect(Collectors.toList());
       } else {
-        final Table table = Table.forPath(tableClient, tablePath);
+        final Table table = readTable();
         final Snapshot latestSnapshot = table.getLatestSnapshot(tableClient);
         final StructType prunedSchema = pruneSchema(
             latestSnapshot.getSchema(tableClient),
@@ -171,9 +170,8 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
 
     final TableClient tableClient = DefaultTableClient.create(new Configuration());
     final Snapshot latestSnapshot;
-    final Table table;
+    final Table table = readTable();
     try {
-      table = Table.forPath(tableClient, tablePath);
       latestSnapshot = table.getLatestSnapshot(tableClient);
     }
     catch (TableNotFoundException e) {
@@ -242,5 +240,22 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
         .map(baseSchema::get)
         .collect(Collectors.toList());
     return new StructType(selectedFields);
+  }
+
+  private Table readTable()
+  {
+    final ClassLoader currCtxClassloader = Thread.currentThread().getContextClassLoader();
+    try {
+      Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+      final Configuration conf = new Configuration();
+      final TableClient tableClient = DefaultTableClient.create(conf);
+      return Table.forPath(tableClient, tablePath);
+    }
+    catch (TableNotFoundException e) {
+      throw InvalidInput.exception(e, "tablePath[%s] not found.", tablePath);
+    }
+    finally {
+      Thread.currentThread().setContextClassLoader(currCtxClassloader);
+    }
   }
 }
