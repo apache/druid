@@ -38,6 +38,9 @@ import java.util.Set;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+/**
+ * Ensures that the usage of the {@link SemanticCreator} annotations follows some basic rules.
+ */
 @RunWith(Parameterized.class)
 public class SemanticCreatorUsageTest
 {
@@ -65,6 +68,9 @@ public class SemanticCreatorUsageTest
     this.method = method;
   }
 
+  /**
+   * {@link SemanticCreator} methods must be public to be accessible by the creator.
+   */
   @Test
   public void testPublic()
   {
@@ -72,16 +78,26 @@ public class SemanticCreatorUsageTest
     assertTrue(StringUtils.format("method [%s] is not public", method), Modifier.isPublic(modifiers));
   }
 
+  /**
+   * {@link SemanticCreator} must return with an interface.
+   *
+   * An exact implementation may indicate that some interface methods might be missing.
+   */
   @Test
   public void testReturnType()
   {
     Class<?> returnType = method.getReturnType();
     assertTrue(
-        returnType + " is not an interface; thise method must return with an interface; ",
+        returnType + " is not an interface; this method must return with an interface; ",
         returnType.isInterface()
     );
   }
 
+  /**
+   * {@link SemanticCreator} method names must follow the naming pattern toReturnType().
+   *
+   * For example: a method returning with a type of Ball should be named as "toBall"
+   */
   @Test
   public void testMethodName()
   {
