@@ -31,7 +31,7 @@ expectedOperators:
   - type: "window"
     processor:
       type: "framedAgg"
-      frame: { peerType: "ROWS", lowUnbounded: true, lowOffset: 0, uppUnbounded: false, uppOffset: 0 }
+      frame: { peerType: "RANGE", lowUnbounded: true, lowOffset: 0, uppUnbounded: false, uppOffset: 0, orderBy: [{ column: l1, direction: ASC }] }
       aggregations:
         - { type: "longMin", name: "w1", fieldName: "l2" }
 
