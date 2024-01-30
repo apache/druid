@@ -111,8 +111,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
       File temporaryDirectory
   )
   {
-    final Configuration conf = new Configuration();
-    final TableClient tableClient = DefaultTableClient.create(conf);
+    final TableClient tableClient = createTableClient();
     try {
       final Row scanState;
       final List<Row> scanRowList;
@@ -124,7 +123,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
                                 .map(row -> deserialize(tableClient, row))
                                 .collect(Collectors.toList());
       } else {
-        final Table table = readTable();
+        final Table table = Table.forPath(tableClient, tablePath);
         final Snapshot latestSnapshot = table.getLatestSnapshot(tableClient);
         final StructType prunedSchema = pruneSchema(
             latestSnapshot.getSchema(tableClient),
@@ -168,10 +167,10 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
       return Stream.of(new InputSplit<>(deltaSplit));
     }
 
-    final TableClient tableClient = DefaultTableClient.create(new Configuration());
+    final TableClient tableClient = createTableClient();
     final Snapshot latestSnapshot;
-    final Table table = readTable();
     try {
+      final Table table = Table.forPath(tableClient, tablePath);
       latestSnapshot = table.getLatestSnapshot(tableClient);
     }
     catch (TableNotFoundException e) {
@@ -242,17 +241,18 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
     return new StructType(selectedFields);
   }
 
-  private Table readTable()
+  /**
+   * @return a table client where the client is initialized with {@link Configuration} class that uses the class's
+   * class loader instead of the context classloader. The latter by default doesn't know about the extension classes,
+   * so the table client cannot load runtime classes resulting in {@link ClassNotFoundException}.
+   */
+  private TableClient createTableClient()
   {
     final ClassLoader currCtxClassloader = Thread.currentThread().getContextClassLoader();
     try {
       Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
       final Configuration conf = new Configuration();
-      final TableClient tableClient = DefaultTableClient.create(conf);
-      return Table.forPath(tableClient, tablePath);
-    }
-    catch (TableNotFoundException e) {
-      throw InvalidInput.exception(e, "tablePath[%s] not found.", tablePath);
+      return DefaultTableClient.create(conf);
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxClassloader);
