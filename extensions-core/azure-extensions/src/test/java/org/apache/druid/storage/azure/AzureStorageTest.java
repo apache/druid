@@ -138,8 +138,34 @@ public class AzureStorageTest
         captor.capture(), ArgumentMatchers.eq(DeleteSnapshotsOptionType.INCLUDE)
     );
 
-    azureStorage.batchDeleteFiles(CONTAINER, ImmutableList.of(BLOB_NAME), null);
+    boolean deleteSuccessful = azureStorage.batchDeleteFiles(CONTAINER, ImmutableList.of(BLOB_NAME), null);
     Assert.assertEquals(captor.getValue().get(0), containerUrl + "/" + BLOB_NAME);
+    Assert.assertTrue(deleteSuccessful);
+  }
+
+  @Test
+  public void testBatchDeleteFiles_error() throws BlobStorageException
+  {
+    String containerUrl = "https://implysaasdeveastussa.blob.core.windows.net/container";
+    BlobBatchClient blobBatchClient = Mockito.mock(BlobBatchClient.class);
+
+    SettableSupplier<PagedResponse<BlobItem>> supplier = new SettableSupplier<>();
+    supplier.set(new TestPagedResponse<>(ImmutableList.of()));
+    PagedIterable<BlobItem> pagedIterable = new PagedIterable<>(supplier);
+
+    ArgumentCaptor<List<String>> captor = ArgumentCaptor.forClass(List.class);
+
+    Mockito.doReturn(containerUrl).when(blobContainerClient).getBlobContainerUrl();
+    Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(CONTAINER);
+    Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(null, STORAGE_ACCOUNT);
+    Mockito.doReturn(blobBatchClient).when(azureClientFactory).getBlobBatchClient(blobContainerClient);
+    Mockito.doThrow(new RuntimeException()).when(blobBatchClient).deleteBlobs(
+            captor.capture(), ArgumentMatchers.eq(DeleteSnapshotsOptionType.INCLUDE)
+    );
+
+    boolean deleteSuccessful = azureStorage.batchDeleteFiles(CONTAINER, ImmutableList.of(BLOB_NAME), null);
+    Assert.assertEquals(captor.getValue().get(0), containerUrl + "/" + BLOB_NAME);
+    Assert.assertFalse(deleteSuccessful);
   }
 }
 

@@ -19,10 +19,8 @@
 
 package org.apache.druid.storage.azure;
 
-import com.azure.storage.blob.batch.BlobBatchStorageException;
 import com.azure.storage.blob.models.BlobStorageException;
 import com.google.common.base.Predicates;
-import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.java.util.common.ISE;
@@ -95,7 +93,15 @@ public class AzureDataSegmentKiller implements DataSegmentKiller
 
     boolean shouldThrowException = false;
     for (Map.Entry<String, List<String>> containerToKeys : containerToKeysToDelete.entrySet()) {
-      shouldThrowException = deleteBlobKeys(containerToKeys.getValue(), containerToKeys.getKey());
+      boolean batchSuccessful = azureStorage.batchDeleteFiles(
+              containerToKeys.getKey(),
+              containerToKeys.getValue(),
+              null
+      );
+
+      if (!batchSuccessful) {
+        shouldThrowException = true;
+      }
     }
 
     if (shouldThrowException) {
@@ -103,42 +109,6 @@ public class AzureDataSegmentKiller implements DataSegmentKiller
           "Couldn't delete segments from Azure. See the task logs for more details."
       );
     }
-  }
-
-  private Boolean deleteBlobKeys(List<String> keysToDelete, String containerName)
-  {
-    boolean hadException = false;
-    List<List<String>> keysChunks = Lists.partition(
-        keysToDelete,
-        MAX_MULTI_OBJECT_DELETE_SIZE
-    );
-    for (List<String> chunkOfKeys : keysChunks) {
-      try {
-        log.info(
-            "Removing from container [%s] the following files: [%s]",
-            containerName,
-            chunkOfKeys
-        );
-        azureStorage.batchDeleteFiles(containerName, keysToDelete);
-      }
-      catch (BlobStorageException | BlobBatchStorageException e) {
-        hadException = true;
-        log.noStackTrace().warn(e,
-            "Unable to delete from container [%s], the following keys [%s]",
-            containerName,
-            chunkOfKeys
-        );
-      }
-      catch (Exception e) {
-        hadException = true;
-        log.noStackTrace().warn(e,
-            "Unexpected exception occurred when deleting from container [%s], the following keys [%s]",
-            containerName,
-            chunkOfKeys
-        );
-      }
-    }
-    return hadException;
   }
 
 
