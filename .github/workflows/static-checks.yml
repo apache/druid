@@ -187,7 +187,7 @@ jobs:
 
       - name: Tar druid logs
         if: ${{ failure() }}
-        run: tar cvzf ./druid-logs.tgz -C ./distribution/target/apache-druid-*-SNAPSHOT/ logs
+        run: tar cvzf ./druid-logs.tgz -C ./distribution/target/apache-druid-*-SNAPSHOT/ log
 
       - name: Upload druid logs to GitHub
         if: ${{ failure() }}
