@@ -25,6 +25,7 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.destination.ExportDestination;
 import org.junit.Test;
 
 public class CalciteExportTest extends CalciteIngestionDmlTest
@@ -49,7 +50,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
                   .build()
         )
         .expectResources(dataSourceRead("foo"))
-        .expectTarget("EXTERN", RowSignature.builder().add("dim2", ColumnType.STRING).build())
+        .expectTarget(ExportDestination.TYPE_KEY, RowSignature.builder().add("dim2", ColumnType.STRING).build())
         .verify();
   }
 
@@ -88,7 +89,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
                   .build()
         )
         .expectResources(dataSourceRead("foo"))
-        .expectTarget("EXTERN", RowSignature.builder().add("dim2", ColumnType.STRING).build())
+        .expectTarget(ExportDestination.TYPE_KEY, RowSignature.builder().add("dim2", ColumnType.STRING).build())
         .verify();
   }
 
@@ -124,7 +125,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
                   .build()
         )
         .expectResources(dataSourceRead("foo"))
-        .expectTarget("EXTERN", RowSignature.builder().add("dim2", ColumnType.STRING).build())
+        .expectTarget(ExportDestination.TYPE_KEY, RowSignature.builder().add("dim2", ColumnType.STRING).build())
         .verify();
   }
 
