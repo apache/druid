@@ -44,8 +44,6 @@ import java.util.stream.Collectors;
  */
 public final class Rows
 {
-  private static final boolean BYTEA_AS_UTF8 = false;
-
   /**
    * @param timeStamp rollup up timestamp to be used to create group key
    * @param inputRow  input row
@@ -93,12 +91,8 @@ public final class Rows
 
   private static List<String> objectToStringsByteA(byte[] array)
   {
-    if (BYTEA_AS_UTF8) {
-      return Collections.singletonList(StringUtils.fromUtf8(array));
-    } else {
-      // convert byte[] to base64 encoded string
-      return Collections.singletonList(StringUtils.encodeBase64String(array));
-    }
+    // convert byte[] to base64 encoded string
+    return Collections.singletonList(StringUtils.encodeBase64String(array));
   }
 
   /**
