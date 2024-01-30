@@ -368,7 +368,27 @@ public class Windowing
         upperOffset = -upperOffset;
       }
       if (lowerOffset >= upperOffset) {
-        throw InvalidInput.exception("The first value of range should be lesser than the second value");
+        final String first, second;
+        int val;
+        if (group.lowerBound.isPreceding()) {
+          val = Math.abs(lowerOffset);
+          first = val + " PRECEDING";
+        } else {
+          val = Math.abs(upperOffset);
+          first = val + " FOLLOWING";
+        }
+        if (group.upperBound.isPreceding()) {
+          val = Math.abs(upperOffset);
+          second = val + " PRECEDING";
+        } else {
+          val = Math.abs(upperOffset);
+          second = val + " FOLLOWING";
+        }
+        throw InvalidInput.exception(
+            "The first value of range in the window [%s] should be lesser than the second value [%s]",
+            first,
+            second
+        );
       }
       return new WindowFrame(
           group.isRows ? WindowFrame.PeerType.ROWS : WindowFrame.PeerType.RANGE,

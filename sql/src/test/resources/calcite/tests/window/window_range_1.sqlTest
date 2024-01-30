@@ -3,7 +3,7 @@ type: "operatorValidation"
 sql: |
   WITH virtual_table as (select m2 ,sum(m1) as summ1
   from foo group by 1 order by summ1 DESC)
-  select m2,summ1,sum(summ1) OVER (order by m2 rows between 2 PRECEDING and 1 PRECEDING) as sumfinal
+  select m2,summ1,sum(summ1) OVER (order by m2 rows between 1 PRECEDING and 2 PRECEDING) as sumfinal
   from virtual_table order by 1
 
 expectedOperators:
