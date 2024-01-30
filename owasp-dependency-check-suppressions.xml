@@ -70,6 +70,13 @@
 
   <suppress>
     <notes><![CDATA[
+      file name: sketches-java-0.8.2.jar
+    ]]></notes>
+    <cve>CVE-2021-40531</cve>
+  </suppress>
+
+  <suppress>
+    <notes><![CDATA[
       file name: azure-core-1.45.1.jar
     ]]></notes>
     <cve>CVE-2023-36052</cve>
