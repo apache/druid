@@ -22,8 +22,11 @@ package org.apache.druid.storage.azure;
 import com.azure.core.http.policy.ExponentialBackoffOptions;
 import com.azure.core.http.policy.RetryOptions;
 import com.azure.identity.DefaultAzureCredentialBuilder;
+import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
+import com.azure.storage.blob.batch.BlobBatchClient;
+import com.azure.storage.blob.batch.BlobBatchClientBuilder;
 import com.azure.storage.common.StorageSharedKeyCredential;
 
 import java.time.Duration;
@@ -62,6 +65,13 @@ public class AzureClientFactory
     }
 
     return cachedBlobServiceClients.get(retryCount);
+  }
+
+
+  // Mainly here to make testing easier.
+  public BlobBatchClient getBlobBatchClient(BlobContainerClient blobContainerClient)
+  {
+    return new BlobBatchClientBuilder(blobContainerClient).buildClient();
   }
 
   private BlobServiceClientBuilder getAuthenticatedBlobServiceClientBuilder()
