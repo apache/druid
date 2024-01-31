@@ -345,7 +345,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     name: 'prefixes',
     label: 'Azure prefixes',
     type: 'string-array',
-    placeholder: 'azureStorage://your-storage-account/your-container/some-path1, azureStorage://your-storage-accountyour-container/some-path2',
+    placeholder: 'azureStorage://your-storage-account/your-container/some-path1, azureStorage://your-storage-account/your-container/some-path2',
     defined: inputSource =>
       inputSource.type === 'azureStorage' &&
       !deepGet(inputSource, 'uris') &&
@@ -378,7 +378,23 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
       </>
     ),
   },
-
+  {
+    name: 'properties.sharedAccessStorageToken',
+    label: 'Shared Access Storage Token',
+    type: 'string',
+    placeholder: '(sas token)',
+    defined: inputSource =>
+      inputSource.type === 'azureStorage',
+    info: (
+      <>
+      <p>Shared Access Storage Token for this storage account.</p>
+      <p>
+        Note: Inlining the sas token into the ingestion spec can be dangerous as it might
+        appear in server log files and can be seen by anyone accessing this console.
+      </p>
+    </>
+    ),
+  },
   // google
   {
     name: 'uris',

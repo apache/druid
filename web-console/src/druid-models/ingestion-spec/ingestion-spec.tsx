@@ -462,7 +462,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     name: 'inputSource.type',
     label: 'Source type',
     type: 'string',
-    suggestions: ['local', 'http', 'inline', 's3', 'azure', 'google', 'hdfs'],
+    suggestions: ['local', 'http', 'inline', 's3', 'azureStorage', 'google', 'hdfs'],
     info: (
       <p>
         Druid connects to raw data through{' '}
@@ -802,7 +802,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'inputSource.prefixes',
           label: 'Azure prefixes',
           type: 'string-array',
-          placeholder: 'azureStorage://your-storage-account/your-container/some-path1, azure://your-storage-account/your-container/some-path2',
+          placeholder: 'azureStorage://your-storage-account/your-container/some-path1, azureStorage://your-storage-account/your-container/some-path2',
           required: true,
           defined: ioConfig =>
             !deepGet(ioConfig, 'inputSource.uris') && !deepGet(ioConfig, 'inputSource.objects'),
@@ -834,6 +834,21 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           ),
         },
         inputSourceFilter,
+        {
+          name: 'inputSource.properties.sharedAccessStorageToken',
+          label: 'Shared Access Storage Token',
+          type: 'string',
+          placeholder: '(sas token)',
+          info: (
+            <>
+              <p>Shared Access Storage Token for this storage account.</p>
+              <p>
+                Note: Inlining the sas token into the ingestion spec can be dangerous as it might
+                appear in server log files and can be seen by anyone accessing this console.
+              </p>
+            </>
+          ),
+        },
       ];
 
     case 'index_parallel:google':
@@ -1359,7 +1374,7 @@ export function guessDataSourceNameFromInputSource(inputSource: InputSource): st
       }
 
     case 's3':
-    case 'azure':
+    case 'azureStorage':
     case 'google': {
       const actualPath = (inputSource.objects || EMPTY_ARRAY)[0];
       const uriPath =

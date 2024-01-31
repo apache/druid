@@ -63,7 +63,7 @@ export const InputSourceInfo = React.memo(function InputSourceInfo(props: InputS
     case 's3':
       return <p>Load text based, avro, orc, or parquet data from Amazon S3.</p>;
 
-    case 'azure':
+    case 'azureStorage':
       return <p>Load text based, avro, orc, or parquet data from Azure.</p>;
 
     case 'google':
