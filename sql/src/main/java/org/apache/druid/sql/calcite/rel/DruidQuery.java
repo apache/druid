@@ -50,6 +50,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FilteredDataSource;
+import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
@@ -108,6 +109,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -1452,7 +1454,7 @@ public class DruidQuery
     if (dataSource.isConcrete()) {
       return null;
     }
-    if (dataSource instanceof TableDataSource) {
+    if (!(dataSource instanceof InlineDataSource || dataSource instanceof QueryDataSource)) {
       // We need a scan query to pull the results up for us before applying the window
       // Returning null here to ensure that the planner generates that alternative
       return null;
@@ -1494,7 +1496,7 @@ public class DruidQuery
   {
     if (sorting == null
         || sorting.getOrderBys().isEmpty()
-        || sorting.getProjection() != null) {
+        || (sorting.getProjection() != null && !sorting.getProjection().getVirtualColumns().isEmpty())) {
       return null;
     }
 
@@ -1515,13 +1517,25 @@ public class DruidQuery
     List<OperatorFactory> operators = new ArrayList<>();
 
     operators.add(new NaiveSortOperatorFactory(sortColumns));
-    if (!sorting.getOffsetLimit().isNone()) {
+
+
+    final Projection projection = sorting.getProjection();
+
+    final org.apache.druid.query.operator.OffsetLimit offsetLimit = sorting.getOffsetLimit().isNone()
+        ? null
+        : sorting.getOffsetLimit().toOperatorOffsetLimit();
+
+    final List<String> projectedColumns = projection == null
+        ? null
+        : projection.getOutputRowSignature().getColumnNames();
+
+    if (offsetLimit != null || projectedColumns != null) {
       operators.add(
           new ScanOperatorFactory(
               null,
               null,
-              sorting.getOffsetLimit().toOperatorOffsetLimit(),
-              null,
+              offsetLimit,
+              projectedColumns,
               null,
               null
           )

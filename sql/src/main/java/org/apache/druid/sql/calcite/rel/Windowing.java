@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.rel;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelFieldCollation;
@@ -65,6 +66,7 @@ import org.apache.druid.sql.calcite.rule.GroupByRules;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nonnull;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -132,8 +134,9 @@ public class Windowing
     List<String> priorPartitionColumns = null;
     LinkedHashSet<ColumnWithDirection> priorSortColumns = new LinkedHashSet<>();
 
-    final RelCollation priorCollation = partialQuery.getScan().getTraitSet().getTrait(RelCollationTraitDef.INSTANCE);
-    if (priorCollation != null) {
+    RelTrait trait = partialQuery.getScan().getTraitSet().getTrait(RelCollationTraitDef.INSTANCE);
+    if (trait != null && trait instanceof RelCollation) {
+      final RelCollation priorCollation = (RelCollation) trait;
       // Populate initial priorSortColumns using collation of the input to the window operation. Allows us to skip
       // the initial sort operator if the rows were already in the desired order.
       priorSortColumns = computeSortColumnsFromRelCollation(priorCollation, sourceRowSignature);
