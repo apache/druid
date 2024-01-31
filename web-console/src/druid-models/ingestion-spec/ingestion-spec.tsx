@@ -97,7 +97,7 @@ export type IngestionComboType =
   | 'index_parallel:druid'
   | 'index_parallel:inline'
   | 'index_parallel:s3'
-  | 'index_parallel:azure'
+  | 'index_parallel:azureStorage'
   | 'index_parallel:google'
   | 'index_parallel:hdfs';
 
@@ -139,7 +139,7 @@ export function getIngestionComboType(
         case 'druid':
         case 'inline':
         case 's3':
-        case 'azure':
+        case 'azureStorage':
         case 'google':
         case 'hdfs':
           return `${ioConfig.type}:${inputSource.type}` as IngestionComboType;
@@ -167,7 +167,7 @@ export function getIngestionTitle(ingestionType: IngestionComboTypeWithExtra): s
     case 'index_parallel:s3':
       return 'Amazon S3';
 
-    case 'index_parallel:azure':
+    case 'index_parallel:azureStorage':
       return 'Azure Data Lake';
 
     case 'index_parallel:google':
@@ -225,7 +225,7 @@ export function getRequiredModule(ingestionType: IngestionComboTypeWithExtra): s
     case 'index_parallel:s3':
       return 'druid-s3-extensions';
 
-    case 'index_parallel:azure':
+    case 'index_parallel:azureStorage':
       return 'druid-azure-extensions';
 
     case 'index_parallel:google':
@@ -776,7 +776,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
         },
       ];
 
-    case 'index_parallel:azure':
+    case 'index_parallel:azureStorage':
       return [
         inputSourceType,
         {
@@ -784,7 +784,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'Azure URIs',
           type: 'string-array',
           placeholder:
-            'azure://your-container/some-file1.ext, azure://your-container/some-file2.ext',
+            'azureStorage://your-storage-account/your-container/some-file1.ext, azureStorage://your-storage-account/your-container/some-file2.ext',
           required: true,
           defined: ioConfig =>
             !deepGet(ioConfig, 'inputSource.prefixes') && !deepGet(ioConfig, 'inputSource.objects'),
@@ -802,7 +802,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'inputSource.prefixes',
           label: 'Azure prefixes',
           type: 'string-array',
-          placeholder: 'azure://your-container/some-path1, azure://your-container/some-path2',
+          placeholder: 'azureStorage://your-storage-account/your-container/some-path1, azure://your-storage-account/your-container/some-path2',
           required: true,
           defined: ioConfig =>
             !deepGet(ioConfig, 'inputSource.uris') && !deepGet(ioConfig, 'inputSource.objects'),
@@ -817,7 +817,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'inputSource.objects',
           label: 'Azure objects',
           type: 'json',
-          placeholder: '{"bucket":"your-container", "path":"some-file.ext"}',
+          placeholder: '{"bucket":"your-storage-account", "path":"your-container/some-file.ext"}',
           required: true,
           defined: ioConfig => deepGet(ioConfig, 'inputSource.objects'),
           info: (
@@ -1083,7 +1083,7 @@ export function getIoConfigTuningFormFields(
   switch (ingestionComboType) {
     case 'index_parallel:http':
     case 'index_parallel:s3':
-    case 'index_parallel:azure':
+    case 'index_parallel:azureStorage':
     case 'index_parallel:google':
     case 'index_parallel:hdfs':
       return [

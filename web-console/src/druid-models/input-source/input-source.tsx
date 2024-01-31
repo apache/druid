@@ -102,7 +102,7 @@ export type InputSourceDesc =
       };
     }
   | {
-      type: 'google' | 'azure';
+      type: 'google' | 'azureStorage';
       uris?: string[];
       prefixes?: string[];
       objects?: { bucket: string; path: string }[];
@@ -147,7 +147,7 @@ export function issueWithInputSource(inputSource: InputSource | undefined): stri
       return;
 
     case 's3':
-    case 'azure':
+    case 'azureStorage':
     case 'google':
       if (
         !nonEmptyArray(inputSource.uris) &&
@@ -169,7 +169,7 @@ export function issueWithInputSource(inputSource: InputSource | undefined): stri
   }
 }
 
-const KNOWN_TYPES = ['inline', 'druid', 'http', 'local', 's3', 'azure', 'google', 'hdfs', 'sql'];
+const KNOWN_TYPES = ['inline', 'druid', 'http', 'local', 's3', 'azureStorage', 'google', 'hdfs', 'sql'];
 export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
   // inline
 
@@ -325,9 +325,9 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     name: 'uris',
     label: 'Azure URIs',
     type: 'string-array',
-    placeholder: 'azure://your-container/some-file1.ext, azure://your-container/some-file2.ext',
+    placeholder: 'azureStorage://your-storage-account/your-container/some-file1.ext, azureStorage://your-storage-account/your-container/some-file2.ext',
     defined: inputSource =>
-      inputSource.type === 'azure' &&
+      inputSource.type === 'azureStorage' &&
       !deepGet(inputSource, 'prefixes') &&
       !deepGet(inputSource, 'objects'),
     required: true,
@@ -345,9 +345,9 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     name: 'prefixes',
     label: 'Azure prefixes',
     type: 'string-array',
-    placeholder: 'azure://your-container/some-path1, azure://your-container/some-path2',
+    placeholder: 'azureStorage://your-storage-account/your-container/some-path1, azureStorage://your-storage-accountyour-container/some-path2',
     defined: inputSource =>
-      inputSource.type === 'azure' &&
+      inputSource.type === 'azureStorage' &&
       !deepGet(inputSource, 'uris') &&
       !deepGet(inputSource, 'objects'),
     required: true,
@@ -362,8 +362,8 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     name: 'objects',
     label: 'Azure objects',
     type: 'json',
-    placeholder: '{"bucket":"your-container", "path":"some-file.ext"}',
-    defined: inputSource => inputSource.type === 'azure' && deepGet(inputSource, 'objects'),
+    placeholder: '{"bucket":"your-storage-account", "path":"your-container/some-file.ext"}',
+    defined: inputSource => inputSource.type === 'azureStorage' && deepGet(inputSource, 'objects'),
     required: true,
     info: (
       <>
@@ -445,7 +445,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     type: 'string',
     suggestions: FILTER_SUGGESTIONS,
     placeholder: '*',
-    defined: typeIsKnown(KNOWN_TYPES, 's3', 'azure', 'google'),
+    defined: typeIsKnown(KNOWN_TYPES, 's3', 'azureStorage', 'google'),
     info: (
       <p>
         A wildcard filter for files. See{' '}
