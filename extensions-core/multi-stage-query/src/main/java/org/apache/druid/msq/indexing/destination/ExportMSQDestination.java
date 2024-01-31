@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.storage.StorageConnectorProvider;
 import org.joda.time.Interval;
@@ -31,6 +33,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Destination used by tasks that write the results as files to an external destination. {@link #resultFormat} denotes
@@ -117,5 +120,11 @@ public class ExportMSQDestination implements MSQDestination
   public ShuffleSpecFactory getShuffleSpecFactory(int targetSize)
   {
     return ShuffleSpecFactories.getGlobalSortWithTargetSize(targetSize);
+  }
+
+  @Override
+  public Optional<Resource> getDestinationResource()
+  {
+    return Optional.of(new Resource(getStorageConnectorProvider().getType(), ResourceType.EXTERNAL));
   }
 }

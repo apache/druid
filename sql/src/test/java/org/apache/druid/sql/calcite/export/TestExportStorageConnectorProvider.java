@@ -31,4 +31,10 @@ public class TestExportStorageConnectorProvider implements StorageConnectorProvi
   {
     return STORAGE_CONNECTOR;
   }
+
+  @Override
+  public String getType()
+  {
+    return TestExportStorageConnector.TYPE_NAME;
+  }
 }

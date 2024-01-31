@@ -22,6 +22,9 @@ package org.apache.druid.msq.indexing.destination;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
+import org.apache.druid.server.security.Resource;
+
+import java.util.Optional;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
@@ -33,4 +36,6 @@ import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 public interface MSQDestination
 {
   ShuffleSpecFactory getShuffleSpecFactory(int targetSize);
+
+  Optional<Resource> getDestinationResource();
 }

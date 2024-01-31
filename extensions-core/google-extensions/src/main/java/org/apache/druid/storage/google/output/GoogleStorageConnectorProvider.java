@@ -61,4 +61,9 @@ public class GoogleStorageConnectorProvider extends GoogleOutputConfig implement
     return new GoogleStorageConnector(this, googleStorage, googleInputDataConfig);
   }
 
+  @Override
+  public String getType()
+  {
+    return GoogleStorageDruidModule.SCHEME;
+  }
 }

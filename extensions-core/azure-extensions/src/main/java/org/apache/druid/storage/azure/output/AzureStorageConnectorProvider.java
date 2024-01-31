@@ -58,4 +58,10 @@ public class AzureStorageConnectorProvider extends AzureOutputConfig implements 
   {
     return new AzureStorageConnector(this, azureStorage);
   }
+
+  @Override
+  public String getType()
+  {
+    return AzureStorageDruidModule.SCHEME;
+  }
 }

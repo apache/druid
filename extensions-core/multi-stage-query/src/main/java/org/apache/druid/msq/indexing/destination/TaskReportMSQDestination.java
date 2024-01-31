@@ -22,6 +22,9 @@ package org.apache.druid.msq.indexing.destination;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
+import org.apache.druid.server.security.Resource;
+
+import java.util.Optional;
 
 public class TaskReportMSQDestination implements MSQDestination
 {
@@ -49,5 +52,11 @@ public class TaskReportMSQDestination implements MSQDestination
   public ShuffleSpecFactory getShuffleSpecFactory(int targetSize)
   {
     return ShuffleSpecFactories.singlePartition();
+  }
+
+  @Override
+  public Optional<Resource> getDestinationResource()
+  {
+    return Optional.empty();
   }
 }

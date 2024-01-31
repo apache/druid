@@ -79,4 +79,10 @@ public class LocalFileStorageConnectorProvider implements StorageConnectorProvid
   {
     return Objects.hash(basePath);
   }
+
+  @Override
+  public String getType()
+  {
+    return LocalFileStorageConnectorProvider.TYPE_NAME;
+  }
 }
