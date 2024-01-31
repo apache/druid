@@ -19,7 +19,7 @@
 
 package org.apache.druid.sql.calcite.schema;
 
-import org.apache.druid.sql.calcite.planner.PlannerConfig;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
@@ -38,15 +38,15 @@ public class NamedLookupSchemaTest extends CalciteTestBase
   private LookupSchema lookupSchema;
 
   @Mock
-  private PlannerConfig plannerConfig;
+  private AuthConfig authConfig;
 
   private NamedLookupSchema target;
 
   @Before
   public void setUp()
   {
-    plannerConfig = EasyMock.createMock(PlannerConfig.class);
-    target = new NamedLookupSchema(plannerConfig, lookupSchema);
+    authConfig = EasyMock.createMock(AuthConfig.class);
+    target = new NamedLookupSchema(authConfig, lookupSchema);
   }
 
   @Test

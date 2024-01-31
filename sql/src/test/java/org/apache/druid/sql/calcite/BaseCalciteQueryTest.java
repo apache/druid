@@ -185,9 +185,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static final PlannerConfig PLANNER_CONFIG_AUTHORIZE_SYS_TABLES =
       PlannerConfig.builder().authorizeSystemTablesDirectly(true).build();
 
-  public static final PlannerConfig PLANNER_CONFIG_AUTHORIZE_LOOKUP =
-      PlannerConfig.builder().authorizeLookupDirectly(true).build();
-
   public static final PlannerConfig PLANNER_CONFIG_LEGACY_QUERY_EXPLAIN =
       PlannerConfig.builder().useNativeQueryExplain(false).build();
 

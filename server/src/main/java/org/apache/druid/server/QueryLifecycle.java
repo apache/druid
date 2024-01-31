@@ -47,6 +47,11 @@ import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.topn.TopNQuery;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.QueryResource.ResourceIOReaderWriter;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Access;
@@ -63,12 +68,15 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * Class that helps a Druid server (broker, historical, etc) manage the lifecycle of a query that it is handling. It
@@ -232,6 +240,57 @@ public class QueryLifecycle
             contextParam -> new ResourceAction(new Resource(contextParam, ResourceType.QUERY_CONTEXT), Action.WRITE)
         )
     );
+    if (authConfig.isEnableAuthorizeLookupDirectly()) {
+      if (baseQuery instanceof GroupByQuery) {
+        GroupByQuery groupByQuery = (GroupByQuery) baseQuery;
+        resourcesToAuthorize = Iterables.concat(
+          resourcesToAuthorize,
+          Iterables.transform(
+            groupByQuery.getDimensions()
+              .stream()
+              .map(this::getLookUpName)
+              .filter(lookupName -> !Strings.isNullOrEmpty(lookupName))
+              .collect(Collectors.toSet()),
+            lookup -> new ResourceAction(new Resource(lookup, ResourceType.LOOKUP), Action.READ)
+          )
+        );
+      } else if (baseQuery instanceof TopNQuery) {
+        TopNQuery topNQuery = (TopNQuery) baseQuery;
+        DimensionSpec dimension = topNQuery.getDimensionSpec();
+        String lookupName = getLookUpName(dimension);
+        if (!Strings.isNullOrEmpty(lookupName)) {
+          resourcesToAuthorize = Iterables.concat(
+            resourcesToAuthorize,
+            Collections.singletonList(new ResourceAction(new Resource(
+                    lookupName,
+                    ResourceType.LOOKUP
+            ), Action.READ))
+          );
+        }
+      } else if (baseQuery instanceof ScanQuery) {
+        ScanQuery scanQuery = (ScanQuery) baseQuery;
+        final LookupNameExtractionShuttle lookNameExtraction = new LookupNameExtractionShuttle();
+        resourcesToAuthorize = Iterables.concat(
+          resourcesToAuthorize,
+          Iterables.transform(
+            Arrays.stream(scanQuery.getVirtualColumns().getVirtualColumns())
+              .filter(virtualColumn -> virtualColumn instanceof ExpressionVirtualColumn
+                                       && ((ExpressionVirtualColumn) virtualColumn).getExpression()
+                                                                                   .toUpperCase(Locale.getDefault())
+                                                                                   .startsWith(
+                                                                                           ResourceType.LOOKUP))
+              .map(virtualColumn -> ((ExpressionVirtualColumn) virtualColumn).getParsedExpression()
+                                                                             .get())
+              .map(express -> {
+                express.visit(lookNameExtraction);
+                return lookNameExtraction.getLookupName();
+              }).filter(lookupName -> !lookupName.isEmpty())
+              .collect(Collectors.toSet()),
+            lookup -> new ResourceAction(new Resource(lookup, ResourceType.LOOKUP), Action.READ)
+          )
+        );
+      }
+    }
     return doAuthorize(
         AuthorizationUtils.authenticationResultFromRequest(req),
         AuthorizationUtils.authorizeAllResourceActions(

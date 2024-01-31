@@ -21,8 +21,8 @@ package org.apache.druid.sql.calcite.schema;
 
 import com.google.inject.Inject;
 import org.apache.calcite.schema.Schema;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.ResourceType;
-import org.apache.druid.sql.calcite.planner.PlannerConfig;
 
 import javax.annotation.Nullable;
 
@@ -35,12 +35,12 @@ public class NamedLookupSchema implements NamedSchema
 
   private final LookupSchema lookupSchema;
 
-  private final PlannerConfig plannerConfig;
+  private final AuthConfig authConfig;
 
   @Inject
-  public NamedLookupSchema(PlannerConfig plannerConfig, LookupSchema lookupSchema)
+  public NamedLookupSchema(AuthConfig authConfig, LookupSchema lookupSchema)
   {
-    this.plannerConfig = plannerConfig;
+    this.authConfig = authConfig;
     this.lookupSchema = lookupSchema;
   }
 
@@ -60,7 +60,7 @@ public class NamedLookupSchema implements NamedSchema
   @Override
   public String getSchemaResourceType(String resourceName)
   {
-    if (plannerConfig.isAuthorizeLookupDirectly()) {
+    if (authConfig.isEnableAuthorizeLookupDirectly()) {
       return ResourceType.LOOKUP;
     }
     return null;

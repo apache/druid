@@ -82,7 +82,7 @@ druid_indexer_logs_directory=/shared/tasklogs
 druid_sql_enable=true
 druid_extensions_hadoopDependenciesDir=/shared/hadoop-dependencies
 druid_request_logging_type=slf4j
-druid_sql_planner_authorizeLookupDirectly=true
+druid_auth_enableAuthorizeLookupDirectly=true
 
 # Setting s3 credentials and region to use pre-populated data for testing.
 druid_s3_accessKey=AKIAT2GGLKKJQCMG64V4
