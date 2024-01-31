@@ -561,6 +561,10 @@ export class WorkbenchQuery {
       }
     }
 
+    if (engine === 'sql-native' || engine === 'sql-msq-task') {
+      apiQuery.context.sqlStringifyArrays ??= false;
+    }
+
     if (Array.isArray(queryParameters) && queryParameters.length) {
       apiQuery.parameters = queryParameters;
     }
