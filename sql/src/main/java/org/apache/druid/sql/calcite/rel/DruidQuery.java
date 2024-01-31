@@ -50,7 +50,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FilteredDataSource;
-import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
@@ -1454,7 +1453,7 @@ public class DruidQuery
     if (dataSource.isConcrete()) {
       return null;
     }
-    if (!(dataSource instanceof InlineDataSource || dataSource instanceof QueryDataSource)) {
+    if (dataSource instanceof TableDataSource) {
       // We need a scan query to pull the results up for us before applying the window
       // Returning null here to ensure that the planner generates that alternative
       return null;
