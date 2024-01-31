@@ -106,7 +106,7 @@ public abstract class IngestHandler extends QueryHandler
     CalcitePlanner planner = handlerContext.planner();
     final SqlValidator validator = planner.getValidator();
     targetType = validator.getValidatedNodeType(validatedNode);
-    ingestionGranularity = DruidSqlParserUtils.convertSqlNodeToGranularity(ingestNode());
+    ingestionGranularity = DruidSqlParserUtils.convertSqlNodeToGranularity(ingestNode().getPartitionedBy());
     final SqlIdentifier tableIdentifier = (SqlIdentifier) ingestNode().getTargetTable();
     targetDatasource = tableIdentifier.names.get(tableIdentifier.names.size() - 1);
   }

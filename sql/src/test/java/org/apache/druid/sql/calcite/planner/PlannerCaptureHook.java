@@ -41,8 +41,7 @@ public class PlannerCaptureHook implements PlannerHook
   @Override
   public void captureSql(String sql)
   {
-    this.druidRel = druidRel;
-    this.execPlan = druidRel.dryRun();
+    // Not used at present. Add a field to capture this if you need it.
   }
 
   @Override
@@ -60,7 +59,8 @@ public class PlannerCaptureHook implements PlannerHook
   @Override
   public void captureDruidRel(DruidRel<?> druidRel)
   {
-    // Not used at present. Add a field to capture this if you need it.
+    this.druidRel = druidRel;
+    this.execPlan = druidRel.dryRun();
   }
 
   @Override

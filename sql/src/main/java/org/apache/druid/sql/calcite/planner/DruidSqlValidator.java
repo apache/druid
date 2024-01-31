@@ -333,6 +333,7 @@ class DruidSqlValidator extends BaseDruidSqlValidator
         // the grain, using a different one is an error. If the user wants to
         // vary the grain across different (re)ingestions, then, at present, don't
         // declare the grain in the catalog.
+        // TODO: allow mismatch
         throw new IAE(
             "PARTITIONED BY mismatch. Catalog: [%s], query: [%s]",
             granularityToSqlString(definedGranularity),
