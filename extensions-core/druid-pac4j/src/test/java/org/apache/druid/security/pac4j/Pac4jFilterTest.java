@@ -42,7 +42,6 @@ import static org.mockito.ArgumentMatchers.any;
 public class Pac4jFilterTest
 {
 
-  private static final JEEHttpActionAdapter JEE_HTTP_ACTION_ADAPTER = new JEEHttpActionAdapter();
   @Mock
   private HttpServletRequest request;
   @Mock
@@ -61,7 +60,7 @@ public class Pac4jFilterTest
     HttpAction httpAction = new FoundAction("testUrl");
     Mockito.doReturn(httpAction.getCode()).when(response).getStatus();
     Mockito.doReturn(((WithLocationAction) httpAction).getLocation()).when(response).getHeader(any());
-    JEE_HTTP_ACTION_ADAPTER.adapt(httpAction, context);
+    JEEHttpActionAdapter.INSTANCE.adapt(httpAction, context);
     Assert.assertEquals(response.getStatus(), 302);
     Assert.assertEquals(response.getHeader("Location"), "testUrl");
   }
@@ -71,7 +70,7 @@ public class Pac4jFilterTest
   {
     HttpAction httpAction = ForbiddenAction.INSTANCE;
     Mockito.doReturn(httpAction.getCode()).when(response).getStatus();
-    JEE_HTTP_ACTION_ADAPTER.adapt(httpAction, context);
+    JEEHttpActionAdapter.INSTANCE.adapt(httpAction, context);
     Assert.assertEquals(response.getStatus(), HttpServletResponse.SC_FORBIDDEN);
   }
 

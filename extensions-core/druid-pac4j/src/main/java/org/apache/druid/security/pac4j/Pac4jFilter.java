@@ -29,7 +29,6 @@ import org.pac4j.core.engine.CallbackLogic;
 import org.pac4j.core.engine.DefaultCallbackLogic;
 import org.pac4j.core.engine.DefaultSecurityLogic;
 import org.pac4j.core.engine.SecurityLogic;
-import org.pac4j.core.http.adapter.HttpActionAdapter;
 import org.pac4j.core.http.adapter.JEEHttpActionAdapter;
 import org.pac4j.core.profile.UserProfile;
 
@@ -47,9 +46,6 @@ import java.util.Collection;
 public class Pac4jFilter implements Filter
 {
   private static final Logger LOGGER = new Logger(Pac4jFilter.class);
-
-  // JEE_HTTP_ACTION_ADAPTER updates the response in the context according to the HTTPAction.
-  private static final HttpActionAdapter<Object, JEEContext> JEE_HTTP_ACTION_ADAPTER = new JEEHttpActionAdapter();
 
   private final Config pac4jConfig;
   private final SecurityLogic<Object, JEEContext> securityLogic;
@@ -96,7 +92,7 @@ public class Pac4jFilter implements Filter
       callbackLogic.perform(
           context,
           pac4jConfig,
-          JEE_HTTP_ACTION_ADAPTER,
+          JEEHttpActionAdapter.INSTANCE,
           "/",
           true, false, false, null);
     } else {
@@ -111,9 +107,11 @@ public class Pac4jFilter implements Filter
               return profiles.iterator().next().getId();
             }
           },
-          JEE_HTTP_ACTION_ADAPTER,
+          JEEHttpActionAdapter.INSTANCE,
           null, "none", null, null);
-
+      // Changed the Authorizer from null to "none".
+      // In the older version, if it is null, it simply grant access and returns authorized.
+      // But in the newer pac4j version, it uses CsrfAuthorizer as default, And because of this, It was returning 403 in API calls.
       if (uid != null) {
         AuthenticationResult authenticationResult = new AuthenticationResult(uid.toString(), authorizerName, name, null);
         servletRequest.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
