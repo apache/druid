@@ -20,6 +20,7 @@
 package org.apache.druid.query.aggregation;
 
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -101,7 +102,7 @@ public class SingleValueBufferAggregator implements BufferAggregator
   public float getFloat(ByteBuffer buf, int position)
   {
     if (TypeStrategies.isNullableNull(buf, position)) {
-      throw new IllegalStateException("Cannot return float for Null Value");
+      throw DruidException.defensive("Cannot return float for Null Value");
     }
     return TypeStrategies.readNotNullNullableFloat(buf, position);
   }
@@ -110,7 +111,7 @@ public class SingleValueBufferAggregator implements BufferAggregator
   public double getDouble(ByteBuffer buf, int position)
   {
     if (TypeStrategies.isNullableNull(buf, position)) {
-      throw new IllegalStateException("Cannot return double for Null Value");
+      throw DruidException.defensive("Cannot return double for Null Value");
     }
     return TypeStrategies.readNotNullNullableDouble(buf, position);
   }
@@ -119,7 +120,7 @@ public class SingleValueBufferAggregator implements BufferAggregator
   public long getLong(ByteBuffer buf, int position)
   {
     if (TypeStrategies.isNullableNull(buf, position)) {
-      throw new IllegalStateException("Cannot return long for Null Value");
+      throw DruidException.defensive("Cannot return long for Null Value");
     }
     return TypeStrategies.readNotNullNullableLong(buf, position);
   }
@@ -129,5 +130,4 @@ public class SingleValueBufferAggregator implements BufferAggregator
   {
     // no resources to cleanup
   }
-
 }
