@@ -771,7 +771,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
 
     // This is the index to stop at for the current window aperture
     // The first row is used by all of the results for the lowerOffset num results, plus 1 for the "current row"
-    int stopIndex = Math.min(lowerOffset + 1, windowSize);
+    int stopIndex = Math.min(Math.abs(lowerOffset) + 1, windowSize);
 
     int startIndex = 0;
     int rowId = rowIdProvider.get();

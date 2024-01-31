@@ -34,7 +34,6 @@ import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexWindowBound;
 import org.apache.calcite.util.mapping.Mappings;
-import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.QueryException;
@@ -359,43 +358,13 @@ public class Windowing
       if (group.lowerBound.isUnbounded() && group.upperBound.isUnbounded()) {
         return WindowFrame.unbounded();
       }
-      int lowerOffset = figureOutOffset(group.lowerBound);
-      int upperOffset = figureOutOffset(group.upperBound);
-      if (group.lowerBound.isPreceding()) {
-        lowerOffset = -lowerOffset;
-      }
-      if (group.upperBound.isPreceding()) {
-        upperOffset = -upperOffset;
-      }
-      if (lowerOffset > upperOffset) {
-        final String first, second;
-        int val;
-        if (group.lowerBound.isPreceding()) {
-          val = Math.abs(lowerOffset);
-          first = val + " PRECEDING";
-        } else {
-          val = Math.abs(upperOffset);
-          first = val + " FOLLOWING";
-        }
-        if (group.upperBound.isPreceding()) {
-          val = Math.abs(upperOffset);
-          second = val + " PRECEDING";
-        } else {
-          val = Math.abs(upperOffset);
-          second = val + " FOLLOWING";
-        }
-        throw InvalidInput.exception(
-            "The first value of range in the window [%s] should be lesser than the second value [%s]",
-            first,
-            second
-        );
-      }
+
       return new WindowFrame(
           group.isRows ? WindowFrame.PeerType.ROWS : WindowFrame.PeerType.RANGE,
           group.lowerBound.isUnbounded(),
-          lowerOffset,
+          figureOutOffset(group.lowerBound),
           group.upperBound.isUnbounded(),
-          upperOffset,
+          figureOutOffset(group.upperBound),
           group.isRows ? null : getOrdering()
       );
     }
@@ -405,7 +374,8 @@ public class Windowing
       if (bound.isUnbounded() || bound.isCurrentRow()) {
         return 0;
       }
-      return getConstant(((RexInputRef) bound.getOffset()).getIndex());
+      final int value = getConstant(((RexInputRef) bound.getOffset()).getIndex());
+      return bound.isPreceding() ? -value : value;
     }
 
     private int getConstant(int refIndex)
