@@ -45,10 +45,12 @@ function isDate(v: any): v is Date {
 }
 
 function isWrappedInArrayToMv(ex: SqlExpression | undefined) {
+  if (!ex) return false;
+  ex = ex.getUnderlyingExpression();
   return ex instanceof SqlFunction && ex.getEffectiveFunctionName() === 'ARRAY_TO_MV';
 }
 
-function getExpressionIfAlias(query: SqlQuery, selectIndex: number): string {
+function formatFormulaAtIndex(query: SqlQuery, selectIndex: number): string {
   const ex = query.getSelectExpressionForIndex(selectIndex);
 
   if (query.isRealOutputColumnAtSelectIndex(selectIndex)) {
@@ -144,7 +146,7 @@ export const PreviewTable = React.memo(function PreviewTable(props: PreviewTable
                       <Icon className="filter-icon" icon={IconNames.FILTER} size={14} />
                     )}
                   </div>
-                  <div className="formula">{getExpressionIfAlias(parsedQuery, i)}</div>
+                  <div className="formula">{formatFormulaAtIndex(parsedQuery, i)}</div>
                 </div>
               );
             },
