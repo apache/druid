@@ -107,7 +107,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       @JsonProperty("startMetadata") @Nullable DataSourceMetadata startMetadata,
       @JsonProperty("endMetadata") @Nullable DataSourceMetadata endMetadata,
       @JsonProperty("dataSource") @Nullable String dataSource,
-      @JsonProperty("schemaMap") @Nullable Map<String, SegmentSchemaMetadata> schemaMetadataMap
+      @JsonProperty("schemaMetadataMap") @Nullable Map<String, SegmentSchemaMetadata> schemaMetadataMap
   )
   {
     this.segmentsToBeOverwritten = segmentsToBeOverwritten;
@@ -150,6 +150,13 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   public String getDataSource()
   {
     return dataSource;
+  }
+
+  @JsonProperty
+  @Nullable
+  public Map<String, SegmentSchemaMetadata> getSchemaMetadataMap()
+  {
+    return schemaMetadataMap;
   }
 
   @Override

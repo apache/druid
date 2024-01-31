@@ -1,5 +1,6 @@
 package org.apache.druid.segment.metadata;
 
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.SchemaPayload;
 import org.apache.druid.segment.column.SegmentSchemaMetadata;
@@ -8,11 +9,15 @@ import org.apache.druid.timeline.SegmentId;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CountDownLatch;
 
 // schema cache for published segments only
 //
+@LazySingleton
 public class SegmentSchemaCache
 {
+
+  private CountDownLatch initialized = new CountDownLatch(1);
 
   // Mapping from segmentId to segmentStats, reference is updated on each database poll.
   // edge case what happens if first this map is build from db
@@ -30,6 +35,17 @@ public class SegmentSchemaCache
 
   private ConcurrentMap<SegmentId, SegmentSchemaMetadata> inTransitSMQResults = new ConcurrentHashMap<>();
   private volatile ConcurrentMap<SegmentId, SegmentSchemaMetadata> inTransitSMQPublishedResults = new ConcurrentHashMap<>();
+
+  public void setInitialized()
+  {
+    initialized.countDown();
+  }
+
+  public void awaitInitialization() throws InterruptedException
+  {
+    initialized.await();
+  }
+
 
   public void updateFinalizedSegmentStatsReference(ConcurrentMap<SegmentId, SegmentStats> segmentStatsMap)
   {
@@ -119,6 +135,15 @@ public class SegmentSchemaCache
     public long getNumRows()
     {
       return numRows;
+    }
+
+    @Override
+    public String toString()
+    {
+      return "SegmentStats{" +
+             "schemaId=" + schemaId +
+             ", numRows=" + numRows +
+             '}';
     }
   }
 }

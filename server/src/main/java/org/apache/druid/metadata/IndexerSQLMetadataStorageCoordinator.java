@@ -51,13 +51,11 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.segment.metadata.SchemaFingerprintGenerator;
-import org.apache.druid.segment.metadata.SchemaPersistHelper;
-import org.apache.druid.segment.metadata.SchemaPersistHelper.SegmentSchemaMetadataPlus;
+import org.apache.druid.segment.metadata.SchemaManager;
+import org.apache.druid.segment.metadata.SchemaManager.SegmentSchemaMetadataPlus;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.DataSegmentWithSchema;
 import org.apache.druid.timeline.Partitions;
-import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -116,20 +114,23 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   private final ObjectMapper jsonMapper;
   private final MetadataStorageTablesConfig dbTables;
   private final SQLMetadataConnector connector;
-  private final SchemaPersistHelper schemaPersistHelper;
+  private final SchemaManager schemaManager;
+  private final SchemaFingerprintGenerator schemaFingerprintGenerator;
 
   @Inject
   public IndexerSQLMetadataStorageCoordinator(
       ObjectMapper jsonMapper,
       MetadataStorageTablesConfig dbTables,
       SQLMetadataConnector connector,
-      SchemaPersistHelper schemaPersistHelper
+      SchemaManager schemaManager,
+      SchemaFingerprintGenerator schemaFingerprintGenerator
   )
   {
     this.jsonMapper = jsonMapper;
     this.dbTables = dbTables;
     this.connector = connector;
-    this.schemaPersistHelper = schemaPersistHelper;
+    this.schemaManager = schemaManager;
+    this.schemaFingerprintGenerator = schemaFingerprintGenerator;
   }
 
   @LifecycleStart
@@ -137,9 +138,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   {
     connector.createDataSourceTable();
     connector.createPendingSegmentsTable();
+    connector.createSegmentSchemaTable();
     connector.createSegmentTable();
     connector.createUpgradeSegmentsTable();
-    connector.createSegmentSchemaTable();
   }
 
   @Override
@@ -418,6 +419,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return result.getSegments();
   }
 
+
   @Override
   public SegmentPublishResult commitSegmentsAndMetadata(
       final Set<DataSegment> segments,
@@ -521,7 +523,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 createNewIdsOfAppendSegmentsAfterReplace(handle, replaceSegments, locksHeldByReplaceTask)
             );
             return SegmentPublishResult.ok(
-                insertSegments(handle, segmentsToInsert)
+                insertSegments(handle, segmentsToInsert, Collections.emptyMap())
             );
           },
           3,
@@ -536,14 +538,16 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @Override
   public SegmentPublishResult commitAppendSegments(
       final Set<DataSegment> appendSegments,
-      final Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock
+      final Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
+      final Map<String, SegmentSchemaMetadata> segmentSchemaMetadataMap
   )
   {
     return commitAppendSegmentsAndMetadataInTransaction(
         appendSegments,
         appendSegmentToReplaceLock,
         null,
-        null
+        null,
+        segmentSchemaMetadataMap
     );
   }
 
@@ -552,14 +556,16 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       Set<DataSegment> appendSegments,
       Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
       DataSourceMetadata startMetadata,
-      DataSourceMetadata endMetadata
+      DataSourceMetadata endMetadata,
+      Map<String, SegmentSchemaMetadata> segmentSchemaMetadataMap
   )
   {
     return commitAppendSegmentsAndMetadataInTransaction(
         appendSegments,
         appendSegmentToReplaceLock,
         startMetadata,
-        endMetadata
+        endMetadata,
+        segmentSchemaMetadataMap
     );
   }
 
@@ -1298,7 +1304,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       Set<DataSegment> appendSegments,
       Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
       @Nullable DataSourceMetadata startMetadata,
-      @Nullable DataSourceMetadata endMetadata
+      @Nullable DataSourceMetadata endMetadata,
+      Map<String, SegmentSchemaMetadata> segmentSchemaMetadataMap
   )
   {
     verifySegmentsToCommit(appendSegments);
@@ -1342,7 +1349,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             }
 
             insertIntoUpgradeSegmentsTable(handle, appendSegmentToReplaceLock);
-            return SegmentPublishResult.ok(insertSegments(handle, allSegmentsToInsert));
+            return SegmentPublishResult.ok(insertSegments(handle, allSegmentsToInsert, segmentSchemaMetadataMap));
           },
           3,
           getSqlMetadataMaxRetry()
@@ -1968,23 +1975,27 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   ) throws IOException
   {
     final Set<DataSegment> toInsertSegments = new HashSet<>();
-    Map<String, Pair<Long, Long>> segmentStats = new HashMap<>();
+    final Map<String, Pair<Long, Long>> segmentStats = new HashMap<>();
     try {
-      if (segmentSchemaMetadataMap.size() > 0) {
+      if (null != segmentSchemaMetadataMap && segmentSchemaMetadataMap.size() > 0) {
+        log.info("Inserting schema in db table.");
         List<SegmentSchemaMetadataPlus> schemaBatch = new ArrayList<>();
         for (Map.Entry<String, SegmentSchemaMetadata> entry : segmentSchemaMetadataMap.entrySet()) {
+          log.info("Schema metadata key [%s], value [%s]", entry.getKey(), entry.getValue());
           schemaBatch.add(new SegmentSchemaMetadataPlus(
-              entry.getKey().toString(),
+              entry.getKey(),
               entry.getValue(),
-              SchemaFingerprintGenerator.generateId(entry.getValue().getSchemaPayload())
+              schemaFingerprintGenerator.generateId(entry.getValue().getSchemaPayload())
           ));
         }
 
-        schemaPersistHelper.persistSchema(handle, schemaBatch);
+        schemaManager.persistSchema(handle, schemaBatch);
 
         // fetch schemaId
         Map<String, Long> fingerprintSchemaIdMap =
-            schemaPersistHelper.schemaIdFetchBatch(handle, schemaBatch.stream().map(SegmentSchemaMetadataPlus::getFingerprint).collect(Collectors.toSet()));
+            schemaManager.schemaIdFetchBatch(handle, schemaBatch.stream().map(SegmentSchemaMetadataPlus::getFingerprint).collect(Collectors.toSet()));
+
+        log.info("Fingerprint schema map is [%s]", fingerprintSchemaIdMap);
 
         for (SegmentSchemaMetadataPlus metadataPlus : schemaBatch) {
           if (!fingerprintSchemaIdMap.containsKey(metadataPlus.getFingerprint())) {
@@ -2178,9 +2189,45 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    * Callers of this method might need to retry as INSERT followed by SELECT
    * might fail due to race conditions.
    */
-  private Set<DataSegment> insertSegments(Handle handle, Set<DataSegment> segments)
+  private Set<DataSegment> insertSegments(
+      Handle handle, Set<DataSegment> segments,
+      Map<String, SegmentSchemaMetadata> segmentSchemaMetadataMap)
       throws IOException
   {
+    final Map<String, Pair<Long, Long>> segmentStats = new HashMap<>();
+    if (null != segmentSchemaMetadataMap && segmentSchemaMetadataMap.size() > 0) {
+      log.info("Inserting schema in db table.");
+      List<SegmentSchemaMetadataPlus> schemaBatch = new ArrayList<>();
+      for (Map.Entry<String, SegmentSchemaMetadata> entry : segmentSchemaMetadataMap.entrySet()) {
+        log.info("Schema metadata key [%s], value [%s]", entry.getKey(), entry.getValue());
+        schemaBatch.add(new SegmentSchemaMetadataPlus(
+            entry.getKey().toString(),
+            entry.getValue(),
+            schemaFingerprintGenerator.generateId(entry.getValue().getSchemaPayload())
+        ));
+      }
+
+      schemaManager.persistSchema(handle, schemaBatch);
+
+      // fetch schemaId
+      Map<String, Long> fingerprintSchemaIdMap =
+          schemaManager.schemaIdFetchBatch(handle, schemaBatch.stream().map(SegmentSchemaMetadataPlus::getFingerprint).collect(Collectors.toSet()));
+
+      log.info("Fingerprint schema map is [%s]", fingerprintSchemaIdMap);
+
+      for (SegmentSchemaMetadataPlus metadataPlus : schemaBatch) {
+        if (!fingerprintSchemaIdMap.containsKey(metadataPlus.getFingerprint())) {
+          // todo handle this
+          // this shouldn't happen
+        }
+        segmentStats.put(
+            metadataPlus.getSegmentId(),
+            Pair.of(
+                fingerprintSchemaIdMap.get(metadataPlus.getFingerprint()),
+                metadataPlus.getSegmentSchemaMetadata().getNumRows()));
+      }
+    }
+
     // Do not insert segment IDs which already exist
     Set<String> existingSegmentIds = segmentExistsBatch(handle, segments);
     final Set<DataSegment> segmentsToInsert = segments.stream().filter(
@@ -2197,8 +2244,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     for (List<DataSegment> partition : partitionedSegments) {
       for (DataSegment segment : partition) {
         final String now = DateTimes.nowUtc().toString();
+        String segmentId = segment.getId().toString();
         batch.add()
-             .bind("id", segment.getId().toString())
+             .bind("id", segmentId.toString())
              .bind("dataSource", segment.getDataSource())
              .bind("created_date", now)
              .bind("start", segment.getInterval().getStart().toString())
@@ -2207,7 +2255,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
              .bind("version", segment.getVersion())
              .bind("used", true)
              .bind("payload", jsonMapper.writeValueAsBytes(segment))
-             .bind("used_status_last_updated", now);
+             .bind("used_status_last_updated", now)
+             .bind("schema_id", segmentStats.get(segmentId).lhs)
+             .bind("num_rows", segmentStats.get(segmentId).rhs);;
       }
 
       final int[] affectedRows = batch.execute();

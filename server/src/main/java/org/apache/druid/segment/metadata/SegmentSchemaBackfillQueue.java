@@ -1,5 +1,6 @@
 package org.apache.druid.segment.metadata;
 
+import com.google.inject.Inject;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -10,7 +11,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.SchemaPayload;
 import org.apache.druid.segment.column.SegmentSchemaMetadata;
-import org.apache.druid.segment.metadata.SchemaPersistHelper.SegmentSchemaMetadataPlus;
+import org.apache.druid.segment.metadata.SchemaManager.SegmentSchemaMetadataPlus;
 import org.apache.druid.timeline.SegmentId;
 import org.skife.jdbi.v2.TransactionCallback;
 
@@ -32,21 +33,23 @@ public class SegmentSchemaBackfillQueue
   private final ScheduledExecutorService executor;
 
   private final SQLMetadataConnector connector;
-  private final SegmentSchemaCache cache;
-  private final SchemaPersistHelper schemaPersistHelper;
+  private final SegmentSchemaCache segmentSchemaCache;
+  private final SchemaManager schemaManager;
+  private final SchemaFingerprintGenerator schemaFingerprintGenerator;
 
+  @Inject
   public SegmentSchemaBackfillQueue(
-      SchemaPersistHelper schemaPersistHelper,
-      SQLMetadataConnector connector,
+      SchemaManager schemaManager,
       ScheduledExecutorFactory scheduledExecutorFactory,
-      SegmentSchemaCache cache
+      SegmentSchemaCache segmentSchemaCache,
+      SchemaFingerprintGenerator schemaFingerprintGenerator
   )
   {
-    this.schemaPersistHelper = schemaPersistHelper;
-    this.connector = connector;
+    this.schemaManager = schemaManager;
     this.executor = scheduledExecutorFactory.create(1, "SegmentSchemaBackfillQueue-%s");
-    this.cache = cache;
+    this.segmentSchemaCache = segmentSchemaCache;
     this.executionPeriod = TimeUnit.MINUTES.toMillis(1);
+    this.schemaFingerprintGenerator = schemaFingerprintGenerator;
   }
 
   @LifecycleStart
@@ -69,7 +72,12 @@ public class SegmentSchemaBackfillQueue
   {
     SchemaPayload schemaPayload = new SchemaPayload(rowSignature, aggregators);
     SegmentSchemaMetadata schemaMetadata = new SegmentSchemaMetadata(schemaPayload, numRows);
-    queue.add(new SegmentSchemaMetadataPlus(segmentId.toString(), schemaMetadata, SchemaFingerprintGenerator.generateId(schemaMetadata.getSchemaPayload())));
+    queue.add(new SegmentSchemaMetadataPlus(segmentId.toString(), schemaMetadata, schemaFingerprintGenerator.generateId(schemaMetadata.getSchemaPayload())));
+  }
+
+  private void add(SegmentSchemaMetadataPlus plus)
+  {
+    queue.add(new SegmentSchemaMetadataPlus(plus.getSegmentId(), plus.getSegmentSchemaMetadata(), plus.getFingerprint()));
   }
 
   public boolean isEnabled()
@@ -95,18 +103,17 @@ public class SegmentSchemaBackfillQueue
       }
     }
 
-    // finally add the published schema to different map in the schema cache
-   // try {
-      connector.retryTransaction((TransactionCallback<Void>) (handle, status) -> {
-        schemaPersistHelper.persistSchema(handle, polled);
-        schemaPersistHelper.updateSegments(handle, polled);
-        return null;
-      }, 1, 3);
-    //}
-    /**catch () {
-
+    try {
+      schemaManager.persistSchemaAndUpdateSegmentsTable(polled);
+    } catch (Exception e) {
+      // implies that the transaction failed
+      polled.forEach(this::add);
     } finally {
-
-    }**/
+      for (SegmentSchemaMetadataPlus plus : polled) {
+        // keep SegmentId in metadataPlus
+        //
+        // segmentSchemaCache.markInTransitSMQResultPublished(SegmentId.tryParse(plus.getSegmentId()));
+      }
+    }
   }
 }

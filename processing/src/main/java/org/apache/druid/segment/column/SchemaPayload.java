@@ -38,4 +38,13 @@ public class SchemaPayload
   {
     return aggregatorFactories;
   }
+
+  @Override
+  public String toString()
+  {
+    return "SchemaPayload{" +
+           "rowSignature=" + rowSignature +
+           ", aggregatorFactories=" + aggregatorFactories +
+           '}';
+  }
 }

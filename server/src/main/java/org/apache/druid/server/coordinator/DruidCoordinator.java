@@ -51,6 +51,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.segment.metadata.SchemaManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
 import org.apache.druid.server.coordinator.compact.CompactionSegmentSearchPolicy;
@@ -66,6 +67,7 @@ import org.apache.druid.server.coordinator.duty.KillDatasourceMetadata;
 import org.apache.druid.server.coordinator.duty.KillRules;
 import org.apache.druid.server.coordinator.duty.KillStalePendingSegments;
 import org.apache.druid.server.coordinator.duty.KillSupervisors;
+import org.apache.druid.server.coordinator.duty.KillUnreferencedSegmentSchemas;
 import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
 import org.apache.druid.server.coordinator.duty.MarkEternityTombstonesAsUnused;
 import org.apache.druid.server.coordinator.duty.MarkOvershadowedSegmentsAsUnused;
@@ -148,6 +150,7 @@ public class DruidCoordinator
   private final LookupCoordinatorManager lookupCoordinatorManager;
   private final DruidLeaderSelector coordLeaderSelector;
   private final CompactSegments compactSegments;
+  private final SchemaManager schemaManager;
 
   private volatile boolean started = false;
 
@@ -185,7 +188,8 @@ public class DruidCoordinator
       BalancerStrategyFactory balancerStrategyFactory,
       LookupCoordinatorManager lookupCoordinatorManager,
       @Coordinator DruidLeaderSelector coordLeaderSelector,
-      CompactionSegmentSearchPolicy compactionSegmentSearchPolicy
+      CompactionSegmentSearchPolicy compactionSegmentSearchPolicy,
+      SchemaManager schemaManager
   )
   {
     this.config = config;
@@ -205,6 +209,7 @@ public class DruidCoordinator
     this.coordLeaderSelector = coordLeaderSelector;
     this.compactSegments = initializeCompactSegmentsDuty(compactionSegmentSearchPolicy);
     this.loadQueueManager = loadQueueManager;
+    this.schemaManager = schemaManager;
   }
 
   public boolean isLeader()
@@ -552,7 +557,8 @@ public class DruidCoordinator
         new KillAuditLog(config, metadataManager.audit()),
         new KillRules(config, metadataManager.rules()),
         new KillDatasourceMetadata(config, metadataManager.indexer(), metadataManager.supervisors()),
-        new KillCompactionConfig(config, metadataManager.segments(), metadataManager.configs())
+        new KillCompactionConfig(config, metadataManager.segments(), metadataManager.configs()),
+        new KillUnreferencedSegmentSchemas(schemaManager)
     );
   }
 

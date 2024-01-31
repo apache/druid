@@ -3,16 +3,22 @@ package org.apache.druid.segment.metadata;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
+import com.google.inject.Inject;
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
+import org.apache.druid.metadata.SQLMetadataConnector;
 import org.apache.druid.segment.column.SchemaPayload;
 import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.PreparedBatch;
+import org.skife.jdbi.v2.TransactionCallback;
+import org.skife.jdbi.v2.Update;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -24,17 +30,46 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class SchemaPersistHelper
+public class SchemaManager
 {
-  private static final EmittingLogger log = new EmittingLogger(SchemaPersistHelper.class);
+  private static final EmittingLogger log = new EmittingLogger(SchemaManager.class);
   private static final int DB_ACTION_PARTITION_SIZE = 100;
   private final MetadataStorageTablesConfig dbTables;
   private final ObjectMapper jsonMapper;
+  private final SQLMetadataConnector connector;
 
-  public SchemaPersistHelper(MetadataStorageTablesConfig dbTables, ObjectMapper jsonMapper)
+  @Inject
+  public SchemaManager(
+      MetadataStorageTablesConfig dbTables,
+      ObjectMapper jsonMapper,
+      SQLMetadataConnector connector
+  )
   {
     this.dbTables = dbTables;
     this.jsonMapper = jsonMapper;
+    this.connector = connector;
+  }
+
+  public void cleanUpUnreferencedSchema()
+  {
+    connector.retryTransaction(
+        (handle, transactionStatus) -> {
+          Update deleteStatement = handle.createStatement(
+              StringUtils.format("DELETE FROM %1$s WHERE schema_id NOT IN (SELECT schema_id FROM %2$s)",
+                                 dbTables.getSegmentSchemaTable(), dbTables.getSegmentsTable()
+              ));
+          return deleteStatement.execute();
+        }, 1, 3
+    );
+  }
+
+  public void persistSchemaAndUpdateSegmentsTable(List<SegmentSchemaMetadataPlus> segmentSchemas)
+  {
+    connector.retryTransaction((TransactionCallback<Void>) (handle, status) -> {
+      persistSchema(handle, segmentSchemas);
+      updateSegments(handle, segmentSchemas);
+      return null;
+    }, 1, 3);
   }
 
   public void persistSchema(Handle handle, List<SegmentSchemaMetadataPlus> batch)
@@ -48,12 +83,12 @@ public class SchemaPersistHelper
 
     try {
       // find out all the unique schema insert them and get their id
-      // go and update the segment table with the schema id
+      // update the segment table with the schema id
 
       // Filter already existing schema
       Set<String> existingSchemas = schemaExistBatch(handle, schemaPayloadMap.keySet());
       log.info("Found already existing schema in the DB: %s", existingSchemas);
-      schemaPayloadMap.keySet().retainAll(existingSchemas);
+      schemaPayloadMap.keySet().removeAll(existingSchemas);
 
       final List<List<String>> partitionedFingerprints = Lists.partition(
           new ArrayList<>(schemaPayloadMap.keySet()),
@@ -114,7 +149,8 @@ public class SchemaPersistHelper
         schemaIdFetchBatch(handle, segmentsToUpdate.stream().map(SegmentSchemaMetadataPlus::getFingerprint).collect(Collectors.toSet()));
 
     // update schemaId and numRows in segments table
-    String updateSql = "";
+    String updateSql = StringUtils.format("UPDATE %s SET schema_id = :schema_id, num_rows = :num_rows where id = :id", dbTables.getSegmentsTable());
+
     PreparedBatch segmentUpdateBatch = handle.prepareBatch(updateSql);
 
     List<List<SegmentSchemaMetadataPlus>> partitionedSegmentIds = Lists.partition(
@@ -161,11 +197,14 @@ public class SchemaPersistHelper
 
     Set<String> existingSchemas = new HashSet<>();
     for (List<String> fingerprintList : partitionedFingerprints) {
+      String fingerprints = fingerprintList.stream()
+                 .map(fingerprint -> "'" + StringEscapeUtils.escapeSql(fingerprint) + "'")
+                 .collect(Collectors.joining(","));
       List<String> existIds =
           handle.createQuery(
                     StringUtils.format(
                         "SELECT fingerprint FROM %s WHERE fingerprint in (%s)",
-                        dbTables.getSegmentSchemaTable(), fingerprintList
+                        dbTables.getSegmentSchemaTable(), fingerprints
                     )
                 )
                 .mapTo(String.class)
@@ -184,14 +223,17 @@ public class SchemaPersistHelper
 
     Map<String, Long> fingerprintIdMap = new HashMap<>();
     for (List<String> fingerprintList : partitionedFingerprints) {
+      String fingerprints = fingerprintList.stream()
+                                           .map(fingerprint -> "'" + StringEscapeUtils.escapeSql(fingerprint) + "'")
+                                           .collect(Collectors.joining(","));
       Map<String, Long> partitionFingerprintIdMap =
           handle.createQuery(
                     StringUtils.format(
-                        "SELECT fingerprint, schema_id FROM %s WHERE fingerprint in (%s)",
-                        dbTables.getSegmentSchemaTable(), fingerprintList
+                        "SELECT fingerprint, id FROM %s WHERE fingerprint in (%s)",
+                        dbTables.getSegmentSchemaTable(), fingerprints
                     )
                 )
-                .map((index, r, ctx) -> Pair.of(r.getString("fingerprint"), r.getLong("schema_id")))
+                .map((index, r, ctx) -> Pair.of(r.getString("fingerprint"), r.getLong("id")))
                 .fold(
                     new HashMap<>(), (accumulator, rs, control, ctx) -> {
                       accumulator.put(rs.lhs, rs.rhs);
@@ -212,12 +254,15 @@ public class SchemaPersistHelper
 
     Set<String> updated = new HashSet<>();
     for (List<String> partition : partitionedSegmentIds) {
+      String ids = partition.stream()
+                            .map(id -> "'" + StringEscapeUtils.escapeSql(id) + "'")
+                            .collect(Collectors.joining(","));
       List<String> updatedSegmentIds =
           handle.createQuery(
                     StringUtils.format(
                         "SELECT id from %s where id in (%s) and schema_id != null",
                         dbTables.getSegmentsTable(),
-                        partition
+                        ids
                     ))
                 .mapTo(String.class)
                 .list();
@@ -253,6 +298,16 @@ public class SchemaPersistHelper
     public String getFingerprint()
     {
       return fingerprint;
+    }
+
+    @Override
+    public String toString()
+    {
+      return "SegmentSchemaMetadataPlus{" +
+             "segmentId='" + segmentId + '\'' +
+             ", fingerprint='" + fingerprint + '\'' +
+             ", segmentSchemaMetadata=" + segmentSchemaMetadata +
+             '}';
     }
   }
 }

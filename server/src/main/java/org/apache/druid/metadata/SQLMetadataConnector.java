@@ -328,7 +328,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  used BOOLEAN NOT NULL,\n"
                 + "  payload %2$s NOT NULL,\n"
                 + "  used_status_last_updated VARCHAR(255) NOT NULL,\n"
-                + "  schema_id VARCHAR(255),\n"
+                + "  schema_id BIGINT,\n"
                 + "  num_rows BIGINT,\n"
                 + "  PRIMARY KEY (id),\n"
                 + "  FOREIGN KEY(schema_id) REFERENCES %5$s(id)\n"
@@ -943,15 +943,15 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             StringUtils.format(
                 "CREATE TABLE %1$s (\n"
                 + "  id %2$s NOT NULL,\n"
-                + "  created_date VARCHAR(255) NOT NULL"
+                + "  created_date VARCHAR(255) NOT NULL,\n"
                 + "  fingerprint VARCHAR(255) NOT NULL,\n"
                 + "  payload %3$s NOT NULL,\n"
                 + "  PRIMARY KEY (id)\n"
                 + ")",
                 tableName, getSerialType(), getPayloadType()
             ),
-            StringUtils.format("CREATE INDEX idx_%1$s_key_time ON %1$s(fingerprint)", tableName),
-            StringUtils.format("CREATE INDEX idx_%1$s_key_time ON %1$s(created_date)", tableName)
+            StringUtils.format("CREATE INDEX idx_%1$s_fingerprint ON %1$s(fingerprint)", tableName),
+            StringUtils.format("CREATE INDEX idx_%1$s_created_date ON %1$s(created_date)", tableName)
         )
     );
   }

@@ -148,6 +148,12 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
     );
   }
 
+  @Override
+  public boolean additionalInitializationCondition() throws InterruptedException
+  {
+    return true;
+  }
+
   /**
    * Refreshes the set of segments in two steps:
    * <ul>

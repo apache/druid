@@ -1,9 +1,10 @@
 package org.apache.druid.server.coordinator.duty;
 
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
+import org.apache.druid.segment.metadata.SchemaManager;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.skife.jdbi.v2.TransactionCallback;
 import org.skife.jdbi.v2.Update;
 import javax.annotation.Nullable;
 
@@ -12,23 +13,19 @@ import javax.annotation.Nullable;
  */
 public class KillUnreferencedSegmentSchemas implements CoordinatorDuty
 {
-  private final SQLMetadataConnector connector;
+  private final SchemaManager schemaManager;
 
-  public KillUnreferencedSegmentSchemas(SQLMetadataConnector connector)
+  public KillUnreferencedSegmentSchemas(SchemaManager schemaManager)
   {
-    this.connector = connector;
+    this.schemaManager = schemaManager;
   }
 
   @Nullable
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    connector.retryTransaction((TransactionCallback<Integer>) (handle, transactionStatus) -> {
-      Update deleteStatement = handle.createStatement(
-          StringUtils.format("DELETE FROM %s WHERE schema_id NOT IN (SELECT schema_id FROM %s)"));
-      return deleteStatement.execute();
-      }, 1, 3
-    );
+    schemaManager.cleanUpUnreferencedSchema();
+    // todo should retrigger schema poll from db?
     return params;
   }
 }

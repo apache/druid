@@ -278,7 +278,8 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
                     if (isServerViewInitialized &&
                         !wasRecentFailure &&
                         (!segmentsNeedingRefresh.isEmpty() || !dataSourcesNeedingRebuild.isEmpty()) &&
-                        (refreshImmediately || nextRefresh < System.currentTimeMillis())) {
+                        (refreshImmediately || nextRefresh < System.currentTimeMillis()) &&
+                        additionalInitializationCondition()) {
                       // We need to do a refresh. Break out of the waiting loop.
                       break;
                     }
@@ -353,6 +354,8 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     }
     initialized.countDown();
   }
+
+  public abstract boolean additionalInitializationCondition() throws InterruptedException;
 
   @LifecycleStart
   public void start() throws InterruptedException

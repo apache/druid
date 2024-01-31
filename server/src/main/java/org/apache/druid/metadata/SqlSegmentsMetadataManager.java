@@ -1088,13 +1088,15 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
 
     Map<Long, SchemaPayload> schemaMap = new HashMap<>();
 
-    String schemaPollQuery = null;
+    String schemaPollQuery;
     if (latestSegmentSchemaPoll == null) {
       schemaPollQuery = String.format("SELECT id, payload, created_date FROM %s", getSegmentSchemaTable());
     } else {
-      schemaPollQuery = String.format("SELECT id, payload, created_date FROM %s where created_date > %1$s from %2$s", latestSegmentSchemaPoll, getSegmentSchemaTable());
+      schemaPollQuery = String.format("SELECT id, payload, created_date FROM %1$s where created_date > '%2$s'", getSegmentSchemaTable(), latestSegmentSchemaPoll.toString());
     }
     String finalSchemaPollQuery = schemaPollQuery;
+    final DateTime[] maxCreatedDate = {latestSegmentSchemaPoll};
+
     connector.inReadOnlyTransaction(new TransactionCallback<Object>()
     {
       @Override
@@ -1107,6 +1109,14 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
               public Void map(int index, ResultSet r, StatementContext ctx) throws SQLException
               {
                 try {
+                  DateTime createdDate = DateTimes.ISO_DATE_TIME.parse(r.getString("created_date"));
+
+                  log.info("Polled created date is [%s]", createdDate);
+
+                  if (maxCreatedDate[0] == null || createdDate.isAfter(maxCreatedDate[0])) {
+                    maxCreatedDate[0] = createdDate;
+                  }
+
                   schemaMap.put(
                       r.getLong("id"),
                       jsonMapper.readValue(r.getBytes("payload"), SchemaPayload.class)
@@ -1121,8 +1131,21 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       }
     });
 
+    log.info("Logging schema and segment stats.");
+
+    schemaMap.forEach((k, v) -> log.info("schema key %s value %s", k, v));
+    segmentStats.forEach((k, v) -> log.info("segment stats is %s value %s", k, v));
+
     schemaMap.forEach(segmentSchemaCache::addFinalizedSegmentSchema);
     segmentSchemaCache.updateFinalizedSegmentStatsReference(segmentStats);
+
+    if (latestSegmentSchemaPoll == null) {
+      log.info("Marking SegmentSchemaCache as initialized.");
+      segmentSchemaCache.setInitialized();
+    }
+    latestSegmentSchemaPoll = maxCreatedDate[0];
+
+    log.info("LatestSegmentSchemaPoll time is [%s]", latestSegmentSchemaPoll);
 
     Preconditions.checkNotNull(
         segments,

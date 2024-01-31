@@ -1538,7 +1538,7 @@ public class ControllerImpl implements Controller
   )
   {
     if (taskLockType.equals(TaskLockType.APPEND)) {
-      return SegmentTransactionalAppendAction.forSegments(segments);
+      return SegmentTransactionalAppendAction.forSegments(segments, Collections.emptyMap());
     } else if (taskLockType.equals(TaskLockType.SHARED)) {
       return SegmentTransactionalInsertAction.appendAction(segments, null, null, Collections.emptyMap());
     } else {

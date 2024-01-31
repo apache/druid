@@ -416,7 +416,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       case REPLACE:
         return SegmentTransactionalReplaceAction.create(segmentsToPublish);
       case APPEND:
-        return SegmentTransactionalAppendAction.forSegments(segmentsToPublish);
+        return SegmentTransactionalAppendAction.forSegments(segmentsToPublish, Collections.emptyMap());
       default:
         return SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToPublish);
     }

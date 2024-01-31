@@ -1,5 +1,8 @@
 package org.apache.druid.segment.metadata;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Inject;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
@@ -8,11 +11,21 @@ import java.security.NoSuchAlgorithmException;
 
 public class SchemaFingerprintGenerator
 {
-  public static String generateId(Object payload)
+
+  private final ObjectMapper objectMapper;
+
+  @Inject
+  public SchemaFingerprintGenerator(ObjectMapper objectMapper)
+  {
+    this.objectMapper = objectMapper;
+  }
+
+  public String generateId(Object payload)
   {
     try {
       MessageDigest digest = MessageDigest.getInstance("SHA-256");
-      byte[] serializedObj = serializeObject(payload);
+      byte[] serializedObj = objectMapper.writeValueAsBytes(payload);
+
       digest.update(serializedObj);
       byte[] hashBytes = digest.digest();
       return bytesToHex(hashBytes);
@@ -21,16 +34,7 @@ public class SchemaFingerprintGenerator
     }
   }
 
-  private static byte[] serializeObject(Object obj) throws IOException
-  {
-    ByteArrayOutputStream bos = new ByteArrayOutputStream();
-    ObjectOutputStream oos = new ObjectOutputStream(bos);
-    oos.writeObject(obj);
-    oos.close();
-    return bos.toByteArray();
-  }
-
-  private static String bytesToHex(byte[] bytes) {
+  private String bytesToHex(byte[] bytes) {
     StringBuilder hexString = new StringBuilder();
     for (byte b : bytes) {
       String hex = Integer.toHexString(0xff & b);

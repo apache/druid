@@ -302,7 +302,8 @@ public interface IndexerMetadataStorageCoordinator
    */
   SegmentPublishResult commitAppendSegments(
       Set<DataSegment> appendSegments,
-      Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock
+      Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
+      Map<String, SegmentSchemaMetadata> segmentSchemaMetadataMap
   );
 
   /**
@@ -317,7 +318,8 @@ public interface IndexerMetadataStorageCoordinator
       Set<DataSegment> appendSegments,
       Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
       DataSourceMetadata startMetadata,
-      DataSourceMetadata endMetadata
+      DataSourceMetadata endMetadata,
+      Map<String, SegmentSchemaMetadata> segmentSchemaMetadataMap
   );
 
   /**
