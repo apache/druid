@@ -99,6 +99,7 @@ export type IngestionComboType =
   | 'index_parallel:inline'
   | 'index_parallel:s3'
   | 'index_parallel:azure'
+  | 'index_parallel:delta'
   | 'index_parallel:google'
   | 'index_parallel:hdfs';
 
@@ -137,6 +138,7 @@ export function getIngestionComboType(
       switch (inputSource.type) {
         case 'local':
         case 'http':
+        case 'delta':
         case 'druid':
         case 'inline':
         case 's3':
@@ -170,6 +172,9 @@ export function getIngestionTitle(ingestionType: IngestionComboTypeWithExtra): s
 
     case 'index_parallel:azure':
       return 'Azure Data Lake';
+
+    case 'index_parallel:delta':
+      return 'Delta Lake';
 
     case 'index_parallel:google':
       return 'Google Cloud Storage';
@@ -522,7 +527,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     name: 'inputSource.type',
     label: 'Source type',
     type: 'string',
-    suggestions: ['local', 'http', 'inline', 's3', 'azure', 'google', 'hdfs'],
+    suggestions: ['local', 'http', 'inline', 'delta', 's3', 'azure', 'google', 'hdfs'],
     info: (
       <p>
         Druid connects to raw data through{' '}
@@ -955,6 +960,18 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
         inputSourceFilter,
       ];
 
+    case 'index_parallel:delta':
+      return [
+        inputSourceType,
+        {
+          name: 'inputSource.tablePath',
+          label: 'Delta table path',
+          type: 'string',
+          placeholder: '/path/to/deltaTable',
+          required: true,
+        },
+      ];
+
     case 'index_parallel:hdfs':
       return [
         inputSourceType,
@@ -1145,6 +1162,7 @@ export function getIoConfigTuningFormFields(
     case 'index_parallel:s3':
     case 'index_parallel:azure':
     case 'index_parallel:google':
+    case 'index_parallel:delta':
     case 'index_parallel:hdfs':
       return [
         {

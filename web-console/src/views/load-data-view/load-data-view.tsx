@@ -869,6 +869,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 {this.renderIngestionCard('index_parallel:s3')}
                 {this.renderIngestionCard('index_parallel:azure')}
                 {this.renderIngestionCard('index_parallel:google')}
+                {this.renderIngestionCard('index_parallel:delta')}
                 {this.renderIngestionCard('index_parallel:hdfs')}
                 {this.renderIngestionCard('index_parallel:druid')}
                 {this.renderIngestionCard('index_parallel:http')}
@@ -928,6 +929,14 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               Files must be in text, orc, or parquet format and must be accessible to all the Druid
               processes in the cluster.
             </p>
+          </>
+        );
+
+      case 'index_parallel:delta':
+        return (
+          <>
+            <p>Load data from Delta Lake.</p>
+            <p>Data must be stored in the Delta Lake format.</p>
           </>
         );
 
@@ -1019,6 +1028,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       case 'index_parallel:s3':
       case 'index_parallel:azure':
       case 'index_parallel:google':
+      case 'index_parallel:delta':
       case 'index_parallel:hdfs':
       case 'kafka':
       case 'kinesis':

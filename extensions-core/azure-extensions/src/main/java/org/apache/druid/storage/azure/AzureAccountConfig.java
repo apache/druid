@@ -22,7 +22,6 @@ package org.apache.druid.storage.azure;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.validation.constraints.Min;
-import javax.validation.constraints.NotNull;
 
 /**
  * Stores the configuration for an Azure account.
@@ -37,7 +36,6 @@ public class AzureAccountConfig
   private int maxTries = 3;
 
   @JsonProperty
-  @NotNull
   private String account;
 
   @JsonProperty
