@@ -226,6 +226,7 @@ public abstract class IngestHandler extends QueryHandler
       ExternalDestinationSqlIdentifier externalDestination = ((ExternalDestinationSqlIdentifier) tableIdentifier);
       StorageConnectorProvider storageConnectorProvider = externalDestination.toStorageConnectorProvider(handlerContext.jsonMapper());
       dataSource = new ExportDestination(storageConnectorProvider);
+      resourceActions.add(new ResourceAction(new Resource(externalDestination.getDestinationType(), ResourceType.EXTERNAL), Action.WRITE));
     } else if (tableIdentifier.names.size() == 1) {
       // Unqualified name.
       String tableName = Iterables.getOnlyElement(tableIdentifier.names);

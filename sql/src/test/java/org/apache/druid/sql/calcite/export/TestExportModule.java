@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.storage.StorageConnectorProvider;
 
 import java.util.List;
@@ -37,7 +38,8 @@ public class TestExportModule implements DruidModule
     return ImmutableList.of(
         new SimpleModule(StorageConnectorProvider.class.getSimpleName())
             .registerSubtypes(
-                new NamedType(TestExportStorageConnectorProvider.class, TestExportStorageConnector.TYPE_NAME)
+                new NamedType(TestExportStorageConnectorProvider.class, TestExportStorageConnector.TYPE_NAME),
+                new NamedType(TestExportStorageConnectorProvider.class, CalciteTests.FORBIDDEN_DESTINATION)
             )
     );
   }

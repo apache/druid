@@ -21,12 +21,16 @@ package org.apache.druid.sql.calcite;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.DruidInjectorBuilder;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.calcite.export.TestExportModule;
+import org.apache.druid.sql.calcite.export.TestExportStorageConnector;
 import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.destination.ExportDestination;
 import org.junit.Test;
 
@@ -43,10 +47,10 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   public void testReplaceIntoExtern()
   {
     testIngestionQuery()
-        .sql("REPLACE INTO EXTERN(testStorage()) "
-             + "AS CSV "
-             + "OVERWRITE ALL "
-             + "SELECT dim2 FROM foo")
+        .sql(StringUtils.format("REPLACE INTO EXTERN(%s()) "
+                                + "AS CSV "
+                                + "OVERWRITE ALL "
+                                + "SELECT dim2 FROM foo", TestExportStorageConnector.TYPE_NAME))
         .expectQuery(
             Druids.newScanQueryBuilder()
                   .dataSource(
@@ -58,7 +62,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
                   .legacy(false)
                   .build()
         )
-        .expectResources(dataSourceRead("foo"))
+        .expectResources(dataSourceRead("foo"), externalWrite(TestExportStorageConnector.TYPE_NAME))
         .expectTarget(ExportDestination.TYPE_KEY, RowSignature.builder().add("dim2", ColumnType.STRING).build())
         .verify();
   }
@@ -67,11 +71,11 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   public void testExportWithPartitionedBy()
   {
     testIngestionQuery()
-        .sql("REPLACE INTO EXTERN(testStorage()) "
-             + "AS CSV "
-             + "OVERWRITE ALL "
-             + "SELECT dim2 FROM foo "
-             + "PARTITIONED BY ALL")
+        .sql(StringUtils.format("REPLACE INTO EXTERN(%s()) "
+                                + "AS CSV "
+                                + "OVERWRITE ALL "
+                                + "SELECT dim2 FROM foo "
+                                + "PARTITIONED BY ALL", TestExportStorageConnector.TYPE_NAME))
         .expectValidationError(
             DruidException.class,
             "Export statements do not support a PARTITIONED BY or CLUSTERED BY clause."
@@ -83,9 +87,9 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   public void testInsertIntoExtern()
   {
     testIngestionQuery()
-        .sql("INSERT INTO EXTERN(testStorage()) "
-             + "AS CSV "
-             + "SELECT dim2 FROM foo")
+        .sql(StringUtils.format("INSERT INTO EXTERN(%s()) "
+                                + "AS CSV "
+                                + "SELECT dim2 FROM foo", TestExportStorageConnector.TYPE_NAME))
         .expectQuery(
             Druids.newScanQueryBuilder()
                   .dataSource(
@@ -97,7 +101,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
                   .legacy(false)
                   .build()
         )
-        .expectResources(dataSourceRead("foo"))
+        .expectResources(dataSourceRead("foo"), externalWrite(TestExportStorageConnector.TYPE_NAME))
         .expectTarget(ExportDestination.TYPE_KEY, RowSignature.builder().add("dim2", ColumnType.STRING).build())
         .verify();
   }
@@ -124,6 +128,15 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
             DruidException.class,
             "No storage connector found for storage connector type:[nonExistent]."
         )
+        .verify();
+  }
+
+  @Test
+  public void testWithForbiddenDestination()
+  {
+    testIngestionQuery()
+        .sql(StringUtils.format("insert into extern(%s()) as csv select  __time, dim1 from foo", CalciteTests.FORBIDDEN_DESTINATION))
+        .expectValidationError(ForbiddenException.class)
         .verify();
   }
 

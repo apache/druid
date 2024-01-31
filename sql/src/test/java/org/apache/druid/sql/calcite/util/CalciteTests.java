@@ -115,6 +115,7 @@ public class CalciteTests
   public static final String DATASOURCE5 = "lotsocolumns";
   public static final String BROADCAST_DATASOURCE = "broadcast";
   public static final String FORBIDDEN_DATASOURCE = "forbiddenDatasource";
+  public static final String FORBIDDEN_DESTINATION = "forbiddenDestination";
   public static final String SOME_DATASOURCE = "some_datasource";
   public static final String SOME_DATSOURCE_ESCAPED = "some\\_datasource";
   public static final String SOMEXDATASOURCE = "somexdatasource";
@@ -149,6 +150,12 @@ public class CalciteTests
             }
           case ResourceType.QUERY_CONTEXT:
             return Access.OK;
+          case ResourceType.EXTERNAL:
+            if (FORBIDDEN_DESTINATION.equals(resource.getName())) {
+              return new Access(false);
+            } else {
+              return Access.OK;
+            }
           default:
             return new Access(false);
         }
