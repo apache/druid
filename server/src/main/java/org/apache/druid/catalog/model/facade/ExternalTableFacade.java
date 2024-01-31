@@ -22,7 +22,6 @@ package org.apache.druid.catalog.model.facade;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.ResolvedTable;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -40,7 +39,7 @@ public class ExternalTableFacade extends TableFacade
     List<ColumnSpec> columns = spec().columns();
     RowSignature.Builder builder = RowSignature.builder();
     for (ColumnSpec col : columns) {
-      ColumnType druidType = Columns.SQL_TO_DRUID_TYPES.get(StringUtils.toUpperCase(col.sqlType()));
+      ColumnType druidType = Columns.druidType(col);
       if (druidType == null) {
         druidType = ColumnType.STRING;
       }

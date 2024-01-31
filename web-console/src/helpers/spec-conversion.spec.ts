@@ -193,6 +193,11 @@ describe('spec conversion', () => {
               fieldName: 'commentLength',
             },
             {
+              name: 'max_commentLength',
+              type: 'longMax',
+              fieldName: 'commentLength',
+            },
+            {
               name: 'sum_delta',
               type: 'longSum',
               fieldName: 'delta',

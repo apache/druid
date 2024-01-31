@@ -32,6 +32,7 @@ import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.MetadataConfigModule;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.guice.security.EscalatorModule;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.junit.Assert;
@@ -111,6 +112,7 @@ public class MySQLMetadataStorageModuleTest
     MySQLMetadataStorageModule module = new MySQLMetadataStorageModule();
     Injector injector = GuiceInjectors.makeStartupInjectorWithModules(
         ImmutableList.of(
+            new EscalatorModule(),
             new MetadataConfigModule(),
             new LifecycleModule(),
             module,

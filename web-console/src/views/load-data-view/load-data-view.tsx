@@ -859,6 +859,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 {this.renderIngestionCard('index_parallel:s3')}
                 {this.renderIngestionCard('index_parallel:azure')}
                 {this.renderIngestionCard('index_parallel:google')}
+                {this.renderIngestionCard('index_parallel:delta')}
                 {this.renderIngestionCard('index_parallel:hdfs')}
                 {this.renderIngestionCard('index_parallel:druid')}
                 {this.renderIngestionCard('index_parallel:http')}
@@ -918,6 +919,14 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               Files must be in text, orc, or parquet format and must be accessible to all the Druid
               processes in the cluster.
             </p>
+          </>
+        );
+
+      case 'index_parallel:delta':
+        return (
+          <>
+            <p>Load data from Delta Lake.</p>
+            <p>Data must be stored in the Delta Lake format.</p>
           </>
         );
 
@@ -1009,6 +1018,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       case 'index_parallel:s3':
       case 'index_parallel:azure':
       case 'index_parallel:google':
+      case 'index_parallel:delta':
       case 'index_parallel:hdfs':
       case 'kafka':
       case 'kinesis':
@@ -3134,8 +3144,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const { spec } = this.state;
     const parallel = deepGet(spec, 'spec.tuningConfig.maxNumConcurrentSubTasks') > 1;
 
-    const appendToExisting = spec.spec?.ioConfig.appendToExisting;
-
     return (
       <>
         <div className="main">
@@ -3161,6 +3169,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 name: 'spec.ioConfig.appendToExisting',
                 label: 'Append to existing',
                 type: 'boolean',
+                defined: s => !isStreamingSpec(s),
                 defaultValue: false,
                 // appendToExisting can only be set on 'dynamic' portioning.
                 // We chose to show it always and instead have a specific message, separate from this form, to notify the user of the issue.
@@ -3171,36 +3180,26 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   </>
                 ),
               },
-              {
-                name: 'context.taskLockType',
-                type: 'boolean',
-                label: `Allow concurrent ${
-                  appendToExisting ? 'append' : 'replace'
-                } tasks (experimental)`,
-                defaultValue: undefined,
-                valueAdjustment: v => {
-                  if (!v) return undefined;
-
-                  if (isStreamingSpec(spec)) {
-                    return 'APPEND';
-                  } else {
-                    return appendToExisting ? 'APPEND' : 'REPLACE';
-                  }
-                },
-                adjustValue: v => {
-                  if (v === undefined) return false;
-
-                  if (isStreamingSpec(spec)) {
-                    return v === 'APPEND';
-                  }
-
-                  return v === (appendToExisting ? 'APPEND' : 'REPLACE');
-                },
-                info: <p>Allows or forbids concurrent tasks.</p>,
-              },
             ]}
             model={spec}
             onChange={this.updateSpec}
+          />
+          <Switch
+            label="Allow concurrent tasks (experimental)"
+            checked={typeof deepGet(spec, 'context.taskLockType') === 'string'}
+            onChange={() => {
+              this.updateSpec(
+                typeof deepGet(spec, 'context.taskLockType') === 'string'
+                  ? deepDelete(spec, 'context.taskLockType')
+                  : deepSet(
+                      spec,
+                      'context.taskLockType',
+                      isStreamingSpec(spec) || deepGet(spec, 'spec.ioConfig.appendToExisting')
+                        ? 'APPEND'
+                        : 'REPLACE',
+                    ),
+              );
+            }}
           />
         </div>
         <div className="other">

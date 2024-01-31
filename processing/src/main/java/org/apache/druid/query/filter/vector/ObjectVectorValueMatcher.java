@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.filter.vector;
 
-import com.google.common.base.Predicate;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.filter.ConstantMatcherType;
@@ -69,7 +69,7 @@ public class ObjectVectorValueMatcher implements VectorValueMatcherFactory
   @Override
   public VectorValueMatcher makeMatcher(DruidPredicateFactory predicateFactory)
   {
-    final Predicate<Object> predicate = predicateFactory.makeObjectPredicate();
+    final DruidObjectPredicate<Object> predicate = predicateFactory.makeObjectPredicate();
 
     return new BaseVectorValueMatcher(selector)
     {
@@ -86,7 +86,7 @@ public class ObjectVectorValueMatcher implements VectorValueMatcherFactory
         for (int i = 0; i < mask.getSelectionSize(); i++) {
           final int rowNum = mask.getSelection()[i];
           final Object o = vector[rowNum];
-          if ((o == null && includeUnknown && predicateFactory.isNullInputUnknown()) || predicate.apply(o)) {
+          if (predicate.apply(o).matches(includeUnknown)) {
             selection[numRows++] = rowNum;
           }
         }

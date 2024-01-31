@@ -1419,6 +1419,15 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
+  public void testInsertWithOverwriteClause()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
+        .expectValidationError(DruidException.class, "An OVERWRITE clause is not allowed with INSERT statements. Use REPLACE statements if overwriting existing segments is required or remove the OVERWRITE clause.")
+        .verify();
+  }
+
+  @Test
   public void testInsertFromExternalProjectSort()
   {
     // INSERT with a particular column ordering.

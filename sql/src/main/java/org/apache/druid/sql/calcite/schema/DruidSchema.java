@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.schema;
 
 import org.apache.calcite.schema.Table;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 
 import javax.inject.Inject;
@@ -29,14 +30,17 @@ public class DruidSchema extends AbstractTableSchema
 {
   private final BrokerSegmentMetadataCache segmentMetadataCache;
   private final DruidSchemaManager druidSchemaManager;
+  private final CatalogResolver catalogResolver;
 
   @Inject
   public DruidSchema(
       final BrokerSegmentMetadataCache segmentMetadataCache,
-      final DruidSchemaManager druidSchemaManager
+      final DruidSchemaManager druidSchemaManager,
+      final CatalogResolver catalogResolver
   )
   {
     this.segmentMetadataCache = segmentMetadataCache;
+    this.catalogResolver = catalogResolver;
     if (druidSchemaManager != null && !(druidSchemaManager instanceof NoopDruidSchemaManager)) {
       this.druidSchemaManager = druidSchemaManager;
     } else {
@@ -56,7 +60,7 @@ public class DruidSchema extends AbstractTableSchema
       return druidSchemaManager.getTable(name);
     } else {
       DatasourceTable.PhysicalDatasourceMetadata dsMetadata = segmentMetadataCache.getDatasource(name);
-      return dsMetadata == null ? null : new DatasourceTable(dsMetadata);
+      return catalogResolver.resolveDatasource(name, dsMetadata);
     }
   }
 
@@ -66,7 +70,7 @@ public class DruidSchema extends AbstractTableSchema
     if (druidSchemaManager != null) {
       return druidSchemaManager.getTableNames();
     } else {
-      return segmentMetadataCache.getDatasourceNames();
+      return catalogResolver.getTableNames(segmentMetadataCache.getDatasourceNames());
     }
   }
 }

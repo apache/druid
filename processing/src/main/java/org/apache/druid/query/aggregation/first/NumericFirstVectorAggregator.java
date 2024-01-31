@@ -19,8 +19,10 @@
 
 package org.apache.druid.query.aggregation.first;
 
+import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.VectorAggregator;
+import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
@@ -33,14 +35,16 @@ public abstract class NumericFirstVectorAggregator implements VectorAggregator
 {
   static final int NULL_OFFSET = Long.BYTES;
   static final int VALUE_OFFSET = NULL_OFFSET + Byte.BYTES;
+  final VectorObjectSelector objectSelector;
   final VectorValueSelector valueSelector;
   private final boolean useDefault = NullHandling.replaceWithDefault();
   private final VectorValueSelector timeSelector;
   private long firstTime;
 
-  public NumericFirstVectorAggregator(VectorValueSelector timeSelector, VectorValueSelector valueSelector)
+  NumericFirstVectorAggregator(VectorValueSelector timeSelector, VectorValueSelector valueSelector, VectorObjectSelector objectSelector)
   {
     this.timeSelector = timeSelector;
+    this.objectSelector = objectSelector;
     this.valueSelector = valueSelector;
     firstTime = Long.MAX_VALUE;
   }
@@ -58,7 +62,16 @@ public abstract class NumericFirstVectorAggregator implements VectorAggregator
   {
     final long[] timeVector = timeSelector.getLongVector();
     final boolean[] nullTimeVector = timeSelector.getNullVector();
-    final boolean[] nullValueVector = valueSelector.getNullVector();
+
+    Object[] objectsWhichMightBeNumeric = null;
+    boolean[] nullValueVector = null;
+
+    if (objectSelector != null) {
+      objectsWhichMightBeNumeric = objectSelector.getObjectVector();
+    } else if (valueSelector != null) {
+      nullValueVector = valueSelector.getNullVector();
+    }
+
     firstTime = buf.getLong(position);
 
     // the time vector is already sorted
@@ -68,22 +81,39 @@ public abstract class NumericFirstVectorAggregator implements VectorAggregator
     // A possible optimization here is to have 2 paths one for earliest where
     // we can take advantage of the sorted nature of time
     // and the earliest_by where we have to go over all elements.
-    int index;
 
+    int index;
     for (int i = startRow; i < endRow; i++) {
+      if (nullTimeVector != null && nullTimeVector[i]) {
+        continue;
+      }
+
+      if (timeVector[i] >= firstTime) {
+        continue;
+      }
       index = i;
-      if (nullTimeVector != null && nullTimeVector[index]) {
-        continue;
-      }
-      final long earliestTime = timeVector[index];
-      if (earliestTime >= firstTime) {
-        continue;
-      }
-      firstTime = earliestTime;
-      if (useDefault || nullValueVector == null || !nullValueVector[index]) {
-        updateTimeWithValue(buf, position, firstTime, index);
+
+      if (objectsWhichMightBeNumeric != null) {
+        final SerializablePair<Long, Number> inPair = (SerializablePair<Long, Number>) objectsWhichMightBeNumeric[index];
+        if (inPair.lhs != null && inPair.lhs < firstTime) {
+          firstTime = inPair.lhs;
+          if (useDefault || inPair.rhs != null) {
+            updateTimeWithValue(buf, position, firstTime, index);
+          } else {
+            updateTimeWithNull(buf, position, firstTime);
+          }
+        }
       } else {
-        updateTimeWithNull(buf, position, firstTime);
+        final long earliestTime = timeVector[index];
+
+        if (earliestTime < firstTime) {
+          firstTime = earliestTime;
+          if (useDefault || nullValueVector == null || !nullValueVector[index]) {
+            updateTimeWithValue(buf, position, earliestTime, index);
+          } else {
+            updateTimeWithNull(buf, position, earliestTime);
+          }
+        }
       }
     }
   }
@@ -110,18 +140,39 @@ public abstract class NumericFirstVectorAggregator implements VectorAggregator
       int positionOffset
   )
   {
-    boolean[] nulls = useDefault ? null : valueSelector.getNullVector();
-    long[] timeVector = timeSelector.getLongVector();
+    final long[] timeVector = timeSelector.getLongVector();
+
+    Object[] objectsWhichMightBeNumeric = null;
+    boolean[] nulls = null;
+    if (objectSelector != null) {
+      objectsWhichMightBeNumeric = objectSelector.getObjectVector();
+    } else if (valueSelector != null) {
+      nulls = useDefault ? null : valueSelector.getNullVector();
+    }
 
     for (int i = 0; i < numRows; i++) {
       int position = positions[i] + positionOffset;
       int row = rows == null ? i : rows[i];
-      long firstTime = buf.getLong(position);
-      if (timeVector[row] < firstTime) {
-        if (useDefault || nulls == null || !nulls[row]) {
-          updateTimeWithValue(buf, position, timeVector[row], row);
-        } else {
-          updateTimeWithNull(buf, position, timeVector[row]);
+      firstTime = buf.getLong(position);
+
+      if (objectsWhichMightBeNumeric != null) {
+        final SerializablePair<Long, Number> inPair = (SerializablePair<Long, Number>) objectsWhichMightBeNumeric[row];
+        if (useDefault || inPair != null) {
+          if (inPair.lhs != null && inPair.lhs < firstTime) {
+            if (inPair.rhs != null) {
+              updateTimeWithValue(buf, position, inPair.lhs, row);
+            } else {
+              updateTimeWithNull(buf, position, inPair.lhs);
+            }
+          }
+        }
+      } else {
+        if (timeVector[row] < firstTime) {
+          if (useDefault || nulls == null || !nulls[row]) {
+            updateTimeWithValue(buf, position, timeVector[row], row);
+          } else {
+            updateTimeWithNull(buf, position, timeVector[row]);
+          }
         }
       }
     }
@@ -132,8 +183,8 @@ public abstract class NumericFirstVectorAggregator implements VectorAggregator
    *
    * @param buf         byte buffer storing the byte array representation of the aggregate
    * @param position    offset within the byte buffer at which the current aggregate value is stored
-   * @param time        the time to be updated in the buffer as the last time
-   * @param index       the index of the vectorized vector which is the last value
+   * @param time        the time to be updated in the buffer as the first time
+   * @param index       he index of the vectorized vector which is the first value
    */
   void updateTimeWithValue(ByteBuffer buf, int position, long time, int index)
   {

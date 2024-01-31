@@ -25,6 +25,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
@@ -46,6 +47,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentId;
@@ -686,7 +688,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
           }
 
           try (final CloseableIterator<DataSegment> iterator =
-                   queryTool.retrieveUnusedSegments(dataSourceName, intervals, null)) {
+                   queryTool.retrieveUnusedSegments(dataSourceName, intervals, null, null, null, null)) {
             while (iterator.hasNext()) {
               final DataSegment dataSegment = iterator.next();
               timeline.addSegments(Iterators.singletonIterator(dataSegment));
@@ -955,6 +957,52 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                    .transform(timeline -> timeline.findNonOvershadowedObjectsInInterval(interval, Partitions.ONLY_COMPLETE));
   }
 
+  /**
+   * Retrieves segments and their associated metadata for a given datasource that are marked unused and that are
+   * *fully contained by* an optionally specified interval. If the interval specified is null, this method will
+   * retrieve all unused segments.
+   *
+   * This call does not return any information about realtime segments.
+   *
+   * @param datasource      The name of the datasource
+   * @param interval        an optional interval to search over.
+   * @param limit           an optional maximum number of results to return. If none is specified, the results are
+   *                        not limited.
+   * @param lastSegmentId an optional last segment id from which to search for results. All segments returned are >
+   *                      this segment lexigraphically if sortOrder is null or  {@link SortOrder#ASC}, or < this
+   *                      segment lexigraphically if sortOrder is {@link SortOrder#DESC}. If none is specified, no
+   *                      such filter is used.
+   * @param sortOrder an optional order with which to return the matching segments by id, start time, end time. If
+   *                  none is specified, the order of the results is not guarenteed.
+
+   * Returns an iterable.
+   */
+  @Override
+  public Iterable<DataSegmentPlus> iterateAllUnusedSegmentsForDatasource(
+      final String datasource,
+      @Nullable final Interval interval,
+      @Nullable final Integer limit,
+      @Nullable final String lastSegmentId,
+      @Nullable final SortOrder sortOrder
+  )
+  {
+    return connector.inReadOnlyTransaction(
+        (handle, status) -> {
+          final SqlSegmentsMetadataQuery queryTool =
+              SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables.get(), jsonMapper);
+
+          final List<Interval> intervals =
+              interval == null
+                  ? Intervals.ONLY_ETERNITY
+                  : Collections.singletonList(interval);
+          try (final CloseableIterator<DataSegmentPlus> iterator =
+                   queryTool.retrieveUnusedSegmentsPlus(datasource, intervals, limit, lastSegmentId, sortOrder, null)) {
+            return ImmutableList.copyOf(iterator);
+          }
+        }
+    );
+  }
+
   @Override
   public Set<String> retrieveAllDataSourceNames()
   {
@@ -1092,7 +1140,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       @Nullable final DateTime minStartTime,
       final DateTime maxEndTime,
       final int limit,
-      DateTime maxUsedFlagLastUpdatedTime
+      DateTime maxUsedStatusLastUpdatedTime
   )
   {
     // Note that we handle the case where used_status_last_updated IS NULL here to allow smooth transition to Druid version that uses used_status_last_updated column
@@ -1116,7 +1164,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                 .setMaxRows(limit)
                 .bind("dataSource", dataSource)
                 .bind("end", maxEndTime.toString())
-                .bind("used_status_last_updated", maxUsedFlagLastUpdatedTime.toString())
+                .bind("used_status_last_updated", maxUsedStatusLastUpdatedTime.toString())
                 .map(
                     new BaseResultSetMapper<Interval>()
                     {
@@ -1135,7 +1183,6 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
             }
 
             Iterator<Interval> iter = sql.iterator();
-
 
             List<Interval> result = Lists.newArrayListWithCapacity(limit);
             for (int i = 0; i < limit && iter.hasNext(); i++) {

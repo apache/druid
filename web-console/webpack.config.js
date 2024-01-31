@@ -78,17 +78,21 @@ module.exports = env => {
       },
     },
     devServer: {
-      publicPath: '/public',
-      index: './index.html',
-      openPage: 'unified-console.html',
       host: '0.0.0.0',
       port: 18081,
+      hot: true,
+      static: {
+        directory: __dirname,
+      },
+      devMiddleware: {
+        publicPath: '/public',
+      },
+      open: 'unified-console.html',
       proxy: {
         '/status': proxyTarget,
         '/druid': proxyTarget,
         '/proxy': proxyTarget,
       },
-      transportMode: 'ws',
     },
     module: {
       rules: [

@@ -196,6 +196,13 @@ public class TestTimelineServerView implements TimelineServerView
     );
   }
 
+  public void invokeSegmentSchemasAnnouncedDummy()
+  {
+    for (Pair<Executor, TimelineCallback> timelineCallbackExec : timelineCallbackExecs) {
+      timelineCallbackExec.rhs.segmentSchemasAnnounced(null);
+    }
+  }
+
   private Pair<DruidServerMetadata, List<DataSegment>> getDummyServerAndSegmentsForType(ServerType serverType)
   {
     final DruidServerMetadata whichServer;

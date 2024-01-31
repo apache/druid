@@ -124,7 +124,6 @@ public interface NamedFunction
     }
   }
 
-
   /**
    * Helper method for implementors performing validation to check that the argument list is some expected size.
    *

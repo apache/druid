@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.query.lookup.namespace.CacheGenerator;
 import org.apache.druid.query.lookup.namespace.ExtractionNamespace;
 
@@ -46,6 +47,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 /**
  * Usage:
@@ -407,6 +409,14 @@ public final class CacheScheduler
     public Map<String, String> getCache()
     {
       return cacheHandler.getCache();
+    }
+
+    /**
+     * Returns a {@link LookupExtractor} view of the cached data.
+     */
+    public LookupExtractor asLookupExtractor(final boolean isOneToOne, final Supplier<byte[]> cacheKeySupplier)
+    {
+      return cacheHandler.asLookupExtractor(isOneToOne, cacheKeySupplier);
     }
 
     public String getVersion()

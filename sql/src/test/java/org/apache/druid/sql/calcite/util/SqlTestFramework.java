@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
+import com.google.inject.Module;
 import com.google.inject.Provides;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.ExpressionModule;
@@ -32,6 +33,7 @@ import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.initialization.ServiceInjectorBuilder;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -67,6 +69,8 @@ import org.apache.druid.timeline.DataSegment;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 
@@ -154,6 +158,11 @@ public class SqlTestFramework
         ObjectMapper objectMapper,
         Injector injector
     );
+
+    default CatalogResolver createCatalogResolver()
+    {
+      return CatalogResolver.NULL_RESOLVER;
+    }
 
     /**
      * Configure the JSON mapper.
@@ -362,6 +371,7 @@ public class SqlTestFramework
     private int minTopNThreshold = TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD;
     private int mergeBufferCount;
     private CatalogResolver catalogResolver = CatalogResolver.NULL_RESOLVER;
+    private List<Module> overrideModules = new ArrayList<>();
 
     public Builder(QueryComponentSupplier componentSupplier)
     {
@@ -383,6 +393,12 @@ public class SqlTestFramework
     public Builder catalogResolver(CatalogResolver catalogResolver)
     {
       this.catalogResolver = catalogResolver;
+      return this;
+    }
+
+    public Builder withOverrideModule(Module m)
+    {
+      this.overrideModules.add(m);
       return this;
     }
 
@@ -419,7 +435,8 @@ public class SqlTestFramework
           plannerConfig,
           viewManager,
           componentSupplier.createSchemaManager(),
-          framework.authorizerMapper
+          framework.authorizerMapper,
+          framework.builder.catalogResolver
       );
 
       this.plannerFactory = new PlannerFactory(
@@ -553,7 +570,7 @@ public class SqlTestFramework
     Injector startupInjector = new StartupInjectorBuilder()
         .withProperties(properties)
         .build();
-    DruidInjectorBuilder injectorBuilder = new CoreInjectorBuilder(startupInjector)
+    CoreInjectorBuilder injectorBuilder = (CoreInjectorBuilder) new CoreInjectorBuilder(startupInjector)
         // Ignore load scopes. This is a unit test, not a Druid node. If a
         // test pulls in a module, then pull in that module, even though we are
         // not the Druid node to which the module is scoped.
@@ -563,8 +580,13 @@ public class SqlTestFramework
         .addModule(new SqlAggregationModule())
         .addModule(new ExpressionModule())
         .addModule(new TestSetupModule(builder));
+
     builder.componentSupplier.configureGuice(injectorBuilder);
-    this.injector = injectorBuilder.build();
+
+    ServiceInjectorBuilder serviceInjector = new ServiceInjectorBuilder(injectorBuilder);
+    serviceInjector.addAll(builder.overrideModules);
+
+    this.injector = serviceInjector.build();
     this.engine = builder.componentSupplier.createEngine(queryLifecycleFactory(), queryJsonMapper(), injector);
     componentSupplier.configureJsonMapper(queryJsonMapper());
     componentSupplier.finalizeTestFramework(this);

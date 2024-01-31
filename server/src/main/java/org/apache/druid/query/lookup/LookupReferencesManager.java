@@ -668,7 +668,11 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
           e -> true,
           startRetries
       );
-      if (lookupExtractorFactoryContainer.getLookupExtractorFactory().isInitialized()) {
+      /*
+       if new container is initailized then add it to manager to start serving immediately.
+       if old container is null then it is fresh load, we can skip waiting for initialization and add the container to registry first. Esp for MSQ workers.
+       */
+      if (old == null || lookupExtractorFactoryContainer.getLookupExtractorFactory().isInitialized()) {
         old = lookupMap.put(lookupName, lookupExtractorFactoryContainer);
         LOG.debug("Loaded lookup [%s] with spec [%s].", lookupName, lookupExtractorFactoryContainer);
         manager.dropContainer(old, lookupName);

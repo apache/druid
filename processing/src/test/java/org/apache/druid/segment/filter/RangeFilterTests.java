@@ -875,6 +875,55 @@ public class RangeFilterTests
           ? ImmutableList.of("0", "3", "7")
           : ImmutableList.of("0")
       );
+
+      if (NullHandling.sqlCompatible() || canTestNumericNullsAsDefaultValues) {
+        // these fail in default value mode that cannot be tested as numeric default values becuase of type
+        // mismatch for subtract operation
+        assertFilterMatches(
+            new RangeFilter(
+                "vd0-add-sub",
+                ColumnType.DOUBLE,
+                0.0,
+                1.0,
+                false,
+                false,
+                null
+            ),
+            NullHandling.replaceWithDefault() && canTestNumericNullsAsDefaultValues
+            ? ImmutableList.of("0", "2", "7")
+            : ImmutableList.of("0")
+        );
+
+        assertFilterMatches(
+            new RangeFilter(
+                "vf0-add-sub",
+                ColumnType.FLOAT,
+                0.0,
+                1.0,
+                false,
+                false,
+                null
+            ),
+            NullHandling.replaceWithDefault() && canTestNumericNullsAsDefaultValues
+            ? ImmutableList.of("0", "4", "6")
+            : ImmutableList.of("0")
+        );
+
+        assertFilterMatches(
+            new RangeFilter(
+                "vl0-add-sub",
+                ColumnType.LONG,
+                0L,
+                1L,
+                false,
+                false,
+                null
+            ),
+            NullHandling.replaceWithDefault() && canTestNumericNullsAsDefaultValues
+            ? ImmutableList.of("0", "3", "7")
+            : ImmutableList.of("0")
+        );
+      }
     }
 
     @Test
@@ -1924,7 +1973,8 @@ public class RangeFilterTests
                     .withIgnoredFields(
                         "lower",
                         "upper",
-                        "cachedOptimizedFilter",
+                        "optimizedFilterIncludeUnknown",
+                        "optimizedFilterNoIncludeUnknown",
                         "stringPredicateSupplier",
                         "longPredicateSupplier",
                         "floatPredicateSupplier",
