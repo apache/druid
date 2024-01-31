@@ -207,7 +207,7 @@ public class AzureStorage
         );
         // We have to call forEach on the response because this is the only way azure batch will throw an exception on a operation failure.
         blobBatchClient.deleteBlobs(
-                blobUris,
+                chunkOfKeys,
                 DeleteSnapshotsOptionType.INCLUDE
         ).forEach(response ->
                 log.debug("Deleting blob with URL %s completed with status code %d%n",

@@ -37,6 +37,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -165,6 +166,40 @@ public class AzureStorageTest
     boolean deleteSuccessful = azureStorage.batchDeleteFiles(CONTAINER, ImmutableList.of(BLOB_NAME), null);
     Assert.assertEquals(captor.getValue().get(0), containerUrl + "/" + BLOB_NAME);
     Assert.assertFalse(deleteSuccessful);
+  }
+
+  @Test
+  public void testBatchDeleteFiles_emptyResponse_multipleResponses() throws BlobStorageException
+  {
+    String containerUrl = "https://storageaccount.blob.core.windows.net/container";
+    BlobBatchClient blobBatchClient = Mockito.mock(BlobBatchClient.class);
+
+    SettableSupplier<PagedResponse<BlobItem>> supplier = new SettableSupplier<>();
+    supplier.set(new TestPagedResponse<>(ImmutableList.of()));
+    PagedIterable<BlobItem> pagedIterable = new PagedIterable<>(supplier);
+
+    ArgumentCaptor<List<String>> captor = ArgumentCaptor.forClass(List.class);
+
+    Mockito.doReturn(containerUrl).when(blobContainerClient).getBlobContainerUrl();
+    Mockito.doReturn(blobContainerClient).when(blobServiceClient).createBlobContainerIfNotExists(CONTAINER);
+    Mockito.doReturn(blobServiceClient).when(azureClientFactory).getBlobServiceClient(null, STORAGE_ACCOUNT);
+    Mockito.doReturn(blobBatchClient).when(azureClientFactory).getBlobBatchClient(blobContainerClient);
+    Mockito.doReturn(pagedIterable).when(blobBatchClient).deleteBlobs(
+            captor.capture(), ArgumentMatchers.eq(DeleteSnapshotsOptionType.INCLUDE)
+    );
+
+
+    List<String> blobNameList = new ArrayList<>();
+    for (int i = 0; i <= 257; i++) {
+      blobNameList.add(BLOB_NAME + i);
+    }
+
+    boolean deleteSuccessful = azureStorage.batchDeleteFiles(CONTAINER, blobNameList, null);
+
+    List<List<String>> deletedValues = captor.getAllValues();
+    Assert.assertEquals(deletedValues.get(0).size(), 256);
+    Assert.assertEquals(deletedValues.get(1).size(), 2);
+    Assert.assertTrue(deleteSuccessful);
   }
 }
 
