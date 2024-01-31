@@ -330,7 +330,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                       icon={IconNames.STOPWATCH}
                       text="Wait until segments have loaded"
                       value={waitUntilSegmentsLoad}
-                      undefinedEffectiveValue /* ={true} */
+                      undefinedEffectiveValue={ingestMode}
                       onValueChange={v =>
                         changeQueryContext(changeWaitUntilSegmentsLoad(queryContext, v))
                       }

@@ -72,7 +72,7 @@ export type ExecutionDestination =
       numTotalRows?: number;
     }
   | { type: 'durableStorage'; numTotalRows?: number }
-  | { type: 'dataSource'; dataSource: string; numTotalRows?: number; loaded?: boolean };
+  | { type: 'dataSource'; dataSource: string; numTotalRows?: number };
 
 export interface ExecutionDestinationPage {
   id: number;
@@ -522,19 +522,6 @@ export class Execution {
     return new Execution(value);
   }
 
-  public markDestinationDatasourceLoaded(): Execution {
-    const { destination } = this;
-    if (destination?.type !== 'dataSource') return this;
-
-    return new Execution({
-      ...this.valueOf(),
-      destination: {
-        ...destination,
-        loaded: true,
-      },
-    });
-  }
-
   public isProcessingData(): boolean {
     const { status, stages } = this;
     return Boolean(
@@ -556,11 +543,11 @@ export class Execution {
 
     switch (segmentStatus?.state) {
       case 'INIT':
-        label = 'Waiting for segments loading to start...';
+        label = 'Waiting for segment loading to start...';
         break;
 
       case 'WAITING':
-        label = 'Waiting for segments loading to complete...';
+        label = 'Waiting for segment loading to complete...';
         break;
 
       case 'SUCCESS':
@@ -577,17 +564,6 @@ export class Execution {
     };
   }
 
-  public isFullyComplete(): boolean {
-    if (this.isWaitingForQuery()) return false;
-
-    const { status, destination } = this;
-    if (status === 'SUCCESS' && destination?.type === 'dataSource') {
-      return Boolean(destination.loaded);
-    }
-
-    return true;
-  }
-
   public getIngestDatasource(): string | undefined {
     const { destination } = this;
     if (destination?.type !== 'dataSource') return;
@@ -599,9 +575,7 @@ export class Execution {
   }
 
   public isSuccessfulInsert(): boolean {
-    return Boolean(
-      this.isFullyComplete() && this.getIngestDatasource() && this.status === 'SUCCESS',
-    );
+    return Boolean(this.status === 'SUCCESS' && this.getIngestDatasource());
   }
 
   public getErrorMessage(): string | undefined {
