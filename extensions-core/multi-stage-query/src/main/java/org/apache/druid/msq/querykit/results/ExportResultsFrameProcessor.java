@@ -36,6 +36,7 @@ import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.msq.counters.ChannelCounters;
+import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.util.SequenceUtils;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -62,14 +63,14 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
   final String exportFilePath;
 
   public ExportResultsFrameProcessor(
-      ReadableFrameChannel inputChannel,
-      ResultFormat exportFormat,
-      FrameReader frameReader,
-      StorageConnector storageConnector,
-      ObjectMapper jsonMapper,
-      int partitionNumber,
-      int workerNumber,
-      ChannelCounters channelCounter
+      final ReadableFrameChannel inputChannel,
+      final ResultFormat exportFormat,
+      final FrameReader frameReader,
+      final StorageConnector storageConnector,
+      final ObjectMapper jsonMapper,
+      final int partitionNumber,
+      final int workerNumber,
+      final ChannelCounters channelCounter
   )
   {
     this.inputChannel = inputChannel;
@@ -138,6 +139,9 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
               while (!cursor.isDone()) {
                 formatter.writeRowStart();
                 for (int j = 0; j < signature.size(); j++) {
+                  if (QueryKitUtils.PARTITION_BOOST_COLUMN.equals(signature.getColumnName(j))) {
+                    continue;
+                  }
                   formatter.writeRowField(signature.getColumnName(j), selectors.get(j).getObject());
                 }
                 channelCounter.incrementRowCount();

@@ -102,12 +102,12 @@ public class MSQExportTest extends MSQTestBase
   private List<Object[]> expectedFooFileContents()
   {
     return new ArrayList<>(ImmutableList.of(
-        new Object[]{0, "1", null},
-        new Object[]{1, "1", 10.1},
-        new Object[]{2, "1", 2},
-        new Object[]{3, "1", 1},
-        new Object[]{4, "1", "def"},
-        new Object[]{5, "1", "abc"}
+        new Object[]{"1", null},
+        new Object[]{"1", 10.1},
+        new Object[]{"1", 2},
+        new Object[]{"1", 1},
+        new Object[]{"1", "def"},
+        new Object[]{"1", "abc"}
     ));
   }
 
