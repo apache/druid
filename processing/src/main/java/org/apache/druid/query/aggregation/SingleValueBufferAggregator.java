@@ -30,9 +30,6 @@ import org.apache.druid.segment.column.TypeStrategies;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
-/**
- *
- */
 public class SingleValueBufferAggregator implements BufferAggregator
 {
   final ColumnValueSelector selector;
@@ -60,7 +57,7 @@ public class SingleValueBufferAggregator implements BufferAggregator
   public void aggregate(ByteBuffer buf, int position)
   {
     if (isAggregateInvoked) {
-      throw InvalidInput.exception("Single Value Aggregator would not be applied to more than one row");
+      throw InvalidInput.exception("Subquery expression returned more than one row");
     }
 
     int written = typeStrategy.write(

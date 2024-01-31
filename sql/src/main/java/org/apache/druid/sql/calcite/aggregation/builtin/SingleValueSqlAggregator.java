@@ -66,16 +66,6 @@ public class SingleValueSqlAggregator extends SimpleSqlAggregator
       final String fieldName
   )
   {
-    switch (aggregationType.getType()) {
-      case LONG:
-      case FLOAT:
-      case DOUBLE:
-      case STRING:
-        return new SingleValueAggregatorFactory(name, fieldName, aggregationType);
-      default:
-        // This error refers to the Druid type. But, we're in SQL validation.
-        // It should refer to the SQL type.
-        throw SimpleSqlAggregator.badTypeException(fieldName, "SINGLE_VALUE", aggregationType);
-    }
+    return new SingleValueAggregatorFactory(name, fieldName, aggregationType);
   }
 }

@@ -1301,7 +1301,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     cannotVectorize();
     testQueryThrows(
         "SELECT  count(*) FROM wikipedia where channel = (select channel from wikipedia order by __time desc LIMIT 2 OFFSET 6)",
-        exception -> exception.expectMessage("Single Value Aggregator would not be applied to more than one row")
+        exception -> exception.expectMessage("Subquery expression returned more than one row")
     );
   }
 

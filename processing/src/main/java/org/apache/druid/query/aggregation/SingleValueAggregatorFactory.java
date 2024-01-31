@@ -37,6 +37,14 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * This AggregatorFactory is meant to wrap the subquery used as an expression into a single value
+ * and is expected to throw an exception when the subquery results in more than one row
+ *
+ * <p>
+ * This consumes columnType as well along with name and fieldName to pass it on to underlying
+ * {@link SingleValueBufferAggregator} to work with different ColumnTypes
+ */
 @JsonTypeName("singleValue")
 public class SingleValueAggregatorFactory extends AggregatorFactory
 {

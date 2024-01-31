@@ -19,14 +19,13 @@
 
 package org.apache.druid.query.aggregation;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nullable;
 
-/**
- *
- */
+
 public class SingleValueAggregator implements Aggregator
 {
   final ColumnValueSelector selector;
@@ -34,7 +33,7 @@ public class SingleValueAggregator implements Aggregator
   @Nullable
   Object value;
 
-  private boolean isNullResult = false;
+  private boolean isNullResult = true;
 
   private boolean isAggregateInvoked = false;
 
@@ -47,9 +46,9 @@ public class SingleValueAggregator implements Aggregator
   public void aggregate()
   {
     if (isAggregateInvoked) {
-      throw InvalidInput.exception("Single Value Aggregator would not be applied to more than one row");
+      throw InvalidInput.exception("Subquery expression returned more than one row");
     }
-    boolean isNotNull = !selector.isNull();
+    boolean isNotNull = (selector.getObject() != null);
     if (isNotNull) {
       isNullResult = false;
       value = selector.getObject();
@@ -60,9 +59,6 @@ public class SingleValueAggregator implements Aggregator
   @Override
   public Object get()
   {
-    if (isNullResult) {
-      return null;
-    }
     return value;
   }
 
@@ -70,7 +66,7 @@ public class SingleValueAggregator implements Aggregator
   public float getFloat()
   {
     if (isNullResult) {
-      throw new IllegalStateException("Cannot return float for Null Value");
+      throw DruidException.defensive("Cannot return float for Null Value");
     }
     return (float) value;
   }
@@ -79,7 +75,7 @@ public class SingleValueAggregator implements Aggregator
   public long getLong()
   {
     if (isNullResult) {
-      throw new IllegalStateException("Cannot return long for Null Value");
+      throw DruidException.defensive("Cannot return long for Null Value");
     }
     return (long) value;
   }
@@ -88,7 +84,7 @@ public class SingleValueAggregator implements Aggregator
   public double getDouble()
   {
     if (isNullResult) {
-      throw new IllegalStateException("Cannot return double for Null Value");
+      throw DruidException.defensive("Cannot return double for Null Value");
     }
     return (double) value;
   }
@@ -109,8 +105,7 @@ public class SingleValueAggregator implements Aggregator
   public String toString()
   {
     return "SingleValueAggregator{" +
-           "valueSelector=" + selector +
-           ", value=" + value +
+           "selector=" + selector +
            '}';
   }
 }
