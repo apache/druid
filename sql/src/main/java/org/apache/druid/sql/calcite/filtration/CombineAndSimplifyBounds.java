@@ -41,6 +41,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class CombineAndSimplifyBounds extends BottomUpTransform
 {
@@ -154,6 +155,7 @@ public class CombineAndSimplifyBounds extends BottomUpTransform
               (c, existingType) -> ColumnType.leastRestrictiveType(existingType, range.getMatchValueType())
           );
         }
+
         final List<ObjectIntPair<RangeFilter>> filterList =
             ranges.computeIfAbsent(rangeRefKey, k -> new ArrayList<>());
         filterList.add(ObjectIntPair.of(range, childIndex));
@@ -198,18 +200,20 @@ public class CombineAndSimplifyBounds extends BottomUpTransform
             childrenToAdd.add(Bounds.toFilter(boundRefKey, range));
           }
         }
-      } else if (disjunction && rangeSet.asRanges().size() == 2) {
-        if (Range.all().equals(rangeSet.span())) {
-          // 2 ranges in disjunction - spanning ALL
-          // complementer must be a negated range
-          for (final ObjectIntPair<BoundDimFilter> boundAndChildIndex : filterList) {
-            childrenToRemove.add(boundAndChildIndex.rightInt());
-          }
-          RangeSet<BoundValue> newRange = RangeSets.intersectRanges(rangeSet.complement().asRanges());
-          childrenToAdd.add(new NotDimFilter(Bounds.toFilter(boundRefKey, newRange.span())));
+      } else if (disjunction && Range.all().equals(rangeSet.span())) {
+        // ranges in disjunction - spanning ALL
+        // complementer must be a negated set of ranges
+        for (final ObjectIntPair<BoundDimFilter> boundAndChildIndex : filterList) {
+          childrenToRemove.add(boundAndChildIndex.rightInt());
         }
+        Set<Range<BoundValue>> newRanges = rangeSet.complement().asRanges();
+        List<DimFilter> newFilters = new ArrayList<>();
+        for (Range<BoundValue> range : newRanges) {
+          BoundDimFilter filter = Bounds.toFilter(boundRefKey, range);
+          newFilters.add(filter);
+        }
+        childrenToAdd.add(new NotDimFilter(disjunction(newFilters)));
       }
-
     }
 
     // Consolidate groups of numeric ranges in "ranges", using the leastRestrictiveNumericTypes computed earlier.
@@ -269,18 +273,19 @@ public class CombineAndSimplifyBounds extends BottomUpTransform
             childrenToAdd.add(Ranges.toFilter(rangeRefKey, range));
           }
         }
-      } else {
-        if (disjunction && rangeSet.asRanges().size() == 2) {
-          if (Range.all().equals(rangeSet.span())) {
-            // 2 ranges in disjunction - spanning ALL
-            // complementer must be a negated range
-            for (final ObjectIntPair<RangeFilter> rangeAndChildIndex : filterList) {
-              childrenToRemove.add(rangeAndChildIndex.rightInt());
-            }
-            RangeSet<RangeValue> newRange = RangeSets.intersectRanges(rangeSet.complement().asRanges());
-            childrenToAdd.add(new NotDimFilter(Ranges.toFilter(rangeRefKey, newRange.span())));
-          }
+      } else if (disjunction && Range.all().equals(rangeSet.span())) {
+        // ranges in disjunction - spanning ALL
+        // complementer must be a negated set of ranges
+        for (final ObjectIntPair<RangeFilter> boundAndChildIndex : filterList) {
+          childrenToRemove.add(boundAndChildIndex.rightInt());
         }
+        Set<Range<RangeValue>> newRanges = rangeSet.complement().asRanges();
+        List<DimFilter> newFilters = new ArrayList<>();
+        for (Range<RangeValue> range : newRanges) {
+          RangeFilter filter = Ranges.toFilter(rangeRefKey, range);
+          newFilters.add(filter);
+        }
+        childrenToAdd.add(new NotDimFilter(disjunction(newFilters)));
       }
     }
 
@@ -336,6 +341,15 @@ public class CombineAndSimplifyBounds extends BottomUpTransform
     } else {
       return disjunction ? new OrDimFilter(newChildren) : new AndDimFilter(newChildren);
     }
+  }
+
+  private static DimFilter disjunction(List<DimFilter> operands)
+  {
+    Preconditions.checkArgument(operands.size() > 0, "invalid number of operands");
+    if (operands.size() == 1) {
+      return operands.get(0);
+    }
+    return new OrDimFilter(operands);
   }
 
   private static DimFilter negate(final DimFilter filter)
