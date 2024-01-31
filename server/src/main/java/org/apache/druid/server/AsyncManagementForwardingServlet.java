@@ -113,16 +113,22 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
       handleEnabledRequest(response);
       return;
     } else {
-      handleBadRequest(response, StringUtils.format("Unsupported proxy destination [%s]", request.getRequestURI()));
+      handleInvalidRequest(
+          response,
+          StringUtils.format("Unsupported proxy destination[%s]", request.getRequestURI()),
+          HttpServletResponse.SC_BAD_REQUEST
+      );
       return;
     }
 
     if (currentLeader == null) {
-      handleBadRequest(
+      handleInvalidRequest(
           response,
           StringUtils.format(
-              "Unable to determine destination for [%s]; is your coordinator/overlord running?", request.getRequestURI()
-          )
+              "Unable to determine destination[%s]; is your coordinator/overlord running?",
+              request.getRequestURI()
+          ),
+          HttpServletResponse.SC_SERVICE_UNAVAILABLE
       );
       return;
     }
@@ -185,11 +191,11 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
     super.onServerResponseHeaders(clientRequest, proxyResponse, serverResponse);
   }
 
-  private void handleBadRequest(HttpServletResponse response, String errorMessage) throws IOException
+  private void handleInvalidRequest(HttpServletResponse response, String errorMessage, int statusCode) throws IOException
   {
     if (!response.isCommitted()) {
       response.resetBuffer();
-      response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+      response.setStatus(statusCode);
       jsonMapper.writeValue(response.getOutputStream(), ImmutableMap.of("error", errorMessage));
     }
     response.flushBuffer();

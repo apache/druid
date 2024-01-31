@@ -778,6 +778,10 @@ APPROX_COUNT_DISTINCT_DS_THETA
 APPROX_QUANTILE_DS
 DS_QUANTILES_SKETCH
 APPROX_QUANTILE_FIXED_BUCKETS
+# Operators
+pivoted
+UNPIVOT
+unpivoted
 # File specific overrides
 100x
 _common
@@ -2374,6 +2378,14 @@ markUnused
 markUsed
 segmentId
 aggregateMultipleValues
+appRegistrationClientId
+appRegistrationClientSecret
+tenantId
+relativeError
+ddSketch
+DDSketch
+druid-ddsketch
+numBins
 
 - ../docs/development/extensions-contrib/spectator-histogram.md
 SpectatorHistogram
@@ -2383,10 +2395,8 @@ spectatorHistogramTimer
 spectatorHistogramDistribution
 percentileSpectatorHistogram
 percentilesSpectatorHistogram
-ddSketch
-DDSketch
-collapsingLowestDense
-relativeError
-numBins
+
+- ../docs/development/extensions-contrib/ddsketch-quantiles.md
 quantilesFromDDSketch
 quantileFromDDSketch
+collapsingLowestDense

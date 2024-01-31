@@ -23,6 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
+import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
@@ -126,11 +127,11 @@ public interface SegmentsMetadataManager
   );
 
   /**
-   * Returns an iterable to go over un-used segments for a given datasource over an optional interval.
-   * The order in which segments are iterated is from earliest start-time, with ties being broken with earliest end-time
-   * first. Note: the iteration may not be as trivially cheap as,
-   * for example, iteration over an ArrayList. Try (to some reasonable extent) to organize the code so that it
-   * iterates the returned iterable only once rather than several times.
+   * Returns an iterable to go over un-used segments and their associated metadata for a given datasource over an
+   * optional interval. The order in which segments are iterated is from earliest start-time, with ties being broken
+   * with earliest end-time first. Note: the iteration may not be as trivially cheap as for example, iteration over an
+   * ArrayList. Try (to some reasonable extent) to organize the code so that it iterates the returned iterable only
+   * once rather than several times.
    *
    * @param datasource    the name of the datasource.
    * @param interval      an optional interval to search over. If none is specified, {@link org.apache.druid.java.util.common.Intervals#ETERNITY}
@@ -141,7 +142,7 @@ public interface SegmentsMetadataManager
    * @param sortOrder     an optional order with which to return the matching segments by id, start time, end time.
    *                      If none is specified, the order of the results is not guarenteed.
    */
-  Iterable<DataSegment> iterateAllUnusedSegmentsForDatasource(
+  Iterable<DataSegmentPlus> iterateAllUnusedSegmentsForDatasource(
       String datasource,
       @Nullable Interval interval,
       @Nullable Integer limit,
