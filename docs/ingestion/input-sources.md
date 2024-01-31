@@ -932,7 +932,7 @@ The following is an example of a Combining input source spec:
 ## Iceberg input source
 
 :::info
-You need to include the [`druid-iceberg-extensions`](../development/extensions-contrib/iceberg.md) as an extension to use the Iceberg input source.
+To use the Iceberg input source, load the extension [`druid-iceberg-extensions`](../development/extensions-contrib/iceberg.md).
 :::
 
 You use the Iceberg input source to read data stored in the Iceberg table format. For a given table, the input source scans up to the latest Iceberg snapshot from the configured Hive catalog. Druid ingests the underlying live data files using the existing input source formats.
@@ -1124,7 +1124,7 @@ This input source provides the following filters: `and`, `equals`, `interval`, a
 ## Delta Lake input source
 
 :::info
-You need to include the [`druid-deltalake-extensions`](../development/extensions-contrib/delta-lake.md) as an extension to use the Delta Lake input source.
+To use the Delta Lake input source, load the extension [`druid-deltalake-extensions`](../development/extensions-contrib/delta-lake.md).
 :::
 
 You can use the Delta input source to read data stored in a Delta Lake table. For a given table, the input source scans

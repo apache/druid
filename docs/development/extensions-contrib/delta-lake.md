@@ -22,10 +22,11 @@ title: "Delta Lake extension"
   ~ under the License.
   -->
 
-## Delta Lake Ingest extension
+## Delta Lake extension
 
 
-Delta Lake is an open source storage layer that brings reliability to data lakes. [DeltaLakeInputSource](../../ingestion/input-sources.md#delta-lake-input-source) lets
+Delta Lake is an open source storage framework that enables building a
+Lakehouse architecture with various compute engines. [DeltaLakeInputSource](../../ingestion/input-sources.md#delta-lake-input-source) lets
 you ingest data stored in a Delta Lake table into Apache Druid. To use the Delta Lake extension, add the `druid-deltalake-extensions` to the list of loaded extensions.
 See [Loading extensions](../../configuration/extensions.md#loading-extensions) for more information.
 
@@ -39,5 +40,5 @@ Older versions are unsupported, so consider upgrading to Delta Lake 3.0.x or hig
 
 ## Known limitations
 
-- This extension only reads from the latest Delta table snapshot as the kernel API only supports that.
-- Column filtering isn't supported yet. So the extension will read all the columns in the configured table.
+- This extension relies on the Delta Kernel API and can only read from the latest Delta table snapshot.
+- Column filtering isn't supported. The extension reads all columns in the configured table.
