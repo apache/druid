@@ -24,15 +24,20 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.BitmapResultFactory;
+import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.FilterBundle;
+import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.NumericColumn;
@@ -57,7 +62,9 @@ public class QueryableIndexCursorSequenceBuilder
   private final QueryableIndex index;
   private final Interval interval;
   private final VirtualColumns virtualColumns;
+  @Nullable
   private final Filter filter;
+  @Nullable
   private final QueryMetrics<? extends Query> metrics;
   private final long minDataTimestamp;
   private final long maxDataTimestamp;
@@ -99,22 +106,24 @@ public class QueryableIndexCursorSequenceBuilder
         columnCache
     );
 
-    final FilterAnalysis filterAnalysis = FilterAnalysis.analyzeFilter(
-        filter,
+    final int numRows = index.getNumRows();
+    final BitmapFactory bitmapFactory = bitmapIndexSelector.getBitmapFactory();
+    final BitmapResultFactory<?> bitmapResultFactory = metrics != null
+                                                       ? metrics.makeBitmapResultFactory(bitmapFactory)
+                                                       : new DefaultBitmapResultFactory(bitmapFactory);
+    FilterBundle filterBundle = filter == null ? null : filter.forCursor(
         bitmapIndexSelector,
-        metrics,
-        index.getNumRows()
+        bitmapResultFactory,
+        numRows,
+        numRows,
+        false,
+        true
     );
 
-    final ImmutableBitmap filterBitmap = filterAnalysis.getPreFilterBitmap();
-    final Filter postFilter = filterAnalysis.getPostFilter();
-
-    if (filterBitmap == null) {
-      baseOffset = descending
-                   ? new SimpleDescendingOffset(index.getNumRows())
-                   : new SimpleAscendingOffset(index.getNumRows());
+    if (filterBundle == null || filterBundle.getIndex() == null) {
+      baseOffset = descending ? new SimpleDescendingOffset(numRows) : new SimpleAscendingOffset(numRows);
     } else {
-      baseOffset = BitmapOffset.of(filterBitmap, descending, index.getNumRows());
+      baseOffset = BitmapOffset.of(filterBundle.getIndex(), descending, index.getNumRows());
     }
 
     final NumericColumn timestamps = (NumericColumn) columnCache.getColumn(ColumnHolder.TIME_COLUMN_NAME);
@@ -175,20 +184,18 @@ public class QueryableIndexCursorSequenceBuilder
                     columnCache
                 );
                 final DateTime myBucket = gran.toDateTime(inputInterval.getStartMillis());
-
-                if (postFilter == null) {
+                final ValueMatcher matcher = filterBundle == null ? null : filterBundle.valueMatcher(columnSelectorFactory);
+                if (matcher == null) {
                   return new QueryableIndexCursor(baseCursorOffset, columnSelectorFactory, myBucket);
                 } else {
                   FilteredOffset filteredOffset = new FilteredOffset(
                       baseCursorOffset,
-                      columnSelectorFactory,
                       descending,
-                      postFilter,
-                      bitmapIndexSelector
+                      filterBundle.getPartialIndex(),
+                      matcher
                   );
                   return new QueryableIndexCursor(filteredOffset, columnSelectorFactory, myBucket);
                 }
-
               }
             }
         ),
@@ -210,15 +217,19 @@ public class QueryableIndexCursorSequenceBuilder
         columnCache
     );
 
-    final FilterAnalysis filterAnalysis = FilterAnalysis.analyzeFilter(
-        filter,
+    final int numRows = index.getNumRows();
+    final BitmapFactory bitmapFactory = bitmapIndexSelector.getBitmapFactory();
+    final BitmapResultFactory<?> bitmapResultFactory = metrics != null
+                                                       ? metrics.makeBitmapResultFactory(bitmapFactory)
+                                                       : new DefaultBitmapResultFactory(bitmapFactory);
+    FilterBundle filterBundle = filter == null ? null : filter.forCursor(
         bitmapIndexSelector,
-        metrics,
-        index.getNumRows()
+        bitmapResultFactory,
+        numRows,
+        numRows,
+        false,
+        false
     );
-
-    final ImmutableBitmap filterBitmap = filterAnalysis.getPreFilterBitmap();
-    final Filter postFilter = filterAnalysis.getPostFilter();
 
 
     NumericColumn timestamps = null;
@@ -245,22 +256,24 @@ public class QueryableIndexCursorSequenceBuilder
     }
 
     final VectorOffset baseOffset =
-        filterBitmap == null
+        filterBundle == null || filterBundle.getIndex() == null
         ? new NoFilterVectorOffset(vectorSize, startOffset, endOffset)
-        : new BitmapVectorOffset(vectorSize, filterBitmap, startOffset, endOffset);
+        : new BitmapVectorOffset(vectorSize, filterBundle.getIndex(), startOffset, endOffset);
 
     // baseColumnSelectorFactory using baseOffset is the column selector for filtering.
     final VectorColumnSelectorFactory baseColumnSelectorFactory = makeVectorColumnSelectorFactoryForOffset(
         columnCache,
         baseOffset
     );
-    if (postFilter == null) {
+    final VectorValueMatcher vectorValueMatcher = filterBundle == null
+                                                  ? null
+                                                  : filterBundle.vectorMatcher(baseColumnSelectorFactory);
+    if (vectorValueMatcher == null) {
       return new QueryableIndexVectorCursor(baseColumnSelectorFactory, baseOffset, vectorSize, closer);
     } else {
       final VectorOffset filteredOffset = FilteredVectorOffset.create(
           baseOffset,
-          baseColumnSelectorFactory,
-          postFilter
+          vectorValueMatcher
       );
 
       // Now create the cursor and column selector that will be returned to the caller.

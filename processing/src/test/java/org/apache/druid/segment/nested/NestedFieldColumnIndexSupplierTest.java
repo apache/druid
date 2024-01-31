@@ -67,20 +67,6 @@ import java.util.TreeSet;
 public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingTest
 {
   private static final int ROW_COUNT = 10;
-  static final ColumnConfig ALWAYS_USE_INDEXES = new ColumnConfig()
-  {
-    @Override
-    public double skipValueRangeIndexScale()
-    {
-      return 1.0;
-    }
-
-    @Override
-    public double skipValuePredicateIndexScale()
-    {
-      return 1.0;
-    }
-  };
   BitmapSerdeFactory roaringFactory = RoaringBitmapSerdeFactory.getInstance();
   BitmapResultFactory<ImmutableBitmap> bitmapResultFactory = new DefaultBitmapResultFactory(
       roaringFactory.getBitmapFactory()
@@ -1317,7 +1303,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
                                               .getByteValue()
         ),
         roaringFactory.getBitmapFactory(),
-        ALWAYS_USE_INDEXES,
+        ColumnConfig.SELECTION_SIZE,
         bitmaps,
         dictionarySupplier,
         stringIndexed,
@@ -1325,8 +1311,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         doubleIndexed,
         globalArrays,
         null,
-        null,
-        ROW_COUNT
+        null
     );
 
     StringValueSetIndexes valueSetIndex = indexSupplier.as(StringValueSetIndexes.class);
@@ -1359,12 +1344,6 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     {
       @Override
       public double skipValueRangeIndexScale()
-      {
-        return 0.2;
-      }
-
-      @Override
-      public double skipValuePredicateIndexScale()
       {
         return 0.2;
       }
@@ -1452,7 +1431,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
 
   private NestedFieldColumnIndexSupplier<?> makeSingleTypeStringSupplier() throws IOException
   {
-    return makeSingleTypeStringSupplier(ALWAYS_USE_INDEXES);
+    return makeSingleTypeStringSupplier(ColumnConfig.SELECTION_SIZE);
   }
 
   private NestedFieldColumnIndexSupplier<?> makeSingleTypeStringSupplier(ColumnConfig columnConfig) throws IOException
@@ -1526,14 +1505,13 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         globalDoubles,
         globalArrays,
         null,
-        null,
-        ROW_COUNT
+        null
     );
   }
 
   private NestedFieldColumnIndexSupplier<?> makeSingleTypeStringWithNullsSupplier() throws IOException
   {
-    return makeSingleTypeStringWithNullsSupplier(ALWAYS_USE_INDEXES);
+    return makeSingleTypeStringWithNullsSupplier(ColumnConfig.SELECTION_SIZE);
   }
 
   private NestedFieldColumnIndexSupplier<?> makeSingleTypeStringWithNullsSupplier(ColumnConfig columnConfig)
@@ -1611,14 +1589,13 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         globalDoubles,
         globalArrays,
         null,
-        null,
-        ROW_COUNT
+        null
     );
   }
 
   private NestedFieldColumnIndexSupplier<?> makeSingleTypeLongSupplier() throws IOException
   {
-    return makeSingleTypeLongSupplier(ALWAYS_USE_INDEXES);
+    return makeSingleTypeLongSupplier(ColumnConfig.SELECTION_SIZE);
   }
 
   private NestedFieldColumnIndexSupplier<?> makeSingleTypeLongSupplier(ColumnConfig columnConfig) throws IOException
@@ -1692,14 +1669,13 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         globalDoubles,
         globalArrays,
         null,
-        null,
-        ROW_COUNT
+        null
     );
   }
 
   private NestedFieldColumnIndexSupplier<?> makeSingleTypeLongSupplierWithNull() throws IOException
   {
-    return makeSingleTypeLongSupplierWithNull(ALWAYS_USE_INDEXES);
+    return makeSingleTypeLongSupplierWithNull(ColumnConfig.SELECTION_SIZE);
   }
 
   private NestedFieldColumnIndexSupplier<?> makeSingleTypeLongSupplierWithNull(ColumnConfig columnConfig)
@@ -1778,14 +1754,13 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         globalDoubles,
         globalArrays,
         null,
-        null,
-        ROW_COUNT
+        null
     );
   }
 
   private NestedFieldColumnIndexSupplier<?> makeSingleTypeDoubleSupplier() throws IOException
   {
-    return makeSingleTypeDoubleSupplier(ALWAYS_USE_INDEXES);
+    return makeSingleTypeDoubleSupplier(ColumnConfig.SELECTION_SIZE);
   }
 
   private NestedFieldColumnIndexSupplier<?> makeSingleTypeDoubleSupplier(ColumnConfig columnConfig) throws IOException
@@ -1859,14 +1834,13 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         globalDoubles,
         globalArrays,
         null,
-        null,
-        ROW_COUNT
+        null
     );
   }
 
   private NestedFieldColumnIndexSupplier<?> makeSingleTypeDoubleSupplierWithNull() throws IOException
   {
-    return makeSingleTypeDoubleSupplierWithNull(ALWAYS_USE_INDEXES);
+    return makeSingleTypeDoubleSupplierWithNull(ColumnConfig.SELECTION_SIZE);
   }
 
   private NestedFieldColumnIndexSupplier<?> makeSingleTypeDoubleSupplierWithNull(ColumnConfig columnConfig)
@@ -1945,14 +1919,13 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         globalDoubles,
         globalArrays,
         null,
-        null,
-        ROW_COUNT
+        null
     );
   }
 
   private NestedFieldColumnIndexSupplier<?> makeVariantSupplierWithNull() throws IOException
   {
-    return makeVariantSupplierWithNull(ALWAYS_USE_INDEXES);
+    return makeVariantSupplierWithNull(ColumnConfig.SELECTION_SIZE);
   }
 
   private NestedFieldColumnIndexSupplier<?> makeVariantSupplierWithNull(ColumnConfig columnConfig) throws IOException
@@ -2041,8 +2014,7 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
         globalDoubles,
         globalArrays,
         null,
-        null,
-        ROW_COUNT
+        null
     );
   }
 

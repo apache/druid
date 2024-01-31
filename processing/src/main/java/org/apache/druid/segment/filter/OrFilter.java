@@ -22,15 +22,13 @@ package org.apache.druid.segment.filter;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
-import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.BitmapResultFactory;
-import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.filter.BooleanFilter;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.Filter;
-import org.apache.druid.query.filter.RowOffsetMatcherFactory;
+import org.apache.druid.query.filter.FilterBundle;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.vector.BaseVectorValueMatcher;
 import org.apache.druid.query.filter.vector.ReadableVectorMatch;
@@ -50,6 +48,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 
 /**
  * Logical OR filter operation
@@ -69,6 +68,106 @@ public class OrFilter implements BooleanFilter
   public OrFilter(List<Filter> filters)
   {
     this(new LinkedHashSet<>(filters));
+  }
+
+  @Override
+  public <T> FilterBundle forCursor(
+      ColumnIndexSelector columnIndexSelector,
+      BitmapResultFactory<T> bitmapResultFactory,
+      int selectionRowCount,
+      int totalRowCount,
+      boolean includeUnknown,
+      boolean allowPartialIndex
+  )
+  {
+    // todo (clint): if we drop all the index stuff from FilteredOffset, we can delete this override
+    //  since the default implementation will be sufficient...
+    final List<T> indexes = new ArrayList<>();
+    final List<Function<ColumnSelectorFactory, ValueMatcher>> matcherFns = new ArrayList<>();
+    final List<Function<VectorColumnSelectorFactory, VectorValueMatcher>> vectorMatcherFns = new ArrayList<>();
+
+    for (Filter subfilter : filters) {
+      boolean needMatcher = true;
+      final BitmapColumnIndex index = subfilter.getBitmapColumnIndex(columnIndexSelector);
+      if (index != null) {
+        final T bitmapResult = index.computeBitmapResult(
+            bitmapResultFactory,
+            totalRowCount,
+            totalRowCount,
+            includeUnknown
+        );
+        if (bitmapResult != null) {
+          indexes.add(bitmapResult);
+          needMatcher = !index.getIndexCapabilities().isExact();
+        } else if (!allowPartialIndex) {
+          break;
+        }
+      } else if (!allowPartialIndex) {
+        break;
+      }
+
+      if (needMatcher) {
+        matcherFns.add(subfilter::makeMatcher);
+        vectorMatcherFns.add(subfilter::makeVectorMatcher);
+      }
+    }
+
+    final ImmutableBitmap index;
+    final ImmutableBitmap partialIndex;
+    if (indexes.size() == filters.size()) {
+      // all or nothing
+      index = bitmapResultFactory.toImmutableBitmap(bitmapResultFactory.union(indexes));
+      partialIndex = null;
+    } else {
+      index = null;
+      if (allowPartialIndex) {
+        if (indexes.isEmpty()) {
+          partialIndex = null;
+        } else if (indexes.size() == 1) {
+          partialIndex = bitmapResultFactory.toImmutableBitmap(indexes.get(0));
+        } else {
+          partialIndex = bitmapResultFactory.toImmutableBitmap(bitmapResultFactory.union(indexes));
+        }
+      } else {
+        partialIndex = null;
+        matcherFns.clear();
+        vectorMatcherFns.clear();
+        // need to convert to all matchers
+        for (Filter subfilter : filters) {
+          matcherFns.add(subfilter::makeMatcher);
+          vectorMatcherFns.add(subfilter::makeVectorMatcher);
+        }
+      }
+    }
+
+    final Function<ColumnSelectorFactory, ValueMatcher> matcherFunction;
+    final Function<VectorColumnSelectorFactory, VectorValueMatcher> vectorMatcherFunction;
+    if (!matcherFns.isEmpty()) {
+      matcherFunction = selectorFactory -> {
+        final ValueMatcher[] matchers = new ValueMatcher[matcherFns.size()];
+        for (int i = 0; i < matcherFns.size(); i++) {
+          matchers[i] = matcherFns.get(i).apply(selectorFactory);
+        }
+        return makeMatcher(matchers);
+      };
+      vectorMatcherFunction = selectorFactory -> {
+        final VectorValueMatcher[] vectorMatchers = new VectorValueMatcher[vectorMatcherFns.size()];
+        for (int i = 0; i < vectorMatcherFns.size(); i++) {
+          vectorMatchers[i] = vectorMatcherFns.get(i).apply(selectorFactory);
+        }
+        return makeVectorMatcher(vectorMatchers);
+      };
+    } else {
+      matcherFunction = null;
+      vectorMatcherFunction = null;
+    }
+
+    return new FilterBundle(
+        index,
+        partialIndex,
+        matcherFunction,
+        vectorMatcherFunction
+    );
   }
 
   @Nullable
@@ -138,37 +237,6 @@ public class OrFilter implements BooleanFilter
   public boolean canVectorizeMatcher(ColumnInspector inspector)
   {
     return filters.stream().allMatch(filter -> filter.canVectorizeMatcher(inspector));
-  }
-
-  @Override
-  public ValueMatcher makeMatcher(
-      ColumnIndexSelector selector,
-      ColumnSelectorFactory columnSelectorFactory,
-      RowOffsetMatcherFactory rowOffsetMatcherFactory
-  )
-  {
-    final List<ValueMatcher> matchers = new ArrayList<>();
-    final List<ImmutableBitmap> bitmaps = new ArrayList<>();
-    final BitmapFactory bitmapFactory = selector.getBitmapFactory();
-    final DefaultBitmapResultFactory resultFactory = new DefaultBitmapResultFactory(bitmapFactory);
-
-    for (Filter filter : filters) {
-      final BitmapColumnIndex columnIndex = filter.getBitmapColumnIndex(selector);
-      if (columnIndex != null && columnIndex.getIndexCapabilities().isExact()) {
-        bitmaps.add(columnIndex.computeBitmapResult(resultFactory, false));
-      } else {
-        ValueMatcher matcher = filter.makeMatcher(columnSelectorFactory);
-        matchers.add(matcher);
-      }
-    }
-
-    if (bitmaps.size() > 0) {
-      ImmutableBitmap combinedBitmap = selector.getBitmapFactory().union(bitmaps);
-      ValueMatcher offsetMatcher = rowOffsetMatcherFactory.makeRowOffsetMatcher(combinedBitmap);
-      matchers.add(0, offsetMatcher);
-    }
-
-    return makeMatcher(matchers.toArray(BooleanFilter.EMPTY_VALUE_MATCHER_ARRAY));
   }
 
   @Override

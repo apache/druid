@@ -21,8 +21,6 @@ package org.apache.druid.segment;
 
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.query.BaseQuery;
-import org.apache.druid.query.DefaultBitmapResultFactory;
-import org.apache.druid.query.filter.BooleanFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.RowOffsetMatcherFactory;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -30,8 +28,9 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.data.Offset;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.filter.ValueMatchers;
-import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.roaringbitmap.IntIterator;
+
+import javax.annotation.Nullable;
 
 public final class FilteredOffset extends Offset
 {
@@ -40,38 +39,37 @@ public final class FilteredOffset extends Offset
 
   FilteredOffset(
       Offset baseOffset,
-      ColumnSelectorFactory columnSelectorFactory,
       boolean descending,
-      Filter postFilter,
-      ColumnSelectorColumnIndexSelector bitmapIndexSelector
+      @Nullable ImmutableBitmap partialMatchBitmap,
+      ValueMatcher filterMatcher
   )
   {
     this.baseOffset = baseOffset;
-    RowOffsetMatcherFactory rowOffsetMatcherFactory = new CursorOffsetHolderRowOffsetMatcherFactory(
-        baseOffset.getBaseReadableOffset(),
-        descending
-    );
-    if (postFilter instanceof BooleanFilter) {
-      filterMatcher = ((BooleanFilter) postFilter).makeMatcher(
-          bitmapIndexSelector,
-          columnSelectorFactory,
-          rowOffsetMatcherFactory
+    if (partialMatchBitmap != null) {
+      RowOffsetMatcherFactory rowOffsetMatcherFactory = new CursorOffsetHolderRowOffsetMatcherFactory(
+          baseOffset.getBaseReadableOffset(),
+          descending
       );
+      ValueMatcher offsetMatcher = rowOffsetMatcherFactory.makeRowOffsetMatcher(partialMatchBitmap);
+      this.filterMatcher = new ValueMatcher()
+      {
+        @Override
+        public boolean matches(boolean includeUnknown)
+        {
+          return offsetMatcher.matches(includeUnknown) || filterMatcher.matches(includeUnknown);
+        }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          inspector.visit("offsetMatcher", offsetMatcher);
+          inspector.visit("filterMatcher", filterMatcher);
+        }
+      };
     } else {
-      final BitmapColumnIndex columnIndex = postFilter.getBitmapColumnIndex(bitmapIndexSelector);
-      // we only consider "exact" indexes here, because if false, we've already used the bitmap index for the base
-      // offset and must use the value matcher here
-      if (columnIndex != null && columnIndex.getIndexCapabilities().isExact()) {
-        filterMatcher = rowOffsetMatcherFactory.makeRowOffsetMatcher(
-            columnIndex.computeBitmapResult(
-                new DefaultBitmapResultFactory(bitmapIndexSelector.getBitmapFactory()),
-                false
-            )
-        );
-      } else {
-        filterMatcher = postFilter.makeMatcher(columnSelectorFactory);
-      }
+      this.filterMatcher = filterMatcher;
     }
+
     incrementIfNeededOnCreationOrReset();
   }
 

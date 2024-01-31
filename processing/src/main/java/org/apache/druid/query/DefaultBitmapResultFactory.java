@@ -56,9 +56,21 @@ public final class DefaultBitmapResultFactory implements BitmapResultFactory<Imm
   }
 
   @Override
+  public int getSelectionSize(ImmutableBitmap bitmapResult)
+  {
+    return bitmapResult.size();
+  }
+
+  @Override
   public ImmutableBitmap intersection(Iterable<ImmutableBitmap> bitmapResults)
   {
     return factory.intersection(bitmapResults);
+  }
+
+  @Override
+  public ImmutableBitmap intersectValues(Iterable<ImmutableBitmap> bitmaps)
+  {
+    return factory.intersection(bitmaps);
   }
 
   @Override

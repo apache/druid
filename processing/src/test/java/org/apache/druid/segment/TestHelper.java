@@ -69,9 +69,14 @@ public class TestHelper
     return new IndexMergerV9(JSON_MAPPER, getTestIndexIO(), segmentWriteOutMediumFactory, true);
   }
 
+  public static IndexMergerV9 getTestIndexMergerV9(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory, ColumnConfig columnConfig)
+  {
+    return new IndexMergerV9(JSON_MAPPER, getTestIndexIO(columnConfig), segmentWriteOutMediumFactory, true);
+  }
+
   public static IndexIO getTestIndexIO()
   {
-    return getTestIndexIO(ColumnConfig.ALWAYS_USE_INDEXES);
+    return getTestIndexIO(ColumnConfig.SELECTION_SIZE);
   }
 
   public static IndexIO getTestIndexIO(ColumnConfig columnConfig)

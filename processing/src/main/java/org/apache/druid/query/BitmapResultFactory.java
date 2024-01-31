@@ -70,6 +70,8 @@ public interface BitmapResultFactory<T>
    */
   boolean isEmpty(T bitmapResult);
 
+  int getSelectionSize(T bitmapResult);
+
   /**
    * Delegates to {@link BitmapFactory#intersection(Iterable)} on the wrapped bitmaps, and returns a bitmap result
    * wrapping the resulting intersection ImmutableBitmap.
@@ -82,6 +84,7 @@ public interface BitmapResultFactory<T>
    */
   T union(Iterable<T> bitmapResults);
 
+  T intersectValues(Iterable<ImmutableBitmap> bitmaps);
   /**
    * Equivalent of intersection(Iterables.transform(dimensionValueBitmaps, factory::wrapDimensionValue)), but doesn't
    * create a lot of bitmap result objects.

@@ -27,7 +27,6 @@ import org.apache.druid.query.BitmapResultFactory;
  */
 public abstract class SimpleImmutableBitmapIterableIndex extends SimpleBitmapColumnIndex
 {
-
   @Override
   public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
   {

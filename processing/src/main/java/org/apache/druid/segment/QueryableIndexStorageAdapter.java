@@ -187,9 +187,12 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   )
   {
     if (filter != null) {
-      final boolean filterCanVectorize =
-          filter.getBitmapColumnIndex(makeBitmapIndexSelector(virtualColumns)) != null
-          || filter.canVectorizeMatcher(this);
+      // ideally we would allow stuff to vectorize if we can build indexes even if the value matcher cannot be
+      // vectorized, this used to be true in fact, but changes to filter partitioning (FilterBundle) have caused
+      // the only way to know this to be building the bitmaps since BitmapColumnIndex can return null.
+      // this will be changed in a future refactor of cursor building, at which point this method can just return
+      // true if !descending...
+      final boolean filterCanVectorize = filter.canVectorizeMatcher(this);
 
       if (!filterCanVectorize) {
         return false;

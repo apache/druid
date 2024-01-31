@@ -19,34 +19,38 @@
 
 package org.apache.druid.segment.index;
 
-import com.google.common.collect.Iterables;
-import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.query.BitmapResultFactory;
 
 import javax.annotation.Nullable;
-import java.util.Collections;
 
-public abstract class SimpleImmutableBitmapDelegatingIterableIndex extends SimpleBitmapColumnIndex
+public abstract class DictionaryScanningSimpleImmutableBitmapIndex extends SimpleImmutableBitmapIterableIndex
 {
-  @Override
-  public final <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
+  private final int dictionarySize;
+  private final double scaleThreshold;
+
+  public DictionaryScanningSimpleImmutableBitmapIndex(int dictionarySize)
   {
-    if (includeUnknown) {
-      final ImmutableBitmap unknownsBitmap = getUnknownsBitmap();
-      if (unknownsBitmap != null) {
-        return bitmapResultFactory.unionDimensionValueBitmaps(
-            Iterables.concat(
-                getBitmapIterable(),
-                Collections.singletonList(unknownsBitmap)
-            )
-        );
-      }
-    }
-    return bitmapResultFactory.unionDimensionValueBitmaps(getBitmapIterable());
+    this(dictionarySize, 1.0);
   }
 
-  protected abstract Iterable<ImmutableBitmap> getBitmapIterable();
+  public DictionaryScanningSimpleImmutableBitmapIndex(int dictionarySize, double scaleThreshold)
+  {
+    this.dictionarySize = dictionarySize;
+    this.scaleThreshold = scaleThreshold;
+  }
 
   @Nullable
-  protected abstract ImmutableBitmap getUnknownsBitmap();
+  @Override
+  public <T> T computeBitmapResult(
+      BitmapResultFactory<T> bitmapResultFactory,
+      int selectionRowCount,
+      int totalRowCount,
+      boolean includeUnknown
+  )
+  {
+    if (selectionRowCount != totalRowCount && selectionRowCount < (dictionarySize * scaleThreshold)) {
+      return null;
+    }
+    return bitmapResultFactory.unionDimensionValueBitmaps(getBitmapIterable(includeUnknown));
+  }
 }
