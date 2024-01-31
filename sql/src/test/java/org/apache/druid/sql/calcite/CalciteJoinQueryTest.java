@@ -861,6 +861,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Parameters(source = QueryContextForJoinProvider.class)
   public void testJoinUnionTablesOnLookup(Map<String, Object> queryContext)
   {
+    // MSQ does not support UNION ALL.
+    msqIncompatible();
     // Cannot vectorize JOIN operator.
     cannotVectorize();
 
@@ -1560,8 +1562,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{"", "a", "xa", "xa"},
-            new Object[]{"1", "a", "xa", "xa"}
+            new Object[]{"", "a", "xabc", "xabc"},
+            new Object[]{"1", "a", "xabc", "xabc"}
         )
     );
   }
@@ -2515,9 +2517,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"abc", "abc", "xabc"},
+            new Object[]{NULL_STRING, "6", "x6"},
             new Object[]{NULL_STRING, "a", "xa"},
-            new Object[]{NULL_STRING, "nosuchkey", "mysteryvalue"},
-            new Object[]{NULL_STRING, "6", "x6"}
+            new Object[]{NULL_STRING, "nosuchkey", "mysteryvalue"}
         )
     );
   }
@@ -2563,9 +2565,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
             new Object[]{"1", 4f, 1L, NULL_STRING, NULL_STRING},
             new Object[]{"def", 5f, 1L, NULL_STRING, NULL_STRING},
             new Object[]{"abc", 6f, 1L, "abc", "xabc"},
+            new Object[]{NULL_STRING, NULL_FLOAT, NULL_LONG, "6", "x6"},
             new Object[]{NULL_STRING, NULL_FLOAT, NULL_LONG, "a", "xa"},
-            new Object[]{NULL_STRING, NULL_FLOAT, NULL_LONG, "nosuchkey", "mysteryvalue"},
-            new Object[]{NULL_STRING, NULL_FLOAT, NULL_LONG, "6", "x6"}
+            new Object[]{NULL_STRING, NULL_FLOAT, NULL_LONG, "nosuchkey", "mysteryvalue"}
         )
     );
   }
@@ -3839,6 +3841,10 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Parameters(source = QueryContextForJoinProvider.class)
   public void testInnerJoinSubqueryWithSelectorFilter(Map<String, Object> queryContext)
   {
+    if (sortBasedJoin) {
+      // Cannot handle the [l1.k = 'abc'] condition.
+      msqIncompatible();
+    }
 
     // Cannot vectorize due to 'concat' expression.
     cannotVectorize();

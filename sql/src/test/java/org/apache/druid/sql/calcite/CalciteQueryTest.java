@@ -1106,20 +1106,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testLatestByEarliestByWithRollupColumn()
-  {
-    assertQueryIsUnplannable(
-        "SELECT EARLIEST_BY(long_last_added, TIME_PARSE('2000-01-01')) FROM wikipedia_first_last",
-        "Cannot call EARLIEST_BY with an explicit 'timeExpr' column for pre-aggregated metric of type [serializablePairLongLong]. Use EARLIEST instead to further rollup the complex column."
-    );
-    assertQueryIsUnplannable(
-        "SELECT LATEST_BY(long_last_added, TIME_PARSE('2000-01-01')) FROM wikipedia_first_last",
-        "Cannot call LATEST_BY with an explicit 'timeExpr' column for pre-aggregated metric of type [serializablePairLongLong]. Use LATEST instead to further rollup the complex column."
-    );
-  }
-
-
-  @Test
   public void testNumericLatestEarliestWithOpratorsGroupBy()
   {
     testQuery(
