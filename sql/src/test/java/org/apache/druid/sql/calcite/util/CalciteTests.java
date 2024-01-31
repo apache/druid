@@ -63,6 +63,7 @@ import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -151,11 +152,14 @@ public class CalciteTests
           case ResourceType.QUERY_CONTEXT:
             return Access.OK;
           case ResourceType.EXTERNAL:
-            if (FORBIDDEN_DESTINATION.equals(resource.getName())) {
-              return new Access(false);
-            } else {
-              return Access.OK;
+            if (Action.WRITE.equals(action)) {
+              if (FORBIDDEN_DESTINATION.equals(resource.getName())) {
+                return new Access(false);
+              } else {
+                return Access.OK;
+              }
             }
+            return new Access(false);
           default:
             return new Access(false);
         }
