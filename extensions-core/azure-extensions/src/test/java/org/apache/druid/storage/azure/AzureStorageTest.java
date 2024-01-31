@@ -151,7 +151,6 @@ public class AzureStorageTest
 
     SettableSupplier<PagedResponse<BlobItem>> supplier = new SettableSupplier<>();
     supplier.set(new TestPagedResponse<>(ImmutableList.of()));
-    PagedIterable<BlobItem> pagedIterable = new PagedIterable<>(supplier);
 
     ArgumentCaptor<List<String>> captor = ArgumentCaptor.forClass(List.class);
 
