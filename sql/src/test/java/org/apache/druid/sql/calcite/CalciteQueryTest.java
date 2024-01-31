@@ -2804,7 +2804,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.CANNOT_APPLY_VIRTUAL_COL)
+  @NotYetSupported(Modes.PLAN_MISMATCH)
   @Test
   public void testGroupByWithSelectAndOrderByProjections()
   {
@@ -2889,7 +2889,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.CANNOT_APPLY_VIRTUAL_COL)
+  @NotYetSupported(Modes.PLAN_MISMATCH)
   @Test
   public void testTopNWithSelectAndOrderByProjections()
   {
@@ -2927,7 +2927,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported
+  @NotYetSupported(Modes.MISSING_UNION_CONVERSION)
   @Test
   public void testUnionAllQueries()
   {
@@ -2961,7 +2961,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
+  @NotYetSupported(Modes.MISSING_UNION_CONVERSION)
   @Test
   public void testUnionAllQueriesWithLimit()
   {
@@ -3401,7 +3401,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
    * doesn't reset framework once the merge buffers
    */
   @SqlTestFrameworkConfig(numMergeBuffers = 3)
-  @NotYetSupported
+  @NotYetSupported(Modes.MISSING_UNION_CONVERSION)
   @Test
   public void testUnionAllSameTableThreeTimes()
   {
@@ -3446,7 +3446,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @SqlTestFrameworkConfig(numMergeBuffers = 3)
-  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
+  @NotYetSupported(Modes.MISSING_UNION_CONVERSION)
   @Test
   public void testExactCountDistinctUsingSubqueryOnUnionAllTables()
   {
@@ -4857,7 +4857,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.CANNOT_APPLY_VIRTUAL_COL)
+  @NotYetSupported(Modes.PLAN_MISMATCH)
   @Test
   public void testGroupByWithSortOnPostAggregationDefault()
   {
@@ -4889,7 +4889,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.CANNOT_APPLY_VIRTUAL_COL)
+  @NotYetSupported(Modes.PLAN_MISMATCH)
   @Test
   public void testGroupByWithSortOnPostAggregationNoTopNConfig()
   {
@@ -4933,7 +4933,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.CANNOT_APPLY_VIRTUAL_COL)
+  @NotYetSupported(Modes.PLAN_MISMATCH)
   @Test
   public void testGroupByWithSortOnPostAggregationNoTopNContext()
   {
@@ -6975,7 +6975,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
+  @NotYetSupported(Modes.MISSING_JOIN_CONVERSION)
   @Test
   public void testMultipleExactCountDistinctWithGroupingAndOtherAggregatorsUsingJoin()
   {
@@ -12138,7 +12138,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported
+  @NotYetSupported(Modes.MISSING_JOIN_CONVERSION)
   @Test
   public void testRequireTimeConditionPositive()
   {
@@ -14635,7 +14635,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported
+  @NotYetSupported(Modes.MISSING_JOIN_CONVERSION)
   @Test
   public void testOrderByAlongWithInternalScanQuery()
   {
@@ -14678,7 +14678,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
+  @NotYetSupported(Modes.MISSING_JOIN_CONVERSION)
   @Test
   public void testOrderByAlongWithInternalScanQueryNoDistinct()
   {
