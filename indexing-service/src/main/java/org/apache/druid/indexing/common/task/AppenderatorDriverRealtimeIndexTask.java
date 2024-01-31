@@ -351,20 +351,21 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       int sequenceNumber = 0;
       String sequenceName = makeSequenceName(getId(), sequenceNumber);
 
-      final TransactionalSegmentPublisher publisher = (mustBeNullOrEmptyOverwriteSegments, segments, commitMetadata) -> {
-        if (mustBeNullOrEmptyOverwriteSegments != null && !mustBeNullOrEmptyOverwriteSegments.isEmpty()) {
-          throw new ISE(
-              "Stream ingestion task unexpectedly attempted to overwrite segments: %s",
-              SegmentUtils.commaSeparatedIdentifiers(mustBeNullOrEmptyOverwriteSegments)
-          );
-        }
-        final SegmentTransactionalInsertAction action = SegmentTransactionalInsertAction.appendAction(
-            segments,
-            null,
-            null
-        );
-        return toolbox.getTaskActionClient().submit(action);
-      };
+      final TransactionalSegmentPublisher publisher =
+          (mustBeNullOrEmptyOverwriteSegments, segments, commitMetadata, segmentIdToUpgradedVersions) -> {
+            if (mustBeNullOrEmptyOverwriteSegments != null && !mustBeNullOrEmptyOverwriteSegments.isEmpty()) {
+              throw new ISE(
+                  "Stream ingestion task unexpectedly attempted to overwrite segments: %s",
+                  SegmentUtils.commaSeparatedIdentifiers(mustBeNullOrEmptyOverwriteSegments)
+              );
+            }
+            final SegmentTransactionalInsertAction action = SegmentTransactionalInsertAction.appendAction(
+                segments,
+                null,
+                null
+            );
+            return toolbox.getTaskActionClient().submit(action);
+          };
 
       // Skip connecting firehose if we've been stopped before we got started.
       synchronized (this) {

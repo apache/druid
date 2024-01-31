@@ -32,6 +32,7 @@ import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.SegmentUtils;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
@@ -52,30 +53,36 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
   @Nullable
   private final DataSourceMetadata endMetadata;
 
+  @Nullable
+  private final Map<String, Set<SegmentIdWithShardSpec>> segmentToUpgradedVersions;
+
   public static SegmentTransactionalAppendAction forSegments(Set<DataSegment> segments)
   {
-    return new SegmentTransactionalAppendAction(segments, null, null);
+    return new SegmentTransactionalAppendAction(segments, null, null, null);
   }
 
   public static SegmentTransactionalAppendAction forSegmentsAndMetadata(
       Set<DataSegment> segments,
       DataSourceMetadata startMetadata,
-      DataSourceMetadata endMetadata
+      DataSourceMetadata endMetadata,
+      Map<String, Set<SegmentIdWithShardSpec>> segmentToUpgradedVersions
   )
   {
-    return new SegmentTransactionalAppendAction(segments, startMetadata, endMetadata);
+    return new SegmentTransactionalAppendAction(segments, startMetadata, endMetadata, segmentToUpgradedVersions);
   }
 
   @JsonCreator
   private SegmentTransactionalAppendAction(
       @JsonProperty("segments") Set<DataSegment> segments,
       @JsonProperty("startMetadata") @Nullable DataSourceMetadata startMetadata,
-      @JsonProperty("endMetadata") @Nullable DataSourceMetadata endMetadata
+      @JsonProperty("endMetadata") @Nullable DataSourceMetadata endMetadata,
+      @JsonProperty("segmentToUpgradedVersions") @Nullable Map<String, Set<SegmentIdWithShardSpec>> segmentToUpgradedVersions
   )
   {
     this.segments = segments;
     this.startMetadata = startMetadata;
     this.endMetadata = endMetadata;
+    this.segmentToUpgradedVersions = segmentToUpgradedVersions;
 
     if ((startMetadata == null && endMetadata != null)
         || (startMetadata != null && endMetadata == null)) {
@@ -101,6 +108,13 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
   public DataSourceMetadata getEndMetadata()
   {
     return endMetadata;
+  }
+
+  @JsonProperty
+  @Nullable
+  public Map<String, Set<SegmentIdWithShardSpec>> getSegmentToUpgradedVersions()
+  {
+    return segmentToUpgradedVersions;
   }
 
   @Override
@@ -142,7 +156,8 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
           segments,
           segmentToReplaceLock,
           startMetadata,
-          endMetadata
+          endMetadata,
+          segmentToUpgradedVersions
       );
     }
 

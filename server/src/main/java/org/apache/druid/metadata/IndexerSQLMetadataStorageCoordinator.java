@@ -62,6 +62,7 @@ import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.PartitionIds;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
@@ -536,6 +537,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         appendSegments,
         appendSegmentToReplaceLock,
         null,
+        null,
         null
     );
   }
@@ -545,14 +547,16 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       Set<DataSegment> appendSegments,
       Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
       DataSourceMetadata startMetadata,
-      DataSourceMetadata endMetadata
+      DataSourceMetadata endMetadata,
+      Map<String, Set<SegmentIdWithShardSpec>> segmentIdToUpgradedVersions
   )
   {
     return commitAppendSegmentsAndMetadataInTransaction(
         appendSegments,
         appendSegmentToReplaceLock,
         startMetadata,
-        endMetadata
+        endMetadata,
+        segmentIdToUpgradedVersions
     );
   }
 
@@ -1291,7 +1295,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       Set<DataSegment> appendSegments,
       Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
       @Nullable DataSourceMetadata startMetadata,
-      @Nullable DataSourceMetadata endMetadata
+      @Nullable DataSourceMetadata endMetadata,
+      @Nullable Map<String, Set<SegmentIdWithShardSpec>> segmentIdToUpgradedVersions
   )
   {
     verifySegmentsToCommit(appendSegments);
@@ -1303,7 +1308,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     final String dataSource = appendSegments.iterator().next().getDataSource();
     final Set<DataSegment> segmentIdsForNewVersions = connector.retryTransaction(
         (handle, transactionStatus)
-            -> createNewIdsForAppendSegments(handle, dataSource, appendSegments),
+            -> createNewIdsForAppendSegments(handle, dataSource, appendSegments, segmentIdToUpgradedVersions),
         0,
         SQLMetadataConnector.DEFAULT_MAX_TRIES
     );
@@ -1436,11 +1441,16 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   private Set<DataSegment> createNewIdsForAppendSegments(
       Handle handle,
       String dataSource,
-      Set<DataSegment> segmentsToAppend
+      Set<DataSegment> segmentsToAppend,
+      @Nullable Map<String, Set<SegmentIdWithShardSpec>> segmentIdToUpgradeVersions
   ) throws IOException
   {
     if (segmentsToAppend.isEmpty()) {
       return Collections.emptySet();
+    }
+
+    if (segmentIdToUpgradeVersions == null) {
+      segmentIdToUpgradeVersions = Collections.emptyMap();
     }
 
     final Set<Interval> appendIntervals = new HashSet<>();
@@ -1475,7 +1485,37 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           entry.getValue(),
           appendVersionToSegments
       );
-      for (Map.Entry<Interval, Set<DataSegment>> upgradeEntry : segmentsToUpgrade.entrySet()) {
+      Map<Interval, Set<DataSegment>> filteredSegmentsToUpgrade = new HashMap<>();
+      for (Interval interval : segmentsToUpgrade.keySet()) {
+        filteredSegmentsToUpgrade.put(interval, new HashSet<>());
+        for (DataSegment segment : segmentsToUpgrade.get(interval)) {
+          boolean include = true;
+          if (segmentIdToUpgradeVersions.containsKey(segment.getId().toString())) {
+            for (SegmentIdWithShardSpec upgradedSegment : segmentIdToUpgradeVersions.get(segment.getId().toString())) {
+              if (upgradedSegment.getVersion().equals(upgradeVersion)) {
+                upgradedSegments.add(
+                    new DataSegment(
+                        upgradedSegment.asSegmentId(),
+                        segment.getLoadSpec(),
+                        segment.getDimensions(),
+                        segment.getMetrics(),
+                        upgradedSegment.getShardSpec(),
+                        null,
+                        segment.getBinaryVersion(),
+                        segment.getSize()
+                    )
+                );
+                include = false;
+                break;
+              }
+            }
+          }
+          if (include) {
+            filteredSegmentsToUpgrade.get(interval).add(segment);
+          }
+        }
+      }
+      for (Map.Entry<Interval, Set<DataSegment>> upgradeEntry : filteredSegmentsToUpgrade.entrySet()) {
         final Interval upgradeInterval = upgradeEntry.getKey();
         final Set<DataSegment> segmentsAlreadyOnVersion
             = overlappingIntervalToSegments.getOrDefault(upgradeInterval, Collections.emptySet())
@@ -1548,6 +1588,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       Set<DataSegment> committedSegments
   ) throws IOException
   {
+    if (CollectionUtils.isNullOrEmpty(segmentsToUpgrade)) {
+      return Collections.emptySet();
+    }
+
     // Find the committed segments with the higest partition number
     SegmentIdWithShardSpec committedMaxId = null;
     for (DataSegment committedSegment : committedSegments) {

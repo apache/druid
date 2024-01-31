@@ -204,7 +204,8 @@ public class ClosedSegmentsSinksBatchAppenderatorDriverTest extends EasyMockSupp
 
   static TransactionalSegmentPublisher makeOkPublisher()
   {
-    return (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) -> SegmentPublishResult.ok(ImmutableSet.of());
+    return (segmentsToBeOverwritten, segmentsToPublish, commitMetadata, segmentIdToUpgradedVersions)
+        -> SegmentPublishResult.ok(ImmutableSet.of());
   }
 
   static class TestSegmentAllocator implements SegmentAllocator

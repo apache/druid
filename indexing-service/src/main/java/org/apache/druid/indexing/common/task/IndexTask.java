@@ -918,7 +918,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
     final TaskLockType taskLockType = getTaskLockHelper().getLockTypeToUse();
     final TransactionalSegmentPublisher publisher =
-        (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) -> toolbox.getTaskActionClient().submit(
+        (segmentsToBeOverwritten, segmentsToPublish, commitMetadata, segmentIdToUpgradedVersions)
+            -> toolbox.getTaskActionClient().submit(
             buildPublishAction(segmentsToBeOverwritten, segmentsToPublish, taskLockType)
         );
 

@@ -312,7 +312,8 @@ public interface IndexerMetadataStorageCoordinator
       Set<DataSegment> appendSegments,
       Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
       DataSourceMetadata startMetadata,
-      DataSourceMetadata endMetadata
+      DataSourceMetadata endMetadata,
+      Map<String, Set<SegmentIdWithShardSpec>> segmentToUpgradeVersions
   );
 
   /**

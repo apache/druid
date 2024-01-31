@@ -514,6 +514,29 @@ public class TaskLockbox
     }
   }
 
+  /**
+   * Conflicting lock - A lock for the same datasource and overlapping interval as the request.
+   * Reusable lock - A conflicting lock which satisifies the lock request.
+   * Superseding lock - A lock created for the request which may make at least one of the existing locks unneeded
+   * Flow:
+   * Check for conflicting locks.
+   * If there are none, create a new lock posse
+   * Else, find a unique lock posse with a lock that can be reused for the request
+   * Else, check if the conflicting locks can coexist and create a new lock posse
+   * Else, check if the incompatible locks can be revoked and create a new lock posse, and revoke such locks
+   *
+   * If none of the conditions is true, return null
+   * Else, add the task to the newly created lock posse.
+   * If the lock task was added to the posse for the first time:
+   *    A) Check if the newly created posse can replace any of the existing locks. If yes, unlock such superseded locks.
+   *.   B) Commit the lock and task to druid_tasklocks. (Unlock if the commit to metadata store fails)
+   *
+   * @param request Request for lock.
+   * @param task Task requesting the lock.
+   * @param persist If true, commit the newly created lock to the metadata store.
+   *                Should be false when syncing from storage.
+   * @return A TaskLockPosse associating the lock for the request with the provided task.
+   */
   private TaskLockPosse createOrFindLockPosse(LockRequest request, Task task, boolean persist)
   {
     Preconditions.checkState(!(request instanceof LockRequestForNewSegment), "Can't handle LockRequestForNewSegment");

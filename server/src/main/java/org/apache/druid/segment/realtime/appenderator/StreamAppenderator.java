@@ -769,6 +769,7 @@ public class StreamAppenderator implements Appenderator
         persistAll(committer),
         (Function<Object, SegmentsAndCommitMetadata>) commitMetadata -> {
           final List<DataSegment> dataSegments = new ArrayList<>();
+          final List<DataSegment> upgradedSegments = new ArrayList<>();
 
           log.info("Preparing to push (stats): processed rows: [%d], sinks: [%d], fireHydrants (across sinks): [%d]",
                    rowIngestionMeters.getProcessed(), theSinks.size(), pushedHydrantsCount.get()
@@ -792,6 +793,22 @@ public class StreamAppenderator implements Appenderator
             );
             if (dataSegment != null) {
               dataSegments.add(dataSegment);
+              if (baseSegmentToUpgradedVersions.containsKey(dataSegment.getId())) {
+                for (SegmentIdWithShardSpec upgradedSegment : baseSegmentToUpgradedVersions.get(dataSegment.getId())) {
+                  upgradedSegments.add(
+                      new DataSegment(
+                          upgradedSegment.asSegmentId(),
+                          dataSegment.getLoadSpec(),
+                          dataSegment.getDimensions(),
+                          dataSegment.getMetrics(),
+                          upgradedSegment.getShardSpec(),
+                          null,
+                          dataSegment.getBinaryVersion(),
+                          dataSegment.getSize()
+                      )
+                  );
+                }
+              }
             } else {
               log.warn("mergeAndPush[%s] returned null, skipping.", entry.getKey());
             }
@@ -799,7 +816,7 @@ public class StreamAppenderator implements Appenderator
 
           log.info("Push complete...");
 
-          return new SegmentsAndCommitMetadata(dataSegments, commitMetadata);
+          return new SegmentsAndCommitMetadata(dataSegments, commitMetadata, upgradedSegments);
         },
         pushExecutor
     );
@@ -1155,6 +1172,15 @@ public class StreamAppenderator implements Appenderator
         throw new RuntimeException(e);
       }
     }
+  }
+
+  public Map<String, Set<SegmentIdWithShardSpec>> getBaseSegmentToUpgradedVersions()
+  {
+    final Map<String, Set<SegmentIdWithShardSpec>> retVal = new HashMap<>();
+    for (SegmentId id : baseSegmentToUpgradedVersions.keySet()) {
+      retVal.put(id.toString(), baseSegmentToUpgradedVersions.get(id));
+    }
+    return retVal;
   }
 
   private void unlockBasePersistDirectory()

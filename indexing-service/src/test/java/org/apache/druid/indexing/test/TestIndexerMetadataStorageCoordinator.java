@@ -174,7 +174,8 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
       Set<DataSegment> appendSegments,
       Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
       DataSourceMetadata startMetadata,
-      DataSourceMetadata endMetadata
+      DataSourceMetadata endMetadata,
+      Map<String, Set<SegmentIdWithShardSpec>> segmentIdToUpgradedVersions
   )
   {
     return SegmentPublishResult.ok(commitSegments(appendSegments));

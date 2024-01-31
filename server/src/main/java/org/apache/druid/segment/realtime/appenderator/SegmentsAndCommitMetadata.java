@@ -30,24 +30,44 @@ import java.util.Objects;
 
 public class SegmentsAndCommitMetadata
 {
-  private static final SegmentsAndCommitMetadata NIL = new SegmentsAndCommitMetadata(Collections.emptyList(), null);
+  private static final SegmentsAndCommitMetadata NIL = new SegmentsAndCommitMetadata(Collections.emptyList(), null, null);
 
   private final Object commitMetadata;
   private final ImmutableList<DataSegment> segments;
+  private final ImmutableList<DataSegment> upgradedSegments;
+
+  public SegmentsAndCommitMetadata(
+      List<DataSegment> segments,
+      @Nullable Object commitMetadata,
+      @Nullable List<DataSegment> upgradedSegments
+  )
+  {
+    this.segments = ImmutableList.copyOf(segments);
+    if (upgradedSegments == null) {
+      this.upgradedSegments = ImmutableList.of();
+    } else {
+      this.upgradedSegments = ImmutableList.copyOf(upgradedSegments);
+    }
+    this.commitMetadata = commitMetadata;
+  }
 
   public SegmentsAndCommitMetadata(
       List<DataSegment> segments,
       @Nullable Object commitMetadata
   )
   {
-    this.segments = ImmutableList.copyOf(segments);
-    this.commitMetadata = commitMetadata;
+    this(segments, commitMetadata, null);
   }
 
   @Nullable
   public Object getCommitMetadata()
   {
     return commitMetadata;
+  }
+
+  public List<DataSegment> getUpgradedSegments()
+  {
+    return upgradedSegments;
   }
 
   public List<DataSegment> getSegments()
@@ -66,13 +86,14 @@ public class SegmentsAndCommitMetadata
     }
     SegmentsAndCommitMetadata that = (SegmentsAndCommitMetadata) o;
     return Objects.equals(commitMetadata, that.commitMetadata) &&
-           Objects.equals(segments, that.segments);
+           Objects.equals(segments, that.segments) &&
+           Objects.equals(upgradedSegments, that.upgradedSegments);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(commitMetadata, segments);
+    return Objects.hash(commitMetadata, segments, upgradedSegments);
   }
 
   @Override
@@ -81,6 +102,7 @@ public class SegmentsAndCommitMetadata
     return getClass().getSimpleName() + "{" +
            "commitMetadata=" + commitMetadata +
            ", segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
+           ", upgradedSegments=" + SegmentUtils.commaSeparatedIdentifiers(upgradedSegments) +
            '}';
   }
 

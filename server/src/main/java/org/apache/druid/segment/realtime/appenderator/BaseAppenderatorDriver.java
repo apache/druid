@@ -614,6 +614,13 @@ public abstract class BaseAppenderatorDriver implements Closeable
     final Object callerMetadata = metadata == null
                                   ? null
                                   : ((AppenderatorDriverMetadata) metadata).getCallerMetadata();
+    final Map<String, Set<SegmentIdWithShardSpec>> segmentIdToUpgradedVersions;
+    if (appenderator instanceof StreamAppenderator) {
+      segmentIdToUpgradedVersions = ((StreamAppenderator) appenderator).getBaseSegmentToUpgradedVersions();
+    } else {
+      segmentIdToUpgradedVersions = null;
+    }
+
     return executor.submit(
       () -> {
         try {
@@ -625,7 +632,8 @@ public abstract class BaseAppenderatorDriver implements Closeable
                     segmentsToBeOverwritten,
                     ourSegments,
                     outputSegmentsAnnotateFunction,
-                    callerMetadata
+                    callerMetadata,
+                    segmentIdToUpgradedVersions
                 );
 
                 if (publishResult.isSuccess()) {
