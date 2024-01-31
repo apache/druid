@@ -121,7 +121,7 @@ public class AzureStorageTest
   @Test
   public void testBatchDeleteFiles_emptyResponse() throws BlobStorageException
   {
-    String containerUrl = "https://implysaasdeveastussa.blob.core.windows.net/container";
+    String containerUrl = "https://storageaccount.blob.core.windows.net/container";
     BlobBatchClient blobBatchClient = Mockito.mock(BlobBatchClient.class);
 
     SettableSupplier<PagedResponse<BlobItem>> supplier = new SettableSupplier<>();
