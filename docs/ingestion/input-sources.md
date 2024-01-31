@@ -1052,7 +1052,7 @@ The following is a sample spec for a S3 warehouse source:
 |warehouseSource|The JSON Object that defines the native input source for reading the data files from the warehouse.|yes|
 |snapshotTime|Timestamp in ISO8601 DateTime format that will be used to fetch the most recent snapshot as of this time.|no|
 
-###Catalog Object
+### Catalog Object
 
 The catalog object supports `local` and `hive` catalog types.
 
