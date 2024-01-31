@@ -166,12 +166,15 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
 
     private final NodeRole nodeRole;
     private final ObjectMapper jsonMapper;
-    private final BaseNodeRoleWatcher baseNodeRoleWatcher;
-
-    private final PathChildrenCache cache;
     private final ExecutorService cacheExecutor;
+    private final ExecutorService listenerExecutor;
+    private final String basePath;
 
     private final Object lock = new Object();
+
+    private BaseNodeRoleWatcher baseNodeRoleWatcher;
+
+    private PathChildrenCache cache;
 
     NodeRoleWatcher(
         ExecutorService listenerExecutor,
@@ -184,12 +187,19 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
       this.curatorFramework = curatorFramework;
       this.nodeRole = nodeRole;
       this.jsonMapper = jsonMapper;
-      this.baseNodeRoleWatcher = new BaseNodeRoleWatcher(listenerExecutor, nodeRole);
+      this.listenerExecutor = listenerExecutor;
+      this.basePath = basePath;
 
       // This is required to be single threaded from docs in PathChildrenCache.
       this.cacheExecutor = Execs.singleThreaded(
           StringUtils.format("NodeRoleWatcher[%s]", StringUtils.encodeForFormat(nodeRole.toString()))
       );
+      refreshCache();
+    }
+
+    public void refreshCache()
+    {
+      baseNodeRoleWatcher = new BaseNodeRoleWatcher(listenerExecutor, nodeRole);
       cache = new PathChildrenCacheFactory.Builder()
           //NOTE: cacheData is temporarily set to false and we get data directly from ZK on each event.
           //this is a workaround to solve curator's out-of-order events problem
@@ -219,6 +229,9 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
     @Override
     public Collection<DiscoveryDruidNode> getAllNodes()
     {
+      while (baseNodeRoleWatcher.getAllNodes() == null) {
+        refreshCache();
+      }
       return baseNodeRoleWatcher.getAllNodes();
     }
 
