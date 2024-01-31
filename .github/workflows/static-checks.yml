@@ -187,11 +187,11 @@ jobs:
           web-console/script/druid stop
 
       - name: Tar druid logs
-        if: ${{ failure() && steps.web-console-test.conclusion == 'failure' }}
+        if: ${{ steps.web-console-test.conclusion == 'failure' }}
         run: tar cvzf ./druid-logs.tgz -C ./distribution/target/apache-druid-*-SNAPSHOT/ log
 
       - name: Upload druid logs to GitHub
-        if: ${{ failure() && steps.web-console-test.conclusion == 'failure' }}
+        if: ${{ steps.web-console-test.conclusion == 'failure' }}
         uses: actions/upload-artifact@master
         with:
           name: Druid logs web-checks
