@@ -85,6 +85,7 @@ describe('sql', () => {
               "column": 14,
               "row": 1,
             },
+            "index": 0,
             "sql": "SELECT *
         FROM wikipedia",
             "startOffset": 0,
@@ -99,6 +100,7 @@ describe('sql', () => {
               "column": 7,
               "row": 5,
             },
+            "index": 1,
             "sql": "SELECT *
         FROM w2
         LIMIT 5",
@@ -132,6 +134,7 @@ describe('sql', () => {
               "column": 15,
               "row": 5,
             },
+            "index": 0,
             "sql": "SELECT
           \\"channel\\",
           COUNT(*) AS \\"Count\\"
@@ -150,6 +153,7 @@ describe('sql', () => {
               "column": 31,
               "row": 3,
             },
+            "index": 1,
             "sql": "SELECT * FROM \\"wikipedia\\"",
             "startOffset": 48,
             "startRowColumn": Object {
@@ -184,6 +188,7 @@ describe('sql', () => {
               "column": 15,
               "row": 8,
             },
+            "index": 0,
             "sql": "WITH w1 AS (
           SELECT channel, page FROM \\"wikipedia\\"
         )
@@ -205,6 +210,7 @@ describe('sql', () => {
               "column": 39,
               "row": 1,
             },
+            "index": 1,
             "sql": "SELECT channel, page FROM \\"wikipedia\\"",
             "startOffset": 15,
             "startRowColumn": Object {
@@ -218,6 +224,7 @@ describe('sql', () => {
               "column": 15,
               "row": 8,
             },
+            "index": 2,
             "sql": "SELECT
           page,
           COUNT(*) AS \\"cnt\\"
@@ -234,8 +241,10 @@ describe('sql', () => {
       `);
     });
 
-    it('works with replace query', () => {
+    it('works with select query followed by a replace query', () => {
       const text = sane`
+        SELECT * FROM "wiki"
+
         REPLACE INTO "wikipedia" OVERWRITE ALL
         WITH "ext" AS (
           SELECT *
@@ -259,11 +268,26 @@ describe('sql', () => {
       expect(found).toMatchInlineSnapshot(`
         Array [
           Object {
-            "endOffset": 379,
+            "endOffset": 29,
+            "endRowColumn": Object {
+              "column": 7,
+              "row": 2,
+            },
+            "index": 0,
+            "sql": "SELECT * FROM \\"wiki\\"",
+            "startOffset": 0,
+            "startRowColumn": Object {
+              "column": 0,
+              "row": 0,
+            },
+          },
+          Object {
+            "endOffset": 401,
             "endRowColumn": Object {
               "column": 18,
-              "row": 15,
+              "row": 17,
             },
+            "index": 1,
             "sql": "REPLACE INTO \\"wikipedia\\" OVERWRITE ALL
         WITH \\"ext\\" AS (
           SELECT *
@@ -280,18 +304,19 @@ describe('sql', () => {
           \\"channel\\"
         FROM \\"ext\\"
         PARTITIONED BY DAY",
-            "startOffset": 0,
+            "startOffset": 22,
             "startRowColumn": Object {
               "column": 0,
-              "row": 0,
+              "row": 2,
             },
           },
           Object {
-            "endOffset": 360,
+            "endOffset": 382,
             "endRowColumn": Object {
               "column": 10,
-              "row": 14,
+              "row": 16,
             },
+            "index": 2,
             "sql": "WITH \\"ext\\" AS (
           SELECT *
           FROM TABLE(
@@ -306,18 +331,19 @@ describe('sql', () => {
           \\"isRobot\\",
           \\"channel\\"
         FROM \\"ext\\"",
-            "startOffset": 39,
+            "startOffset": 61,
             "startRowColumn": Object {
               "column": 0,
-              "row": 1,
+              "row": 3,
             },
           },
           Object {
-            "endOffset": 276,
+            "endOffset": 298,
             "endRowColumn": Object {
               "column": 70,
-              "row": 8,
+              "row": 10,
             },
+            "index": 3,
             "sql": "SELECT *
           FROM TABLE(
             EXTERN(
@@ -325,27 +351,28 @@ describe('sql', () => {
               '{\\"type\\":\\"json\\"}'
             )
           ) EXTEND (\\"isRobot\\" VARCHAR, \\"channel\\" VARCHAR, \\"timestamp\\" VARCHAR)",
-            "startOffset": 57,
+            "startOffset": 79,
             "startRowColumn": Object {
               "column": 2,
-              "row": 2,
+              "row": 4,
             },
           },
           Object {
-            "endOffset": 360,
+            "endOffset": 382,
             "endRowColumn": Object {
               "column": 10,
-              "row": 14,
+              "row": 16,
             },
+            "index": 4,
             "sql": "SELECT
           TIME_PARSE(\\"timestamp\\") AS \\"__time\\",
           \\"isRobot\\",
           \\"channel\\"
         FROM \\"ext\\"",
-            "startOffset": 279,
+            "startOffset": 301,
             "startRowColumn": Object {
               "column": 0,
-              "row": 10,
+              "row": 12,
             },
           },
         ]
@@ -384,6 +411,7 @@ describe('sql', () => {
               "column": 22,
               "row": 17,
             },
+            "index": 0,
             "sql": "EXPLAIN PLAN FOR
         INSERT INTO \\"wikipedia\\"
         WITH \\"ext\\" AS (
@@ -414,6 +442,7 @@ describe('sql', () => {
               "column": 22,
               "row": 17,
             },
+            "index": 1,
             "sql": "INSERT INTO \\"wikipedia\\"
         WITH \\"ext\\" AS (
           SELECT *
@@ -443,6 +472,7 @@ describe('sql', () => {
               "column": 10,
               "row": 15,
             },
+            "index": 2,
             "sql": "WITH \\"ext\\" AS (
           SELECT *
           FROM TABLE(
@@ -469,6 +499,7 @@ describe('sql', () => {
               "column": 70,
               "row": 9,
             },
+            "index": 3,
             "sql": "SELECT *
           FROM TABLE(
             EXTERN(
@@ -488,6 +519,7 @@ describe('sql', () => {
               "column": 10,
               "row": 15,
             },
+            "index": 4,
             "sql": "SELECT
           TIME_PARSE(\\"timestamp\\") AS \\"__time\\",
           \\"isRobot\\",
@@ -526,6 +558,7 @@ describe('sql', () => {
               "column": 14,
               "row": 2,
             },
+            "index": 0,
             "sql": "EXPLAIN PLAN FOR
         SELECT *
         FROM wikipedia",
@@ -541,6 +574,7 @@ describe('sql', () => {
               "column": 14,
               "row": 2,
             },
+            "index": 1,
             "sql": "SELECT *
         FROM wikipedia",
             "startOffset": 17,
@@ -555,6 +589,7 @@ describe('sql', () => {
               "column": 7,
               "row": 7,
             },
+            "index": 2,
             "sql": "EXPLAIN PLAN FOR
         SELECT *
         FROM w2
@@ -571,6 +606,7 @@ describe('sql', () => {
               "column": 7,
               "row": 7,
             },
+            "index": 3,
             "sql": "SELECT *
         FROM w2
         LIMIT 5",

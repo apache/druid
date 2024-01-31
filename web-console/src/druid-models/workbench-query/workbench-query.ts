@@ -550,9 +550,12 @@ export class WorkbenchQuery {
 
     if (engine === 'sql-msq-task') {
       apiQuery.context.executionMode ??= 'async';
-      apiQuery.context.finalizeAggregations ??= !ingestQuery;
-      apiQuery.context.groupByEnableMultiValueUnnesting ??= !ingestQuery;
-      apiQuery.context.waitUntilSegmentsLoad ??= true;
+      if (ingestQuery) {
+        // Alter these defaults for ingest queries if unset
+        apiQuery.context.finalizeAggregations ??= false;
+        apiQuery.context.groupByEnableMultiValueUnnesting ??= false;
+        apiQuery.context.waitUntilSegmentsLoad ??= true;
+      }
     }
 
     if (Array.isArray(queryParameters) && queryParameters.length) {
