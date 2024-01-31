@@ -34,7 +34,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 
@@ -95,7 +94,7 @@ public class FrameRowsAndColumns implements RowsAndColumns, AutoCloseable, Close
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
     // nothing to close
   }

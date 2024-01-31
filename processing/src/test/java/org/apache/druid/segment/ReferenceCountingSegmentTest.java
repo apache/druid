@@ -38,6 +38,7 @@ import java.util.concurrent.Executors;
 public class ReferenceCountingSegmentTest
 {
   private ReferenceCountingSegment segment;
+  private ReferenceCountingSegment segment1;
   private ExecutorService exec;
 
   private final SegmentId segmentId = SegmentId.dummy("test_segment");
