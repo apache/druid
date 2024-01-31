@@ -1094,7 +1094,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                       ),
                       "j0.",
                       "1",
-                      JoinType.INNER
+                      NullHandling.replaceWithDefault() ? JoinType.LEFT : JoinType.INNER
                   ))
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
@@ -1153,7 +1153,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                       ),
                       "j0.",
                       "1",
-                      JoinType.INNER
+                      NullHandling.replaceWithDefault() ? JoinType.LEFT : JoinType.INNER
                   ))
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
@@ -1215,7 +1215,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                       ),
                       "j0.",
                       "1",
-                      JoinType.INNER
+                      NullHandling.replaceWithDefault() ? JoinType.LEFT : JoinType.INNER
                   ))
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
