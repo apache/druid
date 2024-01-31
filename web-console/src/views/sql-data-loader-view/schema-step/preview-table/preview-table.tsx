@@ -19,8 +19,8 @@
 import { Icon } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
-import type { Column, QueryResult, SqlQuery } from '@druid-toolkit/query';
-import { SqlAlias, SqlStar } from '@druid-toolkit/query';
+import type { Column, QueryResult, SqlExpression, SqlQuery } from '@druid-toolkit/query';
+import { SqlAlias, SqlFunction, SqlStar } from '@druid-toolkit/query';
 import classNames from 'classnames';
 import React, { useState } from 'react';
 import type { RowRenderProps } from 'react-table';
@@ -42,6 +42,10 @@ import './preview-table.scss';
 
 function isDate(v: any): v is Date {
   return Boolean(v && typeof v.toISOString === 'function');
+}
+
+function isWrappedInArrayToMv(ex: SqlExpression | undefined) {
+  return ex instanceof SqlFunction && ex.getEffectiveFunctionName() === 'ARRAY_TO_MV';
 }
 
 function getExpressionIfAlias(query: SqlQuery, selectIndex: number): string {
@@ -123,7 +127,10 @@ export const PreviewTable = React.memo(function PreviewTable(props: PreviewTable
                 column.isTimeColumn() ? 'timestamp' : 'dimension',
                 `column${i}`,
                 column.sqlType?.toLowerCase(),
-                { selected },
+                {
+                  selected,
+                  'multi-value': isWrappedInArrayToMv(parsedQuery.getSelectExpressionForIndex(i)),
+                },
               );
 
           return {

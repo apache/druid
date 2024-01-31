@@ -62,23 +62,3 @@ body {
     width: 100%;
   }
 }
-
-.legacy-switch.#{$bp-ns}-control.#{$bp-ns}-switch {
-  input:checked ~ .#{$bp-ns}-control-indicator {
-    background: $orange5;
-  }
-
-  &:hover input:checked ~ .#{$bp-ns}-control-indicator {
-    background: $orange2;
-  }
-}
-
-.danger-switch.#{$bp-ns}-control.#{$bp-ns}-switch {
-  input:checked ~ .#{$bp-ns}-control-indicator {
-    background: $red5;
-  }
-
-  &:hover input:checked ~ .#{$bp-ns}-control-indicator {
-    background: $red2;
-  }
-}

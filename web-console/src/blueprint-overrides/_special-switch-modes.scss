@@ -16,55 +16,24 @@
  * limitations under the License.
  */
 
-@import '../../../variables';
-@import '../../../blueprint-overrides/common/colors';
-
-.schema-table {
-  .rt-th {
-    &.dimension {
-      background: rgba($green3, 0.3);
-
-      &.long,
-      &.float,
-      &.double {
-        background: rgba($blue3, 0.3);
-      }
-
-      &.array {
-        background: rgba($orange2, 0.3);
-      }
-
-      &.mv-string {
-        background: rgba($orange4, 0.3);
-      }
+.bp4-dark .bp4-switch.bp4-control {
+  &.legacy-switch {
+    input:checked ~ .bp4-control-indicator {
+      background: $orange5;
     }
 
-    &.metric {
-      background: rgba($rose2, 0.16);
+    &:hover input:checked ~ .bp4-control-indicator {
+      background: $orange2;
     }
   }
 
-  .rt-td {
-    &.dimension {
-      background: rgba($green3, 0.12);
-
-      &.long,
-      &.float,
-      &.double {
-        background: rgba($blue3, 0.1);
-      }
-
-      &.array {
-        background: rgba($orange2, 0.1);
-      }
-
-      &.mv-string {
-        background: rgba($orange4, 0.1);
-      }
+  &.danger-switch {
+    input:checked ~ .bp4-control-indicator {
+      background: $red5;
     }
 
-    &.metric {
-      background: rgba($rose2, 0.07);
+    &:hover input:checked ~ .bp4-control-indicator {
+      background: $red2;
     }
   }
 }
