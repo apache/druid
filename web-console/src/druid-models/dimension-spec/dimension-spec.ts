@@ -40,7 +40,7 @@ export interface DimensionSpec {
 
 // This is a web console internal made up column type that represents a multi value dimension
 const MADE_UP_MV_COLUMN_TYPE = 'mv-string';
-function madeMadeUpMvDimensionSpec(name: string): DimensionSpec {
+function makeMadeUpMvDimensionSpec(name: string): DimensionSpec {
   return {
     type: 'string',
     name,
@@ -179,7 +179,7 @@ export function getDimensionSpecs(
       }
 
       if (columnType === MADE_UP_MV_COLUMN_TYPE) {
-        return madeMadeUpMvDimensionSpec(h);
+        return makeMadeUpMvDimensionSpec(h);
       }
     } else {
       // Ignore the type hint if it is MVD and we don't want to force people into them
