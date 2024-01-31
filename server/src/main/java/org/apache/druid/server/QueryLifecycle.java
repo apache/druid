@@ -245,6 +245,7 @@ public class QueryLifecycle
   /**
    * Authorize the query using the authentication result.
    * Will return an Access object denoting whether the query is authorized or not.
+   * This method is to be used by the grpc-query-extension.
    *
    * @param authenticationResult authentication result indicating identity of the requester
    * @return authorization result of requester
