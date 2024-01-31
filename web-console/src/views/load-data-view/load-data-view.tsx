@@ -45,6 +45,7 @@ import type { JSX } from 'react';
 import React from 'react';
 
 import {
+  ArrayModeSwitch,
   AutoForm,
   CenterMessage,
   ClearableInput,
@@ -289,7 +290,7 @@ function initializeSchemaWithSampleIfNeeded(
   sample: SampleResponse,
 ): Partial<IngestionSpec> {
   if (deepGet(spec, 'spec.dataSchema.dimensionsSpec')) return spec;
-  return updateSchemaWithSample(spec, sample, 'fixed', 'arrays', getRollup(spec, false));
+  return updateSchemaWithSample(spec, sample, 'fixed', 'multi-values', getRollup(spec, false));
 }
 
 type Step =
@@ -2387,39 +2388,14 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 />
               </FormGroupWithInfo>
               {showArrayModeToggle(spec) && (
-                <FormGroupWithInfo
-                  inlineInfo
-                  info={
-                    <PopoverText>
-                      <p>
-                        Store arrays as multi-value string columns instead of arrays. Note that all
-                        detected array elements will be coerced to strings if you choose this
-                        option, and data will behave more like a string than an array at query time.
-                        See{' '}
-                        <ExternalLink href={`${getLink('DOCS')}/querying/arrays`}>
-                          array docs
-                        </ExternalLink>{' '}
-                        and{' '}
-                        <ExternalLink href={`${getLink('DOCS')}/querying/multi-value-dimensions`}>
-                          mvd docs
-                        </ExternalLink>{' '}
-                        for more details about the differences between arrays and multi-value
-                        strings.
-                      </p>
-                    </PopoverText>
-                  }
-                >
-                  <Switch
-                    label="Store ARRAYs as MVDs"
-                    className="legacy-switch"
-                    checked={arrayMode === 'multi-values'}
-                    onChange={() =>
-                      this.setState({
-                        newArrayMode: arrayMode === 'arrays' ? 'multi-values' : 'arrays',
-                      })
-                    }
-                  />
-                </FormGroupWithInfo>
+                <ArrayModeSwitch
+                  arrayMode={arrayMode}
+                  changeArrayMode={newArrayMode => {
+                    this.setState({
+                      newArrayMode,
+                    });
+                  }}
+                />
               )}
               {schemaMode !== 'fixed' && (
                 <AutoForm

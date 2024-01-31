@@ -45,6 +45,7 @@ import {
   externalConfigToIngestQueryPattern,
   ingestQueryPatternToQuery,
 } from '../ingest-query-pattern/ingest-query-pattern';
+import type { ArrayMode } from '../ingestion-spec/ingestion-spec';
 import type { QueryContext } from '../query-context/query-context';
 
 const ISSUE_MARKER = '--:ISSUE:';
@@ -91,7 +92,7 @@ export class WorkbenchQuery {
     externalConfig: ExternalConfig,
     timeExpression: SqlExpression | undefined,
     partitionedByHint: string | undefined,
-    forceMultiValue: boolean,
+    arrayMode: ArrayMode,
   ): WorkbenchQuery {
     return new WorkbenchQuery({
       queryString: ingestQueryPatternToQuery(
@@ -99,7 +100,7 @@ export class WorkbenchQuery {
           externalConfig,
           timeExpression,
           partitionedByHint,
-          forceMultiValue,
+          arrayMode,
         ),
       ).toString(),
       queryContext: {

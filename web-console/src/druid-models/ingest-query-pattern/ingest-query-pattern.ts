@@ -34,6 +34,7 @@ import {
   externalConfigToTableExpression,
   fitExternalConfigPattern,
 } from '../external-config/external-config';
+import type { ArrayMode } from '../ingestion-spec/ingestion-spec';
 import { guessDataSourceNameFromInputSource } from '../ingestion-spec/ingestion-spec';
 
 export type IngestMode = 'insert' | 'replace';
@@ -62,7 +63,7 @@ export function externalConfigToIngestQueryPattern(
   config: ExternalConfig,
   timeExpression: SqlExpression | undefined,
   partitionedByHint: string | undefined,
-  forceMultiValue: boolean,
+  arrayMode: ArrayMode,
 ): IngestQueryPattern {
   return {
     destinationTableName: guessDataSourceNameFromInputSource(config.inputSource) || 'data',
@@ -70,7 +71,7 @@ export function externalConfigToIngestQueryPattern(
     mainExternalName: 'ext',
     mainExternalConfig: config,
     filters: [],
-    dimensions: externalConfigToInitDimensions(config, timeExpression, forceMultiValue),
+    dimensions: externalConfigToInitDimensions(config, timeExpression, arrayMode),
     partitionedBy: partitionedByHint || (timeExpression ? 'day' : 'all'),
     clusteredBy: [],
   };

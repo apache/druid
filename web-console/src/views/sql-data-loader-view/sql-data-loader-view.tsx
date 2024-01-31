@@ -189,28 +189,28 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
             inputSource={inputSource}
             initInputFormat={inputFormat}
             doneButton={false}
-            onSet={({ inputFormat, signature, timeExpression, forceMultiValue }) => {
+            onSet={({ inputFormat, signature, timeExpression, arrayMode }) => {
               setContent({
                 queryString: ingestQueryPatternToQuery(
                   externalConfigToIngestQueryPattern(
                     { inputSource, inputFormat, signature },
                     timeExpression,
                     undefined,
-                    forceMultiValue,
+                    arrayMode,
                   ),
                 ).toString(),
                 queryContext: INITIAL_QUERY_CONTEXT,
               });
             }}
             altText="Skip the wizard and continue with custom SQL"
-            onAltSet={({ inputFormat, signature, timeExpression, forceMultiValue }) => {
+            onAltSet={({ inputFormat, signature, timeExpression, arrayMode }) => {
               goToQuery({
                 queryString: ingestQueryPatternToQuery(
                   externalConfigToIngestQueryPattern(
                     { inputSource, inputFormat, signature },
                     timeExpression,
                     undefined,
-                    forceMultiValue,
+                    arrayMode,
                   ),
                 ).toString(),
               });
