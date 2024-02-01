@@ -761,9 +761,10 @@ class DruidSqlValidator extends BaseDruidSqlValidator
         fields.add(Pair.of(colName, sourceField.getType()));
         continue;
       }
+      RelDataType relType = typeFactory.createSqlType(SqlTypeName.get(sqlTypeName));
       fields.add(Pair.of(
           colName,
-          typeFactory.createSqlType(SqlTypeName.get(sqlTypeName))
+          typeFactory.createTypeWithNullability(relType, true)
       ));
     }
 

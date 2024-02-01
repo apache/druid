@@ -368,6 +368,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
         .sql("INSERT INTO dst SELECT *\n" +
              "FROM TABLE(http(userName => 'bob',\n" +
             "                 password => 'secret',\n" +
+             // "                uris => ARRAY['http://foo.com/bar.json'],\n" +
              "                uris => ?,\n" +
              "                format => 'csv'))\n" +
              "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n" +
@@ -481,9 +482,9 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
       buf.append(sig.getColumnName(i)).append(" ");
       ColumnType type = sig.getColumnType(i).get();
       if (type == ColumnType.STRING) {
-        buf.append(Columns.STRING);
+        buf.append(Columns.SQL_VARCHAR);
       } else if (type == ColumnType.LONG) {
-        buf.append(Columns.LONG);
+        buf.append(Columns.SQL_BIGINT);
       } else if (type == ColumnType.DOUBLE) {
         buf.append(Columns.DOUBLE);
       } else if (type == ColumnType.FLOAT) {

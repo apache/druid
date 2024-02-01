@@ -131,6 +131,7 @@ public class CalcitePlanner implements Planner, ViewExpander
     this.costFactory = config.getCostFactory();
     this.validatorContext = validatorContext;
     this.defaultSchema = config.getDefaultSchema();
+    this.operatorTable = config.getOperatorTable();
     this.programs = config.getPrograms();
     this.parserConfig = config.getParserConfig();
     this.sqlToRelConverterConfig = config.getSqlToRelConverterConfig();
@@ -141,41 +142,6 @@ public class CalcitePlanner implements Planner, ViewExpander
     this.context = config.getContext();
     this.connectionConfig = connConfig(context);
     this.typeSystem = config.getTypeSystem();
-
-    // With the catalog, schemas can provide functions.
-    // Add the necessary indirection. The type factory used here
-    // is the Druid one, since the per-query one is not yet available
-    // here. Nor are built-in function associated with per-query types.
-    this.operatorTable = new ChainedSqlOperatorTable(
-        Arrays.asList(
-            config.getOperatorTable(),
-            new DruidCatalogReader(
-                CalciteSchema.from(rootSchema(defaultSchema)),
-                CalciteSchema.from(defaultSchema).path(null),
-                DruidTypeSystem.TYPE_FACTORY,
-                connectionConfig
-            )
-        )
-    )
-    {
-      @Override
-      public void lookupOperatorOverloads(final SqlIdentifier opName,
-                                          SqlFunctionCategory category,
-                                          SqlSyntax syntax,
-                                          List<SqlOperator> operatorList,
-                                          SqlNameMatcher nameMatcher
-      )
-      {
-        // Workaround for a Calcite bug. Built-in operators have no name: opName
-        // is null. The "standard" operator table special-cases null names. The
-        // chained one just goes ahead and dereferences the (null) opName. This
-        // hack makes the chained version work like the base version.
-        if (opName == null) {
-          return;
-        }
-        super.lookupOperatorOverloads(opName, category, syntax, operatorList, nameMatcher);
-      }
-    };
     reset();
   }
 

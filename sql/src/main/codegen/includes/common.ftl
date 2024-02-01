@@ -27,32 +27,32 @@ SqlNode PartitionGranularity() :
   (
     <HOUR>
     {
-      result = SqlLiteral.createCharString(DruidSqlParserUtils.HOUR_GRAIN, getPos());
+      result = SqlLiteral.createSymbol(DruidSqlParserUtils.HOUR_GRAIN, getPos());
     }
   |
     <DAY>
     {
-      result = SqlLiteral.createCharString(DruidSqlParserUtils.DAY_GRAIN, getPos());
+      result = SqlLiteral.createSymbol(DruidSqlParserUtils.DAY_GRAIN, getPos());
     }
   |
     <MONTH>
     {
-      result = SqlLiteral.createCharString(DruidSqlParserUtils.MONTH_GRAIN, getPos());
+      result = SqlLiteral.createSymbol(DruidSqlParserUtils.MONTH_GRAIN, getPos());
     }
   |
     <YEAR>
     {
-      result = SqlLiteral.createCharString(DruidSqlParserUtils.YEAR_GRAIN, getPos());
+      result = SqlLiteral.createSymbol(DruidSqlParserUtils.YEAR_GRAIN, getPos());
     }
   |
     <ALL>
     {
-      result = SqlLiteral.createCharString(DruidSqlParserUtils.ALL_GRAIN, getPos());
+      result = SqlLiteral.createSymbol(DruidSqlParserUtils.ALL_GRAIN, getPos());
     }
     [
       <TIME>
       {
-        result = SqlLiteral.createCharString(DruidSqlParserUtils.ALL_TIME_GRAIN, getPos());
+        result = SqlLiteral.createSymbol(DruidSqlParserUtils.ALL_TIME_GRAIN, getPos());
       }
     ]
   |
