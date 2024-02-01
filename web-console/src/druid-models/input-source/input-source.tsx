@@ -169,7 +169,17 @@ export function issueWithInputSource(inputSource: InputSource | undefined): stri
   }
 }
 
-const KNOWN_TYPES = ['inline', 'druid', 'http', 'local', 's3', 'azureStorage', 'google', 'hdfs', 'sql'];
+const KNOWN_TYPES = [
+  'inline',
+  'druid',
+  'http',
+  'local',
+  's3',
+  'azureStorage',
+  'google',
+  'hdfs',
+  'sql',
+];
 export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
   // inline
 
@@ -325,7 +335,8 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     name: 'uris',
     label: 'Azure URIs',
     type: 'string-array',
-    placeholder: 'azureStorage://your-storage-account/your-container/some-file1.ext, azureStorage://your-storage-account/your-container/some-file2.ext',
+    placeholder:
+      'azureStorage://your-storage-account/your-container/some-file1.ext, azureStorage://your-storage-account/your-container/some-file2.ext',
     defined: inputSource =>
       inputSource.type === 'azureStorage' &&
       !deepGet(inputSource, 'prefixes') &&
@@ -345,7 +356,8 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     name: 'prefixes',
     label: 'Azure prefixes',
     type: 'string-array',
-    placeholder: 'azureStorage://your-storage-account/your-container/some-path1, azureStorage://your-storage-account/your-container/some-path2',
+    placeholder:
+      'azureStorage://your-storage-account/your-container/some-path1, azureStorage://your-storage-account/your-container/some-path2',
     defined: inputSource =>
       inputSource.type === 'azureStorage' &&
       !deepGet(inputSource, 'uris') &&
@@ -383,16 +395,15 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     label: 'Shared Access Storage Token',
     type: 'string',
     placeholder: '(sas token)',
-    defined: inputSource =>
-      inputSource.type === 'azureStorage',
+    defined: inputSource => inputSource.type === 'azureStorage',
     info: (
       <>
-      <p>Shared Access Storage Token for this storage account.</p>
-      <p>
-        Note: Inlining the sas token into the ingestion spec can be dangerous as it might
-        appear in server log files and can be seen by anyone accessing this console.
-      </p>
-    </>
+        <p>Shared Access Storage Token for this storage account.</p>
+        <p>
+          Note: Inlining the sas token into the ingestion spec can be dangerous as it might appear
+          in server log files and can be seen by anyone accessing this console.
+        </p>
+      </>
     ),
   },
   // google
