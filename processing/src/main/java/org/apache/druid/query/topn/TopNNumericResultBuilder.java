@@ -22,7 +22,6 @@ package org.apache.druid.query.topn;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import org.apache.druid.query.ComparisonUtils;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
@@ -76,7 +75,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
       int retVal = metricComparator.compare(d1.getTopNMetricVal(), d2.getTopNMetricVal());
 
       if (retVal == 0) {
-        retVal = ComparisonUtils.getComparatorForType(d1.getDimType()).compare(d1.getDimValue(), d2.getDimValue());
+        retVal = d1.getDimType().getNullableStrategy().compare(d1.getDimValue(), d2.getDimValue());
       }
 
       return retVal;
@@ -213,7 +212,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
           int retVal = metricComparator.compare(d2.getTopNMetricVal(), d1.getTopNMetricVal());
 
           if (retVal == 0) {
-            retVal = ComparisonUtils.getComparatorForType(d1.getDimType()).compare(d1.getDimValue(), d2.getDimValue());
+            retVal = d1.getDimType().getNullableStrategy().compare(d1.getDimValue(), d2.getDimValue());
           }
 
           return retVal;

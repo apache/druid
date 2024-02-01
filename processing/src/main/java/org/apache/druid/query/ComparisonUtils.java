@@ -19,44 +19,14 @@
 
 package org.apache.druid.query;
 
-import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
-import org.apache.druid.segment.column.TypeSignature;
-import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
 
 public class ComparisonUtils
 {
-
-  public static Comparator<Object> getComparatorForType(TypeSignature<ValueType> type)
-  {
-    switch (type.getType()) {
-      case LONG:
-        // The type of the object should be Long
-      case DOUBLE:
-        // The type of the object should be Double
-      case FLOAT:
-        // The type of the object should be Float
-      case STRING:
-        // The type of the object should be String
-        return Comparator.nullsFirst((lhs, rhs) -> ((Comparable) lhs).compareTo(rhs));
-      case ARRAY:
-        switch (type.getElementType().getType()) {
-          case STRING:
-          case LONG:
-          case FLOAT:
-          case DOUBLE:
-            // The type of the object should be List<ElementType>
-            return Comparator.nullsFirst(new ListComparator(Comparators.naturalNullsFirst()));
-        }
-      default:
-        throw DruidException.defensive("Type[%s] cannot be compared", type);
-    }
-  }
 
   /**
    * Should be a null friendly element comparator

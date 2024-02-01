@@ -30,7 +30,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.query.ColumnSelectorPlus;
-import org.apache.druid.query.ComparisonUtils;
 import org.apache.druid.query.dimension.ColumnSelectorStrategy;
 import org.apache.druid.query.dimension.ColumnSelectorStrategyFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -422,20 +421,9 @@ public final class DimensionHandlerUtils
   }
 
   @Nullable
-  public static Object[] convertToList(Object obj, ValueType elementType)
+  public static Object[] convertToArray(Object obj, TypeSignature<ValueType> elementType)
   {
-    switch (elementType) {
-      case LONG:
-        return coerceToObjectArrayWithElementCoercionFunction(obj, DimensionHandlerUtils::convertObjectToLong);
-      case FLOAT:
-        return coerceToObjectArrayWithElementCoercionFunction(obj, DimensionHandlerUtils::convertObjectToFloat);
-      case DOUBLE:
-        return coerceToObjectArrayWithElementCoercionFunction(obj, DimensionHandlerUtils::convertObjectToDouble);
-    }
-    throw new ISE(
-        "Unable to convert object of type[%s] to Object[]",
-        obj.getClass().getName()
-    );
+    return coerceToObjectArrayWithElementCoercionFunction(obj, (object) -> convertObjectToType(object, elementType));
   }
 
 
@@ -483,9 +471,8 @@ public final class DimensionHandlerUtils
   )
   {
     //noinspection unchecked
-    return ComparisonUtils
-        .getComparatorForType(type)
-        .compare(convertObjectToType(lhs, type), convertObjectToType(rhs, type));
+    return type.getNullableStrategy()
+               .compare(convertObjectToType(lhs, type), convertObjectToType(rhs, type));
   }
 
   // TODO(laksh): Explain why coercion is needed

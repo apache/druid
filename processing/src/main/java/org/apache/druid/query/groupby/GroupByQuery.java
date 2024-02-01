@@ -42,7 +42,6 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.BaseQuery;
-import org.apache.druid.query.ComparisonUtils;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
@@ -790,12 +789,12 @@ public class GroupByQuery extends BaseQuery<ResultRow>
       } else if (dimensionType.equals(ColumnType.STRING_ARRAY)) {
         final Object[] lhsArr = DimensionHandlerUtils.coerceToStringArray(lhsObj);
         final Object[] rhsArr = DimensionHandlerUtils.coerceToStringArray(rhsObj);
-        dimCompare = ComparisonUtils.getComparatorForType(ColumnType.STRING_ARRAY).compare(lhsArr, rhsArr);
+        dimCompare = ColumnType.STRING_ARRAY.getNullableStrategy().compare(lhsArr, rhsArr);
       } else if (dimensionType.equals(ColumnType.LONG_ARRAY)
                  || dimensionType.equals(ColumnType.DOUBLE_ARRAY)) {
-        final Object[] lhsArr = DimensionHandlerUtils.convertToList(lhsObj, dimensionType.getElementType().getType());
-        final Object[] rhsArr = DimensionHandlerUtils.convertToList(rhsObj, dimensionType.getElementType().getType());
-        dimCompare = ComparisonUtils.getComparatorForType(dimensionType).compare(lhsArr, rhsArr);
+        final Object[] lhsArr = DimensionHandlerUtils.convertToArray(lhsObj, dimensionType.getElementType());
+        final Object[] rhsArr = DimensionHandlerUtils.convertToArray(rhsObj, dimensionType.getElementType());
+        dimCompare = dimensionType.getNullableStrategy().compare(lhsArr, rhsArr);
       } else {
         dimCompare = comparator.compare((String) lhsObj, (String) rhsObj);
       }

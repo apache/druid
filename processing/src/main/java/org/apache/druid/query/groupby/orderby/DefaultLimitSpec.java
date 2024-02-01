@@ -49,6 +49,7 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
@@ -436,13 +437,13 @@ public class DefaultLimitSpec implements LimitSpec
   {
     Comparator arrayComparator = null;
     if (columnType.isArray()) {
-      final ValueType elementType = columnType.getElementType().getType();
+      final TypeSignature<ValueType> elementType = columnType.getElementType();
       if (columnType.getElementType().isNumeric()) {
         arrayComparator = (o1, o2) ->
             new ComparisonUtils.NumericListComparatorForStringElementComparator(comparator)
                 .compare(
-                    DimensionHandlerUtils.convertToList(o1, elementType),
-                    DimensionHandlerUtils.convertToList(o2, elementType)
+                    DimensionHandlerUtils.convertToArray(o1, elementType),
+                    DimensionHandlerUtils.convertToArray(o2, elementType)
                 );
       } else if (columnType.getElementType().equals(ColumnType.STRING)) {
         arrayComparator = (o1, o2) ->
