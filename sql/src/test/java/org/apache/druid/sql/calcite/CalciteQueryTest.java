@@ -644,8 +644,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testEarliestAggregators()
   {
-    msqIncompatible();
-
     testQuery(
         "SELECT "
         + "EARLIEST(cnt), EARLIEST(m1), EARLIEST(dim1, 10), EARLIEST(dim1, CAST(10 AS INTEGER)), "
@@ -1207,8 +1205,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testPrimitiveEarliestInSubquery()
   {
-    msqIncompatible();
-
     testQuery(
         "SELECT SUM(val1), SUM(val2), SUM(val3) FROM (SELECT dim2, EARLIEST(m1) AS val1, EARLIEST(cnt) AS val2, EARLIEST(m2) AS val3 FROM foo GROUP BY dim2)",
         ImmutableList.of(
@@ -1415,7 +1411,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testStringEarliestSingleStringDim()
   {
-    msqIncompatible();
     testQuery(
         "SELECT dim2, EARLIEST(dim1,10) AS val FROM foo GROUP BY dim2",
         ImmutableList.of(
@@ -1531,8 +1526,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testEarliestAggregatorsNumericNulls()
   {
-    msqIncompatible();
-
     testQuery(
         "SELECT EARLIEST(l1), EARLIEST(d1), EARLIEST(f1) FROM druid.numfoo",
         ImmutableList.of(
@@ -1590,8 +1583,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFirstLatestAggregatorsSkipNulls()
   {
-    msqIncompatible();
-
     final DimFilter filter;
     if (useDefault) {
       filter = notNull("dim1");
@@ -1704,8 +1695,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testOrderByEarliestFloat()
   {
-    msqIncompatible();
-
     List<Object[]> expected;
     if (NullHandling.replaceWithDefault()) {
       expected = ImmutableList.of(
@@ -1751,8 +1740,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testOrderByEarliestDouble()
   {
-    msqIncompatible();
-
     List<Object[]> expected;
     if (NullHandling.replaceWithDefault()) {
       expected = ImmutableList.of(
@@ -1798,8 +1785,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testOrderByEarliestLong()
   {
-    msqIncompatible();
-
     List<Object[]> expected;
     if (NullHandling.replaceWithDefault()) {
       expected = ImmutableList.of(
@@ -9670,7 +9655,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTimeseriesEmptyResultsAggregatorDefaultValuesNonVectorized()
   {
+    // Empty-dataset aggregation queries in MSQ return an empty row, rather than a single row as SQL requires.
     msqIncompatible();
+
     cannotVectorize();
     skipVectorize();
     // timeseries with all granularity have a single group, so should return default results for given aggregators
@@ -9986,7 +9973,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByAggregatorDefaultValuesNonVectorized()
   {
-    msqIncompatible();
     cannotVectorize();
     skipVectorize();
     testQuery(
