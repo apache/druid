@@ -356,6 +356,93 @@ public class QueryGranularityTest
             hour.bucketStart(DateTimes.of("2012-11-04T03:30:00-08:00"))
         )
     );
+
+    final PeriodGranularity p7days = new PeriodGranularity(
+        new Period("P7D"),
+        DateTimes.of("2022-03-24T02:35:00.000-07:00"),
+        tz
+    );
+    assertSameDateTime(
+        Lists.newArrayList(
+            new DateTime("2022-03-03T02:35:00.000-08:00", tz),
+            new DateTime("2022-03-10T02:35:00.000-08:00", tz),
+            new DateTime("2022-03-24T02:35:00.000-07:00", tz),
+            new DateTime("2022-03-31T02:35:00.000-07:00", tz)
+
+        ),
+        Lists.newArrayList(
+            p7days.bucketStart(DateTimes.of("2022-03-04T02:35:00.000-08:00")),
+            p7days.bucketStart(DateTimes.of("2022-03-16T02:35:00.000-07:00")),
+            p7days.bucketStart(DateTimes.of("2022-03-26T02:35:00.000-07:00")),
+            p7days.bucketStart(DateTimes.of("2022-03-31T03:35:00.000-07:00"))
+        )
+    );
+
+    final PeriodGranularity week = new PeriodGranularity(
+        new Period("P1W"),
+        DateTimes.of("2022-03-24T02:35:00.000-07:00"),
+        tz
+    );
+
+    assertSameDateTime(
+        Lists.newArrayList(
+            new DateTime("2022-03-03T02:35:00.000-08:00", tz),
+            new DateTime("2022-03-10T02:35:00.000-08:00", tz),
+            new DateTime("2022-03-24T02:35:00.000-07:00", tz),
+            new DateTime("2022-03-31T02:35:00.000-07:00", tz)
+
+        ),
+        Lists.newArrayList(
+            week.bucketStart(DateTimes.of("2022-03-04T02:35:00.000-08:00")),
+            week.bucketStart(DateTimes.of("2022-03-16T02:35:00.000-07:00")),
+            week.bucketStart(DateTimes.of("2022-03-26T02:35:00.000-07:00")),
+            week.bucketStart(DateTimes.of("2022-03-31T03:35:00.000-07:00"))
+        )
+    );
+
+    final PeriodGranularity month = new PeriodGranularity(
+        new Period("P1M"),
+        DateTimes.of("2022-03-24T02:35:00.000-07:00"),
+        tz
+    );
+
+    assertSameDateTime(
+        Lists.newArrayList(
+            new DateTime("2022-02-24T02:35:00.000-08:00", tz),
+            new DateTime("2022-02-24T02:35:00.000-08:00", tz),
+            new DateTime("2022-03-24T02:35:00.000-07:00", tz),
+            new DateTime("2022-03-24T02:35:00.000-07:00", tz)
+
+        ),
+        Lists.newArrayList(
+            month.bucketStart(DateTimes.of("2022-03-04T02:35:00.000-08:00")),
+            month.bucketStart(DateTimes.of("2022-03-16T02:35:00.000-07:00")),
+            month.bucketStart(DateTimes.of("2022-03-26T02:35:00.000-07:00")),
+            month.bucketStart(DateTimes.of("2022-03-31T03:35:00.000-07:00"))
+        )
+    );
+
+    final PeriodGranularity year = new PeriodGranularity(
+        new Period("P1Y"),
+        DateTimes.of("2022-03-24T02:35:00.000-07:00"),
+        tz
+    );
+
+    assertSameDateTime(
+        Lists.newArrayList(
+            new DateTime("2021-03-24T02:35:00.000-07:00", tz),
+            new DateTime("2021-03-24T02:35:00.000-07:00", tz),
+            new DateTime("2022-03-24T02:35:00.000-07:00", tz),
+            new DateTime("2022-03-24T02:35:00.000-07:00", tz)
+
+        ),
+        Lists.newArrayList(
+            year.bucketStart(DateTimes.of("2022-03-04T02:35:00.000-08:00")),
+            year.bucketStart(DateTimes.of("2022-03-16T02:35:00.000-07:00")),
+            year.bucketStart(DateTimes.of("2022-03-26T02:35:00.000-07:00")),
+            year.bucketStart(DateTimes.of("2022-03-31T03:35:00.000-07:00"))
+        )
+    );
   }
 
   @Test
@@ -877,7 +964,7 @@ public class QueryGranularityTest
     Assert.assertFalse("actualIter not exhausted!?", actualIter.hasNext());
     Assert.assertFalse("expectedIter not exhausted!?", expectedIter.hasNext());
   }
-  
+
   @Test
   public void testTruncateKathmandu()
   {

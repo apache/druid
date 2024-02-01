@@ -53,6 +53,9 @@ public class TypeStrategies
   @Nullable
   public static TypeStrategy<?> getComplex(String typeName)
   {
+    if (typeName == null) {
+      return null;
+    }
     return COMPLEX_STRATEGIES.get(typeName);
   }
 

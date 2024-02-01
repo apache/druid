@@ -24,8 +24,8 @@ import com.fasterxml.jackson.databind.cfg.MapperConfig;
 import com.fasterxml.jackson.databind.introspect.AnnotatedClass;
 import com.fasterxml.jackson.databind.introspect.AnnotatedClassResolver;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.EnvVarBuilder;
 import io.fabric8.kubernetes.api.model.EnvVarSourceBuilder;
@@ -35,11 +35,13 @@ import io.fabric8.kubernetes.api.model.PodTemplate;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import io.fabric8.kubernetes.client.utils.Serialization;
+import org.apache.commons.io.IOUtils;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InternalServerError;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -49,12 +51,16 @@ import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.KubernetesOverlordUtils;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.tasklogs.TaskLogs;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
@@ -85,13 +91,15 @@ public class PodTemplateTaskAdapter implements TaskAdapter
   private final DruidNode node;
   private final ObjectMapper mapper;
   private final HashMap<String, PodTemplate> templates;
+  private final TaskLogs taskLogs;
 
   public PodTemplateTaskAdapter(
       KubernetesTaskRunnerConfig taskRunnerConfig,
       TaskConfig taskConfig,
       DruidNode node,
       ObjectMapper mapper,
-      Properties properties
+      Properties properties,
+      TaskLogs taskLogs
   )
   {
     this.taskRunnerConfig = taskRunnerConfig;
@@ -99,6 +107,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
     this.node = node;
     this.mapper = mapper;
     this.templates = initializePodTemplates(properties);
+    this.taskLogs = taskLogs;
   }
 
   /**
@@ -163,13 +172,42 @@ public class PodTemplateTaskAdapter implements TaskAdapter
   {
     Map<String, String> annotations = from.getSpec().getTemplate().getMetadata().getAnnotations();
     if (annotations == null) {
-      throw new IOE("No annotations found on pod spec for job [%s]", from.getMetadata().getName());
+      log.info("No annotations found on pod spec for job [%s]. Trying to load task payload from deep storage.", from.getMetadata().getName());
+      return toTaskUsingDeepStorage(from);
     }
     String task = annotations.get(DruidK8sConstants.TASK);
     if (task == null) {
-      throw new IOE("No task annotation found on pod spec for job [%s]", from.getMetadata().getName());
+      log.info("No task annotation found on pod spec for job [%s]. Trying to load task payload from deep storage.", from.getMetadata().getName());
+      return toTaskUsingDeepStorage(from);
     }
     return mapper.readValue(Base64Compression.decompressBase64(task), Task.class);
+  }
+
+  private Task toTaskUsingDeepStorage(Job from) throws IOException
+  {
+    com.google.common.base.Optional<InputStream> taskBody = taskLogs.streamTaskPayload(getTaskId(from).getOriginalTaskId());
+    if (!taskBody.isPresent()) {
+      throw InternalServerError.exception(
+          "Could not load task payload from deep storage for job [%s]. Check the overlord logs for errors uploading task payloads to deep storage.",
+          from.getMetadata().getName()
+      );
+    }
+    String task = IOUtils.toString(taskBody.get(), Charset.defaultCharset());
+    return mapper.readValue(task, Task.class);
+  }
+
+  @Override
+  public K8sTaskId getTaskId(Job from)
+  {
+    Map<String, String> annotations = from.getSpec().getTemplate().getMetadata().getAnnotations();
+    if (annotations == null) {
+      throw DruidException.defensive().build("No annotations found on pod spec for job [%s]", from.getMetadata().getName());
+    }
+    String taskId = annotations.get(DruidK8sConstants.TASK_ID);
+    if (taskId == null) {
+      throw DruidException.defensive().build("No task_id annotation found on pod spec for job [%s]", from.getMetadata().getName());
+    }
+    return new K8sTaskId(taskId);
   }
 
   private HashMap<String, PodTemplate> initializePodTemplates(Properties properties)
@@ -208,9 +246,9 @@ public class PodTemplateTaskAdapter implements TaskAdapter
     }
   }
 
-  private Collection<EnvVar> getEnv(Task task)
+  private Collection<EnvVar> getEnv(Task task) throws IOException
   {
-    return ImmutableList.of(
+    List<EnvVar> envVars = Lists.newArrayList(
         new EnvVarBuilder()
             .withName(DruidK8sConstants.TASK_DIR_ENV)
             .withValue(taskConfig.getBaseDir())
@@ -220,16 +258,20 @@ public class PodTemplateTaskAdapter implements TaskAdapter
             .withValue(task.getId())
             .build(),
         new EnvVarBuilder()
-            .withName(DruidK8sConstants.TASK_JSON_ENV)
-            .withValueFrom(new EnvVarSourceBuilder().withFieldRef(new ObjectFieldSelector(
-                null,
-                StringUtils.format("metadata.annotations['%s']", DruidK8sConstants.TASK)
-            )).build()).build(),
-        new EnvVarBuilder()
             .withName(DruidK8sConstants.LOAD_BROADCAST_SEGMENTS_ENV)
             .withValue(Boolean.toString(task.supportsQueries()))
             .build()
     );
+    if (!shouldUseDeepStorageForTaskPayload(task)) {
+      envVars.add(new EnvVarBuilder()
+          .withName(DruidK8sConstants.TASK_JSON_ENV)
+          .withValueFrom(new EnvVarSourceBuilder().withFieldRef(new ObjectFieldSelector(
+              null,
+              StringUtils.format("metadata.annotations['%s']", DruidK8sConstants.TASK)
+          )).build()).build()
+      );
+    }
+    return envVars;
   }
 
   private Map<String, String> getPodLabels(KubernetesTaskRunnerConfig config, Task task)
@@ -239,14 +281,18 @@ public class PodTemplateTaskAdapter implements TaskAdapter
 
   private Map<String, String> getPodTemplateAnnotations(Task task) throws IOException
   {
-    return ImmutableMap.<String, String>builder()
-        .put(DruidK8sConstants.TASK, Base64Compression.compressBase64(mapper.writeValueAsString(task)))
+    ImmutableMap.Builder<String, String> podTemplateAnnotationBuilder = ImmutableMap.<String, String>builder()
         .put(DruidK8sConstants.TLS_ENABLED, String.valueOf(node.isEnableTlsPort()))
         .put(DruidK8sConstants.TASK_ID, task.getId())
         .put(DruidK8sConstants.TASK_TYPE, task.getType())
         .put(DruidK8sConstants.TASK_GROUP_ID, task.getGroupId())
-        .put(DruidK8sConstants.TASK_DATASOURCE, task.getDataSource())
-        .build();
+        .put(DruidK8sConstants.TASK_DATASOURCE, task.getDataSource());
+
+    if (!shouldUseDeepStorageForTaskPayload(task)) {
+      podTemplateAnnotationBuilder
+          .put(DruidK8sConstants.TASK, Base64Compression.compressBase64(mapper.writeValueAsString(task)));
+    }
+    return podTemplateAnnotationBuilder.build();
   }
   
   private Map<String, String> getJobLabels(KubernetesTaskRunnerConfig config, Task task)
@@ -275,5 +321,12 @@ public class PodTemplateTaskAdapter implements TaskAdapter
   private String getDruidLabel(String baseLabel)
   {
     return DruidK8sConstants.DRUID_LABEL_PREFIX + baseLabel;
+  }
+
+  @Override
+  public boolean shouldUseDeepStorageForTaskPayload(Task task) throws IOException
+  {
+    String compressedTaskPayload = Base64Compression.compressBase64(mapper.writeValueAsString(task));
+    return compressedTaskPayload.length() > DruidK8sConstants.MAX_ENV_VARIABLE_KBS;
   }
 }

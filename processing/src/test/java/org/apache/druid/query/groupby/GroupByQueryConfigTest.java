@@ -102,8 +102,8 @@ public class GroupByQueryConfigTest
     Assert.assertEquals(true, config2.isSingleThreaded());
     Assert.assertEquals(1, config2.getBufferGrouperInitialBuckets());
     Assert.assertEquals(3_000_000, config2.getMaxOnDiskStorage().getBytes());
-    Assert.assertEquals(5 /* Can't override */, config2.getConfiguredMaxSelectorDictionarySize());
-    Assert.assertEquals(6_000_000 /* Can't override */, config2.getConfiguredMaxMergingDictionarySize());
+    Assert.assertEquals(3, config2.getConfiguredMaxSelectorDictionarySize());
+    Assert.assertEquals(4, config2.getConfiguredMaxMergingDictionarySize());
     Assert.assertEquals(7.0, config2.getBufferGrouperMaxLoadFactor(), 0.0);
     Assert.assertTrue(config2.isApplyLimitPushDownToSegment());
   }

@@ -301,7 +301,7 @@ public class IndexerWorkerClient implements WorkerClient
             final ServiceClient client = clientFactory.makeClient(
                 id,
                 locator,
-                new SpecificTaskRetryPolicy(workerTaskId, StandardRetryPolicy.unlimited())
+                new SpecificTaskRetryPolicy(workerTaskId, StandardRetryPolicy.unlimitedWithoutRetryLogging())
             );
             return Pair.of(client, locator);
           }

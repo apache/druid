@@ -32,7 +32,6 @@ import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnProcessorFactory;
 import org.apache.druid.segment.ColumnProcessors;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -48,6 +47,11 @@ import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+/**
+ * Compares values between columns, first converting them all to strings. This filter behaves like "not distinct from",
+ * e.g. given columns x and y, the SQL equivalent would be "x is not distinct from y" (and so ignores
+ * {@code includeUnknown}).
+ */
 public class ColumnComparisonFilter implements Filter
 {
   private final List<DimensionSpec> dimensions;
@@ -79,13 +83,13 @@ public class ColumnComparisonFilter implements Filter
   public static ValueMatcher makeValueMatcher(final List<Supplier<String[]>> valueGetters)
   {
     if (valueGetters.isEmpty()) {
-      return BooleanValueMatcher.of(true);
+      return ValueMatchers.allTrue();
     }
 
     return new ValueMatcher()
     {
       @Override
-      public boolean matches()
+      public boolean matches(boolean includeUnknown)
       {
         // Keep all values to compare against each other.
         String[][] values = new String[valueGetters.size()][];
@@ -137,21 +141,9 @@ public class ColumnComparisonFilter implements Filter
   }
 
   @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
-  {
-    return false;
-  }
-
-  @Override
   public Set<String> getRequiredColumns()
   {
     return dimensions.stream().map(DimensionSpec::getDimension).collect(Collectors.toSet());
-  }
-
-  @Override
-  public double estimateSelectivity(ColumnIndexSelector indexSelector)
-  {
-    throw new UnsupportedOperationException();
   }
 
   @Override

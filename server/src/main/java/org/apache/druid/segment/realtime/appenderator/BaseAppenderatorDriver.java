@@ -38,6 +38,8 @@ import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -53,11 +55,10 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.NavigableMap;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
@@ -178,18 +179,18 @@ public abstract class BaseAppenderatorDriver implements Closeable
     // Interval Start millis -> List of Segments for this interval
     // there might be multiple segments for a start interval, for example one segment
     // can be in APPENDING state and others might be in PUBLISHING state
-    private final NavigableMap<Long, SegmentsOfInterval> intervalToSegmentStates;
+    private final Map<Interval, SegmentsOfInterval> intervalToSegmentStates;
 
     // most recently allocated segment
     private String lastSegmentId;
 
     SegmentsForSequence()
     {
-      this.intervalToSegmentStates = new TreeMap<>();
+      this.intervalToSegmentStates = new HashMap<>();
     }
 
     SegmentsForSequence(
-        NavigableMap<Long, SegmentsOfInterval> intervalToSegmentStates,
+        Map<Interval, SegmentsOfInterval> intervalToSegmentStates,
         String lastSegmentId
     )
     {
@@ -199,21 +200,40 @@ public abstract class BaseAppenderatorDriver implements Closeable
 
     void add(SegmentIdWithShardSpec identifier)
     {
+      for (Map.Entry<Interval, SegmentsOfInterval> entry : intervalToSegmentStates.entrySet()) {
+        final SegmentWithState appendingSegment = entry.getValue().getAppendingSegment();
+        if (appendingSegment == null) {
+          continue;
+        }
+        if (identifier.getInterval().contains(entry.getKey())) {
+          if (identifier.getVersion().compareTo(appendingSegment.getSegmentIdentifier().getVersion()) > 0) {
+            entry.getValue().finishAppendingToCurrentActiveSegment(SegmentWithState::finishAppending);
+          }
+        }
+      }
       intervalToSegmentStates.computeIfAbsent(
-          identifier.getInterval().getStartMillis(),
+          identifier.getInterval(),
           k -> new SegmentsOfInterval(identifier.getInterval())
       ).setAppendingSegment(SegmentWithState.newSegment(identifier));
       lastSegmentId = identifier.toString();
     }
 
-    Entry<Long, SegmentsOfInterval> floor(long timestamp)
+    SegmentsOfInterval findCandidate(long timestamp)
     {
-      return intervalToSegmentStates.floorEntry(timestamp);
+      Interval interval = Intervals.utc(timestamp, timestamp);
+      SegmentsOfInterval retVal = null;
+      for (Map.Entry<Interval, SegmentsOfInterval> entry : intervalToSegmentStates.entrySet()) {
+        if (entry.getKey().contains(interval)) {
+          interval = entry.getKey();
+          retVal = entry.getValue();
+        }
+      }
+      return retVal;
     }
 
-    SegmentsOfInterval get(long timestamp)
+    SegmentsOfInterval get(Interval interval)
     {
-      return intervalToSegmentStates.get(timestamp);
+      return intervalToSegmentStates.get(interval);
     }
 
     public Stream<SegmentWithState> allSegmentStateStream()
@@ -290,16 +310,15 @@ public abstract class BaseAppenderatorDriver implements Closeable
         return null;
       }
 
-      final Map.Entry<Long, SegmentsOfInterval> candidateEntry = segmentsForSequence.floor(
+      final SegmentsOfInterval candidate = segmentsForSequence.findCandidate(
           timestamp.getMillis()
       );
 
-      if (candidateEntry != null) {
-        final SegmentsOfInterval segmentsOfInterval = candidateEntry.getValue();
-        if (segmentsOfInterval.interval.contains(timestamp)) {
-          return segmentsOfInterval.appendingSegment == null ?
+      if (candidate != null) {
+        if (candidate.interval.contains(timestamp)) {
+          return candidate.appendingSegment == null ?
                  null :
-                 segmentsOfInterval.appendingSegment.getSegmentIdentifier();
+                 candidate.appendingSegment.getSegmentIdentifier();
         } else {
           return null;
         }
@@ -596,91 +615,104 @@ public abstract class BaseAppenderatorDriver implements Closeable
                                   ? null
                                   : ((AppenderatorDriverMetadata) metadata).getCallerMetadata();
     return executor.submit(
-        () -> {
-          try {
-            final ImmutableSet<DataSegment> ourSegments = ImmutableSet.copyOf(pushedAndTombstones);
-            final SegmentPublishResult publishResult = publisher.publishSegments(
-                segmentsToBeOverwritten,
-                ourSegments,
-                outputSegmentsAnnotateFunction,
-                callerMetadata
-            );
-
-            if (publishResult.isSuccess()) {
-              log.info(
-                  "Published [%s] segments with commit metadata [%s]",
-                  segmentsAndCommitMetadata.getSegments().size(),
-                  callerMetadata
-              );
-              log.infoSegments(segmentsAndCommitMetadata.getSegments(), "Published segments");
-            } else {
-              // Publishing didn't affirmatively succeed. However, segments with our identifiers may still be active
-              // now after all, for two possible reasons:
-              //
-              // 1) A replica may have beat us to publishing these segments. In this case we want to delete the
-              //    segments we pushed (if they had unique paths) to avoid wasting space on deep storage.
-              // 2) We may have actually succeeded, but not realized it due to missing the confirmation response
-              //    from the overlord. In this case we do not want to delete the segments we pushed, since they are
-              //    now live!
-
-              final Set<SegmentIdWithShardSpec> segmentsIdentifiers = segmentsAndCommitMetadata
-                  .getSegments()
-                  .stream()
-                  .map(SegmentIdWithShardSpec::fromDataSegment)
-                  .collect(Collectors.toSet());
-
-              final Set<DataSegment> activeSegments = usedSegmentChecker.findUsedSegments(segmentsIdentifiers);
-
-              if (activeSegments.equals(ourSegments)) {
-                log.info(
-                    "Could not publish [%s] segments, but checked and found them already published; continuing.",
-                    ourSegments.size()
-                );
-                log.infoSegments(
-                    segmentsAndCommitMetadata.getSegments(),
-                    "Could not publish segments"
+      () -> {
+        try {
+          RetryUtils.retry(
+              () -> {
+              try {
+                final ImmutableSet<DataSegment> ourSegments = ImmutableSet.copyOf(pushedAndTombstones);
+                final SegmentPublishResult publishResult = publisher.publishSegments(
+                    segmentsToBeOverwritten,
+                    ourSegments,
+                    outputSegmentsAnnotateFunction,
+                    callerMetadata
                 );
 
-                // Clean up pushed segments if they are physically disjoint from the published ones (this means
-                // they were probably pushed by a replica, and with the unique paths option).
-                final boolean physicallyDisjoint = Sets.intersection(
-                    activeSegments.stream().map(DataSegment::getLoadSpec).collect(Collectors.toSet()),
-                    ourSegments.stream().map(DataSegment::getLoadSpec).collect(Collectors.toSet())
-                ).isEmpty();
-
-                if (physicallyDisjoint) {
-                  segmentsAndCommitMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
-                }
-              } else {
-                // Our segments aren't active. Publish failed for some reason. Clean them up and then throw an error.
-                segmentsAndCommitMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
-
-                if (publishResult.getErrorMsg() != null) {
-                  log.errorSegments(ourSegments, "Failed to publish segments");
-                  throw new ISE(
-                      "Failed to publish segments because of [%s]",
-                      publishResult.getErrorMsg()
+                if (publishResult.isSuccess()) {
+                  log.info(
+                      "Published [%s] segments with commit metadata [%s]",
+                      segmentsAndCommitMetadata.getSegments().size(),
+                      callerMetadata
                   );
+                  log.infoSegments(segmentsAndCommitMetadata.getSegments(), "Published segments");
                 } else {
-                  log.errorSegments(ourSegments, "Failed to publish segments");
-                  throw new ISE("Failed to publish segments");
+                  // Publishing didn't affirmatively succeed. However, segments with our identifiers may still be active
+                  // now after all, for two possible reasons:
+                  //
+                  // 1) A replica may have beat us to publishing these segments. In this case we want to delete the
+                  //    segments we pushed (if they had unique paths) to avoid wasting space on deep storage.
+                  // 2) We may have actually succeeded, but not realized it due to missing the confirmation response
+                  //    from the overlord. In this case we do not want to delete the segments we pushed, since they are
+                  //    now live!
+
+                  final Set<SegmentIdWithShardSpec> segmentsIdentifiers = segmentsAndCommitMetadata
+                      .getSegments()
+                      .stream()
+                      .map(SegmentIdWithShardSpec::fromDataSegment)
+                      .collect(Collectors.toSet());
+
+                  final Set<DataSegment> activeSegments = usedSegmentChecker.findUsedSegments(segmentsIdentifiers);
+
+                  if (activeSegments.equals(ourSegments)) {
+                    log.info(
+                        "Could not publish [%s] segments, but checked and found them already published; continuing.",
+                        ourSegments.size()
+                    );
+                    log.infoSegments(
+                        segmentsAndCommitMetadata.getSegments(),
+                        "Could not publish segments"
+                    );
+
+                    // Clean up pushed segments if they are physically disjoint from the published ones (this means
+                    // they were probably pushed by a replica, and with the unique paths option).
+                    final boolean physicallyDisjoint = Sets.intersection(
+                        activeSegments.stream().map(DataSegment::getLoadSpec).collect(Collectors.toSet()),
+                        ourSegments.stream().map(DataSegment::getLoadSpec).collect(Collectors.toSet())
+                    ).isEmpty();
+
+                    if (physicallyDisjoint) {
+                      segmentsAndCommitMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
+                    }
+                  } else {
+                    log.errorSegments(ourSegments, "Failed to publish segments");
+                    if (publishResult.getErrorMsg() != null && publishResult.getErrorMsg().contains(("Failed to update the metadata Store. The new start metadata is ahead of last commited end state."))) {
+                      throw new ISE(publishResult.getErrorMsg());
+                    }
+                    // Our segments aren't active. Publish failed for some reason. Clean them up and then throw an error.
+                    segmentsAndCommitMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
+                    if (publishResult.getErrorMsg() != null) {
+                      throw new ISE("Failed to publish segments because of [%s]", publishResult.getErrorMsg());
+                    }
+                    throw new ISE("Failed to publish segments");
+                  }
                 }
               }
-            }
-          }
-          catch (Exception e) {
-            // Must not remove segments here, we aren't sure if our transaction succeeded or not.
-            log.noStackTrace().warn(e, "Failed publish");
-            log.warnSegments(
-                segmentsAndCommitMetadata.getSegments(),
-                "Failed publish, not removing segments"
-            );
-            Throwables.propagateIfPossible(e);
-            throw new RuntimeException(e);
-          }
-
-          return segmentsAndCommitMetadata;
+              catch (Exception e) {
+                // Must not remove segments here, we aren't sure if our transaction succeeded or not.
+                log.noStackTrace().warn(e, "Failed publish");
+                log.warnSegments(
+                    segmentsAndCommitMetadata.getSegments(),
+                    "Failed publish, not removing segments"
+                );
+                Throwables.propagateIfPossible(e);
+                throw new RuntimeException(e);
+              }
+              return segmentsAndCommitMetadata;
+            },
+              e -> (e.getMessage() != null && e.getMessage().contains("Failed to update the metadata Store. The new start metadata is ahead of last commited end state.")),
+              RetryUtils.DEFAULT_MAX_TRIES
+          );
         }
+        catch (Exception e) {
+          if (e.getMessage() != null && e.getMessage().contains("Failed to update the metadata Store. The new start metadata is ahead of last commited end state.")) {
+            // Publish failed for some reason. Clean them up and then throw an error.
+            segmentsAndCommitMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
+          }
+          Throwables.propagateIfPossible(e);
+          throw new RuntimeException(e);
+        }
+        return segmentsAndCommitMetadata;
+      }
     );
   }
 

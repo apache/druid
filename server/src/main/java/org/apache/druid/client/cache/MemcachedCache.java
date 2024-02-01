@@ -30,6 +30,7 @@ import com.google.common.collect.Maps;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import net.spy.memcached.AddrUtil;
+import net.spy.memcached.ClientMode;
 import net.spy.memcached.ConnectionFactory;
 import net.spy.memcached.ConnectionFactoryBuilder;
 import net.spy.memcached.FailureMode;
@@ -52,10 +53,16 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
 
 import javax.annotation.Nullable;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyManagementException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -339,25 +346,8 @@ public class MemcachedCache implements Cache
         }
       };
 
-      final ConnectionFactory connectionFactory = new MemcachedCustomConnectionFactoryBuilder()
-          // 1000 repetitions gives us good distribution with murmur3_128
-          // (approx < 5% difference in counts across nodes, with 5 cache nodes)
-          .setKetamaNodeRepetitions(1000)
-          .setHashAlg(MURMUR3_128)
-          .setProtocol(ConnectionFactoryBuilder.Protocol.valueOf(StringUtils.toUpperCase(config.getProtocol())))
-          .setLocatorType(ConnectionFactoryBuilder.Locator.valueOf(StringUtils.toUpperCase(config.getLocator())))
-          .setDaemon(true)
-          .setFailureMode(FailureMode.Cancel)
-          .setTranscoder(transcoder)
-          .setShouldOptimize(true)
-          .setOpQueueMaxBlockTime(config.getTimeout())
-          .setOpTimeout(config.getTimeout())
-          .setReadBufferSize(config.getReadBufferSize())
-          .setOpQueueFactory(opQueueFactory)
-          .setMetricCollector(metricCollector)
-          .setEnableMetrics(MetricType.DEBUG) // Not as scary as it sounds
-          .build();
-
+      final ConnectionFactory connectionFactory = createConnectionFactory(config, transcoder,
+              opQueueFactory, metricCollector);
       final List<InetSocketAddress> hosts = AddrUtil.getAddresses(config.getHosts());
 
 
@@ -389,9 +379,55 @@ public class MemcachedCache implements Cache
 
       return new MemcachedCache(clientSupplier, config, monitor);
     }
-    catch (IOException e) {
+    catch (IOException | NoSuchAlgorithmException e) {
       throw new RuntimeException(e);
     }
+    catch (KeyStoreException e) {
+      throw new RuntimeException(e);
+    }
+    catch (KeyManagementException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static ConnectionFactory createConnectionFactory(final MemcachedCacheConfig config, final LZ4Transcoder transcoder, final OperationQueueFactory opQueueFactory, final MetricCollector metricCollector) throws KeyManagementException, KeyStoreException, NoSuchAlgorithmException
+  {
+    MemcachedCustomConnectionFactoryBuilder connectionFactoryBuilder = (MemcachedCustomConnectionFactoryBuilder) new MemcachedCustomConnectionFactoryBuilder()
+            // 1000 repetitions gives us good distribution with murmur3_128
+            // (approx < 5% difference in counts across nodes, with 5 cache nodes)
+            .setKetamaNodeRepetitions(1000)
+            .setHashAlg(MURMUR3_128)
+            .setProtocol(ConnectionFactoryBuilder.Protocol.valueOf(StringUtils.toUpperCase(config.getProtocol())))
+            .setLocatorType(ConnectionFactoryBuilder.Locator.valueOf(StringUtils.toUpperCase(config.getLocator())))
+            .setDaemon(true)
+            .setFailureMode(FailureMode.Cancel)
+            .setTranscoder(transcoder)
+            .setShouldOptimize(true)
+            .setOpQueueMaxBlockTime(config.getTimeout())
+            .setOpTimeout(config.getTimeout())
+            .setReadBufferSize(config.getReadBufferSize())
+            .setOpQueueFactory(opQueueFactory)
+            .setMetricCollector(metricCollector)
+            .setEnableMetrics(MetricType.DEBUG); // Not as scary as it sounds
+    if (config.enableTls()) {
+      // Build SSLContext
+      TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+      tmf.init((KeyStore) null);
+      SSLContext sslContext = SSLContext.getInstance("TLS");
+      sslContext.init(null, tmf.getTrustManagers(), null);
+      // Create the client in TLS mode
+      connectionFactoryBuilder.setSSLContext(sslContext);
+    }
+    if ("dynamic".equals(config.getClientMode())) {
+      connectionFactoryBuilder.setClientMode(ClientMode.Dynamic);
+      connectionFactoryBuilder.setHostnameForTlsVerification(config.getHosts().split(",")[0]);
+    } else if ("static".equals(config.getClientMode())) {
+      connectionFactoryBuilder.setClientMode(ClientMode.Static);
+    } else {
+      throw new RuntimeException("Invalid value provided for `druid.cache.clientMode`. Value must be 'static' or 'dynamic'.");
+    }
+    connectionFactoryBuilder.setSkipTlsHostnameVerification(config.skipTlsHostnameVerification());
+    return connectionFactoryBuilder.build();
   }
 
   private final int timeout;

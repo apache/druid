@@ -24,7 +24,6 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.segment.ColumnInspector;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -39,8 +38,8 @@ public interface Filter
   /**
    * Returns a {@link BitmapColumnIndex} if this filter supports using a bitmap index for filtering for the given input
    * {@link ColumnIndexSelector}. The {@link BitmapColumnIndex} can be used to compute into a bitmap indicating rows
-   * that match this filter result {@link BitmapColumnIndex#computeBitmapResult(BitmapResultFactory)}, or examine
-   * details about the index prior to computing it, via {@link BitmapColumnIndex#getIndexCapabilities()}.
+   * that match this filter result {@link BitmapColumnIndex#computeBitmapResult(BitmapResultFactory, boolean)}, or
+   * examine details about the index prior to computing it, via {@link BitmapColumnIndex#getIndexCapabilities()}.
    *
    * @param selector Object used to create BitmapColumnIndex
    *
@@ -50,7 +49,7 @@ public interface Filter
   BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector);
 
   /**
-   * Get a ValueMatcher that applies this filter to row values.
+   * Get a {@link ValueMatcher} that applies this filter to row values.
    *
    * @param factory Object used to create ValueMatchers
    *
@@ -59,7 +58,7 @@ public interface Filter
   ValueMatcher makeMatcher(ColumnSelectorFactory factory);
 
   /**
-   * Get a VectorValueMatcher that applies this filter to row vectors.
+   * Get a {@link VectorValueMatcher} that applies this filter to row vectors.
    *
    * @param factory Object used to create ValueMatchers
    *
@@ -69,37 +68,6 @@ public interface Filter
   {
     throw new UOE("Filter[%s] cannot vectorize", getClass().getName());
   }
-
-  /**
-   * Estimate selectivity of this filter.
-   * This method can be used for cost-based query planning like in {@link org.apache.druid.query.search.AutoStrategy}.
-   * To avoid significant performance degradation for calculating the exact cost,
-   * implementation of this method targets to achieve rapid selectivity estimation
-   * with reasonable sacrifice of the accuracy.
-   * As a result, the estimated selectivity might be different from the exact value.
-   *
-   * @param indexSelector Object used to retrieve indexes
-   *
-   * @return an estimated selectivity ranging from 0 (filter selects no rows) to 1 (filter selects all rows).
-   *
-   * @see Filter#getBitmapColumnIndex(ColumnIndexSelector)
-   */
-  default double estimateSelectivity(ColumnIndexSelector indexSelector)
-  {
-    return getBitmapColumnIndex(indexSelector).estimateSelectivity(indexSelector.getNumRows());
-  }
-
-  /**
-   * Indicates whether this filter supports selectivity estimation.
-   * A filter supports selectivity estimation if it supports bitmap index and
-   * the dimension which the filter evaluates does not have multi values.
-   *
-   * @param columnSelector Object to check the dimension has multi values.
-   * @param indexSelector  Object used to retrieve bitmap indexes
-   *
-   * @return true if this Filter supports selectivity estimation, false otherwise.
-   */
-  boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector);
 
   /**
    * Returns true if this filter can produce a vectorized matcher from its "makeVectorMatcher" method.

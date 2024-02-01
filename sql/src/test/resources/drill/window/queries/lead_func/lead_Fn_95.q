@@ -1,1 +1,1 @@
-select col5, lead(col5) over(partition by col7 order by col5) lead_col5 from "allTypsUniq.parquet" where col5 in ( "1947-07-02 00:28:02.418" , "2011-06-02 00:28:02.218" , "1950-08-02 00:28:02.111" , "2012-06-02 00:28:02.418" , "1985-04-02 00:28:02.638")
+select col5, lead(col5) over(partition by col7 order by col5) lead_col5 from "allTypsUniq.parquet" where col5 in ( '1947-07-02 00:28:02.418' , '2011-06-02 00:28:02.218' , '1950-08-02 00:28:02.111' , '2012-06-02 00:28:02.418' , '1985-04-02 00:28:02.638')

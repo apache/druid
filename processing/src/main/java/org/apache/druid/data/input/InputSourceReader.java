@@ -22,6 +22,8 @@ package org.apache.druid.data.input;
 import org.apache.druid.data.input.impl.InputEntityIteratingReader;
 import org.apache.druid.guice.annotations.UnstableApi;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.segment.RowAdapter;
+import org.apache.druid.segment.RowAdapters;
 
 import java.io.IOException;
 
@@ -45,4 +47,12 @@ public interface InputSourceReader
   CloseableIterator<InputRow> read(InputStats inputStats) throws IOException;
 
   CloseableIterator<InputRowListPlusRawValues> sample() throws IOException;
+
+  /**
+   * Returns an adapter that can be used to read the rows from {@link #read()}.
+   */
+  default RowAdapter<InputRow> rowAdapter()
+  {
+    return RowAdapters.standardRow();
+  }
 }

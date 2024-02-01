@@ -24,6 +24,7 @@ import React, { useState } from 'react';
 
 import type { Execution } from '../../../druid-models';
 import {
+  copyQueryResultsToClipboard,
   downloadQueryResults,
   formatDurationHybrid,
   formatInteger,
@@ -68,6 +69,10 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
       downloadQueryResults(queryResult, `results-${execution.id}.${format}`, format);
     };
 
+    const handleCopy = (format: string) => {
+      copyQueryResultsToClipboard(queryResult, format);
+    };
+
     buttons.push(
       <Button
         key="results"
@@ -101,6 +106,10 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
               <MenuItem text="CSV" onClick={() => handleDownload('csv')} />
               <MenuItem text="TSV" onClick={() => handleDownload('tsv')} />
               <MenuItem text="JSON (new line delimited)" onClick={() => handleDownload('json')} />
+              <MenuDivider title="Copy to clipboard as..." />
+              <MenuItem text="CSV" onClick={() => handleCopy('csv')} />
+              <MenuItem text="TSV" onClick={() => handleCopy('tsv')} />
+              <MenuItem text="JSON (new line delimited)" onClick={() => handleCopy('json')} />
             </Menu>
           }
           position={Position.BOTTOM_RIGHT}

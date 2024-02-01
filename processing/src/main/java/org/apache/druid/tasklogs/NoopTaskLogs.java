@@ -64,4 +64,16 @@ public class NoopTaskLogs implements TaskLogs
   {
     log.info("Noop: No task logs are deleted.");
   }
+
+  @Override
+  public void pushTaskPayload(String taskid, File taskPayloadFile)
+  {
+    log.info("Not pushing payload for task: %s", taskid);
+  }
+
+  @Override
+  public Optional<InputStream> streamTaskPayload(String taskid)
+  {
+    return Optional.absent();
+  }
 }

@@ -35,6 +35,8 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
+import static org.junit.Assert.assertNull;
+
 public class TypeStrategiesTest
 {
   ByteBuffer buffer = ByteBuffer.allocate(1 << 16);
@@ -637,7 +639,7 @@ public class TypeStrategiesTest
       return Comparators.<Long>naturalNullsFirst().thenComparing(Longs::compare).compare(this.lhs, o.lhs);
     }
   }
-  
+
   public static class NullableLongPairTypeStrategy implements TypeStrategy<NullableLongPair>
   {
 
@@ -691,5 +693,11 @@ public class TypeStrategiesTest
     {
       return read(ByteBuffer.wrap(value));
     }
+  }
+
+  @Test
+  public void getComplexTypeNull()
+  {
+    assertNull(TypeStrategies.getComplex(null));
   }
 }

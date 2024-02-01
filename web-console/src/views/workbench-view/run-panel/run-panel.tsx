@@ -38,6 +38,7 @@ import { IndexSpecDialog } from '../../../dialogs/index-spec-dialog/index-spec-d
 import type { DruidEngine, IndexSpec, QueryContext, WorkbenchQuery } from '../../../druid-models';
 import {
   changeDurableShuffleStorage,
+  changeFailOnEmptyInsert,
   changeFinalizeAggregations,
   changeGroupByEnableMultiValueUnnesting,
   changeMaxParseExceptions,
@@ -45,7 +46,9 @@ import {
   changeUseApproximateCountDistinct,
   changeUseApproximateTopN,
   changeUseCache,
+  changeWaitUntilSegmentsLoad,
   getDurableShuffleStorage,
+  getFailOnEmptyInsert,
   getFinalizeAggregations,
   getGroupByEnableMultiValueUnnesting,
   getMaxParseExceptions,
@@ -53,6 +56,7 @@ import {
   getUseApproximateCountDistinct,
   getUseApproximateTopN,
   getUseCache,
+  getWaitUntilSegmentsLoad,
   summarizeIndexSpec,
 } from '../../../druid-models';
 import { deepGet, deepSet, pluralIfNeeded, tickIcon } from '../../../utils';
@@ -109,7 +113,9 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
   const queryParameters = query.queryParameters;
 
   const maxParseExceptions = getMaxParseExceptions(queryContext);
+  const failOnEmptyInsert = getFailOnEmptyInsert(queryContext);
   const finalizeAggregations = getFinalizeAggregations(queryContext);
+  const waitUntilSegmentsLoad = getWaitUntilSegmentsLoad(queryContext);
   const groupByEnableMultiValueUnnesting = getGroupByEnableMultiValueUnnesting(queryContext);
   const sqlJoinAlgorithm = queryContext.sqlJoinAlgorithm ?? 'broadcast';
   const selectDestination = queryContext.selectDestination ?? 'taskReport';
@@ -303,12 +309,30 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                       ))}
                     </MenuItem>
                     <MenuTristate
+                      icon={IconNames.DISABLE}
+                      text="Fail on empty insert"
+                      value={failOnEmptyInsert}
+                      undefinedEffectiveValue={false}
+                      onValueChange={v =>
+                        changeQueryContext(changeFailOnEmptyInsert(queryContext, v))
+                      }
+                    />
+                    <MenuTristate
                       icon={IconNames.TRANSLATE}
                       text="Finalize aggregations"
                       value={finalizeAggregations}
                       undefinedEffectiveValue={!ingestMode}
                       onValueChange={v =>
                         changeQueryContext(changeFinalizeAggregations(queryContext, v))
+                      }
+                    />
+                    <MenuTristate
+                      icon={IconNames.STOPWATCH}
+                      text="Wait until segments have loaded"
+                      value={waitUntilSegmentsLoad}
+                      undefinedEffectiveValue={ingestMode}
+                      onValueChange={v =>
+                        changeQueryContext(changeWaitUntilSegmentsLoad(queryContext, v))
                       }
                     />
                     <MenuTristate

@@ -63,8 +63,8 @@ public class ViewSqlEngine implements SqlEngine
       case GROUPING_SETS:
       case WINDOW_FUNCTIONS:
       case UNNEST:
+      case ALLOW_TOP_LEVEL_UNION_ALL:
         return true;
-
       // Views can't sit on top of INSERT or REPLACE.
       case CAN_INSERT:
       case CAN_REPLACE:

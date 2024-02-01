@@ -26,6 +26,7 @@ import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.NoErrorResponseTransformStrategy;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.HumanReadableBytesRange;
+import org.apache.druid.server.SubqueryGuardrailHelper;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Period;
 
@@ -44,7 +45,6 @@ import java.util.zip.Deflater;
 public class ServerConfig
 {
   public static final int DEFAULT_GZIP_INFLATE_BUFFER_SIZE = 4096;
-  public static final String DEFAULT_MAX_SUBQUERY_BYTES = "unlimited";
 
   private static final boolean DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY = false;
 
@@ -140,7 +140,7 @@ public class ServerConfig
   private int maxSubqueryRows = 100000;
 
   @JsonProperty
-  private String maxSubqueryBytes = DEFAULT_MAX_SUBQUERY_BYTES;
+  private String maxSubqueryBytes = SubqueryGuardrailHelper.LIMIT_DISABLED_VALUE;
 
   @JsonProperty
   private boolean useNestedForUnknownTypeInSubquery = DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY;
@@ -187,11 +187,11 @@ public class ServerConfig
   private boolean enableHSTS = false;
 
   /**
-   * This is a feature flag to enable query requests queuing when admins want to reserve some threads for
-   * non-query requests. This feature flag is not documented and can be removed in the future.
+   * This feature flag enables query requests queuing when admins want to reserve some threads for
+   * non-query requests. This feature flag is not documented and will be removed in the future.
    */
   @JsonProperty
-  private boolean enableQueryRequestsQueuing = false;
+  private boolean enableQueryRequestsQueuing = true;
 
   @JsonProperty
   private boolean showDetailedJettyErrors = true;

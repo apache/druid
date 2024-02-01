@@ -137,6 +137,7 @@ import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentKiller;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.NoopDataSegmentArchiver;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentTest;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
@@ -482,7 +483,10 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
       default:
         throw new RE("Unknown task storage type [%s]", taskStorageType);
     }
-    tsqa = new TaskStorageQueryAdapter(taskStorage, taskLockbox);
+    TaskMaster taskMaster = EasyMock.createMock(TaskMaster.class);
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.absent()).anyTimes();
+    EasyMock.replay(taskMaster);
+    tsqa = new TaskStorageQueryAdapter(taskStorage, taskLockbox, taskMaster);
     return taskStorage;
   }
 
@@ -562,9 +566,9 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     return new TestIndexerMetadataStorageCoordinator()
     {
       @Override
-      public Set<DataSegment> announceHistoricalSegments(Set<DataSegment> segments)
+      public Set<DataSegment> commitSegments(Set<DataSegment> segments)
       {
-        Set<DataSegment> retVal = super.announceHistoricalSegments(segments);
+        Set<DataSegment> retVal = super.commitSegments(segments);
         if (publishCountDown != null) {
           publishCountDown.countDown();
         }
@@ -615,6 +619,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         .build();
 
     return new TaskToolboxFactory(
+        null,
         taskConfig,
         new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
         tac,
@@ -660,7 +665,8 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        "1"
+        "1",
+        CentralizedDatasourceSchemaConfig.create()
     );
   }
 
@@ -897,7 +903,13 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
 
     // manually create local segments files
     List<File> segmentFiles = new ArrayList<>();
-    for (DataSegment segment : mdc.retrieveUnusedSegmentsForInterval("test_kill_task", Intervals.of("2011-04-01/P4D"))) {
+    final List<DataSegment> unusedSegments = mdc.retrieveUnusedSegmentsForInterval(
+        "test_kill_task",
+        Intervals.of("2011-04-01/P4D"),
+        null,
+        null
+    );
+    for (DataSegment segment : unusedSegments) {
       File file = new File((String) segment.getLoadSpec().get("path"));
       FileUtils.mkdirp(file.getParentFile());
       Files.write(file.toPath(), ByteArrays.EMPTY_ARRAY);
@@ -911,6 +923,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             Intervals.of("2011-04-01/P4D"),
             null,
             false,
+            null,
             null,
             null
         );
@@ -987,7 +1000,13 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
 
     // manually create local segments files
     List<File> segmentFiles = new ArrayList<>();
-    for (DataSegment segment : mdc.retrieveUnusedSegmentsForInterval("test_kill_task", Intervals.of("2011-04-01/P4D"))) {
+    final List<DataSegment> unusedSegments = mdc.retrieveUnusedSegmentsForInterval(
+        "test_kill_task",
+        Intervals.of("2011-04-01/P4D"),
+        null,
+        null
+    );
+    for (DataSegment segment : unusedSegments) {
       File file = new File((String) segment.getLoadSpec().get("path"));
       FileUtils.mkdirp(file.getParentFile());
       Files.write(file.toPath(), ByteArrays.EMPTY_ARRAY);
@@ -1003,7 +1022,8 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             null,
             false,
             null,
-            maxSegmentsToKill
+            maxSegmentsToKill,
+            null
         );
 
     final TaskStatus status = runTask(killUnusedSegmentsTask);

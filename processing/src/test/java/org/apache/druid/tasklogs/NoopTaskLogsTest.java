@@ -32,4 +32,11 @@ public class NoopTaskLogsTest
     TaskLogs taskLogs = new NoopTaskLogs();
     Assert.assertFalse(taskLogs.streamTaskStatus("id").isPresent());
   }
+
+  @Test
+  public void test_streamTaskPayload() throws IOException
+  {
+    TaskLogs taskLogs = new NoopTaskLogs();
+    Assert.assertFalse(taskLogs.streamTaskPayload("id").isPresent());
+  }
 }

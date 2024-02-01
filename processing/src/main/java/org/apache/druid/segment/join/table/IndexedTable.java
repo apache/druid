@@ -95,6 +95,7 @@ public interface IndexedTable extends ReferenceCountedObject, Closeable
    * see {@link org.apache.druid.segment.join.JoinableFactory#computeJoinCacheKey}
    *
    * @return the byte array for cache key
+   *
    * @throws {@link IAE} if caching is not supported
    */
   default byte[] computeCacheKey()
@@ -125,8 +126,10 @@ public interface IndexedTable extends ReferenceCountedObject, Closeable
     /**
      * Returns whether keys are unique in this index. If this returns true, then {@link #find(Object)} will only ever
      * return a zero- or one-element list.
+     *
+     * @param includeNull whether null is considered a valid key
      */
-    boolean areKeysUnique();
+    boolean areKeysUnique(boolean includeNull);
 
     /**
      * Returns the list of row numbers corresponding to "key" in this index.
@@ -134,14 +137,14 @@ public interface IndexedTable extends ReferenceCountedObject, Closeable
      * If "key" is some type other than the natural type {@link #keyType()}, it will be converted before checking
      * the index.
      */
-    IntSortedSet find(Object key);
+    IntSortedSet find(@Nullable Object key);
 
     /**
      * Returns the row number corresponding to "key" in this index, or {@link #NOT_FOUND} if the key does not exist
      * in the index.
      *
-     * It is only valid to call this method if {@link #keyType()} is {@link ValueType#LONG} and {@link #areKeysUnique()}
-     * returns true.
+     * It is only valid to call this method if {@link #keyType()} is {@link ValueType#LONG} and
+     * {@link #areKeysUnique(boolean)} returns true.
      *
      * @throws UnsupportedOperationException if preconditions are not met
      */

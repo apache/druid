@@ -20,6 +20,7 @@
 package org.apache.druid.msq.test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import org.apache.calcite.rel.RelRoot;
@@ -35,8 +36,6 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlEngine;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 
@@ -44,7 +43,7 @@ import org.junit.runner.RunWith;
  * Runs {@link CalciteJoinQueryTest} but with MSQ engine.
  */
 @RunWith(Enclosed.class)
-public class CalciteSelectJoinQueryMSQTest
+public abstract class CalciteSelectJoinQueryMSQTest
 {
   /**
    * Run all tests with {@link JoinAlgorithm#BROADCAST}.
@@ -88,7 +87,6 @@ public class CalciteSelectJoinQueryMSQTest
   {
     private final JoinAlgorithm joinAlgorithm;
 
-    private TestGroupByBuffers groupByBuffers;
 
     protected Base(final JoinAlgorithm joinAlgorithm)
     {
@@ -96,23 +94,13 @@ public class CalciteSelectJoinQueryMSQTest
       this.joinAlgorithm = joinAlgorithm;
     }
 
-    @Before
-    public void setup2()
-    {
-      groupByBuffers = TestGroupByBuffers.createDefault();
-    }
-
-    @After
-    public void teardown2()
-    {
-      groupByBuffers.close();
-    }
-
     @Override
     public void configureGuice(DruidInjectorBuilder builder)
     {
       super.configureGuice(builder);
-      builder.addModules(CalciteMSQTestsHelper.fetchModules(temporaryFolder, groupByBuffers).toArray(new Module[0]));
+      builder.addModules(
+          CalciteMSQTestsHelper.fetchModules(temporaryFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0])
+      );
     }
 
     @Override
@@ -127,8 +115,9 @@ public class CalciteSelectJoinQueryMSQTest
       final MSQTestOverlordServiceClient indexingServiceClient = new MSQTestOverlordServiceClient(
           queryJsonMapper,
           injector,
-          new MSQTestTaskActionClient(queryJsonMapper),
-          workerMemoryParameters
+          new MSQTestTaskActionClient(queryJsonMapper, injector),
+          workerMemoryParameters,
+          ImmutableList.of()
       );
       return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper)
       {

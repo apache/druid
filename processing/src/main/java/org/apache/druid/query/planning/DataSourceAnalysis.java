@@ -29,6 +29,7 @@ import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.segment.join.JoinPrefixUtils;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -245,6 +246,24 @@ public class DataSourceAnalysis
   public boolean isJoin()
   {
     return !preJoinableClauses.isEmpty();
+  }
+
+  /**
+   * Returns whether "column" on the analyzed datasource refers to a column from the base datasource.
+   */
+  public boolean isBaseColumn(final String column)
+  {
+    if (baseQuery != null) {
+      return false;
+    }
+
+    for (final PreJoinableClause clause : preJoinableClauses) {
+      if (JoinPrefixUtils.isPrefixedBy(column, clause.getPrefix())) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   @Override

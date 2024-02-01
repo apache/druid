@@ -69,7 +69,7 @@ public class SegmentMetadataUpdateAction implements TaskAction<Void>
     try {
       toolbox.getTaskLockbox().doInCriticalSection(
           task,
-          segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
+          segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()),
           CriticalAction.builder()
                         .onValidLocks(
                             () -> {

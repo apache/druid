@@ -27,6 +27,7 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.SqlStatementFactory;
+import org.apache.druid.sql.calcite.BaseCalciteQueryTest.ResultMatchMode;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest.ResultsVerifier;
 import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -77,7 +78,7 @@ public class QueryTestBuilder
     ObjectMapper jsonMapper();
 
     PlannerFixture plannerFixture(PlannerConfig plannerConfig, AuthConfig authConfig);
-    ResultsVerifier defaultResultsVerifier(List<Object[]> expectedResults, RowSignature expectedResultSignature);
+    ResultsVerifier defaultResultsVerifier(List<Object[]> expectedResults, ResultMatchMode expectedResultMatchMode, RowSignature expectedResultSignature);
 
     boolean isRunningMSQ();
 
@@ -107,6 +108,7 @@ public class QueryTestBuilder
   protected PlannerFixture plannerFixture;
   protected String expectedLogicalPlan;
   protected SqlSchema expectedSqlSchema;
+  protected ResultMatchMode expectedResultMatchMode;
 
   public QueryTestBuilder(final QueryTestConfig config)
   {
@@ -167,6 +169,15 @@ public class QueryTestBuilder
       final List<Object[]> expectedResults
   )
   {
+    return expectedResults(ResultMatchMode.EQUALS, expectedResults);
+  }
+
+  public QueryTestBuilder expectedResults(
+      ResultMatchMode expecteMatchMode,
+      final List<Object[]> expectedResults
+  )
+  {
+    this.expectedResultMatchMode = expecteMatchMode;
     this.expectedResults = expectedResults;
     return this;
   }
@@ -310,6 +321,12 @@ public class QueryTestBuilder
   public QueryResults results()
   {
     return build().resultsOnly();
+  }
+
+  public boolean isDecoupledMode()
+  {
+    String mode = (String) queryContext.getOrDefault(PlannerConfig.CTX_NATIVE_QUERY_SQL_PLANNING_MODE, "");
+    return PlannerConfig.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED.equalsIgnoreCase(mode);
   }
 
 }

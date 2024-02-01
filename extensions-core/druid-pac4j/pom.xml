@@ -29,12 +29,12 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>28.0.0-SNAPSHOT</version>
+    <version>30.0.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
   <properties>
-    <pac4j.version>3.8.3</pac4j.version>
+    <pac4j.version>4.5.7</pac4j.version>
 
     <!-- Following must be updated along with any updates to pac4j version -->
     <nimbus.lang.tag.version>1.7</nimbus.lang.tag.version>
@@ -64,6 +64,13 @@
       <groupId>org.pac4j</groupId>
       <artifactId>pac4j-oidc</artifactId>
       <version>${pac4j.version}</version>
+      <exclusions>
+        <!-- pac4j-oidc erroneously declares mockito as a compile time instead of test dependency -->
+        <exclusion>
+          <groupId>org.mockito</groupId>
+          <artifactId>mockito-core</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <dependency>

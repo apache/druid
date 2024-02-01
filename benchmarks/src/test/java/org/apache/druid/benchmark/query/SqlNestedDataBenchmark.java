@@ -45,6 +45,7 @@ import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.sql.calcite.SqlVectorizedExpressionSanityTest;
@@ -57,7 +58,6 @@ import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -112,7 +112,7 @@ public class SqlNestedDataBenchmark
     {
       return 1;
     }
-    
+
     @Override
     public String getFormatString()
     {
@@ -298,7 +298,7 @@ public class SqlNestedDataBenchmark
     );
     List<DimensionSchema> dims = ImmutableList.<DimensionSchema>builder()
                                               .addAll(schemaInfo.getDimensionsSpec().getDimensions())
-                                              .add(new AutoTypeColumnSchema("nested"))
+                                              .add(new AutoTypeColumnSchema("nested", null))
                                               .build();
     DimensionsSpec dimsSpec = new DimensionsSpec(dims);
 
@@ -326,7 +326,7 @@ public class SqlNestedDataBenchmark
         PROCESSING_CONFIG
     );
 
-    final SpecificSegmentsQuerySegmentWalker walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
+    final SpecificSegmentsQuerySegmentWalker walker = SpecificSegmentsQuerySegmentWalker.createWalker(conglomerate).add(
         dataSegment,
         index
     );

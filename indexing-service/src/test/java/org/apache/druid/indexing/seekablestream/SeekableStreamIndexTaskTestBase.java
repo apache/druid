@@ -116,6 +116,7 @@ import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderator;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
@@ -662,6 +663,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
     final DataSegmentPusher dataSegmentPusher = new LocalDataSegmentPusher(dataSegmentPusherConfig);
 
     toolboxFactory = new TaskToolboxFactory(
+        null,
         taskConfig,
         null, // taskExecutorNode
         taskActionClientFactory,
@@ -699,7 +701,8 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
         null,
         null,
         null,
-        "1"
+        "1",
+        CentralizedDatasourceSchemaConfig.create()
     );
   }
 

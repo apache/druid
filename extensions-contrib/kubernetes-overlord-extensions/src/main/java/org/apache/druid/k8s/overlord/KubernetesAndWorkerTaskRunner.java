@@ -25,6 +25,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.indexer.RunnerTaskState;
+import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
@@ -37,6 +38,7 @@ import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
+import org.apache.druid.k8s.overlord.runnerstrategy.RunnerStrategy;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 
 import javax.annotation.Nullable;
@@ -56,17 +58,17 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
 {
   private final KubernetesTaskRunner kubernetesTaskRunner;
   private final WorkerTaskRunner workerTaskRunner;
-  private final KubernetesAndWorkerTaskRunnerConfig kubernetesAndWorkerTaskRunnerConfig;
+  private final RunnerStrategy runnerStrategy;
 
   public KubernetesAndWorkerTaskRunner(
       KubernetesTaskRunner kubernetesTaskRunner,
       WorkerTaskRunner workerTaskRunner,
-      KubernetesAndWorkerTaskRunnerConfig kubernetesAndWorkerTaskRunnerConfig
+      RunnerStrategy runnerStrategy
   )
   {
     this.kubernetesTaskRunner = kubernetesTaskRunner;
     this.workerTaskRunner = workerTaskRunner;
-    this.kubernetesAndWorkerTaskRunnerConfig = kubernetesAndWorkerTaskRunnerConfig;
+    this.runnerStrategy = runnerStrategy;
   }
 
   @Override
@@ -100,7 +102,8 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
   @Override
   public ListenableFuture<TaskStatus> run(Task task)
   {
-    if (kubernetesAndWorkerTaskRunnerConfig.isSendAllTasksToWorkerTaskRunner()) {
+    RunnerStrategy.RunnerType runnerType = runnerStrategy.getRunnerTypeForTask(task);
+    if (RunnerStrategy.RunnerType.WORKER_RUNNER_TYPE.equals(runnerType)) {
       return workerTaskRunner.run(task);
     } else {
       return kubernetesTaskRunner.run(task);
@@ -232,6 +235,16 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
     return Optional.absent();
   }
 
+  @Override
+  public TaskLocation getTaskLocation(String taskId)
+  {
+    TaskLocation taskLocation = kubernetesTaskRunner.getTaskLocation(taskId);
+    if (taskLocation == null || taskLocation.equals(TaskLocation.unknown())) {
+      return workerTaskRunner.getTaskLocation(taskId);
+    }
+    return taskLocation;
+  }
+  
   @Nullable
   @Override
   public RunnerTaskState getRunnerTaskState(String taskId)
@@ -264,5 +277,18 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
       return -1;
     }
     return Math.max(0, k8sCapacity) + Math.max(0, workerCapacity);
+  }
+
+  // Worker task runners do not implement these methods
+  @Override
+  public void updateStatus(Task task, TaskStatus status)
+  {
+    kubernetesTaskRunner.updateStatus(task, status);
+  }
+
+  @Override
+  public void updateLocation(Task task, TaskLocation location)
+  {
+    kubernetesTaskRunner.updateLocation(task, location);
   }
 }

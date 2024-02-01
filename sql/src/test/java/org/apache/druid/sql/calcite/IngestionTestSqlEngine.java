@@ -83,12 +83,14 @@ public class IngestionTestSqlEngine implements SqlEngine
       case TOPN_QUERY:
       case TIME_BOUNDARY_QUERY:
       case SCAN_NEEDS_SIGNATURE:
+      case UNNEST:
         return false;
       case CAN_INSERT:
       case CAN_REPLACE:
       case READ_EXTERNAL_DATA:
       case SCAN_ORDER_BY_NON_TIME:
       case ALLOW_BROADCAST_RIGHTY_JOIN:
+      case ALLOW_TOP_LEVEL_UNION_ALL:
         return true;
       default:
         throw SqlEngines.generateUnrecognizedFeatureException(IngestionTestSqlEngine.class.getSimpleName(), feature);

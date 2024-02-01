@@ -23,6 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
+import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
@@ -126,6 +127,30 @@ public interface SegmentsMetadataManager
   );
 
   /**
+   * Returns an iterable to go over un-used segments and their associated metadata for a given datasource over an
+   * optional interval. The order in which segments are iterated is from earliest start-time, with ties being broken
+   * with earliest end-time first. Note: the iteration may not be as trivially cheap as for example, iteration over an
+   * ArrayList. Try (to some reasonable extent) to organize the code so that it iterates the returned iterable only
+   * once rather than several times.
+   *
+   * @param datasource    the name of the datasource.
+   * @param interval      an optional interval to search over. If none is specified, {@link org.apache.druid.java.util.common.Intervals#ETERNITY}
+   * @param limit         an optional maximum number of results to return. If none is specified, the results are not limited.
+   * @param lastSegmentId an optional last segment id from which to search for results. All segments returned are >
+   *                      this segment lexigraphically if sortOrder is null or  {@link SortOrder#ASC}, or < this segment
+   *                      lexigraphically if sortOrder is {@link SortOrder#DESC}. If none is specified, no such filter is used.
+   * @param sortOrder     an optional order with which to return the matching segments by id, start time, end time.
+   *                      If none is specified, the order of the results is not guarenteed.
+   */
+  Iterable<DataSegmentPlus> iterateAllUnusedSegmentsForDatasource(
+      String datasource,
+      @Nullable Interval interval,
+      @Nullable Integer limit,
+      @Nullable String lastSegmentId,
+      @Nullable SortOrder sortOrder
+  );
+
+  /**
    * Retrieves all data source names for which there are segment in the database, regardless of whether those segments
    * are used or not. If there are no segments in the database, returns an empty set.
    *
@@ -139,17 +164,25 @@ public interface SegmentsMetadataManager
   Set<String> retrieveAllDataSourceNames();
 
   /**
-   * Returns top N unused segment intervals with the start time no earlier than the specified start time (if not null)
-   * and with the end time no later than the specified maxEndTime and with sed_status_last_updated time no later than
-   * maxLastUsedTime when ordered by segment start time, end time. Any segment having no used_status_last_updated time
-   * due to upgrade from legacy Druid means maxUsedFlagLastUpdatedTime is ignored for that segment.
+   * Returns a list of up to {@code limit} unused segment intervals for the specified datasource. Segments are filtered based on the following criteria:
+   *
+   * <li> The start time of the segment must be no earlier than the specified {@code minStartTime} (if not null). </li>
+   * <li> The end time of the segment must be no later than the specified {@code maxEndTime}. </li>
+   * <li> The {@code used_status_last_updated} time of the segment must be no later than {@code maxUsedStatusLastUpdatedTime}.
+   *      Segments that have no {@code used_status_last_updated} time (due to an upgrade from legacy Druid) will
+   *      have {@code maxUsedStatusLastUpdatedTime} ignored. </li>
+   *
+   * <p>
+   * The list of intervals is ordered by segment start time and then by end time.
+   * </p>
    */
   List<Interval> getUnusedSegmentIntervals(
       String dataSource,
       DateTime minStartTime,
       DateTime maxEndTime,
       int limit,
-      DateTime maxUsedFlagLastUpdatedTime);
+      DateTime maxUsedStatusLastUpdatedTime
+  );
 
   @VisibleForTesting
   void poll();

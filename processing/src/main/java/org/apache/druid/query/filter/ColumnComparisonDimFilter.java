@@ -60,12 +60,6 @@ public class ColumnComparisonDimFilter extends AbstractOptimizableDimFilter impl
   }
 
   @Override
-  public DimFilter optimize()
-  {
-    return this;
-  }
-
-  @Override
   public Filter toFilter()
   {
     return new ColumnComparisonFilter(dimensions);

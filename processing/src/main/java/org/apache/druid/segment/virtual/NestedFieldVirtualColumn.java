@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.primitives.Doubles;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.IAE;
@@ -35,6 +34,8 @@ import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.filter.ColumnIndexSelector;
+import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseSingleValueDimensionSelector;
@@ -1158,10 +1159,10 @@ public class NestedFieldVirtualColumn implements VirtualColumn
   @Override
   public ColumnIndexSupplier getIndexSupplier(
       String columnName,
-      ColumnSelector selector
+      ColumnIndexSelector indexSelector
   )
   {
-    ColumnHolder holder = selector.getColumnHolder(this.columnName);
+    ColumnHolder holder = indexSelector.getColumnHolder(this.columnName);
     if (holder == null) {
       return null;
     }
@@ -1169,10 +1170,15 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     if (theColumn instanceof CompressedNestedDataComplexColumn) {
       final CompressedNestedDataComplexColumn<?> nestedColumn = (CompressedNestedDataComplexColumn<?>) theColumn;
       final ColumnIndexSupplier nestedColumnPathIndexSupplier = nestedColumn.getColumnIndexSupplier(parts);
+      if (nestedColumnPathIndexSupplier == null && processFromRaw) {
+        // if processing from raw, a non-exstent path from parts doesn't mean the path doesn't really exist
+        // so fall back to no indexes
+        return NoIndexesColumnIndexSupplier.getInstance();
+      }
       if (expectedType != null) {
         final Set<ColumnType> types = nestedColumn.getColumnTypes(parts);
         // if the expected output type is numeric but not all of the input types are numeric, we might have additional
-        // null values than what the null value bitmap is tracking, wrap it
+        // null values than what the null value bitmap is tracking, fall back to not using indexes
         if (expectedType.isNumeric() && (types == null || types.stream().anyMatch(t -> !t.isNumeric()))) {
           return NoIndexesColumnIndexSupplier.getInstance();
         }
@@ -1228,6 +1234,13 @@ public class NestedFieldVirtualColumn implements VirtualColumn
   public ColumnCapabilities capabilities(ColumnInspector inspector, String columnName)
   {
     if (processFromRaw) {
+      if (expectedType != null && expectedType.isArray() && ColumnType.NESTED_DATA.equals(expectedType.getElementType())) {
+        // arrays of objects!
+        return ColumnCapabilitiesImpl.createDefault()
+                                     .setType(ColumnType.ofArray(ColumnType.NESTED_DATA))
+                                     .setHasMultipleValues(false)
+                                     .setHasNulls(true);
+      }
       // JSON_QUERY always returns a StructuredData
       return ColumnCapabilitiesImpl.createDefault()
                                    .setType(ColumnType.NESTED_DATA)
@@ -1639,9 +1652,9 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     }
 
     @Override
-    public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+    public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
     {
-      return baseSelector.makeValueMatcher(predicate);
+      return baseSelector.makeValueMatcher(predicateFactory);
     }
 
     @Override

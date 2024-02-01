@@ -19,15 +19,16 @@
 
 package org.apache.druid.math.expr;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
-import org.apache.druid.math.expr.vector.VectorComparisonProcessors;
 import org.apache.druid.math.expr.vector.VectorMathProcessors;
 import org.apache.druid.math.expr.vector.VectorProcessors;
 import org.apache.druid.math.expr.vector.VectorStringProcessors;
@@ -1436,11 +1437,12 @@ public interface Function extends NamedFunction
     private static final BigDecimal MAX_FINITE_VALUE = BigDecimal.valueOf(Double.MAX_VALUE);
     private static final BigDecimal MIN_FINITE_VALUE = BigDecimal.valueOf(-1 * Double.MAX_VALUE);
     //CHECKSTYLE.ON: Regexp
+    public static final String NAME = "round";
 
     @Override
     public String name()
     {
-      return "round";
+      return NAME;
     }
 
     @Override
@@ -2184,7 +2186,10 @@ public interface Function extends NamedFunction
     }
   }
 
-  class NvlFunc implements Function
+  /**
+   * nvl is like coalesce, but accepts exactly two arguments.
+   */
+  class NvlFunc extends CoalesceFunc
   {
     @Override
     public String name()
@@ -2193,10 +2198,63 @@ public interface Function extends NamedFunction
     }
 
     @Override
+    public void validateArguments(List<Expr> args)
+    {
+      validationHelperCheckArgumentCount(args, 2);
+    }
+  }
+
+  /**
+   * SQL function "x IS NOT DISTINCT FROM y". Very similar to "x = y", i.e. {@link BinEqExpr}, except this function
+   * never returns null, and this function considers NULL as a value, so NULL itself is not-distinct-from NULL. For
+   * example: `x == null` returns `null` in SQL-compatible null handling mode, but `notdistinctfrom(x, null)` is
+   * true if `x` is null.
+   */
+  class IsNotDistinctFromFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "notdistinctfrom";
+    }
+
+    @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      final ExprEval eval = args.get(0).eval(bindings);
-      return eval.value() == null ? args.get(1).eval(bindings) : eval;
+      final ExprEval leftVal = args.get(0).eval(bindings);
+      final ExprEval rightVal = args.get(1).eval(bindings);
+
+      if (leftVal.value() == null || rightVal.value() == null) {
+        return ExprEval.ofLongBoolean(leftVal.value() == null && rightVal.value() == null);
+      }
+
+      // Code copied and adapted from BinaryBooleanOpExprBase and BinEqExpr.
+      // The code isn't shared due to differences in code structure: BinaryBooleanOpExprBase + BinEqExpr have logic
+      // interleaved between parent and child class, but we can't use BinaryBooleanOpExprBase as a parent here, because
+      // (a) this is a function, not an expr; and (b) our logic for handling and returning nulls is different from most
+      // binary exprs, where null in means null out.
+      final ExpressionType comparisonType = ExpressionTypeConversion.autoDetect(leftVal, rightVal);
+      switch (comparisonType.getType()) {
+        case STRING:
+          return ExprEval.ofLongBoolean(Objects.equals(leftVal.asString(), rightVal.asString()));
+        case LONG:
+          return ExprEval.ofLongBoolean(leftVal.asLong() == rightVal.asLong());
+        case ARRAY:
+          final ExpressionType type = Preconditions.checkNotNull(
+              ExpressionTypeConversion.leastRestrictiveType(leftVal.type(), rightVal.type()),
+              "Cannot be null because ExprEval type is not nullable"
+          );
+          return ExprEval.ofLongBoolean(
+              type.getNullableStrategy().compare(leftVal.castTo(type).asArray(), rightVal.castTo(type).asArray()) == 0
+          );
+        case DOUBLE:
+        default:
+          if (leftVal.isNumericNull() || rightVal.isNumericNull()) {
+            return ExprEval.ofLongBoolean(leftVal.isNumericNull() && rightVal.isNumericNull());
+          } else {
+            return ExprEval.ofLongBoolean(leftVal.asDouble() == rightVal.asDouble());
+          }
+      }
     }
 
     @Override
@@ -2209,19 +2267,42 @@ public interface Function extends NamedFunction
     @Override
     public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      return ExpressionTypeConversion.conditional(inspector, args);
+      return ExpressionType.LONG;
+    }
+  }
+
+  /**
+   * SQL function "x IS DISTINCT FROM y". Very similar to "x <> y", i.e. {@link BinNeqExpr}, except this function
+   * never returns null.
+   *
+   * Implemented as a subclass of IsNotDistinctFromFunc to keep the code simple, and because we expect "notdistinctfrom"
+   * to be more common than "isdistinctfrom" in actual usage.
+   */
+  class IsDistinctFromFunc extends IsNotDistinctFromFunc
+  {
+    @Override
+    public String name()
+    {
+      return "isdistinctfrom";
     }
 
     @Override
-    public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      return inspector.canVectorize(args);
+      return ExprEval.ofLongBoolean(!super.apply(args, bindings).asBoolean());
     }
 
     @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    public void validateArguments(List<Expr> args)
     {
-      return VectorProcessors.nvl(inspector, args.get(0), args.get(1));
+      validationHelperCheckArgumentCount(args, 2);
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.LONG;
     }
   }
 
@@ -2319,19 +2400,6 @@ public interface Function extends NamedFunction
     {
       return ExpressionType.LONG;
     }
-
-    @Override
-    public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
-    {
-      final Expr expr = args.get(0);
-      return inspector.areNumeric(expr) && expr.canVectorize(inspector);
-    }
-
-    @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
-    {
-      return VectorComparisonProcessors.lessThanOrEqual(inspector, args.get(0), ExprEval.of(0L).toExpr());
-    }
   }
 
   /**
@@ -2363,19 +2431,6 @@ public interface Function extends NamedFunction
     public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
       return ExpressionType.LONG;
-    }
-
-    @Override
-    public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
-    {
-      final Expr expr = args.get(0);
-      return inspector.areNumeric(expr) && expr.canVectorize(inspector);
-    }
-
-    @Override
-    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
-    {
-      return VectorComparisonProcessors.greaterThan(inspector, args.get(0), ExprEval.of(0L).toExpr());
     }
   }
 
@@ -2459,6 +2514,54 @@ public interface Function extends NamedFunction
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
       return VectorProcessors.isNotNull(inspector, args.get(0));
+    }
+  }
+
+  class CoalesceFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "coalesce";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      for (int i = 0; i < args.size(); i++) {
+        final Expr arg = args.get(i);
+        final ExprEval<?> eval = arg.eval(bindings);
+        if (i == args.size() - 1 || eval.value() != null) {
+          return eval;
+        }
+      }
+
+      throw DruidException.defensive("Not reached, argument count must be at least 1");
+    }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      validationHelperCheckMinArgumentCount(args, 1);
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionTypeConversion.conditional(inspector, args);
+    }
+
+    @Override
+    public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return args.size() == 2 && inspector.canVectorize(args);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
+    {
+      return VectorProcessors.nvl(inspector, args.get(0), args.get(1));
     }
   }
 
@@ -3155,14 +3258,6 @@ public interface Function extends NamedFunction
     public void validateArguments(List<Expr> args)
     {
       validationHelperCheckArgumentCount(args, 1);
-      IdentifierExpr expr = args.get(0).getIdentifierExprIfIdentifierExpr();
-
-      if (expr == null) {
-        throw validationFailed(
-            "argument %s should be an identifier expression. Use array() instead",
-            args.get(0).toString()
-        );
-      }
     }
 
     @Nullable
@@ -3251,11 +3346,11 @@ public interface Function extends NamedFunction
     @Override
     public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
     {
-      ExpressionType type = ExpressionType.LONG;
+      ExpressionType type = null;
       for (Expr arg : args) {
-        type = ExpressionTypeConversion.function(type, arg.getOutputType(inspector));
+        type = ExpressionTypeConversion.leastRestrictiveType(type, arg.getOutputType(inspector));
       }
-      return ExpressionType.asArrayType(type);
+      return type == null ? null : ExpressionTypeFactory.getInstance().ofArray(type);
     }
 
     /**
