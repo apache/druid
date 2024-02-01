@@ -88,7 +88,7 @@
           -->
         <calcite.version>1.35.0</calcite.version>
         <confluent.version>6.2.12</confluent.version>
-        <datasketches.version>4.2.0</datasketches.version>
+        <datasketches.version>5.0.1</datasketches.version>
         <datasketches.memory.version>2.2.0</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>
         <dropwizard.metrics.version>4.2.22</dropwizard.metrics.version>

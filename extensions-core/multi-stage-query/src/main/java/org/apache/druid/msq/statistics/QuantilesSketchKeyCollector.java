@@ -150,7 +150,7 @@ public class QuantilesSketchKeyCollector implements KeyCollector<QuantilesSketch
 
     final int numPartitions = Ints.checkedCast(LongMath.divide(sketch.getN(), targetWeight, RoundingMode.CEILING));
 
-    final byte[][] quantiles = (sketch.getPartitionBoundaries(numPartitions, QuantileSearchCriteria.EXCLUSIVE)).boundaries;
+    final byte[][] quantiles = (sketch.getPartitionBoundaries(numPartitions, QuantileSearchCriteria.EXCLUSIVE)).getBoundaries();
     final List<ClusterByPartition> partitions = new ArrayList<>();
 
     for (int i = 0; i < numPartitions; i++) {
