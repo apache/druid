@@ -71,7 +71,7 @@ public class IcebergRangeFilter implements IcebergFilter
   @Override
   public Expression getFilterExpression()
   {
-    List<Expression> expressions = new ArrayList<>(2);
+    List<Expression> expressions = new ArrayList<>();
 
     if (lower != null) {
       Expression lowerExp = lowerOpen
