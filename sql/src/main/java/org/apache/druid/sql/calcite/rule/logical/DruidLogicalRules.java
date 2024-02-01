@@ -28,6 +28,7 @@ import org.apache.calcite.rel.logical.LogicalFilter;
 import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.logical.LogicalSort;
 import org.apache.calcite.rel.logical.LogicalTableScan;
+import org.apache.calcite.rel.logical.LogicalUnion;
 import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -90,6 +91,12 @@ public class DruidLogicalRules
                 Convention.NONE,
                 DruidLogicalConvention.instance(),
                 DruidWindowRule.class.getSimpleName()
+            ),
+            new DruidUnionRule(
+                LogicalUnion.class,
+                Convention.NONE,
+                DruidLogicalConvention.instance(),
+                DruidUnionRule.class.getSimpleName()
             )
         )
     );

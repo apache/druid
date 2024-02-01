@@ -262,6 +262,7 @@ public class CalciteRulesManager
     builder.addMatchLimit(CalciteRulesManager.HEP_DEFAULT_MATCH_LIMIT);
     builder.addGroupBegin();
     builder.addRuleCollection(baseRuleSet(plannerContext));
+    builder.addRuleInstance(CoreRules.UNION_MERGE);
     builder.addGroupEnd();
     return Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE);
   }

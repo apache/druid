@@ -241,7 +241,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       }
 
       // Exceptions during rule evaluations could be wrapped inside a RuntimeException by VolcanoRuleCall class.
-      // This block will extract a user-friendly message from the exception chain. 
+      // This block will extract a user-friendly message from the exception chain.
       if (e.getMessage() != null
           && e.getCause() != null
           && e.getCause().getMessage() != null
@@ -559,8 +559,8 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
                  .plus(DruidLogicalConvention.instance()),
           newRoot
       );
-      DruidQueryGenerator shuttle = new DruidQueryGenerator(plannerContext);
-      newRoot.accept(shuttle);
+      DruidQueryGenerator shuttle = new DruidQueryGenerator(plannerContext, newRoot);
+      shuttle.run();
       log.info("PartialDruidQuery : " + shuttle.getPartialDruidQuery());
       shuttle.getQueryList().add(shuttle.getPartialDruidQuery()); // add topmost query to the list
       shuttle.getQueryTables().add(shuttle.getCurrentTable());

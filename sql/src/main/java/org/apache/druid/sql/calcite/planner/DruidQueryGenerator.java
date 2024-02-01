@@ -29,6 +29,7 @@ import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.core.TableFunctionScan;
 import org.apache.calcite.rel.core.TableScan;
+import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.rel.core.Window;
 import org.apache.calcite.rel.logical.LogicalAggregate;
 import org.apache.calcite.rel.logical.LogicalCorrelate;
@@ -58,11 +59,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-
 /**
- * Converts a DAG of {@link org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode} convention to a native
- * Druid query for execution. The convertion is done via a {@link org.apache.calcite.rel.RelShuttle} visitor
- * implementation.
+ * Converts a DAG of
+ * {@link org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode} convention
+ * to a native Druid query for execution. The convertion is done via a
+ * {@link org.apache.calcite.rel.RelShuttle} visitor implementation.
  */
 public class DruidQueryGenerator extends RelShuttleImpl
 {
@@ -72,11 +73,12 @@ public class DruidQueryGenerator extends RelShuttleImpl
   private PartialDruidQuery partialDruidQuery;
   private PartialDruidQuery.Stage currentStage = null;
   private DruidTable currentTable = null;
-  private boolean isRoot = true;
+  private final RelNode relRoot;
 
-  public DruidQueryGenerator(PlannerContext plannerContext)
+  public DruidQueryGenerator(PlannerContext plannerContext, RelNode relRoot)
   {
     this.plannerContext = plannerContext;
+    this.relRoot = relRoot;
   }
 
   @Override
@@ -86,7 +88,6 @@ public class DruidQueryGenerator extends RelShuttleImpl
       throw new ISE("Planning hasn't converted logical table scan to druid convention");
     }
     DruidTableScan druidTableScan = (DruidTableScan) scan;
-    isRoot = false;
     RelNode result = super.visit(scan);
     partialDruidQuery = PartialDruidQuery.create(scan);
     currentStage = PartialDruidQuery.Stage.SCAN;
@@ -111,16 +112,16 @@ public class DruidQueryGenerator extends RelShuttleImpl
   @Override
   public RelNode visit(LogicalValues values)
   {
-    isRoot = false;
     RelNode result = super.visit(values);
     final List<ImmutableList<RexLiteral>> tuples = values.getTuples();
     final List<Object[]> objectTuples = tuples
         .stream()
-        .map(tuple -> tuple
-            .stream()
-            .map(v -> DruidLogicalValuesRule.getValueFromLiteral(v, plannerContext))
-            .collect(Collectors.toList())
-            .toArray(new Object[0])
+        .map(
+            tuple -> tuple
+                .stream()
+                .map(v -> DruidLogicalValuesRule.getValueFromLiteral(v, plannerContext))
+                .collect(Collectors.toList())
+                .toArray(new Object[0])
         )
         .collect(Collectors.toList());
     RowSignature rowSignature = RowSignatures.fromRelDataType(
@@ -145,7 +146,6 @@ public class DruidQueryGenerator extends RelShuttleImpl
 
   public RelNode visitFilter(Filter filter)
   {
-    isRoot = false;
     RelNode result = super.visit(filter);
     if (currentStage == PartialDruidQuery.Stage.AGGREGATE) {
       partialDruidQuery = partialDruidQuery.withHavingFilter(filter);
@@ -207,7 +207,6 @@ public class DruidQueryGenerator extends RelShuttleImpl
   @Override
   public RelNode visit(LogicalAggregate aggregate)
   {
-    isRoot = false;
     RelNode result = super.visit(aggregate);
     if (PartialDruidQuery.Stage.AGGREGATE.canFollow(currentStage)) {
       partialDruidQuery = partialDruidQuery.withAggregate(aggregate);
@@ -240,11 +239,9 @@ public class DruidQueryGenerator extends RelShuttleImpl
 
   private RelNode visitProject(Project project)
   {
-    boolean rootForReal = isRoot;
-    isRoot = false;
     RelNode result = super.visit(project);
-    if (rootForReal && (currentStage == PartialDruidQuery.Stage.AGGREGATE
-                        || currentStage == PartialDruidQuery.Stage.HAVING_FILTER)) {
+    if (isRoot(project) && (currentStage == PartialDruidQuery.Stage.AGGREGATE
+        || currentStage == PartialDruidQuery.Stage.HAVING_FILTER)) {
       partialDruidQuery = partialDruidQuery.withAggregateProject(project);
       currentStage = PartialDruidQuery.Stage.AGGREGATE_PROJECT;
     } else if (currentStage == PartialDruidQuery.Stage.SCAN || currentStage == PartialDruidQuery.Stage.WHERE_FILTER) {
@@ -267,7 +264,6 @@ public class DruidQueryGenerator extends RelShuttleImpl
 
   private RelNode visitSort(Sort sort)
   {
-    isRoot = false;
     RelNode result = super.visit(sort);
     if (PartialDruidQuery.Stage.SORT.canFollow(currentStage)) {
       partialDruidQuery = partialDruidQuery.withSort(sort);
@@ -282,7 +278,6 @@ public class DruidQueryGenerator extends RelShuttleImpl
 
   private RelNode visitAggregate(Aggregate aggregate)
   {
-    isRoot = false;
     RelNode result = super.visit(aggregate);
     if (PartialDruidQuery.Stage.AGGREGATE.canFollow(currentStage)) {
       partialDruidQuery = partialDruidQuery.withAggregate(aggregate);
@@ -312,9 +307,18 @@ public class DruidQueryGenerator extends RelShuttleImpl
       return visit((LogicalValues) other);
     } else if (other instanceof Window) {
       return visitWindow((Window) other);
+    } else if (other instanceof Union) {
+      return visitUnion((Union) other);
     }
 
     throw new UOE("Found unsupported RelNode [%s]", other.getClass().getSimpleName());
+  }
+
+  private RelNode visitUnion(Union union)
+  {
+    RelNode newUnion = super.visit(union);
+
+    return null;
   }
 
   private RelNode visitWindow(Window other)
@@ -351,4 +355,13 @@ public class DruidQueryGenerator extends RelShuttleImpl
     return currentTable;
   }
 
+  public void run()
+  {
+    relRoot.accept(this);
+  }
+
+  public boolean isRoot(RelNode node)
+  {
+    return node == relRoot;
+  }
 }
