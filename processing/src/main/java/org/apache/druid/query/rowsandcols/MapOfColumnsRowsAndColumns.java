@@ -127,17 +127,6 @@ public class MapOfColumnsRowsAndColumns implements RowsAndColumns
 
       for (int i = 0; i < signature.size(); ++i) {
         final ColumnType type = signature.getColumnType(i).orElse(null);
-
-        // If the column is String type, we likely got String objects instead of utf8 bytes, so convert to utf8Bytes
-        // to align with expectations.
-        if (ColumnType.STRING.equals(type)) {
-          for (int j = 0; j < columnOriented[i].length; j++) {
-            if (columnOriented[i][j] instanceof String) {
-              columnOriented[i][j] = ByteBuffer.wrap(((String) columnOriented[i][j]).getBytes(StandardCharsets.UTF_8));
-            }
-          }
-        }
-
         bob.add(signature.getColumnName(i), columnOriented[i], type);
       }
     }

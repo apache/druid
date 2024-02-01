@@ -1510,13 +1510,7 @@ public class DruidQuery
 
     if (dataSource.isConcrete()) {
       // Currently only non-time orderings of subqueries are allowed.
-      List<String> orderByColumnNames = sorting.getOrderBys()
-          .stream().map(OrderByColumnSpec::getDimension)
-          .collect(Collectors.toList());
-      plannerContext.setPlanningError(
-          "SQL query requires ordering a table by non-time column [%s], which is not supported.",
-          orderByColumnNames
-      );
+      setPlanningErrorOrderByNonTimeIsUnsupported();
       return null;
     }
 
@@ -1546,6 +1540,17 @@ public class DruidQuery
         signature,
         operators,
         null
+    );
+  }
+
+  private void setPlanningErrorOrderByNonTimeIsUnsupported()
+  {
+    List<String> orderByColumnNames = sorting.getOrderBys()
+        .stream().map(OrderByColumnSpec::getDimension)
+        .collect(Collectors.toList());
+    plannerContext.setPlanningError(
+        "SQL query requires ordering a table by non-time column [%s], which is not supported.",
+        orderByColumnNames
     );
   }
 
@@ -1628,10 +1633,7 @@ public class DruidQuery
         // potential branches of exploration rather than being a semantic requirement of the query itself.  So, it is
         // not safe to send an error message telling the end-user exactly what is happening, instead we need to set the
         // planning error and hope.
-        plannerContext.setPlanningError(
-            "SQL query requires order by non-time column [%s], which is not supported.",
-            orderByColumns
-        );
+        setPlanningErrorOrderByNonTimeIsUnsupported();
         return null;
       }
     }

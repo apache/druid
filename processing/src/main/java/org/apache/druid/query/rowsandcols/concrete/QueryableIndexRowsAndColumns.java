@@ -22,6 +22,7 @@ package org.apache.druid.query.rowsandcols.concrete;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
+import org.apache.druid.query.rowsandcols.SemanticCreator;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.segment.CloseableShapeshifter;
 import org.apache.druid.segment.QueryableIndex;
@@ -33,14 +34,15 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 public class QueryableIndexRowsAndColumns implements RowsAndColumns, AutoCloseable, CloseableShapeshifter
 {
-  private static final HashMap<Class<?>, Function<QueryableIndexRowsAndColumns, ?>> AS_MAP = makeAsMap();
+  private static final Map<Class<?>, Function<QueryableIndexRowsAndColumns, ?>> AS_MAP = RowsAndColumns
+      .makeAsMap(QueryableIndexRowsAndColumns.class);
 
   private final QueryableIndex index;
 
@@ -104,13 +106,17 @@ public class QueryableIndexRowsAndColumns implements RowsAndColumns, AutoCloseab
     }
   }
 
-  private static HashMap<Class<?>, Function<QueryableIndexRowsAndColumns, ?>> makeAsMap()
+  @SuppressWarnings("unused")
+  @SemanticCreator
+  public StorageAdapter toStorageAdapter()
   {
-    HashMap<Class<?>, Function<QueryableIndexRowsAndColumns, ?>> retVal = new HashMap<>();
+    return new QueryableIndexStorageAdapter(index);
+  }
 
-    retVal.put(StorageAdapter.class, rac -> new QueryableIndexStorageAdapter(rac.index));
-    retVal.put(QueryableIndex.class, rac -> rac.index);
-
-    return retVal;
+  @SuppressWarnings("unused")
+  @SemanticCreator
+  public QueryableIndex toQueryableIndex()
+  {
+    return index;
   }
 }
