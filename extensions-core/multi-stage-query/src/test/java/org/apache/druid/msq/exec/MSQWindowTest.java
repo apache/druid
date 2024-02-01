@@ -21,6 +21,7 @@ package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -35,6 +36,7 @@ import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -101,7 +103,12 @@ public class MSQWindowTest extends MSQTestBase
   public static Collection<Object[]> data()
   {
     Object[][] data = new Object[][]{
-        {DEFAULT, DEFAULT_MSQ_CONTEXT}
+        {DEFAULT, DEFAULT_MSQ_CONTEXT},
+        {DURABLE_STORAGE, DURABLE_STORAGE_MSQ_CONTEXT},
+        {FAULT_TOLERANCE, FAULT_TOLERANCE_MSQ_CONTEXT},
+        {PARALLEL_MERGE, PARALLEL_MERGE_MSQ_CONTEXT},
+        {QUERY_RESULTS_WITH_DURABLE_STORAGE, QUERY_RESULTS_WITH_DURABLE_STORAGE_CONTEXT},
+        {QUERY_RESULTS_WITH_DEFAULT, QUERY_RESULTS_WITH_DEFAULT_CONTEXT}
     };
 
     return Arrays.asList(data);
@@ -677,6 +684,80 @@ public class MSQWindowTest extends MSQTestBase
   }
 
   @Test
+  public void testWindowOnFooWithNoGroupByAndPartitionOnTwoElements()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("m1", ColumnType.FLOAT)
+                                            .add("cc", ColumnType.DOUBLE)
+                                            .build();
+
+    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0, null);
+    final AggregatorFactory[] theAggs = {
+        new DoubleSumAggregatorFactory("w0", "m1")
+    };
+    WindowFramedAggregateProcessor proc = new WindowFramedAggregateProcessor(theFrame, theAggs);
+
+    final Map<String, Object> contextWithRowSignature =
+        ImmutableMap.<String, Object>builder()
+                    .putAll(context)
+                    .put(
+                        DruidQuery.CTX_SCAN_SIGNATURE,
+                        "[{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"m2\",\"type\":\"DOUBLE\"}]"
+                    )
+                    .build();
+
+    final WindowOperatorQuery query = new WindowOperatorQuery(
+        new QueryDataSource(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("m1", "m2")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(contextWithRowSignature)
+                .legacy(false)
+                .build()),
+        new LegacySegmentSpec(Intervals.ETERNITY),
+        context,
+        RowSignature.builder().add("m1", ColumnType.FLOAT).add("w0", ColumnType.DOUBLE).build(),
+        ImmutableList.of(
+            new NaiveSortOperatorFactory(ImmutableList.of(
+                ColumnWithDirection.ascending("m1"),
+                ColumnWithDirection.ascending("m2")
+            )),
+            new NaivePartitioningOperatorFactory(ImmutableList.of("m1", "m2")),
+            new WindowOperatorFactory(proc)
+        ),
+        ImmutableList.of()
+    );
+    testSelectQuery()
+        .setSql("select m1,SUM(m1) OVER(PARTITION BY m1,m2) cc from foo")
+        .setExpectedMSQSpec(MSQSpec.builder()
+                                   .query(query)
+                                   .columnMappings(
+                                       new ColumnMappings(ImmutableList.of(
+                                           new ColumnMapping("m1", "m1"),
+                                           new ColumnMapping("w0", "cc")
+                                       )
+                                       ))
+                                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                                   .destination(isDurableStorageDestination()
+                                                ? DurableStorageMSQDestination.INSTANCE
+                                                : TaskReportMSQDestination.INSTANCE)
+                                   .build())
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedResultRows(ImmutableList.of(
+            new Object[]{1.0f, 1.0},
+            new Object[]{2.0f, 2.0},
+            new Object[]{3.0f, 3.0},
+            new Object[]{4.0f, 4.0},
+            new Object[]{5.0f, 5.0},
+            new Object[]{6.0f, 6.0}
+        ))
+        .setQueryContext(context)
+        .verifyResults();
+  }
+
+  @Test
   public void testWindowOnFooWithNoGroupByAndPartitionByAnother()
   {
     RowSignature rowSignature = RowSignature.builder()
@@ -1121,6 +1202,193 @@ public class MSQWindowTest extends MSQTestBase
             new Object[]{4.0f, 21.0, 4.0},
             new Object[]{5.0f, 21.0, 5.0},
             new Object[]{6.0f, 21.0, 6.0}
+        ))
+        .setQueryContext(context)
+        .verifyResults();
+  }
+
+  @Test
+  public void testWindowOnFooWithParitionOverWithUnnest()
+  {
+    final Map<String, Object> contextWithRowSignature =
+        ImmutableMap.<String, Object>builder()
+                    .putAll(context)
+                    .put(
+                        DruidQuery.CTX_SCAN_SIGNATURE,
+                        "[{\"name\":\"j0.unnest\",\"type\":\"STRING\"},{\"name\":\"m1\",\"type\":\"FLOAT\"}]"
+                    )
+                    .build();
+
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("m1", ColumnType.FLOAT)
+                                            .add("cc", ColumnType.DOUBLE)
+                                            .add("d3", ColumnType.STRING)
+                                            .build();
+
+    final WindowFrame theFrame = new WindowFrame(
+        WindowFrame.PeerType.ROWS,
+        true,
+        0,
+        true,
+        0,
+        null
+    );
+    final AggregatorFactory[] theAggs = {
+        new DoubleSumAggregatorFactory("w0", "m1")
+    };
+    WindowFramedAggregateProcessor proc = new WindowFramedAggregateProcessor(theFrame, theAggs);
+
+    final WindowOperatorQuery query = new WindowOperatorQuery(
+        new QueryDataSource(
+            newScanQueryBuilder()
+                .dataSource(
+                    UnnestDataSource.create(
+                        new TableDataSource(CalciteTests.DATASOURCE1),
+                        expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
+                        null
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("j0.unnest", "m1")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(contextWithRowSignature)
+                .legacy(false)
+                .build()),
+        new LegacySegmentSpec(Intervals.ETERNITY),
+        context,
+        RowSignature.builder()
+                    .add("m1", ColumnType.FLOAT)
+                    .add("w0", ColumnType.DOUBLE)
+                    .add("j0.unnest", ColumnType.STRING)
+                    .build(),
+        ImmutableList.of(
+            new NaivePartitioningOperatorFactory(ImmutableList.of()),
+            new WindowOperatorFactory(proc)
+        ),
+        ImmutableList.of()
+    );
+    testSelectQuery()
+        .setSql(
+            "select m1,SUM(m1) OVER() cc, u.d3 from foo CROSS JOIN UNNEST(MV_TO_ARRAY(dim3)) as u(d3)")
+        .setExpectedMSQSpec(MSQSpec.builder()
+                                   .query(query)
+                                   .columnMappings(
+                                       new ColumnMappings(ImmutableList.of(
+                                           new ColumnMapping("m1", "m1"),
+                                           new ColumnMapping("w0", "cc"),
+                                           new ColumnMapping("j0.unnest", "d3")
+                                       )
+                                       ))
+                                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                                   .destination(isDurableStorageDestination()
+                                                ? DurableStorageMSQDestination.INSTANCE
+                                                : TaskReportMSQDestination.INSTANCE)
+                                   .build())
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedResultRows(ImmutableList.of(
+            new Object[]{1.0f, 24.0, "a"},
+            new Object[]{1.0f, 24.0, "b"},
+            new Object[]{2.0f, 24.0, "b"},
+            new Object[]{2.0f, 24.0, "c"},
+            new Object[]{3.0f, 24.0, "d"},
+            new Object[]{4.0f, 24.0, ""},
+            new Object[]{5.0f, 24.0, NullHandling.sqlCompatible() ? null : ""},
+            new Object[]{6.0f, 24.0, NullHandling.sqlCompatible() ? null : ""}
+        ))
+        .setQueryContext(context)
+        .verifyResults();
+  }
+
+  @Test
+  public void testWindowOnFooWithEmptyOverWithUnnest()
+  {
+    final Map<String, Object> contextWithRowSignature =
+        ImmutableMap.<String, Object>builder()
+                    .putAll(context)
+                    .put(
+                        DruidQuery.CTX_SCAN_SIGNATURE,
+                        "[{\"name\":\"j0.unnest\",\"type\":\"STRING\"},{\"name\":\"m1\",\"type\":\"FLOAT\"}]"
+                    )
+                    .build();
+
+    
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("m1", ColumnType.FLOAT)
+                                            .add("cc", ColumnType.DOUBLE)
+                                            .add("d3", ColumnType.STRING)
+                                            .build();
+
+    final WindowFrame theFrame = new WindowFrame(
+        WindowFrame.PeerType.ROWS,
+        true,
+        0,
+        true,
+        0,
+        null
+    );
+    final AggregatorFactory[] theAggs = {
+        new DoubleSumAggregatorFactory("w0", "m1")
+    };
+    WindowFramedAggregateProcessor proc = new WindowFramedAggregateProcessor(theFrame, theAggs);
+
+    final WindowOperatorQuery query = new WindowOperatorQuery(
+        new QueryDataSource(
+            newScanQueryBuilder()
+                .dataSource(
+                    UnnestDataSource.create(
+                        new TableDataSource(CalciteTests.DATASOURCE1),
+                        expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
+                        null
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("j0.unnest", "m1")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(contextWithRowSignature)
+                .legacy(false)
+                .build()),
+        new LegacySegmentSpec(Intervals.ETERNITY),
+        context,
+        RowSignature.builder()
+                    .add("m1", ColumnType.FLOAT)
+                    .add("w0", ColumnType.DOUBLE)
+                    .add("j0.unnest", ColumnType.STRING)
+                    .build(),
+        ImmutableList.of(
+            new NaiveSortOperatorFactory(ImmutableList.of(ColumnWithDirection.ascending("m1"))),
+            new NaivePartitioningOperatorFactory(ImmutableList.of("m1")),
+            new WindowOperatorFactory(proc)
+        ),
+        ImmutableList.of()
+    );
+    testSelectQuery()
+        .setSql(
+            "select m1,SUM(m1) OVER(PARTITION BY m1) cc, u.d3 from foo CROSS JOIN UNNEST(MV_TO_ARRAY(dim3)) as u(d3)")
+        .setExpectedMSQSpec(MSQSpec.builder()
+                                   .query(query)
+                                   .columnMappings(
+                                       new ColumnMappings(ImmutableList.of(
+                                           new ColumnMapping("m1", "m1"),
+                                           new ColumnMapping("w0", "cc"),
+                                           new ColumnMapping("j0.unnest", "d3")
+                                       )
+                                       ))
+                                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                                   .destination(isDurableStorageDestination()
+                                                ? DurableStorageMSQDestination.INSTANCE
+                                                : TaskReportMSQDestination.INSTANCE)
+                                   .build())
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedResultRows(ImmutableList.of(
+            new Object[]{1.0f, 2.0, "a"},
+            new Object[]{1.0f, 2.0, "b"},
+            new Object[]{2.0f, 4.0, "b"},
+            new Object[]{2.0f, 4.0, "c"},
+            new Object[]{3.0f, 3.0, "d"},
+            new Object[]{4.0f, 4.0, ""},
+            new Object[]{5.0f, 5.0, NullHandling.sqlCompatible() ? null : ""},
+            new Object[]{6.0f, 6.0, NullHandling.sqlCompatible() ? null : ""}
         ))
         .setQueryContext(context)
         .verifyResults();

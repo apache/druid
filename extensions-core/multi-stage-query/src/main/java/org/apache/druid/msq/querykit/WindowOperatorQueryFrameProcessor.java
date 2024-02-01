@@ -83,6 +83,7 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
   private Supplier<ResultRow> rowSupplierFromFrameCursor;
   private ResultRow outputRow = null;
   private FrameWriter frameWriter = null;
+  List<Integer> partitionColsIndex;
 
   public WindowOperatorQueryFrameProcessor(
       final WindowOperatorQuery query,
@@ -108,6 +109,7 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
     this.frameRowsAndCols = new ArrayList<>();
     this.resultRowAndCols = new ArrayList<>();
     this.objectsOfASingleRac = new ArrayList<>();
+    this.partitionColsIndex = new ArrayList<>();
   }
 
   @Override
@@ -186,7 +188,6 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
     // Phase 1 of the execution
     // eagerly validate presence of empty OVER() clause
     boolean status = checkEagerlyForEmptyWindow(operatorFactoryList);
-    List<Integer> partitionColsIndex = null;
     if (status) {
       // if OVER() found
       // convert each frame to rac
@@ -269,6 +270,7 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
           runAllOpsOnSingleRac(rac);
           objectsOfASingleRac.clear();
           outputRow = currentRow.copy();
+          // add the new stuff
           return ReturnOrAwait.runAgain();
         }
         frameCursor.advance();
