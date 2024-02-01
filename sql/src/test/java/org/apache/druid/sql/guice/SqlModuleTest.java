@@ -209,7 +209,6 @@ public class SqlModuleTest
                     .toProvider(QuerySchedulerProvider.class)
                     .in(LazySingleton.class);
               binder.bind(ResponseContextConfig.class).toInstance(SqlResourceTest.TEST_RESPONSE_CONTEXT_CONFIG);
-              binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
               binder.bind(OverlordClient.class).to(NoopOverlordClient.class);
               binder.bind(CoordinatorClient.class).to(NoopCoordinatorClient.class);
             },

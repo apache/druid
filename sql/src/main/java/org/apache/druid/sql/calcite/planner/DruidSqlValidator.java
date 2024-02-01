@@ -165,7 +165,6 @@ class DruidSqlValidator extends BaseDruidSqlValidator
 
     // The target is a new or existing datasource.
     final DatasourceTable table = validateInsertTarget(targetNamespace, insertNs, operationName);
-    final SqlValidatorTable target = insertNs.resolve().getTable();
 
     // An existing datasource may have metadata.
     final DatasourceFacade tableMetadata = table == null ? null : table.effectiveMetadata().catalogMetadata();
@@ -215,7 +214,7 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     validateClustering(sourceType, ingestNode, catalogClustering);
 
     // Determine the output (target) schema.
-    final RelDataType targetType = validateTargetType(scope, target, insert, sourceType, tableMetadata);
+    final RelDataType targetType = validateTargetType(scope, insertNs, insert, sourceType, tableMetadata);
 
     // Set the type for the INSERT/REPLACE node
     setValidatedNodeType(insert, targetType);
@@ -697,7 +696,7 @@ class DruidSqlValidator extends BaseDruidSqlValidator
    */
   private RelDataType validateTargetType(
       SqlValidatorScope scope,
-      SqlValidatorTable table,
+      final IdentifierNamespace insertNs,
       SqlInsert insert,
       RelRecordType sourceType,
       DatasourceFacade tableMetadata
@@ -773,7 +772,8 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     // behavior, but doesn't do anything because we enforced exact type
     // matches above.
     final RelDataType targetType = typeFactory.createStructType(fields);
-    checkTypeAssignment(scope, table, sourceType, targetType, insert);
+    final SqlValidatorTable target = insertNs.resolve().getTable();
+    checkTypeAssignment(scope, target, sourceType, targetType, insert);
     return targetType;
   }
 
