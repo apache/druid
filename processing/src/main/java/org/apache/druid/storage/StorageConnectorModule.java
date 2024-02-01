@@ -20,6 +20,7 @@
 package org.apache.druid.storage;
 
 import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
@@ -36,6 +37,7 @@ public class StorageConnectorModule implements DruidModule
     return ImmutableList.of(
         new SimpleModule(StorageConnector.class.getSimpleName())
             .registerSubtypes(LocalFileStorageConnectorProvider.class)
+            .registerSubtypes(new NamedType(LocalFileStorageConnectorProvider.class, "localStorage"))
     );
   }
 

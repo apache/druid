@@ -19,8 +19,15 @@
 
 package org.apache.druid.testsEx.msq;
 
+import com.google.api.client.util.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.guava.Yielder;
+import org.apache.druid.msq.indexing.report.MSQResultsReport;
+import org.apache.druid.msq.indexing.report.MSQTaskReport;
+import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.sql.SqlTaskStatus;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.utils.DataLoaderHelper;
@@ -32,6 +39,11 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
 @RunWith(DruidTestRunner.class)
 @Category(MultiStageQuery.class)
@@ -175,5 +187,84 @@ public class ITMultiStageQuery
     dataLoaderHelper.waitUntilDatasourceIsReady(datasource);
 
     msqHelper.testQueriesFromFile(QUERY_FILE, datasource);
+  }
+
+  @Test
+  public void testExport() throws Exception
+  {
+    String exportQuery =
+        StringUtils.format(
+            "REPLACE INTO extern(%s(basePath = '%s'))\n"
+            + "AS CSV\n"
+            + "OVERWRITE ALL\n"
+            + "SELECT page, added, delta\n"
+            + "FROM TABLE(\n"
+            + "  EXTERN(\n"
+            + "    '{\"type\":\"local\",\"files\":[\"/resources/data/batch_index/json/wikipedia_index_data1.json\"]}',\n"
+            + "    '{\"type\":\"json\"}',\n"
+            + "    '[{\"type\":\"string\",\"name\":\"timestamp\"},{\"type\":\"string\",\"name\":\"isRobot\"},{\"type\":\"string\",\"name\":\"diffUrl\"},{\"type\":\"long\",\"name\":\"added\"},{\"type\":\"string\",\"name\":\"countryIsoCode\"},{\"type\":\"string\",\"name\":\"regionName\"},{\"type\":\"string\",\"name\":\"channel\"},{\"type\":\"string\",\"name\":\"flags\"},{\"type\":\"long\",\"name\":\"delta\"},{\"type\":\"string\",\"name\":\"isUnpatrolled\"},{\"type\":\"string\",\"name\":\"isNew\"},{\"type\":\"double\",\"name\":\"deltaBucket\"},{\"type\":\"string\",\"name\":\"isMinor\"},{\"type\":\"string\",\"name\":\"isAnonymous\"},{\"type\":\"long\",\"name\":\"deleted\"},{\"type\":\"string\",\"name\":\"cityName\"},{\"type\":\"long\",\"name\":\"metroCode\"},{\"type\":\"string\",\"name\":\"namespace\"},{\"type\":\"string\",\"name\":\"comment\"},{\"type\":\"string\",\"name\":\"page\"},{\"type\":\"long\",\"name\":\"commentLength\"},{\"type\":\"string\",\"name\":\"countryName\"},{\"type\":\"string\",\"name\":\"user\"},{\"type\":\"string\",\"name\":\"regionIsoCode\"}]'\n"
+            + "  )\n"
+            + ")\n",
+            "localStorage", "/shared/export"
+        );
+
+    SqlTaskStatus exportTask = msqHelper.submitMsqTask(exportQuery);
+
+    msqHelper.pollTaskIdForSuccess(exportTask.getTaskId());
+
+    if (exportTask.getState().isFailure()) {
+      Assert.fail(StringUtils.format(
+          "Unable to start the task successfully.\nPossible exception: %s",
+          exportTask.getError()
+      ));
+    }
+
+    String resultQuery = "SELECT page, added, delta\n"
+                         + "  FROM TABLE(\n"
+                         + "    EXTERN(\n"
+                         + "      '{\"type\":\"local\",\"baseDir\":\"/shared/export/worker0/\",\"filter\":\"*.csv\"}',\n"
+                         + "      '{\"type\":\"csv\",\"findColumnsFromHeader\":false,\"columns\":[\"delta\",\"added\",\"page\"]}'\n"
+                         + "    )\n"
+                         + "  ) EXTEND (\"delta\" BIGINT, \"added\" BIGINT, \"page\" VARCHAR)\n"
+                         + "   WHERE delta != 0\n"
+                         + "   ORDER BY page";
+
+    SqlTaskStatus resultTaskStatus = msqHelper.submitMsqTask(resultQuery);
+
+    msqHelper.pollTaskIdForSuccess(resultTaskStatus.getTaskId());
+
+    Map<String, MSQTaskReport> statusReport = msqHelper.fetchStatusReports(resultTaskStatus.getTaskId());
+    MSQTaskReport taskReport = statusReport.get(MSQTaskReport.REPORT_KEY);
+    if (taskReport == null) {
+      throw new ISE("Unable to fetch the status report for the task [%]", resultTaskStatus.getTaskId());
+    }
+    MSQTaskReportPayload taskReportPayload = Preconditions.checkNotNull(
+        taskReport.getPayload(),
+        "payload"
+    );
+    MSQResultsReport resultsReport = Preconditions.checkNotNull(
+        taskReportPayload.getResults(),
+        "Results report for the task id is empty"
+    );
+
+    Yielder<Object[]> yielder = resultsReport.getResultYielder();
+    List<List<Object>> actualResults = new ArrayList<>();
+
+    while (!yielder.isDone()) {
+      Object[] row = yielder.get();
+      actualResults.add(Arrays.asList(row));
+      yielder = yielder.next(null);
+    }
+
+    ImmutableList<ImmutableList<Object>> expectedResults = ImmutableList.of(
+        ImmutableList.of("Cherno Alpha", 111, 123),
+        ImmutableList.of("Gypsy Danger", -143, 57),
+        ImmutableList.of("Striker Eureka", 330, 459)
+    );
+
+    Assert.assertEquals(
+        expectedResults,
+        actualResults
+    );
   }
 }
