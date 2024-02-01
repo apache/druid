@@ -45,6 +45,7 @@ import type { JSX } from 'react';
 import React from 'react';
 
 import {
+  ArrayModeSwitch,
   AutoForm,
   CenterMessage,
   ClearableInput,
@@ -56,6 +57,7 @@ import {
 } from '../../components';
 import { AlertDialog, AsyncActionDialog } from '../../dialogs';
 import type {
+  ArrayMode,
   DimensionSpec,
   DruidFilter,
   FlattenField,
@@ -85,6 +87,7 @@ import {
   FILTER_FIELDS,
   FILTERS_FIELDS,
   FLATTEN_FIELD_FIELDS,
+  getArrayMode,
   getDimensionSpecName,
   getIngestionComboType,
   getIngestionImage,
@@ -118,6 +121,7 @@ import {
   possibleDruidFormatForValues,
   PRIMARY_PARTITION_RELATED_FORM_FIELDS,
   removeTimestampTransform,
+  showArrayModeToggle,
   splitFilter,
   STREAMING_INPUT_FORMAT_FIELDS,
   TIME_COLUMN,
@@ -201,8 +205,6 @@ import {
 
 import './load-data-view.scss';
 
-const DEFAULT_ROLLUP_SETTING = false;
-
 function showRawLine(line: SampleEntry): string {
   if (!line.parsed) return 'No parse';
   const raw = line.parsed.raw;
@@ -281,6 +283,14 @@ function getTimestampSpec(sampleResponse: SampleResponse | null): TimestampSpec 
   );
 
   return chooseByBestTimestamp(timestampSpecs) || CONSTANT_TIMESTAMP_SPEC;
+}
+
+function initializeSchemaWithSampleIfNeeded(
+  spec: Partial<IngestionSpec>,
+  sample: SampleResponse,
+): Partial<IngestionSpec> {
+  if (deepGet(spec, 'spec.dataSchema.dimensionsSpec')) return spec;
+  return updateSchemaWithSample(spec, sample, 'fixed', 'multi-values', getRollup(spec, false));
 }
 
 type Step =
@@ -364,6 +374,7 @@ export interface LoadDataViewState {
   showResetConfirm: boolean;
   newRollup?: boolean;
   newSchemaMode?: SchemaMode;
+  newArrayMode?: ArrayMode;
 
   // welcome
   overlordModules?: string[];
@@ -859,6 +870,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 {this.renderIngestionCard('index_parallel:s3')}
                 {this.renderIngestionCard('index_parallel:azure')}
                 {this.renderIngestionCard('index_parallel:google')}
+                {this.renderIngestionCard('index_parallel:delta')}
                 {this.renderIngestionCard('index_parallel:hdfs')}
                 {this.renderIngestionCard('index_parallel:druid')}
                 {this.renderIngestionCard('index_parallel:http')}
@@ -918,6 +930,14 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               Files must be in text, orc, or parquet format and must be accessible to all the Druid
               processes in the cluster.
             </p>
+          </>
+        );
+
+      case 'index_parallel:delta':
+        return (
+          <>
+            <p>Load data from Delta Lake.</p>
+            <p>Data must be stored in the Delta Lake format.</p>
           </>
         );
 
@@ -1009,6 +1029,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       case 'index_parallel:s3':
       case 'index_parallel:azure':
       case 'index_parallel:google':
+      case 'index_parallel:delta':
       case 'index_parallel:hdfs':
       case 'kafka':
       case 'kinesis':
@@ -1632,6 +1653,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     if (selectedFlattenField) {
       return (
         <FormEditor
+          key={selectedFlattenField.index}
           fields={FLATTEN_FIELD_FIELDS}
           initValue={selectedFlattenField.value}
           onClose={this.resetSelected}
@@ -1989,19 +2011,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           disabled: !transformQueryState.data,
           onNextStep: () => {
             if (!transformQueryState.data) return false;
-
-            let newSpec = spec;
-            if (!deepGet(newSpec, 'spec.dataSchema.dimensionsSpec')) {
-              const currentRollup = deepGet(newSpec, 'spec.dataSchema.granularitySpec.rollup');
-              newSpec = updateSchemaWithSample(
-                newSpec,
-                transformQueryState.data,
-                'fixed',
-                typeof currentRollup === 'boolean' ? currentRollup : DEFAULT_ROLLUP_SETTING,
-              );
-            }
-
-            this.updateSpec(newSpec);
+            this.updateSpec(initializeSchemaWithSampleIfNeeded(spec, transformQueryState.data));
             return true;
           },
         })}
@@ -2024,6 +2034,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     if (selectedTransform) {
       return (
         <FormEditor
+          key={selectedTransform.index}
           fields={TRANSFORM_FIELDS}
           initValue={selectedTransform.value}
           onClose={this.resetSelected}
@@ -2192,19 +2203,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         {this.renderNextBar({
           onNextStep: () => {
             if (!filterQueryState.data) return false;
-
-            let newSpec = spec;
-            if (!deepGet(newSpec, 'spec.dataSchema.dimensionsSpec')) {
-              const currentRollup = deepGet(newSpec, 'spec.dataSchema.granularitySpec.rollup');
-              newSpec = updateSchemaWithSample(
-                newSpec,
-                filterQueryState.data,
-                'fixed',
-                typeof currentRollup === 'boolean' ? currentRollup : DEFAULT_ROLLUP_SETTING,
-              );
-            }
-
-            this.updateSpec(newSpec);
+            this.updateSpec(initializeSchemaWithSampleIfNeeded(spec, filterQueryState.data));
             return true;
           },
         })}
@@ -2224,6 +2223,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     return (
       <FormEditor
+        key={selectedFilter.index}
         fields={FILTER_FIELDS}
         initValue={selectedFilter.value}
         showCustom={f => !KNOWN_FILTER_TYPES.includes(f.type || '')}
@@ -2311,6 +2311,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       selectedAutoDimension || selectedDimensionSpec || selectedMetricSpec,
     );
     const schemaMode = getSchemaMode(spec);
+    const arrayMode = getArrayMode(spec);
 
     let mainFill: JSX.Element | string;
     if (schemaQueryState.isInit()) {
@@ -2386,6 +2387,16 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   label="Explicitly specify schema"
                 />
               </FormGroupWithInfo>
+              {showArrayModeToggle(spec) && (
+                <ArrayModeSwitch
+                  arrayMode={arrayMode}
+                  changeArrayMode={newArrayMode => {
+                    this.setState({
+                      newArrayMode,
+                    });
+                  }}
+                />
+              )}
               {schemaMode !== 'fixed' && (
                 <AutoForm
                   fields={[
@@ -2513,7 +2524,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           {this.renderDimensionSpecControls()}
           {this.renderMetricSpecControls()}
           {this.renderChangeRollupAction()}
-          {this.renderChangeDimensionModeAction()}
+          {this.renderChangeSchemaModeAction()}
+          {this.renderChangeArrayModeAction()}
         </div>
         {this.renderNextBar({
           disabled: !schemaQueryState.data,
@@ -2608,7 +2620,14 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         action={async () => {
           const sampleResponse = await sampleForTransform(spec, cacheRows);
           this.updateSpec(
-            updateSchemaWithSample(spec, sampleResponse, getSchemaMode(spec), newRollup, true),
+            updateSchemaWithSample(
+              spec,
+              sampleResponse,
+              getSchemaMode(spec),
+              getArrayMode(spec),
+              newRollup,
+              true,
+            ),
           );
         }}
         confirmButtonText={`Yes - ${newRollup ? 'enable' : 'disable'} rollup`}
@@ -2623,7 +2642,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     );
   }
 
-  renderChangeDimensionModeAction() {
+  renderChangeSchemaModeAction() {
     const { newSchemaMode, spec, cacheRows } = this.state;
     if (!newSchemaMode || !cacheRows) return;
     const autoDetect = newSchemaMode !== 'fixed';
@@ -2633,7 +2652,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         action={async () => {
           const sampleResponse = await sampleForTransform(spec, cacheRows);
           this.updateSpec(
-            updateSchemaWithSample(spec, sampleResponse, newSchemaMode, getRollup(spec)),
+            updateSchemaWithSample(
+              spec,
+              sampleResponse,
+              newSchemaMode,
+              getArrayMode(spec),
+              getRollup(spec),
+            ),
           );
         }}
         confirmButtonText={`Yes - ${autoDetect ? 'auto detect' : 'explicitly define'} schema`}
@@ -2680,6 +2705,41 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             </Radio>
           </RadioGroup>
         )}
+      </AsyncActionDialog>
+    );
+  }
+
+  renderChangeArrayModeAction() {
+    const { newArrayMode, spec, cacheRows } = this.state;
+    if (!newArrayMode || !cacheRows) return;
+    const multiValues = newArrayMode === 'multi-values';
+
+    return (
+      <AsyncActionDialog
+        action={async () => {
+          const sampleResponse = await sampleForTransform(spec, cacheRows);
+          this.updateSpec(
+            updateSchemaWithSample(
+              spec,
+              sampleResponse,
+              getSchemaMode(spec),
+              newArrayMode,
+              getRollup(spec),
+            ),
+          );
+        }}
+        confirmButtonText={`Yes - ${multiValues ? 'use MVDs' : 'ARRAYs'}`}
+        successText={`Array mode changed to ${multiValues ? 'multi-values' : 'arrays'}.`}
+        failText="Could not change array mode"
+        intent={Intent.WARNING}
+        onClose={() => this.setState({ newArrayMode: undefined })}
+      >
+        <p>
+          {multiValues
+            ? `Are you sure you want to use multi-value dimensions?`
+            : `Are you sure you want to use ARRAYs?`}
+        </p>
+        <p>Making this change will reset all schema configuration done so far.</p>
       </AsyncActionDialog>
     );
   }
@@ -2789,6 +2849,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     return (
       <FormEditor
+        key={selectedDimensionSpec.index}
         fields={DIMENSION_SPEC_FIELDS}
         initValue={selectedDimensionSpec.value}
         onClose={this.resetSelected}
@@ -2877,6 +2938,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     return (
       <FormEditor
+        key={selectedMetricSpec.index}
         fields={METRIC_SPEC_FIELDS}
         initValue={selectedMetricSpec.value}
         onClose={this.resetSelected}

@@ -41,10 +41,7 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.Duration;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -55,6 +52,8 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.ToLongFunction;
 import java.util.stream.Collectors;
+
+import static org.junit.Assert.assertThrows;
 
 public class RowBasedStorageAdapterTest
 {
@@ -208,9 +207,6 @@ public class RowBasedStorageAdapterTest
           }
         }
       };
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   public final AtomicLong numCloses = new AtomicLong();
 
@@ -437,8 +433,7 @@ public class RowBasedStorageAdapterTest
   public void test_getNumRows()
   {
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
-    expectedException.expect(UnsupportedOperationException.class);
-    adapter.getMetadata();
+    assertThrows(UnsupportedOperationException.class, () -> adapter.getMetadata());
   }
 
   @Test
@@ -452,8 +447,7 @@ public class RowBasedStorageAdapterTest
   public void test_getMetadata()
   {
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
-    expectedException.expect(UnsupportedOperationException.class);
-    adapter.getMetadata();
+    assertThrows(UnsupportedOperationException.class, () -> adapter.getMetadata());
   }
 
   @Test
