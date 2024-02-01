@@ -42,11 +42,6 @@ an [UnknownError](./reference.md#error_UnknownError) with a message including "N
 - `GROUPING SETS` are not implemented. Queries using these features return a
   [QueryNotSupported](reference.md#error_QueryNotSupported) error.
 
-- The numeric varieties of the `EARLIEST` and `LATEST` aggregators do not work properly. Attempting to use the numeric
-  varieties of these aggregators lead to an error like
-  `java.lang.ClassCastException: class java.lang.Double cannot be cast to class org.apache.druid.collections.SerializablePair`.
-  The string varieties, however, do work properly.
-
 ## `INSERT` and `REPLACE` Statements
 
 - The `INSERT` and `REPLACE` statements with column lists, like `INSERT INTO tbl (a, b, c) SELECT ...`, is not implemented.
