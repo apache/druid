@@ -219,37 +219,23 @@ public class BrokerServerView implements TimelineServerView
     }
   }
 
-  private QueryableDruidServer<?> addServer(DruidServer server)
+  private QueryableDruidServer addServer(DruidServer server)
   {
-    QueryableDruidServer<?> retVal = new QueryableDruidServer<>(server, druidClientFactory.makeDirectClient(server));
-    QueryableDruidServer<?> exists = clients.put(server.getName(), retVal);
+    QueryableDruidServer retVal = new QueryableDruidServer<>(server, druidClientFactory.makeDirectClient(server));
+    QueryableDruidServer exists = clients.put(server.getName(), retVal);
     if (exists != null) {
       log.warn("QueryRunner for server[%s] already exists!? Well it's getting replaced", server);
-      try {
-        exists.close();
-      }
-      catch (Exception e) {
-        log.warn(e, "Exception while closing QueryRunner for server[%s]", server);
-      }
     }
 
     return retVal;
   }
 
-  private void removeServer(DruidServer server)
+  private QueryableDruidServer removeServer(DruidServer server)
   {
     for (DataSegment segment : server.iterateAllSegments()) {
       serverRemovedSegment(server.getMetadata(), segment);
     }
-    QueryableDruidServer<?> client = clients.remove(server.getName());
-    if (client != null) {
-      try {
-        client.close();
-      }
-      catch (Exception e) {
-        log.warn(e, "Exception while closing QueryRunner for server[%s]", server);
-      }
-    }
+    return clients.remove(server.getName());
   }
 
   private void serverAddedSegment(final DruidServerMetadata server, final DataSegment segment)
@@ -276,7 +262,7 @@ public class BrokerServerView implements TimelineServerView
           selectors.put(segmentId, selector);
         }
 
-        QueryableDruidServer<?> queryableDruidServer = clients.get(server.getName());
+        QueryableDruidServer queryableDruidServer = clients.get(server.getName());
         if (queryableDruidServer == null) {
           DruidServer inventoryValue = baseView.getInventoryValue(server.getName());
           if (inventoryValue == null) {
@@ -318,7 +304,7 @@ public class BrokerServerView implements TimelineServerView
         return;
       }
 
-      QueryableDruidServer<?> queryableDruidServer = clients.get(server.getName());
+      QueryableDruidServer queryableDruidServer = clients.get(server.getName());
       if (queryableDruidServer == null) {
         log.warn(
             "Could not find server[%s] in inventory. Skipping removal of segment[%s].",

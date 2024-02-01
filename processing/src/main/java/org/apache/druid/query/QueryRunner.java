@@ -25,7 +25,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.context.ResponseContext;
 
 @ExtensionPoint
-public interface QueryRunner<T> extends AutoCloseable
+public interface QueryRunner<T>
 {
   /**
    * Runs the given query and returns results in a time-ordered sequence.
@@ -36,11 +36,5 @@ public interface QueryRunner<T> extends AutoCloseable
   default Sequence<T> run(QueryPlus<T> queryPlus)
   {
     return this.run(queryPlus, ResponseContext.createEmpty());
-  }
-
-  @Override
-  default void close() throws Exception
-  {
-    // do nothing
   }
 }

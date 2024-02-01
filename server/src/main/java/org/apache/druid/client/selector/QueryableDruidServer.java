@@ -24,7 +24,7 @@ import org.apache.druid.query.QueryRunner;
 
 /**
  */
-public class QueryableDruidServer<T extends QueryRunner<?>> implements AutoCloseable
+public class QueryableDruidServer<T extends QueryRunner<?>>
 {
   private final DruidServer server;
   private final T queryRunner;
@@ -52,11 +52,5 @@ public class QueryableDruidServer<T extends QueryRunner<?>> implements AutoClose
            "server=" + server +
            ", queryRunner=" + queryRunner +
            '}';
-  }
-
-  @Override
-  public void close() throws Exception
-  {
-    queryRunner.close();
   }
 }

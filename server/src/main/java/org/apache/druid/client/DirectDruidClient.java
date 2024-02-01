@@ -128,7 +128,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       HttpClient httpClient,
       String scheme,
       String host,
-      ServiceEmitter emitter
+      ServiceEmitter emitter,
+      ScheduledExecutorService queryCancellationExecutor
   )
   {
     this.warehouse = warehouse;
@@ -141,7 +142,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
     this.isSmile = this.objectMapper.getFactory() instanceof SmileFactory;
     this.openConnections = new AtomicInteger();
-    this.queryCancellationExecutor = Execs.scheduledSingleThreaded("query-cancellation-executor");
+    this.queryCancellationExecutor = queryCancellationExecutor;
   }
 
   public int getNumOpenConnections()
@@ -583,15 +584,5 @@ public class DirectDruidClient<T> implements QueryRunner<T>
            "host='" + host + '\'' +
            ", isSmile=" + isSmile +
            '}';
-  }
-
-  @Override
-  public void close() throws Exception
-  {
-    queryCancellationExecutor.shutdown();
-    if (!queryCancellationExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
-      queryCancellationExecutor.shutdownNow();
-      log.warn("Timed out waiting for query cancellation executor to terminate, forcing shutdown");
-    }
   }
 }
