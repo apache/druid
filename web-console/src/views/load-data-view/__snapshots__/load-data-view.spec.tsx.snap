@@ -209,6 +209,20 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             onClick={[Function]}
           >
             <img
+              alt="Ingestion tile for index_parallel:delta"
+              src="/some/base_url/assets/delta.png"
+            />
+            <p>
+              Delta Lake
+            </p>
+          </Blueprint4.Card>
+          <Blueprint4.Card
+            className="ingestion-card"
+            elevation={1}
+            interactive={true}
+            onClick={[Function]}
+          >
+            <img
               alt="Ingestion tile for index_parallel:hdfs"
               src="/some/base_url/assets/hdfs.png"
             />

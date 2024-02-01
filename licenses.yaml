@@ -191,7 +191,7 @@ name: AWS SDK for Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.12.497
+version: 1.12.638
 libraries:
   - com.amazonaws: aws-java-sdk-core
   - com.amazonaws: aws-java-sdk-ec2
@@ -4632,7 +4632,7 @@ libraries:
 
 name: com.amazonaws aws-java-sdk-bundle
 license_category: binary
-version: 1.12.497
+version: 1.12.638
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
@@ -5056,7 +5056,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 0.21.4
+version: 0.21.9
 
 ---
 

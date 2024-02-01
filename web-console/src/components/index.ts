@@ -19,6 +19,7 @@
 export * from './action-cell/action-cell';
 export * from './action-icon/action-icon';
 export * from './array-input/array-input';
+export * from './array-mode-switch/array-mode-switch';
 export * from './auto-form/auto-form';
 export * from './braced-text/braced-text';
 export * from './center-message/center-message';
