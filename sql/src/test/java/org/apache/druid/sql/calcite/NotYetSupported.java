@@ -70,16 +70,13 @@ public @interface NotYetSupported
   {
     PLAN_MISMATCH(AssertionError.class, "AssertionError: query #"),
     NOT_ENOUGH_RULES(DruidException.class, "not enough rules"),
-    CANNOT_CONVERT(DruidException.class, "Cannot convert query parts"),
     ERROR_HANDLING(AssertionError.class, "(is <ADMIN> was <OPERATOR>|is <INVALID_INPUT> was <UNCATEGORIZED>|with message a string containing)"),
     EXPRESSION_NOT_GROUPED(DruidException.class, "Expression '[a-z]+' is not being grouped"),
     COLUMN_NOT_FOUND(DruidException.class, "CalciteContextException.*Column.*not found in any table"),
     NULLS_FIRST_LAST(DruidException.class, "NULLS (FIRST|LAST)"),
     BIGINT_TO_DATE(DruidException.class, "BIGINT to type (DATE|TIME)"),
-    NPE_PLAIN(NullPointerException.class, "java.lang.NullPointerException"),
     NPE(DruidException.class, "java.lang.NullPointerException"),
     AGGREGATION_NOT_SUPPORT_TYPE(DruidException.class, "Aggregation \\[(MIN|MAX)\\] does not support type \\[STRING\\]"),
-    MISSING_DESC(DruidException.class, "function signature DESC"),
     RESULT_COUNT_MISMATCH(AssertionError.class, "result count:"),
     ALLDATA_CSV(DruidException.class, "allData.csv"),
     BIGINT_TIME_COMPARE(DruidException.class, "Cannot apply '.' to arguments of type"),
@@ -88,9 +85,7 @@ public @interface NotYetSupported
     T_ALLTYPES_ISSUES(AssertionError.class, "(t_alltype|allTypsUniq|fewRowsAllData).parquet.*Verifier.verify"),
     RESULT_MISMATCH(AssertionError.class, "(assertResultsEquals|AssertionError: column content mismatch)"),
     UNSUPPORTED_NULL_ORDERING(DruidException.class, "(A|DE)SCENDING ordering with NULLS (LAST|FIRST)"),
-    CANNOT_TRANSLATE(DruidException.class, "Cannot translate reference"),
     MISSING_UNION_CONVERSION(DruidException.class, "Missing conversions? (is|are) LogicalUnion"),
-    MISSING_WINDOW_CONVERSION(DruidException.class, "Missing conversions? is Window"),
     MISSING_JOIN_CONVERSION(DruidException.class, "Missing conversions? is (Logical)?Join");
 
     public Class<? extends Throwable> throwableClass;
