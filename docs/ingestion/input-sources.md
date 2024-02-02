@@ -1121,6 +1121,17 @@ This input source provides the following filters: `and`, `equals`, `interval`, a
 |type|Set this value to `not`.|yes|
 |filter|The iceberg filter on which logical NOT is applied|yes|
 
+`range` Filter:
+
+|Property|Description|Default|Required|
+|--------|-----------|-------|--------|
+|type|Set this value to `range`.|None|yes|
+|filterColumn|The column name from the iceberg table schema based on which range filtering needs to happen.|None|yes|
+|lower|Lower bound value to match.|None|no. At least one of `lower` or `upper` must not be null.|
+|upper|Upper bound value to match. |None|no. At least one of `lower` or `upper` must not be null.|
+|lowerOpen|Boolean indicating if lower bound is open in the interval of values defined by the range (">" instead of ">="). |false|no|
+|upperOpen|Boolean indicating if upper bound is open on the interval of values defined by range ("<" instead of "<="). |false|no|
+
 ## Delta Lake input source
 
 :::info
