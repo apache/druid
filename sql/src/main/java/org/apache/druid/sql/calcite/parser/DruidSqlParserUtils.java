@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.parser;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -134,7 +135,7 @@ public class DruidSqlParserUtils
 
     public static GranularityGrain fromValue(String value)
     {
-      GranularityGrain granularityGrain = valueToGranularityGrain.get(value);
+      GranularityGrain granularityGrain = valueToGranularityGrain.get(StringUtils.toUpperCase(value));
       if (granularityGrain != null) {
         return granularityGrain;
       }
@@ -205,14 +206,25 @@ public class DruidSqlParserUtils
 
     if (sqlNode instanceof SqlLiteral) {
       SqlLiteral literal = (SqlLiteral) sqlNode;
-      if (!SqlLiteral.valueMatchesType(literal.getValue(), SqlTypeName.SYMBOL)) {
+      if (SqlLiteral.valueMatchesType(literal.getValue(), SqlTypeName.SYMBOL)) {
+        GranularityGrain value = literal.getValueAs(GranularityGrain.class);
+        if (value == null) {
+          throw new IAE(PARTITION_ERROR_MESSAGE, "NULL");
+        }
+        return value.getGranularity();
+      }
+
+      else if (SqlLiteral.valueMatchesType(literal.getValue(), SqlTypeName.CHAR)) {
+        String value = literal.getValueAs(String.class);
+        if (Strings.isNullOrEmpty(value)) {
+          throw new IAE(PARTITION_ERROR_MESSAGE, value == null ? "NULL" : "'" + value + "'");
+        }
+        return GranularityGrain.fromValue(value).getGranularity();
+      }
+
+      else {
         throw new IAE(PARTITION_ERROR_MESSAGE, literal.getValue());
       }
-      GranularityGrain value = literal.getValueAs(GranularityGrain.class);
-      if (value == null) {
-        throw new IAE(PARTITION_ERROR_MESSAGE, "NULL");
-      }
-      return value.getGranularity();
     }
 
     if (!(sqlNode instanceof SqlCall)) {

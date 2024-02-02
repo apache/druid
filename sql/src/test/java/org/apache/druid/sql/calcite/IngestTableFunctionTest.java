@@ -368,7 +368,6 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
         .sql("INSERT INTO dst SELECT *\n" +
              "FROM TABLE(http(userName => 'bob',\n" +
             "                 password => 'secret',\n" +
-             // "                uris => ARRAY['http://foo.com/bar.json'],\n" +
              "                uris => ?,\n" +
              "                format => 'csv'))\n" +
              "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n" +

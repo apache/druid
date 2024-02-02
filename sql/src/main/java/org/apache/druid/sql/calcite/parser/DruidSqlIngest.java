@@ -19,10 +19,13 @@
 
 package org.apache.druid.sql.calcite.parser;
 
+import java.util.List;
+
 import org.apache.calcite.sql.SqlInsert;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.calcite.util.ImmutableNullableList;
 
 import javax.annotation.Nullable;
 
@@ -64,5 +67,15 @@ public abstract class DruidSqlIngest extends SqlInsert
   public SqlNodeList getClusteredBy()
   {
     return clusteredBy;
+  }
+
+  @Override
+  public List<SqlNode> getOperandList()
+  {
+    return ImmutableNullableList.<SqlNode>builder()
+        .addAll(super.getOperandList())
+        .add(partitionedBy)
+        .add(clusteredBy)
+        .build();
   }
 }

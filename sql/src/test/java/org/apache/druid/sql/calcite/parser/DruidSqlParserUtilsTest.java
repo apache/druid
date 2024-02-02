@@ -145,6 +145,14 @@ public class DruidSqlParserUtilsTest
       Granularity actualGranularity = DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode);
       Assert.assertEquals(expectedGranularity, actualGranularity);
     }
+
+    @Test
+    public void testConvertSqlNodeToGranularityAsSymbol() throws ParseException
+    {
+      SqlNode sqlNode = SqlLiteral.createSymbol(DruidSqlParserUtils.GranularityGrain.fromValue(timeUnit.name()), SqlParserPos.ZERO);
+      Granularity actualGranularity = DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode);
+      Assert.assertEquals(expectedGranularity, actualGranularity);
+    }
   }
 
   /**
