@@ -24,10 +24,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.SqlExplain;
 import org.apache.calcite.sql.SqlIdentifier;
-import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.SqlNodeList;
-import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.error.InvalidSqlInput;
@@ -54,31 +51,6 @@ public abstract class IngestHandler extends QueryHandler
   )
   {
     super(handlerContext, explain);
-  }
-
-  protected static SqlNode convertQuery(DruidSqlIngest sqlNode)
-  {
-    SqlNode query = sqlNode.getSource();
-
-    // Check if ORDER BY clause is not provided to the underlying query
-    if (query instanceof SqlOrderBy) {
-      SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
-      SqlNodeList orderByList = sqlOrderBy.orderList;
-      if (!(orderByList == null || orderByList.equals(SqlNodeList.EMPTY))) {
-        throw InvalidSqlInput.exception(
-            "Cannot use an ORDER BY clause on a Query of type [%s], use CLUSTERED BY instead",
-            sqlNode.getOperator().getName()
-        );
-      }
-    }
-    if (sqlNode.getClusteredBy() != null) {
-      query = DruidSqlParserUtils.convertClusterByToOrderBy(query, sqlNode.getClusteredBy());
-    }
-
-    if (!query.isA(SqlKind.QUERY)) {
-      throw InvalidSqlInput.exception("Unexpected SQL statement type [%s], expected it to be a QUERY", query.getKind());
-    }
-    return query;
   }
 
   protected String operationName()

@@ -1638,7 +1638,6 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                              + "partitioned by DAY\n"
                              + "clustered by channel";
     HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
-    context.put(PlannerContext.CTX_SQL_OUTER_LIMIT, 100);
     testIngestionQuery().context(context).sql(sqlString)
                         .expectValidationError(
                             new DruidExceptionMatcher(
@@ -1667,7 +1666,6 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                              + "partitioned by DAY\n"
                              + "clustered by channel";
     HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
-    context.put(PlannerContext.CTX_SQL_OUTER_LIMIT, 100);
     testIngestionQuery().context(context).sql(sqlString)
                         .expectValidationError(
                             new DruidExceptionMatcher(
@@ -1695,7 +1693,6 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                              + "partitioned by DAY\n"
                              + "clustered by channel";
     HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
-    context.put(PlannerContext.CTX_SQL_OUTER_LIMIT, 100);
     testIngestionQuery().context(context).sql(sqlString)
                         .expectValidationError(
                             new DruidExceptionMatcher(
@@ -1724,7 +1721,6 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                              + "partitioned by DAY\n"
                              + "clustered by channel";
     HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
-    context.put(PlannerContext.CTX_SQL_OUTER_LIMIT, 100);
     testIngestionQuery().context(context).sql(sqlString)
                         .expectValidationError(
                             new DruidExceptionMatcher(

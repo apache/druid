@@ -283,7 +283,7 @@ class DruidSqlValidator extends BaseDruidSqlValidator
           throw new IAE("Cannot %s into [%s] because it does not exist", operationName, destId);
         }
         // New table. Validate the shape of the name.
-        IdUtils.validateId(operationName + " dataSource", tableName);
+        IdUtils.validateId("table", tableName);
         return null;
       }
       throw e;
@@ -456,6 +456,7 @@ class DruidSqlValidator extends BaseDruidSqlValidator
 
   static {
     try {
+      // TODO: this class has changed, and the orderScopes field no longer exists.
       ORDER_SCOPES_FIELD = FieldUtils.getDeclaredField(
           SqlValidatorImpl.class,
           "orderScopes",

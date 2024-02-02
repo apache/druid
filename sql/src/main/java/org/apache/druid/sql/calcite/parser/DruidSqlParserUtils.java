@@ -21,8 +21,8 @@ package org.apache.druid.sql.calcite.parser;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.sql.SqlAsOperator;
 import org.apache.calcite.sql.SqlBasicCall;
@@ -74,6 +74,7 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class DruidSqlParserUtils
@@ -81,16 +82,65 @@ public class DruidSqlParserUtils
   private static final Logger log = new Logger(DruidSqlParserUtils.class);
   public static final String ALL = "all";
 
-  public static final String SECOND_GRAIN = "SECOND";
-  public static final String MINUTE_GRAIN = "MINUTE";
-  public static final String HOUR_GRAIN = "HOUR";
-  public static final String DAY_GRAIN = "DAY";
-  public static final String WEEK_GRAIN = "WEEK";
-  public static final String MONTH_GRAIN = "MONTH";
-  public static final String QUARTER_GRAIN = "QUARTER";
-  public static final String YEAR_GRAIN = "YEAR";
-  public static final String ALL_GRAIN = "ALL";
-  public static final String ALL_TIME_GRAIN = "ALL TIME";
+  public enum GranularityGrain
+  {
+    SECOND_GRAIN("SECOND", Granularities.SECOND),
+    MINUTE_GRAIN("MINUTE", Granularities.MINUTE),
+    HOUR_GRAIN("HOUR", Granularities.HOUR),
+    DAY_GRAIN("DAY", Granularities.DAY),
+    WEEK_GRAIN("WEEK", Granularities.WEEK),
+    MONTH_GRAIN("MONTH", Granularities.MONTH),
+    QUARTER_GRAIN("QUARTER", Granularities.QUARTER),
+    YEAR_GRAIN("YEAR", Granularities.YEAR),
+    ALL_GRAIN("ALL", Granularities.ALL),
+    ALL_TIME_GRAIN("ALL TIME", Granularities.ALL);
+
+    static Map<String, GranularityGrain> valueToGranularityGrain = ImmutableMap.of(
+        GranularityGrain.SECOND_GRAIN.value, GranularityGrain.SECOND_GRAIN,
+        GranularityGrain.MINUTE_GRAIN.value, GranularityGrain.MINUTE_GRAIN,
+        GranularityGrain.HOUR_GRAIN.value, GranularityGrain.HOUR_GRAIN,
+        GranularityGrain.DAY_GRAIN.value, GranularityGrain.DAY_GRAIN,
+        GranularityGrain.WEEK_GRAIN.value, GranularityGrain.WEEK_GRAIN,
+        GranularityGrain.MONTH_GRAIN.value, GranularityGrain.MONTH_GRAIN,
+        GranularityGrain.QUARTER_GRAIN.value, GranularityGrain.QUARTER_GRAIN,
+        GranularityGrain.YEAR_GRAIN.value, GranularityGrain.YEAR_GRAIN,
+        GranularityGrain.ALL_GRAIN.value, GranularityGrain.ALL_GRAIN,
+        GranularityGrain.ALL_TIME_GRAIN.value, GranularityGrain.ALL_TIME_GRAIN
+    );
+
+    private final String value;
+    private final Granularity granularity;
+    GranularityGrain(String value, Granularity granularity)
+    {
+      this.value = value;
+      this.granularity = granularity;
+    }
+
+    @Override
+    public String toString()
+    {
+      return value;
+    }
+
+    public String getValue()
+    {
+      return value;
+    }
+
+    public Granularity getGranularity()
+    {
+      return granularity;
+    }
+
+    public static GranularityGrain fromValue(String value)
+    {
+      GranularityGrain granularityGrain = valueToGranularityGrain.get(value);
+      if (granularityGrain != null) {
+        return granularityGrain;
+      }
+      throw new IAE(PARTITION_ERROR_MESSAGE, "'" + value + "'");
+    }
+  }
 
   /**
    * Delegates to {@code convertSqlNodeToGranularity} and converts the exceptions to {@link ParseException}
@@ -155,42 +205,14 @@ public class DruidSqlParserUtils
 
     if (sqlNode instanceof SqlLiteral) {
       SqlLiteral literal = (SqlLiteral) sqlNode;
-      if (!SqlLiteral.valueMatchesType(literal.getValue(), SqlTypeName.CHAR)) {
+      if (!SqlLiteral.valueMatchesType(literal.getValue(), SqlTypeName.SYMBOL)) {
         throw new IAE(PARTITION_ERROR_MESSAGE, literal.getValue());
       }
-      String value = literal.getValueAs(String.class);
-      if (Strings.isNullOrEmpty(value)) {
-        throw new IAE(PARTITION_ERROR_MESSAGE, value == null ? "NULL" : "'" + value + "'");
+      GranularityGrain value = literal.getValueAs(GranularityGrain.class);
+      if (value == null) {
+        throw new IAE(PARTITION_ERROR_MESSAGE, "NULL");
       }
-      switch (StringUtils.toUpperCase(value)) {
-        case SECOND_GRAIN:
-          return Granularities.SECOND;
-        case MINUTE_GRAIN:
-          return Granularities.MINUTE;
-        case HOUR_GRAIN:
-          return Granularities.HOUR;
-        case DAY_GRAIN:
-          return Granularities.DAY;
-        case WEEK_GRAIN:
-          return Granularities.WEEK;
-        case MONTH_GRAIN:
-          return Granularities.MONTH;
-        case QUARTER_GRAIN:
-          return Granularities.QUARTER;
-        case YEAR_GRAIN:
-          return Granularities.YEAR;
-        case ALL_GRAIN:
-        case ALL_TIME_GRAIN:
-          return Granularities.ALL;
-        default:
-          // This is a user-provided string: `PT1D`, etc.
-          try {
-            return new PeriodGranularity(new Period(value), null, null);
-          }
-          catch (IllegalArgumentException e) {
-            throw new IAE(PARTITION_ERROR_MESSAGE, "'" + value + "'");
-          }
-      }
+      return value.getGranularity();
     }
 
     if (!(sqlNode instanceof SqlCall)) {

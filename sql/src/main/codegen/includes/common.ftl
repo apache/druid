@@ -27,32 +27,32 @@ SqlNode PartitionGranularity() :
   (
     <HOUR>
     {
-      result = SqlLiteral.createSymbol(DruidSqlParserUtils.HOUR_GRAIN, getPos());
+      result = SqlLiteral.createSymbol(DruidSqlParserUtils.GranularityGrain.HOUR_GRAIN, getPos());
     }
   |
     <DAY>
     {
-      result = SqlLiteral.createSymbol(DruidSqlParserUtils.DAY_GRAIN, getPos());
+      result = SqlLiteral.createSymbol(DruidSqlParserUtils.GranularityGrain.DAY_GRAIN, getPos());
     }
   |
     <MONTH>
     {
-      result = SqlLiteral.createSymbol(DruidSqlParserUtils.MONTH_GRAIN, getPos());
+      result = SqlLiteral.createSymbol(DruidSqlParserUtils.GranularityGrain.MONTH_GRAIN, getPos());
     }
   |
     <YEAR>
     {
-      result = SqlLiteral.createSymbol(DruidSqlParserUtils.YEAR_GRAIN, getPos());
+      result = SqlLiteral.createSymbol(DruidSqlParserUtils.GranularityGrain.YEAR_GRAIN, getPos());
     }
   |
     <ALL>
     {
-      result = SqlLiteral.createSymbol(DruidSqlParserUtils.ALL_GRAIN, getPos());
+      result = SqlLiteral.createSymbol(DruidSqlParserUtils.GranularityGrain.ALL_GRAIN, getPos());
     }
     [
       <TIME>
       {
-        result = SqlLiteral.createSymbol(DruidSqlParserUtils.ALL_TIME_GRAIN, getPos());
+        result = SqlLiteral.createSymbol(DruidSqlParserUtils.GranularityGrain.ALL_TIME_GRAIN, getPos());
       }
     ]
   |
