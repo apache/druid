@@ -78,7 +78,7 @@ public class PlannerContext
   public static final String CTX_SQL_OUTER_LIMIT = "sqlOuterLimit";
 
   /**
-   * Undocumented context key, used to enable window functions.
+   * Key to enable window functions.
    */
   public static final String CTX_ENABLE_WINDOW_FNS = "enableWindowing";
 

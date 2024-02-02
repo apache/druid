@@ -5611,8 +5611,8 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   public void test_lag_func_lag_Fn_67()
   {
     windowQueryTest();
-  }
 
+  }
   @NotYetSupported(Modes.UNSUPPORTED_NULL_ORDERING)
   @DrillTest("lag_func/lag_Fn_68")
   @Test
