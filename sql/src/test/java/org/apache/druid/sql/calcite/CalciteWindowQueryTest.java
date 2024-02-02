@@ -212,8 +212,11 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
       testBuilder()
           .skipVectorize(true)
           .sql(testCase.getSql())
-          .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
-              QueryContexts.ENABLE_DEBUG, true))
+          .queryContext(ImmutableMap.of(
+              PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
+              QueryContexts.ENABLE_DEBUG, true,
+              QueryContexts.WINDOWING_STRICT_VALIDATION, false
+              ))
           .addCustomVerification(QueryVerification.ofResults(testCase))
           .run();
     }
