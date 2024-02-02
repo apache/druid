@@ -69,7 +69,7 @@ public class ExternalDestinationSqlIdentifier extends SqlIdentifier
     SqlWriter.Frame frame = writer.startFunCall(getDestinationType());
     for (Map.Entry<String, String> property : properties.entrySet()) {
       writer.sep(",");
-      writer.print(StringUtils.format("%s = '%s'", property.getKey(), property.getValue()));
+      writer.print(StringUtils.format("%s => '%s'", property.getKey(), property.getValue()));
     }
     writer.endFunCall(frame);
     writer.endFunCall(externFrame);

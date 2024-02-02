@@ -100,8 +100,8 @@ public class DruidSqlUnparseTest
   @Test
   public void testUnparseExternalSqlIdentifierReplace() throws ParseException
   {
-    String sqlQuery = "REPLACE INTO EXTERN( s3(bucket='bucket1',prefix='prefix1') ) AS CSV OVERWRITE ALL SELECT dim2 FROM foo";
-    String prettySqlQuery = "REPLACE INTO EXTERN(S3(bucket = 'bucket1', prefix = 'prefix1'))\n"
+    String sqlQuery = "REPLACE INTO EXTERN( s3(bucket=>'bucket1',prefix=>'prefix1') ) AS CSV OVERWRITE ALL SELECT dim2 FROM foo";
+    String prettySqlQuery = "REPLACE INTO EXTERN(S3(bucket => 'bucket1', prefix => 'prefix1'))\n"
                             + "AS csv\n"
                             + "OVERWRITE ALL\n"
                             + "SELECT \"dim2\"\n"
@@ -115,8 +115,8 @@ public class DruidSqlUnparseTest
   @Test
   public void testUnparseExternalSqlIdentifierInsert() throws ParseException
   {
-    String sqlQuery = "INSERT INTO EXTERN( s3(bucket='bucket1',prefix='prefix1') ) AS CSV SELECT dim2 FROM foo";
-    String prettySqlQuery = "INSERT INTO EXTERN(S3(bucket = 'bucket1', prefix = 'prefix1'))\n"
+    String sqlQuery = "INSERT INTO EXTERN( s3(bucket=>'bucket1',prefix=>'prefix1') ) AS CSV SELECT dim2 FROM foo";
+    String prettySqlQuery = "INSERT INTO EXTERN(S3(bucket => 'bucket1', prefix => 'prefix1'))\n"
                             + "AS csv\n"
                             + "SELECT \"dim2\"\n"
                             + "    FROM \"foo\"\n";
