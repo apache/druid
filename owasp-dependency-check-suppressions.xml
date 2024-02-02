@@ -62,13 +62,6 @@
   </suppress>
 
   <suppress>
-    <notes><![CDATA[
-      file name: sketches-java-0.8.2.jar
-    ]]></notes>
-    <cve>CVE-2021-40531</cve>
-  </suppress>
-
-  <suppress>
     <!-- This presumably applies to maven build system -->
     <notes><![CDATA[
      file name: maven-settings
