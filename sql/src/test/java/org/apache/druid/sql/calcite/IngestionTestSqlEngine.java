@@ -104,7 +104,12 @@ public class IngestionTestSqlEngine implements SqlEngine
   }
 
   @Override
-  public QueryMaker buildQueryMakerForInsert(String targetDataSource, RelRoot relRoot, PlannerContext plannerContext)
+  public QueryMaker buildQueryMakerForInsert(
+      final String targetDataSource,
+      final RelRoot relRoot,
+      final PlannerContext plannerContext,
+      final RelDataType targetType
+  )
   {
     final RowSignature signature = RowSignatures.fromRelDataType(
         relRoot.validatedRowType.getFieldNames(),

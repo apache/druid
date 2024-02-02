@@ -24,7 +24,8 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlWriter;
-import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.druid.sql.calcite.planner.DruidSqlIngestOperator;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -38,30 +39,40 @@ public class DruidSqlInsert extends DruidSqlIngest
 {
   public static final String SQL_INSERT_SEGMENT_GRANULARITY = "sqlInsertSegmentGranularity";
 
-  // This allows reusing super.unparse
-  public static final SqlOperator OPERATOR = SqlInsert.OPERATOR;
-
-  /**
-   * While partitionedBy and partitionedByStringForUnparse can be null as arguments to the constructor, this is
-   * disallowed (semantically) and the constructor performs checks to ensure that. This helps in producing friendly
-   * errors when the PARTITIONED BY custom clause is not present, and keeps its error separate from JavaCC/Calcite's
-   * custom errors which can be cryptic when someone accidentally forgets to explicitly specify the PARTITIONED BY clause
-   */
   public DruidSqlInsert(
       @Nonnull SqlInsert insertNode,
-      @Nullable Granularity partitionedBy,
-      @Nullable String partitionedByStringForUnparse,
+      @Nullable SqlNode partitionedBy,
       @Nullable SqlNodeList clusteredBy
   )
   {
-    super(
+    this(
         insertNode.getParserPosition(),
         (SqlNodeList) insertNode.getOperandList().get(0), // No better getter to extract this
         insertNode.getTargetTable(),
         insertNode.getSource(),
         insertNode.getTargetColumnList(),
         partitionedBy,
-        partitionedByStringForUnparse,
+        clusteredBy
+    );
+  }
+
+  public DruidSqlInsert(
+      SqlParserPos pos,
+      SqlNodeList keywords,
+      SqlNode targetTable,
+      SqlNode source,
+      SqlNodeList columnList,
+      @Nullable SqlNode partitionedBy,
+      @Nullable SqlNodeList clusteredBy
+  )
+  {
+    super(
+        pos,
+        keywords,
+        targetTable,
+        source,
+        columnList,
+        partitionedBy,
         clusteredBy
     );
   }
@@ -70,7 +81,7 @@ public class DruidSqlInsert extends DruidSqlIngest
   @Override
   public SqlOperator getOperator()
   {
-    return OPERATOR;
+    return DruidSqlIngestOperator.INSERT_OPERATOR;
   }
 
   @Override
@@ -78,7 +89,7 @@ public class DruidSqlInsert extends DruidSqlIngest
   {
     super.unparse(writer, leftPrec, rightPrec);
     writer.keyword("PARTITIONED BY");
-    writer.keyword(partitionedByStringForUnparse);
+    writer.keyword(partitionedBy.toString());
     if (getClusteredBy() != null) {
       writer.keyword("CLUSTERED BY");
       SqlWriter.Frame frame = writer.startList("", "");

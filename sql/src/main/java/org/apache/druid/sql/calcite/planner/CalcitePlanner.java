@@ -86,6 +86,7 @@ public class CalcitePlanner implements Planner, ViewExpander
   private final @Nullable RelOptCostFactory costFactory;
   private final Context context;
   private final CalciteConnectionConfig connectionConfig;
+  private final DruidSqlValidator.ValidatorContext validatorContext;
   private final RelDataTypeSystem typeSystem;
 
   /**
@@ -118,9 +119,10 @@ public class CalcitePlanner implements Planner, ViewExpander
    * {@link org.apache.calcite.tools.Frameworks#getPlanner} instead.
    */
   @SuppressWarnings("method.invocation.invalid")
-  public CalcitePlanner(FrameworkConfig config)
+  public CalcitePlanner(FrameworkConfig config, DruidSqlValidator.ValidatorContext validatorContext)
   {
     this.costFactory = config.getCostFactory();
+    this.validatorContext = validatorContext;
     this.defaultSchema = config.getDefaultSchema();
     this.operatorTable = config.getOperatorTable();
     this.programs = config.getPrograms();
@@ -207,7 +209,7 @@ public class CalcitePlanner implements Planner, ViewExpander
         planner.addRelTraitDef(RelCollationTraitDef.INSTANCE);
       }
     } else {
-      for (RelTraitDef def : this.traitDefs) {
+      for (RelTraitDef<?> def : this.traitDefs) {
         planner.addRelTraitDef(def);
       }
     }
@@ -240,7 +242,11 @@ public class CalcitePlanner implements Planner, ViewExpander
       validatedSqlNode = validator.validate(sqlNode);
     }
     catch (RuntimeException e) {
-      throw new ValidationException(e);
+      // Change from Calcite: pass the message explicitly to avoid messages like:
+      // foo.bar.MyException: The real message here
+      // By passing the message, get get the simpler form:
+      // The real message here
+      throw new ValidationException(e.getMessage(), e);
     }
     state = CalcitePlanner.State.STATE_4_VALIDATED;
     return validatedSqlNode;
@@ -279,13 +285,21 @@ public class CalcitePlanner implements Planner, ViewExpander
     return rel(sql).rel;
   }
 
+  /**
+   * Convert the given node to a relational operator. Converts the give node
+   * rather than the one given by {@link #validatedSqlNode}. This is a change
+   * from the original Calcite code. (Though, oddly, Calcite accepted an argument
+   * and didn't use it.) We use the passed-in argument because Druid ignores the
+   * INSERT node: using just the SELECT within the INSERT. The {@code validatedQueryNode}
+   * points to the (unwanted) INSERT, the passed in node is the actual query.
+   */
   @Override
   public RelRoot rel(SqlNode sql)
   {
     ensure(CalcitePlanner.State.STATE_4_VALIDATED);
     SqlNode validatedSqlNode = Objects.requireNonNull(
-        this.validatedSqlNode,
-        "validatedSqlNode is null. Need to call #validate() first"
+        sql,
+        "sql is null. Need to call #validate() first"
     );
     final RexBuilder rexBuilder = createRexBuilder();
     final RelOptCluster cluster = RelOptCluster.create(
@@ -295,8 +309,8 @@ public class CalcitePlanner implements Planner, ViewExpander
     final SqlToRelConverter.Config config =
         sqlToRelConverterConfig.withTrimUnusedFields(false);
     final SqlToRelConverter sqlToRelConverter =
-        new SqlToRelConverter(this, validator,
-                              createCatalogReader(), cluster, convertletTable, config
+        new DruidSqlToRelConverter(this, validator,
+            createCatalogReader(), cluster, convertletTable, config
         );
     RelRoot root =
         sqlToRelConverter.convertQuery(validatedSqlNode, false, true);
@@ -403,12 +417,15 @@ public class CalcitePlanner implements Planner, ViewExpander
         SqlValidator.Config.DEFAULT.withConformance(connectionConfig.conformance())
                                    .withLenientOperatorLookup(connectionConfig.lenientOperatorLookup())
                                    .withIdentifierExpansion(true);
+                                   // TODO: check on this
+                                   //.withTypeCoercionEnabled(false);
     return new DruidSqlValidator(
         opTab,
         catalogReader,
         getTypeFactory(),
         validatorConfig,
-        context.unwrapOrThrow(PlannerContext.class)
+        context.unwrapOrThrow(PlannerContext.class),
+        validatorContext
     );
   }
 

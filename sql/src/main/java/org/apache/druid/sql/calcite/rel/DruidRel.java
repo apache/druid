@@ -55,6 +55,11 @@ public abstract class DruidRel<T extends DruidRel<?>> extends AbstractRelNode
     return getPlannerContext().getQueryMaker().runQuery(toDruidQuery(false));
   }
 
+  public Object dryRun()
+  {
+    return getPlannerContext().getQueryMaker().explain(toDruidQuery(false));
+  }
+
   public abstract T withPartialQuery(PartialDruidQuery newQueryBuilder);
 
   public boolean isValidDruidQuery()
