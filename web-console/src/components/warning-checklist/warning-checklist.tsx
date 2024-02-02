@@ -40,7 +40,7 @@ export const WarningChecklist = React.memo(function WarningChecklist(props: Warn
   return (
     <div className="warning-checklist">
       {checks.map((check, i) => (
-        <Switch key={i} onChange={() => doCheck(i)}>
+        <Switch key={i} className="danger-switch" onChange={() => doCheck(i)}>
           {check}
         </Switch>
       ))}

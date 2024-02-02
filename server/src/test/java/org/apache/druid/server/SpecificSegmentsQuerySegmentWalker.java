@@ -91,7 +91,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
   public static SpecificSegmentsQuerySegmentWalker createWalker(
       final QueryRunnerFactoryConglomerate conglomerate)
   {
-    return createWalker(QueryStackTests.injector(), conglomerate);
+    return createWalker(QueryStackTests.injectorWithLookup(), conglomerate);
   }
 
   /**

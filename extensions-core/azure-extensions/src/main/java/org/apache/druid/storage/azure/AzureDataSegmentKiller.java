@@ -32,6 +32,9 @@ import org.apache.druid.timeline.DataSegment;
 
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -40,6 +43,7 @@ import java.util.Map;
 public class AzureDataSegmentKiller implements DataSegmentKiller
 {
   private static final Logger log = new Logger(AzureDataSegmentKiller.class);
+  private static final Integer MAX_MULTI_OBJECT_DELETE_SIZE = 256; // https://learn.microsoft.com/en-us/rest/api/storageservices/blob-batch?tabs=microsoft-entra-id
 
   private final AzureDataSegmentConfig segmentConfig;
   private final AzureInputDataConfig inputDataConfig;
@@ -62,6 +66,51 @@ public class AzureDataSegmentKiller implements DataSegmentKiller
     this.azureStorage = azureStorage;
     this.azureCloudBlobIterableFactory = azureCloudBlobIterableFactory;
   }
+
+  @Override
+  public void kill(List<DataSegment> segments) throws SegmentLoadingException
+  {
+    if (segments.isEmpty()) {
+      return;
+    }
+    if (segments.size() == 1) {
+      kill(segments.get(0));
+      return;
+    }
+
+    // create a list of keys to delete
+    Map<String, List<String>> containerToKeysToDelete = new HashMap<>();
+    for (DataSegment segment : segments) {
+      Map<String, Object> loadSpec = segment.getLoadSpec();
+      final String containerName = MapUtils.getString(loadSpec, "containerName");
+      final String blobPath = MapUtils.getString(loadSpec, "blobPath");
+      List<String> keysToDelete = containerToKeysToDelete.computeIfAbsent(
+          containerName,
+          k -> new ArrayList<>()
+      );
+      keysToDelete.add(blobPath);
+    }
+
+    boolean shouldThrowException = false;
+    for (Map.Entry<String, List<String>> containerToKeys : containerToKeysToDelete.entrySet()) {
+      boolean batchSuccessful = azureStorage.batchDeleteFiles(
+              containerToKeys.getKey(),
+              containerToKeys.getValue(),
+              null
+      );
+
+      if (!batchSuccessful) {
+        shouldThrowException = true;
+      }
+    }
+
+    if (shouldThrowException) {
+      throw new SegmentLoadingException(
+          "Couldn't delete segments from Azure. See the task logs for more details."
+      );
+    }
+  }
+
 
   @Override
   public void kill(DataSegment segment) throws SegmentLoadingException

@@ -44,11 +44,11 @@ import {
   typeIsKnown,
 } from '../../utils';
 import type { SampleResponse } from '../../utils/sampler';
-import type { DimensionsSpec } from '../dimension-spec/dimension-spec';
+import type { DimensionSpec, DimensionsSpec } from '../dimension-spec/dimension-spec';
 import {
+  getDimensionSpecColumnType,
   getDimensionSpecName,
   getDimensionSpecs,
-  getDimensionSpecType,
 } from '../dimension-spec/dimension-spec';
 import type { IndexSpec } from '../index-spec/index-spec';
 import { summarizeIndexSpec } from '../index-spec/index-spec';
@@ -73,6 +73,7 @@ export interface IngestionSpec {
   readonly type: IngestionType;
   readonly spec: IngestionSpecInner;
   readonly context?: { taskLockType?: 'APPEND' | 'REPLACE' };
+  readonly suspended?: boolean;
 }
 
 export interface IngestionSpecInner {
@@ -98,6 +99,7 @@ export type IngestionComboType =
   | 'index_parallel:inline'
   | 'index_parallel:s3'
   | 'index_parallel:azure'
+  | 'index_parallel:delta'
   | 'index_parallel:google'
   | 'index_parallel:hdfs';
 
@@ -136,6 +138,7 @@ export function getIngestionComboType(
       switch (inputSource.type) {
         case 'local':
         case 'http':
+        case 'delta':
         case 'druid':
         case 'inline':
         case 's3':
@@ -169,6 +172,9 @@ export function getIngestionTitle(ingestionType: IngestionComboTypeWithExtra): s
 
     case 'index_parallel:azure':
       return 'Azure Data Lake';
+
+    case 'index_parallel:delta':
+      return 'Delta Lake';
 
     case 'index_parallel:google':
       return 'Google Cloud Storage';
@@ -228,6 +234,9 @@ export function getRequiredModule(ingestionType: IngestionComboTypeWithExtra): s
     case 'index_parallel:azure':
       return 'druid-azure-extensions';
 
+    case 'index_parallel:delta':
+      return 'druid-deltalake-extensions';
+
     case 'index_parallel:google':
       return 'druid-google-extensions';
 
@@ -274,6 +283,8 @@ export interface DataSchema {
 
 export type SchemaMode = 'fixed' | 'string-only-discovery' | 'type-aware-discovery';
 
+export type ArrayMode = 'arrays' | 'multi-values';
+
 export function getSchemaMode(spec: Partial<IngestionSpec>): SchemaMode {
   if (deepGet(spec, 'spec.dataSchema.dimensionsSpec.useSchemaDiscovery') === true) {
     return 'type-aware-discovery';
@@ -285,9 +296,66 @@ export function getSchemaMode(spec: Partial<IngestionSpec>): SchemaMode {
   return Array.isArray(dimensions) && dimensions.length === 0 ? 'string-only-discovery' : 'fixed';
 }
 
-export function getRollup(spec: Partial<IngestionSpec>): boolean {
+export function getArrayMode(spec: Partial<IngestionSpec>): ArrayMode {
+  const schemaMode = getSchemaMode(spec);
+  switch (schemaMode) {
+    case 'type-aware-discovery':
+      return 'arrays';
+
+    case 'string-only-discovery':
+      return 'multi-values';
+
+    default: {
+      const dimensions: (DimensionSpec | string)[] = deepGet(
+        spec,
+        'spec.dataSchema.dimensionsSpec.dimensions',
+      );
+
+      if (
+        dimensions.some(
+          d =>
+            typeof d === 'object' && d.type === 'auto' && String(d.castToType).startsWith('ARRAY'),
+        )
+      ) {
+        return 'arrays';
+      }
+
+      if (
+        dimensions.some(
+          d =>
+            typeof d === 'object' &&
+            d.type === 'string' &&
+            typeof d.multiValueHandling === 'string',
+        )
+      ) {
+        return 'multi-values';
+      }
+
+      return 'arrays';
+    }
+  }
+}
+
+export function showArrayModeToggle(spec: Partial<IngestionSpec>): boolean {
+  const schemaMode = getSchemaMode(spec);
+  if (schemaMode !== 'fixed') return false;
+
+  const dimensions: (DimensionSpec | string)[] = deepGet(
+    spec,
+    'spec.dataSchema.dimensionsSpec.dimensions',
+  );
+
+  return dimensions.some(
+    d =>
+      typeof d === 'object' &&
+      ((d.type === 'auto' && String(d.castToType).startsWith('ARRAY')) ||
+        (d.type === 'string' && typeof d.multiValueHandling === 'string')),
+  );
+}
+
+export function getRollup(spec: Partial<IngestionSpec>, valueIfUnset = true): boolean {
   const specRollup = deepGet(spec, 'spec.dataSchema.granularitySpec.rollup');
-  return typeof specRollup === 'boolean' ? specRollup : true;
+  return typeof specRollup === 'boolean' ? specRollup : valueIfUnset;
 }
 
 export function getSpecType(spec: Partial<IngestionSpec>): IngestionType {
@@ -367,7 +435,7 @@ export function cleanSpec(
 ): Partial<IngestionSpec> {
   return allowKeys(
     spec,
-    ['type', 'spec', 'context'].concat(allowSuspended ? ['suspended'] : []),
+    ['type', 'spec', 'context'].concat(allowSuspended ? ['suspended'] : []) as any,
   ) as IngestionSpec;
 }
 
@@ -462,7 +530,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     name: 'inputSource.type',
     label: 'Source type',
     type: 'string',
-    suggestions: ['local', 'http', 'inline', 's3', 'azure', 'google', 'hdfs'],
+    suggestions: ['local', 'http', 'inline', 'delta', 's3', 'azure', 'google', 'hdfs'],
     info: (
       <p>
         Druid connects to raw data through{' '}
@@ -895,6 +963,18 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
         inputSourceFilter,
       ];
 
+    case 'index_parallel:delta':
+      return [
+        inputSourceType,
+        {
+          name: 'inputSource.tablePath',
+          label: 'Delta table path',
+          type: 'string',
+          placeholder: '/path/to/deltaTable',
+          required: true,
+        },
+      ];
+
     case 'index_parallel:hdfs':
       return [
         inputSourceType,
@@ -1085,6 +1165,7 @@ export function getIoConfigTuningFormFields(
     case 'index_parallel:s3':
     case 'index_parallel:azure':
     case 'index_parallel:google':
+    case 'index_parallel:delta':
     case 'index_parallel:hdfs':
       return [
         {
@@ -2382,11 +2463,26 @@ function inputFormatFromType(options: InputFormatFromTypeOptions): InputFormat {
 
 // ------------------------
 
-export function guessIsArrayFromSampleResponse(
-  sampleResponse: SampleResponse,
-  column: string,
-): boolean {
-  return sampleResponse.data.some(r => isSimpleArray(r.input?.[column]));
+function checkArray(array: any[], checkFn: (x: any) => boolean): boolean {
+  return array.every(as => checkFn(as) || (Array.isArray(as) && as.every(checkFn)));
+}
+
+function isIntegerOrNull(x: any): boolean {
+  return x == null || (typeof x === 'number' && Number.isInteger(x));
+}
+
+function isIntegerOrNullAcceptString(x: any): boolean {
+  return (
+    x == null || ((typeof x === 'number' || typeof x === 'string') && Number.isInteger(Number(x)))
+  );
+}
+
+function isNumberOrNull(x: any): boolean {
+  return x == null || (typeof x === 'number' && !isNaN(x));
+}
+
+function isNumberOrNullAcceptString(x: any): boolean {
+  return x == null || ((typeof x === 'number' || typeof x === 'string') && !isNaN(Number(x)));
 }
 
 export function guessColumnTypeFromInput(
@@ -2399,23 +2495,50 @@ export function guessColumnTypeFromInput(
   if (!definedValues.length) return 'string';
 
   // If we see any arrays in the input this is a multi-value dimension that must be a string
-  if (definedValues.some(v => isSimpleArray(v))) return 'string';
+  if (definedValues.some(v => isSimpleArray(v))) {
+    if (guessNumericStringsAsNumbers) {
+      if (checkArray(definedValues, isIntegerOrNullAcceptString)) {
+        return 'ARRAY<long>';
+      }
+
+      if (checkArray(definedValues, isNumberOrNullAcceptString)) {
+        return 'ARRAY<double>';
+      }
+    } else {
+      if (checkArray(definedValues, isIntegerOrNull)) {
+        return 'ARRAY<long>';
+      }
+
+      if (checkArray(definedValues, isNumberOrNull)) {
+        return 'ARRAY<double>';
+      }
+    }
+
+    return 'ARRAY<string>';
+  }
 
   // If we see any JSON objects in the input assume COMPLEX<json>
   if (definedValues.some(v => v && typeof v === 'object')) return 'COMPLEX<json>';
 
-  if (
-    definedValues.every(v => {
-      return (
-        (typeof v === 'number' || (guessNumericStringsAsNumbers && typeof v === 'string')) &&
-        !isNaN(Number(v))
-      );
-    })
-  ) {
-    return definedValues.every(v => v % 1 === 0) ? 'long' : 'double';
+  if (guessNumericStringsAsNumbers) {
+    if (definedValues.every(isIntegerOrNullAcceptString)) {
+      return 'long';
+    }
+
+    if (definedValues.every(isNumberOrNullAcceptString)) {
+      return 'double';
+    }
   } else {
-    return 'string';
+    if (definedValues.every(isIntegerOrNull)) {
+      return 'long';
+    }
+
+    if (definedValues.every(isNumberOrNull)) {
+      return 'double';
+    }
   }
+
+  return 'string';
 }
 
 export function guessColumnTypeFromSampleResponse(
@@ -2433,11 +2556,12 @@ export function inputFormatOutputsNumericStrings(inputFormat: InputFormat | unde
   return oneOf(inputFormat?.type, 'csv', 'tsv', 'regex');
 }
 
-function getTypeHintsFromSpec(spec: Partial<IngestionSpec>): Record<string, string> {
-  const typeHints: Record<string, string> = {};
+function getColumnTypeHintsFromSpec(spec: Partial<IngestionSpec>): Record<string, string> {
+  const columnTypeHints: Record<string, string> = {};
   const currentDimensions = deepGet(spec, 'spec.dataSchema.dimensionsSpec.dimensions') || [];
   for (const currentDimension of currentDimensions) {
-    typeHints[getDimensionSpecName(currentDimension)] = getDimensionSpecType(currentDimension);
+    columnTypeHints[getDimensionSpecName(currentDimension)] =
+      getDimensionSpecColumnType(currentDimension);
   }
 
   const currentMetrics = deepGet(spec, 'spec.dataSchema.metricsSpec') || [];
@@ -2445,21 +2569,22 @@ function getTypeHintsFromSpec(spec: Partial<IngestionSpec>): Record<string, stri
     const singleFieldName = getMetricSpecSingleFieldName(currentMetric);
     const metricOutputType = getMetricSpecOutputType(currentMetric);
     if (singleFieldName && metricOutputType) {
-      typeHints[singleFieldName] = metricOutputType;
+      columnTypeHints[singleFieldName] = metricOutputType;
     }
   }
 
-  return typeHints;
+  return columnTypeHints;
 }
 
 export function updateSchemaWithSample(
   spec: Partial<IngestionSpec>,
   sampleResponse: SampleResponse,
   schemaMode: SchemaMode,
+  arrayMode: ArrayMode,
   rollup: boolean,
   forcePartitionInitialization = false,
 ): Partial<IngestionSpec> {
-  const typeHints = getTypeHintsFromSpec(spec);
+  const columnTypeHints = getColumnTypeHintsFromSpec(spec);
   const guessNumericStringsAsNumbers = inputFormatOutputsNumericStrings(
     deepGet(spec, 'spec.ioConfig.inputFormat'),
   );
@@ -2488,7 +2613,13 @@ export function updateSchemaWithSample(
       newSpec = deepSet(
         newSpec,
         'spec.dataSchema.dimensionsSpec.dimensions',
-        getDimensionSpecs(sampleResponse, typeHints, guessNumericStringsAsNumbers, rollup),
+        getDimensionSpecs(
+          sampleResponse,
+          columnTypeHints,
+          guessNumericStringsAsNumbers,
+          arrayMode === 'multi-values',
+          rollup,
+        ),
       );
       break;
   }
@@ -2496,7 +2627,7 @@ export function updateSchemaWithSample(
   if (rollup) {
     newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec.queryGranularity', 'hour');
 
-    const metrics = getMetricSpecs(sampleResponse, typeHints, guessNumericStringsAsNumbers);
+    const metrics = getMetricSpecs(sampleResponse, columnTypeHints, guessNumericStringsAsNumbers);
     if (metrics) {
       newSpec = deepSet(newSpec, 'spec.dataSchema.metricsSpec', metrics);
     }

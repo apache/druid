@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
@@ -98,7 +97,7 @@ public class RetrieveSegmentsActionsTest
   public void testRetrieveUsedSegmentsAction()
   {
     final RetrieveUsedSegmentsAction action =
-        new RetrieveUsedSegmentsAction(task.getDataSource(), INTERVAL, null, Segments.ONLY_VISIBLE);
+        new RetrieveUsedSegmentsAction(task.getDataSource(), ImmutableList.of(INTERVAL));
     final Set<DataSegment> resultSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
     Assert.assertEquals(expectedUsedSegments, resultSegments);
   }

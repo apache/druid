@@ -17,12 +17,23 @@
  */
 
 import { IconNames } from '@blueprintjs/icons';
+import { Tooltip2 } from '@blueprintjs/popover2';
 import React, { useState } from 'react';
 
 import { StatusDialog } from '../../../dialogs/status-dialog/status-dialog';
+import type { Capabilities } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
 import { Api } from '../../../singletons';
-import { pluralIfNeeded } from '../../../utils';
+import type { NullModeDetection } from '../../../utils';
+import {
+  deepGet,
+  explainNullModeDetection,
+  NULL_DETECTION_QUERY,
+  nullDetectionQueryResultDecoder,
+  pluralIfNeeded,
+  queryDruidRune,
+  summarizeNullModeDetection,
+} from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 interface StatusSummary {
@@ -30,11 +41,15 @@ interface StatusSummary {
   extensionCount: number;
 }
 
-export interface StatusCardProps {}
+export interface StatusCardProps {
+  capabilities: Capabilities;
+}
 
-export const StatusCard = React.memo(function StatusCard(_props: StatusCardProps) {
+export const StatusCard = React.memo(function StatusCard(props: StatusCardProps) {
+  const { capabilities } = props;
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [statusSummaryState] = useQueryManager<null, StatusSummary>({
+    initQuery: null,
     processQuery: async () => {
       const statusResp = await Api.instance.get('/status');
       return {
@@ -42,10 +57,19 @@ export const StatusCard = React.memo(function StatusCard(_props: StatusCardProps
         extensionCount: statusResp.data.modules.length,
       };
     },
-    initQuery: null,
+  });
+
+  const [nullModeDetectionState] = useQueryManager<Capabilities, NullModeDetection>({
+    initQuery: capabilities,
+    processQuery: async capabilities => {
+      if (!capabilities.hasQuerying()) return {};
+      const nullDetectionResponse = await queryDruidRune(NULL_DETECTION_QUERY);
+      return nullDetectionQueryResultDecoder(deepGet(nullDetectionResponse, '0.result'));
+    },
   });
 
   const statusSummary = statusSummaryState.data;
+  const nullModeDetection = nullModeDetectionState.data;
   return (
     <>
       <HomeViewCard
@@ -63,6 +87,22 @@ export const StatusCard = React.memo(function StatusCard(_props: StatusCardProps
             <p>{`Apache Druid is running version ${statusSummary.version}`}</p>
             <p>{`${pluralIfNeeded(statusSummary.extensionCount, 'extension')} loaded`}</p>
           </>
+        )}
+        {nullModeDetection && (
+          <Tooltip2
+            content={
+              <div>
+                <p>
+                  <strong>Null related server properties</strong>
+                </p>
+                {explainNullModeDetection(nullModeDetection).map((line, i) => (
+                  <p key={i}>{line}</p>
+                ))}
+              </div>
+            }
+          >
+            <p>{summarizeNullModeDetection(nullModeDetection)}</p>
+          </Tooltip2>
         )}
       </HomeViewCard>
       {showStatusDialog && (
