@@ -236,7 +236,8 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
           .sql(testCase.getSql())
           .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
                                         QueryContexts.ENABLE_DEBUG, true,
-                                        QueryContexts.MAX_SUBQUERY_BYTES_KEY, "100000"
+                                        QueryContexts.MAX_SUBQUERY_BYTES_KEY, "100000",
+                                        QueryContexts.WINDOWING_STRICT_VALIDATION, false
                         )
           )
           .addCustomVerification(QueryVerification.ofResults(testCase))
