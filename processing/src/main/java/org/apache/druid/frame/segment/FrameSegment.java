@@ -89,6 +89,6 @@ public class FrameSegment implements Segment
     if (CloseableShapeshifter.class.equals(clazz)) {
       return (T) new FrameRowsAndColumns(frame, frameReader.signature());
     }
-    return null;
+    return Segment.super.as(clazz);
   }
 }
