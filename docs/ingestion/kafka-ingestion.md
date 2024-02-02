@@ -24,41 +24,39 @@ description: "Overview of the Kafka indexing service for Druid. Includes example
   ~ under the License.
   -->
 
+:::info
+To use the Kafka indexing service, you must be on Apache Kafka version of 0.11.x or higher.
+If you are using an older version, refer to the [Kafka upgrade guide](https://kafka.apache.org/documentation/#upgrade).
+:::
+
 When you enable the Kafka indexing service, you can configure supervisors on the Overlord to manage the creation and lifetime of Kafka indexing tasks.
 
 Kafka indexing tasks read events using Kafka's own partition and offset mechanism to guarantee exactly-once ingestion. The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures, and ensure that scalability and replication requirements are maintained.
 
-This topic contains configuration reference information for the Kafka indexing service supervisor for Apache Druid.
+This topic contains configuration information for the Kafka indexing service supervisor for Apache Druid.
 
 ## Setup
 
 To use the Kafka indexing service, you must first load the `druid-kafka-indexing-service` extension on both the Overlord and the MiddleManager. See [Loading extensions](../configuration/extensions.md) for more information.
 
-### Kafka support
+## Deployment notes on Kafka partitions and Druid segments
 
-The Kafka indexing service supports transactional topics introduced in Kafka 0.11.x by default. The consumer for Kafka indexing service is incompatible with older Kafka brokers. If you are using an older version, refer to the [Kafka upgrade guide](https://kafka.apache.org/documentation/#upgrade).
+Druid assigns Kafka partitions to each Kafka indexing task. A task writes the events it consumes from Kafka into a single segment for the segment granularity interval until it reaches one of the following limits: `maxRowsPerSegment`, `maxTotalRows`, or `intermediateHandoffPeriod`. At this point, the task creates a new partition for this segment granularity to contain subsequent events.
 
-Additionally, you can set `isolation.level` to `read_uncommitted` in `consumerProperties` if either:
-- You don't need Druid to consume transactional topics.
-- You need Druid to consume older versions of Kafka. Make sure offsets are sequential, since there is no offset gap check in Druid.
+The Kafka indexing task also does incremental hand-offs. Therefore, segments become available as they are ready and you don't have to wait for all segments until the end of the task duration. When the task reaches one of `maxRowsPerSegment`, `maxTotalRows`, or `intermediateHandoffPeriod`, it hands off all the segments and creates a new set of segments for further events. This allows the task to run for longer durations without accumulating old segments locally on MiddleManager services.
 
-If your Kafka cluster enables consumer-group based ACLs, you can set `group.id` in `consumerProperties` to override the default auto generated group ID.
+The Kafka indexing service may still produce some small segments. For example, consider the following scenario:
+- Task duration is 4 hours.
+- Segment granularity is set to an HOUR.
+- The supervisor was started at 9:10.
+After 4 hours at 13:10, Druid starts a new set of tasks. The events for the interval 13:00 - 14:00 may be split across existing tasks and the new set of tasks which could result in small segments. To merge them together into new segments of an ideal size (in the range of ~500-700 MB per segment), you can schedule re-indexing tasks, optionally with a different segment granularity.
+For information on how to optimize the segment size, see [Segment size optimization](../operations/segment-optimization.md).
 
-## Supervisor spec
+## Supervisor spec configuration
 
-Similar to the ingestion spec for batch ingestion, the [supervisor spec](../ingestion/supervisor.md#supervisor-spec) configures the data ingestion for Kafka streaming ingestion.
+This section outlines the configuration properties that are specific to the Apache Kafka streaming ingestion method. For configuration properties shared across all streaming ingestion methods supported by Druid, see [Supervisor spec](supervisor.md#supervisor-spec).
 
-The following table outlines the high-level configuration options for the Kafka supervisor spec:
-
-|Property|Type|Description|Required|
-|--------|----|-----------|--------|
-|`type`|String|The supervisor type; must be `kafka`.|Yes|
-|`spec`|Object|The container object for the supervisor configuration.|Yes|
-|`ioConfig`|Object|The I/O configuration object to define the connection and I/O-related settings for the supervisor and indexing tasks.|Yes|
-|`dataSchema`|Object|The schema for the indexing task to use during ingestion. See [`dataSchema`](../ingestion/ingestion-spec.md#dataschema) for more information.|Yes|
-|`tuningConfig`|Object|The tuning configuration object to define performance-related settings for the supervisor and indexing tasks.|No|
-
-The following example shows a supervisor spec for the Kafka indexing service.
+The following example shows a supervisor spec for the Kafka indexing service:
 
 <details>
   <summary>Click to view the example</summary>
@@ -78,8 +76,8 @@ The following example shows a supervisor spec for the Kafka indexing service.
         "dimensionExclusions": [
           "timestamp",
           "value"
-         ]
-       },
+        ]
+      },
       "metricsSpec": [
         {
           "name": "count",
@@ -93,13 +91,13 @@ The following example shows a supervisor spec for the Kafka indexing service.
         {
           "name": "value_min",
           "fieldName": "value",
-         "type": "doubleMin"
+          "type": "doubleMin"
         },
         {
           "name": "value_max",
           "fieldName": "value",
           "type": "doubleMax"
-       }
+        }
       ],
       "granularitySpec": {
         "type": "uniform",
@@ -123,7 +121,7 @@ The following example shows a supervisor spec for the Kafka indexing service.
       "type": "kafka",
       "maxRowsPerSegment": 5000000
     }
-  } 
+  }
 }
 ```
 
@@ -131,31 +129,46 @@ The following example shows a supervisor spec for the Kafka indexing service.
 
 ### I/O configuration
 
-The following table outlines the configuration options for `ioConfig`:
+The following table outlines the Kafka-specific configuration properties for `ioConfig`:
 
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
-|`topic`|String|The Kafka topic to read from. Must be a specific topic. Druid does not support topic patterns. To ingest data from multiple topic, see [Ingest from multiple topics](#ingest-from-multiple-topics). |Yes||
-|`inputFormat`|Object|The [input format](../ingestion/data-formats.md#input-format) to define input data parsing.|Yes||
+|`topic`|String|Single Kafka topic to read from. To ingest data from multiple topic, use `topicPattern`. |Yes if `topicPattern` isn't set.||
+|`topicPattern`|Multiple Kafka topics to read from, passed as a regex pattern. See [Ingest from multiple topics](#ingest-from-multiple-topics) for more information.|Yes if `topic` isn't set.||
 |`consumerProperties`|String, Object|A map of properties to pass to the Kafka consumer. See [Consumer properties](#consumer-properties) for details.|Yes||
 |`pollTimeout`|Long|The length of time to wait for the Kafka consumer to poll records, in milliseconds.|No|100|
-|`replicas`|Integer|The number of replica sets, where 1 is a single set of tasks (no replication). Druid always assigns replicate tasks to different workers to provide resiliency against process failure.|No|1|
-|`taskCount`|Integer|The maximum number of reading tasks in a replica set. The maximum number of reading tasks equals `taskCount * replicas`. The total number of tasks, reading and publishing, is greater than this count. See [Capacity planning](../ingestion/supervisor.md#capacity-planning) for more details. When `taskCount > {numKafkaPartitions}`, the actual number of reading tasks is less than the `taskCount` value.|No|1|
-|`taskDuration`|ISO 8601 period|The length of time before tasks stop reading and begin publishing segments.|No|PT1H|
-|`startDelay`|ISO 8601 period|The period to wait before the supervisor starts managing tasks.|No|PT5S|
-|`period`|ISO 8601 period|Determines how often the supervisor executes its management logic. Note that the supervisor also runs in response to certain events, such as tasks succeeding, failing, and reaching their task duration. The `period` value specifies the maximum time between iterations.|No|PT30S|
 |`useEarliestOffset`|Boolean|If a supervisor manages a datasource for the first time, it obtains a set of starting offsets from Kafka. This flag determines whether it retrieves the earliest or latest offsets in Kafka. Under normal circumstances, subsequent tasks start from where the previous segments ended. Druid only uses `useEarliestOffset` on the first run.|No|`false`|
-|`completionTimeout`|ISO 8601 period|The length of time to wait before declaring a publishing task as failed and terminating it. If the value is too low, your tasks may never publish. The publishing clock for a task begins roughly after `taskDuration` elapses.|No|PT30M|
-|`lateMessageRejectionStartDateTime`|ISO 8601 date time|Configures tasks to reject messages with timestamps earlier than this date time. For example, if this property is set to `2016-01-01T11:00Z` and the supervisor creates a task at `2016-01-01T12:00Z`, Druid drops messages with timestamps earlier than `2016-01-01T11:00Z`. This can prevent concurrency issues if your data stream has late messages and you have multiple pipelines that need to operate on the same segments, such as a realtime and a nightly batch ingestion pipeline.|No||
-|`lateMessageRejectionPeriod`|ISO 8601 period|Configures tasks to reject messages with timestamps earlier than this period before the task was created. For example, if this property is set to `PT1H` and the supervisor creates a task at `2016-01-01T12:00Z`, Druid drops messages with timestamps earlier than `2016-01-01T11:00Z`. This may help prevent concurrency issues if your data stream has late messages and you have multiple pipelines that need to operate on the same segments, such as a realtime and a nightly batch ingestion pipeline. Note that you can specify only one of the late message rejection properties.|No||
-|`earlyMessageRejectionPeriod`|ISO 8601 period|Configures tasks to reject messages with timestamps later than this period after the task reached its task duration. For example, if this property is set to `PT1H`, the task duration is set to `PT1H` and the supervisor creates a task at `2016-01-01T12:00Z`, Druid drops messages with timestamps later than `2016-01-01T14:00Z`. Tasks sometimes run past their task duration, such as in cases of supervisor failover. Setting `earlyMessageRejectionPeriod` too low may cause Druid to drop messages unexpectedly whenever a task runs past its originally configured task duration.|No||
-|`autoScalerConfig`|Object|Defines auto scaling behavior for ingestion tasks. See [Task autoscaler](../ingestion/supervisor.md#task-autoscaler) for more information.|No|null|
-|`idleConfig`|Object|Defines how and when the Kafka supervisor can become idle. See [Idle supervisor configuration](#idle-supervisor-configuration) for more details.|No|null|
+|`idleConfig`|Object|Defines how and when the Kafka supervisor can become idle. See [Idle configuration](#idle-configuration) for more details.|No|null|
+
+For configuration properties shared across all streaming ingestion methods supported by Druid, refer to [Supervisor I/O configuration](supervisor.md#io-configuration).
+
+
+#### Ingest from multiple topics
+
+:::info
+If you enable multi-topic ingestion for a datasource, downgrading to a version older than
+28.0.0 will cause the ingestion for that datasource to fail.
+:::
+
+You can ingest data from one or multiple topics.
+When ingesting data from multiple topics, Druid assigns partitions based on the hashcode of the topic name and the ID of the partition within that topic. The partition assignment might not be uniform across all the tasks. Druid assumes that partitions across individual topics have similar load. If you want to ingest from both high and low load topics in the same supervisor, it is recommended that you have a higher number of partitions for a high load topic and a lower number of partitions for a low load topic.
+
+To ingest data from multiple topics, use the `topicPattern` property instead of `topic`.
+You pass multiple topics as a regex pattern. For example, to ingest data from clicks and impressions, set `topicPattern` to `clicks|impressions`.
+Similarly, you can use `metrics-.*` as the value for `topicPattern` if you want to ingest from all the topics that start with `metrics-`. If you add a new topic that matches the regex to the cluster, Druid automatically starts ingesting from those new topics. Topic names that match partially, such as `my-metrics-12`, are not included for ingestion.
 
 #### Consumer properties
 
 Consumer properties must contain a property `bootstrap.servers` with a list of Kafka brokers in the form: `<BROKER_1>:<PORT_1>,<BROKER_2>:<PORT_2>,...`.
-By default, `isolation.level` is set to `read_committed`. If you use older versions of Kafka servers without transactions support or don't want Druid to consume only committed transactions, set `isolation.level` to `read_uncommitted`.
+By default, `isolation.level` is set to `read_committed`. 
+
+If you use older versions of Kafka servers without transactions support or don't want Druid to consume only committed transactions, set `isolation.level` to `read_uncommitted`.
+
+Additionally, you can set `isolation.level` to `read_uncommitted` in `consumerProperties` if either:
+- You don't need Druid to consume transactional topics.
+- You need Druid to consume older versions of Kafka. Make sure offsets are sequential, since there is no offset gap check in Druid.
+
+If your Kafka cluster enables consumer-group based ACLs, you can set `group.id` in `consumerProperties` to override the default auto generated group ID.
 
 In some cases, you may need to fetch consumer properties at runtime. For example, when `bootstrap.servers` is not known upfront, or is not static. To enable SSL connections, you must provide passwords for `keystore`, `truststore`, and `key` secretly. You can provide configurations at runtime with a dynamic config provider implementation like the environment variable config provider that comes with Druid. For more information, see [Dynamic config provider](../operations/dynamic-config-provider.md).
 
@@ -169,51 +182,20 @@ export SSL_TRUSTSTORE_PASSWORD=mysecrettruststorepassword
 ```
 
 ```json
-  "druid.dynamic.config.provider": {
-    "type": "environment",
-     "variables": {
-        "sasl.jaas.config": "KAFKA_JAAS_CONFIG",
-        "ssl.key.password": "SSL_KEY_PASSWORD",
-        "ssl.keystore.password": "SSL_KEYSTORE_PASSWORD",
-        "ssl.truststore.password": "SSL_TRUSTSTORE_PASSWORD"
-      }
+"druid.dynamic.config.provider": {
+  "type": "environment",
+  "variables": {
+    "sasl.jaas.config": "KAFKA_JAAS_CONFIG",
+    "ssl.key.password": "SSL_KEY_PASSWORD",
+    "ssl.keystore.password": "SSL_KEYSTORE_PASSWORD",
+    "ssl.truststore.password": "SSL_TRUSTSTORE_PASSWORD"
   }
+}
 ```
 
 Verify that you've changed the values for all configurations to match your own environment. In the Druid data loader interface, you can use the environment variable config provider syntax in the **Consumer properties** field on the **Connect tab**. When connecting to Kafka, Druid replaces the environment variables with their corresponding values.
 
-#### Task autoscaler
-
-You can optionally configure autoscaling behavior for ingestion tasks using the `autoScalerConfig` property of the `ioConfig` object.
-
-The following table outlines the configuration options for `autoScalerConfig`:
-
-|Property|Description|Required|Default|
-|--------|-----------|--------|-------|
-|`enableTaskAutoScaler`|Enables the auto scaler. If not specified, Druid disables the auto scaler even when `autoScalerConfig` is not null.|No|`false`|
-|`taskCountMax`|Maximum number of ingestion tasks. Set `taskCountMax >= taskCountMin`. If `taskCountMax > {numKafkaPartitions}`, Druid only scales reading tasks up to `{numKafkaPartitions}`. In this case, `taskCountMax` is ignored.|Yes||
-|`taskCountMin`|Minimum number of ingestion tasks. When you enable the autoscaler, Druid ignores the value of `taskCount` in `ioConfig` and starts with the `taskCountMin` number of tasks to launch.|Yes||
-|`minTriggerScaleActionFrequencyMillis`|Minimum time interval between two scale actions.| No|600000|
-|`autoScalerStrategy`|The algorithm of `autoScaler`. Druid only supports the `lagBased` strategy. See [Autoscaler strategy](#autoscaler-strategy) for more information.|No|`lagBased`|
-
-##### Autoscaler strategy
-
-The following table outlines the configuration options for `autoScalerStrategy`:
-
-|Property|Description|Required|Default|
-|--------|-----------|--------|-------|
-|`lagCollectionIntervalMillis`|The time period during which Druid collects lag metric points.|No|30000|
-|`lagCollectionRangeMillis`|The total time window of lag collection. Use with `lagCollectionIntervalMillis` to specify the intervals at which to collect lag metric points.|No|600000|
-|`scaleOutThreshold`|The threshold of scale out action. |No|6000000|
-|`triggerScaleOutFractionThreshold`|Enables scale out action if `triggerScaleOutFractionThreshold` percent of lag points is higher than `scaleOutThreshold`.|No|0.3|
-|`scaleInThreshold`|The threshold of scale in action.|No|1000000|
-|`triggerScaleInFractionThreshold`|Enables scale in action if `triggerScaleInFractionThreshold` percent of lag points is lower than `scaleOutThreshold`.|No|0.9|
-|`scaleActionStartDelayMillis`|The number of milliseconds to delay after the supervisor starts before the first scale logic check.|No|300000|
-|`scaleActionPeriodMillis`|The frequency in milliseconds to check if a scale action is triggered.|No|60000|
-|`scaleInStep`|The number of tasks to reduce at once when scaling down.|No|1|
-|`scaleOutStep`|The number of tasks to add at once when scaling out.|No|2|
-
-#### Idle supervisor configuration
+#### Idle configuration
 
 :::info
 Idle state transitioning is currently designated as experimental.
@@ -235,129 +217,59 @@ The following example shows a supervisor spec with `lagBased` autoscaler and idl
 
 ```json
 {
-    "type": "kafka",
-    "spec": {
-      "dataSchema": {
-        ...
+  "type": "kafka",
+  "spec": {
+    "dataSchema": {...},
+    "ioConfig": {
+      "topic": "metrics",
+      "inputFormat": {
+        "type": "json"
       },
-      "ioConfig": {
-         "topic": "metrics",
-         "inputFormat": {
-             "type": "json"
-         },
-          "consumerProperties": {
-             "bootstrap.servers": "localhost:9092"
-          },
-         "autoScalerConfig": {
-             "enableTaskAutoScaler": true,
-              "taskCountMax": 6,
-              "taskCountMin": 2,
-             "minTriggerScaleActionFrequencyMillis": 600000,
-             "autoScalerStrategy": "lagBased",
-              "lagCollectionIntervalMillis": 30000,
-              "lagCollectionRangeMillis": 600000,
-              "scaleOutThreshold": 6000000,
-              "triggerScaleOutFractionThreshold": 0.3,
-             "scaleInThreshold": 1000000,
-             "triggerScaleInFractionThreshold": 0.9,
-              "scaleActionStartDelayMillis": 300000,
-              "scaleActionPeriodMillis": 60000,
-              "scaleInStep": 1,
-             "scaleOutStep": 2
-         },
-         "taskCount":1,
-         "replicas":1,
-         "taskDuration":"PT1H",
-         "idleConfig": {
-           "enabled": true,
-           "inactiveAfterMillis": 600000 
-         }
+      "consumerProperties": {
+        "bootstrap.servers": "localhost:9092"
       },
-     "tuningConfig":{
-        ...
-     }
-    }
+      "autoScalerConfig": {
+        "enableTaskAutoScaler": true,
+        "taskCountMax": 6,
+        "taskCountMin": 2,
+        "minTriggerScaleActionFrequencyMillis": 600000,
+        "autoScalerStrategy": "lagBased",
+        "lagCollectionIntervalMillis": 30000,
+        "lagCollectionRangeMillis": 600000,
+        "scaleOutThreshold": 6000000,
+        "triggerScaleOutFractionThreshold": 0.3,
+        "scaleInThreshold": 1000000,
+        "triggerScaleInFractionThreshold": 0.9,
+        "scaleActionStartDelayMillis": 300000,
+        "scaleActionPeriodMillis": 60000,
+        "scaleInStep": 1,
+        "scaleOutStep": 2
+      },
+      "taskCount": 1,
+      "replicas": 1,
+      "taskDuration": "PT1H",
+      "idleConfig": {
+        "enabled": true,
+        "inactiveAfterMillis": 600000
+      }
+    },
+    "tuningConfig": {...}
+  }
 }
 ```
 </details>
 
-#### Ingest from multiple topics
-
-:::info
-If you enable multi-topic ingestion for a datasource, downgrading to a version older than
-28.0.0 will cause the ingestion for that datasource to fail.
-:::
-
-To ingest data from multiple topics, you set `topicPattern` instead of `topic` in the supervisor `ioConfig` object.
-You can pass multiple topics as a regex pattern as the value for `topicPattern` in `ioConfig`. For example, to
-ingest data from clicks and impressions, set `topicPattern` to `clicks|impressions` in `ioCofig`.
-Similarly, you can use `metrics-.*` as the value for `topicPattern` if you want to ingest from all the topics that
-start with `metrics-`. If you add a new topic that matches the regex to the cluster, Druid automatically starts
-ingesting from those new topics. Topic names that match partially, such as `my-metrics-12`, are not included for ingestion.
-
-When ingesting data from multiple topics, Druid assigns partitions based on the hashcode of the topic name and the
-ID of the partition within that topic. The partition assignment might not be uniform across all the tasks. It's also
-assumed that partitions across individual topics have similar load. It is recommended that you have a higher number of
-partitions for a high load topic and a lower number of partitions for a low load topic. Assuming that you want to
-ingest from both high and low load topic in the same supervisor.
 
 ### Tuning configuration
 
-The `tuningConfig` object is optional. If you don't specify the `tuningConfig` object, Druid uses the default configuration settings.
-
-The following table outlines the configuration options for `tuningConfig`:
+The following table outlines the Kafka-specific configuration properties for `tuningConfig`:
 
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
-|`type`|String|The indexing task type; must be `kafka`.|Yes||
-|`maxRowsInMemory`|Integer|The number of rows to aggregate before persisting. This number represents the post-aggregation rows. It is not equivalent to the number of input events, but the resulting number of aggregated rows. Druid uses `maxRowsInMemory` to manage the required JVM heap size. The maximum heap memory usage for indexing scales is `maxRowsInMemory * (2 + maxPendingPersists)`. Normally, you do not need to set this, but depending on the nature of data, if rows are short in terms of bytes, you may not want to store a million rows in memory and this value should be set.|No|150000|
-|`maxBytesInMemory`|Long|The number of bytes to aggregate in heap memory before persisting. This is based on a rough estimate of memory usage and not actual usage. Normally, this is computed internally. The maximum heap memory usage for indexing is `maxBytesInMemory * (2 + maxPendingPersists)`.|No|One-sixth of max JVM memory|
-|`skipBytesInMemoryOverheadCheck`|Boolean|The calculation of `maxBytesInMemory` takes into account overhead objects created during ingestion and each intermediate persist. To exclude the bytes of these overhead objects from the `maxBytesInMemory` check, set `skipBytesInMemoryOverheadCheck` to `true`.|No|`false`|
-|`maxRowsPerSegment`|Integer|The number of rows to store in a segment. This number is post-aggregation rows. Handoff occurs when `maxRowsPerSegment` or `maxTotalRows` is reached or every `intermediateHandoffPeriod`, whichever happens first.|No|5000000|
-|`maxTotalRows`|Long|The number of rows to aggregate across all segments; this number is post-aggregation rows. Handoff happens either if `maxRowsPerSegment` or `maxTotalRows` is reached or every `intermediateHandoffPeriod`, whichever happens earlier.|No|20000000|
-|`intermediateHandoffPeriod`|ISO 8601 period|The period that determines how often tasks hand off segments. Handoff occurs if `maxRowsPerSegment` or `maxTotalRows` is reached or every `intermediateHandoffPeriod`, whichever happens first.|No|P2147483647D|
-|`intermediatePersistPeriod`|ISO 8601 period|The period that determines the rate at which intermediate persists occur.|No|PT10M|
-|`maxPendingPersists`|Integer|Maximum number of persists that can be pending but not started. If a new intermediate persist exceeds this limit, Druid blocks ingestion until the currently running persist finishes. One persist can be running concurrently with ingestion, and none can be queued up. The maximum heap memory usage for indexing scales is `maxRowsInMemory * (2 + maxPendingPersists)`.|No|0|
-|`indexSpec`|Object|Defines how Druid indexes the data. See [IndexSpec](#indexspec) for more information.|No||
-|`indexSpecForIntermediatePersists`|Object|Defines segment storage format options to use at indexing time for intermediate persisted temporary segments. You can use `indexSpecForIntermediatePersists` to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. However, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published. See [IndexSpec](#indexspec) for possible values.|No|Same as `indexSpec`|
-|`reportParseExceptions`|Boolean|DEPRECATED. If `true`, Druid throws exceptions encountered during parsing causing ingestion to halt. If `false`, Druid skips unparseable rows and fields. Setting `reportParseExceptions` to `true` overrides existing configurations for `maxParseExceptions` and `maxSavedParseExceptions`, setting `maxParseExceptions` to 0 and limiting `maxSavedParseExceptions` to not more than 1.|No|`false`|
-|`handoffConditionTimeout`|Long|Number of milliseconds to wait for segment handoff. Set to a value >= 0, where 0 means to wait indefinitely.|No|900000 (15 minutes)|
-|`resetOffsetAutomatically`|Boolean| Determines how Druid reads Kafka messages when partitions in the topic have `offsetOutOfRangeException`. This feature behaves similarly to the Kafka `auto.offset.reset` consumer property. If `resetOffsetAutomatically` is set to `true`, Druid automatically resets to the earliest or latest offset available in Kafka, based on the value of the `useEarliestOffset` property (earliest if `true`, latest if `false`). Druid logs messages to the ingestion task log file indicating that a reset has occurred without interrupting ingestion. Setting `resetOffsetAutomatically`  to `true` can lead to dropping data (if `useEarliestSequenceNumber` is `false`) or duplicating data (if `useEarliestSequenceNumber` is `true`) without your knowledge.<br/>If only one partition in the topic has `offsetOutOfrangeException`, the offset is reset for that partition only.<br/>If `resetOffsetAutomatically` is `false`, the exception bubbles up causing tasks to fail and ingestion to halt. If this occurs, manual intervention is required to correct the situation, potentially using the [Reset Supervisor API](../api-reference/supervisor-api.md#reset-a-supervisor). |No|`false`|
-|`workerThreads`|Integer|The number of threads that the supervisor uses to handle requests/responses for worker tasks, along with any other internal asynchronous operation.|No|`min(10, taskCount)`|
 |`chatAsync`|Boolean|If `true`, use asynchronous communication with indexing tasks, and ignore the `chatThreads` parameter. If `false`, use synchronous communication in a thread pool of size `chatThreads`.|No|`true`|
 |`chatThreads`|Integer|The number of threads to use for communicating with indexing tasks. Ignored if `chatAsync` is `true`.|No|`min(10, taskCount * replicas)`|
-|`chatRetries`|Integer|The number of times HTTP requests to indexing tasks are retried before considering tasks unresponsive.|No|8|
-|`httpTimeout`| ISO 8601 period|The period of time to wait for a HTTP response from an indexing task.|No|PT10S|
-|`shutdownTimeout`|ISO 8601 period|The period of time to wait for the supervisor to attempt a graceful shutdown of tasks before exiting.|No|PT80S|
-|`offsetFetchPeriod`|ISO 8601 period|Determines how often the supervisor queries Kafka and the indexing tasks to fetch current offsets and calculate lag. If the user-specified value is below the minimum value of `PT5S`, the supervisor ignores the value and uses the minimum value instead.|No|PT30S|
-|`segmentWriteOutMediumFactory`|Object|The segment write-out medium to use when creating segments. See [Additional Peon configuration: SegmentWriteOutMediumFactory](../configuration/index.md#segmentwriteoutmediumfactory) for explanation and available options.|No|If not specified, Druid uses the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type`.|
-|`logParseExceptions`|Boolean|If `true`, Druid logs an error message when a parsing exception occurs, containing information about the row where the error occurred.|No|`false`|
-|`maxParseExceptions`|Integer|The maximum number of parse exceptions that can occur before the task halts ingestion and fails. Overridden if `reportParseExceptions` is set.|No|unlimited|
-|`maxSavedParseExceptions`|Integer|When a parse exception occurs, Druid keeps track of the most recent parse exceptions. `maxSavedParseExceptions` limits the number of saved exception instances. These saved exceptions are available after the task finishes in the [task completion report](../ingestion/tasks.md#task-reports). Overridden if `reportParseExceptions` is set.|No|0|
 
-#### IndexSpec
-
-The following table outlines the configuration options for `indexSpec`:
-
-|Property|Type|Description|Required|Default|
-|--------|----|-----------|--------|-------|
-|`bitmap`|Object|Compression format for bitmap indexes. Druid supports roaring and concise bitmap types.|No|Roaring|
-|`dimensionCompression`|String|Compression format for dimension columns. One of `LZ4`, `LZF`, `ZSTD` or `uncompressed`.|No|`LZ4`|
-|`metricCompression`|String|Compression format for primitive type metric columns. One of `LZ4`, `LZF`, `ZSTD`, `uncompressed` or `none`.|No|`LZ4`|
-|`longEncoding`|String|Encoding format for metric and dimension columns with type long. One of `auto` or `longs`. `auto` encodes the values using offset or lookup table depending on column cardinality, and store them with variable size. `longs` stores the value as is with 8 bytes each.|No|`longs`|
-
-## Deployment notes on Kafka partitions and Druid segments
-
-Druid assigns Kafka partitions to each Kafka indexing task. A task writes the events it consumes from Kafka into a single segment for the segment granularity interval until it reaches one of the following limits: `maxRowsPerSegment`, `maxTotalRows`, or `intermediateHandoffPeriod`. At this point, the task creates a new partition for this segment granularity to contain subsequent events.
-
-The Kafka indexing task also does incremental hand-offs. Therefore, segments become available as they are ready and you don't have to wait for all segments until the end of the task duration. When the task reaches one of `maxRowsPerSegment`, `maxTotalRows`, or `intermediateHandoffPeriod`, it hands off all the segments and creates a new set of segments for further events. This allows the task to run for longer durations without accumulating old segments locally on MiddleManager services.
-
-The Kafka indexing service may still produce some small segments. For example, consider the following scenario:
-- Task duration is 4 hours.
-- Segment granularity is set to an HOUR.
-- The supervisor was started at 9:10.
-After 4 hours at 13:10, Druid starts a new set of tasks. The events for the interval 13:00 - 14:00 may be split across existing tasks and the new set of tasks which could result in small segments. To merge them together into new segments of an ideal size (in the range of ~500-700 MB per segment), you can schedule re-indexing tasks, optionally with a different segment granularity.
-For information on how to optimize the segment size, see [Segment size optimization](../operations/segment-optimization.md).
+For configuration properties shared across all streaming ingestion methods supported by Druid, refer to [Supervisor tuning configuration](supervisor.md#tuning-configuration).
 
 ## Learn more
 
@@ -366,4 +278,4 @@ See the following topics for more information:
 * [Supervisor API](../api-reference/supervisor-api.md) for how to manage and monitor supervisors using the API.
 * [Supervisor](../ingestion/supervisor.md) for supervisor status and capacity planning.
 * [Loading from Apache Kafka](../tutorials/tutorial-kafka.md) for a tutorial on streaming data from Apache Kafka.
-* [Kafka input format](../ingestion/data-formats.md) to learn about the `kafka` input format.
+* [Kafka input format](../ingestion/data-formats.md#kafka) to learn about the `kafka` input format.
