@@ -1596,7 +1596,7 @@ public class RowBasedGrouperHelper
       @Override
       public void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Object[] dimValues)
       {
-        dimValues[dimValIdx] = longArrayDictionary.get(buffer.getInt(initialOffset + keyBufferPosition));
+        dimValues[dimValIdx] = getDictionaryForType(elementType).get(buffer.getInt(initialOffset + keyBufferPosition));
       }
 
       @Override

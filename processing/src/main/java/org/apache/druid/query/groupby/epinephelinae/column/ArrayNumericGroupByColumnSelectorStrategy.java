@@ -150,6 +150,7 @@ public abstract class ArrayNumericGroupByColumnSelectorStrategy
       Object[] rhs = dictionary.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition));
 
       int minLength = Math.min(lhs.length, rhs.length);
+      //noinspection ArrayEquality
       if (lhs == rhs) {
         return 0;
       } else {
