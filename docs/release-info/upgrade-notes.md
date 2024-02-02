@@ -32,21 +32,11 @@ For the full release notes for a specific version, see the [releases page](https
 
 #### Enabled empty ingest queries
 
-Druid 29.0.0 introduced a new MSQ query parameter `failOnEmptyInsert` that allows empty ingest queries by default. Previously, ingest queries that produced no data would fail with the `InsertCannotBeEmpty` MSQ fault.
-
-When `failOnEmptyInsert` is `false`, the MSQ task engine allows empty ingest queries. An empty INSERT query is essentially a no-operation query, and an empty REPLACE query deletes all data that matches the OVERWRITE clause.
+The MSQ task engine now allows empty ingest queries by default. For queries that don't generate any output rows, the MSQ task engine reports zero values for `numTotalRows` and `totalSizeInBytes` instead of null. Previously, ingest queries that produced no data would fail with the `InsertCannotBeEmpty` MSQ fault.
 
 To revert to the original behavior, set the MSQ query parameter `failOnEmptyInsert` to `true`.
 
-[#15495](https://github.com/apache/druid/pull/15495)
-
-#### MSQ task engine partitions
-
-During an upgrade to Druid 29.0.0, GROUP BY queries that use the MSQ task engine may fail if some of the workers are on an older version while others are on a newer version.
-
-[#15474](https://github.com/apache/druid/pull/15474)
-
-### Incompatible changes
+[#15495](https://github.com/apache/druid/pull/15495) [#15674](https://github.com/apache/druid/pull/15674)
 
 #### Changed `equals` filter for native queries
 
@@ -54,13 +44,26 @@ Native query equals filter on mixed type `auto` columns which contain arrays mus
 
 [#15503](https://github.com/apache/druid/pull/15503)
 
-#### Changed property name for centralized datasource schemas 
+#### Changed how empty or null array columns are stored
 
-The property `druid.coordinator.centralizedTableSchema.enabled` has been renamed to `druid.centralizedDatasourceSchema.enabled` to better align with Druid terminology.
+Columns ingested with the auto column indexer that contain only empty or null arrays are now stored as `ARRAY<LONG\>` instead of `COMPLEX<json\>`.
 
-This is only a name change and did not change any functionality.
+[#15505](https://github.com/apache/druid/pull/15505)
 
-[#15476](https://github.com/apache/druid/pull/15476)
+#### Changed how Druid allocates weekly segments
+
+When the requested granularity is a month or larger but a segment can't be allocated, Druid resorts to day partitioning.
+Unless explicitly specified, Druid skips week-granularity segments for data partitioning because these segments don't align with the end of the month or more coarse-grained intervals.
+
+[#15589](https://github.com/apache/druid/pull/15589)
+
+### Incompatible changes
+
+### Removed the `auto` search strategy
+
+Removed the `auto` search strategy from the native search query. Setting `searchStrategy` to `auto` is now equivalent to `useIndexes`. Improvements to how and when indexes are computed have allowed the `useIndexes` strategy to be more adaptive, skipping computing expensive indexes when possible.
+
+[#15550](https://github.com/apache/druid/pull/15550)
 
 ## 28.0.0
 
