@@ -15264,4 +15264,34 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
         .run();
   }
+
+  @Test
+  public void testCastBooleanToInteger()
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT CAST(TRUE as INTEGER)",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(
+                      InlineDataSource.fromIterable(
+                          ImmutableList.of(
+                              new Object[]{1L}
+                          ),
+                          RowSignature.builder().add("EXPR$0", ColumnType.LONG).build()
+                      )
+                  )
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .columns(ImmutableList.of(
+                      "EXPR$0"
+                  ))
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1}
+        )
+    );
+  }
 }
