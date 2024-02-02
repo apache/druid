@@ -889,7 +889,7 @@ The following is a sample spec for a S3 warehouse source:
             "namespace": "iceberg_namespace",
             "icebergCatalog": {
               "type": "hive",
-              "warehousePath": "hdfs://warehouse/path",
+              "warehousePath": "s3://warehouse/path",
               "catalogUri": "thrift://hive-metastore.x.com:8970",
               "catalogProperties": {
                 "hive.metastore.connect.retries": "1",
