@@ -2735,22 +2735,8 @@ public class ControllerImpl implements Controller
           if (isFailOnEmptyInsertEnabled && Boolean.TRUE.equals(isShuffleStageOutputEmpty)) {
             throw new MSQException(new InsertCannotBeEmptyFault(task.getDataSource()));
           }
-
-          // Q for MSQ folks
-          // I am not sure why can't we switch to universal
-          // if the partition boundary for a stage derived from the last valid shuffle spec
-          // is not ready, especially when the stage before the final has a shuffle spec of null
-          final ClusterByPartitions partitionBoundaries;
-          ClusterByPartitions tmp = ClusterByPartitions.oneUniversalPartition();
-          try {
-            tmp = queryKernel.getResultPartitionBoundariesForStage(shuffleStageId);
-          }
-          catch (ISE e) {
-            log.warn("Partiton boundaries not ready switching to universal");
-          }
-          finally {
-            partitionBoundaries = tmp;
-          }
+          final ClusterByPartitions partitionBoundaries =
+              queryKernel.getResultPartitionBoundariesForStage(shuffleStageId);
 
           final boolean mayHaveMultiValuedClusterByFields =
               !queryKernel.getStageDefinition(shuffleStageId).mustGatherResultKeyStatistics()

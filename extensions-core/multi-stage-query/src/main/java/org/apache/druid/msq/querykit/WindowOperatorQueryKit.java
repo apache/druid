@@ -137,7 +137,8 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
         // find the shuffle spec of the next stage
         // if it is the last stage set the next shuffle spec to null
         if (i + 1 == numberOfWindows) {
-          nextShuffleSpec = null;
+          nextShuffleSpec = ShuffleSpecFactories.singlePartition()
+                                                .build(ClusterBy.none(), false);
         } else {
           nextShuffleSpec = findShuffleSpecForNextWindow(operatorList.get(i + 1), maxWorkerCount);
         }

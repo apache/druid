@@ -1208,7 +1208,7 @@ public class MSQWindowTest extends MSQTestBase
   }
 
   @Test
-  public void testWindowOnFooWithParitionOverWithUnnest()
+  public void testWindowOnFooWithEmptyOverWithUnnest()
   {
     final Map<String, Object> contextWithRowSignature =
         ImmutableMap.<String, Object>builder()
@@ -1301,7 +1301,7 @@ public class MSQWindowTest extends MSQTestBase
   }
 
   @Test
-  public void testWindowOnFooWithEmptyOverWithUnnest()
+  public void testWindowOnFooWithPartitionByAndWithUnnest()
   {
     final Map<String, Object> contextWithRowSignature =
         ImmutableMap.<String, Object>builder()
@@ -1312,7 +1312,7 @@ public class MSQWindowTest extends MSQTestBase
                     )
                     .build();
 
-    
+
     RowSignature rowSignature = RowSignature.builder()
                                             .add("m1", ColumnType.FLOAT)
                                             .add("cc", ColumnType.DOUBLE)
