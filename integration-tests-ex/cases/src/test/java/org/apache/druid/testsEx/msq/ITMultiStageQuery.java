@@ -194,7 +194,7 @@ public class ITMultiStageQuery
   {
     String exportQuery =
         StringUtils.format(
-            "REPLACE INTO extern(%s(basePath = '%s'))\n"
+            "REPLACE INTO extern(%s(basePath => '%s'))\n"
             + "AS CSV\n"
             + "OVERWRITE ALL\n"
             + "SELECT page, added, delta\n"

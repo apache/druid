@@ -32,7 +32,11 @@ import org.apache.druid.sql.calcite.export.TestExportStorageConnector;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.destination.ExportDestination;
+import org.apache.druid.storage.StorageConnectorModule;
+import org.apache.druid.storage.local.LocalFileStorageConnectorProvider;
+import org.hamcrest.CoreMatchers;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 
 public class CalciteExportTest extends CalciteIngestionDmlTest
 {
@@ -40,6 +44,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   public void configureGuice(DruidInjectorBuilder builder)
   {
     super.configureGuice(builder);
+    builder.addModule(new StorageConnectorModule());
     builder.addModule(new TestExportModule());
   }
 
@@ -47,7 +52,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   public void testReplaceIntoExtern()
   {
     testIngestionQuery()
-        .sql(StringUtils.format("REPLACE INTO EXTERN(%s()) "
+        .sql(StringUtils.format("REPLACE INTO EXTERN(%s(basePath => 'export')) "
                                 + "AS CSV "
                                 + "OVERWRITE ALL "
                                 + "SELECT dim2 FROM foo", TestExportStorageConnector.TYPE_NAME))
@@ -64,6 +69,23 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
         )
         .expectResources(dataSourceRead("foo"), externalWrite(TestExportStorageConnector.TYPE_NAME))
         .expectTarget(ExportDestination.TYPE_KEY, RowSignature.builder().add("dim2", ColumnType.STRING).build())
+        .verify();
+  }
+
+  @Test
+  public void testReplaceWithoutRequiredParameter()
+  {
+    testIngestionQuery()
+        .sql(StringUtils.format("REPLACE INTO EXTERN(%s()) "
+                                + "AS CSV "
+                                + "OVERWRITE ALL "
+                                + "SELECT dim2 FROM foo", LocalFileStorageConnectorProvider.TYPE_NAME))
+        .expectValidationError(
+            CoreMatchers.allOf(
+                CoreMatchers.instanceOf(IllegalArgumentException.class),
+                ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Missing required creator property 'basePath'"))
+            )
+        )
         .verify();
   }
 
@@ -110,7 +132,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   public void testExportWithoutFormat()
   {
     testIngestionQuery()
-        .sql("INSERT INTO EXTERN(testStorage(bucket='bucket1',prefix='prefix1',tempDir='/tempdir',chunkSize='5242880',maxRetry='1')) "
+        .sql("INSERT INTO EXTERN(testStorage(bucket=>'bucket1',prefix=>'prefix1',tempDir=>'/tempdir',chunkSize=>'5242880',maxRetry=>'1')) "
              + "SELECT dim2 FROM foo")
         .expectValidationError(
             DruidException.class,
@@ -125,8 +147,10 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
     testIngestionQuery()
         .sql("insert into extern(nonExistent()) as csv select  __time, dim1 from foo")
         .expectValidationError(
-            DruidException.class,
-            "No storage connector found for storage connector type:[nonExistent]."
+            CoreMatchers.allOf(
+                CoreMatchers.instanceOf(IllegalArgumentException.class),
+                ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Could not resolve type id 'nonExistent' as a subtype"))
+            )
         )
         .verify();
   }

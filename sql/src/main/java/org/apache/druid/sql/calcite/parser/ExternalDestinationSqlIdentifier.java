@@ -97,18 +97,9 @@ public class ExternalDestinationSqlIdentifier extends SqlIdentifier
     final HashMap<String, String> storageConnectorProperties = new HashMap<>(properties);
     storageConnectorProperties.put("type", getDestinationType());
 
-    final StorageConnectorProvider storageConnectorProvider;
-    try {
-      storageConnectorProvider = objectMapper.convertValue(
+    return objectMapper.convertValue(
           storageConnectorProperties,
           StorageConnectorProvider.class
       );
-    }
-    catch (IllegalArgumentException e) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                          .build("No storage connector found for storage connector type:[%s].", getDestinationType());
-    }
-    return storageConnectorProvider;
   }
 }

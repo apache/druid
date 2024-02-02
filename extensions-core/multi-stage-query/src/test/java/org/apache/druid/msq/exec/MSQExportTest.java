@@ -53,8 +53,9 @@ public class MSQExportTest extends MSQTestBase
                                             .add("dim1", ColumnType.STRING)
                                             .add("cnt", ColumnType.LONG).build();
 
-    testIngestQuery().setSql(
-                         "insert into extern(" + TestExportStorageConnector.TYPE_NAME + "()) as csv select cnt, dim1 from foo")
+    final String sql = StringUtils.format("insert into extern(%s()) as csv select cnt, dim1 from foo", TestExportStorageConnector.TYPE_NAME);
+
+    testIngestQuery().setSql(sql)
                      .setExpectedDataSource("foo1")
                      .setQueryContext(DEFAULT_MSQ_CONTEXT)
                      .setExpectedRowSignature(rowSignature)
@@ -83,9 +84,9 @@ public class MSQExportTest extends MSQTestBase
     Map<String, Object> queryContext = new HashMap<>(DEFAULT_MSQ_CONTEXT);
     queryContext.put(MultiStageQueryContext.CTX_ROWS_PER_PAGE, 1);
 
-    testIngestQuery().setSql(
-                         StringUtils.format("insert into extern(localStorage(basePath='%s')) as csv select cnt, dim1 from foo", exportDir.getAbsolutePath())
-                     )
+    final String sql = StringUtils.format("insert into extern(local(basePath=>'%s')) as csv select cnt, dim1 from foo", exportDir.getAbsolutePath());
+
+    testIngestQuery().setSql(sql)
                      .setExpectedDataSource("foo1")
                      .setQueryContext(queryContext)
                      .setExpectedRowSignature(rowSignature)

@@ -130,11 +130,18 @@ SELECT
 FROM <table>
 ```
 
-Exporting is currently supported for Amazon S3 storage. This can be done passing the function `S3()` as an argument to the `EXTERN` function. The `druid-s3-extensions` should be loaded.
+Exporting is currently supported for Amazon S3 storage and local storage.
+
+##### S3
+
+Exporting results to S3 can be done by passing the function `S3()` as an argument to the `EXTERN` function. The `druid-s3-extensions` should be loaded.
+The `S3()` function is a druid function which configures the connection. Arguments to `S3()` should be passed as named parameters with the value in single quotes like the example below.
 
 ```sql
 INSERT INTO
-  EXTERN(S3(bucket=<...>, prefix=<...>, tempDir=<...>))
+  EXTERN(
+    S3(bucket => 's3://your_bucket', prefix => 'prefix/to/files', tempDir => '/tmp/export')
+  )
 AS CSV
 SELECT
   <column>
@@ -143,13 +150,38 @@ FROM <table>
 
 Supported arguments to the function:
 
-| Parameter   | Required | Description                                                                                                                                                                                                                                                                                | Default |
-|-------------|---------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| --|
-| `bucket`    | Yes | The S3 bucket to which the files are exported to.                                                                                                                                                                                                                                          | n/a |
-| `prefix`    | Yes | Path prepended to all the paths uploaded to the bucket to namespace the connector's files. Provide a unique value for the prefix and do not share the same prefix between different clusters. If the location includes other files or directories, then they might get cleaned up as well. | n/a |
-| `tempDir`   | Yes | Directory path on the local disk to store temporary files required while uploading the data                                                                                                                                                                                                | n/a |
-| `maxRetry`  | No | Defines the max number times to attempt S3 API calls to avoid failures due to transient errors.                                                                                                                                                                                            | 10 |
-| `chunkSize` | No | Defines the size of each chunk to temporarily store in `tempDir`. The chunk size must be between 5 MiB and 5 GiB. A large chunk size reduces the API calls to S3, however it requires more disk space to store the temporary chunks.                                                       | 100MiB |
+| Parameter   | Required | Description                                                                                                                                                                                                                          | Default |
+|-------------|---------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| --|
+| `bucket`    | Yes | The S3 bucket to which the files are exported to.                                                                                                                                                                                    | n/a |
+| `prefix`    | Yes | Path where the exported files would be created. If the location includes other files or directories, then they might get cleaned up as well.                                                                                         | n/a |
+| `tempDir`   | Yes | Directory path on the local disk to store temporary files required while uploading the data                                                                                                                                          | n/a |
+| `maxRetry`  | No | Defines the max number times to attempt S3 API calls to avoid failures due to transient errors.                                                                                                                                      | 10 |
+| `chunkSize` | No | Defines the size of each chunk to temporarily store in `tempDir`. The chunk size must be between 5 MiB and 5 GiB. A large chunk size reduces the API calls to S3, however it requires more disk space to store the temporary chunks. | 100MiB |
+
+##### LOCAL
+
+Exporting is also supported to the local storage, which exports the results to the filesystem of the MSQ worker.
+This is useful in a single node setup or for testing, and is not suitable for production use cases.
+
+This can be done by passing the function `LOCAL()` as an argument to the `EXTERN FUNCTION`.
+Arguments to `LOCAL()` should be passed as named parameters with the value in single quotes like the example below.
+
+```sql
+INSERT INTO
+  EXTERN(
+    local(basePath => '/tmp/exportLocation')
+  )
+AS CSV
+SELECT
+  <column>
+FROM <table>
+```
+
+Supported arguments to the function:
+
+| Parameter   | Required | Description                                                     | Default |
+|-------------|--------------------------------|-----------------------------------------------------------------| --|
+| `basePath`  | Yes | The file system path where the exported files would be created. If the location includes other files or directories, then they might get cleaned up as well.| n/a |
 
 For more information, see [Read external data with EXTERN](concepts.md#write-to-an-external-destination-with-extern).
 

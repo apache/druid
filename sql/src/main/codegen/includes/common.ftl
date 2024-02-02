@@ -122,19 +122,34 @@ String FileFormat() :
 SqlIdentifier ExternalDestination() :
 {
   final Span s;
-  SqlIdentifier destinationType;
+  SqlIdentifier destinationType = null;
+  String destinationTypeString = null;
   Map<String, String> properties = new HashMap();
 }
 {
-  destinationType = SimpleIdentifier() [ <LPAREN> [ properties = ExternProperties() ] <RPAREN>]
+ (
+  destinationType = SimpleIdentifier()
   {
-    s = span();
-    return new ExternalDestinationSqlIdentifier(
-      destinationType.toString(),
-      s.pos(),
-      properties
-    );
+    destinationTypeString = destinationType.toString();
   }
+  |
+  <LOCAL>
+  {
+    // local is a reserved keyword in calcite. However, local is also a supported input source / destination and
+    // keeping the name is preferred for consistency in other places, and so that permission checks are applied
+    // correctly, so this is handled as a special case.
+    destinationTypeString = "local";
+  }
+ )
+ [ <LPAREN> [ properties = ExternProperties() ] <RPAREN>]
+ {
+   s = span();
+   return new ExternalDestinationSqlIdentifier(
+     destinationTypeString,
+     s.pos(),
+     properties
+   );
+ }
 }
 
 Map<String, String> ExternProperties() :
@@ -147,14 +162,14 @@ Map<String, String> ExternProperties() :
 }
 {
   (
-    identifier = SimpleIdentifier() <EQ> value = SimpleStringLiteral()
+    identifier = SimpleIdentifier() <NAMED_ARGUMENT_ASSIGNMENT> value = SimpleStringLiteral()
     {
       properties.put(identifier.toString(), value);
     }
   )
   (
     <COMMA>
-    identifier = SimpleIdentifier() <EQ> value = SimpleStringLiteral()
+    identifier = SimpleIdentifier() <NAMED_ARGUMENT_ASSIGNMENT> value = SimpleStringLiteral()
     {
       properties.put(identifier.toString(), value);
     }

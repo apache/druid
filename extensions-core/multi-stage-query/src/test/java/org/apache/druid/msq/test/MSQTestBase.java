@@ -177,9 +177,9 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.sql.guice.SqlBindings;
 import org.apache.druid.storage.StorageConnector;
+import org.apache.druid.storage.StorageConnectorModule;
 import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.storage.local.LocalFileStorageConnector;
-import org.apache.druid.storage.local.LocalFileStorageConnectorProvider;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.PruneLoadSpec;
 import org.apache.druid.timeline.SegmentId;
@@ -514,10 +514,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
     objectMapper.registerModule(
         new SimpleModule(StorageConnector.class.getSimpleName())
             .registerSubtypes(
-                new NamedType(TestExportStorageConnectorProvider.class, TestExportStorageConnector.TYPE_NAME),
-                new NamedType(LocalFileStorageConnectorProvider.class, "localStorage")
+                new NamedType(TestExportStorageConnectorProvider.class, TestExportStorageConnector.TYPE_NAME)
             )
     );
+    objectMapper.registerModules(new StorageConnectorModule().getJacksonModules());
     objectMapper.registerModules(sqlModule.getJacksonModules());
 
     doReturn(mock(Request.class)).when(brokerClient).makeRequest(any(), anyString());
