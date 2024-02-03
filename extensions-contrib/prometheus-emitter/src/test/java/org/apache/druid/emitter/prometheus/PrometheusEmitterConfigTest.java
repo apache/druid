@@ -39,7 +39,7 @@ public class PrometheusEmitterConfigTest
 
     // Expect an exception thrown by our own PrometheusEmitterConfig due to invalid label key
     Exception exception = Assert.assertThrows(DruidException.class, () -> {
-      new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, null, null, 0, null, false, true, 60, extraLabels);
+      new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, null, null, 0, null, false, true, 60, extraLabels, false, null);
     });
 
     String expectedMessage = "Invalid metric label name [label Name]. Label names must conform to the pattern [[a-zA-Z_:][a-zA-Z0-9_:]*]";

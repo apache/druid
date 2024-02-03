@@ -121,25 +121,15 @@ The following properties are automatically set by the Coordinator:
 * `id`: Generated using the task type, datasource name, interval, and timestamp. The task ID is prefixed with `coordinator-issued`.
 * `context`: Set according to the user-provided `taskContext`.
 
-Compaction tasks typically fetch all [relevant segments](compaction.md#compaction-io-configuration) prior to launching any subtasks,
+Compaction tasks typically fetch all [relevant segments](manual-compaction.md#compaction-io-configuration) prior to launching any subtasks,
 _unless_ the following properties are all set to non-null values. It is strongly recommended to set them to non-null values to
 maximize performance and minimize disk usage of the `compact` tasks launched by auto-compaction:
 
-- [`granularitySpec`](compaction.md#compaction-granularity-spec), with non-null values for each of `segmentGranularity`, `queryGranularity`, and `rollup`
-- [`dimensionsSpec`](compaction.md#compaction-dimensions-spec)
+- [`granularitySpec`](manual-compaction.md#compaction-granularity-spec), with non-null values for each of `segmentGranularity`, `queryGranularity`, and `rollup`
+- [`dimensionsSpec`](manual-compaction.md#compaction-dimensions-spec)
 - `metricsSpec`
 
 For more details on each of the specs in an auto-compaction configuration, see [Automatic compaction dynamic configuration](../configuration/index.md#automatic-compaction-dynamic-configuration).
-
-### Avoid conflicts with ingestion
-
-Compaction tasks may be interrupted when they interfere with ingestion. For example, this occurs when an ingestion task needs to write data to a segment for a time interval locked for compaction. If there are continuous failures that prevent compaction from making progress, consider one of the following strategies:
-* Set `skipOffsetFromLatest` to reduce the chance of conflicts between ingestion and compaction. See more details in this section below.
-* Increase the priority value of compaction tasks relative to ingestion tasks. Only recommended for advanced users. This approach can cause ingestion jobs to fail or lag. To change the priority of compaction tasks, set `taskPriority` to the desired priority value in the auto-compaction configuration. For details on the priority values of different task types, see [Lock priority](../ingestion/tasks.md#lock-priority).
-
-The Coordinator compacts segments from newest to oldest. In the auto-compaction configuration, you can set a time period, relative to the end time of the most recent segment, for segments that should not be compacted. Assign this value to `skipOffsetFromLatest`. Note that this offset is not relative to the current time but to the latest segment time. For example, if you want to skip over segments from five days prior to the end time of the most recent segment, assign `"skipOffsetFromLatest": "P5D"`.
-
-To set `skipOffsetFromLatest`, consider how frequently you expect the stream to receive late arriving data. If your stream only occasionally receives late arriving data, the auto-compaction system robustly compacts your data even though data is ingested outside the `skipOffsetFromLatest` window. For most realtime streaming ingestion use cases, it is reasonable to set `skipOffsetFromLatest` to a few hours or a day.
 
 ### Set frequency of compaction runs
 
@@ -152,6 +142,34 @@ druid.coordinator.compaction.duties=["compactSegments"]
 druid.coordinator.compaction.period=PT60S
 ```
 
+## Avoid conflicts with ingestion
+
+Compaction tasks may be interrupted when they interfere with ingestion. For example, this occurs when an ingestion task needs to write data to a segment for a time interval locked for compaction. If there are continuous failures that prevent compaction from making progress, consider one of the following strategies:
+
+* Enable [concurrent append and replace tasks](#enable-concurrent-append-and-replace) on your datasource and on the ingestion tasks.
+* Set `skipOffsetFromLatest` to reduce the chance of conflicts between ingestion and compaction. See more details in [Skip compaction for latest segments](#skip-compaction-for-latest-segments).
+* Increase the priority value of compaction tasks relative to ingestion tasks. Only recommended for advanced users. This approach can cause ingestion jobs to fail or lag. To change the priority of compaction tasks, set `taskPriority` to the desired priority value in the auto-compaction configuration. For details on the priority values of different task types, see [Lock priority](../ingestion/tasks.md#lock-priority).
+
+### Enable concurrent append and replace
+
+You can use concurrent append and replace to safely replace the existing data in an interval of a datasource while new data is being appended to that interval even during compaction.
+
+To do this, you need to update your datasource to allow concurrent append and replace tasks:
+
+* If you're using the API, include the following `taskContext` property in your API call: `"useConcurrentLocks": true`
+* If you're using the UI, enable **Allow concurrent compactions (experimental)** in the **Compaction config** for your datasource.
+
+You'll also need to update your ingestion jobs for the datasource to include the task context `"useConcurrentLocks": true`.
+
+For information on how to do this, see [Concurrent append and replace](../ingestion/concurrent-append-replace.md).
+
+### Skip compaction for latest segments
+
+The Coordinator compacts segments from newest to oldest. In the auto-compaction configuration, you can set a time period, relative to the end time of the most recent segment, for segments that should not be compacted. Assign this value to `skipOffsetFromLatest`. Note that this offset is not relative to the current time but to the latest segment time. For example, if you want to skip over segments from five days prior to the end time of the most recent segment, assign `"skipOffsetFromLatest": "P5D"`.
+
+To set `skipOffsetFromLatest`, consider how frequently you expect the stream to receive late arriving data. If your stream only occasionally receives late arriving data, the auto-compaction system robustly compacts your data even though data is ingested outside the `skipOffsetFromLatest` window. For most realtime streaming ingestion use cases, it is reasonable to set `skipOffsetFromLatest` to a few hours or a day.
+
+
 ## View automatic compaction statistics
 
 After the Coordinator has initiated auto-compaction, you can view compaction statistics for the datasource, including the number of bytes, segments, and intervals already compacted and those awaiting compaction. The Coordinator also reports the total bytes, segments, and intervals not eligible for compaction in accordance with its [segment search policy](../design/coordinator.md#segment-search-policy-in-automatic-compaction).
@@ -162,7 +180,7 @@ To get statistics by API, send a [`GET` request](../api-reference/automatic-comp
 
 ## Examples
 
-The following examples demonstrate potential use cases in which auto-compaction may improve your Druid performance. See more details in [Compaction strategies](../data-management/compaction.md#compaction-strategies). The examples in this section do not change the underlying data.
+The following examples demonstrate potential use cases in which auto-compaction may improve your Druid performance. See more details in [Compaction strategies](../data-management/compaction.md#compaction-guidelines). The examples in this section do not change the underlying data.
 
 ### Change segment granularity
 
@@ -206,7 +224,8 @@ The following auto-compaction configuration compacts updates the `wikipedia` seg
 ## Learn more
 
 See the following topics for more information:
-* [Compaction](compaction.md) for an overview of compaction and how to set up manual compaction in Druid.
+* [Compaction](compaction.md) for an overview of compaction in Druid.
+* [Manual compaction](manual-compaction.md) for how to manually perform compaction tasks.
 * [Segment optimization](../operations/segment-optimization.md) for guidance on evaluating and optimizing Druid segment size.
 * [Coordinator process](../design/coordinator.md#automatic-compaction) for details on how the Coordinator plans compaction tasks.
 

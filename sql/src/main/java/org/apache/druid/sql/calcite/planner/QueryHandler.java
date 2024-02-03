@@ -239,6 +239,17 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       if (de != null) {
         throw de;
       }
+
+      // Exceptions during rule evaluations could be wrapped inside a RuntimeException by VolcanoRuleCall class.
+      // This block will extract a user-friendly message from the exception chain. 
+      if (e.getMessage() != null
+          && e.getCause() != null
+          && e.getCause().getMessage() != null
+          && e.getMessage().startsWith("Error while applying rule")) {
+        throw DruidException.forPersona(DruidException.Persona.ADMIN)
+                            .ofCategory(DruidException.Category.UNCATEGORIZED)
+                            .build(e, "%s", e.getCause().getMessage());
+      }
       throw DruidPlanner.translateException(e);
     }
     catch (Exception e) {
@@ -681,9 +692,6 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
   private DruidException buildSQLPlanningError(RelOptPlanner.CannotPlanException exception)
   {
     String errorMessage = handlerContext.plannerContext().getPlanningError();
-    if (null == errorMessage && exception instanceof UnsupportedSQLQueryException) {
-      errorMessage = exception.getMessage();
-    }
     if (errorMessage == null) {
       throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                           .ofCategory(DruidException.Category.UNSUPPORTED)
@@ -696,7 +704,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build(
                               exception,
-                              "Query planning failed for unknown reason, our best guess is this [%s]",
+                              "Query could not be planned. A possible reason is [%s]",
                               errorMessage
                           );
     }

@@ -72,7 +72,7 @@ public class KafkaEmitterTest
   public void testKafkaEmitter() throws InterruptedException
   {
     final List<ServiceMetricEvent> serviceMetricEvents = ImmutableList.of(
-        ServiceMetricEvent.builder().build("m1", 1).build("service", "host")
+        ServiceMetricEvent.builder().setMetric("m1", 1).build("service", "host")
     );
 
     final List<AlertEvent> alertEvents = ImmutableList.of(
@@ -106,7 +106,7 @@ public class KafkaEmitterTest
     ObjectMapper mapper = new ObjectMapper();
     mapper.registerModule(new JodaModule());
     final KafkaEmitter kafkaEmitter = new KafkaEmitter(
-        new KafkaEmitterConfig("", eventsType, "metrics", "alerts", requestTopic, "metadata", "test-cluster", null),
+        new KafkaEmitterConfig("", eventsType, "metrics", "alerts", requestTopic, "metadata", "test-cluster", null, null),
         mapper
     )
     {
@@ -139,6 +139,8 @@ public class KafkaEmitterTest
       kafkaEmitter.emit(event);
     }
     countDownSentEvents.await();
+
+    kafkaEmitter.close();
 
     Assert.assertEquals(0, kafkaEmitter.getMetricLostCount());
     Assert.assertEquals(0, kafkaEmitter.getAlertLostCount());

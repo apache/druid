@@ -333,9 +333,9 @@ public class OrcReaderTest extends InitializedNullHandlingTest
         new TimestampSpec("ts", "millis", null),
         new DimensionsSpec(
             ImmutableList.of(
-                new AutoTypeColumnSchema("middle"),
-                new AutoTypeColumnSchema("list"),
-                new AutoTypeColumnSchema("map")
+                new AutoTypeColumnSchema("middle", null),
+                new AutoTypeColumnSchema("list", null),
+                new AutoTypeColumnSchema("map", null)
             )
         ),
         inputFormat,
@@ -542,8 +542,8 @@ public class OrcReaderTest extends InitializedNullHandlingTest
         new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(
             ImmutableList.of(
-                new AutoTypeColumnSchema("a"),
-                new AutoTypeColumnSchema("b")
+                new AutoTypeColumnSchema("a", null),
+                new AutoTypeColumnSchema("b", null)
             )
         ),
         inputFormat,
@@ -608,11 +608,11 @@ public class OrcReaderTest extends InitializedNullHandlingTest
         new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(
             ImmutableList.of(
-                new AutoTypeColumnSchema("a"),
-                new AutoTypeColumnSchema("b"),
-                new AutoTypeColumnSchema("c"),
-                new AutoTypeColumnSchema("d"),
-                new AutoTypeColumnSchema("t_d_0")
+                new AutoTypeColumnSchema("a", null),
+                new AutoTypeColumnSchema("b", null),
+                new AutoTypeColumnSchema("c", null),
+                new AutoTypeColumnSchema("d", null),
+                new AutoTypeColumnSchema("t_d_0", null)
             )
         ),
         inputFormat,

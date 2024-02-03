@@ -36,7 +36,11 @@ public abstract class FloatColumnAccessorBase implements ColumnAccessor
   @Override
   public Object getObject(int rowNum)
   {
-    return getFloat(rowNum);
+    if (isNull(rowNum)) {
+      return null;
+    } else {
+      return getFloat(rowNum);
+    }
   }
 
   @Override

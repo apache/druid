@@ -121,13 +121,13 @@ public class KubernetesPeonClient
                                                                  .withName(taskId.getK8sJobName())
                                                                  .delete().isEmpty());
       if (result) {
-        log.info("Cleaned up k8s task: %s", taskId);
+        log.info("Cleaned up k8s job: %s", taskId);
       } else {
-        log.info("K8s task does not exist: %s", taskId);
+        log.info("K8s job does not exist: %s", taskId);
       }
       return result;
     } else {
-      log.info("Not cleaning up task %s due to flag: debugJobs=true", taskId);
+      log.info("Not cleaning up job %s due to flag: debugJobs=true", taskId);
       return true;
     }
   }
@@ -271,6 +271,6 @@ public class KubernetesPeonClient
   {
     ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
     IndexTaskUtils.setTaskDimensions(metricBuilder, task);
-    emitter.emit(metricBuilder.build(metric, durationMs));
+    emitter.emit(metricBuilder.setMetric(metric, durationMs));
   }
 }

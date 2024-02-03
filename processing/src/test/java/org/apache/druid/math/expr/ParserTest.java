@@ -38,6 +38,7 @@ import org.junit.rules.ExpectedException;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -820,7 +821,7 @@ public class ParserTest extends InitializedNullHandlingTest
     }
     final Expr.BindingAnalysis deets = parsed.analyzeInputs();
     Assert.assertEquals(expression, expected, parsed.toString());
-    Assert.assertEquals(expression, identifiers, deets.getRequiredBindingsList());
+    Assert.assertEquals(expression, new HashSet<>(identifiers), deets.getRequiredBindings());
     Assert.assertEquals(expression, scalars, deets.getScalarVariables());
     Assert.assertEquals(expression, arrays, deets.getArrayVariables());
 
@@ -828,7 +829,7 @@ public class ParserTest extends InitializedNullHandlingTest
     final Expr roundTrip = Parser.parse(parsedNoFlatten.stringify(), ExprMacroTable.nil());
     Assert.assertEquals(parsed.stringify(), roundTrip.stringify());
     final Expr.BindingAnalysis roundTripDeets = roundTrip.analyzeInputs();
-    Assert.assertEquals(expression, identifiers, roundTripDeets.getRequiredBindingsList());
+    Assert.assertEquals(expression, new HashSet<>(identifiers), roundTripDeets.getRequiredBindings());
     Assert.assertEquals(expression, scalars, roundTripDeets.getScalarVariables());
     Assert.assertEquals(expression, arrays, roundTripDeets.getArrayVariables());
   }

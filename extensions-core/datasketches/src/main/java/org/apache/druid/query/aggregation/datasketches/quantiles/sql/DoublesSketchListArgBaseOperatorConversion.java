@@ -40,7 +40,6 @@ import org.apache.calcite.util.Static;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.sql.calcite.expression.BasicOperandTypeChecker;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.PostAggregatorVisitor;
@@ -143,8 +142,8 @@ public abstract class DoublesSketchListArgBaseOperatorConversion implements SqlO
         final RelDataType operandType = callBinding.getValidator().deriveType(callBinding.getScope(), operand);
 
         // Verify that 'operand' is a literal number.
-        if (!SqlUtil.isLiteral(operand)) {
-          return BasicOperandTypeChecker.throwOrReturn(
+        if (!SqlUtil.isLiteral(operand, true)) {
+          return OperatorConversions.throwOrReturn(
               throwOnFailure,
               callBinding,
               cb -> cb.getValidator()
@@ -156,7 +155,7 @@ public abstract class DoublesSketchListArgBaseOperatorConversion implements SqlO
         }
 
         if (!SqlTypeFamily.NUMERIC.contains(operandType)) {
-          return BasicOperandTypeChecker.throwOrReturn(
+          return OperatorConversions.throwOrReturn(
               throwOnFailure,
               callBinding,
               SqlCallBinding::newValidationSignatureError

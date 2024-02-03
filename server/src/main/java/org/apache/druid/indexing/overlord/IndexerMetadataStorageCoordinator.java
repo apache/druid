@@ -20,9 +20,11 @@
 package org.apache.druid.indexing.overlord;
 
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.PartialShardSpec;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -81,8 +83,9 @@ public interface IndexerMetadataStorageCoordinator
   Collection<DataSegment> retrieveAllUsedSegments(String dataSource, Segments visibility);
 
   /**
+   *
    * Retrieve all published segments which are marked as used and the created_date of these segments belonging to the
-   * given data source from the metadata store.
+   * given data source and list of intervals from the metadata store.
    *
    * Unlike other similar methods in this interface, this method doesn't accept a {@link Segments} "visibility"
    * parameter. The returned collection may include overshadowed segments and their created_dates, as if {@link
@@ -90,10 +93,11 @@ public interface IndexerMetadataStorageCoordinator
    * if needed.
    *
    * @param dataSource The data source to query
+   * @param intervals The list of interval to query
    *
    * @return The DataSegments and the related created_date of segments
    */
-  Collection<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource);
+  Collection<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource, List<Interval> intervals);
 
   /**
    * Retrieve all published segments which may include any data in the given intervals and are marked as used from the
@@ -124,20 +128,16 @@ public interface IndexerMetadataStorageCoordinator
   );
 
   /**
-   * see {@link #retrieveUnusedSegmentsForInterval(String, Interval, Integer)}
-   */
-  default List<DataSegment> retrieveUnusedSegmentsForInterval(String dataSource, Interval interval)
-  {
-    return retrieveUnusedSegmentsForInterval(dataSource, interval, null);
-  }
-
-  /**
    * Retrieve all published segments which include ONLY data within the given interval and are marked as unused from the
    * metadata store.
    *
    * @param dataSource  The data source the segments belong to
    * @param interval    Filter the data segments to ones that include data in this interval exclusively.
    * @param limit The maximum number of unused segments to retreive. If null, no limit is applied.
+   * @param maxUsedStatusLastUpdatedTime The maximum {@code used_status_last_updated} time. Any unused segment in {@code interval}
+   *                                   with {@code used_status_last_updated} no later than this time will be included in the
+   *                                   kill task. Segments without {@code used_status_last_updated} time (due to an upgrade
+   *                                   from legacy Druid) will have {@code maxUsedStatusLastUpdatedTime} ignored
    *
    * @return DataSegments which include ONLY data within the requested interval and are marked as unused. Segments NOT
    * returned here may include data in the interval
@@ -145,7 +145,8 @@ public interface IndexerMetadataStorageCoordinator
   List<DataSegment> retrieveUnusedSegmentsForInterval(
       String dataSource,
       Interval interval,
-      @Nullable Integer limit
+      @Nullable Integer limit,
+      @Nullable DateTime maxUsedStatusLastUpdatedTime
   );
 
   /**
@@ -166,7 +167,7 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @return set of segments actually added
    */
-  Set<DataSegment> announceHistoricalSegments(Set<DataSegment> segments) throws IOException;
+  Set<DataSegment> commitSegments(Set<DataSegment> segments) throws IOException;
 
   /**
    * Allocates pending segments for the given requests in the pending segments table.
@@ -254,7 +255,7 @@ public interface IndexerMetadataStorageCoordinator
    * commit metadata.
    *
    * If segmentsToDrop is not null and not empty, this insertion will be atomic with a insert-and-drop on inserting
-   * {@param segments} and dropping {@param segmentsToDrop}
+   * {@param segments} and dropping {@param segmentsToDrop}.
    *
    * @param segments       set of segments to add, must all be from the same dataSource
    * @param startMetadata  dataSource metadata pre-insert must match this startMetadata according to
@@ -271,11 +272,87 @@ public interface IndexerMetadataStorageCoordinator
    * @throws IllegalArgumentException if startMetadata and endMetadata are not either both null or both non-null
    * @throws RuntimeException         if the state of metadata storage after this call is unknown
    */
-  SegmentPublishResult announceHistoricalSegments(
+  SegmentPublishResult commitSegmentsAndMetadata(
       Set<DataSegment> segments,
       @Nullable DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata
   ) throws IOException;
+
+  /**
+   * Commits segments created by an APPEND task. This method also handles segment
+   * upgrade scenarios that may result from concurrent append and replace.
+   * <ul>
+   * <li>If a REPLACE task committed a segment that overlaps with any of the
+   * appendSegments while this APPEND task was in progress, the appendSegments
+   * are upgraded to the version of the replace segment.</li>
+   * <li>If an appendSegment is covered by a currently active REPLACE lock, then
+   * an entry is created for it in the upgrade_segments table, so that when the
+   * REPLACE task finishes, it can upgrade the appendSegment as required.</li>
+   * </ul>
+   *
+   * @param appendSegments             All segments created by an APPEND task that
+   *                                   must be committed in a single transaction.
+   * @param appendSegmentToReplaceLock Map from append segment to the currently
+   *                                   active REPLACE lock (if any) covering it
+   */
+  SegmentPublishResult commitAppendSegments(
+      Set<DataSegment> appendSegments,
+      Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock
+  );
+
+  /**
+   * Commits segments created by an APPEND task. This method also handles segment
+   * upgrade scenarios that may result from concurrent append and replace. Also
+   * commits start and end {@link DataSourceMetadata}.
+   *
+   * @see #commitAppendSegments
+   * @see #commitSegmentsAndMetadata
+   */
+  SegmentPublishResult commitAppendSegmentsAndMetadata(
+      Set<DataSegment> appendSegments,
+      Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
+      DataSourceMetadata startMetadata,
+      DataSourceMetadata endMetadata
+  );
+
+  /**
+   * Commits segments created by a REPLACE task. This method also handles the
+   * segment upgrade scenarios that may result from concurrent append and replace.
+   * <ul>
+   * <li>If an APPEND task committed a segment to an interval locked by this task,
+   * the append segment is upgraded to the version of the corresponding lock.
+   * This is done with the help of entries created in the upgrade_segments table
+   * in {@link #commitAppendSegments}</li>
+   * </ul>
+   *
+   * @param replaceSegments        All segments created by a REPLACE task that
+   *                               must be committed in a single transaction.
+   * @param locksHeldByReplaceTask All active non-revoked REPLACE locks held by the task
+   */
+  SegmentPublishResult commitReplaceSegments(
+      Set<DataSegment> replaceSegments,
+      Set<ReplaceTaskLock> locksHeldByReplaceTask
+  );
+
+  /**
+   * Creates and inserts new IDs for the pending segments hat overlap with the given
+   * replace segments being committed. The newly created pending segment IDs:
+   * <ul>
+   * <li>Have the same interval and version as that of an overlapping segment
+   * committed by the REPLACE task.</li>
+   * <li>Cannot be committed but are only used to serve realtime queries against
+   * those versions.</li>
+   * </ul>
+   *
+   * @param replaceSegments Segments being committed by a REPLACE task
+   * @param activeRealtimeSequencePrefixes Set of sequence prefixes of active and pending completion task groups
+   *                                       of the supervisor (if any) for this datasource
+   * @return Map from originally allocated pending segment to its new upgraded ID.
+   */
+  Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradePendingSegmentsOverlappingWith(
+      Set<DataSegment> replaceSegments,
+      Set<String> activeRealtimeSequencePrefixes
+  );
 
   /**
    * Retrieves data source's metadata from the metadata store. Returns null if there is no metadata.
@@ -321,11 +398,11 @@ public interface IndexerMetadataStorageCoordinator
   int removeDataSourceMetadataOlderThan(long timestamp, @NotNull Set<String> excludeDatasources);
 
   /**
-   * Similar to {@link #announceHistoricalSegments(Set)}, but meant for streaming ingestion tasks for handling
+   * Similar to {@link #commitSegments}, but meant for streaming ingestion tasks for handling
    * the case where the task ingested no records and created no segments, but still needs to update the metadata
    * with the progress that the task made.
    *
-   * The metadata should undergo the same validation checks as performed by {@link #announceHistoricalSegments}.
+   * The metadata should undergo the same validation checks as performed by {@link #commitSegments}.
    *
    *
    * @param dataSource the datasource
@@ -354,14 +431,21 @@ public interface IndexerMetadataStorageCoordinator
   /**
    * Retrieve the segment for a given id from the metadata store. Return null if no such segment exists
    * <br>
-   * If includeUnused is set, this also returns unused segments. Unused segments could be deleted by a kill task at any
-   * time and might lead to unexpected behaviour. This option exists mainly to provide a consistent view of the metadata,
-   * for example, in calls from MSQ controller and worker and would generally not be requrired.
+   * If {@code includeUnused} is set, the segment {@code id} retrieval should also consider the set of unused segments
+   * in the metadata store. Unused segments could be deleted by a kill task at any time and might lead to unexpected behaviour.
+   * This option exists mainly to provide a consistent view of the metadata, for example, in calls from MSQ controller
+   * and worker and would generally not be required.
    *
-   * @param id The segment id
+   * @param id The segment id to retrieve
    *
    * @return DataSegment used segment corresponding to given id
    */
   DataSegment retrieveSegmentForId(String id, boolean includeUnused);
 
+  /**
+   * Delete entries from the upgrade segments table after the corresponding replace task has ended
+   * @param taskId - id of the task with replace locks
+   * @return number of deleted entries from the metadata store
+   */
+  int deleteUpgradeSegmentsForTask(String taskId);
 }

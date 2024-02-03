@@ -35,12 +35,10 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.emitter.core.Event;
-import org.apache.druid.java.util.emitter.core.LoggingEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.java.util.http.client.response.SequenceInputStreamResponseHandler;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.lookup.LookupsState;
 import org.apache.druid.server.http.HostAndPortWithScheme;
 import org.easymock.EasyMock;
@@ -48,9 +46,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import javax.ws.rs.core.Response;
 import java.io.ByteArrayInputStream;
@@ -61,13 +57,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class LookupCoordinatorManagerTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
   private final ObjectMapper mapper = new DefaultObjectMapper();
   private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createStrictMock(DruidNodeDiscoveryProvider.class);
   private final LookupNodeDiscovery lookupNodeDiscovery = EasyMock.createStrictMock(
@@ -111,31 +104,20 @@ public class LookupCoordinatorManagerTest
       Collections.emptySet()
   );
 
-  private static final AtomicLong EVENT_EMITS = new AtomicLong(0L);
-  private static ServiceEmitter SERVICE_EMITTER;
+  private final AuditInfo auditInfo = new AuditInfo("author", "identify", "comment", "127.0.0.1");
+  private static StubServiceEmitter SERVICE_EMITTER;
 
   @BeforeClass
   public static void setUpStatic()
   {
-    LoggingEmitter loggingEmitter = EasyMock.createNiceMock(LoggingEmitter.class);
-    EasyMock.replay(loggingEmitter);
-    SERVICE_EMITTER = new ServiceEmitter("", "", loggingEmitter)
-    {
-      @Override
-      public void emit(Event event)
-      {
-        EVENT_EMITS.incrementAndGet();
-        super.emit(event);
-      }
-    };
+    SERVICE_EMITTER = new StubServiceEmitter("", "");
     EmittingLogger.registerEmitter(SERVICE_EMITTER);
   }
 
   @Before
-  public void setUp() throws IOException
+  public void setUp()
   {
     SERVICE_EMITTER.flush();
-    EVENT_EMITS.set(0L);
 
     EasyMock.reset(lookupNodeDiscovery);
 
@@ -146,26 +128,22 @@ public class LookupCoordinatorManagerTest
             EasyMock.<TypeReference>anyObject(),
             EasyMock.<AtomicReference>isNull()
         )
-    ).andReturn(
-        new AtomicReference<>(null)
-    ).anyTimes();
+    ).andReturn(new AtomicReference<>(null)).anyTimes();
     EasyMock.expect(
         configManager.watch(
             EasyMock.eq(LookupCoordinatorManager.OLD_LOOKUP_CONFIG_KEY),
             EasyMock.<TypeReference>anyObject(),
             EasyMock.<AtomicReference>isNull()
         )
-    ).andReturn(
-        new AtomicReference<>(null)
-    ).anyTimes();
+    ).andReturn(new AtomicReference<>(null)).anyTimes();
     EasyMock.replay(configManager);
   }
 
   @After
-  public void tearDown() throws IOException
+  public void tearDown()
   {
+    Assert.assertEquals(0, SERVICE_EMITTER.getEvents().size());
     SERVICE_EMITTER.flush();
-    Assert.assertEquals(0, EVENT_EMITS.get());
   }
 
   @Test
@@ -545,9 +523,7 @@ public class LookupCoordinatorManagerTest
       }
     };
     manager.start();
-    final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
-    expectedException.expect(ISE.class);
-    manager.updateLookups(TIERED_LOOKUP_MAP_V0, auditInfo);
+    Assert.assertThrows(ISE.class, () -> manager.updateLookups(TIERED_LOOKUP_MAP_V0, auditInfo));
   }
 
   @Test
@@ -569,7 +545,6 @@ public class LookupCoordinatorManagerTest
     };
     manager.start();
 
-    final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
     EasyMock.reset(configManager);
     EasyMock.expect(
         configManager.set(
@@ -601,7 +576,6 @@ public class LookupCoordinatorManagerTest
     };
     manager.start();
 
-    final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
     EasyMock.reset(configManager);
     EasyMock.expect(configManager.set(
                         EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
@@ -621,7 +595,6 @@ public class LookupCoordinatorManagerTest
         ImmutableMap.of("prop", "old")
     );
 
-    final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
     final LookupCoordinatorManager manager = new LookupCoordinatorManager(
         client,
         druidNodeDiscoveryProvider,
@@ -683,7 +656,6 @@ public class LookupCoordinatorManagerTest
         "v0",
         ImmutableMap.of("prop", "old")
     );
-    final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
     final LookupCoordinatorManager manager = new LookupCoordinatorManager(
         client,
         druidNodeDiscoveryProvider,
@@ -754,7 +726,6 @@ public class LookupCoordinatorManagerTest
       }
     };
     manager.start();
-    final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
     EasyMock.reset(configManager);
     EasyMock.expect(configManager.set(
                         EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
@@ -784,7 +755,6 @@ public class LookupCoordinatorManagerTest
       }
     };
     manager.start();
-    final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
 
     try {
       manager.updateLookups(TIERED_LOOKUP_MAP_V0, auditInfo);
@@ -802,7 +772,6 @@ public class LookupCoordinatorManagerTest
         ImmutableMap.of("prop", "old")
     );
 
-    final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
     final LookupCoordinatorManager manager = new LookupCoordinatorManager(
         client,
         druidNodeDiscoveryProvider,
@@ -876,7 +845,6 @@ public class LookupCoordinatorManagerTest
       }
     };
     manager.start();
-    final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
     EasyMock.reset(configManager);
     EasyMock.expect(
         configManager.set(
@@ -922,7 +890,6 @@ public class LookupCoordinatorManagerTest
       }
     };
     manager.start();
-    final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
     EasyMock.reset(configManager);
     EasyMock.expect(
         configManager.set(
@@ -967,7 +934,6 @@ public class LookupCoordinatorManagerTest
       }
     };
     manager.start();
-    final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
     EasyMock.reset(configManager);
     EasyMock.expect(
         configManager.set(
@@ -1008,7 +974,6 @@ public class LookupCoordinatorManagerTest
       }
     };
     manager.start();
-    final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
     Assert.assertFalse(manager.deleteLookup(LOOKUP_TIER, "foo", auditInfo));
   }
 
@@ -1030,7 +995,6 @@ public class LookupCoordinatorManagerTest
       }
     };
     manager.start();
-    final AuditInfo auditInfo = new AuditInfo("author", "comment", "localhost");
     Assert.assertFalse(manager.deleteLookup(LOOKUP_TIER, "foo", auditInfo));
   }
 

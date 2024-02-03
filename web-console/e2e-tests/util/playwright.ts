@@ -19,8 +19,8 @@
 import * as playwright from 'playwright-chromium';
 
 const TRUE = 'true';
-const WIDTH = 1920;
-const HEIGHT = 1080;
+const WIDTH = 1250;
+const HEIGHT = 760;
 const PADDING = 128;
 
 export async function createBrowser(): Promise<playwright.Browser> {
@@ -40,6 +40,25 @@ export async function createPage(browser: playwright.Browser): Promise<playwrigh
   const context = await browser.newContext();
   const page = await context.newPage();
   await page.setViewportSize({ width: WIDTH, height: HEIGHT });
+
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+  page.on('response', async response => {
+    if (response.status() < 400) return;
+
+    const request = response.request();
+    let bodyText: string;
+    try {
+      bodyText = await response.text();
+    } catch (e) {
+      bodyText = `Could not get the body of the error message due to: ${e.message}`;
+    }
+
+    console.log(`==============================================`);
+    console.log(`Request failed on ${request.url()} (with status ${response.status()})`);
+    console.log(`Body: ${bodyText}`);
+    console.log(`==============================================`);
+  });
+
   return page;
 }
 

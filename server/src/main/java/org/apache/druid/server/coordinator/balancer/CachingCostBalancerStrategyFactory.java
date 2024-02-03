@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
 
@@ -94,6 +95,12 @@ public class CachingCostBalancerStrategyFactory extends BalancerStrategyFactory
           public ServerView.CallbackAction segmentViewInitialized()
           {
             initialized.countDown();
+            return ServerView.CallbackAction.CONTINUE;
+          }
+
+          @Override
+          public ServerView.CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
+          {
             return ServerView.CallbackAction.CONTINUE;
           }
         }

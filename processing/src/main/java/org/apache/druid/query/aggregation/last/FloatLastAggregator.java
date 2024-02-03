@@ -19,30 +19,37 @@
 
 package org.apache.druid.query.aggregation.last;
 
-import org.apache.druid.collections.SerializablePair;
-import org.apache.druid.segment.BaseFloatColumnValueSelector;
+import org.apache.druid.query.aggregation.SerializablePairLongFloat;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
+import org.apache.druid.segment.ColumnValueSelector;
 
-public class FloatLastAggregator extends NumericLastAggregator<BaseFloatColumnValueSelector>
+public class FloatLastAggregator extends NumericLastAggregator
 {
   float lastValue;
 
-  public FloatLastAggregator(BaseLongColumnValueSelector timeSelector, BaseFloatColumnValueSelector valueSelector)
+  public FloatLastAggregator(BaseLongColumnValueSelector timeSelector, ColumnValueSelector valueSelector, boolean needsFoldCheck)
   {
-    super(timeSelector, valueSelector);
+    super(timeSelector, valueSelector, needsFoldCheck);
     lastValue = 0;
   }
 
   @Override
-  void setCurrentValue()
+  void setLastValue()
   {
     lastValue = valueSelector.getFloat();
   }
 
   @Override
+  void setLastValue(Number lastValue)
+  {
+    this.lastValue = lastValue.floatValue();
+  }
+
+
+  @Override
   public Object get()
   {
-    return new SerializablePair<>(lastTime, rhsNull ? null : lastValue);
+    return new SerializablePairLongFloat(lastTime, rhsNull ? null : lastValue);
   }
 
   @Override

@@ -664,21 +664,23 @@ public class ControllerQueryKernel
    */
   public List<WorkOrder> getWorkInCaseWorkerEligibleForRetryElseThrow(int workerNumber, MSQFault msqFault)
   {
+    if (isRetriableFault(msqFault)) {
+      return getWorkInCaseWorkerEligibleForRetry(workerNumber);
+    } else {
+      throw new MSQException(msqFault);
+    }
+  }
 
+  public static boolean isRetriableFault(MSQFault msqFault)
+  {
     final String errorCode;
     if (msqFault instanceof WorkerFailedFault) {
       errorCode = MSQFaultUtils.getErrorCodeFromMessage((((WorkerFailedFault) msqFault).getErrorMsg()));
     } else {
       errorCode = msqFault.getErrorCode();
     }
-
-    log.info("Parsed out errorCode[%s] to check eligibility for retry", errorCode);
-
-    if (RETRIABLE_ERROR_CODES.contains(errorCode)) {
-      return getWorkInCaseWorkerEligibleForRetry(workerNumber);
-    } else {
-      throw new MSQException(msqFault);
-    }
+    log.debug("Parsed out errorCode[%s] to check eligibility for retry", errorCode);
+    return RETRIABLE_ERROR_CODES.contains(errorCode);
   }
 
   /**
@@ -781,5 +783,19 @@ public class ControllerQueryKernel
   public boolean allPartialKeyInformationPresent(StageId stageId)
   {
     return getStageKernelOrThrow(stageId).allPartialKeyInformationFetched();
+  }
+
+  /**
+   * @return {@code true} if the stage output is empty, {@code false} if the stage output is non-empty,
+   * or {@code null} for stages where cluster key statistics are not gathered or is incomplete
+   */
+  @Nullable
+  public Boolean isStageOutputEmpty(final StageId stageId)
+  {
+    final CompleteKeyStatisticsInformation completeKeyStatistics = getCompleteKeyStatisticsInformation(stageId);
+    if (completeKeyStatistics == null || !completeKeyStatistics.isComplete()) {
+      return null;
+    }
+    return completeKeyStatistics.getTimeSegmentVsWorkerMap().size() == 0;
   }
 }

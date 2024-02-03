@@ -21,24 +21,18 @@ package org.apache.druid.segment.index;
 
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.query.BitmapResultFactory;
-import org.apache.druid.segment.filter.Filters;
 
 /**
  * {@link SimpleBitmapColumnIndex} for anything which can compute an {@link Iterable<ImmutableBitmap>} in some manner
  */
 public abstract class SimpleImmutableBitmapIterableIndex extends SimpleBitmapColumnIndex
 {
-  @Override
-  public double estimateSelectivity(int totalRows)
-  {
-    return Filters.estimateSelectivity(getBitmapIterable().iterator(), totalRows);
-  }
 
   @Override
-  public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+  public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
   {
-    return bitmapResultFactory.unionDimensionValueBitmaps(getBitmapIterable());
+    return bitmapResultFactory.unionDimensionValueBitmaps(getBitmapIterable(includeUnknown));
   }
 
-  protected abstract Iterable<ImmutableBitmap> getBitmapIterable();
+  protected abstract Iterable<ImmutableBitmap> getBitmapIterable(boolean includeUnknown);
 }

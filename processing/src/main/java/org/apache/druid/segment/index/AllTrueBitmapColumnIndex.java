@@ -40,13 +40,7 @@ public class AllTrueBitmapColumnIndex implements BitmapColumnIndex
   }
 
   @Override
-  public double estimateSelectivity(int totalRows)
-  {
-    return 1;
-  }
-
-  @Override
-  public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+  public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
   {
     return bitmapResultFactory.wrapAllTrue(
         selector.getBitmapFactory()

@@ -21,22 +21,29 @@ package org.apache.druid.query.aggregation.first;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import org.apache.druid.collections.SerializablePair;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.SerializablePairLongLong;
+import org.apache.druid.query.aggregation.SerializablePairLongLongComplexMetricSerde;
+import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.BaseLongColumnValueSelector;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.Types;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorObjectSelector;
+import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -45,11 +52,15 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
+@JsonTypeName("longFirst")
 public class LongFirstAggregatorFactory extends AggregatorFactory
 {
+  public static final ColumnType TYPE = ColumnType.ofComplex(SerializablePairLongLongComplexMetricSerde.TYPE_NAME);
+
   private static final Aggregator NIL_AGGREGATOR = new LongFirstAggregator(
       NilColumnValueSelector.instance(),
-      NilColumnValueSelector.instance()
+      NilColumnValueSelector.instance(),
+      false
   )
   {
     @Override
@@ -61,7 +72,8 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
 
   private static final BufferAggregator NIL_BUFFER_AGGREGATOR = new LongFirstBufferAggregator(
       NilColumnValueSelector.instance(),
-      NilColumnValueSelector.instance()
+      NilColumnValueSelector.instance(),
+      false
   )
   {
     @Override
@@ -96,13 +108,18 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    final BaseLongColumnValueSelector valueSelector = metricFactory.makeColumnValueSelector(fieldName);
+    final ColumnValueSelector valueSelector = metricFactory.makeColumnValueSelector(fieldName);
     if (valueSelector instanceof NilColumnValueSelector) {
       return NIL_AGGREGATOR;
     } else {
       return new LongFirstAggregator(
           metricFactory.makeColumnValueSelector(timeColumn),
-          valueSelector
+          valueSelector,
+          FirstLastUtils.selectorNeedsFoldCheck(
+              valueSelector,
+              metricFactory.getColumnCapabilities(fieldName),
+              SerializablePairLongLong.class
+          )
       );
     }
   }
@@ -110,15 +127,39 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    final BaseLongColumnValueSelector valueSelector = metricFactory.makeColumnValueSelector(fieldName);
+    final ColumnValueSelector valueSelector = metricFactory.makeColumnValueSelector(fieldName);
     if (valueSelector instanceof NilColumnValueSelector) {
       return NIL_BUFFER_AGGREGATOR;
     } else {
       return new LongFirstBufferAggregator(
           metricFactory.makeColumnValueSelector(timeColumn),
-          valueSelector
+          valueSelector,
+          FirstLastUtils.selectorNeedsFoldCheck(
+              valueSelector,
+              metricFactory.getColumnCapabilities(fieldName),
+              SerializablePairLongLong.class
+          )
       );
     }
+  }
+
+  @Override
+  public VectorAggregator factorizeVector(VectorColumnSelectorFactory columnSelectorFactory)
+  {
+    VectorValueSelector timeSelector = columnSelectorFactory.makeValueSelector(timeColumn);
+    ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(fieldName);
+    if (Types.isNumeric(capabilities)) {
+      VectorValueSelector valueSelector = columnSelectorFactory.makeValueSelector(fieldName);
+      return new LongFirstVectorAggregator(timeSelector, valueSelector);
+    }
+    VectorObjectSelector objectSelector = columnSelectorFactory.makeObjectSelector(fieldName);
+    return new LongFirstVectorAggregator(timeSelector, objectSelector);
+  }
+
+  @Override
+  public boolean canVectorize(ColumnInspector columnInspector)
+  {
+    return true;
   }
 
   @Override
@@ -149,72 +190,13 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
   @Override
   public AggregateCombiner makeAggregateCombiner()
   {
-    throw new UOE("LongFirstAggregatorFactory is not supported during ingestion for rollup");
+    return new GenericFirstAggregateCombiner(SerializablePairLongLong.class);
   }
 
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new LongFirstAggregatorFactory(name, name, timeColumn)
-    {
-      @Override
-      public Aggregator factorize(ColumnSelectorFactory metricFactory)
-      {
-        final ColumnValueSelector<SerializablePair<Long, Long>> selector = metricFactory.makeColumnValueSelector(name);
-        return new LongFirstAggregator(null, null)
-        {
-          @Override
-          public void aggregate()
-          {
-            SerializablePair<Long, Long> pair = selector.getObject();
-            if (pair.lhs < firstTime) {
-              firstTime = pair.lhs;
-              if (pair.rhs != null) {
-                firstValue = pair.rhs;
-                rhsNull = false;
-              } else {
-                rhsNull = true;
-              }
-            }
-          }
-        };
-      }
-
-      @Override
-      public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
-      {
-        final ColumnValueSelector<SerializablePair<Long, Long>> selector = metricFactory.makeColumnValueSelector(name);
-        return new LongFirstBufferAggregator(null, null)
-        {
-          @Override
-          public void putValue(ByteBuffer buf, int position)
-          {
-            SerializablePair<Long, Long> pair = selector.getObject();
-            buf.putLong(position, pair.rhs);
-          }
-
-          @Override
-          public void aggregate(ByteBuffer buf, int position)
-          {
-            SerializablePair<Long, Long> pair = selector.getObject();
-            long firstTime = buf.getLong(position);
-            if (pair.lhs < firstTime) {
-              if (pair.rhs != null) {
-                updateTimeWithValue(buf, position, pair.lhs);
-              } else {
-                updateTimeWithNull(buf, position, pair.lhs);
-              }
-            }
-          }
-
-          @Override
-          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-          {
-            inspector.visit("selector", selector);
-          }
-        };
-      }
-    };
+    return new LongFirstAggregatorFactory(name, name, timeColumn);
   }
 
   @Override
@@ -222,16 +204,16 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
   {
     Map map = (Map) object;
     if (map.get("rhs") == null) {
-      return new SerializablePair<>(((Number) map.get("lhs")).longValue(), null);
+      return new SerializablePairLongLong(((Number) map.get("lhs")).longValue(), null);
     }
-    return new SerializablePair<>(((Number) map.get("lhs")).longValue(), ((Number) map.get("rhs")).longValue());
+    return new SerializablePairLongLong(((Number) map.get("lhs")).longValue(), ((Number) map.get("rhs")).longValue());
   }
 
   @Override
   @Nullable
   public Object finalizeComputation(@Nullable Object object)
   {
-    return object == null ? null : ((SerializablePair<Long, Long>) object).rhs;
+    return object == null ? null : ((SerializablePairLongLong) object).rhs;
   }
 
   @Override
@@ -271,8 +253,7 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
   @Override
   public ColumnType getIntermediateType()
   {
-    // if we don't pretend to be a primitive, group by v1 gets sad and doesn't work because no complex type serde
-    return ColumnType.LONG;
+    return TYPE;
   }
 
   @Override

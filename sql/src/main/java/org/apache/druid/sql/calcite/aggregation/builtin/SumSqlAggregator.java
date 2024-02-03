@@ -19,9 +19,10 @@
 
 package org.apache.druid.sql.calcite.aggregation.builtin;
 
+import org.apache.calcite.linq4j.Nullness;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.sql.SqlAggFunction;
-import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.fun.SqlSumAggFunction;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -35,11 +36,17 @@ import javax.annotation.Nullable;
 
 public class SumSqlAggregator extends SimpleSqlAggregator
 {
+  /**
+   * We use this custom aggregation function instead of builtin SqlStdOperatorTable.SUM
+   * to avoid transformation to COUNT+SUM0. See CALCITE-6020 for more details.
+   * It can be handled differently after CALCITE-6020 is addressed.
+   */
+  private static final SqlAggFunction DRUID_SUM = new SqlSumAggFunction(Nullness.castNonNull(null)) {};
 
   @Override
   public SqlAggFunction calciteFunction()
   {
-    return SqlStdOperatorTable.SUM;
+    return DRUID_SUM;
   }
 
   @Override

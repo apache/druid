@@ -57,6 +57,8 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("unneeded", "segment/unneeded/count");
     public static final CoordinatorStat OVERSHADOWED
         = CoordinatorStat.toDebugAndEmit("overshadowed", "segment/overshadowed/count");
+    public static final CoordinatorStat UNNEEDED_ETERNITY_TOMBSTONE
+        = CoordinatorStat.toDebugAndEmit("unneededEternityTombstone", "segment/unneededEternityTombstone/count");
   }
 
   public static class SegmentQueue
@@ -147,6 +149,8 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("killMaxSlots", "killTask/maxSlot/count");
     public static final CoordinatorStat SUBMITTED_TASKS
         = CoordinatorStat.toDebugAndEmit("killTasks", "kill/task/count");
+    public static final CoordinatorStat PENDING_SEGMENTS
+        = CoordinatorStat.toDebugAndEmit("killPendingSegs", "kill/pendingSegments/count");
   }
 
   public static class Balancer

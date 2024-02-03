@@ -90,7 +90,7 @@ public class AbstractTaskTest
     when(toolbox.getTaskActionClient()).thenReturn(taskActionClient);
 
 
-    AbstractTask task = new NoopTask("myID", null, null, 1, 0, null, null, null)
+    AbstractTask task = new NoopTask("myID", null, null, 1, 0, null)
     {
       @Nullable
       @Override
@@ -138,7 +138,7 @@ public class AbstractTaskTest
     when(toolbox.getTaskActionClient()).thenReturn(taskActionClient);
 
 
-    AbstractTask task = new NoopTask("myID", null, null, 1, 0, null, null, null)
+    AbstractTask task = new NoopTask("myID", null, null, 1, 0, null)
     {
       @Nullable
       @Override
@@ -182,18 +182,93 @@ public class AbstractTaskTest
     when(taskActionClient.submit(any())).thenReturn(TaskConfig.class);
     when(toolbox.getTaskActionClient()).thenReturn(taskActionClient);
 
-    AbstractTask task = new NoopTask("myID", null, null, 1, 0, null, null, null)
+    TaskStatus taskStatus = TaskStatus.failure("myId", "failed");
+    AbstractTask task = new NoopTask("myID", null, null, 1, 0, null)
     {
       @Override
       public TaskStatus runTask(TaskToolbox toolbox)
       {
-        return TaskStatus.failure("myId", "failed");
+        return taskStatus;
       }
     };
     task.run(toolbox);
-    UpdateStatusAction action = new UpdateStatusAction("failure");
+    UpdateStatusAction action = new UpdateStatusAction("", taskStatus);
     verify(taskActionClient).submit(eq(action));
   }
+
+  @Test
+  public void testNullStackStatusGetsReportedCorrectly() throws Exception
+  {
+    TaskToolbox toolbox = mock(TaskToolbox.class);
+    when(toolbox.getAttemptId()).thenReturn("1");
+
+    DruidNode node = new DruidNode("foo", "foo", false, 1, 2, true, true);
+    when(toolbox.getTaskExecutorNode()).thenReturn(node);
+
+    TaskLogPusher pusher = mock(TaskLogPusher.class);
+    when(toolbox.getTaskLogPusher()).thenReturn(pusher);
+
+    TaskConfig config = mock(TaskConfig.class);
+    when(config.isEncapsulatedTask()).thenReturn(true);
+    File folder = temporaryFolder.newFolder();
+    when(config.getTaskDir(eq("myID"))).thenReturn(folder);
+    when(toolbox.getConfig()).thenReturn(config);
+    when(toolbox.getJsonMapper()).thenReturn(objectMapper);
+
+    TaskActionClient taskActionClient = mock(TaskActionClient.class);
+    when(taskActionClient.submit(any())).thenReturn(TaskConfig.class);
+    when(toolbox.getTaskActionClient()).thenReturn(taskActionClient);
+    AbstractTask task = new NoopTask("myID", null, null, 1, 0, null)
+    {
+      @Nullable
+      @Override
+      public TaskStatus runTask(TaskToolbox toolbox)
+      {
+        // Simulate the scenario where taskStatus is never set and cleanUp is called with null.
+        return null;
+      }
+    };
+    task.run(toolbox);
+    UpdateStatusAction action = new UpdateStatusAction("", TaskStatus.failure(task.getId(), "Task failed to run"));
+    verify(taskActionClient).submit(eq(action));
+  }
+
+  @Test
+  public void testSetupFailsGetsReportedCorrectly() throws Exception
+  {
+    TaskToolbox toolbox = mock(TaskToolbox.class);
+    when(toolbox.getAttemptId()).thenReturn("1");
+
+    DruidNode node = new DruidNode("foo", "foo", false, 1, 2, true, true);
+    when(toolbox.getTaskExecutorNode()).thenReturn(node);
+
+    TaskLogPusher pusher = mock(TaskLogPusher.class);
+    when(toolbox.getTaskLogPusher()).thenReturn(pusher);
+
+    TaskConfig config = mock(TaskConfig.class);
+    when(config.isEncapsulatedTask()).thenReturn(true);
+    File folder = temporaryFolder.newFolder();
+    when(config.getTaskDir(eq("myID"))).thenReturn(folder);
+    when(toolbox.getConfig()).thenReturn(config);
+    when(toolbox.getJsonMapper()).thenReturn(objectMapper);
+
+    TaskActionClient taskActionClient = mock(TaskActionClient.class);
+    when(taskActionClient.submit(any())).thenReturn(TaskConfig.class);
+    when(toolbox.getTaskActionClient()).thenReturn(taskActionClient);
+    AbstractTask task = new NoopTask("myID", null, null, 1, 0, null)
+    {
+      @Nullable
+      @Override
+      public String setup(TaskToolbox toolbox)
+      {
+        return "setup error";
+      }
+    };
+    task.run(toolbox);
+    UpdateStatusAction action = new UpdateStatusAction("", TaskStatus.failure(task.getId(), "setup error"));
+    verify(taskActionClient).submit(eq(action));
+  }
+
 
   @Test
   public void testBatchIOConfigAppend()

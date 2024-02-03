@@ -45,6 +45,7 @@ import {
   externalConfigToIngestQueryPattern,
   ingestQueryPatternToQuery,
 } from '../ingest-query-pattern/ingest-query-pattern';
+import type { ArrayMode } from '../ingestion-spec/ingestion-spec';
 import type { QueryContext } from '../query-context/query-context';
 
 const ISSUE_MARKER = '--:ISSUE:';
@@ -89,20 +90,22 @@ export class WorkbenchQuery {
 
   static fromInitExternalConfig(
     externalConfig: ExternalConfig,
-    isArrays: boolean[],
     timeExpression: SqlExpression | undefined,
     partitionedByHint: string | undefined,
+    arrayMode: ArrayMode,
   ): WorkbenchQuery {
     return new WorkbenchQuery({
       queryString: ingestQueryPatternToQuery(
         externalConfigToIngestQueryPattern(
           externalConfig,
-          isArrays,
           timeExpression,
           partitionedByHint,
+          arrayMode,
         ),
       ).toString(),
-      queryContext: {},
+      queryContext: {
+        arrayIngestMode: 'array',
+      },
     });
   }
 
@@ -226,7 +229,7 @@ export class WorkbenchQuery {
 
     const queryStartingWithInsertOrReplace = queryFragment.substring(matchInsertReplaceIndex);
 
-    const matchEnd = queryStartingWithInsertOrReplace.match(/\b(?:SELECT|WITH)\b|$/i);
+    const matchEnd = queryStartingWithInsertOrReplace.match(/\(|\b(?:SELECT|WITH)\b|$/i);
     const fragmentQuery = SqlQuery.maybeParse(
       queryStartingWithInsertOrReplace.substring(0, matchEnd?.index) + ' SELECT * FROM t',
     );
@@ -550,8 +553,16 @@ export class WorkbenchQuery {
 
     if (engine === 'sql-msq-task') {
       apiQuery.context.executionMode ??= 'async';
-      apiQuery.context.finalizeAggregations ??= !ingestQuery;
-      apiQuery.context.groupByEnableMultiValueUnnesting ??= !ingestQuery;
+      if (ingestQuery) {
+        // Alter these defaults for ingest queries if unset
+        apiQuery.context.finalizeAggregations ??= false;
+        apiQuery.context.groupByEnableMultiValueUnnesting ??= false;
+        apiQuery.context.waitUntilSegmentsLoad ??= true;
+      }
+    }
+
+    if (engine === 'sql-native' || engine === 'sql-msq-task') {
+      apiQuery.context.sqlStringifyArrays ??= false;
     }
 
     if (Array.isArray(queryParameters) && queryParameters.length) {

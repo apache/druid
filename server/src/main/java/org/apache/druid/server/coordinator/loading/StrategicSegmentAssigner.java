@@ -573,8 +573,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     );
     return new ReplicationThrottler(
         tierToLoadingReplicaCount,
-        loadingConfig.getReplicationThrottleLimit(),
-        loadingConfig.getMaxReplicaAssignmentsInRun()
+        loadingConfig.getReplicationThrottleLimit()
     );
   }
 

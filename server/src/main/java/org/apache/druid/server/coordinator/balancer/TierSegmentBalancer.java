@@ -201,17 +201,13 @@ public class TierSegmentBalancer
    */
   private int getNumDecommSegmentsToMove(int maxSegmentsToMove)
   {
-    final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
     if (decommissioningServers.isEmpty() || activeServers.isEmpty()) {
       return 0;
-    } else if (dynamicConfig.isSmartSegmentLoading()) {
+    } else {
       final int decommSegmentsToMove = decommissioningServers.stream().mapToInt(
           server -> server.getProjectedSegments().getTotalSegmentCount()
       ).sum();
       return Math.min(decommSegmentsToMove, maxSegmentsToMove);
-    } else {
-      int maxPercentageToMove = dynamicConfig.getDecommissioningMaxPercentOfMaxSegmentsToMove();
-      return (int) Math.ceil(maxSegmentsToMove * (maxPercentageToMove / 100.0));
     }
   }
 

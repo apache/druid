@@ -92,6 +92,14 @@ public abstract class NestedCommonFormatColumnSerializer implements GenericColum
     }
   }
 
+  protected void writeInternal(FileSmoosher smoosher, ByteBuffer buffer, String fileName) throws IOException
+  {
+    final String internalName = getInternalFileName(getColumnName(), fileName);
+    try (SmooshedWriter smooshChannel = smoosher.addWithSmooshedWriter(internalName, buffer.capacity())) {
+      smooshChannel.write(buffer);
+    }
+  }
+
   protected void writeV0Header(WritableByteChannel channel, ByteBuffer columnNameBuffer) throws IOException
   {
     channel.write(ByteBuffer.wrap(new byte[]{NestedCommonFormatColumnSerializer.V0}));

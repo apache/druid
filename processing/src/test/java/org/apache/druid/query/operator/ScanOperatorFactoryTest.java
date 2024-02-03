@@ -61,7 +61,7 @@ public class ScanOperatorFactoryTest
     final Builder bob = new Builder();
     bob.timeRange = Intervals.utc(0, 6);
     bob.filter = DimFilters.dimEquals("abc", "b");
-    bob.limit = 48;
+    bob.offsetLimit = OffsetLimit.limit(48);
     bob.projectedColumns = Arrays.asList("a", "b");
     bob.virtualColumns = VirtualColumns.EMPTY;
     bob.ordering = Collections.singletonList(ColumnWithDirection.ascending("a"));
@@ -72,7 +72,7 @@ public class ScanOperatorFactoryTest
 
     Assert.assertNotEquals(factory, bob.copy().setTimeRange(null).build());
     Assert.assertNotEquals(factory, bob.copy().setFilter(null).build());
-    Assert.assertNotEquals(factory, bob.copy().setLimit(null).build());
+    Assert.assertNotEquals(factory, bob.copy().setOffsetLimit(null).build());
     Assert.assertNotEquals(factory, bob.copy().setProjectedColumns(null).build());
     Assert.assertNotEquals(factory, bob.copy().setVirtualColumns(null).build());
     Assert.assertNotEquals(factory, bob.copy().setOrdering(null).build());
@@ -132,7 +132,7 @@ public class ScanOperatorFactoryTest
                     "interval[%s], filter[%s], limit[%s], ordering[%s], projection[%s], virtual[%s]",
                     interval,
                     filter,
-                    limit,
+                    OffsetLimit.limit(limit),
                     ordering,
                     projection,
                     virtual
@@ -141,7 +141,7 @@ public class ScanOperatorFactoryTest
                 ScanOperatorFactory factory = new ScanOperatorFactory(
                     interval,
                     filter,
-                    limit,
+                    OffsetLimit.limit(limit),
                     projection,
                     virtual,
                     ordering
@@ -182,7 +182,7 @@ public class ScanOperatorFactoryTest
                             (TestRowsAndColumnsDecorator.DecoratedRowsAndColumns) inRac;
 
                         Assert.assertEquals(msg, factory.getTimeRange(), rac.getTimeRange());
-                        Assert.assertEquals(msg, factory.getLimit(), rac.getLimit());
+                        Assert.assertEquals(msg, factory.getOffsetLimit(), rac.getOffsetLimit());
                         Assert.assertEquals(msg, factory.getVirtualColumns(), rac.getVirtualColumns());
                         validateList(msg, factory.getOrdering(), rac.getOrdering());
                         validateList(msg, factory.getProjectedColumns(), rac.getProjectedColumns());
@@ -228,7 +228,7 @@ public class ScanOperatorFactoryTest
   {
     private Interval timeRange;
     private DimFilter filter;
-    private Integer limit;
+    private OffsetLimit offsetLimit;
     private List<String> projectedColumns;
     private VirtualColumns virtualColumns;
     private List<ColumnWithDirection> ordering;
@@ -245,9 +245,9 @@ public class ScanOperatorFactoryTest
       return this;
     }
 
-    public Builder setLimit(Integer limit)
+    public Builder setOffsetLimit(OffsetLimit offsetLimit)
     {
-      this.limit = limit;
+      this.offsetLimit = offsetLimit;
       return this;
     }
 
@@ -274,7 +274,7 @@ public class ScanOperatorFactoryTest
       Builder retVal = new Builder();
       retVal.timeRange = timeRange;
       retVal.filter = filter;
-      retVal.limit = limit;
+      retVal.offsetLimit = offsetLimit;
       retVal.projectedColumns = projectedColumns;
       retVal.virtualColumns = virtualColumns;
       retVal.ordering = ordering;
@@ -286,7 +286,7 @@ public class ScanOperatorFactoryTest
       return new ScanOperatorFactory(
           timeRange,
           filter,
-          limit,
+          offsetLimit,
           projectedColumns,
           virtualColumns,
           ordering

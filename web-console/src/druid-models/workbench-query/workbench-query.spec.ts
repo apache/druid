@@ -289,6 +289,7 @@ describe('WorkbenchQuery', () => {
           context: {
             sqlOuterLimit: 1001,
             sqlQueryId: 'deadbeef-9fb0-499c-8475-ea461e96a4fd',
+            sqlStringifyArrays: false,
             useCache: false,
           },
           header: true,
@@ -316,6 +317,7 @@ describe('WorkbenchQuery', () => {
           context: {
             sqlOuterLimit: 1001,
             sqlQueryId: 'lol',
+            sqlStringifyArrays: false,
           },
           header: true,
           query: 'SELECT * FROM wikipedia',
@@ -354,6 +356,7 @@ describe('WorkbenchQuery', () => {
           context: {
             sqlOuterLimit: 1001,
             sqlQueryId: 'deadbeef-9fb0-499c-8475-ea461e96a4fd',
+            sqlStringifyArrays: false,
             useCache: false,
             x: 1,
           },
@@ -394,6 +397,7 @@ describe('WorkbenchQuery', () => {
           context: {
             sqlOuterLimit: 1001,
             sqlQueryId: 'lol',
+            sqlStringifyArrays: false,
             x: 1,
           },
           header: true,
@@ -422,7 +426,9 @@ describe('WorkbenchQuery', () => {
             executionMode: 'async',
             finalizeAggregations: false,
             groupByEnableMultiValueUnnesting: false,
+            sqlStringifyArrays: false,
             useCache: false,
+            waitUntilSegmentsLoad: true,
           },
           header: true,
           query: 'INSERT INTO wiki2 SELECT * FROM wikipedia',
@@ -479,6 +485,18 @@ describe('WorkbenchQuery', () => {
           TIME_PARSE(pickup_datetime) AS __time,
           *
         FROM TABLE(
+      `;
+
+      const workbenchQuery = WorkbenchQuery.blank().changeQueryString(sql);
+      expect(workbenchQuery.getIngestDatasource()).toEqual('trips2');
+      expect(workbenchQuery.changeEngine('sql-native').getIngestDatasource()).toBeUndefined();
+    });
+
+    it('works with INSERT (unparsable with paren)', () => {
+      const sql = sane`
+        -- Some comment
+        INSERT into trips2
+        (SELECT TIME_PARSE(pickup_datetime) AS __time,
       `;
 
       const workbenchQuery = WorkbenchQuery.blank().changeQueryString(sql);

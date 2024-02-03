@@ -118,7 +118,6 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
 
   private final int numAttempts;
   private final ParallelIndexIngestionSpec ingestionSchema;
-  private final String supervisorTaskId;
   private final String subtaskSpecId;
 
   /**
@@ -169,7 +168,8 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
         taskResource,
         ingestionSchema.getDataSchema().getDataSource(),
         context,
-        AbstractTask.computeBatchIngestionMode(ingestionSchema.getIOConfig())
+        AbstractTask.computeBatchIngestionMode(ingestionSchema.getIOConfig()),
+        supervisorTaskId
     );
 
     if (ingestionSchema.getTuningConfig().isForceGuaranteedRollup()) {
@@ -179,7 +179,6 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
     this.subtaskSpecId = subtaskSpecId;
     this.numAttempts = numAttempts;
     this.ingestionSchema = ingestionSchema;
-    this.supervisorTaskId = supervisorTaskId;
     this.missingIntervalsInOverwriteMode = ingestionSchema.getIOConfig().isAppendToExisting() != true
                                            && ingestionSchema.getDataSchema()
                                                              .getGranularitySpec()
@@ -217,9 +216,8 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
   public boolean isReady(TaskActionClient taskActionClient) throws IOException
   {
     return determineLockGranularityAndTryLock(
-        new SurrogateTaskActionClient(supervisorTaskId, taskActionClient),
-        ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals(),
-        ingestionSchema.getIOConfig()
+        new SurrogateTaskActionClient(getSupervisorTaskId(), taskActionClient),
+        ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals()
     );
   }
 
@@ -233,12 +231,6 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
   public ParallelIndexIngestionSpec getIngestionSchema()
   {
     return ingestionSchema;
-  }
-
-  @JsonProperty
-  public String getSupervisorTaskId()
-  {
-    return supervisorTaskId;
   }
 
   @Override
@@ -273,7 +265,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
       final InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(toolbox);
 
       final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientProvider().build(
-          supervisorTaskId,
+          getSupervisorTaskId(),
           ingestionSchema.getTuningConfig().getChatHandlerTimeout(),
           ingestionSchema.getTuningConfig().getChatHandlerNumRetries()
       );

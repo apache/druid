@@ -32,6 +32,7 @@ export interface QueryContext {
   durableShuffleStorage?: boolean;
   maxParseExceptions?: number;
   groupByEnableMultiValueUnnesting?: boolean;
+  arrayIngestMode?: 'array' | 'mvd';
 
   [key: string]: any;
 }
@@ -146,6 +147,22 @@ export function changeTaskAssigment(
     : deepDelete(context, 'taskAssignment');
 }
 
+// failOnEmptyInsert
+
+export function getFailOnEmptyInsert(context: QueryContext): boolean | undefined {
+  const { failOnEmptyInsert } = context;
+  return typeof failOnEmptyInsert === 'boolean' ? failOnEmptyInsert : undefined;
+}
+
+export function changeFailOnEmptyInsert(
+  context: QueryContext,
+  failOnEmptyInsert: boolean | undefined,
+): QueryContext {
+  return typeof failOnEmptyInsert === 'boolean'
+    ? deepSet(context, 'failOnEmptyInsert', failOnEmptyInsert)
+    : deepDelete(context, 'failOnEmptyInsert');
+}
+
 // finalizeAggregations
 
 export function getFinalizeAggregations(context: QueryContext): boolean | undefined {
@@ -160,6 +177,22 @@ export function changeFinalizeAggregations(
   return typeof finalizeAggregations === 'boolean'
     ? deepSet(context, 'finalizeAggregations', finalizeAggregations)
     : deepDelete(context, 'finalizeAggregations');
+}
+
+// waitUntilSegmentsLoad
+
+export function getWaitUntilSegmentsLoad(context: QueryContext): boolean | undefined {
+  const { waitUntilSegmentsLoad } = context;
+  return typeof waitUntilSegmentsLoad === 'boolean' ? waitUntilSegmentsLoad : undefined;
+}
+
+export function changeWaitUntilSegmentsLoad(
+  context: QueryContext,
+  waitUntilSegmentsLoad: boolean | undefined,
+): QueryContext {
+  return typeof waitUntilSegmentsLoad === 'boolean'
+    ? deepSet(context, 'waitUntilSegmentsLoad', waitUntilSegmentsLoad)
+    : deepDelete(context, 'waitUntilSegmentsLoad');
 }
 
 // groupByEnableMultiValueUnnesting

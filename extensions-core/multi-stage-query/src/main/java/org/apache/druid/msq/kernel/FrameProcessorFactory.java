@@ -21,8 +21,8 @@ package org.apache.druid.msq.kernel;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.core.type.TypeReference;
-import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.OutputChannelFactory;
+import org.apache.druid.frame.processor.manager.ProcessorManager;
 import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
@@ -36,18 +36,17 @@ import java.util.function.Consumer;
  * Property of {@link StageDefinition} that describes its computation logic.
  *
  * Workers call {@link #makeProcessors} to generate the processors that perform computations within that worker's
- * {@link org.apache.druid.frame.processor.FrameProcessorExecutor}. Additionally, provides methods for accumulating
- * the results of the processors: {@link #newAccumulatedResult()}, {@link #accumulateResult}, and
- * {@link #mergeAccumulatedResult}.
+ * {@link org.apache.druid.frame.processor.FrameProcessorExecutor}. Additionally, provides
+ * {@link #mergeAccumulatedResult(Object, Object)} for merging results from {@link ProcessorManager#result()}.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-public interface FrameProcessorFactory<ExtraInfoType, ProcessorType extends FrameProcessor<T>, T, R>
+public interface FrameProcessorFactory<T, R, ExtraInfoType>
 {
   /**
    * Create processors for a particular worker in a particular stage. The processors will be run on a thread pool,
    * with at most "maxOutstandingProcessors" number of processors outstanding at once.
    *
-   * The Sequence returned by {@link ProcessorsAndChannels#processors()} is passed directly to
+   * The Sequence returned by {@link ProcessorsAndChannels#getProcessorManager()} is passed directly to
    * {@link org.apache.druid.frame.processor.FrameProcessorExecutor#runAllFully}.
    *
    * @param stageDefinition          stage definition
@@ -65,7 +64,7 @@ public interface FrameProcessorFactory<ExtraInfoType, ProcessorType extends Fram
    *
    * @return a processor sequence, which may be computed lazily; and a list of output channels.
    */
-  ProcessorsAndChannels<ProcessorType, T> makeProcessors(
+  ProcessorsAndChannels<T, R> makeProcessors(
       StageDefinition stageDefinition,
       int workerNumber,
       List<InputSlice> inputSlices,
@@ -78,18 +77,8 @@ public interface FrameProcessorFactory<ExtraInfoType, ProcessorType extends Fram
       Consumer<Throwable> warningPublisher
   ) throws IOException;
 
-  TypeReference<R> getAccumulatedResultTypeReference();
-
-  /**
-   * Produces a "blank slate" result.
-   */
-  R newAccumulatedResult();
-
-  /**
-   * Accumulates an additional result. May modify the left-hand side {@code accumulated}. Does not modify the
-   * right-hand side {@code current}.
-   */
-  R accumulateResult(R accumulated, T current);
+  @Nullable
+  TypeReference<R> getResultTypeReference();
 
   /**
    * Merges two accumulated results. May modify the left-hand side {@code accumulated}. Does not modify the right-hand

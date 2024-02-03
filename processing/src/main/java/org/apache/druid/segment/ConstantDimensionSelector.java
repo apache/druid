@@ -19,13 +19,15 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.base.Predicate;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.query.filter.DruidObjectPredicate;
+import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.query.filter.DruidPredicateMatch;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ZeroIndexedInts;
-import org.apache.druid.segment.filter.BooleanValueMatcher;
+import org.apache.druid.segment.filter.ValueMatchers;
 import org.apache.druid.segment.historical.SingleValueHistoricalDimensionSelector;
 
 import javax.annotation.Nullable;
@@ -66,13 +68,21 @@ public class ConstantDimensionSelector implements SingleValueHistoricalDimension
   @Override
   public ValueMatcher makeValueMatcher(String matchValue)
   {
-    return BooleanValueMatcher.of(Objects.equals(value, matchValue));
+    return Objects.equals(value, matchValue) ? ValueMatchers.allTrue() : ValueMatchers.allFalse();
   }
 
   @Override
-  public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+  public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
   {
-    return BooleanValueMatcher.of(predicate.apply(value));
+    final DruidObjectPredicate<String> predicate = predicateFactory.makeStringPredicate();
+    final DruidPredicateMatch match = predicate.apply(value);
+    if (match == DruidPredicateMatch.TRUE) {
+      return ValueMatchers.allTrue();
+    }
+    if (match == DruidPredicateMatch.UNKNOWN) {
+      return ValueMatchers.allUnknown();
+    }
+    return ValueMatchers.allFalse();
   }
 
   @Override

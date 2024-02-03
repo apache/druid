@@ -57,12 +57,14 @@ public class ColumnTypeFactory implements TypeFactory<ColumnType>
         switch (type.getElementType().getType()) {
           case LONG:
             return ColumnType.LONG_ARRAY;
+          case FLOAT:
+            return ColumnType.FLOAT_ARRAY;
           case DOUBLE:
             return ColumnType.DOUBLE_ARRAY;
           case STRING:
             return ColumnType.STRING_ARRAY;
           default:
-            throw new ISE("Unsupported expression type[%s]", type.asTypeString());
+            return ColumnType.ofArray(ofType(type.getElementType()));
         }
       case COMPLEX:
         return INTERNER.intern(new ColumnType(ValueType.COMPLEX, type.getComplexTypeName(), null));

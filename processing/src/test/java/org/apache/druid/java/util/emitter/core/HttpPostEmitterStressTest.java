@@ -157,7 +157,7 @@ public class HttpPostEmitterStressTest
 
     httpClient.setGoHandler(new GoHandler() {
       @Override
-      protected <X extends Exception> ListenableFuture<Response> go(Request request) throws X
+      protected ListenableFuture<Response> go(Request request)
       {
         return GoHandlers.immediateFuture(EmitterTest.BAD_RESPONSE);
       }
@@ -170,7 +170,7 @@ public class HttpPostEmitterStressTest
     Event bigEvent = ServiceMetricEvent.builder()
                                        .setFeed("bigEvents")
                                        .setDimension("test", bigString)
-                                       .build("metric", 10)
+                                       .setMetric("metric", 10)
                                        .build("qwerty", "asdfgh");
 
     for (int i = 0; i < 1000; i++) {
@@ -197,7 +197,7 @@ public class HttpPostEmitterStressTest
 
     httpClient.setGoHandler(new GoHandler() {
       @Override
-      protected <X extends Exception> ListenableFuture<Response> go(Request request) throws X
+      protected ListenableFuture<Response> go(Request request)
       {
         return GoHandlers.immediateFuture(EmitterTest.BAD_RESPONSE);
       }
@@ -210,13 +210,13 @@ public class HttpPostEmitterStressTest
     Event smallEvent = ServiceMetricEvent.builder()
                                        .setFeed("smallEvents")
                                        .setDimension("test", "hi")
-                                       .build("metric", 10)
+                                       .setMetric("metric", 10)
                                        .build("qwerty", "asdfgh");
 
     Event bigEvent = ServiceMetricEvent.builder()
                                        .setFeed("bigEvents")
                                        .setDimension("test", bigString)
-                                       .build("metric", 10)
+                                       .setMetric("metric", 10)
                                        .build("qwerty", "asdfgh");
 
     final CountDownLatch threadsCompleted = new CountDownLatch(2);

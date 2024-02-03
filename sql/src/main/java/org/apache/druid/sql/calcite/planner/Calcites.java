@@ -26,8 +26,10 @@ import com.google.common.primitives.Chars;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlCollation;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperatorBinding;
@@ -40,7 +42,6 @@ import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.TimestampString;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.math.expr.ExpressionProcessingConfig;
@@ -131,6 +132,31 @@ public class Calcites
   }
 
   /**
+   * Returns whether an expression is a literal. Like {@link RexUtil#isLiteral(RexNode, boolean)} but can accept
+   * arrays too.
+   *
+   * @param rexNode    expression
+   * @param allowCast  allow calls to CAST if its argument is literal
+   * @param allowArray allow calls to ARRAY if its arguments are literal
+   */
+  public static boolean isLiteral(RexNode rexNode, boolean allowCast, boolean allowArray)
+  {
+    if (RexUtil.isLiteral(rexNode, allowCast)) {
+      return true;
+    } else if (allowArray && rexNode.isA(SqlKind.ARRAY_VALUE_CONSTRUCTOR)) {
+      for (final RexNode element : ((RexCall) rexNode).getOperands()) {
+        if (!RexUtil.isLiteral(element, allowCast)) {
+          return false;
+        }
+      }
+
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  /**
    * Convert {@link RelDataType} to the most appropriate {@link ColumnType}, or null if there is no {@link ColumnType}
    * that is appropriate for this {@link RelDataType}.
    *
@@ -208,12 +234,18 @@ public class Calcites
            SqlTypeName.INT_TYPES.contains(sqlTypeName);
   }
 
+  /**
+   * Returns the natural StringComparator associated with the RelDataType
+   */
   public static StringComparator getStringComparatorForRelDataType(RelDataType dataType)
   {
     final ColumnType valueType = getColumnTypeForRelDataType(dataType);
     return getStringComparatorForValueType(valueType);
   }
 
+  /**
+   * Returns the natural StringComparator associated with the given ColumnType
+   */
   public static StringComparator getStringComparatorForValueType(ColumnType valueType)
   {
     if (valueType.isNumeric()) {
@@ -221,7 +253,7 @@ public class Calcites
     } else if (valueType.is(ValueType.STRING)) {
       return StringComparators.LEXICOGRAPHIC;
     } else {
-      throw new ISE("Unrecognized valueType[%s]", valueType);
+      return StringComparators.NATURAL;
     }
   }
 

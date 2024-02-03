@@ -23,7 +23,7 @@ import React, { useState } from 'react';
 
 import { FancyTabPane } from '../../../components';
 import type { Execution } from '../../../druid-models';
-import { pluralIfNeeded } from '../../../utils';
+import { formatDuration, formatDurationWithMs, pluralIfNeeded } from '../../../utils';
 import { DestinationPagesPane } from '../destination-pages-pane/destination-pages-pane';
 import { ExecutionErrorPane } from '../execution-error-pane/execution-error-pane';
 import { ExecutionStagesPane } from '../execution-stages-pane/execution-stages-pane';
@@ -40,7 +40,8 @@ export type ExecutionDetailsTab =
   | 'result'
   | 'pages'
   | 'error'
-  | 'warnings';
+  | 'warnings'
+  | 'segmentStatus';
 
 interface ExecutionDetailsPaneProps {
   execution: Execution;
@@ -53,6 +54,7 @@ export const ExecutionDetailsPane = React.memo(function ExecutionDetailsPane(
 ) {
   const { execution, initTab, goToTask } = props;
   const [activeTab, setActiveTab] = useState<ExecutionDetailsTab>(initTab || 'general');
+  const segmentStatusDescription = execution.getSegmentStatusDescription();
 
   function renderContent() {
     switch (activeTab) {
@@ -95,6 +97,7 @@ export const ExecutionDetailsPane = React.memo(function ExecutionDetailsPane(
                 ? String(execution.sqlQuery)
                 : JSONBig.stringify(execution.nativeQuery, undefined, 2)
             }
+            leaveBackground
           />
         );
 
@@ -118,6 +121,25 @@ export const ExecutionDetailsPane = React.memo(function ExecutionDetailsPane(
 
       case 'warnings':
         return <ExecutionWarningsPane execution={execution} />;
+
+      case 'segmentStatus':
+        return (
+          <>
+            <p>
+              Duration:{' '}
+              {segmentStatusDescription.duration
+                ? formatDurationWithMs(segmentStatusDescription.duration)
+                : '-'}
+              {execution.duration
+                ? ` (query duration was ${formatDuration(execution.duration)})`
+                : ''}
+            </p>
+            <p>Total segments: {segmentStatusDescription.totalSegments ?? '-'}</p>
+            <p>Used segments: {segmentStatusDescription.usedSegments ?? '-'}</p>
+            <p>Precached segments: {segmentStatusDescription.precachedSegments ?? '-'}</p>
+            <p>On demand segments: {segmentStatusDescription.onDemandSegments ?? '-'}</p>
+          </>
+        );
 
       default:
         return;
@@ -144,6 +166,11 @@ export const ExecutionDetailsPane = React.memo(function ExecutionDetailsPane(
           id: 'native',
           label: 'Native query',
           icon: IconNames.COG,
+        },
+        Boolean(execution.segmentStatus) && {
+          id: 'segmentStatus',
+          label: 'Segments',
+          icon: IconNames.HEAT_GRID,
         },
         execution.result && {
           id: 'result',

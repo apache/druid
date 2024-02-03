@@ -77,7 +77,7 @@ public class ColumnSelectorColumnIndexSelector implements ColumnIndexSelector
   {
     final ColumnIndexSupplier indexSupplier;
     if (isVirtualColumn(column)) {
-      indexSupplier = virtualColumns.getIndexSupplier(column, columnSelector);
+      indexSupplier = virtualColumns.getIndexSupplier(column, this);
     } else {
       final ColumnHolder columnHolder = columnSelector.getColumnHolder(column);
       // for missing columns we return null here. This allows callers to fabricate an 'all true' or 'all false'
@@ -90,15 +90,25 @@ public class ColumnSelectorColumnIndexSelector implements ColumnIndexSelector
     return indexSupplier;
   }
 
-  private boolean isVirtualColumn(final String columnName)
+  @Nullable
+  @Override
+  public ColumnHolder getColumnHolder(String columnName)
   {
-    return virtualColumns.getVirtualColumn(columnName) != null;
+    if (isVirtualColumn(columnName)) {
+      return null;
+    }
+    return columnSelector.getColumnHolder(columnName);
   }
 
   @Nullable
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
   {
-    return virtualColumns.getColumnCapabilities(columnSelector, column);
+    return virtualColumns.getColumnCapabilitiesWithFallback(columnSelector, column);
+  }
+
+  private boolean isVirtualColumn(final String columnName)
+  {
+    return virtualColumns.getVirtualColumn(columnName) != null;
   }
 }

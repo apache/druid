@@ -37,7 +37,6 @@ import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.util.Providers;
-import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.IndexingServiceFirehoseModule;
@@ -110,7 +109,6 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.DummyForInjectionAppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
-import org.apache.druid.server.audit.AuditManagerProvider;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import org.apache.druid.server.http.RedirectFilter;
 import org.apache.druid.server.http.RedirectInfo;
@@ -245,10 +243,6 @@ public class CliOverlord extends ServerRunnable
             configureAutoscale(binder);
             binder.install(runnerConfigModule());
             configureOverlordHelpers(binder);
-
-            binder.bind(AuditManager.class)
-                  .toProvider(AuditManagerProvider.class)
-                  .in(ManageLifecycle.class);
 
             if (standalone) {
               binder.bind(RedirectFilter.class).in(LazySingleton.class);

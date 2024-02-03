@@ -49,6 +49,7 @@ public class Sequences
     return (Sequence<T>) EMPTY_SEQUENCE;
   }
 
+  @SafeVarargs
   public static <T> Sequence<T> concat(Sequence<T>... sequences)
   {
     return concat(Arrays.asList(sequences));

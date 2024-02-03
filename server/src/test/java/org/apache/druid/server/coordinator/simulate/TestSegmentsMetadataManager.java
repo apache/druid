@@ -24,6 +24,8 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.metadata.SortOrder;
+import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentId;
@@ -193,6 +195,18 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
+  public Iterable<DataSegmentPlus> iterateAllUnusedSegmentsForDatasource(
+      String datasource,
+      @Nullable Interval interval,
+      @Nullable Integer limit,
+      @Nullable String lastSegmentId,
+      @Nullable SortOrder sortOrder
+  )
+  {
+    return null;
+  }
+
+  @Override
   public Set<String> retrieveAllDataSourceNames()
   {
     return null;
@@ -204,7 +218,7 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
       @Nullable final DateTime minStartTime,
       final DateTime maxEndTime,
       final int limit,
-      final DateTime maxUsedFlagLastUpdatedTime
+      final DateTime maxUsedStatusLastUpdatedTime
   )
   {
     return null;

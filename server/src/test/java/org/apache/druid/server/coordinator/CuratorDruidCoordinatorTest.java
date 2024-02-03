@@ -40,6 +40,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
@@ -395,12 +396,18 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
                 segmentViewInitLatch.countDown();
                 return res;
               }
+
+              @Override
+              public CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
+              {
+                return CallbackAction.CONTINUE;
+              }
             }
         );
       }
     };
 
-    serverView = new CoordinatorServerView(baseView, new CoordinatorSegmentWatcherConfig(), new NoopServiceEmitter());
+    serverView = new CoordinatorServerView(baseView, new CoordinatorSegmentWatcherConfig(), new NoopServiceEmitter(), null);
 
     baseView.start();
 

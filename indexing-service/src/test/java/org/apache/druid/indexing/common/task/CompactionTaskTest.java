@@ -88,7 +88,7 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.query.CachingEmitter;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
@@ -376,18 +376,17 @@ public class CompactionTaskTest
 
   @Mock
   private Clock clock;
-  private CachingEmitter emitter;
+  private StubServiceEmitter emitter;
 
   @Before
   public void setup()
   {
     final IndexIO testIndexIO = new TestIndexIO(OBJECT_MAPPER, SEGMENT_MAP);
-    emitter = new CachingEmitter();
+    emitter = new StubServiceEmitter();
     toolbox = makeTaskToolbox(
         new TestTaskActionClient(new ArrayList<>(SEGMENT_MAP.keySet())),
         testIndexIO,
-        SEGMENT_MAP,
-        emitter
+        SEGMENT_MAP
     );
     Mockito.when(clock.millis()).thenReturn(0L, 10_000L);
     segmentCacheManagerFactory = new SegmentCacheManagerFactory(OBJECT_MAPPER);
@@ -1560,9 +1559,7 @@ public class CompactionTaskTest
         new PeriodGranularity(Period.months(3), null, null),
         BatchIOConfig.DEFAULT_DROP_EXISTING
     );
-    Assert.assertEquals(10_000L, emitter.getLastEmittedEvent().toMap().get("value"));
-    Assert.assertEquals("compact/segmentAnalyzer/fetchAndProcessMillis", emitter.getLastEmittedEvent().toMap().get("metric"));
-    Assert.assertEquals("metrics", emitter.getLastEmittedEvent().getFeed());
+    emitter.verifyValue("compact/segmentAnalyzer/fetchAndProcessMillis", 10_000L);
   }
 
   @Test
@@ -1939,11 +1936,10 @@ public class CompactionTaskTest
     }
   }
 
-  private static TaskToolbox makeTaskToolbox(
+  private TaskToolbox makeTaskToolbox(
       TaskActionClient taskActionClient,
       IndexIO indexIO,
-      Map<DataSegment, File> segments,
-      CachingEmitter emitter
+      Map<DataSegment, File> segments
   )
   {
     final SegmentCacheManager segmentCacheManager = new NoopSegmentCacheManager()
@@ -1984,7 +1980,7 @@ public class CompactionTaskTest
         .segmentCacheManager(segmentCacheManager)
         .taskLogPusher(null)
         .attemptId("1")
-        .emitter(new ServiceEmitter("service", "host", emitter))
+        .emitter(emitter)
         .build();
   }
 
