@@ -90,7 +90,10 @@ public class SegmentToRowsAndColumnsOperatorTest
       Operator.go(op, new ExceptionalReceiver());
     }
     catch (DruidException e) {
-      Assert.assertEquals(e.getMessage(), "Segment[class org.apache.druid.segment.TestSegmentForAs] cannot shapeshift");
+      Assert.assertEquals(
+          e.getMessage(),
+          "Segment [class org.apache.druid.segment.TestSegmentForAs] cannot shapeshift"
+      );
       exceptionThrown = true;
     }
     Assert.assertTrue(exceptionThrown);

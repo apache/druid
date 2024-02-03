@@ -24,7 +24,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.segment.CloseableShapeshifter;
-import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 
 import java.io.Closeable;
@@ -46,13 +45,7 @@ public class SegmentToRowsAndColumnsOperator implements Operator
   {
     try (final CloseableShapeshifter shifty = segment.as(CloseableShapeshifter.class)) {
       if (shifty == null) {
-        final Class<? extends Segment> classOfSegment;
-        if (segment instanceof ReferenceCountingSegment) {
-          classOfSegment = ((ReferenceCountingSegment) segment).getBaseSegment().getClass();
-        } else {
-          classOfSegment = segment.getClass();
-        }
-        throw DruidException.defensive("Segment[%s] cannot shapeshift", classOfSegment);
+        throw DruidException.defensive("Segment [%s] cannot shapeshift", segment.asString());
       }
       RowsAndColumns rac;
       if (shifty instanceof RowsAndColumns) {
