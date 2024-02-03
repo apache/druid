@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.BooleanFilter;
 import org.apache.druid.query.filter.ColumnIndexSelector;
@@ -39,6 +40,7 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
+import org.apache.druid.segment.data.Offset;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
@@ -48,13 +50,13 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Function;
 
 /**
  * Logical AND filter operation
  */
 public class AndFilter implements BooleanFilter
 {
+  private static final Logger log = new Logger(AndFilter.class);
   private static final Joiner AND_JOINER = Joiner.on(" && ");
 
   private final LinkedHashSet<Filter> filters;
@@ -81,85 +83,66 @@ public class AndFilter implements BooleanFilter
       boolean allowPartialIndex
   )
   {
-    final List<Function<ColumnSelectorFactory, ValueMatcher>> matcherFns = new ArrayList<>();
-    final List<Function<VectorColumnSelectorFactory, VectorValueMatcher>> vectorMatcherFns = new ArrayList<>();
+    final List<FilterBundle.MatcherBundle> matcherBundles = new ArrayList<>();
+
     int selectionCount = selectionRowCount;
-    boolean stopProcessingIndexes = false;
+    ImmutableBitmap index = null;
 
-    ImmutableBitmap accumulator = null;
     for (Filter subfilter : filters) {
-      boolean needMatcher = true;
-      // todo (clint): not actually ever setting stopProcessingIndexes to true yet. it seems like comparing
-      //  selectionCount to totalRowCount there is probably a sweet spot to bail out and just do whatever is left as
-      //  value matchers
-      if (!stopProcessingIndexes) {
-        final BitmapColumnIndex index = subfilter.getBitmapColumnIndex(columnIndexSelector);
-        if (index != null) {
-          final T bitmapResult = index.computeBitmapResult(
-              bitmapResultFactory,
-              selectionCount,
-              totalRowCount,
-              includeUnknown
-          );
-          if (bitmapResult != null) {
-            if (bitmapResultFactory.isEmpty(bitmapResult)) {
-              // Short-circuit.
-              return new FilterBundle(
-                  bitmapResultFactory.toImmutableBitmap(
-                      bitmapResultFactory.wrapAllFalse(columnIndexSelector.getBitmapFactory().makeEmptyImmutableBitmap())
-                  ),
-                  null,
-                  null,
-                  null
-              );
-            }
-            if (accumulator == null) {
-              accumulator = bitmapResultFactory.toImmutableBitmap(bitmapResult);
-            } else {
-              accumulator = accumulator.intersection(bitmapResultFactory.toImmutableBitmap(bitmapResult));
-            }
-            selectionCount = accumulator.size();
-            needMatcher = !index.getIndexCapabilities().isExact();
-          }
+      final FilterBundle subBundle = subfilter.forCursor(
+          columnIndexSelector,
+          bitmapResultFactory,
+          selectionCount,
+          totalRowCount,
+          includeUnknown,
+          allowPartialIndex
+      );
+      if (subBundle.getIndex() != null) {
+        if (subBundle.getIndex().isEmpty()) {
+          // Short-circuit.
+          return new FilterBundle(columnIndexSelector.getBitmapFactory().makeEmptyImmutableBitmap(), null);
         }
+        if (index == null) {
+          index = subBundle.getIndex();
+        } else {
+          index = index.intersection(subBundle.getIndex());
+        }
+        selectionCount = index.size();
       }
-
-      if (needMatcher) {
-        matcherFns.add(subfilter::makeMatcher);
-        vectorMatcherFns.add(subfilter::makeVectorMatcher);
+      if (subBundle.getMatcherBundle() != null) {
+        matcherBundles.add(subBundle.getMatcherBundle());
       }
     }
 
-    final ImmutableBitmap index = accumulator;
+    final FilterBundle.MatcherBundle matcherBundle;
+    if (!matcherBundles.isEmpty()) {
+      matcherBundle = new FilterBundle.MatcherBundle()
+      {
+        @Override
+        public ValueMatcher valueMatcher(ColumnSelectorFactory selectorFactory, Offset baseOffset, boolean descending)
+        {
+          final ValueMatcher[] matchers = new ValueMatcher[matcherBundles.size()];
+          for (int i = 0; i < matcherBundles.size(); i++) {
+            matchers[i] = matcherBundles.get(i).valueMatcher(selectorFactory, baseOffset, descending);
+          }
+          return makeMatcher(matchers);
+        }
 
-    final Function<ColumnSelectorFactory, ValueMatcher> matcherFunction;
-    final Function<VectorColumnSelectorFactory, VectorValueMatcher> vectorMatcherFunction;
-    if (!matcherFns.isEmpty()) {
-      matcherFunction = selectorFactory -> {
-        final ValueMatcher[] matchers = new ValueMatcher[matcherFns.size()];
-        for (int i = 0; i < matcherFns.size(); i++) {
-          matchers[i] = matcherFns.get(i).apply(selectorFactory);
+        @Override
+        public VectorValueMatcher vectorMatcher(VectorColumnSelectorFactory selectorFactory)
+        {
+          final VectorValueMatcher[] vectorMatchers = new VectorValueMatcher[matcherBundles.size()];
+          for (int i = 0; i < matcherBundles.size(); i++) {
+            vectorMatchers[i] = matcherBundles.get(i).vectorMatcher(selectorFactory);
+          }
+          return makeVectorMatcher(vectorMatchers);
         }
-        return makeMatcher(matchers);
-      };
-      vectorMatcherFunction = selectorFactory -> {
-        final VectorValueMatcher[] vectorMatchers = new VectorValueMatcher[vectorMatcherFns.size()];
-        for (int i = 0; i < vectorMatcherFns.size(); i++) {
-          vectorMatchers[i] = vectorMatcherFns.get(i).apply(selectorFactory);
-        }
-        return makeVectorMatcher(vectorMatchers);
       };
     } else {
-      matcherFunction = null;
-      vectorMatcherFunction = null;
+      matcherBundle = null;
     }
 
-    return new FilterBundle(
-        index,
-        null,
-        matcherFunction,
-        vectorMatcherFunction
-    );
+    return new FilterBundle(index, matcherBundle);
   }
 
   @Nullable

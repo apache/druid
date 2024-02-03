@@ -115,5 +115,4 @@ public class WrappedImmutableRoaringBitmap implements ImmutableBitmap
     ImmutableRoaringBitmap unwrappedOtherBitmap = other.bitmap;
     return new WrappedImmutableRoaringBitmap(ImmutableRoaringBitmap.and(bitmap, unwrappedOtherBitmap));
   }
-
 }

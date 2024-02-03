@@ -32,7 +32,6 @@ import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Function;
 
 @SubclassesMustOverrideEqualsAndHashCode
 public interface Filter
@@ -67,21 +66,16 @@ public interface Filter
       index = null;
       needMatcher = true;
     }
-    final Function<ColumnSelectorFactory, ValueMatcher> matcherFunction;
-    final Function<VectorColumnSelectorFactory, VectorValueMatcher> vectorMatcherFunction;
+    final FilterBundle.SimpleMatcherBundle matcherBundle;
     if (needMatcher) {
-      matcherFunction = this::makeMatcher;
-      vectorMatcherFunction = this::makeVectorMatcher;
+      matcherBundle = new FilterBundle.SimpleMatcherBundle(
+          this::makeMatcher,
+          this::makeVectorMatcher
+      );
     } else {
-      matcherFunction = null;
-      vectorMatcherFunction = null;
+      matcherBundle = null;
     }
-    return new FilterBundle(
-        index,
-        null,
-        matcherFunction,
-        vectorMatcherFunction
-    );
+    return new FilterBundle(index, matcherBundle);
   }
 
   /**

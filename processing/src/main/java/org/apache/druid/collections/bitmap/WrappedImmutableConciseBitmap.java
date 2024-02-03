@@ -101,5 +101,4 @@ public class WrappedImmutableConciseBitmap implements ImmutableBitmap
     ImmutableConciseSet unwrappedOtherBitmap = other.bitmap;
     return new WrappedImmutableConciseBitmap(ImmutableConciseSet.intersection(bitmap, unwrappedOtherBitmap));
   }
-
 }

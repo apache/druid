@@ -23,52 +23,43 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.data.Offset;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.util.function.Function;
 
 /**
- * Itsa me, your filter bundle. This is a container for all of the goodies used for producing filtered cursors,
- * a {@link ImmutableBitmap} if the filter can use an index, and functions to build {@link ValueMatcher} and
- * {@link VectorValueMatcher} given a {@link ColumnSelectorFactory} or {@link VectorColumnSelectorFactory} respectively
- * for any filters which must be evaluated row by row during the scan. Cursors will use everything that is non-null,
- * and at least one of index or matcher creators MUST be set.
+ * Itsa me, your filter bundle. This is a container for all the goodies used for producing filtered cursors,
+ * a {@link ImmutableBitmap} if the filter can use an index, and a {@link MatcherBundle} which contains functions to
+ * build {@link ValueMatcher} and {@link VectorValueMatcher} for any filters which must be evaluated row by row during
+ * the cursor scan. Cursors will use everything that is non-null, and at least one of index or matcher bundle MUST be
+ * set.
  * <p>
  * There are a few cases where the filter should set both indexes and matchers. For example, if the filter is a
- * composite filter which can be partitioned, such as {@link org.apache.druid.segment.filter.AndFilter}, then index can
- * be set to reduce the number of rows and the value matcher will filter the remainder. This can also be used if the
- * index is an in-exact match, and a matcher must be used to ensure that the remaining values actually match the filter.
- * <p>
- * {@link #partialIndex} is used to allow {@link org.apache.druid.segment.FilteredOffset} to create a
- * {@link ValueMatcher} that can partially use indexes, mostly for {@link org.apache.druid.segment.filter.OrFilter}.
+ * composite filter which can be partitioned, such as {@link org.apache.druid.segment.filter.AndFilter}, then the filter
+ * can be partitioned due to the intersection nature of AND, so the index can be set to reduce the number of rows and
+ * the matcher bundle will build a matcher which will filter the remainder. This can also be set in the case the index
+ * is an inexact match, and a matcher must be used to ensure that the remaining values actually match the filter.
  */
 public class FilterBundle
 {
   @Nullable
   private final ImmutableBitmap index;
   @Nullable
-  private final ImmutableBitmap partialIndex;
-  @Nullable
-  private final Function<ColumnSelectorFactory, ValueMatcher> matcherFn;
-  @Nullable
-  private final Function<VectorColumnSelectorFactory, VectorValueMatcher> vectorMatcherFn;
+  private final MatcherBundle matcherBundle;
 
   public FilterBundle(
       @Nullable ImmutableBitmap index,
-      @Nullable ImmutableBitmap partialIndex,
-      @Nullable Function<ColumnSelectorFactory, ValueMatcher> matcherFn,
-      @Nullable Function<VectorColumnSelectorFactory, VectorValueMatcher> vectorMatcherFn
+      @Nullable MatcherBundle matcherBundle
   )
   {
     Preconditions.checkArgument(
-        index != null || matcherFn != null,
+        index != null || matcherBundle != null,
         "At least one of index or matcher must be not null"
     );
     this.index = index;
-    this.partialIndex = partialIndex;
-    this.matcherFn = matcherFn;
-    this.vectorMatcherFn = vectorMatcherFn;
+    this.matcherBundle = matcherBundle;
   }
 
 
@@ -79,26 +70,49 @@ public class FilterBundle
   }
 
   @Nullable
-  public ImmutableBitmap getPartialIndex()
+  public MatcherBundle getMatcherBundle()
   {
-    return partialIndex;
+    return matcherBundle;
   }
 
-  @Nullable
-  public ValueMatcher valueMatcher(ColumnSelectorFactory selectorFactory)
+  /**
+   * Builder of {@link ValueMatcher} and {@link VectorValueMatcher}. The
+   * {@link #valueMatcher(ColumnSelectorFactory, Offset, boolean)} function also passes in the base offset and whether
+   * the offset is 'descending' or not, to allow filters more flexibility in value matcher creation.
+   * {@link org.apache.druid.segment.filter.OrFilter} uses these extra parameters to allow partial use of indexes to
+   * create a synthetic value matcher that checks if the row is set in the bitmap, instead of purely using value
+   * matchers, with {@link org.apache.druid.segment.filter.OrFilter.CursorOffsetHolderRowOffsetMatcherFactory}.
+   */
+  public interface MatcherBundle
   {
-    if (matcherFn == null) {
-      return null;
-    }
-    return matcherFn.apply(selectorFactory);
+    ValueMatcher valueMatcher(ColumnSelectorFactory selectorFactory, Offset baseOffset, boolean descending);
+    VectorValueMatcher vectorMatcher(VectorColumnSelectorFactory selectorFactory);
   }
 
-  @Nullable
-  public VectorValueMatcher vectorMatcher(VectorColumnSelectorFactory selectorFactory)
+  public static class SimpleMatcherBundle implements MatcherBundle
   {
-    if (vectorMatcherFn == null) {
-      return null;
+    private final Function<ColumnSelectorFactory, ValueMatcher> matcherFn;
+    private final Function<VectorColumnSelectorFactory, VectorValueMatcher> vectorMatcherFn;
+
+    public SimpleMatcherBundle(
+        Function<ColumnSelectorFactory, ValueMatcher> matcherFn,
+        Function<VectorColumnSelectorFactory, VectorValueMatcher> vectorMatcherFn
+    )
+    {
+      this.matcherFn = matcherFn;
+      this.vectorMatcherFn = vectorMatcherFn;
     }
-    return vectorMatcherFn.apply(selectorFactory);
+
+    @Override
+    public ValueMatcher valueMatcher(ColumnSelectorFactory selectorFactory, Offset baseOffset, boolean descending)
+    {
+      return matcherFn.apply(selectorFactory);
+    }
+
+    @Override
+    public VectorValueMatcher vectorMatcher(VectorColumnSelectorFactory selectorFactory)
+    {
+      return vectorMatcherFn.apply(selectorFactory);
+    }
   }
 }

@@ -19,56 +19,22 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.filter.Filter;
-import org.apache.druid.query.filter.RowOffsetMatcherFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.data.Offset;
 import org.apache.druid.segment.data.ReadableOffset;
-import org.apache.druid.segment.filter.ValueMatchers;
-import org.roaringbitmap.IntIterator;
-
-import javax.annotation.Nullable;
 
 public final class FilteredOffset extends Offset
 {
   private final Offset baseOffset;
   private final ValueMatcher filterMatcher;
 
-  FilteredOffset(
-      Offset baseOffset,
-      boolean descending,
-      @Nullable ImmutableBitmap partialMatchBitmap,
-      ValueMatcher filterMatcher
-  )
+  FilteredOffset(Offset baseOffset, ValueMatcher filterMatcher)
   {
     this.baseOffset = baseOffset;
-    if (partialMatchBitmap != null) {
-      RowOffsetMatcherFactory rowOffsetMatcherFactory = new CursorOffsetHolderRowOffsetMatcherFactory(
-          baseOffset.getBaseReadableOffset(),
-          descending
-      );
-      ValueMatcher offsetMatcher = rowOffsetMatcherFactory.makeRowOffsetMatcher(partialMatchBitmap);
-      this.filterMatcher = new ValueMatcher()
-      {
-        @Override
-        public boolean matches(boolean includeUnknown)
-        {
-          return offsetMatcher.matches(includeUnknown) || filterMatcher.matches(includeUnknown);
-        }
-
-        @Override
-        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-        {
-          inspector.visit("offsetMatcher", offsetMatcher);
-          inspector.visit("filterMatcher", filterMatcher);
-        }
-      };
-    } else {
-      this.filterMatcher = filterMatcher;
-    }
+    this.filterMatcher = filterMatcher;
 
     incrementIfNeededOnCreationOrReset();
   }
@@ -143,79 +109,5 @@ public final class FilteredOffset extends Offset
   {
     inspector.visit("baseOffset", baseOffset);
     inspector.visit("filterMatcher", filterMatcher);
-  }
-
-  private static class CursorOffsetHolderRowOffsetMatcherFactory implements RowOffsetMatcherFactory
-  {
-    private final ReadableOffset offset;
-    private final boolean descending;
-
-    CursorOffsetHolderRowOffsetMatcherFactory(ReadableOffset offset, boolean descending)
-    {
-      this.offset = offset;
-      this.descending = descending;
-    }
-
-    // Use an iterator-based implementation, ImmutableBitmap.get(index) works differently for Concise and Roaring.
-    // ImmutableConciseSet.get(index) is also inefficient, it performs a linear scan on each call
-    @Override
-    public ValueMatcher makeRowOffsetMatcher(final ImmutableBitmap rowBitmap)
-    {
-      final IntIterator iter = descending ?
-                               BitmapOffset.getReverseBitmapOffsetIterator(rowBitmap) :
-                               rowBitmap.iterator();
-
-      if (!iter.hasNext()) {
-        return ValueMatchers.allFalse();
-      }
-
-      if (descending) {
-        return new ValueMatcher()
-        {
-          int iterOffset = Integer.MAX_VALUE;
-
-          @Override
-          public boolean matches(boolean includeUnknown)
-          {
-            int currentOffset = offset.getOffset();
-            while (iterOffset > currentOffset && iter.hasNext()) {
-              iterOffset = iter.next();
-            }
-
-            return iterOffset == currentOffset;
-          }
-
-          @Override
-          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-          {
-            inspector.visit("offset", offset);
-            inspector.visit("iter", iter);
-          }
-        };
-      } else {
-        return new ValueMatcher()
-        {
-          int iterOffset = -1;
-
-          @Override
-          public boolean matches(boolean includeUnknown)
-          {
-            int currentOffset = offset.getOffset();
-            while (iterOffset < currentOffset && iter.hasNext()) {
-              iterOffset = iter.next();
-            }
-
-            return iterOffset == currentOffset;
-          }
-
-          @Override
-          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-          {
-            inspector.visit("offset", offset);
-            inspector.visit("iter", iter);
-          }
-        };
-      }
-    }
   }
 }

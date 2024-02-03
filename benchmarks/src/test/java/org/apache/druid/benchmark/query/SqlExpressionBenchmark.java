@@ -20,7 +20,6 @@
 package org.apache.druid.benchmark.query;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -87,8 +86,8 @@ import java.util.stream.Collectors;
  */
 @State(Scope.Benchmark)
 @Fork(value = 1)
-@Warmup(iterations = 3)
-@Measurement(iterations = 5)
+@Warmup(iterations = 2)
+@Measurement(iterations = 3)
 public class SqlExpressionBenchmark
 {
   private static final Logger log = new Logger(SqlExpressionBenchmark.class);
@@ -212,7 +211,9 @@ public class SqlExpressionBenchmark
       "SELECT string1, long1 FROM foo WHERE ARRAY_CONTAINS(\"multi-string3\", 100) GROUP BY 1,2",
       "SELECT string1, long1 FROM foo WHERE ARRAY_OVERLAP(\"multi-string3\", ARRAY[100, 200]) GROUP BY 1,2",
       // 40: regex filtering
-      "SELECT string4, COUNT(*) FROM foo WHERE REGEXP_EXTRACT(string1, '^1') IS NOT NULL OR REGEXP_EXTRACT('Z' || string2, '^Z2') IS NOT NULL GROUP BY 1"
+      "SELECT string4, COUNT(*) FROM foo WHERE REGEXP_EXTRACT(string1, '^1') IS NOT NULL OR REGEXP_EXTRACT('Z' || string2, '^Z2') IS NOT NULL GROUP BY 1",
+      // 41: complicated filtering
+      "SELECT string2, SUM(long1) FROM foo WHERE string1 = '1000' AND string5 LIKE '%1%' AND (string3 in ('1', '10', '20', '22', '32') AND long2 IN (1, 19, 21, 23, 25, 26, 46) AND double3 < 1010.0 AND double3 > 1000.0 AND (string4 = '1' OR REGEXP_EXTRACT(string1, '^1') IS NOT NULL OR REGEXP_EXTRACT('Z' || string2, '^Z2') IS NOT NULL)) GROUP BY 1 ORDER BY 2"
   );
 
   @Param({"5000000"})
@@ -232,48 +233,49 @@ public class SqlExpressionBenchmark
 
   @Param({
       // non-expression reference
-      "0",
-      "1",
-      "2",
-      "3",
-      "4",
-      "5",
-      "6",
-      // expressions, etc
-      "7",
-      "8",
-      "9",
-      "10",
-      "11",
-      "12",
-      "13",
-      "14",
-      "15",
-      "16",
-      "17",
-      "18",
-      "19",
-      "20",
-      "21",
-      "22",
-      "23",
-      "24",
-      "25",
-      "26",
-      "27",
-      "28",
-      "29",
-      "30",
-      "31",
-      "32",
-      "33",
-      "34",
-      "35",
-      "36",
-      "37",
-      "38",
-      "39",
-      "40"
+//      "0",
+//      "1",
+//      "2",
+//      "3",
+//      "4",
+//      "5",
+//      "6",
+//      // expressions, etc
+//      "7",
+//      "8",
+//      "9",
+//      "10",
+//      "11",
+//      "12",
+//      "13",
+//      "14",
+//      "15",
+//      "16",
+//      "17",
+//      "18",
+//      "19",
+//      "20",
+//      "21",
+//      "22",
+//      "23",
+//      "24",
+//      "25",
+//      "26",
+//      "27",
+//      "28",
+//      "29",
+//      "30",
+//      "31",
+//      "32",
+//      "33",
+//      "34",
+//      "35",
+//      "36",
+//      "37",
+//      "38",
+//      "39",
+//      "40"
+      "41"
   })
   private String query;
 
@@ -366,9 +368,6 @@ public class SqlExpressionBenchmark
                jsonMapper.writerWithDefaultPrettyPrinter()
                          .writeValueAsString(jsonMapper.readValue((String) planResult[0], List.class))
       );
-    }
-    catch (JsonMappingException e) {
-      throw new RuntimeException(e);
     }
     catch (JsonProcessingException e) {
       throw new RuntimeException(e);

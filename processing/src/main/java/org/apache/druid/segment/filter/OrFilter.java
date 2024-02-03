@@ -29,18 +29,23 @@ import org.apache.druid.query.filter.BooleanFilter;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterBundle;
+import org.apache.druid.query.filter.RowOffsetMatcherFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.vector.BaseVectorValueMatcher;
 import org.apache.druid.query.filter.vector.ReadableVectorMatch;
 import org.apache.druid.query.filter.vector.VectorMatch;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.BitmapOffset;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
+import org.apache.druid.segment.data.Offset;
+import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.roaringbitmap.IntIterator;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -80,8 +85,6 @@ public class OrFilter implements BooleanFilter
       boolean allowPartialIndex
   )
   {
-    // todo (clint): if we drop all the index stuff from FilteredOffset, we can delete this override
-    //  since the default implementation will be sufficient...
     final List<T> indexes = new ArrayList<>();
     final List<Function<ColumnSelectorFactory, ValueMatcher>> matcherFns = new ArrayList<>();
     final List<Function<VectorColumnSelectorFactory, VectorValueMatcher>> vectorMatcherFns = new ArrayList<>();
@@ -140,34 +143,59 @@ public class OrFilter implements BooleanFilter
       }
     }
 
-    final Function<ColumnSelectorFactory, ValueMatcher> matcherFunction;
-    final Function<VectorColumnSelectorFactory, VectorValueMatcher> vectorMatcherFunction;
+    final FilterBundle.MatcherBundle matcherBundle;
     if (!matcherFns.isEmpty()) {
-      matcherFunction = selectorFactory -> {
-        final ValueMatcher[] matchers = new ValueMatcher[matcherFns.size()];
-        for (int i = 0; i < matcherFns.size(); i++) {
-          matchers[i] = matcherFns.get(i).apply(selectorFactory);
+      matcherBundle = new FilterBundle.MatcherBundle()
+      {
+        @Override
+        public ValueMatcher valueMatcher(ColumnSelectorFactory selectorFactory, Offset baseOffset, boolean descending)
+        {
+          final ValueMatcher[] matchers = new ValueMatcher[matcherFns.size()];
+          for (int i = 0; i < matcherFns.size(); i++) {
+            matchers[i] = matcherFns.get(i).apply(selectorFactory);
+          }
+          ValueMatcher orMatcher = makeMatcher(matchers);
+          if (partialIndex != null) {
+            RowOffsetMatcherFactory rowOffsetMatcherFactory = new CursorOffsetHolderRowOffsetMatcherFactory(
+                baseOffset.getBaseReadableOffset(),
+                descending
+            );
+            ValueMatcher offsetMatcher = rowOffsetMatcherFactory.makeRowOffsetMatcher(partialIndex);
+            return new ValueMatcher()
+            {
+              @Override
+              public boolean matches(boolean includeUnknown)
+              {
+                return offsetMatcher.matches(includeUnknown) || orMatcher.matches(includeUnknown);
+              }
+
+              @Override
+              public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+              {
+                inspector.visit("offsetMatcher", offsetMatcher);
+                inspector.visit("filterMatcher", orMatcher);
+              }
+            };
+          } else {
+            return orMatcher;
+          }
         }
-        return makeMatcher(matchers);
-      };
-      vectorMatcherFunction = selectorFactory -> {
-        final VectorValueMatcher[] vectorMatchers = new VectorValueMatcher[vectorMatcherFns.size()];
-        for (int i = 0; i < vectorMatcherFns.size(); i++) {
-          vectorMatchers[i] = vectorMatcherFns.get(i).apply(selectorFactory);
+
+        @Override
+        public VectorValueMatcher vectorMatcher(VectorColumnSelectorFactory selectorFactory)
+        {
+          final VectorValueMatcher[] vectorMatchers = new VectorValueMatcher[vectorMatcherFns.size()];
+          for (int i = 0; i < vectorMatcherFns.size(); i++) {
+            vectorMatchers[i] = vectorMatcherFns.get(i).apply(selectorFactory);
+          }
+          return makeVectorMatcher(vectorMatchers);
         }
-        return makeVectorMatcher(vectorMatchers);
       };
     } else {
-      matcherFunction = null;
-      vectorMatcherFunction = null;
+      matcherBundle = null;
     }
 
-    return new FilterBundle(
-        index,
-        partialIndex,
-        matcherFunction,
-        vectorMatcherFunction
-    );
+    return new FilterBundle(index, matcherBundle);
   }
 
   @Nullable
@@ -371,5 +399,79 @@ public class OrFilter implements BooleanFilter
   public int hashCode()
   {
     return Objects.hash(getFilters());
+  }
+
+  private static class CursorOffsetHolderRowOffsetMatcherFactory implements RowOffsetMatcherFactory
+  {
+    private final ReadableOffset offset;
+    private final boolean descending;
+
+    CursorOffsetHolderRowOffsetMatcherFactory(ReadableOffset offset, boolean descending)
+    {
+      this.offset = offset;
+      this.descending = descending;
+    }
+
+    // Use an iterator-based implementation, ImmutableBitmap.get(index) works differently for Concise and Roaring.
+    // ImmutableConciseSet.get(index) is also inefficient, it performs a linear scan on each call
+    @Override
+    public ValueMatcher makeRowOffsetMatcher(final ImmutableBitmap rowBitmap)
+    {
+      final IntIterator iter = descending ?
+                               BitmapOffset.getReverseBitmapOffsetIterator(rowBitmap) :
+                               rowBitmap.iterator();
+
+      if (!iter.hasNext()) {
+        return ValueMatchers.allFalse();
+      }
+
+      if (descending) {
+        return new ValueMatcher()
+        {
+          int iterOffset = Integer.MAX_VALUE;
+
+          @Override
+          public boolean matches(boolean includeUnknown)
+          {
+            int currentOffset = offset.getOffset();
+            while (iterOffset > currentOffset && iter.hasNext()) {
+              iterOffset = iter.next();
+            }
+
+            return iterOffset == currentOffset;
+          }
+
+          @Override
+          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+          {
+            inspector.visit("offset", offset);
+            inspector.visit("iter", iter);
+          }
+        };
+      } else {
+        return new ValueMatcher()
+        {
+          int iterOffset = -1;
+
+          @Override
+          public boolean matches(boolean includeUnknown)
+          {
+            int currentOffset = offset.getOffset();
+            while (iterOffset < currentOffset && iter.hasNext()) {
+              iterOffset = iter.next();
+            }
+
+            return iterOffset == currentOffset;
+          }
+
+          @Override
+          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+          {
+            inspector.visit("offset", offset);
+            inspector.visit("iter", iter);
+          }
+        };
+      }
+    }
   }
 }

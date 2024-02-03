@@ -79,5 +79,4 @@ public interface ImmutableBitmap
    * @param otherBitmap other bitmap
    */
   ImmutableBitmap intersection(ImmutableBitmap otherBitmap);
-
 }

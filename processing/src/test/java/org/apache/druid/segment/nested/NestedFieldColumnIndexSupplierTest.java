@@ -66,7 +66,6 @@ import java.util.TreeSet;
 
 public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingTest
 {
-  private static final int ROW_COUNT = 10;
   BitmapSerdeFactory roaringFactory = RoaringBitmapSerdeFactory.getInstance();
   BitmapResultFactory<ImmutableBitmap> bitmapResultFactory = new DefaultBitmapResultFactory(
       roaringFactory.getBitmapFactory()
@@ -1335,98 +1334,6 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
     Assert.assertNotNull(columnIndex);
     bitmap = columnIndex.computeBitmapResult(bitmapResultFactory, false);
     checkBitmap(bitmap);
-  }
-
-  @Test
-  public void testSkipIndexThresholds() throws IOException
-  {
-    ColumnConfig twentyPercent = new ColumnConfig()
-    {
-      @Override
-      public double skipValueRangeIndexScale()
-      {
-        return 0.2;
-      }
-    };
-    NestedFieldColumnIndexSupplier<?> singleTypeStringSupplier = makeSingleTypeStringSupplier(twentyPercent);
-    NestedFieldColumnIndexSupplier<?> singleTypeLongSupplier = makeSingleTypeLongSupplier(twentyPercent);
-    NestedFieldColumnIndexSupplier<?> singleTypeDoubleSupplier = makeSingleTypeDoubleSupplier(twentyPercent);
-    NestedFieldColumnIndexSupplier<?> variantSupplierWithNull = makeVariantSupplierWithNull(twentyPercent);
-
-    // value cardinality of all of these dictionaries is bigger than the skip threshold, so predicate index short
-    // circuit early and return nothing
-    DruidPredicateFactory predicateFactory = new InDimFilter.InFilterDruidPredicateFactory(
-        null,
-        InDimFilter.ValuesSet.copyOf(ImmutableSet.of("0"))
-    );
-    Assert.assertNull(singleTypeStringSupplier.as(DruidPredicateIndexes.class).forPredicate(predicateFactory));
-    Assert.assertNull(singleTypeLongSupplier.as(DruidPredicateIndexes.class).forPredicate(predicateFactory));
-    Assert.assertNull(singleTypeDoubleSupplier.as(DruidPredicateIndexes.class).forPredicate(predicateFactory));
-    Assert.assertNull(variantSupplierWithNull.as(DruidPredicateIndexes.class).forPredicate(predicateFactory));
-
-    // range index computation is a bit more complicated and done inside of the index maker gizmo because we don't know
-    // the range up front
-    LexicographicalRangeIndexes stringRange = singleTypeStringSupplier.as(LexicographicalRangeIndexes.class);
-    NumericRangeIndexes longRanges = singleTypeLongSupplier.as(NumericRangeIndexes.class);
-    NumericRangeIndexes doubleRanges = singleTypeDoubleSupplier.as(NumericRangeIndexes.class);
-
-    // string: [b, foo, fooo, z]
-    // small enough should be cool
-    Assert.assertNotNull(stringRange.forRange("fo", false, "fooo", false));
-    Assert.assertNotNull(stringRange.forRange("fo", false, "fooo", false, DruidObjectPredicate.alwaysTrue()));
-    // range too big, no index
-    Assert.assertNull(stringRange.forRange("fo", false, "z", false));
-    Assert.assertNull(stringRange.forRange("fo", false, "z", false, DruidObjectPredicate.alwaysTrue()));
-
-    // long: [1, 3, 100, 300]
-    // small enough should be cool
-    Assert.assertNotNull(longRanges.forRange(1, false, 100, true));
-    // range too big, no index
-    Assert.assertNull(longRanges.forRange(1, false, null, false));
-
-    // double: [1.1, 1.2, 3.3, 6.6]
-    // small enough should be cool
-    Assert.assertNotNull(doubleRanges.forRange(null, false, 1.2, false));
-    // range too big, no index
-    Assert.assertNull(doubleRanges.forRange(null, false, 3.3, false));
-
-    // other index types should not be impacted
-    Assert.assertNotNull(singleTypeStringSupplier.as(DictionaryEncodedStringValueIndex.class));
-    Assert.assertNotNull(singleTypeStringSupplier.as(DictionaryEncodedValueIndex.class));
-    Assert.assertNotNull(singleTypeStringSupplier.as(StringValueSetIndexes.class).forValue("foo"));
-    Assert.assertNotNull(
-        singleTypeStringSupplier.as(StringValueSetIndexes.class)
-                                .forSortedValues(new TreeSet<>(ImmutableSet.of("foo", "fooo", "z")))
-    );
-    Assert.assertNotNull(singleTypeStringSupplier.as(NullValueIndex.class));
-
-    Assert.assertNotNull(singleTypeLongSupplier.as(DictionaryEncodedStringValueIndex.class));
-    Assert.assertNotNull(singleTypeLongSupplier.as(DictionaryEncodedValueIndex.class));
-    Assert.assertNotNull(singleTypeLongSupplier.as(StringValueSetIndexes.class).forValue("1"));
-    Assert.assertNotNull(
-        singleTypeLongSupplier.as(StringValueSetIndexes.class)
-                              .forSortedValues(new TreeSet<>(ImmutableSet.of("1", "3", "100")))
-    );
-    Assert.assertNotNull(singleTypeLongSupplier.as(NullValueIndex.class));
-
-    Assert.assertNotNull(singleTypeDoubleSupplier.as(DictionaryEncodedStringValueIndex.class));
-    Assert.assertNotNull(singleTypeDoubleSupplier.as(DictionaryEncodedValueIndex.class));
-    Assert.assertNotNull(singleTypeDoubleSupplier.as(StringValueSetIndexes.class).forValue("1.1"));
-    Assert.assertNotNull(
-        singleTypeDoubleSupplier.as(StringValueSetIndexes.class)
-                                .forSortedValues(new TreeSet<>(ImmutableSet.of("1.1", "1.2", "3.3")))
-    );
-    Assert.assertNotNull(singleTypeDoubleSupplier.as(NullValueIndex.class));
-
-    // variant: [null, b, z, 1, 300, 1.1, 9.9]
-    Assert.assertNotNull(variantSupplierWithNull.as(DictionaryEncodedStringValueIndex.class));
-    Assert.assertNotNull(variantSupplierWithNull.as(DictionaryEncodedValueIndex.class));
-    Assert.assertNotNull(variantSupplierWithNull.as(StringValueSetIndexes.class).forValue("b"));
-    Assert.assertNotNull(
-        variantSupplierWithNull.as(StringValueSetIndexes.class)
-                               .forSortedValues(new TreeSet<>(ImmutableSet.of("b", "1", "9.9")))
-    );
-    Assert.assertNotNull(variantSupplierWithNull.as(NullValueIndex.class));
   }
 
   private NestedFieldColumnIndexSupplier<?> makeSingleTypeStringSupplier() throws IOException

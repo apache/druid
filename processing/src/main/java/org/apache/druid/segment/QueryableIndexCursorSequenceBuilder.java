@@ -184,17 +184,17 @@ public class QueryableIndexCursorSequenceBuilder
                     columnCache
                 );
                 final DateTime myBucket = gran.toDateTime(inputInterval.getStartMillis());
-                final ValueMatcher matcher = filterBundle == null ? null : filterBundle.valueMatcher(columnSelectorFactory);
-                if (matcher == null) {
-                  return new QueryableIndexCursor(baseCursorOffset, columnSelectorFactory, myBucket);
-                } else {
-                  FilteredOffset filteredOffset = new FilteredOffset(
-                      baseCursorOffset,
-                      descending,
-                      filterBundle.getPartialIndex(),
-                      matcher
-                  );
+                if (filterBundle != null && filterBundle.getMatcherBundle() != null) {
+                  final ValueMatcher matcher = filterBundle.getMatcherBundle()
+                                                           .valueMatcher(
+                                                               columnSelectorFactory,
+                                                               baseCursorOffset,
+                                                               descending
+                                                           );
+                  final FilteredOffset filteredOffset = new FilteredOffset(baseCursorOffset, matcher);
                   return new QueryableIndexCursor(filteredOffset, columnSelectorFactory, myBucket);
+                } else {
+                  return new QueryableIndexCursor(baseCursorOffset, columnSelectorFactory, myBucket);
                 }
               }
             }
@@ -265,12 +265,10 @@ public class QueryableIndexCursorSequenceBuilder
         columnCache,
         baseOffset
     );
-    final VectorValueMatcher vectorValueMatcher = filterBundle == null
-                                                  ? null
-                                                  : filterBundle.vectorMatcher(baseColumnSelectorFactory);
-    if (vectorValueMatcher == null) {
-      return new QueryableIndexVectorCursor(baseColumnSelectorFactory, baseOffset, vectorSize, closer);
-    } else {
+
+    if (filterBundle != null && filterBundle.getMatcherBundle() != null) {
+      final VectorValueMatcher vectorValueMatcher = filterBundle.getMatcherBundle()
+                                                                .vectorMatcher(baseColumnSelectorFactory);
       final VectorOffset filteredOffset = FilteredVectorOffset.create(
           baseOffset,
           vectorValueMatcher
@@ -282,6 +280,8 @@ public class QueryableIndexCursorSequenceBuilder
           filteredOffset
       );
       return new QueryableIndexVectorCursor(filteredColumnSelectorFactory, filteredOffset, vectorSize, closer);
+    } else {
+      return new QueryableIndexVectorCursor(baseColumnSelectorFactory, baseOffset, vectorSize, closer);
     }
   }
 
