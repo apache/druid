@@ -35,6 +35,7 @@ import org.apache.druid.sql.destination.ExportDestination;
 import org.apache.druid.storage.StorageConnectorModule;
 import org.apache.druid.storage.local.LocalFileStorageConnectorProvider;
 import org.hamcrest.CoreMatchers;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 
@@ -48,7 +49,9 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
     builder.addModule(new TestExportModule());
   }
 
+  // Disabled until replace supports external destinations. To be enabled after that point.
   @Test
+  @Ignore
   public void testReplaceIntoExtern()
   {
     testIngestionQuery()
@@ -73,12 +76,32 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testReplaceWithoutRequiredParameter()
+  public void testReplaceIntoExternShouldThrowUnsupportedException()
   {
     testIngestionQuery()
-        .sql(StringUtils.format("REPLACE INTO EXTERN(%s()) "
+        .sql(StringUtils.format("REPLACE INTO EXTERN(%s(basePath => 'export')) "
                                 + "AS CSV "
                                 + "OVERWRITE ALL "
+                                + "SELECT dim2 FROM foo", TestExportStorageConnector.TYPE_NAME))
+        .expectValidationError(
+            CoreMatchers.allOf(
+                CoreMatchers.instanceOf(DruidException.class),
+                ThrowableMessageMatcher.hasMessage(
+                    CoreMatchers.containsString(
+                        "REPLACE operations do no support EXTERN destinations. Use INSERT statements to write to an external destination."
+                    )
+                )
+            )
+        )
+        .verify();
+  }
+
+  @Test
+  public void testExportWithoutRequiredParameter()
+  {
+    testIngestionQuery()
+        .sql(StringUtils.format("INSERT INTO EXTERN(%s()) "
+                                + "AS CSV "
                                 + "SELECT dim2 FROM foo", LocalFileStorageConnectorProvider.TYPE_NAME))
         .expectValidationError(
             CoreMatchers.allOf(
@@ -93,9 +116,8 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   public void testExportWithPartitionedBy()
   {
     testIngestionQuery()
-        .sql(StringUtils.format("REPLACE INTO EXTERN(%s()) "
+        .sql(StringUtils.format("INSERT INTO EXTERN(%s()) "
                                 + "AS CSV "
-                                + "OVERWRITE ALL "
                                 + "SELECT dim2 FROM foo "
                                 + "PARTITIONED BY ALL", TestExportStorageConnector.TYPE_NAME))
         .expectValidationError(

@@ -31,7 +31,6 @@ import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -68,9 +67,8 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
       final FrameReader frameReader,
       final StorageConnector storageConnector,
       final ObjectMapper jsonMapper,
-      final int partitionNumber,
-      final int workerNumber,
-      final ChannelCounters channelCounter
+      final ChannelCounters channelCounter,
+      final String exportFilePath
   )
   {
     this.inputChannel = inputChannel;
@@ -79,7 +77,7 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
     this.storageConnector = storageConnector;
     this.jsonMapper = jsonMapper;
     this.channelCounter = channelCounter;
-    this.exportFilePath = getExportFilePath(workerNumber, partitionNumber, exportFormat);
+    this.exportFilePath = exportFilePath;
   }
 
   @Override
@@ -111,15 +109,22 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
 
   private void exportFrame(final Frame frame) throws IOException
   {
-    final RowSignature signature = frameReader.signature();
+    final RowSignature exportRowSignature = createRowSignatureForExport(frameReader.signature());
 
     final Sequence<Cursor> cursorSequence =
         new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY)
             .makeCursors(null, Intervals.ETERNITY, VirtualColumns.EMPTY, Granularities.ALL, false, null);
 
+    // Add headers if we are writing to a new file.
+    final boolean writeHeader = !storageConnector.pathExists(exportFilePath);
+
     try (OutputStream stream = storageConnector.write(exportFilePath)) {
       ResultFormat.Writer formatter = exportFormat.createFormatter(stream, jsonMapper);
       formatter.writeResponseStart();
+
+      if (writeHeader) {
+        formatter.writeHeaderFromRowSignature(exportRowSignature, false);
+      }
 
       SequenceUtils.forEach(
           cursorSequence,
@@ -130,7 +135,7 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
               //noinspection rawtypes
               @SuppressWarnings("rawtypes")
               final List<BaseObjectColumnValueSelector> selectors =
-                  frameReader.signature()
+                  exportRowSignature
                              .getColumnNames()
                              .stream()
                              .map(columnSelectorFactory::makeColumnValueSelector)
@@ -138,11 +143,8 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
 
               while (!cursor.isDone()) {
                 formatter.writeRowStart();
-                for (int j = 0; j < signature.size(); j++) {
-                  if (QueryKitUtils.PARTITION_BOOST_COLUMN.equals(signature.getColumnName(j))) {
-                    continue;
-                  }
-                  formatter.writeRowField(signature.getColumnName(j), selectors.get(j).getObject());
+                for (int j = 0; j < exportRowSignature.size(); j++) {
+                  formatter.writeRowField(exportRowSignature.getColumnName(j), selectors.get(j).getObject());
                 }
                 channelCounter.incrementRowCount();
                 formatter.writeRowEnd();
@@ -160,9 +162,14 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
     }
   }
 
-  private static String getExportFilePath(int workerNumber, int partitionNumber, ResultFormat exportFormat)
+  private static RowSignature createRowSignatureForExport(RowSignature inputRowSignature)
   {
-    return StringUtils.format("worker%s/partition%s.%s", workerNumber, partitionNumber, exportFormat.toString());
+    RowSignature.Builder exportRowSignatureBuilder = RowSignature.builder();
+    inputRowSignature.getColumnNames()
+                     .stream()
+                     .filter(name -> !QueryKitUtils.PARTITION_BOOST_COLUMN.equals(name))
+                     .forEach(name -> exportRowSignatureBuilder.add(name, inputRowSignature.getColumnType(name).orElse(null)));
+    return exportRowSignatureBuilder.build();
   }
 
   @Override

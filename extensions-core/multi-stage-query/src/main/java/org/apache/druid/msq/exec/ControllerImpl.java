@@ -203,7 +203,6 @@ import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.http.ResultFormat;
-import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
@@ -224,6 +223,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -1875,27 +1875,24 @@ public class ControllerImpl implements Controller
       final ExportMSQDestination exportMSQDestination = (ExportMSQDestination) querySpec.getDestination();
       final StorageConnectorProvider storageConnectorProvider = exportMSQDestination.getStorageConnectorProvider();
 
-      final ResultFormat resultFormat = exportMSQDestination.getResultFormat();
-
-      // If the statement is a 'REPLACE' statement, delete the existing files at the destination.
-      if (exportMSQDestination.getReplaceTimeChunks() != null) {
-        if (Intervals.ONLY_ETERNITY.equals(exportMSQDestination.getReplaceTimeChunks())) {
-          StorageConnector storageConnector = storageConnectorProvider.get();
-          try {
-            storageConnector.deleteRecursively("");
-          }
-          catch (IOException e) {
-            throw DruidException.forPersona(DruidException.Persona.USER)
-                                .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                                .build(e, "Exception occurred while deleting existing files from export destination.");
-          }
-        } else {
+      try {
+        // Check that the export destination is empty as a sanity check. We want to avoid modifying any other files with export.
+        Iterator<String> filesIterator = storageConnectorProvider.get().listDir("");
+        if (filesIterator.hasNext()) {
           throw DruidException.forPersona(DruidException.Persona.USER)
-                              .ofCategory(DruidException.Category.UNSUPPORTED)
-                              .build("Currently export only works with OVERWRITE ALL clause.");
+                              .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                              .build("Found files at provided export destination. Export is only allowed to "
+                                     + "an empty path. Please provide an empty path or move the existing files.");
         }
       }
+      catch (IOException e) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                            .build(e, "Exception occurred while connecting to export destination.");
+      }
 
+
+      final ResultFormat resultFormat = exportMSQDestination.getResultFormat();
       final QueryDefinitionBuilder builder = QueryDefinition.builder();
       builder.addAll(queryDef);
       builder.add(StageDefinition.builder(queryDef.getNextStageNumber())
@@ -1904,6 +1901,7 @@ public class ControllerImpl implements Controller
                                  .signature(queryDef.getFinalStageDefinition().getSignature())
                                  .shuffleSpec(null)
                                  .processorFactory(new ExportResultsFrameProcessorFactory(
+                                     queryId,
                                      storageConnectorProvider,
                                      resultFormat
                                  ))

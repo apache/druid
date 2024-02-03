@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.export;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.storage.StorageConnector;
 
 import java.io.ByteArrayOutputStream;
@@ -44,7 +45,7 @@ public class TestExportStorageConnector implements StorageConnector
   @Override
   public boolean pathExists(String path)
   {
-    throw new UnsupportedOperationException();
+    return true;
   }
 
   @Override
@@ -86,6 +87,6 @@ public class TestExportStorageConnector implements StorageConnector
   @Override
   public Iterator<String> listDir(String dirName)
   {
-    throw new UnsupportedOperationException();
+    return ImmutableList.<String>of().stream().iterator();
   }
 }

@@ -371,6 +371,11 @@ public abstract class IngestHandler extends QueryHandler
     @Override
     public void validate()
     {
+      if (ingestNode().getTargetTable() instanceof ExternalDestinationSqlIdentifier) {
+        throw InvalidSqlInput.exception(
+            "REPLACE operations do no support EXTERN destinations. Use INSERT statements to write to an external destination."
+        );
+      }
       if (!handlerContext.plannerContext().featureAvailable(EngineFeature.CAN_REPLACE)) {
         throw InvalidSqlInput.exception(
             "REPLACE operations are not supported by the requested SQL engine [%s].  Consider using MSQ.",

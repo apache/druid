@@ -27,6 +27,7 @@ import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.frame.processor.OutputChannels;
 import org.apache.druid.frame.processor.manager.ProcessorManagers;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.msq.counters.ChannelCounters;
@@ -51,17 +52,26 @@ import java.util.function.Consumer;
 @JsonTypeName("exportResults")
 public class ExportResultsFrameProcessorFactory extends BaseFrameProcessorFactory
 {
+  private final String queryId;
   private final StorageConnectorProvider storageConnectorProvider;
   private final ResultFormat exportFormat;
 
   @JsonCreator
   public ExportResultsFrameProcessorFactory(
+      @JsonProperty("queryId") String queryId,
       @JsonProperty("storageConnectorProvider") StorageConnectorProvider storageConnectorProvider,
       @JsonProperty("exportFormat") ResultFormat exportFormat
   )
   {
+    this.queryId = queryId;
     this.storageConnectorProvider = storageConnectorProvider;
     this.exportFormat = exportFormat;
+  }
+
+  @JsonProperty("queryId")
+  public String getQueryId()
+  {
+    return queryId;
   }
 
   @JsonProperty("exportFormat")
@@ -110,9 +120,8 @@ public class ExportResultsFrameProcessorFactory extends BaseFrameProcessorFactor
             readableInput.getChannelFrameReader(),
             storageConnectorProvider.get(),
             frameContext.jsonMapper(),
-            readableInput.getStagePartition().getPartitionNumber(),
-            workerNumber,
-            channelCounter
+            channelCounter,
+            getExportFilePath(queryId, workerNumber, readableInput.getStagePartition().getPartitionNumber(), exportFormat)
         )
     );
 
@@ -120,5 +129,10 @@ public class ExportResultsFrameProcessorFactory extends BaseFrameProcessorFactor
         ProcessorManagers.of(processors),
         OutputChannels.none()
     );
+  }
+
+  private static String getExportFilePath(String queryId, int workerNumber, int partitionNumber, ResultFormat exportFormat)
+  {
+    return StringUtils.format("%s-worker%s-partition%s.%s", queryId, workerNumber, partitionNumber, exportFormat.toString());
   }
 }

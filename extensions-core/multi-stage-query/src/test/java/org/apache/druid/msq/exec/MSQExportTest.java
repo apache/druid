@@ -96,7 +96,7 @@ public class MSQExportTest extends MSQTestBase
 
     Assert.assertEquals(
         expectedFooFileContents().size(),
-        Objects.requireNonNull(new File(exportDir.getAbsolutePath(), "worker0").listFiles()).length
+        Objects.requireNonNull(new File(exportDir.getAbsolutePath()).listFiles()).length
     );
   }
 

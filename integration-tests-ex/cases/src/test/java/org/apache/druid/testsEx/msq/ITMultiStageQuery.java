@@ -194,9 +194,8 @@ public class ITMultiStageQuery
   {
     String exportQuery =
         StringUtils.format(
-            "REPLACE INTO extern(%s(basePath => '%s'))\n"
+            "INSERT INTO extern(%s(basePath => '%s'))\n"
             + "AS CSV\n"
-            + "OVERWRITE ALL\n"
             + "SELECT page, added, delta\n"
             + "FROM TABLE(\n"
             + "  EXTERN(\n"
@@ -205,7 +204,7 @@ public class ITMultiStageQuery
             + "    '[{\"type\":\"string\",\"name\":\"timestamp\"},{\"type\":\"string\",\"name\":\"isRobot\"},{\"type\":\"string\",\"name\":\"diffUrl\"},{\"type\":\"long\",\"name\":\"added\"},{\"type\":\"string\",\"name\":\"countryIsoCode\"},{\"type\":\"string\",\"name\":\"regionName\"},{\"type\":\"string\",\"name\":\"channel\"},{\"type\":\"string\",\"name\":\"flags\"},{\"type\":\"long\",\"name\":\"delta\"},{\"type\":\"string\",\"name\":\"isUnpatrolled\"},{\"type\":\"string\",\"name\":\"isNew\"},{\"type\":\"double\",\"name\":\"deltaBucket\"},{\"type\":\"string\",\"name\":\"isMinor\"},{\"type\":\"string\",\"name\":\"isAnonymous\"},{\"type\":\"long\",\"name\":\"deleted\"},{\"type\":\"string\",\"name\":\"cityName\"},{\"type\":\"long\",\"name\":\"metroCode\"},{\"type\":\"string\",\"name\":\"namespace\"},{\"type\":\"string\",\"name\":\"comment\"},{\"type\":\"string\",\"name\":\"page\"},{\"type\":\"long\",\"name\":\"commentLength\"},{\"type\":\"string\",\"name\":\"countryName\"},{\"type\":\"string\",\"name\":\"user\"},{\"type\":\"string\",\"name\":\"regionIsoCode\"}]'\n"
             + "  )\n"
             + ")\n",
-            "localStorage", "/shared/export"
+            "local", "/shared/export/"
         );
 
     SqlTaskStatus exportTask = msqHelper.submitMsqTask(exportQuery);
@@ -219,15 +218,16 @@ public class ITMultiStageQuery
       ));
     }
 
-    String resultQuery = "SELECT page, added, delta\n"
-                         + "  FROM TABLE(\n"
-                         + "    EXTERN(\n"
-                         + "      '{\"type\":\"local\",\"baseDir\":\"/shared/export/worker0/\",\"filter\":\"*.csv\"}',\n"
-                         + "      '{\"type\":\"csv\",\"findColumnsFromHeader\":false,\"columns\":[\"delta\",\"added\",\"page\"]}'\n"
-                         + "    )\n"
-                         + "  ) EXTEND (\"delta\" BIGINT, \"added\" BIGINT, \"page\" VARCHAR)\n"
-                         + "   WHERE delta != 0\n"
-                         + "   ORDER BY page";
+    String resultQuery = StringUtils.format(
+        "SELECT page, delta, added\n"
+        + "  FROM TABLE(\n"
+        + "    EXTERN(\n"
+        + "      '{\"type\":\"local\",\"baseDir\":\"/shared/export/\",\"filter\":\"*.csv\"}',\n"
+        + "      '{\"type\":\"csv\",\"findColumnsFromHeader\":true}'\n"
+        + "    )\n"
+        + "  ) EXTEND (\"added\" BIGINT, \"delta\" BIGINT, \"page\" VARCHAR)\n"
+        + "   WHERE delta != 0\n"
+        + "   ORDER BY page");
 
     SqlTaskStatus resultTaskStatus = msqHelper.submitMsqTask(resultQuery);
 
