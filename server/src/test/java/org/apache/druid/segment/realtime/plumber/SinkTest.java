@@ -398,7 +398,8 @@ public class SinkTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        "dedupColumn"
+        "dedupColumn",
+        null
     );
     final Sink sink = new Sink(
         interval,
