@@ -61,7 +61,6 @@ public class TestModifiedKinesisIndexTaskTuningConfig extends KinesisIndexTaskTu
       @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
       @JsonProperty("maxRecordsPerPoll") @Nullable Integer maxRecordsPerPoll,
       @JsonProperty("intermediateHandoffPeriod") @Nullable Period intermediateHandoffPeriod,
-      @JsonProperty("numPersistThreads") @Nullable Integer numPersistThreads,
       @JsonProperty("extra") String extra
   )
   {
@@ -90,8 +89,7 @@ public class TestModifiedKinesisIndexTaskTuningConfig extends KinesisIndexTaskTu
         maxParseExceptions,
         maxSavedParseExceptions,
         maxRecordsPerPoll,
-        intermediateHandoffPeriod,
-        numPersistThreads
+        intermediateHandoffPeriod
     );
     this.extra = extra;
   }
@@ -123,8 +121,7 @@ public class TestModifiedKinesisIndexTaskTuningConfig extends KinesisIndexTaskTu
         base.getMaxParseExceptions(),
         base.getMaxSavedParseExceptions(),
         base.getMaxRecordsPerPollConfigured(),
-        base.getIntermediateHandoffPeriod(),
-        base.getNumPersistThreads()
+        base.getIntermediateHandoffPeriod()
     );
     this.extra = extra;
   }
