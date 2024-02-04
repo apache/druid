@@ -19,22 +19,19 @@
 
 package org.apache.druid.query.aggregation;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nullable;
 
-
 public class SingleValueAggregator implements Aggregator
 {
   final ColumnValueSelector selector;
-
   @Nullable
   Object value;
-
   private boolean isNullResult = true;
-
   private boolean isAggregateInvoked = false;
 
   public SingleValueAggregator(ColumnValueSelector selector)
@@ -48,10 +45,11 @@ public class SingleValueAggregator implements Aggregator
     if (isAggregateInvoked) {
       throw InvalidInput.exception("Subquery expression returned more than one row");
     }
-    boolean isNotNull = (selector.getObject() != null);
+    Object selectorObject = selector.getObject();
+    boolean isNotNull = (selectorObject != null);
     if (isNotNull) {
       isNullResult = false;
-      value = selector.getObject();
+      value = selectorObject;
     }
     isAggregateInvoked = true;
   }
@@ -65,28 +63,19 @@ public class SingleValueAggregator implements Aggregator
   @Override
   public float getFloat()
   {
-    if (isNullResult) {
-      throw DruidException.defensive("Cannot return float for Null Value");
-    }
-    return (float) value;
+    return isNullResult ? NullHandling.ZERO_FLOAT : ((Number) value).floatValue();
   }
 
   @Override
   public long getLong()
   {
-    if (isNullResult) {
-      throw DruidException.defensive("Cannot return long for Null Value");
-    }
-    return (long) value;
+    return isNullResult ? NullHandling.ZERO_LONG : ((Number) value).longValue();
   }
 
   @Override
   public double getDouble()
   {
-    if (isNullResult) {
-      throw DruidException.defensive("Cannot return double for Null Value");
-    }
-    return (double) value;
+    return isNullResult ? NullHandling.ZERO_DOUBLE : ((Number) value).doubleValue();
   }
 
   @Override

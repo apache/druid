@@ -1053,7 +1053,6 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @Test
   public void testSingleValueFloatAgg()
   {
-    msqIncompatible();
     skipVectorize();
     cannotVectorize();
     testQuery(
@@ -1112,7 +1111,6 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @Test
   public void testSingleValueDoubleAgg()
   {
-    msqIncompatible();
     skipVectorize();
     cannotVectorize();
     testQuery(
@@ -1171,7 +1169,6 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @Test
   public void testSingleValueLongAgg()
   {
-    msqIncompatible();
     skipVectorize();
     cannotVectorize();
     testQuery(
@@ -1233,7 +1230,6 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @Test
   public void testSingleValueStringAgg()
   {
-    msqIncompatible();
     skipVectorize();
     cannotVectorize();
     testQuery(
@@ -1296,7 +1292,6 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @Test
   public void testSingleValueStringMultipleRowsAgg()
   {
-    msqIncompatible();
     skipVectorize();
     cannotVectorize();
     testQueryThrows(
@@ -1308,7 +1303,6 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @Test
   public void testSingleValueEmptyInnerAgg()
   {
-    msqIncompatible();
     skipVectorize();
     cannotVectorize();
     testQuery(

@@ -34,11 +34,8 @@ import java.nio.ByteBuffer;
 public class SingleValueBufferAggregator implements BufferAggregator
 {
   final ColumnValueSelector selector;
-
   final ColumnType columnType;
-
   final NullableTypeStrategy typeStrategy;
-
   private boolean isAggregateInvoked = false;
 
   SingleValueBufferAggregator(ColumnValueSelector selector, ColumnType columnType)
@@ -65,10 +62,12 @@ public class SingleValueBufferAggregator implements BufferAggregator
         buf,
         position,
         getSelectorObject(),
-        SingleValueAggregatorFactory.DEFAULT_MAX_STRING_SIZE + Byte.BYTES
+        columnType.isNumeric() ? Double.BYTES + Byte.BYTES : SingleValueAggregatorFactory.DEFAULT_MAX_BUFFER_SIZE
     );
     if (written < 0) {
-      throw new ISE("Single Value Aggregator value exceeds buffer limit");
+      throw DruidException.forPersona(DruidException.Persona.ADMIN)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build("Single Value Aggregator value exceeds buffer limit");
     }
     isAggregateInvoked = true;
   }
@@ -101,28 +100,25 @@ public class SingleValueBufferAggregator implements BufferAggregator
   @Override
   public float getFloat(ByteBuffer buf, int position)
   {
-    if (TypeStrategies.isNullableNull(buf, position)) {
-      throw DruidException.defensive("Cannot return float for Null Value");
-    }
-    return TypeStrategies.readNotNullNullableFloat(buf, position);
+    return TypeStrategies.isNullableNull(buf, position)
+           ? NullHandling.ZERO_FLOAT
+           : TypeStrategies.readNotNullNullableFloat(buf, position);
   }
 
   @Override
   public double getDouble(ByteBuffer buf, int position)
   {
-    if (TypeStrategies.isNullableNull(buf, position)) {
-      throw DruidException.defensive("Cannot return double for Null Value");
-    }
-    return TypeStrategies.readNotNullNullableDouble(buf, position);
+    return TypeStrategies.isNullableNull(buf, position)
+           ? NullHandling.ZERO_DOUBLE
+           : TypeStrategies.readNotNullNullableDouble(buf, position);
   }
 
   @Override
   public long getLong(ByteBuffer buf, int position)
   {
-    if (TypeStrategies.isNullableNull(buf, position)) {
-      throw DruidException.defensive("Cannot return long for Null Value");
-    }
-    return TypeStrategies.readNotNullNullableLong(buf, position);
+    return TypeStrategies.isNullableNull(buf, position)
+           ? NullHandling.ZERO_LONG
+           : TypeStrategies.readNotNullNullableLong(buf, position);
   }
 
   @Override

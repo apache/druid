@@ -31,6 +31,10 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 
 import javax.annotation.Nullable;
 
+/**
+ * This class serves as binding for Single Value Aggregator.
+ * Returns a single value in cases of subqueries used in expressions
+ */
 public class SingleValueSqlAggregator extends SimpleSqlAggregator
 {
 

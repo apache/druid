@@ -29,7 +29,6 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -48,20 +47,16 @@ import java.util.Objects;
 @JsonTypeName("singleValue")
 public class SingleValueAggregatorFactory extends AggregatorFactory
 {
-
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
   private final String name;
-
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
   private final String fieldName;
-
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
   private final ColumnType columnType;
-
-  public static final int DEFAULT_MAX_STRING_SIZE = 1024;
+  public static final int DEFAULT_MAX_BUFFER_SIZE = 1025;
 
   @JsonCreator
   public SingleValueAggregatorFactory(
@@ -138,7 +133,6 @@ public class SingleValueAggregatorFactory extends AggregatorFactory
     return columnType;
   }
 
-
   @Override
   @JsonProperty
   public String getName()
@@ -161,10 +155,10 @@ public class SingleValueAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    if (columnType.is(ValueType.STRING)) {
-      return Byte.BYTES + DEFAULT_MAX_STRING_SIZE;
+    if (columnType.isNumeric()) {
+      return Byte.BYTES + Double.BYTES;
     }
-    return Byte.BYTES + Double.BYTES;
+    return DEFAULT_MAX_BUFFER_SIZE;
   }
 
   @Override

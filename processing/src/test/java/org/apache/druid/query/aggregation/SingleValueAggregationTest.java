@@ -22,32 +22,31 @@ package org.apache.druid.query.aggregation;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.TestColumnSelectorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.ValueType;
-import org.easymock.EasyMock;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
 
-/**
-  */
-public class SingleValueAggregationTest
+public class SingleValueAggregationTest extends InitializedNullHandlingTest
 {
-  private SingleValueAggregatorFactory longAggFatory;
+  private SingleValueAggregatorFactory longAggFactory;
   private ColumnSelectorFactory colSelectorFactoryLong;
   private ColumnCapabilities columnCapabilitiesLong;
   private TestLongColumnSelector selectorLong;
 
-  private SingleValueAggregatorFactory doubleAggFatory;
+  private SingleValueAggregatorFactory doubleAggFactory;
   private ColumnSelectorFactory colSelectorFactoryDouble;
   private ColumnCapabilities columnCapabilitiesDouble;
   private TestDoubleColumnSelectorImpl selectorDouble;
 
-  private SingleValueAggregatorFactory stringAggFatory;
+  private SingleValueAggregatorFactory stringAggFactory;
   private ColumnSelectorFactory colSelectorFactoryString;
   private ColumnCapabilities columnCapabilitiesString;
   private TestObjectColumnSelector selectorString;
@@ -59,65 +58,48 @@ public class SingleValueAggregationTest
   public SingleValueAggregationTest() throws Exception
   {
     String longAggSpecJson = "{\"type\": \"singleValue\", \"name\": \"lng\", \"fieldName\": \"lngFld\", \"columnType\": \"LONG\"}";
-    longAggFatory = TestHelper.makeJsonMapper().readValue(longAggSpecJson, SingleValueAggregatorFactory.class);
+    longAggFactory = TestHelper.makeJsonMapper().readValue(longAggSpecJson, SingleValueAggregatorFactory.class);
 
     String doubleAggSpecJson = "{\"type\": \"singleValue\", \"name\": \"dbl\", \"fieldName\": \"dblFld\", \"columnType\": \"DOUBLE\"}";
-    doubleAggFatory = TestHelper.makeJsonMapper().readValue(doubleAggSpecJson, SingleValueAggregatorFactory.class);
+    doubleAggFactory = TestHelper.makeJsonMapper().readValue(doubleAggSpecJson, SingleValueAggregatorFactory.class);
 
     String strAggSpecJson = "{\"type\": \"singleValue\", \"name\": \"str\", \"fieldName\": \"strFld\", \"columnType\": \"STRING\"}";
-    stringAggFatory = TestHelper.makeJsonMapper().readValue(strAggSpecJson, SingleValueAggregatorFactory.class);
+    stringAggFactory = TestHelper.makeJsonMapper().readValue(strAggSpecJson, SingleValueAggregatorFactory.class);
   }
 
   @Before
   public void setup()
   {
-    NullHandling.initializeForTests();
-
     selectorLong = new TestLongColumnSelector(longValues);
-    columnCapabilitiesLong = EasyMock.createMock(ColumnCapabilities.class);
-    EasyMock.expect(columnCapabilitiesLong.getType()).andReturn(ValueType.LONG);
-
-    colSelectorFactoryLong = EasyMock.createMock(ColumnSelectorFactory.class);
-    EasyMock.expect(colSelectorFactoryLong.makeColumnValueSelector("lngFld")).andReturn(selectorLong);
-    EasyMock.expect(colSelectorFactoryLong.getColumnCapabilities("lngFld")).andReturn(columnCapabilitiesLong);
-
-    EasyMock.replay(columnCapabilitiesLong);
-    EasyMock.replay(colSelectorFactoryLong);
+    columnCapabilitiesLong = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.LONG);
+    colSelectorFactoryLong = new TestColumnSelectorFactory()
+        .addCapabilities("lngFld", columnCapabilitiesLong)
+        .addColumnSelector("lngFld", selectorLong);
 
     selectorDouble = new TestDoubleColumnSelectorImpl(doubleValues);
-    columnCapabilitiesDouble = EasyMock.createMock(ColumnCapabilities.class);
-    EasyMock.expect(columnCapabilitiesDouble.getType()).andReturn(ValueType.DOUBLE);
-
-    colSelectorFactoryDouble = EasyMock.createMock(ColumnSelectorFactory.class);
-    EasyMock.expect(colSelectorFactoryDouble.makeColumnValueSelector("dblFld")).andReturn(selectorDouble);
-    EasyMock.expect(colSelectorFactoryDouble.getColumnCapabilities("dblFld")).andReturn(columnCapabilitiesDouble);
-
-    EasyMock.replay(columnCapabilitiesDouble);
-    EasyMock.replay(colSelectorFactoryDouble);
+    columnCapabilitiesDouble = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.DOUBLE);
+    colSelectorFactoryDouble = new TestColumnSelectorFactory()
+        .addCapabilities("dblFld", columnCapabilitiesDouble)
+        .addColumnSelector("dblFld", selectorDouble);
 
     selectorString = new TestObjectColumnSelector(strValues);
-    columnCapabilitiesString = EasyMock.createMock(ColumnCapabilities.class);
-    EasyMock.expect(columnCapabilitiesString.getType()).andReturn(ValueType.STRING);
-
-    colSelectorFactoryString = EasyMock.createMock(ColumnSelectorFactory.class);
-    EasyMock.expect(colSelectorFactoryString.makeColumnValueSelector("strFld")).andReturn(selectorString);
-    EasyMock.expect(colSelectorFactoryString.getColumnCapabilities("strFld")).andReturn(columnCapabilitiesString);
-
-    EasyMock.replay(columnCapabilitiesString);
-    EasyMock.replay(colSelectorFactoryString);
+    columnCapabilitiesString = ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities();
+    colSelectorFactoryString = new TestColumnSelectorFactory()
+        .addCapabilities("strFld", columnCapabilitiesString)
+        .addColumnSelector("strFld", selectorString);
   }
 
   @Test
   public void testLongAggregator()
   {
-    Assert.assertEquals(ColumnType.LONG, longAggFatory.getIntermediateType());
-    Assert.assertEquals(ColumnType.LONG, longAggFatory.getResultType());
-    Assert.assertEquals("lng", longAggFatory.getName());
-    Assert.assertEquals("lngFld", longAggFatory.getFieldName());
-    Assert.assertThrows(DruidException.class, () -> longAggFatory.getComparator());
+    Assert.assertEquals(ColumnType.LONG, longAggFactory.getIntermediateType());
+    Assert.assertEquals(ColumnType.LONG, longAggFactory.getResultType());
+    Assert.assertEquals("lng", longAggFactory.getName());
+    Assert.assertEquals("lngFld", longAggFactory.getFieldName());
+    Assert.assertThrows(DruidException.class, () -> longAggFactory.getComparator());
 
-    Aggregator agg = longAggFatory.factorize(colSelectorFactoryLong);
-    Assert.assertThrows(DruidException.class, () -> agg.getLong());
+    Aggregator agg = longAggFactory.factorize(colSelectorFactoryLong);
+    Assert.assertEquals(0L, agg.getLong());
 
     aggregate(selectorLong, agg);
     Assert.assertEquals(longValues[0], ((Long) agg.get()).longValue());
@@ -129,9 +111,9 @@ public class SingleValueAggregationTest
   @Test
   public void testLongBufferAggregator()
   {
-    BufferAggregator agg = longAggFatory.factorizeBuffered(colSelectorFactoryLong);
+    BufferAggregator agg = longAggFactory.factorizeBuffered(colSelectorFactoryLong);
 
-    ByteBuffer buffer = ByteBuffer.wrap(new byte[SingleValueAggregatorFactory.DEFAULT_MAX_STRING_SIZE + Byte.BYTES]);
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[SingleValueAggregatorFactory.DEFAULT_MAX_BUFFER_SIZE + Byte.BYTES]);
     agg.init(buffer, 0);
 
     aggregate(selectorLong, agg, buffer, 0);
@@ -144,15 +126,13 @@ public class SingleValueAggregationTest
   @Test
   public void testCombine()
   {
-    Assert.assertThrows(DruidException.class, () -> longAggFatory.combine(9223372036854775800L, 9223372036854775803L));
+    Assert.assertThrows(DruidException.class, () -> longAggFactory.combine(9223372036854775800L, 9223372036854775803L));
   }
 
   @Test
   public void testDoubleAggregator()
   {
-    Aggregator agg = doubleAggFatory.factorize(colSelectorFactoryDouble);
-
-    Assert.assertThrows(DruidException.class, () -> agg.getDouble());
+    Aggregator agg = doubleAggFactory.factorize(colSelectorFactoryDouble);
 
     aggregate(selectorDouble, agg);
     Assert.assertEquals(doubleValues[0], ((Double) agg.get()).doubleValue(), 0.000001);
@@ -164,9 +144,9 @@ public class SingleValueAggregationTest
   @Test
   public void testDoubleBufferAggregator()
   {
-    BufferAggregator agg = doubleAggFatory.factorizeBuffered(colSelectorFactoryDouble);
+    BufferAggregator agg = doubleAggFactory.factorizeBuffered(colSelectorFactoryDouble);
 
-    ByteBuffer buffer = ByteBuffer.wrap(new byte[SingleValueAggregatorFactory.DEFAULT_MAX_STRING_SIZE + Byte.BYTES]);
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[SingleValueAggregatorFactory.DEFAULT_MAX_BUFFER_SIZE + Byte.BYTES]);
     agg.init(buffer, 0);
 
     aggregate(selectorDouble, agg, buffer, 0);
@@ -179,7 +159,7 @@ public class SingleValueAggregationTest
   @Test
   public void testStringAggregator()
   {
-    Aggregator agg = stringAggFatory.factorize(colSelectorFactoryString);
+    Aggregator agg = stringAggFactory.factorize(colSelectorFactoryString);
 
     Assert.assertEquals(null, agg.get());
 
@@ -192,9 +172,9 @@ public class SingleValueAggregationTest
   @Test
   public void testStringBufferAggregator()
   {
-    BufferAggregator agg = stringAggFatory.factorizeBuffered(colSelectorFactoryString);
+    BufferAggregator agg = stringAggFactory.factorizeBuffered(colSelectorFactoryString);
 
-    ByteBuffer buffer = ByteBuffer.wrap(new byte[SingleValueAggregatorFactory.DEFAULT_MAX_STRING_SIZE + Byte.BYTES]);
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[SingleValueAggregatorFactory.DEFAULT_MAX_BUFFER_SIZE + Byte.BYTES]);
     agg.init(buffer, 0);
 
     aggregate(selectorString, agg, buffer, 0);
