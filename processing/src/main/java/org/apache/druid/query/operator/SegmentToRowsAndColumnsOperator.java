@@ -44,7 +44,7 @@ public class SegmentToRowsAndColumnsOperator implements Operator
   {
     try (final CloseableShapeshifter shifty = segment.as(CloseableShapeshifter.class)) {
       if (shifty == null) {
-        throw new ISE("Segment[%s] cannot shapeshift", segment.getClass());
+        throw new ISE("Segment[%s] cannot shapeshift", segment);
       }
       RowsAndColumns rac;
       if (shifty instanceof RowsAndColumns) {

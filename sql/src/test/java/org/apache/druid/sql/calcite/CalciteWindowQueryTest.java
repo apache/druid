@@ -218,6 +218,25 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
           .run();
     }
   }
+  @Test
+  @SuppressWarnings("unchecked")
+  public void windowQueryTest2() throws Exception
+  {
+    TestCase testCase = new TestCase(filename);
+
+    assumeThat(testCase.getType(), Matchers.not(TestType.failingTest));
+
+    if (testCase.getType() == TestType.operatorValidation) {
+      testBuilder()
+          .skipVectorize(true)
+          .sql(testCase.getSql())
+          .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
+              QueryContexts.ENABLE_DEBUG, true,
+              QueryContexts.MAX_SUBQUERY_BYTES_KEY, "100000"))
+          .addCustomVerification(QueryVerification.ofResults(testCase))
+          .run();
+    }
+  }
 
   private WindowOperatorQuery getWindowOperatorQuery(List<Query<?>> queries)
   {
