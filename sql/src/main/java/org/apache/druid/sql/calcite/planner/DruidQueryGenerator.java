@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.planner;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.RelNode;
@@ -64,6 +65,7 @@ import java.util.stream.Collectors;
  * {@link org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode} convention
  * to a native Druid query for execution. The convertion is done via a
  * {@link org.apache.calcite.rel.RelShuttle} visitor implementation.
+ * FIXME
  */
 public class DruidQueryGenerator extends RelShuttleImpl
 {
@@ -75,11 +77,85 @@ public class DruidQueryGenerator extends RelShuttleImpl
   private DruidTable currentTable = null;
   private final RelNode relRoot;
 
+//  static final List<Vertex> vertices = new ArrayList<Vertex>();
+//  static Vertex root;
+
+  static class Vertex {
+    PartialDruidQuery partialDruidQuery;
+    DruidTable queryTable;
+    List<Vertex> inputs;
+    public DruidTable currentTable;
+
+
+
+    public static Vertex create(TableScan scan)
+    {
+      // FIXME
+      Vertex vertex = new Vertex();
+      vertex.partialDruidQuery=PartialDruidQuery.create(scan);
+      return vertex;
+    }
+  }
+
   public DruidQueryGenerator(PlannerContext plannerContext, RelNode relRoot)
   {
     this.plannerContext = plannerContext;
     this.relRoot = relRoot;
   }
+
+
+  public Vertex buildVertex()
+  {
+    return buildVertexFor(relRoot);
+  }
+
+  protected Vertex buildVertexFor(RelNode node)
+  {
+    Preconditions.checkArgument(node.getInputs().size() <= 1, "unsupported");
+
+    List<Vertex> newInputs = new ArrayList<>();
+    for (RelNode input : node.getInputs()) {
+      newInputs.add(buildVertexFor(input));
+    }
+
+    Vertex vertex = processNodeWithInputs(node, newInputs);
+
+    return vertex;
+  }
+
+  private Vertex processNodeWithInputs(RelNode node, List<Vertex> newInputs)
+  {
+    if(node instanceof TableScan) {
+      return visitTableScan((TableScan) node);
+    }
+    throw new UnsupportedOperationException();
+  }
+
+  public static Vertex visitTableScan(TableScan scan)
+  {
+    if (!(scan instanceof DruidTableScan)) {
+      throw new ISE("Planning hasn't converted logical table scan to druid convention");
+    }
+    DruidTableScan druidTableScan = (DruidTableScan) scan;
+    Preconditions.checkArgument(scan.getInputs().size() == 0);
+
+    Vertex vertex = Vertex.create(scan);
+
+    final RelOptTable table = scan.getTable();
+    final DruidTable druidTable = table.unwrap(DruidTable.class);
+
+    Preconditions.checkArgument(druidTable != null);
+
+    vertex.currentTable = druidTable;
+    if (druidTableScan.getProject() != null) {
+      //FIXME ? XXX
+      vertex.partialDruidQuery.withSelectProject(druidTableScan.getProject());
+//      currentStage = PartialDruidQuery.Stage.SELECT_PROJECT;
+    }
+    return vertex;
+  }
+
+
 
   @Override
   public RelNode visit(TableScan scan)

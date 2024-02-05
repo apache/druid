@@ -559,6 +559,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
                  .plus(DruidLogicalConvention.instance()),
           newRoot
       );
+
       DruidQueryGenerator shuttle = new DruidQueryGenerator(plannerContext, newRoot);
       shuttle.run();
       log.info("PartialDruidQuery : " + shuttle.getPartialDruidQuery());
