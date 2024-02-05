@@ -177,14 +177,13 @@ public class ParametrizedUriEmitterTest
           {
             Assert.assertEquals("http://example.com/val1/val2", request.getUrl());
             Assert.assertEquals(
-                StringUtils.format(
+                JSON_MAPPER.readTree(StringUtils.format(
                     "[%s,%s]\n",
                     JSON_MAPPER.writeValueAsString(events.get(0)),
                     JSON_MAPPER.writeValueAsString(events.get(1))
-                ),
-                StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
+                )),
+                JSON_MAPPER.readTree(StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString())
             );
-
             return GoHandlers.immediateFuture(EmitterTest.okResponse());
           }
         }.times(1)

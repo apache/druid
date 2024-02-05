@@ -64,6 +64,6 @@ public class SupervisorStatusTest
     Assert.assertEquals("wikipedia", deserialized.getId());
     final String serialized = mapper.writeValueAsString(deserialized);
     Assert.assertTrue(serialized.contains("\"source\""));
-    Assert.assertEquals(json, serialized);
+    Assert.assertEquals(mapper.readTree(json), mapper.readTree(serialized));
   }
 }

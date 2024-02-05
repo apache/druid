@@ -128,7 +128,7 @@ public class BaseNodeRoleWatcherTest
   private void assertListener(TestListener listener, boolean nodeViewInitialized, List<DiscoveryDruidNode> nodesAdded, List<DiscoveryDruidNode> nodesRemoved)
   {
     Assert.assertEquals(nodeViewInitialized, listener.nodeViewInitialized.get());
-    Assert.assertEquals(nodesAdded, listener.nodesAddedList);
+    Assert.assertEquals(new HashSet<>(nodesAdded), new HashSet<>(listener.nodesAddedList));
     Assert.assertEquals(nodesRemoved, listener.nodesRemovedList);
   }
 

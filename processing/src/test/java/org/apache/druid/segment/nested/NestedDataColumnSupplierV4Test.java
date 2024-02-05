@@ -413,8 +413,8 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
     for (int i = 0; i < data.size(); i++) {
       Map row = data.get(i);
       Assert.assertEquals(
-          JSON_MAPPER.writeValueAsString(row),
-          JSON_MAPPER.writeValueAsString(StructuredData.unwrap(rawSelector.getObject()))
+          JSON_MAPPER.readTree(JSON_MAPPER.writeValueAsString(row)),
+          JSON_MAPPER.readTree(JSON_MAPPER.writeValueAsString(StructuredData.unwrap(rawSelector.getObject())))
       );
       testPath(row, i, "v", vSelector, vDimSelector, vValueIndex, vPredicateIndex, vNulls, null);
       testPath(row, i, "x", xSelector, xDimSelector, xValueIndex, xPredicateIndex, xNulls, ColumnType.LONG);

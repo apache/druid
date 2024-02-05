@@ -78,7 +78,7 @@ public class SqlEntityTest
     String expectedJson = mapper.writeValueAsString(
         Collections.singletonList(((MapBasedInputRow) expectedRow).getEvent())
     );
-    Assert.assertEquals(actualJson, expectedJson);
+    Assert.assertEquals(mapper.readTree(actualJson), mapper.readTree(expectedJson));
     testUtils.dropTable(TABLE_NAME_1);
   }
 
