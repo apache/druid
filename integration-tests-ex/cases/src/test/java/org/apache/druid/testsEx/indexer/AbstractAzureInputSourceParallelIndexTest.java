@@ -86,7 +86,7 @@ public class AbstractAzureInputSourceParallelIndexTest extends AbstractCloudInpu
     }
     finally {
       Assert.assertEquals(
-            "Some segment files were not deleted: " + segmentFiles.toString(),
+            "Some segment files were not deleted: " + segmentFiles,
             segmentFiles.size(),
             0
       );
