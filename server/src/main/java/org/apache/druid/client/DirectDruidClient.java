@@ -553,7 +553,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             if (!responseFuture.isDone()) {
               log.error("Error cancelling query[%s]", query);
             }
-            StatusResponseHolder response = responseFuture.get(5, TimeUnit.SECONDS);
+            StatusResponseHolder response = responseFuture.get(30, TimeUnit.SECONDS);
             if (response.getStatus().getCode() >= 500) {
               log.error("Error cancelling query[%s]: queriable node returned status[%d] [%s].",
                   query,
