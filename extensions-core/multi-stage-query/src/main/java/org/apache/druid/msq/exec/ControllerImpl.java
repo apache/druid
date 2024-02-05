@@ -69,7 +69,7 @@ import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.LockReleaseAction;
 import org.apache.druid.indexing.common.actions.MarkSegmentsAsUnusedAction;
-import org.apache.druid.indexing.common.actions.RetrieveSegmentsToReplaceAction;
+import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalAppendAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
@@ -1237,10 +1237,15 @@ public class ControllerImpl implements Controller
       // any segment created after the lock was acquired for its interval will not be considered.
       final Collection<DataSegment> publishedUsedSegments;
       try {
-        publishedUsedSegments = context.taskActionClient().submit(new RetrieveSegmentsToReplaceAction(
-            dataSource,
-            intervals
-        ));
+        // Additional check as the task action does not accept empty intervals
+        if (intervals.isEmpty()) {
+          publishedUsedSegments = Collections.emptySet();
+        } else {
+          publishedUsedSegments = context.taskActionClient().submit(new RetrieveUsedSegmentsAction(
+              dataSource,
+              intervals
+          ));
+        }
       }
       catch (IOException e) {
         throw new MSQException(e, UnknownFault.forException(e));
