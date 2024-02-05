@@ -33,7 +33,9 @@ public class S3StorageConnectorModule implements DruidModule
   public List<? extends Module> getJacksonModules()
   {
     return Collections.singletonList(
-        new SimpleModule(this.getClass().getSimpleName()).registerSubtypes(S3StorageConnectorProvider.class)
+        new SimpleModule(this.getClass().getSimpleName())
+            .registerSubtypes(S3StorageConnectorProvider.class)
+            .registerSubtypes(S3ExportStorageProvider.class)
     );
   }
 

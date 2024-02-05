@@ -27,7 +27,7 @@ import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.http.ResultFormat;
-import org.apache.druid.storage.StorageConnectorProvider;
+import org.apache.druid.storage.ExportStorageProvider;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -37,7 +37,7 @@ import java.util.Optional;
 
 /**
  * Destination used by tasks that write the results as files to an external destination. {@link #resultFormat} denotes
- * the format of the file created and {@link #storageConnectorProvider} denotes the type of external
+ * the format of the file created and {@link #exportStorageProvider} denotes the type of external
  * destination.
  * <br>
  * {@link #replaceTimeChunks} denotes how existing files should be handled.
@@ -47,28 +47,29 @@ import java.util.Optional;
 public class ExportMSQDestination implements MSQDestination
 {
   public static final String TYPE = "export";
-  private final StorageConnectorProvider storageConnectorProvider;
+  private final ExportStorageProvider exportStorageProvider;
   private final ResultFormat resultFormat;
   @Nullable
   private final List<Interval> replaceTimeChunks;
 
   @JsonCreator
   public ExportMSQDestination(
-      @JsonProperty("storageConnectorProvider") StorageConnectorProvider storageConnectorProvider,
+      @JsonProperty("exportStorageProvider") ExportStorageProvider exportStorageProvider,
       @JsonProperty("resultFormat") ResultFormat resultFormat,
       @JsonProperty("replaceTimeChunks") @Nullable List<Interval> replaceTimeChunks
   )
   {
-    this.storageConnectorProvider = storageConnectorProvider;
+    this.exportStorageProvider = exportStorageProvider;
     this.resultFormat = resultFormat;
     this.replaceTimeChunks = replaceTimeChunks;
   }
 
 
-  @JsonProperty("storageConnectorProvider")
-  public StorageConnectorProvider getStorageConnectorProvider()
+
+  @JsonProperty("exportStorageProvider")
+  public ExportStorageProvider getExportStorageProvider()
   {
-    return storageConnectorProvider;
+    return exportStorageProvider;
   }
 
   @JsonProperty("resultFormat")
@@ -95,7 +96,7 @@ public class ExportMSQDestination implements MSQDestination
       return false;
     }
     ExportMSQDestination that = (ExportMSQDestination) o;
-    return Objects.equals(storageConnectorProvider, that.storageConnectorProvider)
+    return Objects.equals(exportStorageProvider, that.exportStorageProvider)
            && resultFormat == that.resultFormat
            && Objects.equals(replaceTimeChunks, that.replaceTimeChunks);
   }
@@ -103,14 +104,14 @@ public class ExportMSQDestination implements MSQDestination
   @Override
   public int hashCode()
   {
-    return Objects.hash(storageConnectorProvider, resultFormat, replaceTimeChunks);
+    return Objects.hash(exportStorageProvider, resultFormat, replaceTimeChunks);
   }
 
   @Override
   public String toString()
   {
     return "ExportMSQDestination{" +
-           "storageConnectorProvider=" + storageConnectorProvider +
+           "exportStorageProvider=" + exportStorageProvider +
            ", resultFormat=" + resultFormat +
            ", replaceTimeChunks=" + replaceTimeChunks +
            '}';
@@ -125,6 +126,6 @@ public class ExportMSQDestination implements MSQDestination
   @Override
   public Optional<Resource> getDestinationResource()
   {
-    return Optional.of(new Resource(getStorageConnectorProvider().getType(), ResourceType.EXTERNAL));
+    return Optional.of(new Resource(getExportStorageProvider().getResourceType(), ResourceType.EXTERNAL));
   }
 }

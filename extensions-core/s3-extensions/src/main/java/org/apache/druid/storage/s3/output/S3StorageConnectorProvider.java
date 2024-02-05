@@ -55,10 +55,4 @@ public class S3StorageConnectorProvider extends S3OutputConfig implements Storag
   {
     return new S3StorageConnector(this, s3);
   }
-
-  @Override
-  public String getType()
-  {
-    return S3StorageDruidModule.SCHEME;
-  }
 }

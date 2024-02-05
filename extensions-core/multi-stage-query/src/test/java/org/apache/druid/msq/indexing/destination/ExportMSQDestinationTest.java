@@ -24,11 +24,10 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.storage.StorageConnectorModule;
-import org.apache.druid.storage.local.LocalFileStorageConnectorProvider;
+import org.apache.druid.storage.local.LocalFileExportStorageProvider;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.File;
 import java.io.IOException;
 
 public class ExportMSQDestinationTest
@@ -37,7 +36,7 @@ public class ExportMSQDestinationTest
   public void testSerde() throws IOException
   {
     ExportMSQDestination exportDestination = new ExportMSQDestination(
-        new LocalFileStorageConnectorProvider(new File("/path")),
+        new LocalFileExportStorageProvider("/path"),
         ResultFormat.CSV,
         Intervals.ONLY_ETERNITY
     );

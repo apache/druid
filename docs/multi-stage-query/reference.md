@@ -150,12 +150,12 @@ FROM <table>
 
 Supported arguments to the function:
 
-| Parameter   | Required | Description                                                                                                                                                                                                                          | Default |
-|-------------|---------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| --|
-| `bucket`    | Yes | The S3 bucket to which the files are exported to.                                                                                                                                                                                    | n/a |
-| `prefix`    | Yes | Path where the exported files would be created. If the location includes other files or directories, then they might get cleaned up as well.                                                                                         | n/a |
-| `tempDir`   | Yes | Directory path on the local disk to store temporary files required while uploading the data                                                                                                                                          | n/a |
-| `maxRetry`  | No | Defines the max number times to attempt S3 API calls to avoid failures due to transient errors.                                                                                                                                      | 10 |
+| Parameter   | Required | Description                                                                                                                                                                                                                         | Default |
+|-------------|---------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| --|
+| `bucket`    | Yes | The S3 bucket to which the files are exported to.                                                                                                                                                                                   | n/a |
+| `prefix`    | Yes | Path where the exported files would be created. The export query would expect the destination to be empty. If the location includes other files, then the query will fail.                                                          | n/a |
+| `tempDir`   | Yes | Directory path on the local disk to store temporary files required while uploading the data                                                                                                                                         | n/a |
+| `maxRetry`  | No | Defines the max number times to attempt S3 API calls to avoid failures due to transient errors.                                                                                                                                     | 10 |
 | `chunkSize` | No | Defines the size of each chunk to temporarily store in `tempDir`. The chunk size must be between 5 MiB and 5 GiB. A large chunk size reduces the API calls to S3, however it requires more disk space to store the temporary chunks. | 100MiB |
 
 ##### LOCAL
@@ -166,10 +166,13 @@ This is useful in a single node setup or for testing, and is not suitable for pr
 This can be done by passing the function `LOCAL()` as an argument to the `EXTERN FUNCTION`.
 Arguments to `LOCAL()` should be passed as named parameters with the value in single quotes like the example below.
 
+To use local as an export destination, the runtime property `druid.export.storage.baseDir` must be configured on the indexer/middle manager.
+The parameter provided to the `LOCAL()` function will be prefixed with this value when exporting to a local destination.
+
 ```sql
 INSERT INTO
   EXTERN(
-    local(basePath => '/tmp/exportLocation')
+    local(exportPath => 'exportLocation/query1')
   )
 AS CSV
 SELECT
@@ -179,9 +182,9 @@ FROM <table>
 
 Supported arguments to the function:
 
-| Parameter   | Required | Description                                                     | Default |
-|-------------|--------------------------------|-----------------------------------------------------------------| --|
-| `basePath`  | Yes | The file system path where the exported files would be created. If the location includes other files or directories, then they might get cleaned up as well.| n/a |
+| Parameter   | Required | Description                                                                                                                                                                                                                                                                                    | Default |
+|-------------|--------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| --|
+| `exportPath`  | Yes | The file system path where the exported files would be created. This argument will be prefixed with the runtime prop `druid.export.storage.baseDir`. The export query would expect the destination to be empty. If the location includes other files or directories, then the query will fail. | n/a |
 
 For more information, see [Read external data with EXTERN](concepts.md#write-to-an-external-destination-with-extern).
 

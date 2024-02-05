@@ -17,24 +17,13 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.export;
+package org.apache.druid.storage;
 
-import org.apache.druid.storage.ExportStorageProvider;
-import org.apache.druid.storage.StorageConnector;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.inject.Provider;
 
-public class TestExportStorageConnectorProvider implements ExportStorageProvider
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+public interface ExportStorageProvider extends Provider<StorageConnector>
 {
-  private static final StorageConnector STORAGE_CONNECTOR = new TestExportStorageConnector();
-
-  @Override
-  public StorageConnector get()
-  {
-    return STORAGE_CONNECTOR;
-  }
-
-  @Override
-  public String getResourceType()
-  {
-    return "testExport";
-  }
+  String getResourceType();
 }

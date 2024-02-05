@@ -19,8 +19,13 @@
 
 package org.apache.druid.sql.calcite;
 
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.collect.ImmutableList;
+import com.google.inject.Binder;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.DruidInjectorBuilder;
+import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.scan.ScanQuery;
@@ -32,12 +37,16 @@ import org.apache.druid.sql.calcite.export.TestExportStorageConnector;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.destination.ExportDestination;
-import org.apache.druid.storage.StorageConnectorModule;
+import org.apache.druid.storage.StorageConfig;
+import org.apache.druid.storage.StorageConnector;
+import org.apache.druid.storage.local.LocalFileExportStorageProvider;
 import org.apache.druid.storage.local.LocalFileStorageConnectorProvider;
 import org.hamcrest.CoreMatchers;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
+
+import java.util.List;
 
 public class CalciteExportTest extends CalciteIngestionDmlTest
 {
@@ -45,8 +54,25 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   public void configureGuice(DruidInjectorBuilder builder)
   {
     super.configureGuice(builder);
-    builder.addModule(new StorageConnectorModule());
     builder.addModule(new TestExportModule());
+    builder.addModule(new DruidModule()
+    {
+      @Override
+      public List<? extends Module> getJacksonModules()
+      {
+        return ImmutableList.of(
+            new SimpleModule(StorageConnector.class.getSimpleName())
+                .registerSubtypes(LocalFileStorageConnectorProvider.class)
+                .registerSubtypes(LocalFileExportStorageProvider.class)
+        );
+      }
+
+      @Override
+      public void configure(Binder binder)
+      {
+        binder.bind(StorageConfig.class).toInstance(new StorageConfig("/tmp/export"));
+      }
+    });
   }
 
   // Disabled until replace supports external destinations. To be enabled after that point.
@@ -102,11 +128,11 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
     testIngestionQuery()
         .sql(StringUtils.format("INSERT INTO EXTERN(%s()) "
                                 + "AS CSV "
-                                + "SELECT dim2 FROM foo", LocalFileStorageConnectorProvider.TYPE_NAME))
+                                + "SELECT dim2 FROM foo", LocalFileExportStorageProvider.TYPE_NAME))
         .expectValidationError(
             CoreMatchers.allOf(
                 CoreMatchers.instanceOf(IllegalArgumentException.class),
-                ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Missing required creator property 'basePath'"))
+                ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Missing required creator property 'exportPath'"))
             )
         )
         .verify();

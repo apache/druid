@@ -203,7 +203,7 @@ import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.http.ResultFormat;
-import org.apache.druid.storage.StorageConnectorProvider;
+import org.apache.druid.storage.ExportStorageProvider;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
@@ -1873,11 +1873,11 @@ public class ControllerImpl implements Controller
       }
     } else if (querySpec.getDestination() instanceof ExportMSQDestination) {
       final ExportMSQDestination exportMSQDestination = (ExportMSQDestination) querySpec.getDestination();
-      final StorageConnectorProvider storageConnectorProvider = exportMSQDestination.getStorageConnectorProvider();
+      final ExportStorageProvider exportStorageProvider = exportMSQDestination.getExportStorageProvider();
 
       try {
         // Check that the export destination is empty as a sanity check. We want to avoid modifying any other files with export.
-        Iterator<String> filesIterator = storageConnectorProvider.get().listDir("");
+        Iterator<String> filesIterator = exportStorageProvider.get().listDir("");
         if (filesIterator.hasNext()) {
           throw DruidException.forPersona(DruidException.Persona.USER)
                               .ofCategory(DruidException.Category.RUNTIME_FAILURE)
@@ -1902,7 +1902,7 @@ public class ControllerImpl implements Controller
                                  .shuffleSpec(null)
                                  .processorFactory(new ExportResultsFrameProcessorFactory(
                                      queryId,
-                                     storageConnectorProvider,
+                                     exportStorageProvider,
                                      resultFormat
                                  ))
       );

@@ -42,7 +42,7 @@ import org.apache.druid.msq.kernel.ProcessorsAndChannels;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.querykit.BaseFrameProcessorFactory;
 import org.apache.druid.sql.http.ResultFormat;
-import org.apache.druid.storage.StorageConnectorProvider;
+import org.apache.druid.storage.ExportStorageProvider;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
@@ -53,18 +53,18 @@ import java.util.function.Consumer;
 public class ExportResultsFrameProcessorFactory extends BaseFrameProcessorFactory
 {
   private final String queryId;
-  private final StorageConnectorProvider storageConnectorProvider;
+  private final ExportStorageProvider exportStorageProvider;
   private final ResultFormat exportFormat;
 
   @JsonCreator
   public ExportResultsFrameProcessorFactory(
       @JsonProperty("queryId") String queryId,
-      @JsonProperty("storageConnectorProvider") StorageConnectorProvider storageConnectorProvider,
+      @JsonProperty("exportStorageProvider") ExportStorageProvider exportStorageProvider,
       @JsonProperty("exportFormat") ResultFormat exportFormat
   )
   {
     this.queryId = queryId;
-    this.storageConnectorProvider = storageConnectorProvider;
+    this.exportStorageProvider = exportStorageProvider;
     this.exportFormat = exportFormat;
   }
 
@@ -80,10 +80,11 @@ public class ExportResultsFrameProcessorFactory extends BaseFrameProcessorFactor
     return exportFormat;
   }
 
-  @JsonProperty("storageConnectorProvider")
-  public StorageConnectorProvider getStorageConnectorProvider()
+
+  @JsonProperty("exportStorageProvider")
+  public ExportStorageProvider getExportStorageProvider()
   {
-    return storageConnectorProvider;
+    return exportStorageProvider;
   }
 
   @Override
@@ -118,7 +119,7 @@ public class ExportResultsFrameProcessorFactory extends BaseFrameProcessorFactor
             readableInput.getChannel(),
             exportFormat,
             readableInput.getChannelFrameReader(),
-            storageConnectorProvider.get(),
+            exportStorageProvider.get(),
             frameContext.jsonMapper(),
             channelCounter,
             getExportFilePath(queryId, workerNumber, readableInput.getStagePartition().getPartitionNumber(), exportFormat)

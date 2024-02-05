@@ -17,39 +17,36 @@
  * under the License.
  */
 
-package org.apache.druid.storage.google.output;
+package org.apache.druid.storage.s3.output;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.data.input.s3.S3InputSource;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.storage.ExportStorageProvider;
 import org.apache.druid.storage.StorageConnector;
-import org.apache.druid.storage.StorageConnectorProvider;
-import org.apache.druid.storage.google.GoogleInputDataConfig;
-import org.apache.druid.storage.google.GoogleStorage;
-import org.apache.druid.storage.google.GoogleStorageDruidModule;
+import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 
-import javax.annotation.Nullable;
 import java.io.File;
 
-@JsonTypeName(GoogleStorageDruidModule.SCHEME)
-public class GoogleStorageConnectorProvider extends GoogleOutputConfig implements StorageConnectorProvider
+@JsonTypeName(S3ExportStorageProvider.TYPE_NAME)
+public class S3ExportStorageProvider extends S3OutputConfig implements ExportStorageProvider
 {
+  public static final String TYPE_NAME = S3InputSource.TYPE_KEY;
 
   @JacksonInject
-  GoogleStorage googleStorage;
-
-  @JacksonInject
-  GoogleInputDataConfig googleInputDataConfig;
+  ServerSideEncryptingAmazonS3 s3;
 
   @JsonCreator
-  public GoogleStorageConnectorProvider(
+  public S3ExportStorageProvider(
       @JsonProperty(value = "bucket", required = true) String bucket,
       @JsonProperty(value = "prefix", required = true) String prefix,
       @JsonProperty(value = "tempDir", required = true) File tempDir,
-      @JsonProperty(value = "chunkSize") @Nullable HumanReadableBytes chunkSize,
-      @JsonProperty(value = "maxRetry") @Nullable Integer maxRetry
+      @JsonProperty("chunkSize") HumanReadableBytes chunkSize,
+      @JsonProperty("maxRetry") Integer maxRetry
   )
   {
     super(bucket, prefix, tempDir, chunkSize, maxRetry);
@@ -58,6 +55,13 @@ public class GoogleStorageConnectorProvider extends GoogleOutputConfig implement
   @Override
   public StorageConnector get()
   {
-    return new GoogleStorageConnector(this, googleStorage, googleInputDataConfig);
+    return new S3StorageConnector(this, s3);
+  }
+
+  @Override
+  @JsonIgnore
+  public String getResourceType()
+  {
+    return TYPE_NAME;
   }
 }

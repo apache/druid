@@ -17,24 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.export;
+package org.apache.druid.storage;
 
-import org.apache.druid.storage.ExportStorageProvider;
-import org.apache.druid.storage.StorageConnector;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class TestExportStorageConnectorProvider implements ExportStorageProvider
+import javax.annotation.Nullable;
+
+public class StorageConfig
 {
-  private static final StorageConnector STORAGE_CONNECTOR = new TestExportStorageConnector();
+  @JsonProperty("baseDir")
+  @Nullable
+  private final String baseDir;
 
-  @Override
-  public StorageConnector get()
+  @JsonCreator
+  public StorageConfig(@JsonProperty("baseDir") @Nullable String baseDir)
   {
-    return STORAGE_CONNECTOR;
+    this.baseDir = baseDir;
   }
 
-  @Override
-  public String getResourceType()
+  @Nullable
+  public String getBaseDir()
   {
-    return "testExport";
+    return baseDir;
   }
 }

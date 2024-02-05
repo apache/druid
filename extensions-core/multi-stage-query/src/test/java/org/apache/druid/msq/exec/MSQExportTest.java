@@ -84,7 +84,7 @@ public class MSQExportTest extends MSQTestBase
     Map<String, Object> queryContext = new HashMap<>(DEFAULT_MSQ_CONTEXT);
     queryContext.put(MultiStageQueryContext.CTX_ROWS_PER_PAGE, 1);
 
-    final String sql = StringUtils.format("insert into extern(local(basePath=>'%s')) as csv select cnt, dim1 from foo", exportDir.getAbsolutePath());
+    final String sql = StringUtils.format("insert into extern(local(exportPath=>'%s')) as csv select cnt, dim1 from foo", exportDir.getAbsolutePath());
 
     testIngestQuery().setSql(sql)
                      .setExpectedDataSource("foo1")

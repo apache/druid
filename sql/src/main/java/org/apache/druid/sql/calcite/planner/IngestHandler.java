@@ -52,7 +52,7 @@ import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.destination.ExportDestination;
 import org.apache.druid.sql.destination.IngestDestination;
 import org.apache.druid.sql.destination.TableDestination;
-import org.apache.druid.storage.StorageConnectorProvider;
+import org.apache.druid.storage.ExportStorageProvider;
 
 import java.util.List;
 import java.util.regex.Pattern;
@@ -224,8 +224,8 @@ public abstract class IngestHandler extends QueryHandler
           .build("Operation [%s] requires a target table", operationName());
     } else if (tableIdentifier instanceof ExternalDestinationSqlIdentifier) {
       ExternalDestinationSqlIdentifier externalDestination = ((ExternalDestinationSqlIdentifier) tableIdentifier);
-      StorageConnectorProvider storageConnectorProvider = externalDestination.toStorageConnectorProvider(handlerContext.jsonMapper());
-      dataSource = new ExportDestination(storageConnectorProvider);
+      ExportStorageProvider storageProvider = externalDestination.toExportStorageProvider(handlerContext.jsonMapper());
+      dataSource = new ExportDestination(storageProvider);
       resourceActions.add(new ResourceAction(new Resource(externalDestination.getDestinationType(), ResourceType.EXTERNAL), Action.WRITE));
     } else if (tableIdentifier.names.size() == 1) {
       // Unqualified name.

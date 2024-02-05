@@ -25,5 +25,4 @@ import com.google.inject.Provider;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 public interface StorageConnectorProvider extends Provider<StorageConnector>
 {
-  String getType();
 }

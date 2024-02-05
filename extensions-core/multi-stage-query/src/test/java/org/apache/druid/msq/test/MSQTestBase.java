@@ -176,6 +176,7 @@ import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.sql.guice.SqlBindings;
+import org.apache.druid.storage.StorageConfig;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorModule;
 import org.apache.druid.storage.StorageConnectorProvider;
@@ -473,6 +474,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
             );
             binder.bind(Key.get(StorageConnector.class, MultiStageQuery.class))
                   .toProvider(() -> localFileStorageConnector);
+            binder.bind(StorageConfig.class).toInstance(new StorageConfig("/"));
           }
           catch (IOException e) {
             throw new ISE(e, "Unable to create setup storage connector");

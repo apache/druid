@@ -21,7 +21,7 @@ package org.apache.druid.sql.destination;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import org.apache.druid.storage.StorageConnectorProvider;
+import org.apache.druid.storage.ExportStorageProvider;
 
 import java.util.Objects;
 
@@ -32,15 +32,15 @@ import java.util.Objects;
 public class ExportDestination implements IngestDestination
 {
   public static final String TYPE_KEY = "external";
-  private final StorageConnectorProvider storageConnectorProvider;
+  private final ExportStorageProvider storageConnectorProvider;
 
-  public ExportDestination(@JsonProperty("storageConnectorProvider") StorageConnectorProvider storageConnectorProvider)
+  public ExportDestination(@JsonProperty("storageConnectorProvider") ExportStorageProvider storageConnectorProvider)
   {
     this.storageConnectorProvider = storageConnectorProvider;
   }
 
   @JsonProperty("storageConnectorProvider")
-  public StorageConnectorProvider getStorageConnectorProvider()
+  public ExportStorageProvider getStorageConnectorProvider()
   {
     return storageConnectorProvider;
   }
