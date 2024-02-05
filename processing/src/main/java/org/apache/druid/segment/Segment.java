@@ -72,6 +72,6 @@ public interface Segment extends Closeable
 
   default String asString()
   {
-    return "" + getClass();
+    return getClass().toString();
   }
 }
