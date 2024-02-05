@@ -375,7 +375,7 @@ public class QueryStackTests
     return new MapJoinableFactory(setBuilder.build(), mapBuilder.build());
   }
 
-  public static DruidInjectorBuilder injectorBuilder()
+  public static DruidInjectorBuilder defaultInjectorBuilder()
   {
     Injector startupInjector = new StartupInjectorBuilder()
         .build();
@@ -389,13 +389,13 @@ public class QueryStackTests
     return injectorBuilder;
   }
 
-  public static Injector injector()
+  public static Injector injectorWithLookup()
   {
 
     final LookupExtractorFactoryContainerProvider lookupProvider;
     lookupProvider = LookupEnabledTestExprMacroTable.createTestLookupProvider(Collections.emptyMap());
 
-    return injectorBuilder()
+    return defaultInjectorBuilder()
         .addModule(binder -> binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupProvider))
         .build();
   }

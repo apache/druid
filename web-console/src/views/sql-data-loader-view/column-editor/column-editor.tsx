@@ -16,77 +16,109 @@
  * limitations under the License.
  */
 
-import { Button, FormGroup, InputGroup, Intent, Menu, MenuItem, Position } from '@blueprintjs/core';
+import {
+  Button,
+  FormGroup,
+  InputGroup,
+  Intent,
+  Menu,
+  MenuDivider,
+  MenuItem,
+  Position,
+} from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import type { QueryResult } from '@druid-toolkit/query';
-import { SqlExpression, SqlFunction } from '@druid-toolkit/query';
+import { F, SqlExpression, SqlFunction, SqlType } from '@druid-toolkit/query';
 import type { JSX } from 'react';
 import React, { useState } from 'react';
 
 import { AppToaster } from '../../../singletons';
-import { tickIcon } from '../../../utils';
+import { deepDelete, deleteKeys, tickIcon } from '../../../utils';
 import { FlexibleQueryInput } from '../../workbench-view/flexible-query-input/flexible-query-input';
 
 import './column-editor.scss';
 
-const NATIVE_TYPES: (undefined | string)[] = ['', 'string', 'long', 'double'];
+function getTargetTypes(isArray: boolean): SqlType[] {
+  return isArray
+    ? [SqlType.VARCHAR_ARRAY, SqlType.BIGINT_ARRAY, SqlType.DOUBLE_ARRAY]
+    : [SqlType.VARCHAR, SqlType.BIGINT, SqlType.DOUBLE];
+}
 
-interface Breakdown {
-  expression: SqlExpression;
-  nativeType?: string;
+interface CastBreakdown {
+  formula: string;
+  castType?: SqlType;
+  forceMultiValue: boolean;
   outputName: string;
 }
 
-function breakdownExpression(expression: SqlExpression): Breakdown {
+function expressionToCastBreakdown(expression: SqlExpression): CastBreakdown {
   const outputName = expression.getOutputName() || '';
   expression = expression.getUnderlyingExpression();
 
-  let nativeType: string | undefined;
   if (expression instanceof SqlFunction) {
     const asType = expression.getCastType();
+    const formula = String(expression.getArg(0));
     if (asType) {
-      switch (asType.value.toUpperCase()) {
-        case 'VARCHAR':
-          nativeType = 'string';
-          expression = expression.getArg(0)!;
-          break;
-
-        case 'BIGINT':
-          nativeType = 'long';
-          expression = expression.getArg(0)!;
-          break;
-
-        case 'DOUBLE':
-          nativeType = 'double';
-          expression = expression.getArg(0)!;
-          break;
-      }
+      return {
+        formula,
+        castType: asType,
+        forceMultiValue: false,
+        outputName,
+      };
+    } else if (expression.getEffectiveFunctionName() === 'ARRAY_TO_MV') {
+      return {
+        formula,
+        forceMultiValue: true,
+        outputName,
+      };
     }
   }
 
   return {
-    expression,
-    nativeType,
+    formula: String(expression),
+    forceMultiValue: false,
     outputName,
   };
 }
 
-function nativeTypeToSqlType(nativeType: string): string {
-  switch (nativeType) {
-    case 'string':
-      return 'VARCHAR';
-    case 'long':
-      return 'BIGINT';
-    case 'double':
-      return 'DOUBLE';
-    default:
-      return 'VARCHAR';
+function castBreakdownToExpression({
+  formula,
+  castType,
+  forceMultiValue,
+  outputName,
+}: CastBreakdown): SqlExpression {
+  let newExpression = SqlExpression.parse(formula);
+  const defaultOutputName = newExpression.getOutputName();
+
+  if (castType) {
+    newExpression = newExpression.cast(castType);
+  } else if (forceMultiValue) {
+    newExpression = F('ARRAY_TO_MV', newExpression);
   }
+
+  if (!defaultOutputName && !outputName) {
+    throw new Error('Must explicitly define an output name');
+  }
+
+  if (newExpression.getOutputName() !== outputName) {
+    newExpression = newExpression.as(outputName);
+  }
+
+  return newExpression;
+}
+
+function castBreakdownsEqual(a: CastBreakdown, b: CastBreakdown): boolean {
+  return (
+    a.formula === b.formula &&
+    String(a.castType) === String(b.castType) &&
+    a.forceMultiValue === b.forceMultiValue &&
+    a.outputName === b.outputName
+  );
 }
 
 interface ColumnEditorProps {
-  expression?: SqlExpression;
+  initExpression?: SqlExpression;
   onApply(expression: SqlExpression | undefined): void;
   onCancel(): void;
   dirty(): void;
@@ -96,52 +128,128 @@ interface ColumnEditorProps {
 }
 
 export const ColumnEditor = React.memo(function ColumnEditor(props: ColumnEditorProps) {
-  const { expression, onApply, onCancel, dirty, queryResult, headerIndex } = props;
+  const { initExpression, onApply, onCancel, dirty, queryResult, headerIndex } = props;
 
-  const breakdown = expression ? breakdownExpression(expression) : undefined;
-
-  const [outputName, setOutputName] = useState<string | undefined>();
-  const [nativeType, setNativeType] = useState<string | undefined>();
-  const [expressionString, setExpressionString] = useState<string | undefined>();
-
-  const effectiveOutputName = outputName ?? (breakdown?.outputName || '');
-  const effectiveNativeType = nativeType ?? breakdown?.nativeType;
-  const effectiveExpressionString = expressionString ?? (breakdown?.expression.toString() || '');
+  const [initBreakdown] = useState(
+    initExpression ? expressionToCastBreakdown(initExpression) : undefined,
+  );
+  const [currentBreakdown, setCurrentBreakdown] = useState(
+    initBreakdown || { formula: '', forceMultiValue: false, outputName: '' },
+  );
 
   let typeButton: JSX.Element | undefined;
-
   const sqlQuery = queryResult?.sqlQuery;
   if (queryResult && sqlQuery && headerIndex !== -1) {
     const column = queryResult.header[headerIndex];
+    const isArray = String(column.nativeType).toUpperCase().startsWith('ARRAY');
 
     const expression = queryResult.sqlQuery?.getSelectExpressionForIndex(headerIndex);
 
-    if (expression && column.sqlType !== 'TIMESTAMP') {
-      const implicitText =
-        'implicit' + (breakdown?.nativeType ? '' : ` (${String(column.nativeType).toLowerCase()})`);
+    if (expression && column.sqlType !== 'TIMESTAMP' && column.sqlType !== 'OTHER') {
       const selectExpression = sqlQuery.getSelectExpressionForIndex(headerIndex);
+      const initCastType = initBreakdown?.castType;
+      const initForceMultiValue = initBreakdown?.forceMultiValue;
       if (selectExpression) {
+        const castToItems = (
+          <>
+            <MenuDivider title="Cast to..." />
+            {getTargetTypes(isArray).map((targetType, i) => (
+              <MenuItem
+                key={i}
+                icon={tickIcon(
+                  targetType.equals(currentBreakdown.castType) && !currentBreakdown.forceMultiValue,
+                )}
+                text={targetType.value}
+                label={targetType.getNativeType()}
+                onClick={() => {
+                  dirty();
+                  setCurrentBreakdown({ ...currentBreakdown, castType: targetType });
+                }}
+              />
+            ))}
+            {isArray && (
+              <>
+                <MenuDivider />
+                <MenuItem
+                  icon={tickIcon(currentBreakdown.forceMultiValue)}
+                  text="Make multi-value"
+                  onClick={() => {
+                    dirty();
+                    setCurrentBreakdown({
+                      ...deepDelete(currentBreakdown, 'castType'),
+                      forceMultiValue: true,
+                    });
+                  }}
+                />
+              </>
+            )}
+          </>
+        );
+
         typeButton = (
           <Popover2
             position={Position.BOTTOM_LEFT}
             minimal
             content={
-              <Menu>
-                {NATIVE_TYPES.map((type, i) => {
-                  return (
-                    <MenuItem
-                      key={i}
-                      icon={tickIcon(type === (effectiveNativeType || ''))}
-                      text={type || implicitText}
-                      onClick={() => setNativeType(type)}
-                    />
-                  );
-                })}
-              </Menu>
+              initCastType ? (
+                <Menu>
+                  <MenuItem
+                    icon={tickIcon(!currentBreakdown.castType && !currentBreakdown.forceMultiValue)}
+                    text="Remove explicit cast"
+                    onClick={() => {
+                      dirty();
+                      setCurrentBreakdown(
+                        deleteKeys(currentBreakdown, ['castType', 'forceMultiValue']),
+                      );
+                    }}
+                  />
+                  {castToItems}
+                </Menu>
+              ) : initForceMultiValue ? (
+                <Menu>
+                  <MenuItem
+                    icon={tickIcon(!currentBreakdown.castType && currentBreakdown.forceMultiValue)}
+                    text="VARCHAR (multi-value)"
+                    onClick={() => {
+                      dirty();
+                      setCurrentBreakdown({ ...currentBreakdown, forceMultiValue: true });
+                    }}
+                  />
+                  <MenuItem
+                    icon={tickIcon(!currentBreakdown.castType && !currentBreakdown.forceMultiValue)}
+                    text="Remove multi-value coercion"
+                    onClick={() => {
+                      dirty();
+                      setCurrentBreakdown(
+                        deleteKeys(currentBreakdown, ['castType', 'forceMultiValue']),
+                      );
+                    }}
+                  />
+                </Menu>
+              ) : (
+                <Menu>
+                  <MenuItem
+                    icon={tickIcon(!currentBreakdown.castType && !currentBreakdown.forceMultiValue)}
+                    text={`implicit (${column.sqlType})`}
+                    onClick={() => {
+                      dirty();
+                      setCurrentBreakdown(
+                        deleteKeys(currentBreakdown, ['castType', 'forceMultiValue']),
+                      );
+                    }}
+                  />
+                  {castToItems}
+                </Menu>
+              )
             }
           >
             <Button
-              text={`Type: ${effectiveNativeType || implicitText}`}
+              text={`Type: ${
+                currentBreakdown.castType ||
+                (currentBreakdown.forceMultiValue
+                  ? 'VARCHAR (multi-value)'
+                  : `implicit (${column.sqlType})`)
+              }`}
               rightIcon={IconNames.CARET_DOWN}
             />
           </Popover2>
@@ -152,13 +260,13 @@ export const ColumnEditor = React.memo(function ColumnEditor(props: ColumnEditor
 
   return (
     <div className="column-editor">
-      <div className="title">{expression ? 'Edit column' : 'Add column'}</div>
+      <div className="title">{initExpression ? 'Edit column' : 'Add column'}</div>
       <FormGroup label="Name">
         <InputGroup
-          value={effectiveOutputName}
+          value={currentBreakdown.outputName}
           onChange={e => {
-            if (!outputName) dirty();
-            setOutputName(e.target.value);
+            dirty();
+            setCurrentBreakdown({ ...currentBreakdown, outputName: e.target.value });
           }}
         />
       </FormGroup>
@@ -166,17 +274,17 @@ export const ColumnEditor = React.memo(function ColumnEditor(props: ColumnEditor
         <FlexibleQueryInput
           showGutter={false}
           placeholder="expression"
-          queryString={effectiveExpressionString}
-          onQueryStringChange={f => {
-            if (!expressionString) dirty();
-            setExpressionString(f);
+          queryString={currentBreakdown.formula}
+          onQueryStringChange={formula => {
+            dirty();
+            setCurrentBreakdown({ ...currentBreakdown, formula });
           }}
           columnMetadata={undefined}
         />
       </FormGroup>
       {typeButton && <FormGroup>{typeButton}</FormGroup>}
       <div className="apply-cancel-buttons">
-        {expression && (
+        {initExpression && (
           <Button
             className="delete"
             icon={IconNames.TRASH}
@@ -191,25 +299,17 @@ export const ColumnEditor = React.memo(function ColumnEditor(props: ColumnEditor
         <Button
           text="Apply"
           intent={Intent.PRIMARY}
-          disabled={!outputName && !expressionString && typeof nativeType === 'undefined'}
+          disabled={Boolean(initBreakdown && castBreakdownsEqual(initBreakdown, currentBreakdown))}
           onClick={() => {
             let newExpression: SqlExpression;
             try {
-              newExpression = SqlExpression.parse(effectiveExpressionString);
+              newExpression = castBreakdownToExpression(currentBreakdown);
             } catch (e) {
               AppToaster.show({
-                message: `Could not parse SQL expression: ${e.message}`,
+                message: e.message,
                 intent: Intent.DANGER,
               });
               return;
-            }
-
-            if (nativeType) {
-              newExpression = newExpression.cast(nativeTypeToSqlType(nativeType));
-            }
-
-            if (newExpression.getOutputName() !== effectiveOutputName) {
-              newExpression = newExpression.as(effectiveOutputName);
             }
 
             onApply(newExpression);

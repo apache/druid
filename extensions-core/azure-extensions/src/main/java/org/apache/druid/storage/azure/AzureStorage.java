@@ -22,6 +22,7 @@ package org.apache.druid.storage.azure;
 import com.azure.core.http.rest.PagedIterable;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
+import com.azure.storage.blob.batch.BlobBatchClient;
 import com.azure.storage.blob.batch.BlobBatchStorageException;
 import com.azure.storage.blob.models.BlobItem;
 import com.azure.storage.blob.models.BlobRange;
@@ -34,6 +35,7 @@ import com.azure.storage.blob.options.BlockBlobOutputStreamOptions;
 import com.azure.storage.blob.specialized.BlockBlobClient;
 import com.azure.storage.common.Utility;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Streams;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -57,6 +59,10 @@ public class AzureStorage
 
   // Default value from Azure library
   private static final int DELTA_BACKOFF_MS = 30_000;
+
+  // https://learn.microsoft.com/en-us/rest/api/storageservices/blob-batch?tabs=microsoft-entra-id
+  private static final Integer MAX_MULTI_OBJECT_DELETE_SIZE = 256;
+
 
   private static final Logger log = new Logger(AzureStorage.class);
 
@@ -172,20 +178,60 @@ public class AzureStorage
     return blobContainerClient.getBlobClient(Utility.urlEncode(blobPath)).openInputStream(new BlobInputStreamOptions().setRange(new BlobRange(offset, length)));
   }
 
-  public void batchDeleteFiles(String containerName, Iterable<String> paths, Integer maxAttempts)
+  /**
+   * Deletes multiple files from the specified container.
+   *
+   * @param containerName The name of the container from which files will be deleted.
+   * @param paths         An iterable of file paths to be deleted.
+   * @param maxAttempts   (Optional) The maximum number of attempts to delete each file.
+   *                     If null, the system default number of attempts will be used.
+   * @return true if all files were successfully deleted; false otherwise.
+   */
+  public boolean batchDeleteFiles(String containerName, Iterable<String> paths, @Nullable Integer maxAttempts)
       throws BlobBatchStorageException
   {
     BlobContainerClient blobContainerClient = getOrCreateBlobContainerClient(containerName, maxAttempts);
+    BlobBatchClient blobBatchClient = azureClientFactory.getBlobBatchClient(blobContainerClient);
     List<String> blobUris = Streams.stream(paths).map(path -> blobContainerClient.getBlobContainerUrl() + "/" + path).collect(Collectors.toList());
-
-    // We have to call forEach on the response because this is the only way azure batch will throw an exception on a operation failure.
-    azureClientFactory.getBlobBatchClient(blobContainerClient).deleteBlobs(
-        blobUris,
-        DeleteSnapshotsOptionType.INCLUDE
-    ).forEach(response ->
-        log.debug("Deleting blob with URL %s completed with status code %d%n",
-            response.getRequest().getUrl(), response.getStatusCode())
+    boolean hadException = false;
+    List<List<String>> keysChunks = Lists.partition(
+            blobUris,
+            MAX_MULTI_OBJECT_DELETE_SIZE
     );
+    for (List<String> chunkOfKeys : keysChunks) {
+      try {
+        log.info(
+                "Removing from container [%s] the following files: [%s]",
+                containerName,
+                chunkOfKeys
+        );
+        // We have to call forEach on the response because this is the only way azure batch will throw an exception on a operation failure.
+        blobBatchClient.deleteBlobs(
+                chunkOfKeys,
+                DeleteSnapshotsOptionType.INCLUDE
+        ).forEach(response ->
+                log.debug("Deleting blob with URL %s completed with status code %d%n",
+                        response.getRequest().getUrl(), response.getStatusCode())
+        );
+      }
+      catch (BlobStorageException | BlobBatchStorageException e) {
+        hadException = true;
+        log.noStackTrace().warn(e,
+                "Unable to delete from container [%s], the following keys [%s]",
+                containerName,
+                chunkOfKeys
+        );
+      }
+      catch (Exception e) {
+        hadException = true;
+        log.noStackTrace().warn(e,
+                "Unexpected exception occurred when deleting from container [%s], the following keys [%s]",
+                containerName,
+                chunkOfKeys
+        );
+      }
+    }
+    return !hadException;
   }
 
   public List<String> listDir(final String containerName, final String virtualDirPath, final Integer maxAttempts)

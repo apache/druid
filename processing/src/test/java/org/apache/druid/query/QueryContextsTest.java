@@ -152,6 +152,15 @@ public class QueryContextsTest
   }
 
   @Test
+  public void testDefaultWindowingStrictValidation()
+  {
+    Assert.assertEquals(
+        QueryContexts.DEFAULT_WINDOWING_STRICT_VALIDATION,
+        QueryContext.empty().isWindowingStrictValidation()
+    );
+  }
+
+  @Test
   public void testGetEnableJoinLeftScanDirect()
   {
     Assert.assertFalse(QueryContext.empty().getEnableJoinLeftScanDirect());

@@ -823,6 +823,13 @@ rolled-up datasource `wikipedia_rollup` by grouping on hour, "countryName", and 
  to `true` to enable a compatibility mode where the timestampSpec is ignored.
 :::
 
+The [secondary partitioning method](native-batch.md#partitionsspec) determines the requisite number of concurrent worker tasks that run in parallel to complete ingestion with the Combining input source.
+Set this value in `maxNumConcurrentSubTasks` in `tuningConfig` based on the secondary partitioning method:
+- `range` or `single_dim` partitioning: greater than or equal to 1
+- `hashed` or `dynamic` partitioning: greater than or equal to 2
+
+For more information on the `maxNumConcurrentSubTasks` field, see [Implementation considerations](native-batch.md#implementation-considerations).
+
 ## SQL input source
 
 The SQL input source is used to read data directly from RDBMS.
@@ -925,7 +932,7 @@ The following is an example of a Combining input source spec:
 ## Iceberg input source
 
 :::info
- To use the Iceberg input source, add the `druid-iceberg-extensions` extension.
+To use the Iceberg input source, load the extension [`druid-iceberg-extensions`](../development/extensions-contrib/iceberg.md).
 :::
 
 You use the Iceberg input source to read data stored in the Iceberg table format. For a given table, the input source scans up to the latest Iceberg snapshot from the configured Hive catalog. Druid ingests the underlying live data files using the existing input source formats.
@@ -990,7 +997,7 @@ The following is a sample spec for a S3 warehouse source:
             "namespace": "iceberg_namespace",
             "icebergCatalog": {
               "type": "hive",
-              "warehousePath": "hdfs://warehouse/path",
+              "warehousePath": "s3://warehouse/path",
               "catalogUri": "thrift://hive-metastore.x.com:8970",
               "catalogProperties": {
                 "hive.metastore.connect.retries": "1",
@@ -1052,7 +1059,7 @@ The following is a sample spec for a S3 warehouse source:
 |warehouseSource|The JSON Object that defines the native input source for reading the data files from the warehouse.|yes|
 |snapshotTime|Timestamp in ISO8601 DateTime format that will be used to fetch the most recent snapshot as of this time.|no|
 
-###Catalog Object
+### Catalog Object
 
 The catalog object supports `local` and `hive` catalog types.
 
@@ -1114,11 +1121,42 @@ This input source provides the following filters: `and`, `equals`, `interval`, a
 |type|Set this value to `not`.|yes|
 |filter|The iceberg filter on which logical NOT is applied|yes|
 
+`range` Filter:
 
+|Property|Description|Default|Required|
+|--------|-----------|-------|--------|
+|type|Set this value to `range`.|None|yes|
+|filterColumn|The column name from the iceberg table schema based on which range filtering needs to happen.|None|yes|
+|lower|Lower bound value to match.|None|no. At least one of `lower` or `upper` must not be null.|
+|upper|Upper bound value to match. |None|no. At least one of `lower` or `upper` must not be null.|
+|lowerOpen|Boolean indicating if lower bound is open in the interval of values defined by the range (">" instead of ">="). |false|no|
+|upperOpen|Boolean indicating if upper bound is open on the interval of values defined by range ("<" instead of "<="). |false|no|
 
-The [secondary partitioning method](native-batch.md#partitionsspec) determines the requisite number of concurrent worker tasks that run in parallel to complete ingestion with the Combining input source.
-Set this value in `maxNumConcurrentSubTasks` in `tuningConfig` based on the secondary partitioning method:
-- `range` or `single_dim` partitioning: greater than or equal to 1
-- `hashed` or `dynamic` partitioning: greater than or equal to 2
+## Delta Lake input source
 
-For more information on the `maxNumConcurrentSubTasks` field, see [Implementation considerations](native-batch.md#implementation-considerations).
+:::info
+To use the Delta Lake input source, load the extension [`druid-deltalake-extensions`](../development/extensions-contrib/delta-lake.md).
+:::
+
+You can use the Delta input source to read data stored in a Delta Lake table. For a given table, the input source scans
+the latest snapshot from the configured table. Druid ingests the underlying delta files from the table.
+
+The following is a sample spec:
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "delta",
+        "tablePath": "/delta-table/directory"
+      },
+    }
+}
+```
+
+| Property|Description|Required|
+|---------|-----------|--------|
+| type|Set this value to `delta`.|yes|
+| tablePath|The location of the Delta table.|yes|
+

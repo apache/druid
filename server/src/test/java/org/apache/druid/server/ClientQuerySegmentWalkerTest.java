@@ -1481,7 +1481,7 @@ public class ClientQuerySegmentWalkerTest
       }
     }
 
-    Injector injector = QueryStackTests.injector();
+    Injector injector = QueryStackTests.injectorWithLookup();
     walker = QueryStackTests.createClientQuerySegmentWalker(
         injector,
         new CapturingWalker(

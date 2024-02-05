@@ -156,11 +156,11 @@ public class AzureStorageConnectorTest
     EasyMock.reset(azureStorage);
     Capture<String> containerCapture = EasyMock.newCapture();
     Capture<Iterable<String>> pathsCapture = EasyMock.newCapture();
-    azureStorage.batchDeleteFiles(
+    EasyMock.expect(azureStorage.batchDeleteFiles(
         EasyMock.capture(containerCapture),
         EasyMock.capture(pathsCapture),
         EasyMock.anyInt()
-    );
+    )).andReturn(true);
     EasyMock.replay(azureStorage);
     storageConnector.deleteFile(TEST_FILE);
     Assert.assertEquals(CONTAINER, containerCapture.getValue());
@@ -174,7 +174,11 @@ public class AzureStorageConnectorTest
     EasyMock.reset(azureStorage);
     Capture<String> containerCapture = EasyMock.newCapture();
     Capture<Iterable<String>> pathsCapture = EasyMock.newCapture();
-    azureStorage.batchDeleteFiles(EasyMock.capture(containerCapture), EasyMock.capture(pathsCapture), EasyMock.anyInt());
+    EasyMock.expect(azureStorage.batchDeleteFiles(
+            EasyMock.capture(containerCapture),
+            EasyMock.capture(pathsCapture),
+            EasyMock.anyInt()
+    )).andReturn(true);
     EasyMock.replay(azureStorage);
     storageConnector.deleteFiles(ImmutableList.of(TEST_FILE + "_1.part", TEST_FILE + "_2.part"));
     Assert.assertEquals(CONTAINER, containerCapture.getValue());

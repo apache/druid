@@ -114,6 +114,11 @@ public class AzureStorageDruidModule implements DruidModule
   @LazySingleton
   public AzureClientFactory getAzureClientFactory(final AzureAccountConfig config)
   {
+    if (StringUtils.isEmpty(config.getAccount())) {
+      throw new ISE("Set 'account' to the storage account that needs to be configured in the azure config."
+          + " Please refer to azure documentation.");
+    }
+
     if (StringUtils.isEmpty(config.getKey()) && StringUtils.isEmpty(config.getSharedAccessStorageToken()) && BooleanUtils.isNotTrue(config.getUseAzureCredentialsChain())) {
       throw new ISE("Either set 'key' or 'sharedAccessStorageToken' or 'useAzureCredentialsChain' in the azure config."
           + " Please refer to azure documentation.");
