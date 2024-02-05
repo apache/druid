@@ -27,7 +27,7 @@ import TabItem from '@theme/TabItem';
   ~ under the License.
   -->
 
-When you enable the Kinesis indexing service, you can configure supervisors on the Overlord to manage the creation and lifetime of Kinesis indexing tasks. These indexing tasks read events using the Kinesis shard and sequence number mechanism to guarantee exactly-once ingestion. The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures, and ensure that scalability and replication requirements are maintained.
+When you enable the Kinesis indexing service, you can configure supervisors on the Overlord to manage the creation and lifetime of Kinesis indexing tasks. Kinesis indexing tasks read events using the Kinesis shard and sequence number mechanism to guarantee exactly-once ingestion. The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures, and ensure that scalability and replication requirements are maintained.
 
 This topic contains configuration information for the Kinesis indexing service supervisor for Apache Druid.
 
@@ -121,7 +121,8 @@ The following example shows a supervisor spec for a stream with the name `Kinesi
 
 ### I/O configuration
 
-The following table outlines the `ioConfig` configuration properties specific to Kinesis:
+The following table outlines the `ioConfig` configuration properties specific to Kinesis.
+For configuration properties shared across all streaming ingestion methods, refer to [Supervisor I/O configuration](supervisor.md#io-configuration).
 
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
@@ -134,15 +135,14 @@ The following table outlines the `ioConfig` configuration properties specific to
 |`awsExternalId`|String|The AWS external ID to use for additional permissions.|No||
 |`deaggregate`|Boolean|Whether to use the deaggregate function of the Kinesis Client Library (KCL).|No||
 
-For configuration properties shared across all streaming ingestion methods supported by Druid, refer to [Supervisor I/O configuration](supervisor.md#io-configuration).
-
 #### Data format
 
 The Kinesis indexing service supports both [`inputFormat`](data-formats.md#input-format) and [`parser`](data-formats.md#parser) to specify the data format. Use the `inputFormat` to specify the data format for the Kinesis indexing service unless you need a format only supported by the legacy `parser`. For more information, see [Source input formats](data-formats.md).
 
 The Kinesis indexing service supports the following values for `inputFormat`:
+
 * `csv`
-* `delimited`
+* `tvs`
 * `json`
 * `avro_stream`
 * `avro_ocf`
@@ -152,7 +152,8 @@ You can use `parser` to read [`thrift`](../development/extensions-contrib/thrift
 
 ### Tuning configuration
 
-The following table outlines the `tuningConfig` configuration properties specific to Kinesis:
+The following table outlines the `tuningConfig` configuration properties specific to Kinesis.
+For configuration properties shared across all streaming ingestion methods, refer to [Supervisor tuning configuration](supervisor.md#tuning-configuration).
 
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
@@ -164,8 +165,6 @@ The following table outlines the `tuningConfig` configuration properties specifi
 |`maxRecordsPerPoll`|Integer|The maximum number of records to be fetched from buffer per poll. The actual maximum will be `Max(maxRecordsPerPoll, Max(bufferSize, 1))`.|No| See [Determine fetch settings](#determine-fetch-settings) for defaults.|
 |`repartitionTransitionDuration`|ISO 8601 period|When shards are split or merged, the supervisor recomputes shard to task group mappings. The supervisor also signals any running tasks created under the old mappings to stop early at current time + `repartitionTransitionDuration`. Stopping the tasks early allows Druid to begin reading from the new shards more quickly. The repartition transition wait time controlled by this property gives the stream additional time to write records to the new shards after the split or merge, which helps avoid issues with [empty shard handling](https://github.com/apache/druid/issues/7600).|No|`PT2M`|
 |`useListShards`|Boolean|Indicates if `listShards` API of AWS Kinesis SDK can be used to prevent `LimitExceededException` during ingestion. You must set the necessary `IAM` permissions.|No|`false`|
-
-For configuration properties shared across all streaming ingestion methods supported by Druid, refer to [Supervisor tuning configuration](supervisor.md#tuning-configuration).
 
 ## AWS authentication
 

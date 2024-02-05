@@ -44,7 +44,7 @@ The following table outlines the high-level configuration options for a supervis
 ### I/O configuration
 
 The following table outlines the `ioConfig` configuration properties that apply to both Apache Kafka and Amazon Kinesis ingestion methods.
-For configuration properties specific to Apache Kafka or Amazon Kinesis, see [Kafka I/O configuration](kafka-ingestion.md#io-configuration) and [Kinesis I/O configuration](kinesis-ingestion.md#io-configuration) respectively.
+For configuration properties specific to Apache Kafka and Amazon Kinesis, see [Kafka I/O configuration](kafka-ingestion.md#io-configuration) and [Kinesis I/O configuration](kinesis-ingestion.md#io-configuration) respectively.
 
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
@@ -72,7 +72,7 @@ The following table outlines the configuration properties for `autoScalerConfig`
 |`taskCountMax`|The maximum number of ingestion tasks. Must be greater than or equal to `taskCountMin`. If `taskCountMax` is greater than the number of Kafka partitions or Kinesis shards, Druid set the maximum number of reading tasks to the number of Kafka partitions or Kinesis shards and ignores `taskCountMax`.|Yes||
 |`taskCountMin`|The minimum number of ingestion tasks. When you enable the autoscaler, Druid ignores the value of `taskCount` in `ioConfig` and starts with the `taskCountMin` number of tasks to launch.|Yes||
 |`minTriggerScaleActionFrequencyMillis`|The minimum time interval between two scale actions.| No|600000|
-|`autoScalerStrategy`|The algorithm of `autoScaler`. Druid only supports the `lagBased` strategy. See [Autoscaler strategy](#autoscaler-strategy) for more information.|No|`lagBased`|
+|`autoScalerStrategy`|The algorithm of autoscaler. Druid only supports the `lagBased` strategy. See [Autoscaler strategy](#autoscaler-strategy) for more information.|No|`lagBased`|
 
 ##### Autoscaler strategy
 
@@ -80,7 +80,7 @@ The following table outlines the configuration properties for `autoScalerConfig`
 Unlike the Kafka indexing service, Kinesis reports lag metrics measured in time difference in milliseconds between the current sequence number and latest sequence number, rather than message count.
 :::
 
-The following table outlines the configuration properties for `autoScalerStrategy`:
+The following table outlines the configuration properties related to the `lagBased` autoscaler strategy:
 
 |Property|Description|Required|Default|
 |--------|-----------|--------|-------|
@@ -95,7 +95,7 @@ The following table outlines the configuration properties for `autoScalerStrateg
 |`scaleInStep`|The number of tasks to reduce at once when scaling down.|No|1|
 |`scaleOutStep`|The number of tasks to add at once when scaling out.|No|2|
 
-The following example shows a supervisor spec with `lagBased` auto scaler enabled:
+The following example shows a supervisor spec with `lagBased` autoscaler:
 
 <details>
   <summary>Click to view the example</summary>
@@ -182,7 +182,8 @@ The following example shows a supervisor spec with `lagBased` auto scaler enable
 
 The `tuningConfig` object is optional. If you don't specify the `tuningConfig` object, Druid uses the default configuration settings.
 
-The following table outlines the `tuningConfig` configuration properties that apply to both Apache Kafka and Amazon Kinesis ingestion methods:
+The following table outlines the `tuningConfig` configuration properties that apply to both Apache Kafka and Amazon Kinesis ingestion methods.
+For configuration properties specific to Apache Kafka and Amazon Kinesis, see [Kafka tuning configuration](kafka-ingestion.md#tuning-configuration) and [Kinesis tuning configuration](kinesis-ingestion.md#tuning-configuration) respectively.
 
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
@@ -199,20 +200,16 @@ The following table outlines the `tuningConfig` configuration properties that ap
 |`indexSpecForIntermediatePersists`|Object|Defines segment storage format options to use at indexing time for intermediate persisted temporary segments. You can use `indexSpecForIntermediatePersists` to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. However, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published.|No||
 |`reportParseExceptions`|Boolean|DEPRECATED. If `true`, Druid throws exceptions encountered during parsing causing ingestion to halt. If `false`, Druid skips unparseable rows and fields. Setting `reportParseExceptions` to `true` overrides existing configurations for `maxParseExceptions` and `maxSavedParseExceptions`, setting `maxParseExceptions` to 0 and limiting `maxSavedParseExceptions` to not more than 1.|No|`false`|
 |`handoffConditionTimeout`|Long|Number of milliseconds to wait for segment handoff. Set to a value >= 0, where 0 means to wait indefinitely.|No|900000 (15 minutes) for Kafka. 0 for Kinesis.|
-|`resetOffsetAutomatically`|Boolean|Resets partitions when the sequence number is unavailable.
-If set to `true`, Druid resets partitions to the earliest or latest Kafka sequence number or Kinesis offset, based on the value of `useEarliestSequenceNumber` or `useEarliestOffset` (earliest if `true`, latest if `false`). If set to `false`, the exception bubbles up causing tasks to fail and ingestion to halt. If this occurs, manual intervention is required to correct the situation, potentially through [resetting the supervisor](../api-reference/supervisor-api.md#reset-a-supervisor).|No|`false`|
+|`resetOffsetAutomatically`|Boolean|Resets partitions when the sequence number is unavailable. If set to `true`, Druid resets partitions to the earliest or latest Kafka sequence number or Kinesis offset, based on the value of `useEarliestSequenceNumber` or `useEarliestOffset` (earliest if `true`, latest if `false`). If set to `false`, the exception bubbles up causing tasks to fail and ingestion to halt. If this occurs, manual intervention is required to correct the situation, potentially through [resetting the supervisor](../api-reference/supervisor-api.md#reset-a-supervisor).|No|`false`|
 |`workerThreads`|Integer|The number of threads that the supervisor uses to handle requests/responses for worker tasks, along with any other internal asynchronous operation.|No|`min(10, taskCount)`|
 |`chatRetries`|Integer|The number of times Druid retries HTTP requests to indexing tasks before considering tasks unresponsive.|No|8|
 |`httpTimeout`|ISO 8601 period|The period of time to wait for a HTTP response from an indexing task.|No|`PT10S`|
 |`shutdownTimeout`|ISO 8601 period|The period of time to wait for the supervisor to attempt a graceful shutdown of tasks before exiting.|No|`PT80S`|
+|`offsetFetchPeriod`|ISO 8601 period|Determines how often the supervisor queries the streaming source and the indexing tasks to fetch current offsets and calculate lag. If the user-specified value is below the minimum value of `PT5S`, the supervisor ignores the value and uses the minimum value instead.|No|`PT30S`|
 |`segmentWriteOutMediumFactory`|Object|The segment write-out medium to use when creating segments. See [Additional Peon configuration: SegmentWriteOutMediumFactory](../configuration/index.md#segmentwriteoutmediumfactory) for explanation and available options.|No|If not specified, Druid uses the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type`.|
 |`logParseExceptions`|Boolean|If `true`, Druid logs an error message when a parsing exception occurs, containing information about the row where the error occurred.|No|`false`|
 |`maxParseExceptions`|Integer|The maximum number of parse exceptions that can occur before the task halts ingestion and fails. Overridden if `reportParseExceptions` is set.|No|unlimited|
 |`maxSavedParseExceptions`|Integer|When a parse exception occurs, Druid keeps track of the most recent parse exceptions. `maxSavedParseExceptions` limits the number of saved exception instances. These saved exceptions are available after the task finishes in the [task completion report](../ingestion/tasks.md#task-reports). Overridden if `reportParseExceptions` is set.|No|0|
-|`offsetFetchPeriod`|ISO 8601 period|Determines how often the supervisor queries the streaming source and the indexing tasks to fetch current offsets and calculate lag. If the user-specified value is below the minimum value of `PT5S`, the supervisor ignores the value and uses the minimum value instead.|No|`PT30S`|
-
-For configuration properties specific to Apache Kafka, see [Kafka tuning configuration](kafka-ingestion.md#tuning-configuration).  
-For configuration properties specific to Amazon Kinesis, see [Kinesis tuning configuration](kinesis-ingestion.md#tuning-configuration).
 
 ## Start a supervisor
 
