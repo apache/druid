@@ -126,7 +126,7 @@ Druid now supports arbitrary join conditions for INNER join. Any sub-conditions 
 
 ### Experimental extensions
 
-#### DDSketch extension
+#### DDSketch
 
 A new DDSketch extension is available as a community contribution. The DDSketch extension (`druid-ddsketch`) provides support for approximate quantile queries using the [DDSketch](https://github.com/datadog/sketches-java) library.
 
@@ -137,6 +137,12 @@ A new DDSketch extension is available as a community contribution. The DDSketch 
 A new histogram extension is available as a community contribution. The Spectator-based histogram extension (`druid-spectator-histogram`) provides approximate histogram aggregators and percentile post-aggregators based on [Spectator](https://netflix.github.io/atlas-docs/spectator/) fixed-bucket histograms.
 
 [#15340](https://github.com/apache/druid/pull/15340)
+
+#### Delta Lake
+
+A new Delta Lake extension is available as a community contribution. The Delta Lake extension (`druid-deltalake-extensions`) lets you use the [Delta Lake input source](https://druid.apache.org/docs/latest/development/extensions-contrib/delta-lake) to ingest data stored in a Delta Lake table into Apache Druid.
+
+[#15755](https://github.com/apache/druid/pull/15755)
 
 ### Removed the `auto` search strategy
 
