@@ -66,6 +66,7 @@ import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.sql.calcite.planner.DruidQueryGenerator.Vertex;
 import org.apache.druid.sql.calcite.rel.DruidConvention;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.DruidRel;
@@ -560,7 +561,14 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
           newRoot
       );
 
-      DruidQueryGenerator shuttle = new DruidQueryGenerator(plannerContext, newRoot);
+      DruidQueryGenerator shuttle = new DruidQueryGenerator(plannerContext, newRoot,rexBuilder);
+      DruidQuery baseQuery;
+      if(true) {
+        Vertex vertex = shuttle.buildVertex();
+        baseQuery = vertex.buildQuery(true);
+//        vertex.partialDruidQuery.build(
+//~          )
+      }else {
       shuttle.run();
       log.info("PartialDruidQuery : " + shuttle.getPartialDruidQuery());
       shuttle.getQueryList().add(shuttle.getPartialDruidQuery()); // add topmost query to the list
@@ -569,7 +577,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       log.info("query list size " + shuttle.getQueryList().size());
       log.info("query tables size " + shuttle.getQueryTables().size());
       // build bottom-most query
-      DruidQuery baseQuery = shuttle.getQueryList().get(0).build(
+      baseQuery = shuttle.getQueryList().get(0).build(
           shuttle.getQueryTables().get(0).getDataSource(),
           shuttle.getQueryTables().get(0).getRowSignature(),
           plannerContext,
@@ -593,6 +601,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       }
       catch (JsonProcessingException e) {
         throw new RuntimeException(e);
+      }
       }
       DruidQuery finalBaseQuery = baseQuery;
       final Supplier<QueryResponse<Object[]>> resultsSupplier = () -> plannerContext.getQueryMaker().runQuery(finalBaseQuery);

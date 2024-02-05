@@ -31,6 +31,7 @@ import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.core.TableFunctionScan;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.core.Union;
+import org.apache.calcite.rel.core.Values;
 import org.apache.calcite.rel.core.Window;
 import org.apache.calcite.rel.logical.LogicalAggregate;
 import org.apache.calcite.rel.logical.LogicalCorrelate;
@@ -44,13 +45,19 @@ import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.logical.LogicalSort;
 import org.apache.calcite.rel.logical.LogicalUnion;
 import org.apache.calcite.rel.logical.LogicalValues;
+import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
+import org.apache.druid.sql.calcite.rel.PartialDruidQuery.Stage;
 import org.apache.druid.sql.calcite.rel.logical.DruidTableScan;
+import org.apache.druid.sql.calcite.rel.logical.DruidValues;
 import org.apache.druid.sql.calcite.rule.DruidLogicalValuesRule;
 import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.table.InlineTable;
@@ -58,6 +65,7 @@ import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -76,11 +84,54 @@ public class DruidQueryGenerator extends RelShuttleImpl
   private PartialDruidQuery.Stage currentStage = null;
   private DruidTable currentTable = null;
   private final RelNode relRoot;
+  private final RexBuilder rexBuilder;
 
 //  static final List<Vertex> vertices = new ArrayList<Vertex>();
 //  static Vertex root;
 
-  static class Vertex {
+  static class InputDesc {
+
+    private DataSource dataSource;
+    private RowSignature rowSignature;
+
+    public InputDesc(DataSource dataSource, RowSignature rowSignature)
+    {
+      this.dataSource = dataSource;
+      this.rowSignature = rowSignature;
+
+    }
+
+  }
+  public Vertex createVertex(TableScan scan)
+  {
+    // FIXME
+    Vertex vertex = new Vertex();
+    vertex.partialDruidQuery = PartialDruidQuery.create(scan);
+    return vertex;
+  }
+  public Vertex createVertex(Values scan)
+  {
+    // FIXME
+    Vertex vertex = new Vertex();
+    vertex.partialDruidQuery = PartialDruidQuery.create(scan);
+    return vertex;
+  }
+
+
+  // FIXME
+  private Vertex createVertex(RelNode node, Vertex inputVertex)
+  {
+    // FIXME
+    Vertex vertex = new Vertex();
+    vertex.inputs = ImmutableList.of(inputVertex);
+    vertex.partialDruidQuery = PartialDruidQuery.createOuterQuery(inputVertex.partialDruidQuery);
+    return vertex;
+  }
+
+
+
+
+  class Vertex {
     PartialDruidQuery partialDruidQuery;
     DruidTable queryTable;
     List<Vertex> inputs;
@@ -88,50 +139,223 @@ public class DruidQueryGenerator extends RelShuttleImpl
 
 
 
-    public static Vertex create(TableScan scan)
+    public DruidQuery buildQuery(boolean topLevel)
     {
-      // FIXME
+      InputDesc input= getInput();
+      return partialDruidQuery.build(
+          input.dataSource,
+          input.rowSignature,
+          plannerContext,
+          rexBuilder,
+          currentTable != null && !topLevel
+      );
+    }
+
+    private InputDesc getInput()
+    {
+      if(currentTable!=null) {
+        return new InputDesc(currentTable.getDataSource(),currentTable.getRowSignature());
+      }
+
+      if(inputs.size()==1) {
+        DruidQuery inputQuery = inputs.get(0).buildQuery(false);
+
+        return new InputDesc(new QueryDataSource(inputQuery.getQuery()), inputQuery.getOutputRowSignature());
+
+      }
+      throw new IllegalStateException();
+    }
+
+    public Optional<Vertex> mergeFilter(Filter filter)
+    {
+      if(partialDruidQuery.canAccept(Stage.WHERE_FILTER)) {
+        PartialDruidQuery newPartialQuery = partialDruidQuery.withWhereFilter(filter);
+        return Optional.of(newVertex(newPartialQuery));
+      }
+      if(partialDruidQuery.canAccept(Stage.HAVING_FILTER)) {
+        PartialDruidQuery newPartialQuery = partialDruidQuery.withHavingFilter(filter);
+        return Optional.of(newVertex(newPartialQuery));
+      }
+      return Optional.empty();
+    }
+
+    private Vertex newVertex(PartialDruidQuery partialDruidQuery)
+    {
       Vertex vertex = new Vertex();
-      vertex.partialDruidQuery=PartialDruidQuery.create(scan);
+      vertex.inputs = inputs;
+      vertex.currentTable = currentTable;
+      vertex.queryTable = queryTable;
+      vertex.partialDruidQuery = partialDruidQuery;
       return vertex;
+
+    }
+
+    private Vertex mergeIntoDruidQuery(RelNode node, boolean isRoot)
+    {
+////  final RelNode scan,
+////  final Filter whereFilter,
+      if(accepts(node, Stage.WHERE_FILTER, Filter.class)) {
+        PartialDruidQuery newPartialQuery = partialDruidQuery.withWhereFilter((Filter) node);
+        return newVertex(newPartialQuery);
+      }
+////  final Project selectProject,
+      if(accepts(node, Stage.SELECT_PROJECT, Project.class)) {
+        PartialDruidQuery newPartialQuery = partialDruidQuery.withSelectProject((Project) node);
+        return newVertex(newPartialQuery);
+      }
+////  final Aggregate aggregate,
+      if(accepts(node, Stage.AGGREGATE, Aggregate.class)) {
+        PartialDruidQuery newPartialQuery = partialDruidQuery.withAggregate((Aggregate) node);
+        return newVertex(newPartialQuery);
+      }
+////  final Project aggregateProject,
+      if(accepts(node, Stage.AGGREGATE_PROJECT, Project.class) && isRoot) {
+        PartialDruidQuery newPartialQuery = partialDruidQuery.withAggregateProject((Project) node);
+        return newVertex(newPartialQuery);
+      }
+////  final Filter havingFilter,
+      if(accepts(node, Stage.HAVING_FILTER, Filter.class)) {
+        PartialDruidQuery newPartialQuery = partialDruidQuery.withHavingFilter((Filter) node);
+        return newVertex(newPartialQuery);
+      }
+////  final Sort sort,
+      if(accepts(node, Stage.SORT, Sort.class)) {
+        PartialDruidQuery newPartialQuery = partialDruidQuery.withSort((Sort) node);
+        return newVertex(newPartialQuery);
+      }
+////  final Project sortProject,
+      if(accepts(node, Stage.SORT_PROJECT, Project.class)) {
+        PartialDruidQuery newPartialQuery = partialDruidQuery.withSortProject((Project) node);
+        return newVertex(newPartialQuery);
+      }
+////  final Window window,
+      if(accepts(node, Stage.WINDOW, Window.class)) {
+        PartialDruidQuery newPartialQuery = partialDruidQuery.withWindow((Window) node);
+        return newVertex(newPartialQuery);
+      }
+////  final Project windowProject
+      if(accepts(node, Stage.WINDOW_PROJECT, Project.class)) {
+        PartialDruidQuery newPartialQuery = partialDruidQuery.withWindowProject((Project) node);
+        return newVertex(newPartialQuery);
+      }
+
+
+      return null;
+
+    }
+
+    private boolean accepts(RelNode node, Stage whereFilter, Class<? extends RelNode> class1)
+    {
+      return partialDruidQuery.canAccept(whereFilter) && class1.isInstance(node);
     }
   }
 
-  public DruidQueryGenerator(PlannerContext plannerContext, RelNode relRoot)
+  public DruidQueryGenerator(PlannerContext plannerContext, RelNode relRoot, RexBuilder rexBuilder)
   {
     this.plannerContext = plannerContext;
     this.relRoot = relRoot;
+    this.rexBuilder=rexBuilder;
   }
 
 
   public Vertex buildVertex()
   {
-    return buildVertexFor(relRoot);
+    return buildVertexFor(relRoot, true);
   }
 
-  protected Vertex buildVertexFor(RelNode node)
+  protected Vertex buildVertexFor(RelNode node, boolean isRoot)
   {
     Preconditions.checkArgument(node.getInputs().size() <= 1, "unsupported");
 
     List<Vertex> newInputs = new ArrayList<>();
     for (RelNode input : node.getInputs()) {
-      newInputs.add(buildVertexFor(input));
+      newInputs.add(buildVertexFor(input, false));
     }
 
-    Vertex vertex = processNodeWithInputs(node, newInputs);
+    Vertex vertex = processNodeWithInputs(node, newInputs, isRoot);
 
     return vertex;
   }
 
-  private Vertex processNodeWithInputs(RelNode node, List<Vertex> newInputs)
+
+  private Vertex processNodeWithInputs(RelNode node, List<Vertex> newInputs, boolean isRoot)
   {
     if(node instanceof TableScan) {
       return visitTableScan((TableScan) node);
     }
+    if(node instanceof DruidValues) {
+      return visitValues1((DruidValues)node);
+    }
+    if (newInputs.size() == 1) {
+      Vertex inputVertex = newInputs.get(0);
+      Vertex newVertex = inputVertex.mergeIntoDruidQuery(node, isRoot);
+      if (newVertex != null) {
+        return newVertex;
+      }
+      inputVertex = createVertex(node, inputVertex);
+      newVertex = inputVertex.mergeIntoDruidQuery(node, false);
+      if (newVertex != null) {
+        return newVertex;
+      } else {
+        throw new IllegalStateException("should not happend");
+      }
+
+    }
+    //
+//
+////    final RelNode scan,
+////    final Filter whereFilter,
+////    final Project selectProject,
+////    final Aggregate aggregate,
+////    final Project aggregateProject,
+////    final Filter havingFilter,
+////    final Sort sort,
+////    final Project sortProject,
+////    final Window window,
+////    final Project windowProject
+//
+//    if(node instanceof Filter) {
+//      Preconditions.checkArgument(newInputs.size() == 1);
+//      return visitFilter2((Filter) node, newInputs.get(0));
+//    }
+//    if(node instanceof Sort) {
+//      return newInputs.get(0);
+//    }
     throw new UnsupportedOperationException();
   }
 
-  public static Vertex visitTableScan(TableScan scan)
+
+
+  private Vertex visitValues1(DruidValues values)
+  {
+      final List<ImmutableList<RexLiteral>> tuples = values.getTuples();
+      final List<Object[]> objectTuples = tuples
+          .stream()
+          .map(
+              tuple -> tuple
+                  .stream()
+                  .map(v -> DruidLogicalValuesRule.getValueFromLiteral(v, plannerContext))
+                  .collect(Collectors.toList())
+                  .toArray(new Object[0])
+          )
+          .collect(Collectors.toList());
+      RowSignature rowSignature = RowSignatures.fromRelDataType(
+          values.getRowType().getFieldNames(),
+          values.getRowType()
+      );
+      InlineTable inlineTable = new InlineTable(InlineDataSource.fromIterable(objectTuples, rowSignature));
+
+
+      Vertex vertex = createVertex(values);
+      vertex.currentTable=inlineTable;
+
+      return vertex;
+
+  }
+
+
+
+  public Vertex visitTableScan(TableScan scan)
   {
     if (!(scan instanceof DruidTableScan)) {
       throw new ISE("Planning hasn't converted logical table scan to druid convention");
@@ -139,7 +363,7 @@ public class DruidQueryGenerator extends RelShuttleImpl
     DruidTableScan druidTableScan = (DruidTableScan) scan;
     Preconditions.checkArgument(scan.getInputs().size() == 0);
 
-    Vertex vertex = Vertex.create(scan);
+    Vertex vertex = createVertex(scan);
 
     final RelOptTable table = scan.getTable();
     final DruidTable druidTable = table.unwrap(DruidTable.class);
@@ -149,8 +373,8 @@ public class DruidQueryGenerator extends RelShuttleImpl
     vertex.currentTable = druidTable;
     if (druidTableScan.getProject() != null) {
       //FIXME ? XXX
-      vertex.partialDruidQuery.withSelectProject(druidTableScan.getProject());
-//      currentStage = PartialDruidQuery.Stage.SELECT_PROJECT;
+      vertex.partialDruidQuery = vertex.partialDruidQuery.withSelectProject(druidTableScan.getProject());
+      //      currentStage = PartialDruidQuery.Stage.SELECT_PROJECT;
     }
     return vertex;
   }
@@ -218,6 +442,18 @@ public class DruidQueryGenerator extends RelShuttleImpl
   public RelNode visit(LogicalFilter filter)
   {
     return visitFilter(filter);
+  }
+
+
+  public Vertex visitFilter2(Filter filter, Vertex vertex)
+  {
+    PartialDruidQuery.Stage currentStage  = vertex.partialDruidQuery.stage();
+
+    Optional<Vertex> newVertex = vertex.mergeFilter(filter);
+    if (newVertex.isPresent()) {
+      return newVertex.get();
+    }
+    return createVertex(filter, vertex);
   }
 
   public RelNode visitFilter(Filter filter)
