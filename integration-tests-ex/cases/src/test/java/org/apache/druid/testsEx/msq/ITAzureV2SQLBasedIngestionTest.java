@@ -53,5 +53,6 @@ public class ITAzureV2SQLBasedIngestionTest extends AbstractAzureInputSourcePara
   public void testSQLBasedBatchIngestion(Pair<String, List<?>> azureStorageInputSource)
   {
     doMSQTest(azureStorageInputSource, CLOUD_INGEST_SQL, INDEX_QUERIES_FILE, "azureStorage");
+
   }
 }
