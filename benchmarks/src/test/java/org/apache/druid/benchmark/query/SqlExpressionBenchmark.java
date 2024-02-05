@@ -86,8 +86,8 @@ import java.util.stream.Collectors;
  */
 @State(Scope.Benchmark)
 @Fork(value = 1)
-@Warmup(iterations = 2)
-@Measurement(iterations = 3)
+@Warmup(iterations = 3)
+@Measurement(iterations = 5)
 public class SqlExpressionBenchmark
 {
   private static final Logger log = new Logger(SqlExpressionBenchmark.class);
@@ -233,48 +233,48 @@ public class SqlExpressionBenchmark
 
   @Param({
       // non-expression reference
-//      "0",
-//      "1",
-//      "2",
-//      "3",
-//      "4",
-//      "5",
-//      "6",
-//      // expressions, etc
-//      "7",
-//      "8",
-//      "9",
-//      "10",
-//      "11",
-//      "12",
-//      "13",
-//      "14",
-//      "15",
-//      "16",
-//      "17",
-//      "18",
-//      "19",
-//      "20",
-//      "21",
-//      "22",
-//      "23",
-//      "24",
-//      "25",
-//      "26",
-//      "27",
-//      "28",
-//      "29",
-//      "30",
-//      "31",
-//      "32",
-//      "33",
-//      "34",
-//      "35",
-//      "36",
-//      "37",
-//      "38",
-//      "39",
-//      "40"
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      // expressions, etc
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15",
+      "16",
+      "17",
+      "18",
+      "19",
+      "20",
+      "21",
+      "22",
+      "23",
+      "24",
+      "25",
+      "26",
+      "27",
+      "28",
+      "29",
+      "30",
+      "31",
+      "32",
+      "33",
+      "34",
+      "35",
+      "36",
+      "37",
+      "38",
+      "39",
+      "40",
       "41"
   })
   private String query;

@@ -74,9 +74,6 @@ public interface BitmapColumnIndex
       boolean includeUnknown
   )
   {
-    // todo (clint): remove default impl? everyone should probably implement this.. though otoh it is also nice
-    //  to have the other method because it is a way to force computing the index regardless of row count or
-    //  selectivity levels...
     return computeBitmapResult(bitmapResultFactory, includeUnknown);
   }
 }

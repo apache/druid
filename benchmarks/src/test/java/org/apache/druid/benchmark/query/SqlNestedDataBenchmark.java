@@ -85,8 +85,8 @@ import java.util.stream.Collectors;
 
 @State(Scope.Benchmark)
 @Fork(value = 1)
-@Warmup(iterations = 2)
-@Measurement(iterations = 3)
+@Warmup(iterations = 3)
+@Measurement(iterations = 5)
 public class SqlNestedDataBenchmark
 {
   private static final Logger log = new Logger(SqlNestedDataBenchmark.class);
@@ -212,8 +212,8 @@ public class SqlNestedDataBenchmark
 
   @Param({
       "none",
-//      "front-coded-4",
-//      "front-coded-16"
+      "front-coded-4",
+      "front-coded-16"
   })
   private String stringEncoding;
 
@@ -224,54 +224,54 @@ public class SqlNestedDataBenchmark
   private String schema;
 
   @Param({
-//      "0",
-//      "1",
-//      "2",
-//      "3",
-//      "4",
-//      "5",
-//      "6",
-//      "7",
-//      "8",
-//      "9",
-//      "10",
-//      "11",
-//      "12",
-//      "13",
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
       "14",
-//      "15",
-//      "16",
-//      "17",
+      "15",
+      "16",
+      "17",
       "18",
-//      "19",
+      "19",
       "20",
-//      "21",
-//      "22",
-//      "23",
-//      "24",
-//      "25",
+      "21",
+      "22",
+      "23",
+      "24",
+      "25",
       "26",
-//      "27",
+      "27",
       "28",
-//      "29",
+      "29",
       "30",
-//      "31",
+      "31",
       "32",
-//      "33",
-//      "34",
-//      "35",
-//      "36",
-//      "37",
-//      "38",
-//      "39",
-//      "40",
-//      "41",
-//      "42",
-//      "43",
-//      "44",
-//      "45",
-//      "46",
-//      "47"
+      "33",
+      "34",
+      "35",
+      "36",
+      "37",
+      "38",
+      "39",
+      "40",
+      "41",
+      "42",
+      "43",
+      "44",
+      "45",
+      "46",
+      "47"
   })
   private String query;
 

@@ -68,12 +68,6 @@ public final class DefaultBitmapResultFactory implements BitmapResultFactory<Imm
   }
 
   @Override
-  public ImmutableBitmap intersectValues(Iterable<ImmutableBitmap> bitmaps)
-  {
-    return factory.intersection(bitmaps);
-  }
-
-  @Override
   public ImmutableBitmap union(Iterable<ImmutableBitmap> bitmapResults)
   {
     return factory.union(bitmapResults);
