@@ -106,7 +106,7 @@ public class KinesisIndexTaskTuningConfigTest
                      + "  \"resetOffsetAutomatically\": false,\n"
                      + "  \"skipSequenceNumberAvailabilityCheck\": true,\n"
                      + "  \"fetchThreads\": 2,\n"
-                     + "  \"appendableIndexSpec\": { \"type\" : \"onheap\" },\n"
+                     + "  \"appendableIndexSpec\": { \"type\" : \"onheap\" }\n"
                      + "}";
 
     KinesisIndexTaskTuningConfig config = (KinesisIndexTaskTuningConfig) mapper.readValue(
