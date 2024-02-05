@@ -317,6 +317,10 @@ const Redirects=[
   {
     "from":  "/docs/latest/operations/api-reference/",
     "to": "/docs/latest/api-reference/"
+  },
+  {
+    "from":  "/docs/latest/tutorials/tutorial-jupyter-index/",
+    "to": "https://github.com/implydata/learn-druid"
   }
 ]
 
