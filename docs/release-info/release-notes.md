@@ -345,11 +345,9 @@ Added native `array contains element` filter to improve performance when using A
 
 #### Changed `equals` filter for native queries
 
-<!-- Rephrase to make more user friendly -->
-
-Native query equals filter on mixed type `auto` columns which contain arrays must now be filtered as their presenting type, so if any rows are arrays (for example, the segment metadata and `information_schema` reports the type as some array type), then the native queries must also filter as if they are some array type.
-
-This does not impact SQL, which already has this limitation due to how the type presents itself, and again only impacts mixed type `auto` columns which contain both scalars and arrays.
+The [equality filter](https://druid.apache.org/docs/latest/querying/filters#equality-filter) on mixed type `auto` columns that contain arrays must now be filtered as their presenting type. This means that if any rows are arrays (for example, the segment metadata and `information_schema` reports the type as some array type), then the native queries must also filter as if they are some array type.
+ 
+This change impacts mixed type `auto` columns that contain both scalars and arrays. It doesn't impact SQL, which already has this limitation due to how the type presents itself.
 
 [#15503](https://github.com/apache/druid/pull/15503)
 
