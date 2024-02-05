@@ -27,16 +27,33 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.data.input.s3.S3InputSource;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.storage.ExportStorageProvider;
+import org.apache.druid.storage.StorageConfig;
 import org.apache.druid.storage.StorageConnector;
+import org.apache.druid.storage.StorageConnectorUtils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 
+import javax.annotation.Nullable;
 import java.io.File;
 
 @JsonTypeName(S3ExportStorageProvider.TYPE_NAME)
-public class S3ExportStorageProvider extends S3OutputConfig implements ExportStorageProvider
+public class S3ExportStorageProvider implements ExportStorageProvider
 {
   public static final String TYPE_NAME = S3InputSource.TYPE_KEY;
+  @JsonProperty
+  private final String bucket;
+  @JsonProperty
+  private final String prefix;
+  @JsonProperty
+  private final String tempSubDir;
+  @JsonProperty
+  @Nullable
+  private final HumanReadableBytes chunkSize;
+  @JsonProperty
+  @Nullable
+  private final Integer maxRetry;
 
+  @JacksonInject
+  StorageConfig storageConfig;
   @JacksonInject
   ServerSideEncryptingAmazonS3 s3;
 
@@ -44,18 +61,56 @@ public class S3ExportStorageProvider extends S3OutputConfig implements ExportSto
   public S3ExportStorageProvider(
       @JsonProperty(value = "bucket", required = true) String bucket,
       @JsonProperty(value = "prefix", required = true) String prefix,
-      @JsonProperty(value = "tempDir", required = true) File tempDir,
-      @JsonProperty("chunkSize") HumanReadableBytes chunkSize,
-      @JsonProperty("maxRetry") Integer maxRetry
+      @JsonProperty(value = "tempSubDir") @Nullable String tempSubDir,
+      @JsonProperty("chunkSize") @Nullable HumanReadableBytes chunkSize,
+      @JsonProperty("maxRetry") @Nullable Integer maxRetry
   )
   {
-    super(bucket, prefix, tempDir, chunkSize, maxRetry);
+    this.bucket = bucket;
+    this.prefix = prefix;
+    this.tempSubDir = tempSubDir == null ? "" : tempSubDir;
+    this.chunkSize = chunkSize;
+    this.maxRetry = maxRetry;
   }
 
   @Override
   public StorageConnector get()
   {
-    return new S3StorageConnector(this, s3);
+    final File temporaryDirectory = StorageConnectorUtils.validateAndGetPath(storageConfig.getBaseDir(), tempSubDir);
+    final S3OutputConfig s3OutputConfig = new S3OutputConfig(bucket, prefix, temporaryDirectory, chunkSize, maxRetry);
+    return new S3StorageConnector(s3OutputConfig, s3);
+  }
+
+  @JsonProperty("bucket")
+  public String getBucket()
+  {
+    return bucket;
+  }
+
+  @JsonProperty("prefix")
+  public String getPrefix()
+  {
+    return prefix;
+  }
+
+  @JsonProperty("tempSubDir")
+  public String getTempSubDir()
+  {
+    return tempSubDir;
+  }
+
+  @JsonProperty("chunkSize")
+  @Nullable
+  public HumanReadableBytes getChunkSize()
+  {
+    return chunkSize;
+  }
+
+  @JsonProperty("maxRetry")
+  @Nullable
+  public Integer getMaxRetry()
+  {
+    return maxRetry;
   }
 
   @Override

@@ -140,7 +140,7 @@ The `S3()` function is a druid function which configures the connection. Argumen
 ```sql
 INSERT INTO
   EXTERN(
-    S3(bucket => 's3://your_bucket', prefix => 'prefix/to/files', tempDir => '/tmp/export')
+    S3(bucket => 's3://your_bucket', prefix => 'prefix/to/files')
   )
 AS CSV
 SELECT
@@ -150,13 +150,13 @@ FROM <table>
 
 Supported arguments to the function:
 
-| Parameter   | Required | Description                                                                                                                                                                                                                         | Default |
-|-------------|---------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| --|
-| `bucket`    | Yes | The S3 bucket to which the files are exported to.                                                                                                                                                                                   | n/a |
-| `prefix`    | Yes | Path where the exported files would be created. The export query would expect the destination to be empty. If the location includes other files, then the query will fail.                                                          | n/a |
-| `tempDir`   | Yes | Directory path on the local disk to store temporary files required while uploading the data                                                                                                                                         | n/a |
-| `maxRetry`  | No | Defines the max number times to attempt S3 API calls to avoid failures due to transient errors.                                                                                                                                     | 10 |
-| `chunkSize` | No | Defines the size of each chunk to temporarily store in `tempDir`. The chunk size must be between 5 MiB and 5 GiB. A large chunk size reduces the API calls to S3, however it requires more disk space to store the temporary chunks. | 100MiB |
+| Parameter   | Required | Description                                                                                                                                                                                                                        | Default |
+|-------------|----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|
+| `bucket`    | Yes      | The S3 bucket to which the files are exported to.                                                                                                                                                                                  | n/a     |
+| `prefix`    | Yes      | Path where the exported files would be created. The export query would expect the destination to be empty. If the location includes other files, then the query will fail.                                                         | n/a     |
+| `tempSubDir`   | No    | Subdirectory of `druid.export.storage.baseDir` used to store temporary files required while uploading the data. If this argument is not present, the runtime property will be used as the temporary directory.                     | .       |
+| `maxRetry`  | No       | Defines the max number times to attempt S3 API calls to avoid failures due to transient errors.                                                                                                                                    | 10      |
+| `chunkSize` | No       | Defines the size of each chunk to temporarily store in `tempDir`. The chunk size must be between 5 MiB and 5 GiB. A large chunk size reduces the API calls to S3, however it requires more disk space to store the temporary chunks. | 100MiB  |
 
 ##### LOCAL
 
@@ -182,9 +182,9 @@ FROM <table>
 
 Supported arguments to the function:
 
-| Parameter   | Required | Description                                                                                                                                                                                                                                                                                    | Default |
-|-------------|--------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| --|
-| `exportPath`  | Yes | The file system path where the exported files would be created. This argument will be prefixed with the runtime prop `druid.export.storage.baseDir`. The export query would expect the destination to be empty. If the location includes other files or directories, then the query will fail. | n/a |
+| Parameter   | Required | Description                                                                                                                                                                                                                              | Default |
+|-------------|--------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| --|
+| `exportPath`  | Yes | Subdirectory of `druid.export.storage.baseDir` used to as the destination to export the results to. The export query expects the destination to be empty. If the location includes other files or directories, then the query will fail. | n/a |
 
 For more information, see [Read external data with EXTERN](concepts.md#write-to-an-external-destination-with-extern).
 

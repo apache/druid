@@ -25,11 +25,11 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.data.input.impl.LocalInputSource;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.storage.ExportStorageProvider;
 import org.apache.druid.storage.StorageConfig;
 import org.apache.druid.storage.StorageConnector;
+import org.apache.druid.storage.StorageConnectorUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -55,20 +55,8 @@ public class LocalFileExportStorageProvider implements ExportStorageProvider
   @Override
   public StorageConnector get()
   {
-    final String baseDir = storageConfig.getBaseDir();
-    if (baseDir == null) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build("The runtime property `druid.export.storage.baseDir` must be configured.");
-    }
+    final File exportDestination = StorageConnectorUtils.validateAndGetPath(storageConfig.getBaseDir(), exportPath);
     try {
-      final File exportDestination = new File(baseDir, exportPath);
-      final String finalOutputPath = exportDestination.getCanonicalPath();
-      if (!finalOutputPath.startsWith(baseDir)) {
-        throw DruidException.forPersona(DruidException.Persona.USER)
-                            .ofCategory(DruidException.Category.INVALID_INPUT)
-                            .build("The provided destination must be within the path configured by runtime property `druid.export.storage.baseDir`");
-      }
       return new LocalFileStorageConnector(exportDestination);
     }
     catch (IOException e) {
@@ -76,7 +64,7 @@ public class LocalFileExportStorageProvider implements ExportStorageProvider
           e,
           "Unable to create storage connector [%s] for base path [%s]",
           LocalFileStorageConnector.class.getSimpleName(),
-          exportPath
+          exportDestination.toPath()
       );
     }
   }
