@@ -181,8 +181,8 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
 
     // create the shufflespec from the column in the context
     final ShuffleSpec nextShuffleWindowSpec;
-    if (originalQuery.getContext().containsKey("shuffleCol")) {
-      final ClusterBy windowClusterBy = (ClusterBy) originalQuery.getContext().get("shuffleCol");
+    if (originalQuery.getContext().containsKey(DataSourcePlan.NEXT_WINDOW_SHUFFLE_COL)) {
+      final ClusterBy windowClusterBy = (ClusterBy) originalQuery.getContext().get(DataSourcePlan.NEXT_WINDOW_SHUFFLE_COL);
       nextShuffleWindowSpec = new HashShuffleSpec(
           windowClusterBy,
           maxWorkerCount

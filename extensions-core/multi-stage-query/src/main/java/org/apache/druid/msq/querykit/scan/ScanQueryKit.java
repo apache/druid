@@ -138,8 +138,8 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
       signatureBuilder.add(QueryKitUtils.PARTITION_BOOST_COLUMN, ColumnType.LONG);
       final RowSignature signatureSoFar = signatureBuilder.build();
       boolean addShuffle = true;
-      if (originalQuery.getContext().containsKey("shuffleCol")) {
-        final ClusterBy windowClusterBy = (ClusterBy) originalQuery.getContext().get("shuffleCol");
+      if (originalQuery.getContext().containsKey(DataSourcePlan.NEXT_WINDOW_SHUFFLE_COL)) {
+        final ClusterBy windowClusterBy = (ClusterBy) originalQuery.getContext().get(DataSourcePlan.NEXT_WINDOW_SHUFFLE_COL);
         for (KeyColumn c : windowClusterBy.getColumns()) {
           if (!signatureSoFar.contains(c.columnName())) {
             addShuffle = false;

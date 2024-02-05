@@ -135,7 +135,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
       for (int i = 0; i < numberOfWindows; i++) {
         bob.add(rowSignature.getColumnName(baseSize + i), rowSignature.getColumnType(baseSize + i).get()).build();
         // find the shuffle spec of the next stage
-        // if it is the last stage set the next shuffle spec to null
+        // if it is the last stage set the next shuffle spec to single partition
         if (i + 1 == numberOfWindows) {
           nextShuffleSpec = ShuffleSpecFactories.singlePartition()
                                                 .build(ClusterBy.none(), false);

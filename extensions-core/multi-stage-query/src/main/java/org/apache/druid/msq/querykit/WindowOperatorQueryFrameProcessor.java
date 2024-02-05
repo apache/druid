@@ -21,22 +21,22 @@ package org.apache.druid.msq.querykit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
-import org.apache.druid.collections.ResourceHolder;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
+import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.FrameProcessors;
 import org.apache.druid.frame.processor.FrameRowTooLargeException;
 import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.frame.read.FrameReader;
+import org.apache.druid.frame.util.SettableLongVirtualColumn;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.msq.input.ReadableInput;
-import org.apache.druid.msq.input.table.SegmentWithDescriptor;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.operator.NaivePartitioningOperatorFactory;
 import org.apache.druid.query.operator.OffsetLimit;
@@ -52,22 +52,22 @@ import org.apache.druid.query.rowsandcols.semantic.ColumnSelectorFactoryMaker;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
-public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
+public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
 {
-
   private static final Logger log = new Logger(WindowOperatorQueryFrameProcessor.class);
   private final WindowOperatorQuery query;
 
@@ -77,56 +77,77 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
   private final RowSignature outputStageSignature;
   private final ArrayList<RowsAndColumns> frameRowsAndCols;
   private final ArrayList<RowsAndColumns> resultRowAndCols;
+  private final ReadableFrameChannel inputChannel;
+  private final WritableFrameChannel outputChannel;
+  private final FrameWriterFactory frameWriterFactory;
+  private final FrameReader frameReader;
+  private final SettableLongVirtualColumn partitionBoostVirtualColumn;
   ArrayList<ResultRow> objectsOfASingleRac;
+  List<Integer> partitionColsIndex;
   private long currentAllocatorCapacity; // Used for generating FrameRowTooLargeException if needed
   private Cursor frameCursor = null;
   private Supplier<ResultRow> rowSupplierFromFrameCursor;
   private ResultRow outputRow = null;
   private FrameWriter frameWriter = null;
-  List<Integer> partitionColsIndex;
 
   public WindowOperatorQueryFrameProcessor(
-      final WindowOperatorQuery query,
+      WindowOperatorQuery query,
+      ReadableFrameChannel inputChannel,
+      WritableFrameChannel outputChannel,
+      FrameWriterFactory frameWriterFactory,
+      FrameReader frameReader,
+      ObjectMapper jsonMapper,
       final List<OperatorFactory> operatorFactoryList,
-      final ObjectMapper jsonMapper,
-      final ReadableInput baseInput,
-      final Function<SegmentReference, SegmentReference> segmentMapFn,
-      final ResourceHolder<WritableFrameChannel> outputChannelHolder,
-      final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder,
       final RowSignature rowSignature
   )
   {
-    super(
-        baseInput,
-        segmentMapFn,
-        outputChannelHolder,
-        frameWriterFactoryHolder
-    );
-    this.query = query;
-    this.jsonMapper = jsonMapper;
+    this.inputChannel = inputChannel;
+    this.outputChannel = outputChannel;
+    this.frameWriterFactory = frameWriterFactory;
+    this.partitionBoostVirtualColumn = new SettableLongVirtualColumn(QueryKitUtils.PARTITION_BOOST_COLUMN);
     this.operatorFactoryList = operatorFactoryList;
     this.outputStageSignature = rowSignature;
+    this.jsonMapper = jsonMapper;
+    this.frameReader = frameReader;
+    this.query = query;
     this.frameRowsAndCols = new ArrayList<>();
     this.resultRowAndCols = new ArrayList<>();
     this.objectsOfASingleRac = new ArrayList<>();
     this.partitionColsIndex = new ArrayList<>();
   }
 
-  @Override
-  protected ReturnOrAwait<Unit> runWithSegment(SegmentWithDescriptor segment)
+  private static VirtualColumns makeVirtualColumnsForFrameWriter(
+      @Nullable final VirtualColumn partitionBoostVirtualColumn,
+      final ObjectMapper jsonMapper,
+      final WindowOperatorQuery query
+  )
   {
-    throw new RuntimeException("Window stage can run only on the output of a previous stage");
+    List<VirtualColumn> virtualColumns = new ArrayList<>();
+
+    virtualColumns.add(partitionBoostVirtualColumn);
+    final VirtualColumn segmentGranularityVirtualColumn =
+        QueryKitUtils.makeSegmentGranularityVirtualColumn(jsonMapper, query);
+    if (segmentGranularityVirtualColumn != null) {
+      virtualColumns.add(segmentGranularityVirtualColumn);
+    }
+
+    return VirtualColumns.create(virtualColumns);
   }
 
   @Override
-  protected ReturnOrAwait<Unit> runWithLoadedSegment(SegmentWithDescriptor segment)
+  public List<ReadableFrameChannel> inputChannels()
   {
-    throw new RuntimeException("Window stage can run only on the output of a previous stage");
+    return Collections.singletonList(inputChannel);
   }
 
-  // previous stage output
   @Override
-  protected ReturnOrAwait<Unit> runWithInputChannel(ReadableFrameChannel inputChannel, FrameReader inputFrameReader)
+  public List<WritableFrameChannel> outputChannels()
+  {
+    return Collections.singletonList(outputChannel);
+  }
+
+  @Override
+  public ReturnOrAwait<Object> runIncrementally(IntSet readableInputs) throws InterruptedException, IOException
   {
     /**
      *
@@ -190,12 +211,13 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
     boolean status = checkEagerlyForEmptyWindow(operatorFactoryList);
     if (status) {
       // if OVER() found
+      // have to bring all data to a single executor for processing
       // convert each frame to rac
       // concat all the racs to make a giant rac
       // let all operators run on the giant rac when channel is finished
       if (inputChannel.canRead()) {
         final Frame frame = inputChannel.read();
-        convertRowFrameToRowsAndColumns(frame, inputFrameReader.signature());
+        convertRowFrameToRowsAndColumns(frame);
       } else if (inputChannel.isFinished()) {
         runAllOpsOnMultipleRac(frameRowsAndCols);
         return ReturnOrAwait.returnObject(Unit.instance());
@@ -207,19 +229,20 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
       // Aha, you found a PARTITION BY and maybe ORDER BY TO
       // PARTITION BY can also be on multiple keys
       // typically the last stage would already partition and sort for you
-      // figure out frame boundaries and convert each distince group to a rac
+      // figure out frame boundaries and convert each distinct group to a rac
       // then run the windowing operator only on each rac
-      // work in progress
       if (frameCursor == null || frameCursor.isDone()) {
-        if (inputChannel.canRead()) {
+        if (readableInputs.isEmpty()) {
+          return ReturnOrAwait.awaitAll(1);
+        } else if (inputChannel.canRead()) {
           final Frame frame = inputChannel.read();
-          frameCursor = FrameProcessors.makeCursor(frame, inputFrameReader);
+          frameCursor = FrameProcessors.makeCursor(frame, frameReader);
           final ColumnSelectorFactory frameColumnSelectorFactory = frameCursor.getColumnSelectorFactory();
-          partitionColsIndex = findPartitionColumns(inputFrameReader.signature());
-          final Supplier<Object>[] fieldSuppliers = new Supplier[inputFrameReader.signature().size()];
+          partitionColsIndex = findPartitionColumns(frameReader.signature());
+          final Supplier<Object>[] fieldSuppliers = new Supplier[frameReader.signature().size()];
           for (int i = 0; i < fieldSuppliers.length; i++) {
             final ColumnValueSelector<?> selector =
-                frameColumnSelectorFactory.makeColumnValueSelector(inputFrameReader.signature().getColumnName(i));
+                frameColumnSelectorFactory.makeColumnValueSelector(frameReader.signature().getColumnName(i));
             fieldSuppliers[i] = selector::getObject;
 
           }
@@ -238,7 +261,7 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
           if (!objectsOfASingleRac.isEmpty()) {
             RowsAndColumns rac = MapOfColumnsRowsAndColumns.fromResultRow(
                 objectsOfASingleRac,
-                inputFrameReader.signature()
+                frameReader.signature()
             );
             runAllOpsOnSingleRac(rac);
             objectsOfASingleRac.clear();
@@ -248,7 +271,6 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
           return ReturnOrAwait.runAgain();
         }
       }
-
       while (!frameCursor.isDone()) {
         final ResultRow currentRow = rowSupplierFromFrameCursor.get();
         if (outputRow == null) {
@@ -261,16 +283,15 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
         } else {
           // key change noted
           // create rac from the rows seen before
-          // run the operators on this rows and columns
-          // clean up the object to hold the new row only
+          // run the operators on these rows and columns
+          // clean up the object to hold the new rows only
           RowsAndColumns rac = MapOfColumnsRowsAndColumns.fromResultRow(
               objectsOfASingleRac,
-              inputFrameReader.signature()
+              frameReader.signature()
           );
           runAllOpsOnSingleRac(rac);
           objectsOfASingleRac.clear();
           outputRow = currentRow.copy();
-          // add the new stuff
           return ReturnOrAwait.runAgain();
         }
         frameCursor.advance();
@@ -279,35 +300,10 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
     return ReturnOrAwait.runAgain();
   }
 
-
-  private boolean comparePartitionKeys(ResultRow row1, ResultRow row2, List<Integer> partitionIndices)
-  {
-    if (partitionIndices == null || partitionIndices.isEmpty()) {
-      return row1.equals(row2);
-    } else {
-      int match = 0;
-      for (int i : partitionIndices) {
-        if (Objects.equals(row1.get(i), row2.get(i))) {
-          match++;
-        }
-      }
-      return match == partitionIndices.size();
-    }
-  }
-
-  private List<Integer> findPartitionColumns(RowSignature rowSignature)
-  {
-    List<Integer> indexList = new ArrayList<>();
-    for (OperatorFactory of : operatorFactoryList) {
-      if (of instanceof NaivePartitioningOperatorFactory) {
-        for (String s : ((NaivePartitioningOperatorFactory) of).getPartitionColumns()) {
-          indexList.add(rowSignature.indexOf(s));
-        }
-      }
-    }
-    return indexList;
-  }
-
+  /**
+   * @param operatorFactoryList the list of operators to check for empty window
+   * @return true is there is a single OVER() clause across all the operators, false otherwise
+   */
   private boolean checkEagerlyForEmptyWindow(List<OperatorFactory> operatorFactoryList)
   {
     for (OperatorFactory of : operatorFactoryList) {
@@ -320,7 +316,48 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
     return false;
   }
 
+  /**
+   * @param singleRac Use this {@link RowsAndColumns} as a single input for the operators to be run
+   */
+  private void runAllOpsOnSingleRac(RowsAndColumns singleRac)
+  {
+    Operator op = new Operator()
+    {
+      @Nullable
+      @Override
+      public Closeable goOrContinue(Closeable continuationObject, Receiver receiver)
+      {
+        receiver.push(singleRac);
+        receiver.completed();
+        return null;
+      }
+    };
+    runOperatorsAfterThis(op);
+  }
 
+  /**
+   * @param listOfRacs Concat this list of {@link RowsAndColumns} to a {@link ConcatRowsAndColumns} to use as a single input for the operators to be run
+   */
+  private void runAllOpsOnMultipleRac(ArrayList<RowsAndColumns> listOfRacs)
+  {
+    Operator op = new Operator()
+    {
+      @Nullable
+      @Override
+      public Closeable goOrContinue(Closeable continuationObject, Receiver receiver)
+      {
+        RowsAndColumns rac = new ConcatRowsAndColumns(listOfRacs);
+        receiver.push(rac);
+        receiver.completed();
+        return null;
+      }
+    };
+    runOperatorsAfterThis(op);
+  }
+
+  /**
+   * @param op Base operator for the operators to be run. Other operators are wrapped under this to run
+   */
   private void runOperatorsAfterThis(Operator op)
   {
     for (OperatorFactory of : operatorFactoryList) {
@@ -351,63 +388,41 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
     });
   }
 
-  private void runAllOpsOnMultipleRac(ArrayList<RowsAndColumns> listOfRacs)
-  {
-    Operator op = new Operator()
-    {
-      @Nullable
-      @Override
-      public Closeable goOrContinue(Closeable continuationObject, Receiver receiver)
-      {
-        RowsAndColumns rac = new ConcatRowsAndColumns(listOfRacs);
-        receiver.push(rac);
-        receiver.completed();
-        return null;
-      }
-    };
-    runOperatorsAfterThis(op);
-  }
-
-  private void runAllOpsOnSingleRac(RowsAndColumns singleRac)
-  {
-    Operator op = new Operator()
-    {
-      @Nullable
-      @Override
-      public Closeable goOrContinue(Closeable continuationObject, Receiver receiver)
-      {
-        receiver.push(singleRac);
-        receiver.completed();
-        return null;
-      }
-    };
-    runOperatorsAfterThis(op);
-  }
-
-  private void convertRowFrameToRowsAndColumns(Frame frame, RowSignature signature)
-  {
-    RowBasedFrameRowAndColumns frameRowsAndColumns = new RowBasedFrameRowAndColumns(frame, signature);
-    LazilyDecoratedRowsAndColumns ldrc = new LazilyDecoratedRowsAndColumns(
-        frameRowsAndColumns,
-        null,
-        null,
-        null,
-        OffsetLimit.limit(Integer.MAX_VALUE),
-        null,
-        null
-    );
-    frameRowsAndCols.add(ldrc);
-  }
-
+  /**
+   * @param resultRowAndCols Flush the list of {@link RowsAndColumns} to a frame
+   * @throws IOException
+   */
   private void flushAllRowsAndCols(ArrayList<RowsAndColumns> resultRowAndCols) throws IOException
   {
     RowsAndColumns rac = new ConcatRowsAndColumns(resultRowAndCols);
-    rac.getColumnNames();
     AtomicInteger rowId = new AtomicInteger(0);
     createFrameWriterIfNeeded(rac, rowId);
     writeRacToFrame(rac, rowId);
   }
 
+  /**
+   * @param rac   The frame writer to write this {@link RowsAndColumns} object
+   * @param rowId RowId to get the column selector factory from the {@link RowsAndColumns} object
+   */
+  private void createFrameWriterIfNeeded(RowsAndColumns rac, AtomicInteger rowId)
+  {
+    if (frameWriter == null) {
+      final ColumnSelectorFactoryMaker csfm = ColumnSelectorFactoryMaker.fromRAC(rac);
+      final ColumnSelectorFactory frameWriterColumnSelectorFactory = makeVirtualColumnsForFrameWriter(
+          partitionBoostVirtualColumn,
+          jsonMapper,
+          query
+      ).wrap(csfm.make(rowId));
+      frameWriter = frameWriterFactory.newFrameWriter(frameWriterColumnSelectorFactory);
+      currentAllocatorCapacity = frameWriterFactory.allocatorCapacity();
+    }
+  }
+
+  /**
+   * @param rac   {@link RowsAndColumns} to be written to frame
+   * @param rowId Counter to keep track of how many rows are added
+   * @throws IOException
+   */
   public void writeRacToFrame(RowsAndColumns rac, AtomicInteger rowId) throws IOException
   {
     final int numRows = rac.numRows();
@@ -415,6 +430,7 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
     while (rowId.get() < numRows) {
       final boolean didAddToFrame = frameWriter.addSelection();
       if (didAddToFrame) {
+        incrementBoostColumn();
         rowId.incrementAndGet();
       } else if (frameWriter.getNumRows() == 0) {
         throw new FrameRowTooLargeException(currentAllocatorCapacity);
@@ -426,25 +442,16 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
     flushFrameWriter();
   }
 
-  private void createFrameWriterIfNeeded(RowsAndColumns rac, AtomicInteger rowId)
-  {
-    if (frameWriter == null) {
-      final ColumnSelectorFactoryMaker csfm = ColumnSelectorFactoryMaker.fromRAC(rac);
-      final ColumnSelectorFactory frameWriterColumnSelectorFactory = csfm.make(rowId);
-      final FrameWriterFactory frameWriterFactory = getFrameWriterFactory();
-      frameWriter = frameWriterFactory.newFrameWriter(frameWriterColumnSelectorFactory);
-      currentAllocatorCapacity = frameWriterFactory.allocatorCapacity();
-    }
-  }
-
   @Override
   public void cleanup() throws IOException
   {
-    closer.register(frameWriter);
-    closer.register(super::cleanup);
-    closer.close();
+    FrameProcessors.closeAll(inputChannels(), outputChannels(), frameWriter);
   }
 
+  /**
+   * @return Number of rows flushed to the output channel
+   * @throws IOException
+   */
   private long flushFrameWriter() throws IOException
   {
     if (frameWriter == null || frameWriter.getNumRows() <= 0) {
@@ -460,5 +467,61 @@ public class WindowOperatorQueryFrameProcessor extends BaseLeafFrameProcessor
       frameWriter = null;
       return frame.numRows();
     }
+  }
+
+  /**
+   * @param frame Row based frame to be converted to a {@link RowsAndColumns} object
+   */
+  private void convertRowFrameToRowsAndColumns(Frame frame)
+  {
+    final RowSignature signature = frameReader.signature();
+    RowBasedFrameRowAndColumns frameRowsAndColumns = new RowBasedFrameRowAndColumns(frame, signature);
+    LazilyDecoratedRowsAndColumns ldrc = new LazilyDecoratedRowsAndColumns(
+        frameRowsAndColumns,
+        null,
+        null,
+        null,
+        OffsetLimit.limit(Integer.MAX_VALUE),
+        null,
+        null
+    );
+    frameRowsAndCols.add(ldrc);
+  }
+
+  private List<Integer> findPartitionColumns(RowSignature rowSignature)
+  {
+    List<Integer> indexList = new ArrayList<>();
+    for (OperatorFactory of : operatorFactoryList) {
+      if (of instanceof NaivePartitioningOperatorFactory) {
+        for (String s : ((NaivePartitioningOperatorFactory) of).getPartitionColumns()) {
+          indexList.add(rowSignature.indexOf(s));
+        }
+      }
+    }
+    return indexList;
+  }
+
+  private boolean comparePartitionKeys(ResultRow row1, ResultRow row2, List<Integer> partitionIndices)
+  {
+    if (partitionIndices == null || partitionIndices.isEmpty()) {
+      return row1.equals(row2);
+    } else {
+      int match = 0;
+      for (int i : partitionIndices) {
+        if (Objects.equals(row1.get(i), row2.get(i))) {
+          match++;
+        }
+      }
+      return match == partitionIndices.size();
+    }
+  }
+
+  /**
+   * Increments the value of the partition boosting column. It should be called once the row value has been written
+   * to the frame
+   */
+  private void incrementBoostColumn()
+  {
+    partitionBoostVirtualColumn.setValue(partitionBoostVirtualColumn.getValue() + 1);
   }
 }

@@ -88,7 +88,7 @@ public class DataSourcePlan
    * of subqueries.
    */
   private static final Map<String, Object> CONTEXT_MAP_NO_SEGMENT_GRANULARITY = new HashMap<>();
-  public static final String NEXT_WINDOW_SHUFFLE_COL = "shuffleCol";
+  public static final String NEXT_WINDOW_SHUFFLE_COL = "__windowShuffleCol";
 
   private static final Logger log = new Logger(DataSourcePlan.class);
 
@@ -431,10 +431,8 @@ public class DataSourcePlan
   {
     // check if parentContext has a window operator
     final Map<String, Object> windowShuffleMap = new HashMap<>();
-    if (parentContext != null) {
-      if (parentContext.containsKey(NEXT_WINDOW_SHUFFLE_COL)) {
-        windowShuffleMap.put(NEXT_WINDOW_SHUFFLE_COL, parentContext.get(NEXT_WINDOW_SHUFFLE_COL));
-      }
+    if (parentContext != null && parentContext.containsKey(NEXT_WINDOW_SHUFFLE_COL)) {
+      windowShuffleMap.put(NEXT_WINDOW_SHUFFLE_COL, parentContext.get(NEXT_WINDOW_SHUFFLE_COL));
     }
     final QueryDefinition subQueryDef = queryKit.makeQueryDefinition(
         queryId,
