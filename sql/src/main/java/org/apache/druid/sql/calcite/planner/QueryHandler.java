@@ -61,7 +61,6 @@ import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
@@ -562,46 +561,16 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       );
 
       DruidQueryGenerator shuttle = new DruidQueryGenerator(plannerContext, newRoot,rexBuilder);
-      DruidQuery baseQuery;
-      if(true) {
-        Vertex vertex = shuttle.buildVertex();
-        baseQuery = vertex.buildQuery(true);
-//        vertex.partialDruidQuery.build(
-//~          )
-      }else {
-      shuttle.run();
-      log.info("PartialDruidQuery : " + shuttle.getPartialDruidQuery());
-      shuttle.getQueryList().add(shuttle.getPartialDruidQuery()); // add topmost query to the list
-      shuttle.getQueryTables().add(shuttle.getCurrentTable());
-      assert !shuttle.getQueryList().isEmpty();
-      log.info("query list size " + shuttle.getQueryList().size());
-      log.info("query tables size " + shuttle.getQueryTables().size());
-      // build bottom-most query
-      baseQuery = shuttle.getQueryList().get(0).build(
-          shuttle.getQueryTables().get(0).getDataSource(),
-          shuttle.getQueryTables().get(0).getRowSignature(),
-          plannerContext,
-          rexBuilder,
-          shuttle.getQueryList().size() != 1,
-          null
-      );
-      // build outer queries
-      for (int i = 1; i < shuttle.getQueryList().size(); i++) {
-        baseQuery = shuttle.getQueryList().get(i).build(
-            new QueryDataSource(baseQuery.getQuery()),
-            baseQuery.getOutputRowSignature(),
-            plannerContext,
-            rexBuilder,
-            false
-        );
-      }
+      Vertex vertex = shuttle.buildVertex();
+      DruidQuery baseQuery = vertex.buildQuery(true);
       try {
-        log.info("final query : " +
-                 new DefaultObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(baseQuery.getQuery()));
+        log.info(
+            "final query : " +
+                new DefaultObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(baseQuery.getQuery())
+        );
       }
       catch (JsonProcessingException e) {
         throw new RuntimeException(e);
-      }
       }
       DruidQuery finalBaseQuery = baseQuery;
       final Supplier<QueryResponse<Object[]>> resultsSupplier = () -> plannerContext.getQueryMaker().runQuery(finalBaseQuery);
