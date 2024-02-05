@@ -247,9 +247,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   @Override
   protected ReturnOrAwait<Unit> runWithSegment(final SegmentWithDescriptor segment) throws IOException
   {
-    // why not remove order by and limit here ?
     if (cursor == null) {
-      // load from deep storage
       final ResourceHolder<Segment> segmentHolder = closer.register(segment.getOrLoad());
 
       final Yielder<Cursor> cursorYielder = Yielders.each(

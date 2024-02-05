@@ -43,7 +43,6 @@ import org.apache.druid.msq.input.stage.StageInputSlice;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.ProcessorsAndChannels;
 import org.apache.druid.msq.kernel.StageDefinition;
-import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.operator.OperatorFactory;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.segment.column.RowSignature;
@@ -60,27 +59,6 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
   private final WindowOperatorQuery query;
   private final List<OperatorFactory> operatorList;
   private final RowSignature stageRowSignature;
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    WindowOperatorQueryFrameProcessorFactory that = (WindowOperatorQueryFrameProcessorFactory) o;
-    return Objects.equals(query, that.query)
-           && Objects.equals(operatorList, that.operatorList)
-           && Objects.equals(stageRowSignature, that.stageRowSignature);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(query, operatorList, stageRowSignature);
-  }
 
   @JsonCreator
   public WindowOperatorQueryFrameProcessorFactory(
@@ -123,11 +101,10 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
       int maxOutstandingProcessors,
       CounterTracker counters,
       Consumer<Throwable> warningPublisher
-  ) throws IOException
+  )
   {
     // Expecting a single input slice from some prior stage.
     final StageInputSlice slice = (StageInputSlice) Iterables.getOnlyElement(inputSlices);
-    final GroupingEngine engine = frameContext.groupingEngine();
     final Int2ObjectSortedMap<OutputChannel> outputChannels = new Int2ObjectAVLTreeMap<>();
 
     for (final ReadablePartition partition : slice.getPartitions()) {
@@ -169,5 +146,25 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
         ProcessorManagers.of(processors),
         OutputChannels.wrapReadOnly(ImmutableList.copyOf(outputChannels.values()))
     );
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    WindowOperatorQueryFrameProcessorFactory that = (WindowOperatorQueryFrameProcessorFactory) o;
+    return Objects.equals(query, that.query)
+           && Objects.equals(operatorList, that.operatorList)
+           && Objects.equals(stageRowSignature, that.stageRowSignature);
+  }
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(query, operatorList, stageRowSignature);
   }
 }

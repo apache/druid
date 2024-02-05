@@ -43,6 +43,7 @@ import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageDefinitionBuilder;
 import org.apache.druid.msq.querykit.common.SortMergeJoinFrameProcessorFactory;
+import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.InlineDataSource;
@@ -88,8 +89,6 @@ public class DataSourcePlan
    * of subqueries.
    */
   private static final Map<String, Object> CONTEXT_MAP_NO_SEGMENT_GRANULARITY = new HashMap<>();
-  public static final String NEXT_WINDOW_SHUFFLE_COL = "__windowShuffleCol";
-
   private static final Logger log = new Logger(DataSourcePlan.class);
 
   static {
@@ -431,8 +430,8 @@ public class DataSourcePlan
   {
     // check if parentContext has a window operator
     final Map<String, Object> windowShuffleMap = new HashMap<>();
-    if (parentContext != null && parentContext.containsKey(NEXT_WINDOW_SHUFFLE_COL)) {
-      windowShuffleMap.put(NEXT_WINDOW_SHUFFLE_COL, parentContext.get(NEXT_WINDOW_SHUFFLE_COL));
+    if (parentContext != null && parentContext.containsKey(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL)) {
+      windowShuffleMap.put(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL, parentContext.get(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL));
     }
     final QueryDefinition subQueryDef = queryKit.makeQueryDefinition(
         queryId,

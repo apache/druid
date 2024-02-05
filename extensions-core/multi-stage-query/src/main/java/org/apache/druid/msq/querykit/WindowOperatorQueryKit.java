@@ -30,6 +30,7 @@ import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.kernel.StageDefinition;
+import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.operator.ColumnWithDirection;
 import org.apache.druid.query.operator.NaivePartitioningOperatorFactory;
@@ -79,7 +80,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
     if (nextShuffleSpec != null) {
       final ClusterBy windowClusterBy = nextShuffleSpec.clusterBy();
       originalQuery = (WindowOperatorQuery) originalQuery.withOverriddenContext(ImmutableMap.of(
-          DataSourcePlan.NEXT_WINDOW_SHUFFLE_COL,
+          MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL,
           windowClusterBy
       ));
     } else {

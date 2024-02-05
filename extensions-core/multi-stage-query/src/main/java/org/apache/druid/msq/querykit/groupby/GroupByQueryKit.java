@@ -39,6 +39,7 @@ import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
+import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -169,20 +170,15 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
         partitionBoost
     );
 
-    // note to self:
-    // the result signature might change if I add the window shuffle spec
+    // the result signature might change
+    // if window shufle spec is added
     // say the output signature was d0, d1
     // But shuffle spec for window was d1
-    // example query
-    // select m1,m2,
-    // SUM(m1) OVER(PARTITION BY m2) summ1
-    // from foo
-    // GROUP BY m1, m2
-
     // create the shufflespec from the column in the context
+    // and sort after wards to ensure prefix of shuffle is in row signature
     final ShuffleSpec nextShuffleWindowSpec;
-    if (originalQuery.getContext().containsKey(DataSourcePlan.NEXT_WINDOW_SHUFFLE_COL)) {
-      final ClusterBy windowClusterBy = (ClusterBy) originalQuery.getContext().get(DataSourcePlan.NEXT_WINDOW_SHUFFLE_COL);
+    if (originalQuery.getContext().containsKey(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL)) {
+      final ClusterBy windowClusterBy = (ClusterBy) originalQuery.getContext().get(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL);
       nextShuffleWindowSpec = new HashShuffleSpec(
           windowClusterBy,
           maxWorkerCount
@@ -197,8 +193,6 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
         columns.addAll(nextShuffleWindowSpec.clusterBy().getColumns());
       }
       stageShuffleSpec = shuffleSpecFactoryPostAggregation.build(resultClusterBy, false);
-      // Q for Karan, if there is a postagg, how can the windowing for next stage can be added ?
-      //stageShuffleSpec = shuffleSpecFactoryPostAggregation.build(new ClusterBy(columns, maxWorkerCount), false);
     } else {
       stageShuffleSpec = nextShuffleWindowSpec;
     }
@@ -206,12 +200,12 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
     if (stageShuffleSpec == null) {
       stageSignature = resultSignature;
     } else {
+      // sort the signature to make sure the prefix is aligned
       stageSignature = QueryKitUtils.sortableSignature(
           resultSignature,
           stageShuffleSpec.clusterBy().getColumns()
       );
     }
-
 
     if (doLimitOrOffset) {
       queryDefBuilder.add(

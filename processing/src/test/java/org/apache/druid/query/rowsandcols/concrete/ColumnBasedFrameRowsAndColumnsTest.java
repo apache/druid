@@ -25,24 +25,24 @@ import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumnsTestBase;
 import java.util.function.Function;
 
-public class FrameRowsAndColumnsTest extends RowsAndColumnsTestBase
+public class ColumnBasedFrameRowsAndColumnsTest extends RowsAndColumnsTestBase
 {
-  public FrameRowsAndColumnsTest()
+  public ColumnBasedFrameRowsAndColumnsTest()
   {
-    super(FrameRowsAndColumns.class);
+    super(ColumnBasedFrameRowsAndColumns.class);
   }
 
-  public static Function<MapOfColumnsRowsAndColumns, FrameRowsAndColumns> MAKER = input -> {
+  public static Function<MapOfColumnsRowsAndColumns, ColumnBasedFrameRowsAndColumns> MAKER = input -> {
 
     return buildFrame(input);
   };
 
-  private static FrameRowsAndColumns buildFrame(MapOfColumnsRowsAndColumns input)
+  private static ColumnBasedFrameRowsAndColumns buildFrame(MapOfColumnsRowsAndColumns input)
   {
     LazilyDecoratedRowsAndColumns rac = new LazilyDecoratedRowsAndColumns(input, null, null, null, OffsetLimit.limit(Integer.MAX_VALUE), null, null);
 
     rac.numRows(); // materialize
 
-    return (FrameRowsAndColumns) rac.getBase();
+    return (ColumnBasedFrameRowsAndColumns) rac.getBase();
   }
 }

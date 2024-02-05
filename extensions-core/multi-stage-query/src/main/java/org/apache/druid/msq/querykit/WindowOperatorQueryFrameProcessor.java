@@ -35,7 +35,6 @@ import org.apache.druid.frame.util.SettableLongVirtualColumn;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.Unit;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.operator.NaivePartitioningOperatorFactory;
@@ -73,7 +72,6 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
 
   private final List<OperatorFactory> operatorFactoryList;
   private final ObjectMapper jsonMapper;
-  private final Closer closer = Closer.create();
   private final RowSignature outputStageSignature;
   private final ArrayList<RowsAndColumns> frameRowsAndCols;
   private final ArrayList<RowsAndColumns> resultRowAndCols;
@@ -147,9 +145,9 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
   }
 
   @Override
-  public ReturnOrAwait<Object> runIncrementally(IntSet readableInputs) throws InterruptedException, IOException
+  public ReturnOrAwait<Object> runIncrementally(IntSet readableInputs)
   {
-    /**
+    /*
      *
      * PARTITION BY A ORDER BY B
      *
