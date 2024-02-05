@@ -105,7 +105,7 @@ export type InputSourceDesc =
       };
     }
   | {
-      type: 'google' | 'azure';
+      type: 'google' | 'azureStorage';
       uris?: string[];
       prefixes?: string[];
       objects?: { bucket: string; path: string }[];
@@ -154,7 +154,7 @@ export function issueWithInputSource(inputSource: InputSource | undefined): stri
       return;
 
     case 's3':
-    case 'azure':
+    case 'azureStorage':
     case 'google':
       if (
         !nonEmptyArray(inputSource.uris) &&
@@ -188,7 +188,7 @@ const KNOWN_TYPES = [
   'http',
   'local',
   's3',
-  'azure',
+  'azureStorage',
   'delta',
   'google',
   'hdfs',
@@ -349,9 +349,10 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     name: 'uris',
     label: 'Azure URIs',
     type: 'string-array',
-    placeholder: 'azure://your-container/some-file1.ext, azure://your-container/some-file2.ext',
+    placeholder:
+      'azureStorage://your-storage-account/your-container/some-file1.ext, azureStorage://your-storage-account/your-container/some-file2.ext',
     defined: inputSource =>
-      inputSource.type === 'azure' &&
+      inputSource.type === 'azureStorage' &&
       !deepGet(inputSource, 'prefixes') &&
       !deepGet(inputSource, 'objects'),
     required: true,
@@ -369,9 +370,10 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     name: 'prefixes',
     label: 'Azure prefixes',
     type: 'string-array',
-    placeholder: 'azure://your-container/some-path1, azure://your-container/some-path2',
+    placeholder:
+      'azureStorage://your-storage-account/your-container/some-path1, azureStorage://your-storage-account/your-container/some-path2',
     defined: inputSource =>
-      inputSource.type === 'azure' &&
+      inputSource.type === 'azureStorage' &&
       !deepGet(inputSource, 'uris') &&
       !deepGet(inputSource, 'objects'),
     required: true,
@@ -386,8 +388,8 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     name: 'objects',
     label: 'Azure objects',
     type: 'json',
-    placeholder: '{"bucket":"your-container", "path":"some-file.ext"}',
-    defined: inputSource => inputSource.type === 'azure' && deepGet(inputSource, 'objects'),
+    placeholder: '{"bucket":"your-storage-account", "path":"your-container/some-file.ext"}',
+    defined: inputSource => inputSource.type === 'azureStorage' && deepGet(inputSource, 'objects'),
     required: true,
     info: (
       <>
@@ -402,7 +404,22 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
       </>
     ),
   },
-
+  {
+    name: 'properties.sharedAccessStorageToken',
+    label: 'Shared Access Storage Token',
+    type: 'string',
+    placeholder: '(sas token)',
+    defined: inputSource => inputSource.type === 'azureStorage',
+    info: (
+      <>
+        <p>Shared Access Storage Token for this storage account.</p>
+        <p>
+          Note: Inlining the sas token into the ingestion spec can be dangerous as it might appear
+          in server log files and can be seen by anyone accessing this console.
+        </p>
+      </>
+    ),
+  },
   // google
   {
     name: 'uris',
@@ -469,7 +486,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     type: 'string',
     suggestions: FILTER_SUGGESTIONS,
     placeholder: '*',
-    defined: typeIsKnown(KNOWN_TYPES, 's3', 'azure', 'google'),
+    defined: typeIsKnown(KNOWN_TYPES, 's3', 'azureStorage', 'google'),
     info: (
       <p>
         A wildcard filter for files. See{' '}
