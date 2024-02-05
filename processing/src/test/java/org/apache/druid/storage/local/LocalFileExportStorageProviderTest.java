@@ -17,27 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.sql.destination;
+package org.apache.druid.storage.local;
 
 import com.fasterxml.jackson.databind.BeanProperty;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.storage.ExportStorageProvider;
 import org.apache.druid.storage.StorageConfig;
 import org.apache.druid.storage.StorageConnectorModule;
-import org.apache.druid.storage.local.LocalFileExportStorageProvider;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
 
-public class ExportDestinationTest
+public class LocalFileExportStorageProviderTest
 {
   @Test
   public void testSerde() throws IOException
   {
-    ExportDestination exportDestination = new ExportDestination(new LocalFileExportStorageProvider("/basepath/export"));
+    ExportStorageProvider exportDestination = new LocalFileExportStorageProvider("/basepath/export");
 
     ObjectMapper objectMapper = new DefaultObjectMapper();
     objectMapper.registerModules(new StorageConnectorModule().getJacksonModules());
@@ -60,7 +61,17 @@ public class ExportDestinationTest
     });
     byte[] bytes = objectMapper.writeValueAsBytes(exportDestination);
 
-    ExportDestination deserialized = objectMapper.readValue(bytes, ExportDestination.class);
+    ExportStorageProvider deserialized = objectMapper.readValue(bytes, LocalFileExportStorageProvider.class);
     Assert.assertEquals(exportDestination, deserialized);
+  }
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    EqualsVerifier.forClass(LocalFileExportStorageProvider.class)
+                  .withNonnullFields("exportPath")
+                  .withIgnoredFields("storageConfig")
+                  .usingGetClass()
+                  .verify();
   }
 }
