@@ -79,19 +79,6 @@ UNPIVOT (values_column
 )
 ```
 
-### Enabled empty ingest queries
-
-The MSQ task engine now allows empty ingest queries by default. Previously, ingest queries that produced no data would fail with the `InsertCannotBeEmpty` MSQ fault.
-For more information, see [Empty ingest queries in the upgrade notes](#enabled-empty-ingest-queries).
-
-[#15674](https://github.com/apache/druid/pull/15674) [#15495](https://github.com/apache/druid/pull/15495)
-
-### First and last aggregators for double, float, and long data types
-
-Druid 29.0.0 adds support for first and last aggregators for the double, float, and long types in an ingestion spec and MSQ queries. Previously, they were only supported for native queries. For more information, see [First and last aggregators](https://druid.apache.org/docs/latest/querying/aggregations/).
-
-[#14462](https://github.com/apache/druid/pull/14462)
-
 ### Range support in window functions
 
 Window functions now support ranges where both endpoints are unbounded or are the current row. Ranges work in strict mode, which means that Druid will fail queries that aren't supported. You can turn off strict mode for ranges by setting the context parameter `windowingStrictValidation` to `false`.
@@ -106,11 +93,17 @@ The following example shows a window expression with RANGE frame specifications:
 
 [#15703](https://github.com/apache/druid/pull/15703) [#15746](https://github.com/apache/druid/pull/15746)
 
-### Support for Google Cloud Storage
+### Improved INNER joins
 
-Added support for Google Cloud Storage (GCS). You can now use durable storage with GCS. See [Durable storage configurations](https://druid.apache.org/docs/latest/multi-stage-query/reference#durable-storage-configurations) for more information.
+Druid now supports arbitrary join conditions for INNER join. Any sub-conditions that can't be evaluated as part of the join are converted to a post-join filter. Improved join capabilities allow Druid to more effectively support applications like Tableau.
 
-[#15398](https://github.com/apache/druid/pull/15398)
+[#15302](https://github.com/apache/druid/pull/15302)
+
+### First and last aggregators for double, float, and long data types
+
+Druid 29.0.0 adds support for first and last aggregators for the double, float, and long types in an ingestion spec and MSQ queries. Previously, they were only supported for native queries. For more information, see [First and last aggregators](https://druid.apache.org/docs/latest/querying/aggregations/).
+
+[#14462](https://github.com/apache/druid/pull/14462)
 
 ### Support for logging audit events
 
@@ -118,13 +111,22 @@ Added support for logging audit events and improved coverage of audited REST API
 
 [#15480](https://github.com/apache/druid/pull/15480) [#15653](https://github.com/apache/druid/pull/15653)
 
-### Improved INNER joins
+### Enabled empty ingest queries
 
-Druid now supports arbitrary join conditions for INNER join. Any sub-conditions that can't be evaluated as part of the join are converted to a post-join filter. Improved join capabilities allow Druid to more effectively support applications like Tableau.
+The MSQ task engine now allows empty ingest queries by default. Previously, ingest queries that produced no data would fail with the `InsertCannotBeEmpty` MSQ fault.
+For more information, see [Empty ingest queries in the upgrade notes](#enabled-empty-ingest-queries).
 
-[#15302](https://github.com/apache/druid/pull/15302)
+[#15674](https://github.com/apache/druid/pull/15674) [#15495](https://github.com/apache/druid/pull/15495)
+
+### Support for Google Cloud Storage
+
+Added support for Google Cloud Storage (GCS). You can now use durable storage with GCS. See [Durable storage configurations](https://druid.apache.org/docs/latest/multi-stage-query/reference#durable-storage-configurations) for more information.
+
+[#15398](https://github.com/apache/druid/pull/15398)
 
 ### Experimental extensions
+
+Druid 29.0.0 adds the following extensions.
 
 #### DDSketch
 
