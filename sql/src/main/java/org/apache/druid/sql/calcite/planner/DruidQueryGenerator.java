@@ -47,7 +47,6 @@ import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -111,27 +110,11 @@ public class DruidQueryGenerator
       if (currentTable != null) {
         return new InputDesc(currentTable.getDataSource(), currentTable.getRowSignature());
       }
-
       if (inputs.size() == 1) {
         DruidQuery inputQuery = inputs.get(0).buildQuery(false);
-
         return new InputDesc(new QueryDataSource(inputQuery.getQuery()), inputQuery.getOutputRowSignature());
-
       }
       throw new IllegalStateException();
-    }
-
-    public Optional<Vertex> mergeFilter(Filter filter)
-    {
-      if (partialDruidQuery.canAccept(Stage.WHERE_FILTER)) {
-        PartialDruidQuery newPartialQuery = partialDruidQuery.withWhereFilter(filter);
-        return Optional.of(newVertex(newPartialQuery));
-      }
-      if (partialDruidQuery.canAccept(Stage.HAVING_FILTER)) {
-        PartialDruidQuery newPartialQuery = partialDruidQuery.withHavingFilter(filter);
-        return Optional.of(newVertex(newPartialQuery));
-      }
-      return Optional.empty();
     }
 
     private Vertex newVertex(PartialDruidQuery partialDruidQuery)
@@ -142,60 +125,52 @@ public class DruidQueryGenerator
       vertex.queryTable = queryTable;
       vertex.partialDruidQuery = partialDruidQuery;
       return vertex;
-
     }
 
+    /**
+     * Merges the given {@link RelNode} into the current partial query.
+     *
+     * @return the new merged vertex - or null if its not possible to merge
+     */
     private Vertex mergeIntoDruidQuery(RelNode node, boolean isRoot)
     {
-      //// final RelNode scan,
-      //// final Filter whereFilter,
       if (accepts(node, Stage.WHERE_FILTER, Filter.class)) {
         PartialDruidQuery newPartialQuery = partialDruidQuery.withWhereFilter((Filter) node);
         return newVertex(newPartialQuery);
       }
-      //// final Project selectProject,
       if (accepts(node, Stage.SELECT_PROJECT, Project.class)) {
         PartialDruidQuery newPartialQuery = partialDruidQuery.withSelectProject((Project) node);
         return newVertex(newPartialQuery);
       }
-      //// final Aggregate aggregate,
       if (accepts(node, Stage.AGGREGATE, Aggregate.class)) {
         PartialDruidQuery newPartialQuery = partialDruidQuery.withAggregate((Aggregate) node);
         return newVertex(newPartialQuery);
       }
-      //// final Project aggregateProject,
       if (accepts(node, Stage.AGGREGATE_PROJECT, Project.class) && isRoot) {
         PartialDruidQuery newPartialQuery = partialDruidQuery.withAggregateProject((Project) node);
         return newVertex(newPartialQuery);
       }
-      //// final Filter havingFilter,
       if (accepts(node, Stage.HAVING_FILTER, Filter.class)) {
         PartialDruidQuery newPartialQuery = partialDruidQuery.withHavingFilter((Filter) node);
         return newVertex(newPartialQuery);
       }
-      //// final Sort sort,
       if (accepts(node, Stage.SORT, Sort.class)) {
         PartialDruidQuery newPartialQuery = partialDruidQuery.withSort((Sort) node);
         return newVertex(newPartialQuery);
       }
-      //// final Project sortProject,
       if (accepts(node, Stage.SORT_PROJECT, Project.class)) {
         PartialDruidQuery newPartialQuery = partialDruidQuery.withSortProject((Project) node);
         return newVertex(newPartialQuery);
       }
-      //// final Window window,
       if (accepts(node, Stage.WINDOW, Window.class)) {
         PartialDruidQuery newPartialQuery = partialDruidQuery.withWindow((Window) node);
         return newVertex(newPartialQuery);
       }
-      //// final Project windowProject
       if (accepts(node, Stage.WINDOW_PROJECT, Project.class)) {
         PartialDruidQuery newPartialQuery = partialDruidQuery.withWindowProject((Project) node);
         return newVertex(newPartialQuery);
       }
-
       return null;
-
     }
 
     private boolean accepts(RelNode node, Stage whereFilter, Class<? extends RelNode> class1)
@@ -236,7 +211,7 @@ public class DruidQueryGenerator
       return visitTableScan((DruidTableScan) node);
     }
     if (node instanceof DruidValues) {
-      return visitValues1((DruidValues) node);
+      return visitValues((DruidValues) node);
     }
     if (newInputs.size() == 1) {
       Vertex inputVertex = newInputs.get(0);
@@ -255,7 +230,7 @@ public class DruidQueryGenerator
     throw new UnsupportedOperationException();
   }
 
-  private Vertex visitValues1(DruidValues values)
+  private Vertex visitValues(DruidValues values)
   {
     final List<ImmutableList<RexLiteral>> tuples = values.getTuples();
     final List<Object[]> objectTuples = tuples
