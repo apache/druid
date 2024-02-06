@@ -24,16 +24,18 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.s3.S3InputSource;
-import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.storage.ExportStorageProvider;
-import org.apache.druid.storage.StorageConfig;
 import org.apache.druid.storage.StorageConnector;
-import org.apache.druid.storage.StorageConnectorUtils;
+import org.apache.druid.storage.s3.S3StorageDruidModule;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 
-import javax.annotation.Nullable;
 import java.io.File;
+import java.net.URI;
+import java.util.List;
 
 @JsonTypeName(S3ExportStorageProvider.TYPE_NAME)
 public class S3ExportStorageProvider implements ExportStorageProvider
@@ -43,42 +45,61 @@ public class S3ExportStorageProvider implements ExportStorageProvider
   private final String bucket;
   @JsonProperty
   private final String prefix;
-  @JsonProperty
-  private final String tempSubDir;
-  @JsonProperty
-  @Nullable
-  private final HumanReadableBytes chunkSize;
-  @JsonProperty
-  @Nullable
-  private final Integer maxRetry;
 
   @JacksonInject
-  StorageConfig storageConfig;
+  S3ExportConfig s3ExportConfig;
   @JacksonInject
   ServerSideEncryptingAmazonS3 s3;
 
   @JsonCreator
   public S3ExportStorageProvider(
       @JsonProperty(value = "bucket", required = true) String bucket,
-      @JsonProperty(value = "prefix", required = true) String prefix,
-      @JsonProperty(value = "tempSubDir") @Nullable String tempSubDir,
-      @JsonProperty("chunkSize") @Nullable HumanReadableBytes chunkSize,
-      @JsonProperty("maxRetry") @Nullable Integer maxRetry
+      @JsonProperty(value = "prefix", required = true) String prefix
   )
   {
     this.bucket = bucket;
     this.prefix = prefix;
-    this.tempSubDir = tempSubDir == null ? "" : tempSubDir;
-    this.chunkSize = chunkSize;
-    this.maxRetry = maxRetry;
   }
 
   @Override
   public StorageConnector get()
   {
-    final File temporaryDirectory = StorageConnectorUtils.validateAndGetPath(storageConfig.getBaseDir(), tempSubDir);
-    final S3OutputConfig s3OutputConfig = new S3OutputConfig(bucket, prefix, temporaryDirectory, chunkSize, maxRetry);
+    final String tempDir = s3ExportConfig.getTempDir();
+    if (tempDir == null) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.NOT_FOUND)
+                          .build("The runtime property `druid.export.storage.s3.tempDir` must be configured for S3 export.");
+    }
+    validateS3Prefix(s3ExportConfig.getAllowedExportPaths(), bucket, prefix);
+    final S3OutputConfig s3OutputConfig = new S3OutputConfig(
+        bucket,
+        prefix,
+        new File(tempDir),
+        s3ExportConfig.getChunkSize(),
+        s3ExportConfig.getMaxRetry()
+    );
     return new S3StorageConnector(s3OutputConfig, s3);
+  }
+
+  @VisibleForTesting
+  static void validateS3Prefix(List<String> allowedExportPaths, String bucket, String prefix)
+  {
+    if (allowedExportPaths == null) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.NOT_FOUND)
+                          .build(
+                              "The runtime property `druid.export.storage.s3.allowedExportPaths` must be configured for S3 export.");
+    }
+    final URI providedUri = new CloudObjectLocation(bucket, prefix).toUri(S3StorageDruidModule.SCHEME);
+    for (final String path : allowedExportPaths) {
+      final URI allowedUri = URI.create(path.endsWith("/") ? path : path + "/");
+      if (allowedUri.getHost().equals(providedUri.getHost()) && providedUri.getPath().startsWith(allowedUri.getPath())) {
+        return;
+      }
+    }
+    throw DruidException.forPersona(DruidException.Persona.USER)
+                        .ofCategory(DruidException.Category.INVALID_INPUT)
+                        .build("None of the allowed prefixes matched the input path [%s]", providedUri);
   }
 
   @JsonProperty("bucket")
@@ -91,26 +112,6 @@ public class S3ExportStorageProvider implements ExportStorageProvider
   public String getPrefix()
   {
     return prefix;
-  }
-
-  @JsonProperty("tempSubDir")
-  public String getTempSubDir()
-  {
-    return tempSubDir;
-  }
-
-  @JsonProperty("chunkSize")
-  @Nullable
-  public HumanReadableBytes getChunkSize()
-  {
-    return chunkSize;
-  }
-
-  @JsonProperty("maxRetry")
-  @Nullable
-  public Integer getMaxRetry()
-  {
-    return maxRetry;
   }
 
   @Override

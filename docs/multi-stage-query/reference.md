@@ -99,7 +99,7 @@ For more information, see [Read external data with EXTERN](concepts.md#read-exte
 This variation of EXTERN requires one argument, the details of the destination as specified below.
 This variation additionally requires an `AS` clause to specify the format of the exported rows.
 
-INSERT statements and REPLACE statements are both supported with an `EXTERN` destination.
+Only INSERT statements are supported with an `EXTERN` destination.
 Only `CSV` format is supported at the moment.
 Please note that partitioning (`PARTITIONED BY`) and clustering (`CLUSTERED BY`) is not currently supported with export statements.
 
@@ -111,20 +111,6 @@ INSERT statements append the results to the existing files at the destination.
 INSERT INTO
   EXTERN(<destination function>)
 AS CSV
-SELECT
-  <column>
-FROM <table>
-```
-
-REPLACE statements have an additional OVERWRITE clause. As partitioning is not yet supported, only `OVERWRITE ALL`
-is allowed. REPLACE deletes any currently existing files at the specified directory, and creates new files with the results of the query.
-
-
-```sql
-REPLACE INTO
-  EXTERN(<destination function>)
-AS CSV
-OVERWRITE ALL
 SELECT
   <column>
 FROM <table>
@@ -154,9 +140,15 @@ Supported arguments to the function:
 |-------------|----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|
 | `bucket`    | Yes      | The S3 bucket to which the files are exported to.                                                                                                                                                                                  | n/a     |
 | `prefix`    | Yes      | Path where the exported files would be created. The export query would expect the destination to be empty. If the location includes other files, then the query will fail.                                                         | n/a     |
-| `tempSubDir`   | No    | Subdirectory of `druid.export.storage.baseDir` used to store temporary files required while uploading the data. If this argument is not present, the runtime property will be used as the temporary directory.                     | .       |
-| `maxRetry`  | No       | Defines the max number times to attempt S3 API calls to avoid failures due to transient errors.                                                                                                                                    | 10      |
-| `chunkSize` | No       | Defines the size of each chunk to temporarily store in `tempDir`. The chunk size must be between 5 MiB and 5 GiB. A large chunk size reduces the API calls to S3, however it requires more disk space to store the temporary chunks. | 100MiB  |
+
+The following runtime parameters must be configured to export into an S3 destination:
+
+| Runtime Parameter                            | Required | Description                                                                                                                                                                                                                          | Default |
+|----------------------------------------------|----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----|
+| `druid.export.storage.s3.tempSubDir`         | Yes      | Directory used to store temporary files required while uploading the data.                                                                                                                                                           | n/a |
+| `druid.export.storage.s3.allowedExportPaths` | Yes      | An array of S3 prefixes which are whitelisted as export destinations.                                                                                                                                                                | n/a |
+| `druid.export.storage.s3.maxRetry`           | No       | Defines the max number times to attempt S3 API calls to avoid failures due to transient errors.                                                                                                                                      | 10  |
+| `druid.export.storage.s3.chunkSize`          | No       | Defines the size of each chunk to temporarily store in `tempDir`. The chunk size must be between 5 MiB and 5 GiB. A large chunk size reduces the API calls to S3, however it requires more disk space to store the temporary chunks. | 100MiB |
 
 ##### LOCAL
 

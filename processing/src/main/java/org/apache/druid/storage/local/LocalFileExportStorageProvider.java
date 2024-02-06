@@ -25,11 +25,11 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.data.input.impl.LocalInputSource;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.storage.ExportStorageProvider;
 import org.apache.druid.storage.StorageConfig;
 import org.apache.druid.storage.StorageConnector;
-import org.apache.druid.storage.StorageConnectorUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -55,7 +55,7 @@ public class LocalFileExportStorageProvider implements ExportStorageProvider
   @Override
   public StorageConnector get()
   {
-    final File exportDestination = StorageConnectorUtils.validateAndGetPath(storageConfig.getBaseDir(), exportPath);
+    final File exportDestination = validateAndGetPath(storageConfig.getBaseDir(), exportPath);
     try {
       return new LocalFileStorageConnector(exportDestination);
     }
@@ -101,5 +101,24 @@ public class LocalFileExportStorageProvider implements ExportStorageProvider
     return "LocalFileExportStorageProvider{" +
            "exportPath=" + exportPath +
            '}';
+  }
+
+  public static File validateAndGetPath(String basePath, String customPath)
+  {
+    if (basePath == null) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.NOT_FOUND)
+                          .build(
+                              "The runtime property `druid.export.storage.baseDir` must be configured for local export.");
+    }
+    final File baseDir = new File(basePath);
+    final File exportFile = new File(baseDir, customPath);
+    if (!exportFile.toPath().normalize().startsWith(baseDir.toPath())) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build(
+                              "The provided destination must be within the path configured by runtime property `druid.export.storage.baseDir`");
+    }
+    return exportFile;
   }
 }

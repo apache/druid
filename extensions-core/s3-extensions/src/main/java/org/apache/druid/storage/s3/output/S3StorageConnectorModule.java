@@ -22,6 +22,7 @@ package org.apache.druid.storage.s3.output;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
+import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.initialization.DruidModule;
 
 import java.util.Collections;
@@ -42,5 +43,6 @@ public class S3StorageConnectorModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
+    JsonConfigProvider.bind(binder, "druid.export.storage.s3", S3ExportConfig.class);
   }
 }

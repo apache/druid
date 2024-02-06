@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.storage.ExportStorageProvider;
 import org.apache.druid.storage.StorageConfig;
@@ -31,6 +32,7 @@ import org.apache.druid.storage.StorageConnectorModule;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.IOException;
 
 public class LocalFileExportStorageProviderTest
@@ -73,5 +75,34 @@ public class LocalFileExportStorageProviderTest
                   .withIgnoredFields("storageConfig")
                   .usingGetClass()
                   .verify();
+  }
+
+  @Test
+  public void testEmptyPath()
+  {
+    Assert.assertThrows(
+        DruidException.class,
+        () -> LocalFileExportStorageProvider.validateAndGetPath(null, "path")
+    );
+  }
+
+  @Test
+  public void testValidate()
+  {
+    File file = LocalFileExportStorageProvider.validateAndGetPath("/base", "path");
+    Assert.assertEquals("/base/path", file.toPath().toString());
+  }
+
+  @Test
+  public void testWithNonSubdir()
+  {
+    Assert.assertThrows(
+        DruidException.class,
+        () -> LocalFileExportStorageProvider.validateAndGetPath("/base", "../path")
+    );
+    Assert.assertThrows(
+        DruidException.class,
+        () -> LocalFileExportStorageProvider.validateAndGetPath("/base", "../base1")
+    );
   }
 }

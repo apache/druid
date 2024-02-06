@@ -17,42 +17,38 @@
  * under the License.
  */
 
-package org.apache.druid.storage;
+package org.apache.druid.storage.s3.output;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.error.DruidException;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.File;
+import java.util.List;
 
-public class StorageConnectorUtilsTest
+public class S3ExportStorageProviderTest
 {
-  @Test
-  public void testEmptyPath()
-  {
-    Assert.assertThrows(
-        DruidException.class,
-        () -> StorageConnectorUtils.validateAndGetPath(null, "path")
-    );
-  }
+  private final List<String> validPrefixes = ImmutableList.of(
+      "s3://bucket-name/validPath1",
+      "s3://bucket-name/validPath2"
+  );
 
   @Test
-  public void testValidate()
+  public void testValidatePaths()
   {
-    File file = StorageConnectorUtils.validateAndGetPath("/base", "path");
-    Assert.assertEquals("/base/path", file.toPath().toString());
-  }
+    S3ExportStorageProvider.validateS3Prefix(validPrefixes, "bucket-name", "validPath1/");
+    S3ExportStorageProvider.validateS3Prefix(validPrefixes, "bucket-name", "validPath1/validSubPath/");
 
-  @Test
-  public void testWithNonSubdir()
-  {
+    S3ExportStorageProvider.validateS3Prefix(ImmutableList.of("s3://bucket-name"), "bucket-name", "");
+    S3ExportStorageProvider.validateS3Prefix(ImmutableList.of("s3://bucket-name"), "bucket-name", "validPath");
+
     Assert.assertThrows(
         DruidException.class,
-        () -> StorageConnectorUtils.validateAndGetPath("/base", "../path")
+        () -> S3ExportStorageProvider.validateS3Prefix(validPrefixes, "bucket-name", "invalidPath1")
     );
     Assert.assertThrows(
         DruidException.class,
-        () -> StorageConnectorUtils.validateAndGetPath("/base", "../base1")
+        () -> S3ExportStorageProvider.validateS3Prefix(validPrefixes, "bucket-name", "validPath123")
     );
   }
 }
