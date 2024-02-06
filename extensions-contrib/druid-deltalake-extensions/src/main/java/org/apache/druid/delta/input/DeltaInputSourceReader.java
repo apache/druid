@@ -39,29 +39,29 @@ import java.util.NoSuchElementException;
  */
 public class DeltaInputSourceReader implements InputSourceReader
 {
-  private final Iterator<io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch>> filteredColumnarBatchCloseableIterator;
+  private final Iterator<io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch>> filteredColumnarBatchIterators;
   private final InputRowSchema inputRowSchema;
 
   public DeltaInputSourceReader(
-      Iterator<io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch>> filteredColumnarBatchCloseableIterator,
+      Iterator<io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch>> filteredColumnarBatchIterators,
       InputRowSchema inputRowSchema
 
   )
   {
-    this.filteredColumnarBatchCloseableIterator = filteredColumnarBatchCloseableIterator;
+    this.filteredColumnarBatchIterators = filteredColumnarBatchIterators;
     this.inputRowSchema = inputRowSchema;
   }
 
   @Override
   public CloseableIterator<InputRow> read()
   {
-    return new DeltaInputSourceIterator(filteredColumnarBatchCloseableIterator, inputRowSchema);
+    return new DeltaInputSourceIterator(filteredColumnarBatchIterators, inputRowSchema);
   }
 
   @Override
   public CloseableIterator<InputRow> read(InputStats inputStats)
   {
-    return new DeltaInputSourceIterator(filteredColumnarBatchCloseableIterator, inputRowSchema);
+    return new DeltaInputSourceIterator(filteredColumnarBatchIterators, inputRowSchema);
   }
 
   @Override
@@ -122,8 +122,7 @@ public class DeltaInputSourceReader implements InputSourceReader
         if (!filteredBatch.hasNext()) {
           return false;
         }
-        FilteredColumnarBatch filteredData = filteredBatch.next();
-        currentBatch = filteredData.getRows();
+        currentBatch = filteredBatch.next().getRows();
       }
       return true;
     }

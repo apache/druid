@@ -117,7 +117,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
   {
     final TableClient tableClient = createTableClient();
     try {
-      final List<CloseableIterator<FilteredColumnarBatch>> scanFilesData = new ArrayList<>();
+      final List<CloseableIterator<FilteredColumnarBatch>> scanFileDataIters = new ArrayList<>();
 
       if (deltaSplit != null) {
         final Row scanState = deserialize(tableClient, deltaSplit.getStateRow());
@@ -126,7 +126,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
 
         for (String file : deltaSplit.getFiles()) {
           final Row scanFile = deserialize(tableClient, file);
-          scanFilesData.add(
+          scanFileDataIters.add(
               getTransformedDataIterator(tableClient, scanState, scanFile, physicalReadSchema)
           );
         }
@@ -150,7 +150,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
 
           while (scanFileRows.hasNext()) {
             final Row scanFile = scanFileRows.next();
-            scanFilesData.add(
+            scanFileDataIters.add(
                 getTransformedDataIterator(tableClient, scanState, scanFile, physicalReadSchema)
             );
           }
@@ -158,7 +158,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
       }
 
       return new DeltaInputSourceReader(
-        scanFilesData.iterator(),
+        scanFileDataIters.iterator(),
         inputRowSchema
       );
     }
