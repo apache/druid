@@ -123,7 +123,7 @@ can load bundled extensions by adding their names to your common.runtime.propert
 `druid.extensions.loadList` property. For example, to load the postgresql-metadata-storage and
 druid-hdfs-storage extensions, use the configuration:
 
-```
+```properties
 druid.extensions.loadList=["postgresql-metadata-storage", "druid-hdfs-storage"]
 ```
 
@@ -148,7 +148,7 @@ if they are available from Maven, the included [pull-deps](../operations/pull-de
 specify the full Maven coordinate of the extension in the form `groupId:artifactId:version`. For example,
 for the (hypothetical) extension *com.example:druid-example-extension:1.0.0*, run:
 
-```
+```shell
 java \
   -cp "lib/*" \
   -Ddruid.extensions.directory="extensions" \
