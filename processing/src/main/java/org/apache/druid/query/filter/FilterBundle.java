@@ -45,12 +45,12 @@ import java.util.function.Function;
 public class FilterBundle
 {
   @Nullable
-  private final ImmutableBitmap index;
+  private final IndexBundle index;
   @Nullable
   private final MatcherBundle matcherBundle;
 
   public FilterBundle(
-      @Nullable ImmutableBitmap index,
+      @Nullable IndexBundle index,
       @Nullable MatcherBundle matcherBundle
   )
   {
@@ -64,7 +64,7 @@ public class FilterBundle
 
 
   @Nullable
-  public ImmutableBitmap getIndex()
+  public IndexBundle getIndex()
   {
     return index;
   }
@@ -73,6 +73,44 @@ public class FilterBundle
   public MatcherBundle getMatcherBundle()
   {
     return matcherBundle;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "index[" + (index != null ? index.getFilterString() : null) +
+           "], matcher[" + (matcherBundle != null ? matcherBundle.getFilterString() : null) +
+           ']';
+  }
+
+  public interface IndexBundle
+  {
+    String getFilterString();
+    ImmutableBitmap getBitmap();
+  }
+
+  public static class SimpleIndexBundle implements IndexBundle
+  {
+    private final String filterString;
+    private final ImmutableBitmap index;
+
+    public SimpleIndexBundle(String filterString, ImmutableBitmap index)
+    {
+      this.filterString = Preconditions.checkNotNull(filterString);
+      this.index = Preconditions.checkNotNull(index);
+    }
+
+    @Override
+    public String getFilterString()
+    {
+      return filterString;
+    }
+
+    @Override
+    public ImmutableBitmap getBitmap()
+    {
+      return index;
+    }
   }
 
   /**
@@ -85,22 +123,32 @@ public class FilterBundle
    */
   public interface MatcherBundle
   {
+    String getFilterString();
     ValueMatcher valueMatcher(ColumnSelectorFactory selectorFactory, Offset baseOffset, boolean descending);
     VectorValueMatcher vectorMatcher(VectorColumnSelectorFactory selectorFactory);
   }
 
   public static class SimpleMatcherBundle implements MatcherBundle
   {
+    private final String filterString;
     private final Function<ColumnSelectorFactory, ValueMatcher> matcherFn;
     private final Function<VectorColumnSelectorFactory, VectorValueMatcher> vectorMatcherFn;
 
     public SimpleMatcherBundle(
+        String filterString,
         Function<ColumnSelectorFactory, ValueMatcher> matcherFn,
         Function<VectorColumnSelectorFactory, VectorValueMatcher> vectorMatcherFn
     )
     {
-      this.matcherFn = matcherFn;
-      this.vectorMatcherFn = vectorMatcherFn;
+      this.filterString = Preconditions.checkNotNull(filterString);
+      this.matcherFn = Preconditions.checkNotNull(matcherFn);
+      this.vectorMatcherFn = Preconditions.checkNotNull(vectorMatcherFn);
+    }
+
+    @Override
+    public String getFilterString()
+    {
+      return filterString;
     }
 
     @Override

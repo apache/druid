@@ -25,7 +25,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.BooleanFilter;
 import org.apache.druid.query.filter.ColumnIndexSelector;
@@ -50,13 +49,13 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * Logical AND filter operation
  */
 public class AndFilter implements BooleanFilter
 {
-  private static final Logger log = new Logger(AndFilter.class);
   private static final Joiner AND_JOINER = Joiner.on(" && ");
 
   private final LinkedHashSet<Filter> filters;
@@ -83,6 +82,7 @@ public class AndFilter implements BooleanFilter
       boolean allowPartialIndex
   )
   {
+    final List<String> indexStrings = new ArrayList<>();
     final List<FilterBundle.MatcherBundle> matcherBundles = new ArrayList<>();
 
     int selectionCount = selectionRowCount;
@@ -98,14 +98,21 @@ public class AndFilter implements BooleanFilter
           allowPartialIndex
       );
       if (subBundle.getIndex() != null) {
-        if (subBundle.getIndex().isEmpty()) {
+        if (subBundle.getIndex().getBitmap().isEmpty()) {
           // Short-circuit.
-          return new FilterBundle(columnIndexSelector.getBitmapFactory().makeEmptyImmutableBitmap(), null);
+          return new FilterBundle(
+              new FilterBundle.SimpleIndexBundle(
+                  FalseFilter.instance().toString(),
+                  columnIndexSelector.getBitmapFactory().makeEmptyImmutableBitmap()
+              ),
+              null
+          );
         }
+        indexStrings.add(subBundle.getIndex().getFilterString());
         if (index == null) {
-          index = subBundle.getIndex();
+          index = subBundle.getIndex().getBitmap();
         } else {
-          index = index.intersection(subBundle.getIndex());
+          index = index.intersection(subBundle.getIndex().getBitmap());
         }
         selectionCount = index.size();
       }
@@ -118,6 +125,16 @@ public class AndFilter implements BooleanFilter
     if (!matcherBundles.isEmpty()) {
       matcherBundle = new FilterBundle.MatcherBundle()
       {
+        @Override
+        public String getFilterString()
+        {
+          return AND_JOINER.join(
+              matcherBundles.stream()
+                            .map(FilterBundle.MatcherBundle::getFilterString)
+                            .collect(Collectors.toList())
+          );
+        }
+
         @Override
         public ValueMatcher valueMatcher(ColumnSelectorFactory selectorFactory, Offset baseOffset, boolean descending)
         {
@@ -142,7 +159,10 @@ public class AndFilter implements BooleanFilter
       matcherBundle = null;
     }
 
-    return new FilterBundle(index, matcherBundle);
+    return new FilterBundle(
+        index == null ? null : new FilterBundle.SimpleIndexBundle(AND_JOINER.join(indexStrings), index),
+        matcherBundle
+    );
   }
 
   @Nullable

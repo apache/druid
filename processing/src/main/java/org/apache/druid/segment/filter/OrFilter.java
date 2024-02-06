@@ -53,7 +53,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Function;
 
 /**
  * Logical OR filter operation
@@ -86,8 +85,8 @@ public class OrFilter implements BooleanFilter
   )
   {
     final List<T> indexes = new ArrayList<>();
-    final List<Function<ColumnSelectorFactory, ValueMatcher>> matcherFns = new ArrayList<>();
-    final List<Function<VectorColumnSelectorFactory, VectorValueMatcher>> vectorMatcherFns = new ArrayList<>();
+    final List<Filter> indexFilters = new ArrayList<>();
+    final List<Filter> matcherFilters = new ArrayList<>();
 
     for (Filter subfilter : filters) {
       boolean needMatcher = true;
@@ -95,12 +94,13 @@ public class OrFilter implements BooleanFilter
       if (index != null) {
         final T bitmapResult = index.computeBitmapResult(
             bitmapResultFactory,
-            totalRowCount,
+            selectionRowCount,
             totalRowCount,
             includeUnknown
         );
         if (bitmapResult != null) {
           indexes.add(bitmapResult);
+          indexFilters.add(subfilter);
           needMatcher = !index.getIndexCapabilities().isExact();
         } else if (!allowPartialIndex) {
           break;
@@ -110,8 +110,7 @@ public class OrFilter implements BooleanFilter
       }
 
       if (needMatcher) {
-        matcherFns.add(subfilter::makeMatcher);
-        vectorMatcherFns.add(subfilter::makeVectorMatcher);
+        matcherFilters.add(subfilter);
       }
     }
 
@@ -133,26 +132,35 @@ public class OrFilter implements BooleanFilter
         }
       } else {
         partialIndex = null;
-        matcherFns.clear();
-        vectorMatcherFns.clear();
+        matcherFilters.clear();
         // need to convert to all matchers
-        for (Filter subfilter : filters) {
-          matcherFns.add(subfilter::makeMatcher);
-          vectorMatcherFns.add(subfilter::makeVectorMatcher);
-        }
+        matcherFilters.addAll(filters);
       }
     }
 
     final FilterBundle.MatcherBundle matcherBundle;
-    if (!matcherFns.isEmpty()) {
+    if (!matcherFilters.isEmpty()) {
       matcherBundle = new FilterBundle.MatcherBundle()
       {
         @Override
+        public String getFilterString()
+        {
+          if (partialIndex != null) {
+            return StringUtils.format(
+                "OrFilter:[partialIndex[%s], matcher[%s]]",
+                OR_JOINER.join(indexFilters),
+                OR_JOINER.join(matcherFilters)
+            );
+          }
+          return OR_JOINER.join(matcherFilters);
+        }
+
+        @Override
         public ValueMatcher valueMatcher(ColumnSelectorFactory selectorFactory, Offset baseOffset, boolean descending)
         {
-          final ValueMatcher[] matchers = new ValueMatcher[matcherFns.size()];
-          for (int i = 0; i < matcherFns.size(); i++) {
-            matchers[i] = matcherFns.get(i).apply(selectorFactory);
+          final ValueMatcher[] matchers = new ValueMatcher[matcherFilters.size()];
+          for (int i = 0; i < matcherFilters.size(); i++) {
+            matchers[i] = matcherFilters.get(i).makeMatcher(selectorFactory);
           }
           ValueMatcher orMatcher = makeMatcher(matchers);
           if (partialIndex != null) {
@@ -184,9 +192,9 @@ public class OrFilter implements BooleanFilter
         @Override
         public VectorValueMatcher vectorMatcher(VectorColumnSelectorFactory selectorFactory)
         {
-          final VectorValueMatcher[] vectorMatchers = new VectorValueMatcher[vectorMatcherFns.size()];
-          for (int i = 0; i < vectorMatcherFns.size(); i++) {
-            vectorMatchers[i] = vectorMatcherFns.get(i).apply(selectorFactory);
+          final VectorValueMatcher[] vectorMatchers = new VectorValueMatcher[matcherFilters.size()];
+          for (int i = 0; i < matcherFilters.size(); i++) {
+            vectorMatchers[i] = matcherFilters.get(i).makeVectorMatcher(selectorFactory);
           }
           return makeVectorMatcher(vectorMatchers);
         }
@@ -195,7 +203,10 @@ public class OrFilter implements BooleanFilter
       matcherBundle = null;
     }
 
-    return new FilterBundle(index, matcherBundle);
+    return new FilterBundle(
+        index == null ? null : new FilterBundle.SimpleIndexBundle(OR_JOINER.join(indexFilters), index),
+        matcherBundle
+    );
   }
 
   @Nullable

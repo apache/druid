@@ -20,7 +20,6 @@
 package org.apache.druid.query.filter;
 
 import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
-import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
@@ -55,27 +54,30 @@ public interface Filter
   )
   {
     final BitmapColumnIndex columnIndex = getBitmapColumnIndex(columnIndexSelector);
-    final ImmutableBitmap index;
+
+    final FilterBundle.IndexBundle indexBundle;
     final boolean needMatcher;
     if (columnIndex != null) {
-      index = bitmapResultFactory.toImmutableBitmap(
-          columnIndex.computeBitmapResult(bitmapResultFactory, selectionRowCount, totalRowCount, includeUnknown)
-      );
-      needMatcher = index == null || !columnIndex.getIndexCapabilities().isExact();
+      T result = columnIndex.computeBitmapResult(bitmapResultFactory, selectionRowCount, totalRowCount, includeUnknown);
+      needMatcher = result == null || !columnIndex.getIndexCapabilities().isExact();
+      indexBundle = result == null
+                    ? null
+                    : new FilterBundle.SimpleIndexBundle(toString(), bitmapResultFactory.toImmutableBitmap(result));
     } else {
-      index = null;
+      indexBundle = null;
       needMatcher = true;
     }
     final FilterBundle.SimpleMatcherBundle matcherBundle;
     if (needMatcher) {
       matcherBundle = new FilterBundle.SimpleMatcherBundle(
+          toString(),
           this::makeMatcher,
           this::makeVectorMatcher
       );
     } else {
       matcherBundle = null;
     }
-    return new FilterBundle(index, matcherBundle);
+    return new FilterBundle(indexBundle, matcherBundle);
   }
 
   /**

@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.DefaultBitmapResultFactory;
@@ -59,6 +60,7 @@ import java.io.IOException;
 
 public class QueryableIndexCursorSequenceBuilder
 {
+  private static final Logger log = new Logger(QueryableIndexCursorSequenceBuilder.class);
   private final QueryableIndex index;
   private final Interval interval;
   private final VirtualColumns virtualColumns;
@@ -119,11 +121,12 @@ public class QueryableIndexCursorSequenceBuilder
         false,
         true
     );
+    log.debug("Filter partitioning:[%s]", filterBundle);
 
     if (filterBundle == null || filterBundle.getIndex() == null) {
       baseOffset = descending ? new SimpleDescendingOffset(numRows) : new SimpleAscendingOffset(numRows);
     } else {
-      baseOffset = BitmapOffset.of(filterBundle.getIndex(), descending, index.getNumRows());
+      baseOffset = BitmapOffset.of(filterBundle.getIndex().getBitmap(), descending, index.getNumRows());
     }
 
     final NumericColumn timestamps = (NumericColumn) columnCache.getColumn(ColumnHolder.TIME_COLUMN_NAME);
@@ -230,7 +233,7 @@ public class QueryableIndexCursorSequenceBuilder
         false,
         false
     );
-
+    log.debug("Filter partitioning:[%s]", filterBundle);
 
     NumericColumn timestamps = null;
 
@@ -258,7 +261,7 @@ public class QueryableIndexCursorSequenceBuilder
     final VectorOffset baseOffset =
         filterBundle == null || filterBundle.getIndex() == null
         ? new NoFilterVectorOffset(vectorSize, startOffset, endOffset)
-        : new BitmapVectorOffset(vectorSize, filterBundle.getIndex(), startOffset, endOffset);
+        : new BitmapVectorOffset(vectorSize, filterBundle.getIndex().getBitmap(), startOffset, endOffset);
 
     // baseColumnSelectorFactory using baseOffset is the column selector for filtering.
     final VectorColumnSelectorFactory baseColumnSelectorFactory = makeVectorColumnSelectorFactoryForOffset(
