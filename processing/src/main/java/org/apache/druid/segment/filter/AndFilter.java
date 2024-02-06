@@ -73,7 +73,7 @@ public class AndFilter implements BooleanFilter
   }
 
   @Override
-  public <T> FilterBundle forCursor(
+  public <T> FilterBundle makeFilterBundle(
       ColumnIndexSelector columnIndexSelector,
       BitmapResultFactory<T> bitmapResultFactory,
       int selectionRowCount,
@@ -89,7 +89,7 @@ public class AndFilter implements BooleanFilter
     ImmutableBitmap index = null;
 
     for (Filter subfilter : filters) {
-      final FilterBundle subBundle = subfilter.forCursor(
+      final FilterBundle subBundle = subfilter.makeFilterBundle(
           columnIndexSelector,
           bitmapResultFactory,
           selectionCount,

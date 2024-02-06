@@ -44,7 +44,7 @@ public interface Filter
    * Filters populating the {@link FilterBundle} container should only set the values which MUST be evaluated by the
    * cursor. See {@link FilterBundle} for additional details.
    */
-  default <T> FilterBundle forCursor(
+  default <T> FilterBundle makeFilterBundle(
       ColumnIndexSelector columnIndexSelector,
       BitmapResultFactory<T> bitmapResultFactory,
       int selectionRowCount,

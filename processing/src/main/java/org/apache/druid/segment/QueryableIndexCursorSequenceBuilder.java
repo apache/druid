@@ -113,7 +113,7 @@ public class QueryableIndexCursorSequenceBuilder
     final BitmapResultFactory<?> bitmapResultFactory = metrics != null
                                                        ? metrics.makeBitmapResultFactory(bitmapFactory)
                                                        : new DefaultBitmapResultFactory(bitmapFactory);
-    FilterBundle filterBundle = filter == null ? null : filter.forCursor(
+    FilterBundle filterBundle = filter == null ? null : filter.makeFilterBundle(
         bitmapIndexSelector,
         bitmapResultFactory,
         numRows,
@@ -225,7 +225,7 @@ public class QueryableIndexCursorSequenceBuilder
     final BitmapResultFactory<?> bitmapResultFactory = metrics != null
                                                        ? metrics.makeBitmapResultFactory(bitmapFactory)
                                                        : new DefaultBitmapResultFactory(bitmapFactory);
-    FilterBundle filterBundle = filter == null ? null : filter.forCursor(
+    FilterBundle filterBundle = filter == null ? null : filter.makeFilterBundle(
         bitmapIndexSelector,
         bitmapResultFactory,
         numRows,

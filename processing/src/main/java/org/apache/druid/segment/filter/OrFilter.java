@@ -75,7 +75,7 @@ public class OrFilter implements BooleanFilter
   }
 
   @Override
-  public <T> FilterBundle forCursor(
+  public <T> FilterBundle makeFilterBundle(
       ColumnIndexSelector columnIndexSelector,
       BitmapResultFactory<T> bitmapResultFactory,
       int selectionRowCount,
