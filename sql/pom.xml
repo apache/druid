@@ -265,8 +265,6 @@
     <dependency>
       <groupId>org.reflections</groupId>
       <artifactId>reflections</artifactId>
-<!--FIXME-->
-      <version>0.9.12</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
