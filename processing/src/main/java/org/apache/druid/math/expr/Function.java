@@ -1186,7 +1186,7 @@ public interface Function extends NamedFunction
         if (x != 0) {
           return ExprEval.ofLong(null);
         }
-        return ExprEval.ofLong(0);
+        return ExprEval.ofLong(NullHandling.defaultLongValue());
       }
       return ExprEval.ofLong(x / y);
     }
