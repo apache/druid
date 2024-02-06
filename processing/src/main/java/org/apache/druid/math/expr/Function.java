@@ -1174,6 +1174,12 @@ public interface Function extends NamedFunction
     }
 
     @Override
+    public boolean canVectorize(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return false;
+    }
+
+    @Override
     protected ExprEval eval(final long x, final long y)
     {
       if (y == 0) {
