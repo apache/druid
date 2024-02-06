@@ -57,6 +57,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 public class QueryableIndexCursorSequenceBuilder
 {
@@ -109,19 +110,7 @@ public class QueryableIndexCursorSequenceBuilder
     );
 
     final int numRows = index.getNumRows();
-    final BitmapFactory bitmapFactory = bitmapIndexSelector.getBitmapFactory();
-    final BitmapResultFactory<?> bitmapResultFactory = metrics != null
-                                                       ? metrics.makeBitmapResultFactory(bitmapFactory)
-                                                       : new DefaultBitmapResultFactory(bitmapFactory);
-    FilterBundle filterBundle = filter == null ? null : filter.makeFilterBundle(
-        bitmapIndexSelector,
-        bitmapResultFactory,
-        numRows,
-        numRows,
-        false,
-        true
-    );
-    log.debug("Filter partitioning:[%s]", filterBundle);
+    final FilterBundle filterBundle = makeFilterBundle(bitmapIndexSelector, numRows, true);
 
     if (filterBundle == null || filterBundle.getIndex() == null) {
       baseOffset = descending ? new SimpleDescendingOffset(numRows) : new SimpleAscendingOffset(numRows);
@@ -221,19 +210,7 @@ public class QueryableIndexCursorSequenceBuilder
     );
 
     final int numRows = index.getNumRows();
-    final BitmapFactory bitmapFactory = bitmapIndexSelector.getBitmapFactory();
-    final BitmapResultFactory<?> bitmapResultFactory = metrics != null
-                                                       ? metrics.makeBitmapResultFactory(bitmapFactory)
-                                                       : new DefaultBitmapResultFactory(bitmapFactory);
-    FilterBundle filterBundle = filter == null ? null : filter.makeFilterBundle(
-        bitmapIndexSelector,
-        bitmapResultFactory,
-        numRows,
-        numRows,
-        false,
-        false
-    );
-    log.debug("Filter partitioning:[%s]", filterBundle);
+    final FilterBundle filterBundle = makeFilterBundle(bitmapIndexSelector, numRows, false);
 
     NumericColumn timestamps = null;
 
@@ -286,6 +263,46 @@ public class QueryableIndexCursorSequenceBuilder
     } else {
       return new QueryableIndexVectorCursor(baseColumnSelectorFactory, baseOffset, vectorSize, closer);
     }
+  }
+
+  @Nullable
+  private FilterBundle makeFilterBundle(
+      ColumnSelectorColumnIndexSelector bitmapIndexSelector,
+      int numRows,
+      boolean allowPartialIndex
+  )
+  {
+    final BitmapFactory bitmapFactory = bitmapIndexSelector.getBitmapFactory();
+    final BitmapResultFactory<?> bitmapResultFactory;
+    if (metrics != null) {
+      bitmapResultFactory = metrics.makeBitmapResultFactory(bitmapFactory);
+      metrics.reportSegmentRows(numRows);
+    } else {
+      bitmapResultFactory = new DefaultBitmapResultFactory(bitmapFactory);
+    }
+    if (filter == null) {
+      return null;
+    }
+    final long bitmapConstructionStartNs = System.nanoTime();
+    final FilterBundle filterBundle = filter.makeFilterBundle(
+        bitmapIndexSelector,
+        bitmapResultFactory,
+        numRows,
+        numRows,
+        false,
+        allowPartialIndex
+    );
+    if (metrics != null) {
+      final long buildTime = System.nanoTime() - bitmapConstructionStartNs;
+      metrics.reportBitmapConstructionTime(buildTime);
+      if (filterBundle.getIndex() != null) {
+        metrics.reportPreFilteredRows(filterBundle.getIndex().getBitmap().size());
+      } else {
+        metrics.reportPreFilteredRows(0);
+      }
+      log.debug("Filter partitioning (%sms):[%s]", TimeUnit.NANOSECONDS.toMillis(buildTime), filterBundle);
+    }
+    return filterBundle;
   }
 
   VectorColumnSelectorFactory makeVectorColumnSelectorFactoryForOffset(

@@ -242,8 +242,10 @@ public interface QueryMetrics<QueryType extends Query<?>>
 
   void segment(String segmentIdentifier);
 
+  @SuppressWarnings({"unreachable", "unused"})
   void preFilters(List<Filter> preFilters);
 
+  @SuppressWarnings({"unreachable", "unused"})
   void postFilters(List<Filter> postFilters);
 
   /**
