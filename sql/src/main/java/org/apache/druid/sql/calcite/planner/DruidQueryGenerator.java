@@ -261,7 +261,7 @@ public class DruidQueryGenerator
     if (node instanceof DruidValues) {
       return processValues((DruidValues) node);
     }
-    if(node instanceof Union) {
+    if (node instanceof Union) {
       return processUnion((Union) node, newInputs, isRoot);
     }
     if (newInputs.size() == 1) {

@@ -30,9 +30,9 @@ import org.apache.calcite.rel.hint.RelHint;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import java.util.List;
 
-public class DruidWindow2 extends Union implements DruidLogicalNode
+public class DruidUnion extends Union implements DruidLogicalNode
 {
-  public DruidWindow2(
+  public DruidUnion(
       RelOptCluster cluster,
       RelTraitSet traits,
       List<RelHint> hints,
@@ -44,7 +44,7 @@ public class DruidWindow2 extends Union implements DruidLogicalNode
   @Override
   public SetOp copy(RelTraitSet traitSet, List<RelNode> inputs, boolean all)
   {
-    return new DruidWindow2(getCluster(), traitSet, hints, inputs, all);
+    return new DruidUnion(getCluster(), traitSet, hints, inputs, all);
   }
 
   @Override

@@ -88,8 +88,7 @@ public @interface NotYetSupported
     MISSING_UNION_CONVERSION(DruidException.class, "Missing conversions? (is|are) LogicalUnion"),
     MISSING_JOIN_CONVERSION(DruidException.class, "Missing conversions? is (Logical)?Join"),
     ROOT_LEVEL_UNION_SUPPORT(DruidException.class, "Root level Union is not supported!"),
-    UNION_WITH_COMPLEX_OPERAND(DruidException.class, "Union operand with non-trivial remapping")
-    ;
+    UNION_WITH_COMPLEX_OPERAND(DruidException.class, "Union operand with non-trivial remapping");
 
     public Class<? extends Throwable> throwableClass;
     public String regex;

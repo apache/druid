@@ -25,7 +25,7 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
 import org.apache.calcite.rel.core.Union;
 import org.apache.druid.sql.calcite.rel.logical.DruidLogicalConvention;
-import org.apache.druid.sql.calcite.rel.logical.DruidWindow2;
+import org.apache.druid.sql.calcite.rel.logical.DruidUnion;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class DruidUnionRule extends ConverterRule
@@ -45,7 +45,7 @@ public class DruidUnionRule extends ConverterRule
     Union w = (Union) rel;
     RelTraitSet newTrait = w.getTraitSet().replace(DruidLogicalConvention.instance());
 
-    return new DruidWindow2(
+    return new DruidUnion(
         w.getCluster(),
         newTrait,
         w.getHints(),
