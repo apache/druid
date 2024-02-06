@@ -27,13 +27,16 @@ import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Sort;
+import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.rel.core.Window;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
@@ -78,11 +81,20 @@ public class DruidQueryGenerator
     return vertex;
   }
 
+  // FIXME
   private Vertex createVertex(RelNode node, Vertex inputVertex)
   {
     Vertex vertex = new Vertex();
     vertex.inputs = ImmutableList.of(inputVertex);
     vertex.partialDruidQuery = PartialDruidQuery.createOuterQuery(inputVertex.partialDruidQuery);
+    return vertex;
+  }
+
+  private Vertex createVertex(PartialDruidQuery partialDruidQuery, List<Vertex> inputs )
+  {
+    Vertex vertex = new Vertex();
+    vertex.inputs = inputs;
+    vertex.partialDruidQuery = partialDruidQuery;
     return vertex;
   }
 
@@ -118,6 +130,23 @@ public class DruidQueryGenerator
       if (inputs.size() == 1) {
         DruidQuery inputQuery = inputs.get(0).buildQuery(false);
         return new InputDesc(new QueryDataSource(inputQuery.getQuery()), inputQuery.getOutputRowSignature());
+      }
+      if (partialDruidQuery.getScan() instanceof Union) {
+        List<DataSource> dataSources = new ArrayList<>();
+        RowSignature signature = null;
+        for (Vertex inputVertex : inputs) {
+          InputDesc unwrapInputDesc = inputVertex.unwrapInputDesc();
+          dataSources.add(unwrapInputDesc.dataSource);
+
+          if (signature == null) {
+            signature = unwrapInputDesc.rowSignature;
+          } else {
+            if (!signature.equals(unwrapInputDesc.rowSignature)) {
+              throw DruidException.defensive("Row signature mismatch FIXME");
+            }
+          }
+        }
+        return new InputDesc(new UnionDataSource(dataSources), signature);
       }
       throw new IllegalStateException();
     }
@@ -182,6 +211,26 @@ public class DruidQueryGenerator
     {
       return partialDruidQuery.canAccept(whereFilter) && class1.isInstance(node);
     }
+
+    /**
+     * Unwraps the input of this vertex - if it doesn't do anything beyond reading its input.
+     *
+     * @throws DruidException if unwrap is not possible.
+     */
+    public InputDesc unwrapInputDesc()
+    {
+      if (partialDruidQuery.stage() == Stage.SCAN) {
+        return getInput();
+      }
+      if (partialDruidQuery.stage() == PartialDruidQuery.Stage.SELECT_PROJECT &&
+          partialDruidQuery.getWhereFilter() == null &&
+          partialDruidQuery.getSelectProject().isMapping()) {
+        DruidQuery q = buildQuery(false);
+        InputDesc origInput = getInput();
+        return new InputDesc(origInput.dataSource, q.getOutputRowSignature());
+      }
+      throw DruidException.defensive("Can't unwrap input of vertex[%s]", partialDruidQuery);
+    }
   }
 
   private Vertex buildVertexFor(RelNode node, boolean isRoot)
@@ -197,10 +246,13 @@ public class DruidQueryGenerator
   private Vertex processNodeWithInputs(RelNode node, List<Vertex> newInputs, boolean isRoot)
   {
     if (node instanceof DruidTableScan) {
-      return visitTableScan((DruidTableScan) node);
+      return processTableScan((DruidTableScan) node);
     }
     if (node instanceof DruidValues) {
-      return visitValues((DruidValues) node);
+      return processValues((DruidValues) node);
+    }
+    if(node instanceof Union) {
+      return processUnion((Union) node, newInputs, isRoot);
     }
     if (newInputs.size() == 1) {
       Vertex inputVertex = newInputs.get(0);
@@ -212,25 +264,36 @@ public class DruidQueryGenerator
       newVertex = inputVertex.mergeIntoDruidQuery(node, false);
       if (newVertex != null) {
         return newVertex;
-      } else {
-        throw new IllegalStateException("should not happend");
       }
     }
-//    if(node instanceof Union) {
-//      return processUnion(node, newInputs, isRoot);
-//    }
-    throw new UnsupportedOperationException();
+    throw DruidException.defensive().build("Unable to process relNode[%s]", node);
   }
 
-//  private Vertex processUnion(RelNode node, List<Vertex> newInputs, boolean isRoot)
-//  {
-//    Preconditions.checkArgument(isRoot, "non-root not supported");
-//
-////    PartialDruidQuery.to
-//
-//  }
+  private Vertex processUnion(Union node, List<Vertex> inputs, boolean isRoot)
+  {
+    Preconditions.checkArgument(!isRoot, "Root level Union is not supported!");
+    Preconditions.checkArgument(inputs.size()>1, "Union needs multiple inputs");
 
-  private Vertex visitValues(DruidValues values)
+//    new DruidUnionDataSourceRule(null);
+//
+//    List<DataSource> dataSources = new ArrayList<>();
+//    for (Vertex inputVertex : inputs) {
+//      dataSources.add(
+//          inputVertex.unwrapInputDesc().dataSource
+//      );
+//    }
+//    UnionDataSource unionDataSource = new UnionDataSource(dataSources);
+//    return PartialDruidQuery.createOuterQuery(null);
+
+return createVertex(
+    PartialDruidQuery.create(node),
+    inputs
+);
+
+//    throw new RuntimeException();
+  }
+
+  private Vertex processValues(DruidValues values)
   {
     final List<ImmutableList<RexLiteral>> tuples = values.getTuples();
     final List<Object[]> objectTuples = tuples
@@ -256,7 +319,7 @@ public class DruidQueryGenerator
 
   }
 
-  private Vertex visitTableScan(DruidTableScan scan)
+  private Vertex processTableScan(DruidTableScan scan)
   {
     if (!(scan instanceof DruidTableScan)) {
       throw new ISE("Planning hasn't converted logical table scan to druid convention");
