@@ -65,6 +65,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
@@ -1128,11 +1129,14 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   {
     final Set<DataSegment> oldSegments = new HashSet<>();
     final Set<DataSegment> newSegments = new HashSet<>();
+    final Map<String, SegmentSchemaMetadata> schemaMetadataMap = new HashMap<>();
+
     reportsMap
         .values()
         .forEach(report -> {
           oldSegments.addAll(report.getOldSegments());
           newSegments.addAll(report.getNewSegments());
+          schemaMetadataMap.putAll(report.getSchemaMetadataMap());
         });
     final boolean storeCompactionState = getContextValue(
         Tasks.STORE_COMPACTION_STATE_KEY,
@@ -1143,7 +1147,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         toolbox,
         ingestionSchema
     );
-
 
     Set<DataSegment> tombStones = Collections.emptySet();
     if (getIngestionMode() == IngestionMode.REPLACE) {
@@ -1171,12 +1174,14 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     final TaskLockType taskLockType = getTaskLockHelper().getLockTypeToUse();
     final TransactionalSegmentPublisher publisher =
         (segmentsToBeOverwritten, segmentsToPublish, commitMetadata, map) -> toolbox.getTaskActionClient().submit(
-            buildPublishAction(segmentsToBeOverwritten, segmentsToPublish, taskLockType)
+            buildPublishAction(segmentsToBeOverwritten, segmentsToPublish, map, taskLockType)
         );
+
+    LOG.info("Schema metadata map is [%s]", schemaMetadataMap);
 
     final boolean published =
         newSegments.isEmpty()
-        || publisher.publishSegments(oldSegments, newSegments, annotateFunction, null, Collections.emptyMap()).isSuccess();
+        || publisher.publishSegments(oldSegments, newSegments, annotateFunction, null, schemaMetadataMap).isSuccess();
 
     if (published) {
       LOG.info("Published [%d] segments", newSegments.size());

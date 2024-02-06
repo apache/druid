@@ -51,7 +51,7 @@ public interface TransactionalSegmentPublisher
   default SegmentPublishResult publishSegments(
       @Nullable Set<DataSegment> segmentsToBeOverwritten,
       Set<DataSegment> segmentsToPublish,
-      Function<Set<DataSegment>, Set<DataSegment>> outputSegmentsAnnotateFunction,
+      Function<Set< DataSegment>, Set<DataSegment>> outputSegmentsAnnotateFunction,
       @Nullable Object commitMetadata,
       Map<String, SegmentSchemaMetadata> segmentsToPublishSchema
   ) throws IOException

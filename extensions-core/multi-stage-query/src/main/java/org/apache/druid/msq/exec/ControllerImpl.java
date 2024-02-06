@@ -1552,9 +1552,9 @@ public class ControllerImpl implements Controller
   )
   {
     if (taskLockType.equals(TaskLockType.REPLACE)) {
-      return SegmentTransactionalReplaceAction.create(segmentsWithTombstones);
+      return SegmentTransactionalReplaceAction.create(segmentsWithTombstones, Collections.emptyMap());
     } else if (taskLockType.equals(TaskLockType.EXCLUSIVE)) {
-      return SegmentTransactionalInsertAction.overwriteAction(null, segmentsWithTombstones);
+      return SegmentTransactionalInsertAction.overwriteAction(null, segmentsWithTombstones, Collections.emptyMap());
     } else {
       throw DruidException.defensive("Invalid lock type [%s] received for overwrite action", taskLockType);
     }

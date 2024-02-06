@@ -338,7 +338,8 @@ public interface IndexerMetadataStorageCoordinator
    */
   SegmentPublishResult commitReplaceSegments(
       Set<DataSegment> replaceSegments,
-      Set<ReplaceTaskLock> locksHeldByReplaceTask
+      Set<ReplaceTaskLock> locksHeldByReplaceTask,
+      Map<String, SegmentSchemaMetadata> segmentSchemaMetadataMap
   );
 
   /**

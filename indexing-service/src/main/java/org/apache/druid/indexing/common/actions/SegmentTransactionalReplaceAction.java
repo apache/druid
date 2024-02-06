@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
@@ -32,6 +33,7 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.SegmentUtils;
+import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 
@@ -52,25 +54,37 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
    */
   private final Set<DataSegment> segments;
 
+  private final Map<String, SegmentSchemaMetadata> schemaMetadataMap;
+
   public static SegmentTransactionalReplaceAction create(
-      Set<DataSegment> segmentsToPublish
+      Set<DataSegment> segmentsToPublish,
+      Map<String, SegmentSchemaMetadata> schemaMetadataMap
   )
   {
-    return new SegmentTransactionalReplaceAction(segmentsToPublish);
+    log.info("Segment Append replace action ");
+    return new SegmentTransactionalReplaceAction(segmentsToPublish, schemaMetadataMap);
   }
 
   @JsonCreator
   private SegmentTransactionalReplaceAction(
-      @JsonProperty("segments") Set<DataSegment> segments
+      @JsonProperty("segments") Set<DataSegment> segments,
+      @JsonProperty("schemaMetadataMap") Map<String, SegmentSchemaMetadata> schemaMetadataMap
   )
   {
     this.segments = ImmutableSet.copyOf(segments);
+    this.schemaMetadataMap = ImmutableMap.copyOf(schemaMetadataMap);
   }
 
   @JsonProperty
   public Set<DataSegment> getSegments()
   {
     return segments;
+  }
+
+  @JsonProperty
+  public Map<String, SegmentSchemaMetadata> getSchemaMetadataMap()
+  {
+    return schemaMetadataMap;
   }
 
   @Override
@@ -93,6 +107,7 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
     final Set<ReplaceTaskLock> replaceLocksForTask
         = toolbox.getTaskLockbox().findReplaceLocksForTask(task);
 
+    log.info("Replace action starting. Commit replace segments, schema map is [%s].", schemaMetadataMap);
     final SegmentPublishResult publishResult;
     try {
       publishResult = toolbox.getTaskLockbox().doInCriticalSection(
@@ -101,7 +116,7 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
           CriticalAction.<SegmentPublishResult>builder()
               .onValidLocks(
                   () -> toolbox.getIndexerMetadataStorageCoordinator()
-                               .commitReplaceSegments(segments, replaceLocksForTask)
+                               .commitReplaceSegments(segments, replaceLocksForTask, schemaMetadataMap)
               )
               .onInvalidLocks(
                   () -> SegmentPublishResult.fail(

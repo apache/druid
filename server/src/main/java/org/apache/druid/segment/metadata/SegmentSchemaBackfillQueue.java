@@ -32,7 +32,6 @@ public class SegmentSchemaBackfillQueue
   private final long executionPeriod;
   private final ScheduledExecutorService executor;
 
-  private final SQLMetadataConnector connector;
   private final SegmentSchemaCache segmentSchemaCache;
   private final SchemaManager schemaManager;
   private final SchemaFingerprintGenerator schemaFingerprintGenerator;

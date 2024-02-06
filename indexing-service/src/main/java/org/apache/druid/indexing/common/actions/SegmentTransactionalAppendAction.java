@@ -52,21 +52,21 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
   private final DataSourceMetadata startMetadata;
   @Nullable
   private final DataSourceMetadata endMetadata;
-  private final Map<String, SegmentSchemaMetadata> segmentsToPublishSchema;
+  private final Map<String, SegmentSchemaMetadata> schemaMetadataMap;
 
-  public static SegmentTransactionalAppendAction forSegments(Set<DataSegment> segments, Map<String, SegmentSchemaMetadata> segmentsToPublishSchema)
+  public static SegmentTransactionalAppendAction forSegments(Set<DataSegment> segments, Map<String, SegmentSchemaMetadata> schemaMetadataMap)
   {
-    return new SegmentTransactionalAppendAction(segments, null, null, segmentsToPublishSchema);
+    return new SegmentTransactionalAppendAction(segments, null, null, schemaMetadataMap);
   }
 
   public static SegmentTransactionalAppendAction forSegmentsAndMetadata(
       Set<DataSegment> segments,
       DataSourceMetadata startMetadata,
       DataSourceMetadata endMetadata,
-      Map<String, SegmentSchemaMetadata> segmentsToPublishSchema
+      Map<String, SegmentSchemaMetadata> schemaMetadataMap
   )
   {
-    return new SegmentTransactionalAppendAction(segments, startMetadata, endMetadata, segmentsToPublishSchema);
+    return new SegmentTransactionalAppendAction(segments, startMetadata, endMetadata, schemaMetadataMap);
   }
 
   @JsonCreator
@@ -74,7 +74,7 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
       @JsonProperty("segments") Set<DataSegment> segments,
       @JsonProperty("startMetadata") @Nullable DataSourceMetadata startMetadata,
       @JsonProperty("endMetadata") @Nullable DataSourceMetadata endMetadata,
-      @JsonProperty("schemaMap") @Nullable Map<String, SegmentSchemaMetadata> schemaMetadataMap
+      @JsonProperty("schemaMetadataMap") @Nullable Map<String, SegmentSchemaMetadata> schemaMetadataMap
   )
   {
     this.segments = segments;
@@ -85,7 +85,7 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
         || (startMetadata != null && endMetadata == null)) {
       throw InvalidInput.exception("startMetadata and endMetadata must either be both null or both non-null.");
     }
-    this.segmentsToPublishSchema = schemaMetadataMap;
+    this.schemaMetadataMap = schemaMetadataMap;
   }
 
   @JsonProperty
@@ -106,6 +106,12 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
   public DataSourceMetadata getEndMetadata()
   {
     return endMetadata;
+  }
+
+  @JsonProperty
+  public Map<String, SegmentSchemaMetadata> getSchemaMetadataMap()
+  {
+    return schemaMetadataMap;
   }
 
   @Override
@@ -141,7 +147,7 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
       publishAction = () -> toolbox.getIndexerMetadataStorageCoordinator().commitAppendSegments(
           segments,
           segmentToReplaceLock,
-          segmentsToPublishSchema
+          schemaMetadataMap
       );
     } else {
       publishAction = () -> toolbox.getIndexerMetadataStorageCoordinator().commitAppendSegmentsAndMetadata(
@@ -149,7 +155,7 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
           segmentToReplaceLock,
           startMetadata,
           endMetadata,
-          segmentsToPublishSchema
+          schemaMetadataMap
       );
     }
 

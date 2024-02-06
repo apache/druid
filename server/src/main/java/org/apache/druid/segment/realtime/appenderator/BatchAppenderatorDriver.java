@@ -28,6 +28,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
 import org.apache.druid.timeline.DataSegment;
@@ -202,7 +203,8 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
       @Nullable final Set<DataSegment> segmentsToBeOverwritten,
       @Nullable final Set<DataSegment> tombstones,
       final TransactionalSegmentPublisher publisher,
-      final Function<Set<DataSegment>, Set<DataSegment>> outputSegmentsAnnotateFunction
+      final Function<Set<DataSegment>, Set<DataSegment>> outputSegmentsAnnotateFunction,
+      Map<String, SegmentSchemaMetadata> segmentSchemaMetadataMap
   )
   {
     final Map<String, SegmentsForSequence> snapshot;
@@ -227,7 +229,7 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
                 )
                 .collect(Collectors.toList()),
             null,
-            Collections.emptyMap()
+            segmentSchemaMetadataMap
         ),
         publisher,
         outputSegmentsAnnotateFunction

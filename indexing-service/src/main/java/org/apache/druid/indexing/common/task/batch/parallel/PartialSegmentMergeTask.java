@@ -47,6 +47,11 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.SchemaPayload;
+import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.timeline.DataSegment;
@@ -181,7 +186,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
     org.apache.commons.io.FileUtils.deleteQuietly(persistDir);
     FileUtils.mkdirp(persistDir);
 
-    final Set<DataSegment> pushedSegments = mergeAndPushSegments(
+    final Pair<Set<DataSegment>, Map<String, SegmentSchemaMetadata>> pushedSegments = mergeAndPushSegments(
         toolbox,
         getDataSchema(),
         getTuningConfig(),
@@ -190,7 +195,9 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
         intervalToUnzippedFiles
     );
 
-    taskClient.report(new PushedSegmentsReport(getId(), Collections.emptySet(), pushedSegments, ImmutableMap.of()));
+    LOG.info("Partial Segment Merge Task Segment is is [%s]", pushedSegments.rhs);
+
+    taskClient.report(new PushedSegmentsReport(getId(), Collections.emptySet(), pushedSegments.lhs, ImmutableMap.of(), pushedSegments.rhs));
 
     return TaskStatus.success(getId());
   }
@@ -233,7 +240,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
    */
   abstract S createShardSpec(TaskToolbox toolbox, Interval interval, int bucketId);
 
-  private Set<DataSegment> mergeAndPushSegments(
+  private Pair<Set<DataSegment>, Map<String, SegmentSchemaMetadata>> mergeAndPushSegments(
       TaskToolbox toolbox,
       DataSchema dataSchema,
       ParallelIndexTuningConfig tuningConfig,
@@ -244,12 +251,15 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
   {
     final DataSegmentPusher segmentPusher = toolbox.getSegmentPusher();
     final Set<DataSegment> pushedSegments = new HashSet<>();
+    final Map<String, SegmentSchemaMetadata> schemaMetadataMap = new HashMap<>();
+
     for (Entry<Interval, Int2ObjectMap<List<File>>> entryPerInterval : intervalToUnzippedFiles.entrySet()) {
       final Interval interval = entryPerInterval.getKey();
       for (Int2ObjectMap.Entry<List<File>> entryPerBucketId : entryPerInterval.getValue().int2ObjectEntrySet()) {
         long startTime = System.nanoTime();
         final int bucketId = entryPerBucketId.getIntKey();
         final List<File> segmentFilesToMerge = entryPerBucketId.getValue();
+
         final Pair<File, List<String>> mergedFileAndDimensionNames = mergeSegmentsInSamePartition(
             dataSchema,
             tuningConfig,
@@ -260,6 +270,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
             persistDir,
             0
         );
+
         long mergeFinishTime = System.nanoTime();
         LOG.info("Merged [%d] input segment(s) for interval [%s] in [%,d]ms.",
                  segmentFilesToMerge.size(),
@@ -296,6 +307,11 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
         );
         long pushFinishTime = System.nanoTime();
         pushedSegments.add(segment);
+
+        schemaMetadataMap.put(
+            segment.getId().toString(),
+            getSegmentSchema(mergedFileAndDimensionNames.lhs, toolbox.getIndexIO()));
+
         LOG.info("Built segment [%s] for interval [%s] (from [%d] input segment(s) in [%,d]ms) of "
             + "size [%d] bytes and pushed ([%,d]ms) to deep storage [%s].",
             segment.getId(),
@@ -308,7 +324,23 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
         );
       }
     }
-    return pushedSegments;
+    return Pair.of(pushedSegments, schemaMetadataMap);
+  }
+
+  private SegmentSchemaMetadata getSegmentSchema(File segmentFile, IndexIO indexIO) throws IOException
+  {
+    final QueryableIndex queryableIndex = indexIO.loadIndex(segmentFile);
+    final StorageAdapter storageAdapter = new QueryableIndexStorageAdapter(queryableIndex);
+    final RowSignature rowSignature = storageAdapter.getRowSignature();
+    final long numRows = storageAdapter.getNumRows();
+    final AggregatorFactory[] aggregatorFactories = storageAdapter.getMetadata().getAggregators();
+    Map<String, AggregatorFactory> aggregatorFactoryMap = new HashMap<>();
+    if (null != aggregatorFactories) {
+      for (AggregatorFactory aggregatorFactory : aggregatorFactories) {
+        aggregatorFactoryMap.put(aggregatorFactory.getName(), aggregatorFactory);
+      }
+    }
+    return new SegmentSchemaMetadata(new SchemaPayload(rowSignature, aggregatorFactoryMap), numRows);
   }
 
   private static Pair<File, List<String>> mergeSegmentsInSamePartition(

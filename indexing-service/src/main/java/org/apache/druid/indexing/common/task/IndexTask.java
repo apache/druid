@@ -919,7 +919,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     final TaskLockType taskLockType = getTaskLockHelper().getLockTypeToUse();
     final TransactionalSegmentPublisher publisher =
         (segmentsToBeOverwritten, segmentsToPublish, commitMetadata, map) -> toolbox.getTaskActionClient().submit(
-            buildPublishAction(segmentsToBeOverwritten, segmentsToPublish, taskLockType)
+            buildPublishAction(segmentsToBeOverwritten, segmentsToPublish, map, taskLockType)
         );
 
     String effectiveId = getContextValue(CompactionTask.CTX_KEY_APPENDERATOR_TRACKING_TASK_ID, null);
@@ -955,6 +955,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           buildSegmentsParseExceptionHandler,
           pushTimeout
       );
+
+      log.info("Schema for pushed segments is [%s]", pushed.getSegmentSchema());
 
       // If we use timeChunk lock, then we don't have to specify what segments will be overwritten because
       // it will just overwrite all segments overlapped with the new segments.
@@ -1003,7 +1005,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
               inputSegments,
               tombStones,
               publisher,
-              annotateFunction
+              annotateFunction,
+              pushed.getSegmentSchema()
           ), pushTimeout);
       appenderator.close();
 

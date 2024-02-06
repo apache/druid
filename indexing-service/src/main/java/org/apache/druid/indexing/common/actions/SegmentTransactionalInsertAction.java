@@ -75,10 +75,11 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
 
   public static SegmentTransactionalInsertAction overwriteAction(
       @Nullable Set<DataSegment> segmentsToBeOverwritten,
-      Set<DataSegment> segmentsToPublish
+      Set<DataSegment> segmentsToPublish,
+      Map<String, SegmentSchemaMetadata> schemaMetadataMap
   )
   {
-    return new SegmentTransactionalInsertAction(segmentsToBeOverwritten, segmentsToPublish, null, null, null, Collections.emptyMap());
+    return new SegmentTransactionalInsertAction(segmentsToBeOverwritten, segmentsToPublish, null, null, null, schemaMetadataMap);
   }
 
   public static SegmentTransactionalInsertAction appendAction(

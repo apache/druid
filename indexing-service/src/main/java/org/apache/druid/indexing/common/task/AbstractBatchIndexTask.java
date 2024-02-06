@@ -64,6 +64,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -409,16 +410,17 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   protected TaskAction<SegmentPublishResult> buildPublishAction(
       Set<DataSegment> segmentsToBeOverwritten,
       Set<DataSegment> segmentsToPublish,
+      Map<String, SegmentSchemaMetadata> schemaMetadataMap,
       TaskLockType lockType
   )
   {
     switch (lockType) {
       case REPLACE:
-        return SegmentTransactionalReplaceAction.create(segmentsToPublish);
+        return SegmentTransactionalReplaceAction.create(segmentsToPublish, schemaMetadataMap);
       case APPEND:
-        return SegmentTransactionalAppendAction.forSegments(segmentsToPublish, Collections.emptyMap());
+        return SegmentTransactionalAppendAction.forSegments(segmentsToPublish, schemaMetadataMap);
       default:
-        return SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToPublish);
+        return SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToPublish, schemaMetadataMap);
     }
   }
 
