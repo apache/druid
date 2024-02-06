@@ -36,13 +36,13 @@ import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 
-public class RowBasedFrameRowAndColumns implements RowsAndColumns
+public class RowBasedFrameRowsAndColumns implements RowsAndColumns
 {
   private final Frame frame;
   private final RowSignature signature;
   private final LinkedHashMap<String, Column> colCache = new LinkedHashMap<>();
 
-  public RowBasedFrameRowAndColumns(Frame frame, RowSignature signature)
+  public RowBasedFrameRowsAndColumns(Frame frame, RowSignature signature)
   {
     this.frame = FrameType.ROW_BASED.ensureType(frame);
     this.signature = signature;

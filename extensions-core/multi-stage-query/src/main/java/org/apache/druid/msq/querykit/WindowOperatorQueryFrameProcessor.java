@@ -46,7 +46,7 @@ import org.apache.druid.query.rowsandcols.ConcatRowsAndColumns;
 import org.apache.druid.query.rowsandcols.LazilyDecoratedRowsAndColumns;
 import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
-import org.apache.druid.query.rowsandcols.concrete.RowBasedFrameRowAndColumns;
+import org.apache.druid.query.rowsandcols.concrete.RowBasedFrameRowsAndColumns;
 import org.apache.druid.query.rowsandcols.semantic.ColumnSelectorFactoryMaker;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -473,7 +473,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
   private void convertRowFrameToRowsAndColumns(Frame frame)
   {
     final RowSignature signature = frameReader.signature();
-    RowBasedFrameRowAndColumns frameRowsAndColumns = new RowBasedFrameRowAndColumns(frame, signature);
+    RowBasedFrameRowsAndColumns frameRowsAndColumns = new RowBasedFrameRowsAndColumns(frame, signature);
     LazilyDecoratedRowsAndColumns ldrc = new LazilyDecoratedRowsAndColumns(
         frameRowsAndColumns,
         null,

@@ -1567,9 +1567,9 @@ public class MSQReplaceTest extends MSQTestBase
                              new Object[]{946771200000L, 2.0f, 4.0, "b"},
                              new Object[]{946771200000L, 2.0f, 4.0, "c"},
                              new Object[]{946857600000L, 3.0f, 3.0, "d"},
-                             new Object[]{978307200000L, 4.0f, 4.0, ""},
-                             new Object[]{978393600000L, 5.0f, 5.0, NullHandling.sqlCompatible() ? null : ""},
-                             new Object[]{978480000000L, 6.0f, 6.0, NullHandling.sqlCompatible() ? null : ""}
+                             new Object[]{978307200000L, 4.0f, 4.0, NullHandling.sqlCompatible() ? "" : null},
+                             new Object[]{978393600000L, 5.0f, 5.0, null},
+                             new Object[]{978480000000L, 6.0f, 6.0, null}
                          )
                      )
                      .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
