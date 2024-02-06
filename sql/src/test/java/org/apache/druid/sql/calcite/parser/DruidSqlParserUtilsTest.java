@@ -422,8 +422,8 @@ public class DruidSqlParserUtilsTest
       args.add(new SqlIdentifier("__time", SqlParserPos.ZERO));
       args.add(SqlLiteral.createCharString("abc", SqlParserPos.ZERO));
       final SqlNode sqlNode = TimeFloorOperatorConversion.SQL_FUNCTION.createCall(args);
-      ParseException e = Assert.assertThrows(
-          ParseException.class,
+      DruidException e = Assert.assertThrows(
+          DruidException.class,
           () -> DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode)
       );
       Assert.assertEquals("'abc' is an invalid period string", e.getMessage());

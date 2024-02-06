@@ -270,7 +270,9 @@ public class DruidSqlParserUtils
         period = new Period(granularityString);
       }
       catch (IllegalArgumentException e) {
-        throw new IAE(StringUtils.format("%s is an invalid period string", granularitySqlNode.toString()));
+        throw InvalidSqlInput.exception(
+            StringUtils.format("%s is an invalid period string", granularitySqlNode.toString()),
+            sqlNode);
       }
       final PeriodGranularity retVal = new PeriodGranularity(period, null, null);
       validateSupportedGranularityForPartitionedBy(sqlNode, retVal);
