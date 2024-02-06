@@ -256,7 +256,7 @@ public class KafkaEmitterConfig
            ", request.topic='" + requestTopic + '\'' +
            ", segmentMetadata.topic='" + segmentMetadataTopic + '\'' +
            ", clusterName='" + clusterName + '\'' +
-           ", extra.dimensions='" + clusterName + '\'' +
+           ", extra.dimensions='" + extraDimensions + '\'' +
            ", producer.config=" + kafkaProducerConfig + '\'' +
            ", producer.hiddenProperties=" + kafkaProducerSecrets +
            '}';

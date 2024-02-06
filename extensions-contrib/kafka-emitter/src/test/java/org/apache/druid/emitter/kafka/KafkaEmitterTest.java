@@ -106,7 +106,7 @@ public class KafkaEmitterTest
     ObjectMapper mapper = new ObjectMapper();
     mapper.registerModule(new JodaModule());
     final KafkaEmitter kafkaEmitter = new KafkaEmitter(
-        new KafkaEmitterConfig("", eventsType, "metrics", "alerts", requestTopic, "metadata", "test-cluster", null, null, null),
+        new KafkaEmitterConfig("", eventsType, "metrics", "alerts", requestTopic, "metadata", "test-cluster", ImmutableMap.of("clusterId", "cluster-101"), null, null),
         mapper
     )
     {
