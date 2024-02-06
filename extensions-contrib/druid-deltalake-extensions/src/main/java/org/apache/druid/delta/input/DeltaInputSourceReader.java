@@ -94,7 +94,7 @@ public class DeltaInputSourceReader implements InputSourceReader
 
   private static class DeltaInputSourceIterator implements CloseableIterator<InputRow>
   {
-    private final Iterator<io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch>> filteredColumnarBatchCloseableIterator;
+    private final Iterator<io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch>> filteredColumnarBatchIterators;
 
     private io.delta.kernel.utils.CloseableIterator<Row> currentBatch = null;
     private final InputRowSchema inputRowSchema;
@@ -104,7 +104,7 @@ public class DeltaInputSourceReader implements InputSourceReader
         InputRowSchema inputRowSchema
     )
     {
-      this.filteredColumnarBatchCloseableIterator = filteredColumnarBatchCloseableIterator;
+      this.filteredColumnarBatchIterators = filteredColumnarBatchCloseableIterator;
       this.inputRowSchema = inputRowSchema;
     }
 
@@ -112,17 +112,19 @@ public class DeltaInputSourceReader implements InputSourceReader
     public boolean hasNext()
     {
       while (currentBatch == null || !currentBatch.hasNext()) {
-        if (!filteredColumnarBatchCloseableIterator.hasNext()) {
+        if (!filteredColumnarBatchIterators.hasNext()) {
           return false; // No more batches or records to read!
         }
 
-        io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch> filteredBatch =
-            filteredColumnarBatchCloseableIterator.next();
+        final io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch> filteredBatchIterator =
+            filteredColumnarBatchIterators.next();
 
-        if (!filteredBatch.hasNext()) {
-          return false;
+        while (filteredBatchIterator.hasNext()) {
+          currentBatch = filteredBatchIterator.next().getRows();
+          if (!currentBatch.hasNext()) {
+            return false;
+          }
         }
-        currentBatch = filteredBatch.next().getRows();
       }
       return true;
     }
@@ -139,8 +141,14 @@ public class DeltaInputSourceReader implements InputSourceReader
     }
 
     @Override
-    public void close()
+    public void close() throws IOException
     {
+      if (currentBatch != null) {
+        currentBatch.close();
+      }
+      if (filteredColumnarBatchIterators.hasNext()) {
+        filteredColumnarBatchIterators.next().close();
+      }
     }
   }
 }
