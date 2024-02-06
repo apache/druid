@@ -86,8 +86,57 @@ public class DruidQueryGenerator
     return vertex;
   }
 
+  interface PhyNode {
+    PartialDruidQuery buildPartialDruidQuery();
+  }
+  abstract class SingleInputNode {
+    PhyNode input;
+    final PartialDruidQuery buildPartialDruidQuery() {
+      PartialDruidQuery buildPartialDruidQuery = input.buildPartialDruidQuery();
+      PartialDruidQuery new1 = buildUpon(buildPartialDruidQuery);
+      if(new1!=null) {
+        return new1;
+      }
+      return buildUpon(encapsulate(buildPartialDruidQuery));
+
+    }
+    abstract PartialDruidQuery buildUpon(PartialDruidQuery pdq);
+  }
+
+  static class TsNode implements PhyNode {
+  }
+  static class ProjectNode implements PhyNode {
+    PartialDruidQuery buildUpon(PartialDruidQuery pdq) {
+
+    }
+  }
+  static class FilterNode implements PhyNode {
+    buildUpon() {
+      if (accepts(node, Stage.WHERE_FILTER, Filter.class)) {
+        PartialDruidQuery newPartialQuery = partialDruidQuery.withWhereFilter((Filter) node);
+        return newVertex(newPartialQuery);
+      }
+      if (accepts(node, Stage.HAVING_FILTER, Filter.class)) {
+        PartialDruidQuery newPartialQuery = partialDruidQuery.withHavingFilter((Filter) node);
+        return newVertex(newPartialQuery);
+      }
+
+    }
+  }
+  static class UnionNode implements PhyNode {
+  }
+
+  class UVertex {
+    RelNode node;
+
+  }
+
+
   class Vertex
   {
+//    List<RelNode> nodes;
+//    List<VertexOperator>
+    //
     PartialDruidQuery partialDruidQuery;
     DruidTable queryTable;
     List<Vertex> inputs;
@@ -195,7 +244,7 @@ public class DruidQueryGenerator
   {
     List<Vertex> newInputs = new ArrayList<>();
     for (RelNode input : node.getInputs()) {
-      newInputs.add(buildVertexFor(input, false));
+      newInputs.add(buildVertexFor(input, false).buildPartialQuery(false));
     }
     Vertex vertex = processNodeWithInputs(node, newInputs, isRoot);
     return vertex;
