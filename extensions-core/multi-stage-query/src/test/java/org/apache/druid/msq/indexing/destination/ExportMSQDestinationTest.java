@@ -19,10 +19,12 @@
 
 package org.apache.druid.msq.indexing.destination;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.sql.http.ResultFormat;
+import org.apache.druid.storage.StorageConfig;
 import org.apache.druid.storage.StorageConnectorModule;
 import org.apache.druid.storage.local.LocalFileExportStorageProvider;
 import org.junit.Assert;
@@ -43,6 +45,10 @@ public class ExportMSQDestinationTest
     ObjectMapper objectMapper = new DefaultObjectMapper();
     new StorageConnectorModule().getJacksonModules().forEach(objectMapper::registerModule);
     String string = objectMapper.writeValueAsString(exportDestination);
+    objectMapper.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(StorageConfig.class, new StorageConfig("/"))
+    );
 
     ExportMSQDestination newDest = objectMapper.readValue(string, ExportMSQDestination.class);
     Assert.assertEquals(exportDestination, newDest);

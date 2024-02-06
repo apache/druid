@@ -19,8 +19,6 @@
 
 package org.apache.druid.storage.local;
 
-import com.fasterxml.jackson.databind.BeanProperty;
-import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
@@ -44,23 +42,10 @@ public class LocalFileExportStorageProviderTest
 
     ObjectMapper objectMapper = new DefaultObjectMapper();
     objectMapper.registerModules(new StorageConnectorModule().getJacksonModules());
-    objectMapper.setInjectableValues(new InjectableValues()
-    {
-      @Override
-      public Object findInjectableValue(
-          Object valueId,
-          DeserializationContext ctxt,
-          BeanProperty forProperty,
-          Object beanInstance
-      )
-      {
-        if (((String) valueId).contains("StorageConfig")) {
-          return new StorageConfig("/");
-        } else {
-          throw new RuntimeException();
-        }
-      }
-    });
+    objectMapper.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(StorageConfig.class, new StorageConfig("/"))
+    );
     byte[] bytes = objectMapper.writeValueAsBytes(exportDestination);
 
     ExportStorageProvider deserialized = objectMapper.readValue(bytes, LocalFileExportStorageProvider.class);
