@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -302,17 +301,5 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     }
 
     return interval.overlap(dataInterval);
-  }
-
-  @VisibleForTesting
-  public ColumnSelectorColumnIndexSelector makeBitmapIndexSelector(
-      final VirtualColumns virtualColumns
-  )
-  {
-    return new ColumnSelectorColumnIndexSelector(
-        index.getBitmapFactoryForDimensions(),
-        virtualColumns,
-        new DeprecatedQueryableIndexColumnSelector(index)
-    );
   }
 }

@@ -232,12 +232,6 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
       this.pattern = Preconditions.checkNotNull(pattern, "pattern");
     }
 
-    @Override
-    public String toString()
-    {
-      return likePattern;
-    }
-
     public static LikeMatcher from(
         final String likePattern,
         @Nullable final Character escapeChar
@@ -422,6 +416,12 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
     public int hashCode()
     {
       return Objects.hash(getSuffixMatch(), getPrefix(), pattern.toString());
+    }
+
+    @Override
+    public String toString()
+    {
+      return likePattern;
     }
   }
 }
