@@ -92,7 +92,7 @@ public class DruidQueryGenerator
     return vertex;
   }
 
-  private Vertex createVertex(PartialDruidQuery partialDruidQuery, List<Vertex> inputs )
+  private Vertex createVertex(PartialDruidQuery partialDruidQuery, List<Vertex> inputs)
   {
     Vertex vertex = new Vertex();
     vertex.inputs = inputs;
@@ -108,8 +108,8 @@ public class DruidQueryGenerator
   private class Vertex
   {
     PartialDruidQuery partialDruidQuery;
-    DruidTable queryTable;
     List<Vertex> inputs;
+    DruidTable queryTable;
     public DruidTable currentTable;
 
     public DruidQuery buildQuery(boolean topLevel)
@@ -282,26 +282,17 @@ public class DruidQueryGenerator
   private Vertex processUnion(Union node, List<Vertex> inputs, boolean isRoot)
   {
     Preconditions.checkArgument(!isRoot, "Root level Union is not supported!");
-    Preconditions.checkArgument(inputs.size()>1, "Union needs multiple inputs");
-
-//    new DruidUnionDataSourceRule(null);
-//
-//    List<DataSource> dataSources = new ArrayList<>();
+    Preconditions.checkArgument(inputs.size() > 1, "Union needs multiple inputs");
     for (Vertex inputVertex : inputs) {
       if (!inputVertex.canUnwrapInput()) {
         throw DruidException
             .defensive("Union operand with non-trivial remapping is not supported [%s]", inputVertex.partialDruidQuery);
       }
     }
-//    UnionDataSource unionDataSource = new UnionDataSource(dataSources);
-//    return PartialDruidQuery.createOuterQuery(null);
-
-return createVertex(
-    PartialDruidQuery.create(node),
-    inputs
-);
-
-//    throw new RuntimeException();
+    return createVertex(
+        PartialDruidQuery.create(node),
+        inputs
+    );
   }
 
   private Vertex processValues(DruidValues values)
