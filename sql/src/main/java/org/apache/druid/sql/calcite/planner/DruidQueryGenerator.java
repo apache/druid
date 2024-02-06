@@ -193,15 +193,11 @@ public class DruidQueryGenerator
 
   protected Vertex buildVertexFor(RelNode node, boolean isRoot)
   {
-    Preconditions.checkArgument(node.getInputs().size() <= 1, "unsupported");
-
     List<Vertex> newInputs = new ArrayList<>();
     for (RelNode input : node.getInputs()) {
       newInputs.add(buildVertexFor(input, false));
     }
-
     Vertex vertex = processNodeWithInputs(node, newInputs, isRoot);
-
     return vertex;
   }
 
@@ -227,8 +223,19 @@ public class DruidQueryGenerator
         throw new IllegalStateException("should not happend");
       }
     }
+//    if(node instanceof Union) {
+//      return processUnion(node, newInputs, isRoot);
+//    }
     throw new UnsupportedOperationException();
   }
+
+//  private Vertex processUnion(RelNode node, List<Vertex> newInputs, boolean isRoot)
+//  {
+//    Preconditions.checkArgument(isRoot, "non-root not supported");
+//
+////    PartialDruidQuery.to
+//
+//  }
 
   private Vertex visitValues(DruidValues values)
   {
