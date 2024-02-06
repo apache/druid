@@ -119,6 +119,13 @@ public class ServerSelector implements Overshadowable<ServerSelector>
     }
   }
 
+  public boolean hasRealtime()
+  {
+    synchronized (this) {
+      return !realtimeServers.isEmpty();
+    }
+  }
+
   public List<DruidServerMetadata> getCandidates(final int numCandidates)
   {
     List<DruidServerMetadata> candidates;

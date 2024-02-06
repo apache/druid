@@ -1586,13 +1586,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
       // Update the set so that subsequent segment IDs use a higher partition number
       allAllocatedIds.add(newId);
-      newSegmentIds.add(
-          DataSegment.builder(segment)
-                     .interval(newId.getInterval())
-                     .version(newId.getVersion())
-                     .shardSpec(newId.getShardSpec())
-                     .build()
-      );
+      final DataSegment upgradedSegment = DataSegment.builder(segment)
+                                                     .interval(newId.getInterval())
+                                                     .version(newId.getVersion())
+                                                     .shardSpec(newId.getShardSpec())
+                                                     .build();
+      upgradedSegment.setPrevSegmentDescriptor(segment.toDescriptor());
+      newSegmentIds.add(upgradedSegment);
     }
 
     return newSegmentIds;
@@ -2093,13 +2093,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
       // Create upgraded segment with the correct interval, version and shard spec
       String lockVersion = upgradeSegmentToLockVersion.get(oldSegment.getId().toString());
-      upgradedSegments.add(
-          DataSegment.builder(oldSegment)
-                     .interval(newInterval)
-                     .version(lockVersion)
-                     .shardSpec(shardSpec)
-                     .build()
-      );
+      final DataSegment upgradedSegment = DataSegment.builder(oldSegment)
+                                                     .interval(newInterval)
+                                                     .version(lockVersion)
+                                                     .shardSpec(shardSpec)
+                                                     .build();
+      upgradedSegment.setPrevSegmentDescriptor(oldSegment.toDescriptor());
+      upgradedSegments.add(upgradedSegment);
     }
 
     return upgradedSegments;

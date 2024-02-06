@@ -111,6 +111,9 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   private final CompactionState lastCompactionState;
   private final long size;
 
+  @Nullable
+  private SegmentDescriptor prevSegmentDescriptor;
+
   @VisibleForTesting
   public DataSegment(
       SegmentId segmentId,
@@ -191,6 +194,37 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     );
   }
 
+  public DataSegment(
+      String dataSource,
+      Interval interval,
+      String version,
+      // use `Map` *NOT* `LoadSpec` because we want to do lazy materialization to prevent dependency pollution
+      Map<String, Object> loadSpec,
+      @Nullable List<String> dimensions,
+      @Nullable List<String> metrics,
+      @Nullable ShardSpec shardSpec,
+      @Nullable CompactionState lastCompactionState,
+      Integer binaryVersion,
+      long size,
+      PruneSpecsHolder pruneSpecsHolder
+  )
+  {
+    this(
+        dataSource,
+        interval,
+        version,
+        loadSpec,
+        dimensions,
+        metrics,
+        shardSpec,
+        lastCompactionState,
+        binaryVersion,
+        size,
+        null,
+        pruneSpecsHolder
+    );
+  }
+
   @JsonCreator
   public DataSegment(
       @JsonProperty("dataSource") String dataSource,
@@ -210,6 +244,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       @JsonProperty("lastCompactionState") @Nullable CompactionState lastCompactionState,
       @JsonProperty("binaryVersion") Integer binaryVersion,
       @JsonProperty("size") long size,
+      @JsonProperty("prevSegmentDescriptor") @Nullable SegmentDescriptor prevSegmentDescriptor,
       @JacksonInject PruneSpecsHolder pruneSpecsHolder
   )
   {
@@ -227,6 +262,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     this.binaryVersion = binaryVersion;
     Preconditions.checkArgument(size >= 0);
     this.size = size;
+    this.prevSegmentDescriptor = prevSegmentDescriptor;
   }
 
   @Nullable
@@ -347,6 +383,12 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     return id;
   }
 
+  @JsonProperty
+  public SegmentDescriptor getPrevSegmentDescriptor()
+  {
+    return this.prevSegmentDescriptor;
+  }
+
   public boolean isTombstone()
   {
     return getShardSpec().getType().equals(ShardSpec.Type.TOMBSTONE);
@@ -441,6 +483,11 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     return builder(this).lastCompactionState(compactionState).build();
   }
 
+  public void setPrevSegmentDescriptor(SegmentDescriptor descriptor)
+  {
+    this.prevSegmentDescriptor = descriptor;
+  }
+
   @Override
   public int compareTo(DataSegment dataSegment)
   {
@@ -474,6 +521,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
            ", shardSpec=" + shardSpec +
            ", lastCompactionState=" + lastCompactionState +
            ", size=" + size +
+           ", prevSegmentDescriptor=" + prevSegmentDescriptor +
            '}';
   }
 
@@ -565,12 +613,6 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       return this;
     }
 
-    public Builder lastCompactionState(CompactionState compactionState)
-    {
-      this.lastCompactionState = compactionState;
-      return this;
-    }
-
     public Builder binaryVersion(Integer binaryVersion)
     {
       this.binaryVersion = binaryVersion;
@@ -580,6 +622,12 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     public Builder size(long size)
     {
       this.size = size;
+      return this;
+    }
+
+    public Builder lastCompactionState(CompactionState compactionState)
+    {
+      this.lastCompactionState = compactionState;
       return this;
     }
 

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
@@ -94,6 +95,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -452,6 +454,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         filterFieldsForPruning = null;
       }
 
+      final Set<SegmentDescriptor> prevSegmentIdDescriptors = new HashSet<>();
       // Filter unneeded chunks based on partition dimension
       for (TimelineObjectHolder<String, ServerSelector> holder : serversLookup) {
         final Set<PartitionChunk<ServerSelector>> filteredChunks;
@@ -468,12 +471,37 @@ public class CachingClusteredClient implements QuerySegmentWalker
         }
         for (PartitionChunk<ServerSelector> chunk : filteredChunks) {
           ServerSelector server = chunk.getObject();
+          prevSegmentIdDescriptors.add(server.getSegment().getPrevSegmentDescriptor());
           final SegmentDescriptor segment = new SegmentDescriptor(
               holder.getInterval(),
               holder.getVersion(),
               chunk.getChunkNumber()
           );
           segments.add(new SegmentServerSelector(server, segment));
+        }
+      }
+      if (specificSegments) {
+        return segments;
+      }
+
+      List<TimelineObjectHolder<String, ServerSelector>> overshadowedHolders =
+          ImmutableList.copyOf(((VersionedIntervalTimeline) timeline).findFullyOvershadowed());
+      List<TimelineObjectHolder<String, ServerSelector>> filteredHolders =
+          toolChest.filterSegments(query, overshadowedHolders);
+      for (TimelineObjectHolder<String, ServerSelector> holder : filteredHolders) {
+        for (PartitionChunk<ServerSelector> chunk : holder.getObject()) {
+          ServerSelector server = chunk.getObject();
+          if (server.hasRealtime()) {
+            final SegmentDescriptor segment = new SegmentDescriptor(
+                holder.getInterval(),
+                holder.getVersion(),
+                chunk.getChunkNumber()
+            );
+            if (prevSegmentIdDescriptors.contains(segment)) {
+              continue;
+            }
+            segments.add(new SegmentServerSelector(server, segment));
+          }
         }
       }
       return segments;

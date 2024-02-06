@@ -118,18 +118,6 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
 
     IndexTaskUtils.emitSegmentPublishMetrics(publishResult, task, toolbox);
 
-    // Upgrade any overlapping pending segments
-    // Do not perform upgrade in the same transaction as replace commit so that
-    // failure to upgrade pending segments does not affect success of the commit
-    if (publishResult.isSuccess() && toolbox.getSupervisorManager() != null) {
-      try {
-        tryUpgradeOverlappingPendingSegments(task, toolbox);
-      }
-      catch (Exception e) {
-        log.error(e, "Error while upgrading pending segments for task[%s]", task.getId());
-      }
-    }
-
     return publishResult;
   }
 
