@@ -41,7 +41,7 @@ public class DruidSqlUnparseTest
     String sqlQuery = "INSERT INTO dst SELECT * FROM foo PARTITIONED BY ALL TIME";
     String prettySqlQuery = "INSERT INTO \"dst\"\n"
                      + "SELECT *\n"
-                     + "    FROM \"foo\" PARTITIONED BY ALL TIME";
+                     + "    FROM \"foo\" PARTITIONED BY ALL";
 
     DruidSqlParserImpl druidSqlParser = createTestParser(sqlQuery);
     DruidSqlInsert druidSqlReplace = (DruidSqlInsert) druidSqlParser.DruidSqlInsertEof();
@@ -58,7 +58,7 @@ public class DruidSqlUnparseTest
                             + "OVERWRITE ALL\n"
                             + "SELECT *\n"
                             + "    FROM \"foo\"\n"
-                            + "PARTITIONED BY ALL TIME "
+                            + "PARTITIONED BY ALL "
                             + "CLUSTERED BY \"dim1\"";
 
     DruidSqlParserImpl druidSqlParser = createTestParser(sqlQuery);

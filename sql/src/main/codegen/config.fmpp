@@ -52,6 +52,7 @@ data: {
       "org.apache.calcite.sql.SqlNode"
       "org.apache.calcite.sql.SqlInsert"
       "org.apache.druid.java.util.common.granularity.Granularity"
+      "org.apache.druid.java.util.common.granularity.GranularityType"
       "org.apache.druid.java.util.common.granularity.Granularities"
       "org.apache.druid.sql.calcite.parser.DruidSqlInsert"
       "org.apache.druid.sql.calcite.parser.DruidSqlParserUtils"

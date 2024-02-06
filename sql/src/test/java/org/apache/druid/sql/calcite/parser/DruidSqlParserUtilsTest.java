@@ -39,6 +39,7 @@ import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.sql.calcite.expression.builtin.TimeFloorOperatorConversion;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
@@ -136,7 +137,6 @@ public class DruidSqlParserUtilsTest
 
     /**
      * Tests clause like "PARTITIONED BY 'day'"
-     * @throws ParseException
      */
     @Test
     public void testConvertSqlNodeToGranularityAsLiteral() throws ParseException
@@ -146,10 +146,13 @@ public class DruidSqlParserUtilsTest
       Assert.assertEquals(expectedGranularity, actualGranularity);
     }
 
+    /**
+     * Tests thet Granularity literal SqlNode can be converted properly to Granularity.
+     */
     @Test
     public void testConvertSqlNodeToGranularityAsSymbol() throws ParseException
     {
-      SqlNode sqlNode = SqlLiteral.createSymbol(DruidSqlParserUtils.GranularityGrain.fromValue(timeUnit.name()), SqlParserPos.ZERO);
+      SqlNode sqlNode = SqlLiteral.createSymbol(GranularityType.valueOf(timeUnit.name()), SqlParserPos.ZERO);
       Granularity actualGranularity = DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode);
       Assert.assertEquals(expectedGranularity, actualGranularity);
     }
@@ -426,7 +429,7 @@ public class DruidSqlParserUtilsTest
           DruidException.class,
           () -> DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode)
       );
-      Assert.assertEquals("'abc' is an invalid period string", e.getMessage());
+      Assert.assertEquals("granularity['abc'] is an invalid period string", e.getMessage());
     }
   }
 

@@ -57,6 +57,7 @@ public abstract class DruidSqlIngest extends SqlInsert
     this.clusteredBy = clusteredBy;
   }
 
+  @Nullable
   public SqlNode getPartitionedBy()
   {
     return partitionedBy;

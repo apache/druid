@@ -21,9 +21,7 @@ package org.apache.druid.sql.calcite.parser;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.sql.SqlAsOperator;
 import org.apache.calcite.sql.SqlBasicCall;
@@ -45,9 +43,7 @@ import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
@@ -75,7 +71,6 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 public class DruidSqlParserUtils
@@ -85,65 +80,13 @@ public class DruidSqlParserUtils
 
   @VisibleForTesting
   public static final String PARTITION_ERROR_MESSAGE =
-      "Invalid granularity [%s] after PARTITIONED BY.  "
-      + "Expected HOUR, DAY, MONTH, YEAR, ALL TIME, FLOOR() or TIME_FLOOR()";
-
-  public enum GranularityGrain
-  {
-    SECOND_GRAIN("SECOND", Granularities.SECOND),
-    MINUTE_GRAIN("MINUTE", Granularities.MINUTE),
-    HOUR_GRAIN("HOUR", Granularities.HOUR),
-    DAY_GRAIN("DAY", Granularities.DAY),
-    WEEK_GRAIN("WEEK", Granularities.WEEK),
-    MONTH_GRAIN("MONTH", Granularities.MONTH),
-    QUARTER_GRAIN("QUARTER", Granularities.QUARTER),
-    YEAR_GRAIN("YEAR", Granularities.YEAR),
-    ALL_GRAIN("ALL", Granularities.ALL),
-    ALL_TIME_GRAIN("ALL TIME", Granularities.ALL);
-
-    static final Map<String, GranularityGrain> VALUE_TO_GRANULARITY_GRAIN = ImmutableMap.of(
-        GranularityGrain.SECOND_GRAIN.value, GranularityGrain.SECOND_GRAIN,
-        GranularityGrain.MINUTE_GRAIN.value, GranularityGrain.MINUTE_GRAIN,
-        GranularityGrain.HOUR_GRAIN.value, GranularityGrain.HOUR_GRAIN,
-        GranularityGrain.DAY_GRAIN.value, GranularityGrain.DAY_GRAIN,
-        GranularityGrain.WEEK_GRAIN.value, GranularityGrain.WEEK_GRAIN,
-        GranularityGrain.MONTH_GRAIN.value, GranularityGrain.MONTH_GRAIN,
-        GranularityGrain.QUARTER_GRAIN.value, GranularityGrain.QUARTER_GRAIN,
-        GranularityGrain.YEAR_GRAIN.value, GranularityGrain.YEAR_GRAIN,
-        GranularityGrain.ALL_GRAIN.value, GranularityGrain.ALL_GRAIN,
-        GranularityGrain.ALL_TIME_GRAIN.value, GranularityGrain.ALL_TIME_GRAIN
-    );
-
-    private final String value;
-    private final Granularity granularity;
-    GranularityGrain(String value, Granularity granularity)
-    {
-      this.value = value;
-      this.granularity = granularity;
-    }
-
-    @Override
-    public String toString()
-    {
-      return value;
-    }
-
-    public String getValue()
-    {
-      return value;
-    }
-
-    public Granularity getGranularity()
-    {
-      return granularity;
-    }
-
-    @Nullable
-    public static GranularityGrain fromValue(String value)
-    {
-      return VALUE_TO_GRANULARITY_GRAIN.get(StringUtils.toUpperCase(value));
-    }
-  }
+      "Invalid granularity[%s] specified after PARTITIONED BY clause.  "
+      + "Expected "
+      + Arrays.toString(GranularityType.values())
+          .replace("[", "")  //remove the right bracket
+          .replace("]", ",")  //remove the left bracket
+          .trim()
+      + " ALL TIME, FLOOR() or TIME_FLOOR()";
 
   /**
    * Delegates to {@code convertSqlNodeToGranularity} and converts the exceptions to {@link ParseException}
@@ -191,8 +134,9 @@ public class DruidSqlParserUtils
    *
    * @return Granularity as intended by the function call
    *
-   * @throws IAE SqlNode cannot be converted a granularity
+   * @throws InvalidSqlInput if SqlNode cannot be converted to a granularity
    */
+  @Nullable
   public static Granularity convertSqlNodeToGranularity(SqlNode sqlNode)
   {
     if (sqlNode == null) {
@@ -200,26 +144,22 @@ public class DruidSqlParserUtils
     }
 
     if (sqlNode instanceof SqlLiteral) {
+      final Granularity retVal;
       SqlLiteral literal = (SqlLiteral) sqlNode;
       if (SqlLiteral.valueMatchesType(literal.getValue(), SqlTypeName.SYMBOL)) {
-        GranularityGrain value = literal.getValueAs(GranularityGrain.class);
+        GranularityType value = literal.getValueAs(GranularityType.class);
         if (value == null) {
-          throw new IAE(PARTITION_ERROR_MESSAGE, "NULL");
+          throw makeInvalidPartitionByException(null);
         }
-        return value.getGranularity();
+        retVal = value.getDefaultGranularity();
       } else if (SqlLiteral.valueMatchesType(literal.getValue(), SqlTypeName.CHAR)) {
-        String value = literal.getValueAs(String.class);
-        if (Strings.isNullOrEmpty(value)) {
-          throw new IAE(PARTITION_ERROR_MESSAGE, value == null ? "NULL" : "'" + value + "'");
-        }
-        GranularityGrain granularityGrain = GranularityGrain.fromValue(value);
-        if (granularityGrain == null) {
-          throw makeInvalidPartitionByException(sqlNode);
-        }
-        return granularityGrain.getGranularity();
+        retVal = convertSqlLiteralCharToGranularity(literal);
       } else {
-        throw new IAE(PARTITION_ERROR_MESSAGE, literal.getValue());
+        throw makeInvalidPartitionByException(literal);
       }
+
+      validateSupportedGranularityForPartitionedBy(sqlNode, retVal);
+      return retVal;
     }
 
     if (!(sqlNode instanceof SqlCall)) {
@@ -271,7 +211,7 @@ public class DruidSqlParserUtils
       }
       catch (IllegalArgumentException e) {
         throw InvalidSqlInput.exception(
-            StringUtils.format("%s is an invalid period string", granularitySqlNode.toString()),
+            StringUtils.format("granularity[%s] is an invalid period string", granularitySqlNode.toString()),
             sqlNode);
       }
       final PeriodGranularity retVal = new PeriodGranularity(period, null, null);
@@ -304,6 +244,17 @@ public class DruidSqlParserUtils
 
     // Shouldn't reach here
     throw makeInvalidPartitionByException(sqlNode);
+  }
+
+  private static Granularity convertSqlLiteralCharToGranularity(SqlLiteral literal)
+  {
+    try {
+      String value = literal.getValueAs(String.class);
+      return Granularity.fromString(value);
+    }
+    catch (IllegalArgumentException e) {
+      throw makeInvalidPartitionByException(literal);
+    }
   }
 
   private static DruidException makeInvalidPartitionByException(SqlNode sqlNode)

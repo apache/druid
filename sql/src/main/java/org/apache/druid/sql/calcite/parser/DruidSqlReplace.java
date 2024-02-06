@@ -142,8 +142,10 @@ public class DruidSqlReplace extends DruidSqlIngest
     getSource().unparse(writer, 0, 0);
     writer.newlineAndIndent();
 
-    writer.keyword("PARTITIONED BY");
-    writer.keyword(partitionedBy.toString());
+    if (getPartitionedBy() != null) {
+      writer.keyword("PARTITIONED BY");
+      writer.keyword(partitionedBy.toString());
+    }
 
     if (getClusteredBy() != null) {
       writer.keyword("CLUSTERED BY");

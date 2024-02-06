@@ -604,10 +604,8 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
       MatcherAssert.assertThat(
           e,
           invalidSqlIs(
-              "Invalid granularity ['invalid_granularity'] after PARTITIONED BY.  "
-              + "Expected HOUR, DAY, MONTH, YEAR, ALL TIME, FLOOR() or TIME_FLOOR()"
-          )
-      );
+              StringUtils.format(DruidSqlParserUtils.PARTITION_ERROR_MESSAGE, "'invalid_granularity'")
+          ));
     }
     didTest = true;
   }

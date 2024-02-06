@@ -90,8 +90,10 @@ public class DruidSqlInsert extends DruidSqlIngest
   public void unparse(SqlWriter writer, int leftPrec, int rightPrec)
   {
     super.unparse(writer, leftPrec, rightPrec);
-    writer.keyword("PARTITIONED BY");
-    writer.keyword(partitionedBy.toString());
+    if (getPartitionedBy() != null) {
+      writer.keyword("PARTITIONED BY");
+      writer.keyword(partitionedBy.toString());
+    }
     if (getClusteredBy() != null) {
       writer.keyword("CLUSTERED BY");
       SqlWriter.Frame frame = writer.startList("", "");
