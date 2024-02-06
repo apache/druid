@@ -34,6 +34,7 @@ import io.delta.kernel.data.Row;
 import io.delta.kernel.defaults.client.DefaultTableClient;
 import io.delta.kernel.internal.InternalScanFileUtils;
 import io.delta.kernel.internal.data.ScanStateRow;
+import io.delta.kernel.internal.util.Utils;
 import io.delta.kernel.types.StructField;
 import io.delta.kernel.types.StructType;
 import io.delta.kernel.utils.CloseableIterator;
@@ -59,8 +60,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import static io.delta.kernel.internal.util.Utils.singletonCloseableIterator;
 
 /**
  * Input source to ingest data from a Delta Lake.
@@ -118,33 +117,19 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
   {
     final TableClient tableClient = createTableClient();
     try {
-      final Row scanState;
       final List<CloseableIterator<FilteredColumnarBatch>> scanFilesData = new ArrayList<>();
 
       if (deltaSplit != null) {
-        scanState = deserialize(tableClient, deltaSplit.getStateRow());
-
+        final Row scanState = deserialize(tableClient, deltaSplit.getStateRow());
         final StructType physicalReadSchema =
             ScanStateRow.getPhysicalDataReadSchema(tableClient, scanState);
 
         for (String file : deltaSplit.getFiles()) {
           final Row scanFile = deserialize(tableClient, file);
-          final FileStatus fileStatus = InternalScanFileUtils.getAddFileStatus(scanFile);
-
-          final CloseableIterator<ColumnarBatch> physicalDataIter = tableClient.getParquetHandler().readParquetFiles(
-              singletonCloseableIterator(fileStatus),
-              physicalReadSchema,
-              Optional.empty()
+          scanFilesData.add(
+              getTransformedDataIterator(tableClient, scanState, scanFile, physicalReadSchema)
           );
-          final CloseableIterator<FilteredColumnarBatch> transformedData = Scan.transformPhysicalData(
-              tableClient,
-              scanState,
-              scanFile,
-              physicalDataIter
-          );
-          scanFilesData.add(transformedData);
         }
-
       } else {
         final Table table = Table.forPath(tableClient, tablePath);
         final Snapshot latestSnapshot = table.getLatestSnapshot(tableClient);
@@ -154,7 +139,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
         );
         final Scan scan = latestSnapshot.getScanBuilder(tableClient).withReadSchema(tableClient, prunedSchema).build();
         final CloseableIterator<FilteredColumnarBatch> scanFilesIter = scan.getScanFiles(tableClient);
-        scanState = scan.getScanState(tableClient);
+        final Row scanState = scan.getScanState(tableClient);
 
         final StructType physicalReadSchema =
             ScanStateRow.getPhysicalDataReadSchema(tableClient, scanState);
@@ -163,25 +148,11 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
           final FilteredColumnarBatch scanFileBatch = scanFilesIter.next();
           final CloseableIterator<Row> scanFileRows = scanFileBatch.getRows();
 
-          while(scanFileRows.hasNext()) {
+          while (scanFileRows.hasNext()) {
             final Row scanFile = scanFileRows.next();
-            final FileStatus fileStatus =
-                InternalScanFileUtils.getAddFileStatus(scanFile);
-
-            final CloseableIterator<ColumnarBatch> physicalDataIter =
-                tableClient.getParquetHandler().readParquetFiles(
-                    singletonCloseableIterator(fileStatus),
-                    physicalReadSchema,
-                    Optional.empty()
-                );
-            final CloseableIterator<FilteredColumnarBatch> dataIter =
-                Scan.transformPhysicalData(
-                    tableClient,
-                    scanState,
-                    scanFile,
-                    physicalDataIter
-                );
-            scanFilesData.add(dataIter);
+            scanFilesData.add(
+                getTransformedDataIterator(tableClient, scanState, scanFile, physicalReadSchema)
+            );
           }
         }
       }
@@ -297,5 +268,32 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
     finally {
       Thread.currentThread().setContextClassLoader(currCtxClassloader);
     }
+  }
+
+  /**
+   * Utility to get the transformed data iterator from the scan file. Code borrowed and modified from
+   * <a href="https://github.com/delta-io/delta/blob/master/kernel/examples/table-reader/src/main/java/io/delta/kernel/examples/SingleThreadedTableReader.java">
+   * SingleThreadedTableReader.java</a>.
+   */
+  private CloseableIterator<FilteredColumnarBatch> getTransformedDataIterator(
+      final TableClient tableClient,
+      final Row scanState,
+      final Row scanFile,
+      final StructType physicalReadSchema
+  ) throws IOException
+  {
+    final FileStatus fileStatus = InternalScanFileUtils.getAddFileStatus(scanFile);
+
+    final CloseableIterator<ColumnarBatch> physicalDataIter = tableClient.getParquetHandler().readParquetFiles(
+        Utils.singletonCloseableIterator(fileStatus),
+        physicalReadSchema,
+        Optional.empty()
+    );
+    return Scan.transformPhysicalData(
+        tableClient,
+        scanState,
+        scanFile,
+        physicalDataIter
+    );
   }
 }
