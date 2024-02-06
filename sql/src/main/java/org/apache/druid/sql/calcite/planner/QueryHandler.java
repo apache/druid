@@ -65,7 +65,6 @@ import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.sql.calcite.planner.DruidQueryGenerator.Vertex;
 import org.apache.druid.sql.calcite.rel.DruidConvention;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.DruidRel;
@@ -561,8 +560,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       );
 
       DruidQueryGenerator shuttle = new DruidQueryGenerator(plannerContext, newRoot,rexBuilder);
-      Vertex vertex = shuttle.buildVertex();
-      DruidQuery baseQuery = vertex.buildQuery(true);
+      DruidQuery baseQuery = shuttle.buildQuery();
       try {
         log.info(
             "final query : " +

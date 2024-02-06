@@ -59,8 +59,24 @@ public class DruidQueryGenerator
   private final RelNode relRoot;
   private final RexBuilder rexBuilder;
 
+  public DruidQueryGenerator(PlannerContext plannerContext, RelNode relRoot, RexBuilder rexBuilder)
+  {
+    this.plannerContext = plannerContext;
+    this.relRoot = relRoot;
+    this.rexBuilder = rexBuilder;
+  }
+
+  public DruidQuery buildQuery()
+  {
+    return buildVertexFor(relRoot, true).buildQuery(true);
+  }
+
+  /**
+   * FIXME
+   */
   static class InputDesc
   {
+
     private DataSource dataSource;
     private RowSignature rowSignature;
 
@@ -71,7 +87,7 @@ public class DruidQueryGenerator
     }
   }
 
-  public Vertex createVertex(RelNode scan)
+  private Vertex createVertex(RelNode scan)
   {
     Vertex vertex = new Vertex();
     vertex.partialDruidQuery = PartialDruidQuery.create(scan);
@@ -86,7 +102,10 @@ public class DruidQueryGenerator
     return vertex;
   }
 
-  class Vertex
+  /**
+   * FIXME
+   */
+  private class Vertex
   {
     PartialDruidQuery partialDruidQuery;
     DruidTable queryTable;
@@ -179,19 +198,7 @@ public class DruidQueryGenerator
     }
   }
 
-  public DruidQueryGenerator(PlannerContext plannerContext, RelNode relRoot, RexBuilder rexBuilder)
-  {
-    this.plannerContext = plannerContext;
-    this.relRoot = relRoot;
-    this.rexBuilder = rexBuilder;
-  }
-
-  public Vertex buildVertex()
-  {
-    return buildVertexFor(relRoot, true);
-  }
-
-  protected Vertex buildVertexFor(RelNode node, boolean isRoot)
+  private Vertex buildVertexFor(RelNode node, boolean isRoot)
   {
     List<Vertex> newInputs = new ArrayList<>();
     for (RelNode input : node.getInputs()) {
