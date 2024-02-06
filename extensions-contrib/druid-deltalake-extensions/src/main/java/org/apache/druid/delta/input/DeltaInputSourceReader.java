@@ -121,8 +121,8 @@ public class DeltaInputSourceReader implements InputSourceReader
 
         while (filteredBatchIterator.hasNext()) {
           currentBatch = filteredBatchIterator.next().getRows();
-          if (!currentBatch.hasNext()) {
-            return false;
+          if (currentBatch.hasNext()) {
+            return true;
           }
         }
       }
@@ -146,6 +146,7 @@ public class DeltaInputSourceReader implements InputSourceReader
       if (currentBatch != null) {
         currentBatch.close();
       }
+
       if (filteredColumnarBatchIterators.hasNext()) {
         filteredColumnarBatchIterators.next().close();
       }
