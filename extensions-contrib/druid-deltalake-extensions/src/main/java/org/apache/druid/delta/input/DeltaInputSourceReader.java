@@ -29,6 +29,7 @@ import org.apache.druid.data.input.InputStats;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
@@ -38,12 +39,13 @@ import java.util.NoSuchElementException;
  */
 public class DeltaInputSourceReader implements InputSourceReader
 {
-  private final io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch> filteredColumnarBatchCloseableIterator;
+  private final Iterator<io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch>> filteredColumnarBatchCloseableIterator;
   private final InputRowSchema inputRowSchema;
 
   public DeltaInputSourceReader(
-      io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch> filteredColumnarBatchCloseableIterator,
+      Iterator<io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch>> filteredColumnarBatchCloseableIterator,
       InputRowSchema inputRowSchema
+
   )
   {
     this.filteredColumnarBatchCloseableIterator = filteredColumnarBatchCloseableIterator;
@@ -92,13 +94,13 @@ public class DeltaInputSourceReader implements InputSourceReader
 
   private static class DeltaInputSourceIterator implements CloseableIterator<InputRow>
   {
-    private final io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch> filteredColumnarBatchCloseableIterator;
+    private final Iterator<io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch>> filteredColumnarBatchCloseableIterator;
 
     private io.delta.kernel.utils.CloseableIterator<Row> currentBatch = null;
     private final InputRowSchema inputRowSchema;
 
     public DeltaInputSourceIterator(
-        io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch> filteredColumnarBatchCloseableIterator,
+        Iterator<io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch>> filteredColumnarBatchCloseableIterator,
         InputRowSchema inputRowSchema
     )
     {
@@ -113,7 +115,15 @@ public class DeltaInputSourceReader implements InputSourceReader
         if (!filteredColumnarBatchCloseableIterator.hasNext()) {
           return false; // No more batches or records to read!
         }
-        currentBatch = filteredColumnarBatchCloseableIterator.next().getRows();
+
+        io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch> filteredBatch =
+            filteredColumnarBatchCloseableIterator.next();
+
+        if (!filteredBatch.hasNext()) {
+          return false;
+        }
+        FilteredColumnarBatch filteredData = filteredBatch.next();
+        currentBatch = filteredData.getRows();
       }
       return true;
     }
@@ -130,9 +140,8 @@ public class DeltaInputSourceReader implements InputSourceReader
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
-      filteredColumnarBatchCloseableIterator.close();
     }
   }
 }

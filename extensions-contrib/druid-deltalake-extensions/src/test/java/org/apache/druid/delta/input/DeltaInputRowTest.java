@@ -22,10 +22,15 @@ package org.apache.druid.delta.input;
 import io.delta.kernel.Scan;
 import io.delta.kernel.TableNotFoundException;
 import io.delta.kernel.client.TableClient;
+import io.delta.kernel.data.ColumnarBatch;
 import io.delta.kernel.data.FilteredColumnarBatch;
 import io.delta.kernel.data.Row;
 import io.delta.kernel.defaults.client.DefaultTableClient;
+import io.delta.kernel.internal.InternalScanFileUtils;
+import io.delta.kernel.internal.data.ScanStateRow;
+import io.delta.kernel.types.StructType;
 import io.delta.kernel.utils.CloseableIterator;
+import io.delta.kernel.utils.FileStatus;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.Assert;
 import org.junit.Test;
@@ -33,6 +38,8 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Optional;
+
+import static io.delta.kernel.internal.util.Utils.singletonCloseableIterator;
 
 public class DeltaInputRowTest
 {
@@ -42,23 +49,35 @@ public class DeltaInputRowTest
     final TableClient tableClient = DefaultTableClient.create(new Configuration());
     final Scan scan = DeltaTestUtils.getScan(tableClient);
 
-    CloseableIterator<FilteredColumnarBatch> scanFileIter = scan.getScanFiles(tableClient);
+    final Row scanState = scan.getScanState(tableClient);
+    final StructType physicalReadSchema = ScanStateRow.getPhysicalDataReadSchema(tableClient, scanState);
+
+    final CloseableIterator<FilteredColumnarBatch> scanFileIter = scan.getScanFiles(tableClient);
     int totalRecordCount = 0;
     while (scanFileIter.hasNext()) {
-      try (CloseableIterator<FilteredColumnarBatch> data =
-               Scan.readData(
-                   tableClient,
-                   scan.getScanState(tableClient),
-                   scanFileIter.next().getRows(),
-                   Optional.empty()
-               )) {
-        while (data.hasNext()) {
-          FilteredColumnarBatch dataReadResult = data.next();
+      final FilteredColumnarBatch scanFileBatch = scanFileIter.next();
+      final CloseableIterator<Row> scanFileRows = scanFileBatch.getRows();
+
+      while (scanFileRows.hasNext()) {
+        final Row scanFile = scanFileRows.next();
+        final FileStatus fileStatus = InternalScanFileUtils.getAddFileStatus(scanFile);
+
+        final CloseableIterator<ColumnarBatch> physicalDataIter = tableClient.getParquetHandler()
+                                                                             .readParquetFiles(
+                                                                                 singletonCloseableIterator(fileStatus),
+                                                                                 physicalReadSchema,
+                                                                                 Optional.empty()
+                                                                             );
+        final CloseableIterator<FilteredColumnarBatch> dataIter = Scan.transformPhysicalData(tableClient,
+                                                                                             scanState,
+                                                                                             scanFile,
+                                                                                             physicalDataIter
+        );
+
+        while (dataIter.hasNext()) {
+          FilteredColumnarBatch dataReadResult = dataIter.next();
           Row next = dataReadResult.getRows().next();
-          DeltaInputRow deltaInputRow = new DeltaInputRow(
-              next,
-              DeltaTestUtils.FULL_SCHEMA
-          );
+          DeltaInputRow deltaInputRow = new DeltaInputRow(next, DeltaTestUtils.FULL_SCHEMA);
           Assert.assertNotNull(deltaInputRow);
           Assert.assertEquals(DeltaTestUtils.DIMENSIONS, deltaInputRow.getDimensions());
 
