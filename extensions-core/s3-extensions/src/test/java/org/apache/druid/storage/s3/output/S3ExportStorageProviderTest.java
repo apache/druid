@@ -37,11 +37,17 @@ public class S3ExportStorageProviderTest
   public void testValidatePaths()
   {
     S3ExportStorageProvider.validateS3Prefix(validPrefixes, "bucket-name", "validPath1/");
+    S3ExportStorageProvider.validateS3Prefix(validPrefixes, "bucket-name", "validPath1");
     S3ExportStorageProvider.validateS3Prefix(validPrefixes, "bucket-name", "validPath1/validSubPath/");
 
     S3ExportStorageProvider.validateS3Prefix(ImmutableList.of("s3://bucket-name"), "bucket-name", "");
     S3ExportStorageProvider.validateS3Prefix(ImmutableList.of("s3://bucket-name"), "bucket-name", "validPath");
+    S3ExportStorageProvider.validateS3Prefix(validPrefixes, "bucket-name", "validPath1/../validPath2/");
 
+    Assert.assertThrows(
+        DruidException.class,
+        () -> S3ExportStorageProvider.validateS3Prefix(validPrefixes, "incorrect-bucket", "validPath1/")
+    );
     Assert.assertThrows(
         DruidException.class,
         () -> S3ExportStorageProvider.validateS3Prefix(validPrefixes, "bucket-name", "invalidPath1")
