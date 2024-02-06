@@ -53,14 +53,14 @@ public class DruidSqlReplace extends DruidSqlIngest
    * errors when the PARTITIONED BY custom clause is not present, and keeps its error separate from JavaCC/Calcite's
    * custom errors which can be cryptic when someone accidentally forgets to explicitly specify the PARTITIONED BY clause
    */
-  public DruidSqlReplace(
+  public static DruidSqlReplace create(
       @Nonnull SqlInsert insertNode,
       @Nullable SqlNode partitionedBy,
       @Nullable SqlNodeList clusteredBy,
       @Nullable SqlNode replaceTimeQuery
   )
   {
-    this(
+    return new DruidSqlReplace(
         insertNode.getParserPosition(),
         (SqlNodeList) insertNode.getOperandList().get(0), // No better getter to extract this
         insertNode.getTargetTable(),

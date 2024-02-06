@@ -112,6 +112,6 @@ SqlNode DruidSqlInsertEof() :
       return insertNode;
     }
     SqlInsert sqlInsert = (SqlInsert) insertNode;
-    return new DruidSqlInsert(sqlInsert, partitionedBy, clusteredBy);
+    return DruidSqlInsert.create(sqlInsert, partitionedBy, clusteredBy);
   }
 }

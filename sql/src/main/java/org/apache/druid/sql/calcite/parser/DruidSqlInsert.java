@@ -41,13 +41,13 @@ public class DruidSqlInsert extends DruidSqlIngest
   // This allows reusing super.unparse
   public static final SqlOperator OPERATOR = SqlInsert.OPERATOR;
 
-  public DruidSqlInsert(
+  public static DruidSqlInsert create(
       @Nonnull SqlInsert insertNode,
       @Nullable SqlNode partitionedBy,
       @Nullable SqlNodeList clusteredBy
   )
   {
-    this(
+    return new DruidSqlInsert(
         insertNode.getParserPosition(),
         (SqlNodeList) insertNode.getOperandList().get(0), // No better getter to extract this
         insertNode.getTargetTable(),

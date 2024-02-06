@@ -82,10 +82,7 @@ public class DruidSqlParserUtils
   public static final String PARTITION_ERROR_MESSAGE =
       "Invalid granularity[%s] specified after PARTITIONED BY clause.  "
       + "Expected "
-      + Arrays.toString(GranularityType.values())
-          .replace("[", "")  //remove the right bracket
-          .replace("]", ",")  //remove the left bracket
-          .trim()
+      + StringUtils.replace(StringUtils.replace(Arrays.toString(GranularityType.values()), "[", ""), "]", ",").trim()
       + " ALL TIME, FLOOR() or TIME_FLOOR()";
 
   /**

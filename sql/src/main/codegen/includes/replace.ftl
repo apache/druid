@@ -71,7 +71,7 @@ SqlNode DruidSqlReplaceEof() :
     <EOF>
     {
         sqlInsert = new SqlInsert(s.end(source), SqlNodeList.EMPTY, table, source, columnList);
-        return new DruidSqlReplace(sqlInsert, partitionedBy, clusteredBy, replaceTimeQuery);
+        return DruidSqlReplace.create(sqlInsert, partitionedBy, clusteredBy, replaceTimeQuery);
     }
 }
 
