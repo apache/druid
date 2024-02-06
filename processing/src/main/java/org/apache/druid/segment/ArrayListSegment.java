@@ -109,7 +109,7 @@ public class ArrayListSegment<RowType> implements Segment
     if (CloseableShapeshifter.class.equals(clazz)) {
       return (T) new MyCloseableShapeshifter();
     }
-    return null;
+    return Segment.super.as(clazz);
   }
 
   @Override
