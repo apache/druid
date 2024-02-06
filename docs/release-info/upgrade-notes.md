@@ -30,7 +30,7 @@ For the full release notes for a specific version, see the [releases page](https
 
 ### Upgrade notes
 
-### Improved concurrent append and replace
+#### Improved concurrent append and replace
 
 You no longer have to manually determine the task lock type for concurrent append and replace with the `taskLockType` task context. Instead, Druid can now determine it automatically for you. You can use the context parameter `"useConcurrentLocks": true` for individual tasks and datasources or enable concurrent append and replace at a cluster level using `druid.indexer.task.default.context`.
 
