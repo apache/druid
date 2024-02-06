@@ -2928,6 +2928,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.ROOT_LEVEL_UNION_SUPPORT)
   @Test
   public void testUnionAllQueries()
   {
@@ -2961,7 +2962,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.MISSING_UNION_CONVERSION)
+  @NotYetSupported(Modes.UNION_WITH_COMPLEX_OPERAND)
   @Test
   public void testUnionAllQueriesWithLimit()
   {
@@ -3445,7 +3446,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @SqlTestFrameworkConfig(numMergeBuffers = 3)
-  @NotYetSupported(Modes.MISSING_UNION_CONVERSION)
   @Test
   public void testExactCountDistinctUsingSubqueryOnUnionAllTables()
   {

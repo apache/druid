@@ -71,7 +71,9 @@ public class DruidQueryGenerator
 
   public DruidQuery buildQuery()
   {
-    return buildVertexFor(relRoot, true).buildQuery(true);
+    Vertex vertex = buildVertexFor(relRoot, true);
+
+    return vertex.buildQuery(true);
   }
 
   private Vertex createVertex(RelNode scan)
@@ -219,17 +221,25 @@ public class DruidQueryGenerator
      */
     public InputDesc unwrapInputDesc()
     {
-      if (partialDruidQuery.stage() == Stage.SCAN) {
-        return getInput();
-      }
-      if (partialDruidQuery.stage() == PartialDruidQuery.Stage.SELECT_PROJECT &&
-          partialDruidQuery.getWhereFilter() == null &&
-          partialDruidQuery.getSelectProject().isMapping()) {
+      if (canUnwrapInput()) {
         DruidQuery q = buildQuery(false);
         InputDesc origInput = getInput();
         return new InputDesc(origInput.dataSource, q.getOutputRowSignature());
       }
       throw DruidException.defensive("Can't unwrap input of vertex[%s]", partialDruidQuery);
+    }
+
+    public boolean canUnwrapInput()
+    {
+      if (partialDruidQuery.stage() == Stage.SCAN) {
+        return true;
+      }
+      if (partialDruidQuery.stage() == PartialDruidQuery.Stage.SELECT_PROJECT &&
+          partialDruidQuery.getWhereFilter() == null &&
+          partialDruidQuery.getSelectProject().isMapping()) {
+        return true;
+      }
+      return false;
     }
   }
 
@@ -277,11 +287,12 @@ public class DruidQueryGenerator
 //    new DruidUnionDataSourceRule(null);
 //
 //    List<DataSource> dataSources = new ArrayList<>();
-//    for (Vertex inputVertex : inputs) {
-//      dataSources.add(
-//          inputVertex.unwrapInputDesc().dataSource
-//      );
-//    }
+    for (Vertex inputVertex : inputs) {
+      if (!inputVertex.canUnwrapInput()) {
+        throw DruidException
+            .defensive("Union operand with non-trivial remapping is not supported [%s]", inputVertex.partialDruidQuery);
+      }
+    }
 //    UnionDataSource unionDataSource = new UnionDataSource(dataSources);
 //    return PartialDruidQuery.createOuterQuery(null);
 
