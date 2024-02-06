@@ -67,7 +67,7 @@ The following table describes how Druid maps SQL types onto native types when ru
 |OTHER|COMPLEX|none|May represent various Druid column types such as hyperUnique, approxHistogram, etc.|
 
 <sup>*</sup> 
-The default value is `NULL` for all types, except in legacy mode (`druid.generic.useDefaultValueForNull = true`) which initialize a default value. 
+The default value is <code>NULL</code> for all types, except in legacy mode (<code>druid.generic.useDefaultValueForNull = true</code>) which initialize a default value. 
 <br /><br />
 For casts between two SQL types, the behavior depends on the runtime type:
 
