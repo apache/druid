@@ -85,7 +85,6 @@ public @interface NotYetSupported
     T_ALLTYPES_ISSUES(AssertionError.class, "(t_alltype|allTypsUniq|fewRowsAllData).parquet.*Verifier.verify"),
     RESULT_MISMATCH(AssertionError.class, "(assertResultsEquals|AssertionError: column content mismatch)"),
     UNSUPPORTED_NULL_ORDERING(DruidException.class, "(A|DE)SCENDING ordering with NULLS (LAST|FIRST)"),
-    MISSING_UNION_CONVERSION(DruidException.class, "Missing conversions? (is|are) LogicalUnion"),
     MISSING_JOIN_CONVERSION(DruidException.class, "Missing conversions? is (Logical)?Join"),
     ROOT_LEVEL_UNION_SUPPORT(DruidException.class, "Root level Union is not supported!"),
     UNION_WITH_COMPLEX_OPERAND(DruidException.class, "Union operand with non-trivial remapping");

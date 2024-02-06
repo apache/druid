@@ -37,7 +37,8 @@ public class DruidUnion extends Union implements DruidLogicalNode
       RelTraitSet traits,
       List<RelHint> hints,
       List<RelNode> inputs,
-      boolean all) {
+      boolean all)
+  {
     super(cluster, traits, hints, inputs, all);
   }
 

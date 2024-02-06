@@ -29,7 +29,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.Assert.assertEquals;
 
 public class NotYetSupportedUsageTest
 {
@@ -45,6 +45,6 @@ public class NotYetSupportedUsageTest
       modes.remove(annot.value());
     }
 
-    assertEquals(Collections.emptySet(), modes, "there are unused modes which should be removed");
+    assertEquals("There are unused modes which should be removed", Collections.emptySet(), modes);
   }
 }
