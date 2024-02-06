@@ -19,8 +19,11 @@
 
 package org.apache.druid.sql.calcite.parser;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.sql.SqlAsOperator;
 import org.apache.calcite.sql.SqlBasicCall;
@@ -42,7 +45,9 @@ import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
@@ -70,12 +75,75 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class DruidSqlParserUtils
 {
   private static final Logger log = new Logger(DruidSqlParserUtils.class);
   public static final String ALL = "all";
+
+  @VisibleForTesting
+  public static final String PARTITION_ERROR_MESSAGE =
+      "Invalid granularity [%s] after PARTITIONED BY.  "
+      + "Expected HOUR, DAY, MONTH, YEAR, ALL TIME, FLOOR() or TIME_FLOOR()";
+
+  public enum GranularityGrain
+  {
+    SECOND_GRAIN("SECOND", Granularities.SECOND),
+    MINUTE_GRAIN("MINUTE", Granularities.MINUTE),
+    HOUR_GRAIN("HOUR", Granularities.HOUR),
+    DAY_GRAIN("DAY", Granularities.DAY),
+    WEEK_GRAIN("WEEK", Granularities.WEEK),
+    MONTH_GRAIN("MONTH", Granularities.MONTH),
+    QUARTER_GRAIN("QUARTER", Granularities.QUARTER),
+    YEAR_GRAIN("YEAR", Granularities.YEAR),
+    ALL_GRAIN("ALL", Granularities.ALL),
+    ALL_TIME_GRAIN("ALL TIME", Granularities.ALL);
+
+    static final Map<String, GranularityGrain> VALUE_TO_GRANULARITY_GRAIN = ImmutableMap.of(
+        GranularityGrain.SECOND_GRAIN.value, GranularityGrain.SECOND_GRAIN,
+        GranularityGrain.MINUTE_GRAIN.value, GranularityGrain.MINUTE_GRAIN,
+        GranularityGrain.HOUR_GRAIN.value, GranularityGrain.HOUR_GRAIN,
+        GranularityGrain.DAY_GRAIN.value, GranularityGrain.DAY_GRAIN,
+        GranularityGrain.WEEK_GRAIN.value, GranularityGrain.WEEK_GRAIN,
+        GranularityGrain.MONTH_GRAIN.value, GranularityGrain.MONTH_GRAIN,
+        GranularityGrain.QUARTER_GRAIN.value, GranularityGrain.QUARTER_GRAIN,
+        GranularityGrain.YEAR_GRAIN.value, GranularityGrain.YEAR_GRAIN,
+        GranularityGrain.ALL_GRAIN.value, GranularityGrain.ALL_GRAIN,
+        GranularityGrain.ALL_TIME_GRAIN.value, GranularityGrain.ALL_TIME_GRAIN
+    );
+
+    private final String value;
+    private final Granularity granularity;
+    GranularityGrain(String value, Granularity granularity)
+    {
+      this.value = value;
+      this.granularity = granularity;
+    }
+
+    @Override
+    public String toString()
+    {
+      return value;
+    }
+
+    public String getValue()
+    {
+      return value;
+    }
+
+    public Granularity getGranularity()
+    {
+      return granularity;
+    }
+
+    @Nullable
+    public static GranularityGrain fromValue(String value)
+    {
+      return VALUE_TO_GRANULARITY_GRAIN.get(StringUtils.toUpperCase(value));
+    }
+  }
 
   /**
    * Delegates to {@code convertSqlNodeToGranularity} and converts the exceptions to {@link ParseException}
@@ -96,28 +164,64 @@ public class DruidSqlParserUtils
   }
 
   /**
-   * This method is used to extract the granularity from a SqlNode representing following function calls:
-   * 1. FLOOR(__time TO TimeUnit)
-   * 2. TIME_FLOOR(__time, 'PT1H')
+   * This method is used to extract the granularity from a SqlNode which represents
+   * the argument to the {@code PARTITIONED BY} clause. The node can be any of the following:
+   * <ul>
+   * <li>A literal with a string that matches the SQL keywords
+   * {@code HOUR, DAY, MONTH, YEAR, ALL [TIME]}</li>
+   * <li>A literal string with a period in ISO 8601 format.</li>
+   * <li>Function call: {@code FLOOR(__time TO TimeUnit)}</li>
+   * <li>Function call: TIME_FLOOR(__time, 'PT1H')}</li>
+   * </ul>
    * <p>
-   * Validation on the sqlNode is contingent to following conditions:
-   * 1. sqlNode is an instance of SqlCall
-   * 2. Operator is either one of TIME_FLOOR or FLOOR
-   * 3. Number of operands in the call are 2
-   * 4. First operand is a SimpleIdentifier representing __time
-   * 5. If operator is TIME_FLOOR, the second argument is a literal, and can be converted to the Granularity class
-   * 6. If operator is FLOOR, the second argument is a TimeUnit, and can be mapped using {@link TimeUnits}
+   * Validation of the function sqlNode is contingent to following conditions:
+   * <ol>
+   * <li>sqlNode is an instance of SqlCall</li>
+   * <li>Operator is either one of TIME_FLOOR or FLOOR</li>
+   * <li>Number of operands in the call are 2</li>
+   * <li>First operand is a SimpleIdentifier representing __time</li>
+   * <li>If operator is TIME_FLOOR, the second argument is a literal, and can be converted to the Granularity class</li>
+   * <li>If operator is FLOOR, the second argument is a TimeUnit, and can be mapped using {@link TimeUnits}</li>
+   * </ol>
    * <p>
-   * Since it is to be used primarily while parsing the SqlNode, it is wrapped in {@code convertSqlNodeToGranularityThrowingParseExceptions}
+   * This method is called during validation, which will catch any errors. It is then called again
+   * during conversion, at which time we assume the node is valid.
    *
    * @param sqlNode SqlNode representing a call to a function
    *
    * @return Granularity as intended by the function call
    *
-   * @throws ParseException SqlNode cannot be converted a granularity
+   * @throws IAE SqlNode cannot be converted a granularity
    */
-  public static Granularity convertSqlNodeToGranularity(SqlNode sqlNode) throws ParseException
+  public static Granularity convertSqlNodeToGranularity(SqlNode sqlNode)
   {
+    if (sqlNode == null) {
+      return null;
+    }
+
+    if (sqlNode instanceof SqlLiteral) {
+      SqlLiteral literal = (SqlLiteral) sqlNode;
+      if (SqlLiteral.valueMatchesType(literal.getValue(), SqlTypeName.SYMBOL)) {
+        GranularityGrain value = literal.getValueAs(GranularityGrain.class);
+        if (value == null) {
+          throw new IAE(PARTITION_ERROR_MESSAGE, "NULL");
+        }
+        return value.getGranularity();
+      } else if (SqlLiteral.valueMatchesType(literal.getValue(), SqlTypeName.CHAR)) {
+        String value = literal.getValueAs(String.class);
+        if (Strings.isNullOrEmpty(value)) {
+          throw new IAE(PARTITION_ERROR_MESSAGE, value == null ? "NULL" : "'" + value + "'");
+        }
+        GranularityGrain granularityGrain = GranularityGrain.fromValue(value);
+        if (granularityGrain == null) {
+          throw makeInvalidPartitionByException(sqlNode);
+        }
+        return granularityGrain.getGranularity();
+      } else {
+        throw new IAE(PARTITION_ERROR_MESSAGE, literal.getValue());
+      }
+    }
+
     if (!(sqlNode instanceof SqlCall)) {
       throw makeInvalidPartitionByException(sqlNode);
     }
@@ -166,7 +270,7 @@ public class DruidSqlParserUtils
         period = new Period(granularityString);
       }
       catch (IllegalArgumentException e) {
-        throw new ParseException(StringUtils.format("%s is an invalid period string", granularitySqlNode.toString()));
+        throw new IAE(StringUtils.format("%s is an invalid period string", granularitySqlNode.toString()));
       }
       final PeriodGranularity retVal = new PeriodGranularity(period, null, null);
       validateSupportedGranularityForPartitionedBy(sqlNode, retVal);
@@ -203,14 +307,13 @@ public class DruidSqlParserUtils
   private static DruidException makeInvalidPartitionByException(SqlNode sqlNode)
   {
     return InvalidSqlInput.exception(
-        "Invalid granularity [%s] after PARTITIONED BY.  "
-        + "Expected HOUR, DAY, MONTH, YEAR, ALL TIME, FLOOR() or TIME_FLOOR()",
+        PARTITION_ERROR_MESSAGE,
         sqlNode
     );
   }
 
   /**
-   * This method validates and converts a {@link SqlNode} representing a query into an optimized list of intervals to
+   * Validates and converts a {@link SqlNode} representing a query into an optimized list of intervals to
    * be used in creating an ingestion spec. If the sqlNode is an SqlLiteral of {@link #ALL}, returns a singleton list of
    * "ALL". Otherwise, it converts and optimizes the query using {@link MoveTimeFiltersToIntervals} into a list of
    * intervals which contain all valid values of time as per the query.
@@ -579,7 +682,10 @@ public class DruidSqlParserUtils
     return String.valueOf(zonedTimestamp.toInstant().toEpochMilli());
   }
 
-  public static void validateSupportedGranularityForPartitionedBy(SqlNode originalNode, Granularity granularity)
+  public static void validateSupportedGranularityForPartitionedBy(
+      @Nullable SqlNode originalNode,
+      Granularity granularity
+  )
   {
     if (!GranularityType.isStandard(granularity)) {
       throw InvalidSqlInput.exception(

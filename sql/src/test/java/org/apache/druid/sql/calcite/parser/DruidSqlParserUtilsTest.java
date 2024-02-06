@@ -133,6 +133,26 @@ public class DruidSqlParserUtilsTest
       Granularity actualGranularity = DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(floorCall);
       Assert.assertEquals(expectedGranularity, actualGranularity);
     }
+
+    /**
+     * Tests clause like "PARTITIONED BY 'day'"
+     * @throws ParseException
+     */
+    @Test
+    public void testConvertSqlNodeToGranularityAsLiteral() throws ParseException
+    {
+      SqlNode sqlNode = SqlLiteral.createCharString(timeUnit.name(), SqlParserPos.ZERO);
+      Granularity actualGranularity = DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode);
+      Assert.assertEquals(expectedGranularity, actualGranularity);
+    }
+
+    @Test
+    public void testConvertSqlNodeToGranularityAsSymbol() throws ParseException
+    {
+      SqlNode sqlNode = SqlLiteral.createSymbol(DruidSqlParserUtils.GranularityGrain.fromValue(timeUnit.name()), SqlParserPos.ZERO);
+      Granularity actualGranularity = DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode);
+      Assert.assertEquals(expectedGranularity, actualGranularity);
+    }
   }
 
   /**
@@ -305,28 +325,6 @@ public class DruidSqlParserUtilsTest
 
   public static class FloorToGranularityConversionErrorsTest
   {
-    /**
-     * Tests clause like "PARTITIONED BY 'day'"
-     */
-    @Test
-    public void testConvertSqlNodeToGranularityWithIncorrectNode()
-    {
-      SqlNode sqlNode = SqlLiteral.createCharString("day", SqlParserPos.ZERO);
-      DruidException e = Assert.assertThrows(
-          DruidException.class,
-          () -> DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode)
-      );
-      MatcherAssert.assertThat(
-          e,
-          DruidExceptionMatcher
-              .invalidSqlInput()
-              .expectMessageIs(
-                  "Invalid granularity ['day'] after PARTITIONED BY.  "
-                  + "Expected HOUR, DAY, MONTH, YEAR, ALL TIME, FLOOR() or TIME_FLOOR()"
-              )
-      );
-    }
-
     /**
      * Tests clause like "PARTITIONED BY CEIL(__time TO DAY)"
      */

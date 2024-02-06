@@ -67,7 +67,7 @@ public abstract class IngestHandler extends QueryHandler
   )
   {
     super(handlerContext, queryNode, explain);
-    this.ingestionGranularity = ingestNode.getPartitionedBy();
+    ingestionGranularity = DruidSqlParserUtils.convertSqlNodeToGranularity(ingestNode.getPartitionedBy());
     handlerContext.hook().captureInsert(ingestNode);
   }
 

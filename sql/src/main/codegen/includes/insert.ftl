@@ -78,13 +78,14 @@ SqlNode DruidSqlInsert() :
 SqlNode DruidSqlInsertEof() :
 {
   SqlNode insertNode;
-  org.apache.druid.java.util.common.Pair<Granularity, String> partitionedBy = new org.apache.druid.java.util.common.Pair(null, null);
+  SqlNode partitionedBy = null;
   SqlNodeList clusteredBy = null;
 }
 {
   insertNode = DruidSqlInsert()
-  // PARTITIONED BY is necessary, but is kept optional in the grammar. It is asserted that it is not missing in the
-  // DruidSqlInsert constructor so that we can return a custom error message.
+  // PARTITIONED BY is necessary. It can be provided either in this statement or in the catalog.
+  // As a result, it is optional in the grammar. It is asserted that it is not missing in the
+  // insert analysis step.
   [
     <PARTITIONED> <BY>
     partitionedBy = PartitionGranularity()
@@ -93,7 +94,7 @@ SqlNode DruidSqlInsertEof() :
     clusteredBy = ClusteredBy()
   ]
   {
-      if (clusteredBy != null && partitionedBy.lhs == null) {
+      if (clusteredBy != null && partitionedBy == null) {
         throw org.apache.druid.sql.calcite.parser.DruidSqlParserUtils.problemParsing(
           "CLUSTERED BY found before PARTITIONED BY, CLUSTERED BY must come after the PARTITIONED BY clause"
         );
@@ -111,6 +112,6 @@ SqlNode DruidSqlInsertEof() :
       return insertNode;
     }
     SqlInsert sqlInsert = (SqlInsert) insertNode;
-    return new DruidSqlInsert(sqlInsert, partitionedBy.lhs, partitionedBy.rhs, clusteredBy);
+    return new DruidSqlInsert(sqlInsert, partitionedBy, clusteredBy);
   }
 }

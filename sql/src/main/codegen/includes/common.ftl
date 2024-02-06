@@ -18,58 +18,52 @@
  */
 
 // Using fully qualified name for Pair class, since Calcite also has a same class name being used in the Parser.jj
-org.apache.druid.java.util.common.Pair<Granularity, String> PartitionGranularity() :
+SqlNode PartitionGranularity() :
 {
   SqlNode e;
   Granularity granularity;
-  String unparseString;
+  SqlNode result;
 }
 {
   (
     <HOUR>
     {
-      granularity = Granularities.HOUR;
-      unparseString = "HOUR";
+      result = SqlLiteral.createSymbol(DruidSqlParserUtils.GranularityGrain.HOUR_GRAIN, getPos());
     }
   |
     <DAY>
     {
-      granularity = Granularities.DAY;
-      unparseString = "DAY";
+      result = SqlLiteral.createSymbol(DruidSqlParserUtils.GranularityGrain.DAY_GRAIN, getPos());
     }
   |
     <MONTH>
     {
-      granularity = Granularities.MONTH;
-      unparseString = "MONTH";
+      result = SqlLiteral.createSymbol(DruidSqlParserUtils.GranularityGrain.MONTH_GRAIN, getPos());
     }
   |
     <YEAR>
     {
-      granularity = Granularities.YEAR;
-      unparseString = "YEAR";
+      result = SqlLiteral.createSymbol(DruidSqlParserUtils.GranularityGrain.YEAR_GRAIN, getPos());
     }
   |
     <ALL>
     {
-      granularity = Granularities.ALL;
-      unparseString = "ALL";
+      result = SqlLiteral.createSymbol(DruidSqlParserUtils.GranularityGrain.ALL_GRAIN, getPos());
     }
     [
       <TIME>
       {
-        unparseString += " TIME";
+        result = SqlLiteral.createSymbol(DruidSqlParserUtils.GranularityGrain.ALL_TIME_GRAIN, getPos());
       }
     ]
   |
     e = Expression(ExprContext.ACCEPT_SUB_QUERY)
     {
-      granularity = DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(e);
-      unparseString = e.toString();
+      result = e;
     }
   )
   {
-    return new org.apache.druid.java.util.common.Pair(granularity, unparseString);
+    return result;
   }
 }
 
