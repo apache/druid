@@ -58,6 +58,7 @@ public class KafkaEmitterConfigTest
         "requestTest",
         "metadataTest",
         "clusterNameTest",
+        null,
         ImmutableMap.<String, String>builder()
                     .put("testKey", "testValue").build(),
         DEFAULT_PRODUCER_SECRETS
@@ -79,6 +80,7 @@ public class KafkaEmitterConfigTest
         null,
         "metadataTest",
         "clusterNameTest",
+        null,
         ImmutableMap.<String, String>builder()
                     .put("testKey", "testValue").build(),
         DEFAULT_PRODUCER_SECRETS
@@ -102,6 +104,7 @@ public class KafkaEmitterConfigTest
         null,
         "metadataTest",
         "clusterNameTest",
+        null,
         ImmutableMap.<String, String>builder()
                     .put("testKey", "testValue").build(),
         DEFAULT_PRODUCER_SECRETS
@@ -117,7 +120,7 @@ public class KafkaEmitterConfigTest
   {
     KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig("localhost:9092", null, "metricTest",
                                                                    "alertTest", null, "metadataTest",
-                                                                   "clusterNameTest", null, null
+                                                                   "clusterNameTest", null, null, null
     );
     try {
       @SuppressWarnings("unused")
