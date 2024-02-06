@@ -54,4 +54,5 @@ public class NamespaceExtractionConfig
     this.numBufferedEntries = numBufferedEntries;
   }
 
+
 }
