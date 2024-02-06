@@ -71,22 +71,6 @@ public class DruidQueryGenerator
     return buildVertexFor(relRoot, true).buildQuery(true);
   }
 
-  /**
-   * FIXME
-   */
-  static class InputDesc
-  {
-
-    private DataSource dataSource;
-    private RowSignature rowSignature;
-
-    public InputDesc(DataSource dataSource, RowSignature rowSignature)
-    {
-      this.dataSource = dataSource;
-      this.rowSignature = rowSignature;
-    }
-  }
-
   private Vertex createVertex(RelNode scan)
   {
     Vertex vertex = new Vertex();
@@ -103,7 +87,9 @@ public class DruidQueryGenerator
   }
 
   /**
-   * FIXME
+   * Execution dag vertex - encapsulates a list of operators.
+   *
+   * Right now it relies on {@link PartialDruidQuery} to hold on to the operators it encapsulates.
    */
   private class Vertex
   {
@@ -270,7 +256,7 @@ public class DruidQueryGenerator
 
   }
 
-  public Vertex visitTableScan(DruidTableScan scan)
+  private Vertex visitTableScan(DruidTableScan scan)
   {
     if (!(scan instanceof DruidTableScan)) {
       throw new ISE("Planning hasn't converted logical table scan to druid convention");
@@ -290,5 +276,20 @@ public class DruidQueryGenerator
       vertex.partialDruidQuery = vertex.partialDruidQuery.withSelectProject(druidTableScan.getProject());
     }
     return vertex;
+  }
+
+  /**
+   * Utility class to return represent input related things.
+   */
+  private static class InputDesc
+  {
+    private DataSource dataSource;
+    private RowSignature rowSignature;
+
+    public InputDesc(DataSource dataSource, RowSignature rowSignature)
+    {
+      this.dataSource = dataSource;
+      this.rowSignature = rowSignature;
+    }
   }
 }

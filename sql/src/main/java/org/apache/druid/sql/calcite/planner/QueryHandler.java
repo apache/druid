@@ -559,8 +559,8 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
           newRoot
       );
 
-      DruidQueryGenerator shuttle = new DruidQueryGenerator(plannerContext, newRoot,rexBuilder);
-      DruidQuery baseQuery = shuttle.buildQuery();
+      DruidQueryGenerator generator = new DruidQueryGenerator(plannerContext, newRoot, rexBuilder);
+      DruidQuery baseQuery = generator.buildQuery();
       try {
         log.info(
             "final query : " +
