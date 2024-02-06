@@ -30,6 +30,12 @@ For the full release notes for a specific version, see the [releases page](https
 
 ### Upgrade notes
 
+### Improved concurrent append and replace
+
+You no longer have to manually determine the task lock type for concurrent append and replace with the `taskLockType` task context. Instead, Druid can now determine it automatically for you. You can use the context parameter `"useConcurrentLocks": true` for individual tasks and datasources or enable concurrent append and replace at a cluster level using `druid.indexer.task.default.context`.
+
+[#15684](https://github.com/apache/druid/pull/15684)
+
 #### Enabled empty ingest queries
 
 The MSQ task engine now allows empty ingest queries by default. For queries that don't generate any output rows, the MSQ task engine reports zero values for `numTotalRows` and `totalSizeInBytes` instead of null. Previously, ingest queries that produced no data would fail with the `InsertCannotBeEmpty` MSQ fault.
@@ -37,6 +43,15 @@ The MSQ task engine now allows empty ingest queries by default. For queries that
 To revert to the original behavior, set the MSQ query parameter `failOnEmptyInsert` to `true`.
 
 [#15495](https://github.com/apache/druid/pull/15495) [#15674](https://github.com/apache/druid/pull/15674)
+
+#### Enabled query request queuing by default when total laning is turned on
+
+When query scheduler threads are less than server HTTP threads, total laning turns on.
+This reserves some HTTP threads for non-query requests such as health checks.
+The total laning previously would reject any query request that exceeds the lane capacity.
+Now, excess requests will instead be queued with a timeout equal to `MIN(Integer.MAX_VALUE, druid.server.http.maxQueryTimeout)`.
+
+[#15440](https://github.com/apache/druid/pull/15440)
 
 #### Changed `equals` filter for native queries
 

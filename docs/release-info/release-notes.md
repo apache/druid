@@ -99,9 +99,15 @@ Druid now supports arbitrary join conditions for INNER join. Any sub-conditions 
 
 [#15302](https://github.com/apache/druid/pull/15302)
 
+### Improved concurrent append and replace
+
+You no longer have to manually determine the task lock type for concurrent append and replace with the `taskLockType` task context. Instead, Druid can now determine it automatically for you. You can use the context parameter `"useConcurrentLocks": true` for individual tasks and datasources or enable concurrent append and replace at a cluster level using `druid.indexer.task.default.context`.
+
+[#15684](https://github.com/apache/druid/pull/15684)
+
 ### First and last aggregators for double, float, and long data types
 
-Druid 29.0.0 adds support for first and last aggregators for the double, float, and long types in an ingestion spec and MSQ queries. Previously, they were only supported for native queries. For more information, see [First and last aggregators](https://druid.apache.org/docs/latest/querying/aggregations/).
+Druid now supports for first and last aggregators for the double, float, and long types in an ingestion spec and MSQ queries. Previously, they were only supported for native queries. For more information, see [First and last aggregators](https://druid.apache.org/docs/latest/querying/aggregations/).
 
 [#14462](https://github.com/apache/druid/pull/14462)
 
@@ -181,7 +187,6 @@ The **Load query detail archive** now supports loading queries by selecting a JS
 #### Improved time chart brush and added auto-granularity
 
 * Added the notion of timezone in the explore view.
-* Added `chronoshift` as a dependency.
 * Time chart is now able to automatically pick a granularity if "auto" is selected (which is the default) based on the current time filter extent.
 * Brush is now automatically enabled in the time chart.
 * Brush interval snaps to the selected time granularity.
@@ -191,7 +196,7 @@ The **Load query detail archive** now supports loading queries by selecting a JS
 
 #### Toggle to fail on empty inserts
 
-Added a new toggle to fail when an ingestion query produces no data.
+Added a new toggle that controls whether an ingestion fails if the ingestion query produces no data.
 
 [#15627](https://github.com/apache/druid/pull/15627)
 
@@ -209,7 +214,7 @@ Added a new toggle to fail when an ingestion query produces no data.
 
 #### Added system fields to input sources
 
-Added the option to return system fields when defining an input source. This allows for ingestion of metadata such as an S3 object's URI.
+Added the option to return system fields when defining an input source. This allows for ingestion of metadata, such as an S3 object's URI.
 
 [#15276](https://github.com/apache/druid/pull/15276)
 
@@ -228,7 +233,7 @@ Columns ingested with the auto column indexer that contain only empty or null co
 
 #### Enabled skipping compaction for datasources with partial-eternity segments
 
-Druid now skips compaction for datasources with segments that have their interval start or end coinciding with Eternity interval end-points.
+Druid now skips compaction for datasources with segments that have an interval start or end which coincides with Eternity interval end-points.
 
 [#15542](https://github.com/apache/druid/pull/15542)
 
@@ -241,7 +246,6 @@ Improved segment allocation as follows:
 
 #### Other ingestion improvements
 
-* Added a context parameter `useConcurrentLocks` for concurrent locks. You can set it for an individual task or at a cluster level using `druid.indexer.task.default.context` [#15684](https://github.com/apache/druid/pull/15684)
 * Added a default implementation for the `evalDimension` method in the RowFunction interface [#15452](https://github.com/apache/druid/pull/15452)
 * Added a configurable delay to the Peon service that determines how long a Peon should wait before dropping a segment [#15373](https://github.com/apache/druid/pull/15373)
 * Improved metadata store updates by attempting to retry updates rather than failing [#15141](https://github.com/apache/druid/pull/15141)
@@ -280,19 +284,19 @@ specifies an extern input with native druid input types `ARRAY<STRING>`, `ARRAY<
 
 #### Improved tombstone generation to honor granularity specified in a `REPLACE` query
 
-MSQ `REPLACE` queries now generate tombstone segments honoring the segment granularity specified in the query, rather than generating irregular tombstones. If a query generates more than 5000 tombstones, Druid returns an MSQ `TooManyBucketsFault` error, similar to the behavior with data segments.
+MSQ `REPLACE` queries now generate tombstone segments honoring the segment granularity specified in the query rather than generating irregular tombstones. If a query generates more than 5000 tombstones, Druid returns an MSQ `TooManyBucketsFault` error, similar to the behavior with data segments.
 
 [#15243](https://github.com/apache/druid/pull/15243)
 
 #### Improved hash joins using filters
 
-Improved consistency of JOIN behavior for queries using either the native or MSQ engine to prune based on base (left-hand side) columns only.
+Improved consistency of JOIN behavior for queries using either the native or MSQ task engine to prune based on base (left-hand side) columns only.
 
 [#15299](https://github.com/apache/druid/pull/15299)
 
 #### Configurable page size limit
 
-You can now limit the pages size for results of SELECT queries run using the MSQ engine. See `rowsPerPage` in the [SQL-based ingestion reference](https://druid.apache.org/docs/latest/multi-stage-query/reference).
+You can now limit the pages size for results of SELECT queries run using the MSQ task engine. See `rowsPerPage` in the [SQL-based ingestion reference](https://druid.apache.org/docs/latest/multi-stage-query/reference).
 
 ### Streaming ingestion
 
@@ -519,6 +523,12 @@ Added a parameter `snapshotTime` to the iceberg input source spec that allows th
 
 ### Upgrade notes
 
+### Improved concurrent append and replace
+
+You no longer have to manually determine the task lock type for concurrent append and replace with the `taskLockType` task context. Instead, Druid can now determine it automatically for you. You can use the context parameter `"useConcurrentLocks": true` for individual tasks and datasources or enable concurrent append and replace at a cluster level using `druid.indexer.task.default.context`.
+
+[#15684](https://github.com/apache/druid/pull/15684)
+
 #### Enabled empty ingest queries
 
 The MSQ task engine now allows empty ingest queries by default. For queries that don't generate any output rows, the MSQ task engine reports zero values for `numTotalRows` and `totalSizeInBytes` instead of null. Previously, ingest queries that produced no data would fail with the `InsertCannotBeEmpty` MSQ fault.
@@ -526,6 +536,15 @@ The MSQ task engine now allows empty ingest queries by default. For queries that
 To revert to the original behavior, set the MSQ query parameter `failOnEmptyInsert` to `true`.
 
 [#15495](https://github.com/apache/druid/pull/15495) [#15674](https://github.com/apache/druid/pull/15674)
+
+#### Enabled query request queuing by default when total laning is turned on
+
+When query scheduler threads are less than server HTTP threads, total laning turns on.
+This reserves some HTTP threads for non-query requests such as health checks.
+The total laning previously would reject any query request that exceeds the lane capacity.
+Now, excess requests will instead be queued with a timeout equal to `MIN(Integer.MAX_VALUE, druid.server.http.maxQueryTimeout)`.
+
+[#15440](https://github.com/apache/druid/pull/15440)
 
 #### Changed `equals` filter for native queries
 
@@ -578,6 +597,7 @@ The web console now logs request errors in end-to-end tests to help with debuggi
 
 The following dependencies have been updated:
 
+* Added `chronoshift` as a dependency [#14990](https://github.com/apache/druid/pull/14990)
 * Added `gson` to `pom.xml` [#15488](https://github.com/apache/druid/pull/15488/)
 * Updated Confluent's dependencies to 6.2.12 [#15441](https://github.com/apache/druid/pull/15441)
 * Excluded `jackson-jaxrs` from `ranger-plugin-common`, which isn't required, to address CVEs [#15481](https://github.com/apache/druid/pull/15481)
