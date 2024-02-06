@@ -306,8 +306,7 @@ Kinesis stream.
 
 ## Deaggregation
 
-The Kinesis indexing service supports de-aggregation of multiple rows packed into a single record by the Kinesis
-Producer Library's aggregate method for more efficient data transfer.
+The Kinesis indexing service supports de-aggregation of multiple rows stored within a single [Kinesis Data Streams](https://docs.aws.amazon.com/streams/latest/dev/introduction.html) record for more efficient data transfer.
 
 To enable this feature, set `deaggregate` to true in your `ioConfig` when submitting a supervisor spec.
 

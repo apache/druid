@@ -213,8 +213,8 @@ For configuration properties specific to Apache Kafka and Amazon Kinesis, see [K
 
 ## Start a supervisor
 
-Druid starts a new supervisor for a datasource when you create a supervisor spec.
-You can create a supervisor spec using the [Load Data](../operations/web-console.md#data-loader) UI in the Druid web console or by calling the [Supervisor API](../api-reference/supervisor-api.md).
+Druid starts a new supervisor when you submit a supervisor spec.
+You can submit the supervisor spec using the Druid console [data loader](../operations/web-console.md#data-loader) or by calling the [Supervisor API](../api-reference/supervisor-api.md).
 
 The following screenshot shows the [Supervisors](../operations/web-console.md#supervisors) view of the Druid web console for a cluster with two supervisors:
 
