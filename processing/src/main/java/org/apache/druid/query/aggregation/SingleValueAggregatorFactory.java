@@ -48,15 +48,15 @@ import java.util.Objects;
 public class SingleValueAggregatorFactory extends AggregatorFactory
 {
   @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @JsonInclude
   private final String name;
   @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @JsonInclude
   private final String fieldName;
   @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @JsonInclude
   private final ColumnType columnType;
-  public static final int DEFAULT_MAX_BUFFER_SIZE = 1025;
+  public static final int DEFAULT_MAX_VALUE_SIZE = 1024;
 
   @JsonCreator
   public SingleValueAggregatorFactory(
@@ -65,12 +65,9 @@ public class SingleValueAggregatorFactory extends AggregatorFactory
       @JsonProperty("columnType") final ColumnType columnType
   )
   {
-    Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
-    Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
-
-    this.name = name;
-    this.fieldName = fieldName;
-    this.columnType = columnType;
+    this.name = Preconditions.checkNotNull(name, "name");
+    this.fieldName = Preconditions.checkNotNull(fieldName, "fieldName");
+    this.columnType = Preconditions.checkNotNull(columnType, "columnType");
   }
 
   @Override
@@ -85,6 +82,7 @@ public class SingleValueAggregatorFactory extends AggregatorFactory
   {
     ColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
     ColumnCapabilities columnCapabilities = metricFactory.getColumnCapabilities(fieldName);
+    Preconditions.checkNotNull(columnCapabilities, "Unable to get the capabilities of [%s]", fieldName);
     ColumnType columnType = new ColumnType(columnCapabilities.getType(), null, null);
     return new SingleValueBufferAggregator(selector, columnType);
   }
@@ -95,6 +93,11 @@ public class SingleValueAggregatorFactory extends AggregatorFactory
     throw DruidException.defensive("Single Value Aggregator would not have more than one row to compare");
   }
 
+  /**
+   * Combine method would never be invoked as the broker sends the subquery to multiple segments
+   * and gather the results to a single value on which the single value aggregator is applied.
+   * Though getCombiningFactory would be invoked for understanding the fieldname.
+   */
   @Override
   @Nullable
   public Object combine(@Nullable Object lhs, @Nullable Object rhs)
@@ -155,10 +158,8 @@ public class SingleValueAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    if (columnType.isNumeric()) {
-      return Byte.BYTES + Double.BYTES;
-    }
-    return DEFAULT_MAX_BUFFER_SIZE;
+    // keeping 8 bytes for all numerics to make code look simple. This would store only a single value.
+    return Byte.BYTES + (columnType.isNumeric() ? Double.BYTES : DEFAULT_MAX_VALUE_SIZE);
   }
 
   @Override

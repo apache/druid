@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation;
 
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.segment.ColumnValueSelector;
 
@@ -30,8 +29,7 @@ public class SingleValueAggregator implements Aggregator
 {
   final ColumnValueSelector selector;
   @Nullable
-  Object value;
-  private boolean isNullResult = true;
+  private Object value;
   private boolean isAggregateInvoked = false;
 
   public SingleValueAggregator(ColumnValueSelector selector)
@@ -45,12 +43,7 @@ public class SingleValueAggregator implements Aggregator
     if (isAggregateInvoked) {
       throw InvalidInput.exception("Subquery expression returned more than one row");
     }
-    Object selectorObject = selector.getObject();
-    boolean isNotNull = (selectorObject != null);
-    if (isNotNull) {
-      isNullResult = false;
-      value = selectorObject;
-    }
+    value = selector.getObject();
     isAggregateInvoked = true;
   }
 
@@ -63,25 +56,33 @@ public class SingleValueAggregator implements Aggregator
   @Override
   public float getFloat()
   {
-    return isNullResult ? NullHandling.ZERO_FLOAT : ((Number) value).floatValue();
+    assert validObjectValue();
+    return isNull() ? NullHandling.ZERO_FLOAT : ((Number) value).floatValue();
   }
 
   @Override
   public long getLong()
   {
-    return isNullResult ? NullHandling.ZERO_LONG : ((Number) value).longValue();
+    assert validObjectValue();
+    return isNull() ? NullHandling.ZERO_LONG : ((Number) value).longValue();
   }
 
   @Override
   public double getDouble()
   {
-    return isNullResult ? NullHandling.ZERO_DOUBLE : ((Number) value).doubleValue();
+    assert validObjectValue();
+    return isNull() ? NullHandling.ZERO_DOUBLE : ((Number) value).doubleValue();
   }
 
   @Override
   public boolean isNull()
   {
-    return isNullResult;
+    return NullHandling.sqlCompatible() && value == null;
+  }
+
+  private boolean validObjectValue()
+  {
+    return NullHandling.replaceWithDefault() || !isNull();
   }
 
   @Override
@@ -95,6 +96,8 @@ public class SingleValueAggregator implements Aggregator
   {
     return "SingleValueAggregator{" +
            "selector=" + selector +
+           ", value=" + value +
+           ", isAggregateInvoked=" + isAggregateInvoked +
            '}';
   }
 }

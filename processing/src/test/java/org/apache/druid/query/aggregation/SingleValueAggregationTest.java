@@ -99,7 +99,11 @@ public class SingleValueAggregationTest extends InitializedNullHandlingTest
     Assert.assertThrows(DruidException.class, () -> longAggFactory.getComparator());
 
     Aggregator agg = longAggFactory.factorize(colSelectorFactoryLong);
-    Assert.assertEquals(0L, agg.getLong());
+    if (NullHandling.replaceWithDefault()) {
+      Assert.assertEquals(0L, agg.getLong());
+    } else {
+      Assert.assertThrows(AssertionError.class, () -> agg.getLong());
+    }
 
     aggregate(selectorLong, agg);
     Assert.assertEquals(longValues[0], ((Long) agg.get()).longValue());
@@ -113,7 +117,7 @@ public class SingleValueAggregationTest extends InitializedNullHandlingTest
   {
     BufferAggregator agg = longAggFactory.factorizeBuffered(colSelectorFactoryLong);
 
-    ByteBuffer buffer = ByteBuffer.wrap(new byte[SingleValueAggregatorFactory.DEFAULT_MAX_BUFFER_SIZE + Byte.BYTES]);
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[SingleValueAggregatorFactory.DEFAULT_MAX_VALUE_SIZE + Byte.BYTES]);
     agg.init(buffer, 0);
 
     aggregate(selectorLong, agg, buffer, 0);
@@ -146,7 +150,7 @@ public class SingleValueAggregationTest extends InitializedNullHandlingTest
   {
     BufferAggregator agg = doubleAggFactory.factorizeBuffered(colSelectorFactoryDouble);
 
-    ByteBuffer buffer = ByteBuffer.wrap(new byte[SingleValueAggregatorFactory.DEFAULT_MAX_BUFFER_SIZE + Byte.BYTES]);
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[SingleValueAggregatorFactory.DEFAULT_MAX_VALUE_SIZE + Byte.BYTES]);
     agg.init(buffer, 0);
 
     aggregate(selectorDouble, agg, buffer, 0);
@@ -174,7 +178,7 @@ public class SingleValueAggregationTest extends InitializedNullHandlingTest
   {
     BufferAggregator agg = stringAggFactory.factorizeBuffered(colSelectorFactoryString);
 
-    ByteBuffer buffer = ByteBuffer.wrap(new byte[SingleValueAggregatorFactory.DEFAULT_MAX_BUFFER_SIZE + Byte.BYTES]);
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[SingleValueAggregatorFactory.DEFAULT_MAX_VALUE_SIZE + Byte.BYTES]);
     agg.init(buffer, 0);
 
     aggregate(selectorString, agg, buffer, 0);

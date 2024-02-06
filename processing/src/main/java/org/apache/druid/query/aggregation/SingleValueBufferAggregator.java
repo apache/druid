@@ -22,7 +22,6 @@ package org.apache.druid.query.aggregation;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.NullableTypeStrategy;
@@ -33,12 +32,12 @@ import java.nio.ByteBuffer;
 
 public class SingleValueBufferAggregator implements BufferAggregator
 {
-  final ColumnValueSelector selector;
-  final ColumnType columnType;
-  final NullableTypeStrategy typeStrategy;
+  private final ColumnValueSelector selector;
+  private final ColumnType columnType;
+  private final NullableTypeStrategy typeStrategy;
   private boolean isAggregateInvoked = false;
 
-  SingleValueBufferAggregator(ColumnValueSelector selector, ColumnType columnType)
+  public SingleValueBufferAggregator(ColumnValueSelector selector, ColumnType columnType)
   {
     this.selector = selector;
     this.columnType = columnType;
@@ -58,16 +57,19 @@ public class SingleValueBufferAggregator implements BufferAggregator
       throw InvalidInput.exception("Subquery expression returned more than one row");
     }
 
+    int maxbufferSixe = Byte.BYTES + (columnType.isNumeric()
+                                      ? Double.BYTES
+                                      : SingleValueAggregatorFactory.DEFAULT_MAX_VALUE_SIZE);
     int written = typeStrategy.write(
         buf,
         position,
         getSelectorObject(),
-        columnType.isNumeric() ? Double.BYTES + Byte.BYTES : SingleValueAggregatorFactory.DEFAULT_MAX_BUFFER_SIZE
+        maxbufferSixe
     );
     if (written < 0) {
       throw DruidException.forPersona(DruidException.Persona.ADMIN)
                           .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                          .build("Single Value Aggregator value exceeds buffer limit");
+                          .build("Subquery result exceeds the buffer limit [%s]", maxbufferSixe);
     }
     isAggregateInvoked = true;
   }
