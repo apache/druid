@@ -41,6 +41,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class CombineAndSimplifyBounds extends BottomUpTransform
 {
@@ -63,25 +64,13 @@ public class CombineAndSimplifyBounds extends BottomUpTransform
       return filter;
     } else if (filter instanceof AndDimFilter) {
       final List<DimFilter> children = getAndFilterChildren((AndDimFilter) filter);
-      final DimFilter one = doSimplifyAnd(children);
-      final DimFilter two = negate(doSimplifyOr(negateAll(children)));
-      return computeCost(one) <= computeCost(two) ? one : two;
+      return doSimplifyAnd(children);
     } else if (filter instanceof OrDimFilter) {
       final List<DimFilter> children = getOrFilterChildren((OrDimFilter) filter);
-      final DimFilter one = doSimplifyOr(children);
-      final DimFilter two = negate(doSimplifyAnd(negateAll(children)));
-      return computeCost(one) <= computeCost(two) ? one : two;
+      return doSimplifyOr(children);
     } else if (filter instanceof NotDimFilter) {
       final DimFilter field = ((NotDimFilter) filter).getField();
-      final DimFilter candidate;
-      if (field instanceof OrDimFilter) {
-        candidate = doSimplifyAnd(negateAll(getOrFilterChildren((OrDimFilter) field)));
-      } else if (field instanceof AndDimFilter) {
-        candidate = doSimplifyOr(negateAll(getAndFilterChildren((AndDimFilter) field)));
-      } else {
-        candidate = negate(field);
-      }
-      return computeCost(filter) <= computeCost(candidate) ? filter : candidate;
+      return negate(field);
     } else {
       return filter;
     }
@@ -166,6 +155,7 @@ public class CombineAndSimplifyBounds extends BottomUpTransform
               (c, existingType) -> ColumnType.leastRestrictiveType(existingType, range.getMatchValueType())
           );
         }
+
         final List<ObjectIntPair<RangeFilter>> filterList =
             ranges.computeIfAbsent(rangeRefKey, k -> new ArrayList<>());
         filterList.add(ObjectIntPair.of(range, childIndex));
@@ -210,6 +200,19 @@ public class CombineAndSimplifyBounds extends BottomUpTransform
             childrenToAdd.add(Bounds.toFilter(boundRefKey, range));
           }
         }
+      } else if (disjunction && Range.all().equals(rangeSet.span())) {
+        // ranges in disjunction - spanning ALL
+        // complementer must be a negated set of ranges
+        for (final ObjectIntPair<BoundDimFilter> boundAndChildIndex : filterList) {
+          childrenToRemove.add(boundAndChildIndex.rightInt());
+        }
+        Set<Range<BoundValue>> newRanges = rangeSet.complement().asRanges();
+        List<DimFilter> newFilters = new ArrayList<>();
+        for (Range<BoundValue> range : newRanges) {
+          BoundDimFilter filter = Bounds.toFilter(boundRefKey, range);
+          newFilters.add(filter);
+        }
+        childrenToAdd.add(new NotDimFilter(disjunction(newFilters)));
       }
     }
 
@@ -270,6 +273,19 @@ public class CombineAndSimplifyBounds extends BottomUpTransform
             childrenToAdd.add(Ranges.toFilter(rangeRefKey, range));
           }
         }
+      } else if (disjunction && Range.all().equals(rangeSet.span())) {
+        // ranges in disjunction - spanning ALL
+        // complementer must be a negated set of ranges
+        for (final ObjectIntPair<RangeFilter> boundAndChildIndex : filterList) {
+          childrenToRemove.add(boundAndChildIndex.rightInt());
+        }
+        Set<Range<RangeValue>> newRanges = rangeSet.complement().asRanges();
+        List<DimFilter> newFilters = new ArrayList<>();
+        for (Range<RangeValue> range : newRanges) {
+          RangeFilter filter = Ranges.toFilter(rangeRefKey, range);
+          newFilters.add(filter);
+        }
+        childrenToAdd.add(new NotDimFilter(disjunction(newFilters)));
       }
     }
 
@@ -327,6 +343,15 @@ public class CombineAndSimplifyBounds extends BottomUpTransform
     }
   }
 
+  private static DimFilter disjunction(List<DimFilter> operands)
+  {
+    Preconditions.checkArgument(operands.size() > 0, "invalid number of operands");
+    if (operands.size() == 1) {
+      return operands.get(0);
+    }
+    return new OrDimFilter(operands);
+  }
+
   private static DimFilter negate(final DimFilter filter)
   {
     if (Filtration.matchEverything().equals(filter)) {
@@ -343,36 +368,6 @@ public class CombineAndSimplifyBounds extends BottomUpTransform
       return negated != null ? negated : new NotDimFilter(filter);
     } else {
       return new NotDimFilter(filter);
-    }
-  }
-
-  private static List<DimFilter> negateAll(final List<DimFilter> children)
-  {
-    final List<DimFilter> newChildren = Lists.newArrayListWithCapacity(children.size());
-    for (final DimFilter child : children) {
-      newChildren.add(negate(child));
-    }
-    return newChildren;
-  }
-
-  private static int computeCost(final DimFilter filter)
-  {
-    if (filter instanceof NotDimFilter) {
-      return computeCost(((NotDimFilter) filter).getField());
-    } else if (filter instanceof AndDimFilter) {
-      int cost = 0;
-      for (DimFilter field : ((AndDimFilter) filter).getFields()) {
-        cost += computeCost(field);
-      }
-      return cost;
-    } else if (filter instanceof OrDimFilter) {
-      int cost = 0;
-      for (DimFilter field : ((OrDimFilter) filter).getFields()) {
-        cost += computeCost(field);
-      }
-      return cost;
-    } else {
-      return 1;
     }
   }
 }
