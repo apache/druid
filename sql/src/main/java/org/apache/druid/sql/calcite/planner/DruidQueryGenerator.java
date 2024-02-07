@@ -43,6 +43,7 @@ import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery.Stage;
 import org.apache.druid.sql.calcite.rel.logical.DruidTableScan;
 import org.apache.druid.sql.calcite.rel.logical.DruidValues;
+import org.apache.druid.sql.calcite.rel.logical.XInputProducer;
 import org.apache.druid.sql.calcite.rule.DruidLogicalValuesRule;
 import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.table.InlineTable;
@@ -105,7 +106,7 @@ public class DruidQueryGenerator
    *
    * Right now it relies on {@link PartialDruidQuery} to hold on to the operators it encapsulates.
    */
-  private class Vertex
+  public class Vertex
   {
     PartialDruidQuery partialDruidQuery;
     List<Vertex> inputs;
@@ -241,6 +242,7 @@ public class DruidQueryGenerator
       }
       return false;
     }
+
   }
 
   private Vertex buildVertexFor(RelNode node, boolean isRoot)
@@ -255,9 +257,14 @@ public class DruidQueryGenerator
 
   private Vertex processNodeWithInputs(RelNode node, List<Vertex> newInputs, boolean isRoot)
   {
-    if (node instanceof DruidTableScan) {
-      return processTableScan((DruidTableScan) node);
+    if(node instanceof XInputProducer) {
+      XInputProducer xInputProducer = (XInputProducer) node;
+      xInputProducer.validate(newInputs, isRoot);
+      return createVertex(node);
     }
+//    if (node instanceof DruidTableScan) {
+//      return processTableScan((DruidTableScan) node);
+//    }
     if (node instanceof DruidValues) {
       return processValues((DruidValues) node);
     }
@@ -346,7 +353,7 @@ public class DruidQueryGenerator
   /**
    * Utility class to return represent input related things.
    */
-  private static class InputDesc
+  public static class InputDesc
   {
     private DataSource dataSource;
     private RowSignature rowSignature;
