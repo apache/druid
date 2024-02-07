@@ -93,6 +93,7 @@ public class FilterBundle
     List<IndexBundleInfo> getIndexMetrics();
     ImmutableBitmap getBitmap();
   }
+
   /**
    * Builder of {@link ValueMatcher} and {@link VectorValueMatcher}. The
    * {@link #valueMatcher(ColumnSelectorFactory, Offset, boolean)} function also passes in the base offset and whether
