@@ -40,6 +40,7 @@ import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -48,6 +49,7 @@ import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.run.SqlEngines;
+import org.apache.druid.sql.destination.IngestDestination;
 
 import java.util.HashSet;
 import java.util.List;
@@ -60,6 +62,7 @@ public class MSQTaskSqlEngine implements SqlEngine
       ImmutableSet.<String>builder()
                   .addAll(NativeSqlEngine.SYSTEM_CONTEXT_PARAMETERS)
                   .add(QueryKitUtils.CTX_TIME_COLUMN_NAME)
+                  .add(DruidSqlIngest.SQL_EXPORT_FILE_FORMAT)
                   .add(MultiStageQueryContext.CTX_IS_REINDEX)
                   .build();
 
@@ -121,6 +124,7 @@ public class MSQTaskSqlEngine implements SqlEngine
       case CAN_INSERT:
       case CAN_REPLACE:
       case READ_EXTERNAL_DATA:
+      case WRITE_EXTERNAL_DATA:
       case SCAN_ORDER_BY_NON_TIME:
       case SCAN_NEEDS_SIGNATURE:
         return true;
@@ -153,7 +157,7 @@ public class MSQTaskSqlEngine implements SqlEngine
 
   @Override
   public QueryMaker buildQueryMakerForInsert(
-      final String targetDataSource,
+      final IngestDestination destination,
       final RelRoot relRoot,
       final PlannerContext plannerContext
   )
@@ -161,7 +165,7 @@ public class MSQTaskSqlEngine implements SqlEngine
     validateInsert(relRoot.rel, relRoot.fields, plannerContext);
 
     return new MSQTaskQueryMaker(
-        targetDataSource,
+        destination,
         overlordClient,
         plannerContext,
         jsonMapper,
