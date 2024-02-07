@@ -31,7 +31,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.planner.querygen.PDQVertexFactory.PDQVertex;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 import org.apache.druid.sql.calcite.rel.logical.DruidTableScan;
@@ -151,9 +150,6 @@ return        xInputProducer.buildVertexRoot(vertexFactory, newInputs);
     );
     InlineTable inlineTable = new InlineTable(InlineDataSource.fromIterable(objectTuples, rowSignature));
 
-    PDQVertex vertex = vertexFactory .createVertex(values);
-    vertex.currentTable = inlineTable;
-
     return vertexFactory .createTableScanVertex(values, inlineTable, null);
 
   }
@@ -163,7 +159,6 @@ return        xInputProducer.buildVertexRoot(vertexFactory, newInputs);
     if (!(scan instanceof DruidTableScan)) {
       throw new ISE("Planning hasn't converted logical table scan to druid convention");
     }
-    DruidTableScan druidTableScan = scan;
     Preconditions.checkArgument(scan.getInputs().size() == 0);
 
 

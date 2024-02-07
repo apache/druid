@@ -84,7 +84,6 @@ public class PDQVertex implements Vertex
   PartialDruidQuery partialDruidQuery;
   List<Vertex> inputs;
   DruidTable queryTable;
-  public DruidTable currentTable;
 
   public DruidQuery buildQuery(boolean topLevel)
   {
@@ -103,9 +102,6 @@ public class PDQVertex implements Vertex
     if( partialDruidQuery.getScan() instanceof XInputProducer ) {
 XInputProducer xInputProducer = (XInputProducer) partialDruidQuery.getScan();
 return xInputProducer.getInputDesc();
-    }
-    if (currentTable != null) {
-      return new InputDesc(currentTable.getDataSource(), currentTable.getRowSignature());
     }
     if (inputs.size() == 1) {
       DruidQuery inputQuery = inputs.get(0).buildQuery(false);
@@ -135,7 +131,6 @@ return xInputProducer.getInputDesc();
   {
     PDQVertex vertex = new PDQVertex();
     vertex.inputs = inputs;
-    vertex.currentTable = currentTable;
     vertex.queryTable = queryTable;
     vertex.partialDruidQuery = partialDruidQuery;
     return vertex;
@@ -225,7 +220,6 @@ return xInputProducer.getInputDesc();
   public Vertex createTableScanVertex(RelNode scan, final DruidTable druidTable, Project project)
   {
     PDQVertex vertex = createVertex(scan);
-    vertex.currentTable = druidTable;
     if (project != null) {
       vertex.partialDruidQuery = vertex.partialDruidQuery.withSelectProject(project);
     }
