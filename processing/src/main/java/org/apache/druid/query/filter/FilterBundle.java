@@ -20,6 +20,7 @@
 package org.apache.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
@@ -123,12 +124,14 @@ public class FilterBundle
     }
 
     @JsonProperty
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public List<IndexBundleInfo> getIndexes()
     {
       return indexes;
     }
 
     @JsonProperty
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public List<MatcherBundleInfo> getMatchers()
     {
       return matchers;
@@ -212,6 +215,7 @@ public class FilterBundle
 
     @Nullable
     @JsonProperty
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public IndexBundleInfo getPartialIndex()
     {
       return partialIndex;
