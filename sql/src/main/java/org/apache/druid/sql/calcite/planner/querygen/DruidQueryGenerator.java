@@ -153,7 +153,7 @@ public class DruidQueryGenerator
     PDQVertex vertex = vertexFactory .createVertex(values);
     vertex.currentTable = inlineTable;
 
-    return createTableScanVertex(values, inlineTable, null);
+    return vertexFactory .createTableScanVertex(values, inlineTable, null);
 
   }
 
@@ -173,16 +173,7 @@ public class DruidQueryGenerator
 
     Project project = druidTableScan.getProject();
 
-    return createTableScanVertex(scan, druidTable, project);
+    return vertexFactory .createTableScanVertex(scan, druidTable, project);
   }
 
-  private Vertex createTableScanVertex(RelNode scan, final DruidTable druidTable, Project project)
-  {
-    PDQVertex vertex = vertexFactory .createVertex(scan);
-    vertex.currentTable = druidTable;
-    if (project != null) {
-      vertex.partialDruidQuery = vertex.partialDruidQuery.withSelectProject(project);
-    }
-    return vertex;
-  }
 }

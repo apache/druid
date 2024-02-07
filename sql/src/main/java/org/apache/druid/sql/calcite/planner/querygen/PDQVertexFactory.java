@@ -217,4 +217,15 @@ public class PDQVertex implements Vertex
   }
 
 }
+
+  Vertex createTableScanVertex(RelNode scan, final DruidTable druidTable, Project project)
+  {
+    PDQVertex vertex = createVertex(scan);
+    vertex.currentTable = druidTable;
+    if (project != null) {
+      vertex.partialDruidQuery = vertex.partialDruidQuery.withSelectProject(project);
+    }
+    return vertex;
+  }
+
 }
