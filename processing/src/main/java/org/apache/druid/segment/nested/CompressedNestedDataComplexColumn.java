@@ -114,6 +114,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
   private final Supplier<TStringDictionary> stringDictionarySupplier;
   private final Supplier<FixedIndexed<Long>> longDictionarySupplier;
   private final Supplier<FixedIndexed<Double>> doubleDictionarySupplier;
+  @Nullable
   private final Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier;
   private final SmooshedFileMapper fileMapper;
   private final String rootFieldPath;
@@ -1012,6 +1013,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
               stringDictionarySupplier,
               longDictionarySupplier,
               doubleDictionarySupplier,
+              arrayDictionarySupplier,
               arrayElementDictionarySupplier,
               arrayElementBitmaps,
               size
