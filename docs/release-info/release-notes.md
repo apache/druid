@@ -79,6 +79,12 @@ UNPIVOT (values_column
 )
 ```
 
+### MSQ export statements (experimental)
+
+Druid 29.0.0 adds experimental support for export statements to the MSQ task engine. This allows query tasks to write data to an external destination through the [`EXTERN` function](https://druid.apache.org/docs/latest/multi-stage-query/reference#extern-function).
+
+[#15689](https://github.com/apache/druid/pull/15689)
+
 ### Range support in window functions
 
 Window functions now support ranges where both endpoints are unbounded or are the current row. Ranges work in strict mode, which means that Druid will fail queries that aren't supported. You can turn off strict mode for ranges by setting the context parameter `windowingStrictValidation` to `false`.
