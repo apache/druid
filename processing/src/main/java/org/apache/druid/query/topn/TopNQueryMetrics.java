@@ -22,6 +22,7 @@ package org.apache.druid.query.topn;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.query.QueryMetrics;
+import org.apache.druid.query.filter.FilterBundle;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 
@@ -90,8 +91,8 @@ public interface TopNQueryMetrics extends QueryMetrics<TopNQuery>
   /**
    * Called with the number of rows, processed via each cursor, processed for the query within the segment. The total
    * number of processed rows, reported via this method for a TopNQueryMetrics instance, is smaller or equal to
-   * {@link #reportPreFilteredRows(long)}, because {@link #postFilters} are additionally applied. If there
-   * are no postFilters, preFilteredRows and processedRows are equal.
+   * {@link #reportPreFilteredRows(long)}, because matchers from {@link #filterBundle(FilterBundle.BundleInfo)} are
+   * additionally applied. If there are no postFilters, preFilteredRows and processedRows are equal.
    */
   @PublicApi
   TopNQueryMetrics addProcessedRows(long numRows);

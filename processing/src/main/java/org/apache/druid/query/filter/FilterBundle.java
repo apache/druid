@@ -109,6 +109,72 @@ public class FilterBundle
     VectorValueMatcher vectorMatcher(VectorColumnSelectorFactory selectorFactory);
   }
 
+  public static class SimpleIndexBundle implements IndexBundle
+  {
+    private final List<IndexBundleInfo> indexBundles;
+
+    private final ImmutableBitmap index;
+
+    public SimpleIndexBundle(List<IndexBundleInfo> indexBundles, ImmutableBitmap index)
+    {
+      this.indexBundles = Preconditions.checkNotNull(indexBundles);
+      this.index = Preconditions.checkNotNull(index);
+    }
+
+    @Override
+    public List<IndexBundleInfo> getIndexMetrics()
+    {
+      return indexBundles;
+    }
+
+    @Override
+    public ImmutableBitmap getBitmap()
+    {
+      return index;
+    }
+
+  }
+
+  public static class SimpleMatcherBundle implements MatcherBundle
+  {
+    private final List<MatcherBundleInfo> matcherBundles;
+    private final Function<ColumnSelectorFactory, ValueMatcher> matcherFn;
+    private final Function<VectorColumnSelectorFactory, VectorValueMatcher> vectorMatcherFn;
+
+    public SimpleMatcherBundle(
+        List<MatcherBundleInfo> matcherBundles,
+        Function<ColumnSelectorFactory, ValueMatcher> matcherFn,
+        Function<VectorColumnSelectorFactory, VectorValueMatcher> vectorMatcherFn
+    )
+    {
+      this.matcherBundles = Preconditions.checkNotNull(matcherBundles);
+      this.matcherFn = Preconditions.checkNotNull(matcherFn);
+      this.vectorMatcherFn = Preconditions.checkNotNull(vectorMatcherFn);
+    }
+
+    @Override
+    public List<MatcherBundleInfo> getMatcherMetrics()
+    {
+      return matcherBundles;
+    }
+
+    @Override
+    public ValueMatcher valueMatcher(
+        ColumnSelectorFactory selectorFactory,
+        Offset baseOffset,
+        boolean descending
+    )
+    {
+      return matcherFn.apply(selectorFactory);
+    }
+
+    @Override
+    public VectorValueMatcher vectorMatcher(VectorColumnSelectorFactory selectorFactory)
+    {
+      return vectorMatcherFn.apply(selectorFactory);
+    }
+  }
+
   public static class BundleInfo
   {
     private final List<IndexBundleInfo> indexes;
@@ -229,72 +295,6 @@ public class FilterBundle
              "filter=\"" + filter + '\"' +
              (partialIndex != null ? ", partialIndex=" + partialIndex : "") +
              '}';
-    }
-  }
-
-  public static class SimpleIndexBundle implements IndexBundle
-  {
-    private final List<IndexBundleInfo> indexBundles;
-
-    private final ImmutableBitmap index;
-
-    public SimpleIndexBundle(List<IndexBundleInfo> indexBundles, ImmutableBitmap index)
-    {
-      this.indexBundles = Preconditions.checkNotNull(indexBundles);
-      this.index = Preconditions.checkNotNull(index);
-    }
-
-    @Override
-    public List<IndexBundleInfo> getIndexMetrics()
-    {
-      return indexBundles;
-    }
-
-    @Override
-    public ImmutableBitmap getBitmap()
-    {
-      return index;
-    }
-
-  }
-
-  public static class SimpleMatcherBundle implements MatcherBundle
-  {
-    private final List<MatcherBundleInfo> matcherBundles;
-    private final Function<ColumnSelectorFactory, ValueMatcher> matcherFn;
-    private final Function<VectorColumnSelectorFactory, VectorValueMatcher> vectorMatcherFn;
-
-    public SimpleMatcherBundle(
-        List<MatcherBundleInfo> matcherBundles,
-        Function<ColumnSelectorFactory, ValueMatcher> matcherFn,
-        Function<VectorColumnSelectorFactory, VectorValueMatcher> vectorMatcherFn
-    )
-    {
-      this.matcherBundles = Preconditions.checkNotNull(matcherBundles);
-      this.matcherFn = Preconditions.checkNotNull(matcherFn);
-      this.vectorMatcherFn = Preconditions.checkNotNull(vectorMatcherFn);
-    }
-
-    @Override
-    public List<MatcherBundleInfo> getMatcherMetrics()
-    {
-      return matcherBundles;
-    }
-
-    @Override
-    public ValueMatcher valueMatcher(
-        ColumnSelectorFactory selectorFactory,
-        Offset baseOffset,
-        boolean descending
-    )
-    {
-      return matcherFn.apply(selectorFactory);
-    }
-
-    @Override
-    public VectorValueMatcher vectorMatcher(VectorColumnSelectorFactory selectorFactory)
-    {
-      return vectorMatcherFn.apply(selectorFactory);
     }
   }
 }
