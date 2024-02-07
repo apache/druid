@@ -51,7 +51,7 @@ public abstract class DictionaryScanningBitmapIndex extends SimpleImmutableBitma
 
   @Nullable
   @Override
-  public <T> T computeBitmapResult(
+  public final <T> T computeBitmapResult(
       BitmapResultFactory<T> bitmapResultFactory,
       int selectionRowCount,
       int totalRowCount,
