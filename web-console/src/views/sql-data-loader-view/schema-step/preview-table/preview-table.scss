@@ -58,6 +58,14 @@
           &.double {
             background: rgba($blue3, 0.3);
           }
+
+          &.array {
+            background: rgba($orange2, 0.3);
+          }
+
+          &.multi-value {
+            background: rgba($orange4, 0.3);
+          }
         }
 
         &.metric {
@@ -118,6 +126,14 @@
         &.float,
         &.double {
           background: rgba($blue3, 0.1);
+        }
+
+        &.array {
+          background: rgba($orange2, 0.1);
+        }
+
+        &.multi-value {
+          background: rgba($orange4, 0.1);
         }
       }
 

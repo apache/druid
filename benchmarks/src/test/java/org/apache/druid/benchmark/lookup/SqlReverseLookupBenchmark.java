@@ -72,7 +72,7 @@ public class SqlReverseLookupBenchmark
   /**
    * Type of lookup to benchmark. All are members of enum {@link LookupBenchmarkUtil.LookupType}.
    */
-  @Param({"hashmap"})
+  @Param({"hashmap", "immutable"})
   private String lookupType;
 
   /**
@@ -84,7 +84,7 @@ public class SqlReverseLookupBenchmark
   /**
    * Average number of keys that map to each value.
    */
-  @Param({"100000", "200000", "400000", "800000", "1600000"})
+  @Param({"1000", "5000", "10000", "100000"})
   private int keysPerValue;
 
   private SqlEngine engine;
@@ -133,8 +133,10 @@ public class SqlReverseLookupBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void planEquals(Blackhole blackhole)
   {
-    final String sql =
-        "SELECT COUNT(*) FROM foo WHERE LOOKUP(dimZipf, 'benchmark-lookup', 'N/A') = '0'";
+    final String sql = StringUtils.format(
+        "SELECT COUNT(*) FROM foo WHERE LOOKUP(dimZipf, 'benchmark-lookup', 'N/A') = '%s'",
+        LookupBenchmarkUtil.makeKeyOrValue(0)
+    );
     try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, ImmutableMap.of())) {
       final PlannerResult plannerResult = planner.plan();
       blackhole.consume(plannerResult);
@@ -146,8 +148,10 @@ public class SqlReverseLookupBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void planNotEquals(Blackhole blackhole)
   {
-    final String sql =
-        "SELECT COUNT(*) FROM foo WHERE LOOKUP(dimZipf, 'benchmark-lookup', 'N/A') <> '0'";
+    final String sql = StringUtils.format(
+        "SELECT COUNT(*) FROM foo WHERE LOOKUP(dimZipf, 'benchmark-lookup', 'N/A') <> '%s'",
+        LookupBenchmarkUtil.makeKeyOrValue(0)
+    );
     try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, ImmutableMap.of())) {
       final PlannerResult plannerResult = planner.plan();
       blackhole.consume(plannerResult);

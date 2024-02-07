@@ -22,14 +22,13 @@ import type { SqlExpression } from '@druid-toolkit/query';
 import { C, SqlColumnDeclaration, SqlType } from '@druid-toolkit/query';
 import React, { useState } from 'react';
 
-import { AutoForm, CenterMessage, LearnMore, Loader } from '../../../components';
-import type { InputFormat, InputSource } from '../../../druid-models';
+import { ArrayModeSwitch, AutoForm, CenterMessage, LearnMore, Loader } from '../../../components';
+import type { ArrayMode, InputFormat, InputSource } from '../../../druid-models';
 import {
   BATCH_INPUT_FORMAT_FIELDS,
   chooseByBestTimestamp,
   DETECTION_TIMESTAMP_SPEC,
   guessColumnTypeFromSampleResponse,
-  guessIsArrayFromSampleResponse,
   inputFormatOutputsNumericStrings,
   possibleDruidFormatForValues,
   TIME_COLUMN,
@@ -52,8 +51,8 @@ import './input-format-step.scss';
 export interface InputFormatAndMore {
   inputFormat: InputFormat;
   signature: SqlColumnDeclaration[];
-  isArrays: boolean[];
   timeExpression: SqlExpression | undefined;
+  arrayMode: ArrayMode;
 }
 
 interface PossibleTimeExpression {
@@ -80,6 +79,7 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
     AutoForm.isValidModel(initInputFormat, BATCH_INPUT_FORMAT_FIELDS) ? initInputFormat : undefined,
   );
   const [selectTimestamp, setSelectTimestamp] = useState(true);
+  const [arrayMode, setArrayMode] = useState<ArrayMode>('multi-values');
 
   const [previewState] = useQueryManager<InputFormat, SampleResponse>({
     query: inputFormatToSample,
@@ -166,12 +166,12 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
               ),
             ),
           ),
-          isArrays: headerNames.map(name =>
-            guessIsArrayFromSampleResponse(previewSampleResponse, name),
-          ),
           timeExpression: selectTimestamp ? possibleTimeExpression?.timeExpression : undefined,
+          arrayMode,
         }
       : undefined;
+
+  const hasArrays = inputFormatAndMore?.signature.some(d => d.columnType.isArray());
 
   return (
     <div className="input-format-step">
@@ -224,6 +224,7 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
           )}
         </div>
         <div className="bottom-controls">
+          {hasArrays && <ArrayModeSwitch arrayMode={arrayMode} changeArrayMode={setArrayMode} />}
           {possibleTimeExpression && (
             <FormGroup>
               <Callout>
