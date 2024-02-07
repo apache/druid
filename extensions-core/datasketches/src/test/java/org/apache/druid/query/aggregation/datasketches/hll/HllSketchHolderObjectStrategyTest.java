@@ -80,7 +80,7 @@ public class HllSketchHolderObjectStrategyTest
   @Test
   public void testHllSketchIsNullEquivalent()
   {
-    final Random random = new Random();
+    final Random random = new Random(0);
     for (final TgtHllType tgtHllType : TgtHllType.values()) {
       for (int lgK = 7; lgK < 22; lgK++) {
         for (int sz : new int[]{0, 1, 2, 127, 128, 129, 255, 256, 257, 511, 512, 513, 16383, 16384, 16385}) {
