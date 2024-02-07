@@ -54,7 +54,7 @@ public PDQVertexFactory(PlannerContext plannerContext, RexBuilder rexBuilder)
   }
 
 // FIXME
-  PDQVertex createVertex(RelNode scan)
+  public PDQVertex createVertex(RelNode scan)
 {
   PDQVertex vertex = new PDQVertex();
   vertex.partialDruidQuery = PartialDruidQuery.create(scan);
@@ -216,15 +216,6 @@ return xInputProducer.getInputDesc();
   }
 
 }
-
-  public Vertex createTableScanVertex(RelNode scan, final DruidTable druidTable, Project project)
-  {
-    PDQVertex vertex = createVertex(scan);
-    if (project != null) {
-      vertex.partialDruidQuery = vertex.partialDruidQuery.withSelectProject(project);
-    }
-    return vertex;
-  }
 
   // FIXME ok?
   public PlannerContext getPlannerContext()

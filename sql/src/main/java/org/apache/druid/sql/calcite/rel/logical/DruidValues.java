@@ -80,7 +80,7 @@ public class DruidValues extends LogicalValues implements DruidLogicalNode, XInp
     if (inlineTable == null) {
       inlineTable = buildInlineTable(vertexFactory.getPlannerContext());
     }
-    return vertexFactory.createTableScanVertex(this, null, null);
+    return vertexFactory.createVertex(this);
   }
 
   private InlineTable buildInlineTable(PlannerContext plannerContext)
