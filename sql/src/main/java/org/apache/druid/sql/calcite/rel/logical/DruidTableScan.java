@@ -102,9 +102,9 @@ public class DruidTableScan extends TableScan implements DruidLogicalNode, XInpu
   @Override
   public Vertex buildVertexRoot(PDQVertexFactory vertexFactory, List<Vertex> inputs)
   {
-    Preconditions.checkArgument(getInputs().size() == 0);
+    Preconditions.checkArgument(inputs.size() == 0);
     Preconditions.checkArgument(getDruidTable() != null);
-    return vertexFactory.createTableScanVertex(this, null, null);
+    return vertexFactory.createTableScanVertex(this, getDruidTable(), null);
   }
 
   @Override
