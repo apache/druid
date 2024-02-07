@@ -147,7 +147,7 @@ public class DruidSqlParserUtilsTest
     }
 
     /**
-     * Tests thet Granularity literal SqlNode can be converted properly to Granularity.
+     * Tests that Granularity literal SqlNode can be converted properly to Granularity.
      */
     @Test
     public void testConvertSqlNodeToGranularityAsSymbol() throws ParseException

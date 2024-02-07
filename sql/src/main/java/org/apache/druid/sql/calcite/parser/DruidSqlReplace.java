@@ -69,7 +69,7 @@ public class DruidSqlReplace extends DruidSqlIngest
   }
 
   /**
-   * While partitionedBy and partitionedByStringForUnparse can be null as arguments to the constructor, this is
+   * While partitionedBy can be null as arguments to the constructor, this is
    * disallowed (semantically) and the constructor performs checks to ensure that. This helps in producing friendly
    * errors when the PARTITIONED BY custom clause is not present, and keeps its error separate from JavaCC/Calcite's
    * custom errors which can be cryptic when someone accidentally forgets to explicitly specify the PARTITIONED BY clause

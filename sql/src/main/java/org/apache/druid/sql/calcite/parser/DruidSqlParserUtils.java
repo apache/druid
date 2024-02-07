@@ -131,7 +131,7 @@ public class DruidSqlParserUtils
    *
    * @return Granularity as intended by the function call
    *
-   * @throws InvalidSqlInput if SqlNode cannot be converted to a granularity
+   * @throws DruidException if SqlNode cannot be converted to a granularity
    */
   @Nullable
   public static Granularity convertSqlNodeToGranularity(SqlNode sqlNode)

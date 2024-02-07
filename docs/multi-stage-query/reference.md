@@ -304,11 +304,11 @@ Examples:
 -- Keyword
 PARTITIONED BY HOUR
 
--- String constant
+-- String literal
 PARTITIONED BY 'HOUR'
 
--- Or
-PARTITIOND BY 'PT1H'
+-- ISO 8601 period
+PARTITIONED BY 'PT1H'
 
 -- TIME_FLOOR function
 PARTITIONED BY TIME_FLOOR(__time, 'PT1H')

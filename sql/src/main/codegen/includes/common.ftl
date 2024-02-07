@@ -57,7 +57,7 @@ SqlNode PartitionGranularity() :
   |
     e = Expression(ExprContext.ACCEPT_SUB_QUERY)
     {
-      // validate
+      // validate, the return Granularity value is not needed
       DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(e);
       result = e;
     }
