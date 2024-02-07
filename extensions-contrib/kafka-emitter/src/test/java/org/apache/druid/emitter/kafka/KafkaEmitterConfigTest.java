@@ -58,7 +58,7 @@ public class KafkaEmitterConfigTest
         "requestTest",
         "metadataTest",
         "clusterNameTest",
-        null,
+        ImmutableMap.of("env","preProd"),
         ImmutableMap.<String, String>builder()
                     .put("testKey", "testValue").build(),
         DEFAULT_PRODUCER_SECRETS
