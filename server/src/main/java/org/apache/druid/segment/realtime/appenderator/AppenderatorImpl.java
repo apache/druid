@@ -188,7 +188,7 @@ public class AppenderatorImpl implements Appenderator
    */
   private final Map<FireHydrant, Pair<File, SegmentId>> persistedHydrantMetadata =
       Collections.synchronizedMap(new IdentityHashMap<>());
-
+  
   /**
    * This constructor allows the caller to provide its own SinkQuerySegmentWalker.
    *
@@ -1148,9 +1148,9 @@ public class AppenderatorImpl implements Appenderator
     if (persistExecutor == null) {
       // use a blocking single threaded executor to throttle the firehose when write to disk is slow
       persistExecutor = MoreExecutors.listeningDecorator(
-          Execs.newBlockingSingleThreaded(
+          Execs.newBlockingThreaded(
               "[" + StringUtils.encodeForFormat(myId) + "]-appenderator-persist",
-              maxPendingPersists
+              tuningConfig.getNumPersistThreads(), maxPendingPersists
           )
       );
     }
