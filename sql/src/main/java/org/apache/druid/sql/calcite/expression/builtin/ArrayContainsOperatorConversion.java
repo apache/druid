@@ -34,6 +34,7 @@ import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.ArrayContainsElementFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.EqualityFilter;
+import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -129,14 +130,18 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
                                         leftExpr,
                                         leftExpr.getDruidType()
                                     );
-              filters.add(
-                  new EqualityFilter(
-                      column,
-                      ExpressionType.toColumnType(ExpressionType.elementType(exprEval.type())),
-                      val,
-                      null
-                  )
-              );
+              if (val == null) {
+                filters.add(NullFilter.forColumn(column));
+              } else {
+                filters.add(
+                    new EqualityFilter(
+                        column,
+                        ExpressionType.toColumnType(ExpressionType.elementType(exprEval.type())),
+                        val,
+                        null
+                    )
+                );
+              }
             }
           }
 
