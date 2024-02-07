@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
@@ -36,7 +37,6 @@ import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 import org.apache.druid.sql.calcite.rel.logical.DruidTableScan;
 import org.apache.druid.sql.calcite.rel.logical.DruidValues;
-import org.apache.druid.sql.calcite.rel.logical.XInputProducer;
 import org.apache.druid.sql.calcite.rule.DruidLogicalValuesRule;
 import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.table.InlineTable;
@@ -153,7 +153,7 @@ public class DruidQueryGenerator
     PDQVertex vertex = vertexFactory .createVertex(values);
     vertex.currentTable = inlineTable;
 
-    return vertex;
+    return createTableScanVertex(values, inlineTable, null);
 
   }
 
@@ -165,16 +165,23 @@ public class DruidQueryGenerator
     DruidTableScan druidTableScan = scan;
     Preconditions.checkArgument(scan.getInputs().size() == 0);
 
-    PDQVertex vertex = vertexFactory .createVertex(scan);
 
     final RelOptTable table = scan.getTable();
     final DruidTable druidTable = table.unwrap(DruidTable.class);
 
     Preconditions.checkArgument(druidTable != null);
 
+    Project project = druidTableScan.getProject();
+
+    return createTableScanVertex(scan, druidTable, project);
+  }
+
+  private Vertex createTableScanVertex(RelNode scan, final DruidTable druidTable, Project project)
+  {
+    PDQVertex vertex = vertexFactory .createVertex(scan);
     vertex.currentTable = druidTable;
-    if (druidTableScan.getProject() != null) {
-      vertex.partialDruidQuery = vertex.partialDruidQuery.withSelectProject(druidTableScan.getProject());
+    if (project != null) {
+      vertex.partialDruidQuery = vertex.partialDruidQuery.withSelectProject(project);
     }
     return vertex;
   }

@@ -34,6 +34,7 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.schema.Table;
 import org.apache.druid.sql.calcite.planner.querygen.Vertex;
+import org.apache.druid.sql.calcite.planner.querygen.XInputProducer;
 
 import java.util.List;
 

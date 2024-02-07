@@ -17,10 +17,8 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.rel.logical;
+package org.apache.druid.sql.calcite.planner.querygen;
 
-
-import org.apache.druid.sql.calcite.planner.querygen.Vertex;
 
 import java.util.List;
 
