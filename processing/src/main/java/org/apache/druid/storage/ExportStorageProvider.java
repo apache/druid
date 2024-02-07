@@ -26,4 +26,9 @@ import com.google.inject.Provider;
 public interface ExportStorageProvider extends Provider<StorageConnector>
 {
   String getResourceType();
+
+  /**
+   * Return a URI representation of the base path. This is used to be used for logging and error messages.
+   */
+  String getBasePath();
 }

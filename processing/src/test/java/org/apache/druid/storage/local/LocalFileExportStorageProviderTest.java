@@ -74,7 +74,7 @@ public class LocalFileExportStorageProviderTest
   @Test
   public void testValidate()
   {
-    File file = LocalFileExportStorageProvider.validateAndGetPath("/base", "path");
+    File file = LocalFileExportStorageProvider.validateAndGetPath("/base", "/base/path");
     Assert.assertEquals("/base/path", file.toPath().toString());
   }
 
@@ -83,11 +83,11 @@ public class LocalFileExportStorageProviderTest
   {
     Assert.assertThrows(
         DruidException.class,
-        () -> LocalFileExportStorageProvider.validateAndGetPath("/base", "../path")
+        () -> LocalFileExportStorageProvider.validateAndGetPath("/base", "/base/../path")
     );
     Assert.assertThrows(
         DruidException.class,
-        () -> LocalFileExportStorageProvider.validateAndGetPath("/base", "../base1")
+        () -> LocalFileExportStorageProvider.validateAndGetPath("/base", "/base1")
     );
   }
 }

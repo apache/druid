@@ -77,6 +77,13 @@ public class LocalFileExportStorageProvider implements ExportStorageProvider
   }
 
   @Override
+  @JsonIgnore
+  public String getBasePath()
+  {
+    return exportPath;
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
@@ -112,12 +119,18 @@ public class LocalFileExportStorageProvider implements ExportStorageProvider
                               "The runtime property `druid.export.storage.baseDir` must be configured for local export.");
     }
     final File baseDir = new File(basePath);
-    final File exportFile = new File(baseDir, customPath);
+    if (!baseDir.isAbsolute()) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build(
+                              "The runtime property `druid.export.storage.baseDir` must be an absolute path.");
+    }
+    final File exportFile = new File(customPath);
     if (!exportFile.toPath().normalize().startsWith(baseDir.toPath())) {
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build(
-                              "The provided destination must be within the path configured by runtime property `druid.export.storage.baseDir`");
+                          .build("The provided destination must be within the path configured by runtime property `druid.export.storage.baseDir` "
+                                 + "Please reach out to the cluster admin for the allowed path. ", customPath);
     }
     return exportFile;
   }

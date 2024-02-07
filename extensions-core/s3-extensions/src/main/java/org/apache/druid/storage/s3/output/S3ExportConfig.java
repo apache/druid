@@ -28,8 +28,8 @@ import java.util.List;
 
 public class S3ExportConfig
 {
-  @JsonProperty("tempDir")
-  private final String tempDir;
+  @JsonProperty("tempLocalDir")
+  private final String tempLocalDir;
   @JsonProperty("chunkSize")
   private final HumanReadableBytes chunkSize;
   @JsonProperty("maxRetry")
@@ -39,20 +39,20 @@ public class S3ExportConfig
 
   @JsonCreator
   public S3ExportConfig(
-      @JsonProperty("tempDir") final String tempDir,
+      @JsonProperty("tempLocalDir") final String tempLocalDir,
       @JsonProperty("chunkSize") @Nullable final HumanReadableBytes chunkSize,
       @JsonProperty("maxRetry") @Nullable final Integer maxRetry,
       @JsonProperty("allowedExportPaths") final List<String> allowedExportPaths)
   {
-    this.tempDir = tempDir;
+    this.tempLocalDir = tempLocalDir;
     this.chunkSize = chunkSize;
     this.maxRetry = maxRetry;
     this.allowedExportPaths = allowedExportPaths;
   }
 
-  public String getTempDir()
+  public String getTempLocalDir()
   {
-    return tempDir;
+    return tempLocalDir;
   }
 
   public HumanReadableBytes getChunkSize()

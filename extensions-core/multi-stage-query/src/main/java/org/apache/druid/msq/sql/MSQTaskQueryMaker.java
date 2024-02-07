@@ -213,16 +213,9 @@ public class MSQTaskQueryMaker implements QueryMaker
       ExportDestination exportDestination = ((ExportDestination) targetDataSource);
       ResultFormat format = ResultFormat.fromString(sqlQueryContext.getString(DruidSqlIngest.SQL_EXPORT_FILE_FORMAT));
 
-      if (replaceTimeChunks != null && !Intervals.ONLY_ETERNITY.equals(replaceTimeChunks)) {
-        throw DruidException.forPersona(DruidException.Persona.USER)
-                            .ofCategory(DruidException.Category.UNSUPPORTED)
-                            .build("Currently export only works with OVERWRITE ALL clause");
-      }
-
       destination = new ExportMSQDestination(
           exportDestination.getStorageConnectorProvider(),
-          format,
-          replaceTimeChunks
+          format
       );
     } else if (targetDataSource instanceof TableDestination) {
       Granularity segmentGranularityObject;

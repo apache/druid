@@ -37,4 +37,10 @@ public class TestExportStorageConnectorProvider implements ExportStorageProvider
   {
     return "testExport";
   }
+
+  @Override
+  public String getBasePath()
+  {
+    return "testExport";
+  }
 }

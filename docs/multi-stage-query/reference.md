@@ -125,7 +125,7 @@ The `S3()` function is a Druid function that configures the connection. Argument
 ```sql
 INSERT INTO
   EXTERN(
-    S3(bucket => 's3://your_bucket', prefix => 'prefix/to/files')
+    S3(bucket => 'your_bucket', prefix => 'prefix/to/files')
   )
 AS CSV
 SELECT
@@ -135,16 +135,16 @@ FROM <table>
 
 Supported arguments for the function:
 
-| Parameter   | Required | Description                                                                                                                                                           | Default |
-|-------------|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|
-| `bucket`    | Yes      | The S3 bucket to which the files are exported to.                                                                                                                     | n/a     |
-| `prefix`    | Yes      | Path where the exported files would be created. The export query expects the destination to be empty. If the location includes other files, then the query will fail. | n/a     |
+| Parameter   | Required | Description                                                                                                                                                                                                                                                                    | Default |
+|-------------|----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|
+| `bucket`    | Yes      | The S3 bucket to which the files are exported to. The bucket and prefix combination should be whitelisted in `druid.export.storage.s3.allowedExportPaths`.                                                                                                                     | n/a     |
+| `prefix`    | Yes      | Path where the exported files would be created. The export query expects the destination to be empty. If the location includes other files, then the query will fail. The bucket and prefix combination should be whitelisted in `druid.export.storage.s3.allowedExportPaths`. | n/a     |
 
 The following runtime parameters must be configured to export into an S3 destination:
 
 | Runtime Parameter                            | Required | Description                                                                                                                                                                                                                          | Default |
 |----------------------------------------------|----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----|
-| `druid.export.storage.s3.tempSubDir`         | Yes      | Directory used to store temporary files required while uploading the data.                                                                                                                                                           | n/a |
+| `druid.export.storage.s3.tempLocalDir`       | Yes      | Directory used on the local storage of the worker to store temporary files required while uploading the data.                                                                                                                        | n/a |
 | `druid.export.storage.s3.allowedExportPaths` | Yes      | An array of S3 prefixes that are whitelisted as export destinations. Export queries fail if the export destination does not match any of the configured prefixes. Example: `[\"s3://bucket1/export/\", \"s3://bucket2/export/\"]`    | n/a |
 | `druid.export.storage.s3.maxRetry`           | No       | Defines the max number times to attempt S3 API calls to avoid failures due to transient errors.                                                                                                                                      | 10  |
 | `druid.export.storage.s3.chunkSize`          | No       | Defines the size of each chunk to temporarily store in `tempDir`. The chunk size must be between 5 MiB and 5 GiB. A large chunk size reduces the API calls to S3, however it requires more disk space to store the temporary chunks. | 100MiB |
@@ -154,7 +154,9 @@ The following runtime parameters must be configured to export into an S3 destina
 You can export to the local storage, which exports the results to the filesystem of the MSQ worker.
 This is useful in a single node setup or for testing but is not suitable for production use cases.
 
-Export results to local storage by passing the function `LOCAL()` as an argument for the `EXTERN FUNCTION`. To use local storage as an export destination, the runtime property `druid.export.storage.baseDir` must be configured on the Indexer/Middle Manager.
+Export results to local storage by passing the function `LOCAL()` as an argument for the `EXTERN FUNCTION`.
+To use local storage as an export destination, the runtime property `druid.export.storage.baseDir` must be configured on the Indexer/Middle Manager.
+This value must be set to an absolute path on the local machine. Exporting data will be allowed to paths which match the prefix set by this value.
 Arguments to `LOCAL()` should be passed as named parameters with the value in single quotes in the following example:
 
 ```sql
@@ -170,9 +172,9 @@ FROM <table>
 
 Supported arguments to the function:
 
-| Parameter   | Required | Description                                                                                                                                                                                                                           | Default |
-|-------------|--------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| --|
-| `exportPath`  | Yes | Subdirectory of `druid.export.storage.baseDir` used as the destination to export the results to. The export query expects the destination to be empty. If the location includes other files or directories, then the query will fail. | n/a |
+| Parameter   | Required | Description                                                                                                                                                                                                                                              | Default |
+|-------------|--------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| --|
+| `exportPath`  | Yes | Absolute path to a subdirectory of `druid.export.storage.baseDir` used as the destination to export the results to. The export query expects the destination to be empty. If the location includes other files or directories, then the query will fail. | n/a |
 
 For more information, see [Read external data with EXTERN](concepts.md#write-to-an-external-destination-with-extern).
 

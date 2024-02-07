@@ -66,11 +66,11 @@ public class S3ExportStorageProvider implements ExportStorageProvider
   @Override
   public StorageConnector get()
   {
-    final String tempDir = s3ExportConfig.getTempDir();
+    final String tempDir = s3ExportConfig.getTempLocalDir();
     if (tempDir == null) {
       throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                           .ofCategory(DruidException.Category.NOT_FOUND)
-                          .build("The runtime property `druid.export.storage.s3.tempDir` must be configured for S3 export.");
+                          .build("The runtime property `druid.export.storage.s3.tempLocalDir` must be configured for S3 export.");
     }
     final List<String> allowedExportPaths = s3ExportConfig.getAllowedExportPaths();
     if (allowedExportPaths == null) {
@@ -102,7 +102,10 @@ public class S3ExportStorageProvider implements ExportStorageProvider
     }
     throw DruidException.forPersona(DruidException.Persona.USER)
                         .ofCategory(DruidException.Category.INVALID_INPUT)
-                        .build("None of the allowed prefixes matched the input path [%s]", providedUri);
+                        .build("None of the allowed prefixes matched the input path [%s]. "
+                               + "Please reach out to the cluster admin for the whitelisted paths for export. "
+                               + "The paths are controlled via the property `druid.export.storage.s3.allowedExportPaths`.",
+                               providedUri);
   }
 
   private static boolean validateUri(final URI allowedUri, final URI providedUri)
@@ -132,5 +135,12 @@ public class S3ExportStorageProvider implements ExportStorageProvider
   public String getResourceType()
   {
     return TYPE_NAME;
+  }
+
+  @Override
+  @JsonIgnore
+  public String getBasePath()
+  {
+    return new CloudObjectLocation(bucket, prefix).toUri(S3StorageDruidModule.SCHEME).toString();
   }
 }

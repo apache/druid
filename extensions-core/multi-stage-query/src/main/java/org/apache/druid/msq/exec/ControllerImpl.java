@@ -1886,8 +1886,9 @@ public class ControllerImpl implements Controller
         if (filesIterator.hasNext()) {
           throw DruidException.forPersona(DruidException.Persona.USER)
                               .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                              .build("Found files at provided export destination. Export is only allowed to "
-                                     + "an empty path. Please provide an empty path or move the existing files.");
+                              .build("Found files at provided export destination[%s]. Export is only allowed to "
+                                     + "an empty path. Please provide an empty path/subdirectory or move the existing files.",
+                                     exportStorageProvider.getBasePath());
         }
       }
       catch (IOException e) {

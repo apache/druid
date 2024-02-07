@@ -20,7 +20,6 @@
 package org.apache.druid.msq.indexing.destination;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
@@ -28,10 +27,7 @@ import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.storage.ExportStorageProvider;
-import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -39,29 +35,21 @@ import java.util.Optional;
  * Destination used by tasks that write the results as files to an external destination. {@link #resultFormat} denotes
  * the format of the file created and {@link #exportStorageProvider} denotes the type of external
  * destination.
- * <br>
- * {@link #replaceTimeChunks} denotes how existing files should be handled.
- * - If the value is null, the results are appended to the existing files.
- * - If the value is present, existing files will be deleted according to time intervals.
  */
 public class ExportMSQDestination implements MSQDestination
 {
   public static final String TYPE = "export";
   private final ExportStorageProvider exportStorageProvider;
   private final ResultFormat resultFormat;
-  @Nullable
-  private final List<Interval> replaceTimeChunks;
 
   @JsonCreator
   public ExportMSQDestination(
       @JsonProperty("exportStorageProvider") ExportStorageProvider exportStorageProvider,
-      @JsonProperty("resultFormat") ResultFormat resultFormat,
-      @JsonProperty("replaceTimeChunks") @Nullable List<Interval> replaceTimeChunks
+      @JsonProperty("resultFormat") ResultFormat resultFormat
   )
   {
     this.exportStorageProvider = exportStorageProvider;
     this.resultFormat = resultFormat;
-    this.replaceTimeChunks = replaceTimeChunks;
   }
 
 
@@ -78,14 +66,6 @@ public class ExportMSQDestination implements MSQDestination
     return resultFormat;
   }
 
-  @Nullable
-  @JsonProperty("replaceTimeChunks")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  public List<Interval> getReplaceTimeChunks()
-  {
-    return replaceTimeChunks;
-  }
-
   @Override
   public boolean equals(Object o)
   {
@@ -97,14 +77,13 @@ public class ExportMSQDestination implements MSQDestination
     }
     ExportMSQDestination that = (ExportMSQDestination) o;
     return Objects.equals(exportStorageProvider, that.exportStorageProvider)
-           && resultFormat == that.resultFormat
-           && Objects.equals(replaceTimeChunks, that.replaceTimeChunks);
+           && resultFormat == that.resultFormat;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(exportStorageProvider, resultFormat, replaceTimeChunks);
+    return Objects.hash(exportStorageProvider, resultFormat);
   }
 
   @Override
@@ -113,7 +92,6 @@ public class ExportMSQDestination implements MSQDestination
     return "ExportMSQDestination{" +
            "exportStorageProvider=" + exportStorageProvider +
            ", resultFormat=" + resultFormat +
-           ", replaceTimeChunks=" + replaceTimeChunks +
            '}';
   }
 
