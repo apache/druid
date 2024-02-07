@@ -304,9 +304,15 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
-        ImmutableList.of(
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(
             new Object[]{null},
             new Object[]{null}
+        )
+        : ImmutableList.of(
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""}
         )
     );
   }
@@ -376,9 +382,15 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
-        ImmutableList.of(
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(
             new Object[]{null},
             new Object[]{null}
+        )
+        : ImmutableList.of(
+            new Object[]{""},
+            new Object[]{""},
+            new Object[]{""}
         )
     );
   }
