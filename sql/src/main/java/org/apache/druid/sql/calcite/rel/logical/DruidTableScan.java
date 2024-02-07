@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.rel.logical;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
@@ -34,11 +33,7 @@ import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.schema.Table;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.sql.calcite.planner.DruidQueryGenerator.Vertex;
-import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
-import org.apache.druid.sql.calcite.table.DruidTable;
-
 import java.util.List;
 
 /**
@@ -117,26 +112,27 @@ public class DruidTableScan extends TableScan implements DruidLogicalNode, XInpu
   @Override
   public void validate(List<Vertex> newInputs, boolean isRoot)
   {
-    DruidTableScan scan = this;
-    if (!(scan instanceof DruidTableScan)) {
-      throw new ISE("Planning hasn't converted logical table scan to druid convention");
-    }
-    DruidTableScan druidTableScan = scan;
-    Preconditions.checkArgument(scan.getInputs().size() == 0);
-
-    Vertex vertex = Vertex.createFor(scan);
-    PartialDruidQuery partialQuery = PartialDruidQuery.create(this);
-
-    final RelOptTable table = scan.getTable();
-    final DruidTable druidTable = table.unwrap(DruidTable.class);
-
-    Preconditions.checkArgument(druidTable != null);
-
-    vertex.currentTable = druidTable;
-    if (druidTableScan.getProject() != null) {
-      vertex.partialDruidQuery = vertex.partialDruidQuery.withSelectProject(druidTableScan.getProject());
-    }
-    return vertex;
+    throw new RuntimeException("asd");
+//    DruidTableScan scan = this;
+//    if (!(scan instanceof DruidTableScan)) {
+//      throw new ISE("Planning hasn't converted logical table scan to druid convention");
+//    }
+//    DruidTableScan druidTableScan = scan;
+//    Preconditions.checkArgument(scan.getInputs().size() == 0);
+//
+//    Vertex vertex = Vertex.createFor(scan);
+//    PartialDruidQuery partialQuery = PartialDruidQuery.create(this);
+//
+//    final RelOptTable table = scan.getTable();
+//    final DruidTable druidTable = table.unwrap(DruidTable.class);
+//
+//    Preconditions.checkArgument(druidTable != null);
+//
+//    vertex.currentTable = druidTable;
+//    if (druidTableScan.getProject() != null) {
+//      vertex.partialDruidQuery = vertex.partialDruidQuery.withSelectProject(druidTableScan.getProject());
+//    }
+//    return vertex;
 
   }
 

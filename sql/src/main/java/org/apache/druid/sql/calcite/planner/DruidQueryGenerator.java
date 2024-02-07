@@ -257,14 +257,14 @@ public class DruidQueryGenerator
 
   private Vertex processNodeWithInputs(RelNode node, List<Vertex> newInputs, boolean isRoot)
   {
-    if(node instanceof XInputProducer) {
+    if(false && node instanceof XInputProducer) {
       XInputProducer xInputProducer = (XInputProducer) node;
       xInputProducer.validate(newInputs, isRoot);
       return createVertex(node);
     }
-//    if (node instanceof DruidTableScan) {
-//      return processTableScan((DruidTableScan) node);
-//    }
+    if (node instanceof DruidTableScan) {
+      return processTableScan((DruidTableScan) node);
+    }
     if (node instanceof DruidValues) {
       return processValues((DruidValues) node);
     }
