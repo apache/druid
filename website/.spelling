@@ -1307,9 +1307,11 @@ kafka.topic
 keyColumnName
 keyFormat
 listDelimiter
+lowerOpen
 timestamp
 timestampColumnName
 timestampSpec
+upperOpen
 urls
 valueFormat
 1GB
