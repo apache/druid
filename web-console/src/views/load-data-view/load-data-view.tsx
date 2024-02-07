@@ -868,7 +868,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             {mode !== 'streaming' && (
               <>
                 {this.renderIngestionCard('index_parallel:s3')}
-                {this.renderIngestionCard('index_parallel:azure')}
+                {this.renderIngestionCard('index_parallel:azureStorage')}
                 {this.renderIngestionCard('index_parallel:google')}
                 {this.renderIngestionCard('index_parallel:delta')}
                 {this.renderIngestionCard('index_parallel:hdfs')}
@@ -962,7 +962,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       case 'index_parallel:s3':
         return <p>Load text based, orc, or parquet data from Amazon S3.</p>;
 
-      case 'index_parallel:azure':
+      case 'index_parallel:azureStorage':
         return <p>Load text based, orc, or parquet data from Azure.</p>;
 
       case 'index_parallel:google':
@@ -1027,7 +1027,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       case 'index_parallel:druid':
       case 'index_parallel:inline':
       case 'index_parallel:s3':
-      case 'index_parallel:azure':
+      case 'index_parallel:azureStorage':
       case 'index_parallel:google':
       case 'index_parallel:delta':
       case 'index_parallel:hdfs':
