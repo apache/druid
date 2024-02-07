@@ -23,7 +23,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
@@ -173,9 +172,7 @@ return        xInputProducer.buildVertexRoot(vertexFactory, newInputs);
 
     Preconditions.checkArgument(druidTable != null);
 
-    Project project = druidTableScan.getProject();
-
-    return vertexFactory .createTableScanVertex(scan, druidTable, project);
+    return vertexFactory .createTableScanVertex(scan, druidTable, null);
   }
 
 }

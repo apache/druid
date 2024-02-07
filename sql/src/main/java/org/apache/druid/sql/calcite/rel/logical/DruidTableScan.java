@@ -29,7 +29,6 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
-import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
@@ -47,24 +46,20 @@ import java.util.List;
  */
 public class DruidTableScan extends TableScan implements DruidLogicalNode, XInputProducer
 {
-  private final Project project;
-
   public DruidTableScan(
       RelOptCluster cluster,
       RelTraitSet traitSet,
-      RelOptTable table,
-      Project project
+      RelOptTable table
   )
   {
     super(cluster, traitSet, table);
-    this.project = project;
     assert getConvention() instanceof DruidLogicalConvention;
   }
 
   @Override
   public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs)
   {
-    return new DruidTableScan(getCluster(), traitSet, table, project);
+    return new DruidTableScan(getCluster(), traitSet, table);
   }
 
   @Override
@@ -82,24 +77,13 @@ public class DruidTableScan extends TableScan implements DruidLogicalNode, XInpu
   @Override
   public RelWriter explainTerms(RelWriter pw)
   {
-    if (project != null) {
-      project.explainTerms(pw);
-    }
     return super.explainTerms(pw).item("druid", "logical");
   }
 
   @Override
   public RelDataType deriveRowType()
   {
-    if (project != null) {
-      return project.getRowType();
-    }
     return super.deriveRowType();
-  }
-
-  public Project getProject()
-  {
-    return project;
   }
 
   public static DruidTableScan create(RelOptCluster cluster, final RelOptTable relOptTable)
@@ -112,7 +96,7 @@ public class DruidTableScan extends TableScan implements DruidLogicalNode, XInpu
           }
           return ImmutableList.of();
         });
-    return new DruidTableScan(cluster, traitSet, relOptTable, null);
+    return new DruidTableScan(cluster, traitSet, relOptTable);
   }
 
   @Override
@@ -120,7 +104,7 @@ public class DruidTableScan extends TableScan implements DruidLogicalNode, XInpu
   {
     Preconditions.checkArgument(getInputs().size() == 0);
     Preconditions.checkArgument(getDruidTable() != null);
-    return vertexFactory.createTableScanVertex(this, null, getProject());
+    return vertexFactory.createTableScanVertex(this, null, null);
   }
 
   @Override

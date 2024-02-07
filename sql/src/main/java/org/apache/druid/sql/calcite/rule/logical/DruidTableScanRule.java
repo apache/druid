@@ -46,8 +46,7 @@ public class DruidTableScanRule extends RelOptRule
     DruidTableScan druidTableScan = new DruidTableScan(
         tableScan.getCluster(),
         newTrait,
-        tableScan.getTable(),
-        null
+        tableScan.getTable()
     );
     call.transformTo(druidTableScan);
   }
