@@ -129,7 +129,7 @@ public class LocalFileExportStorageProvider implements ExportStorageProvider
     if (!exportFile.toPath().normalize().startsWith(baseDir.toPath())) {
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build("The provided destination must be within the path configured by runtime property `druid.export.storage.baseDir` "
+                          .build("The provided destination [%s] must be within the path configured by runtime property `druid.export.storage.baseDir` "
                                  + "Please reach out to the cluster admin for the allowed path. ", customPath);
     }
     return exportFile;
