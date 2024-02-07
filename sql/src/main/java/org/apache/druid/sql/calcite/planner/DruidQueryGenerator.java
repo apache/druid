@@ -38,6 +38,7 @@ import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.calcite.planner.DruidQueryGenerator.PDQVertexFactory.PDQVertex;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery.Stage;
@@ -62,12 +63,14 @@ public class DruidQueryGenerator
   private final PlannerContext plannerContext;
   private final RelNode relRoot;
   private final RexBuilder rexBuilder;
+  private final PDQVertexFactory vertexFactory ;
 
   public DruidQueryGenerator(PlannerContext plannerContext, RelNode relRoot, RexBuilder rexBuilder)
   {
     this.plannerContext = plannerContext;
     this.relRoot = relRoot;
     this.rexBuilder = rexBuilder;
+    this.vertexFactory = new PDQVertexFactory(plannerContext,rexBuilder);
   }
 
   public DruidQuery buildQuery()
@@ -77,7 +80,18 @@ public class DruidQueryGenerator
     return vertex.buildQuery(true);
   }
 
-  private PDQVertex createVertex(RelNode scan)
+  static class PDQVertexFactory {
+
+    private final PlannerContext plannerContext;
+    private final RexBuilder rexBuilder;
+
+  public PDQVertexFactory(PlannerContext plannerContext, RexBuilder rexBuilder)
+    {
+      this.plannerContext = plannerContext;
+      this.rexBuilder = rexBuilder;
+    }
+
+    private PDQVertex createVertex(RelNode scan)
   {
     PDQVertex vertex = new PDQVertex();
     vertex.partialDruidQuery = PartialDruidQuery.create(scan);
@@ -101,22 +115,6 @@ public class DruidQueryGenerator
     return vertex;
   }
 
-  public interface Vertex{
-
-    InputDesc unwrapInputDesc();
-
-    Vertex mergeIntoDruidQuery(RelNode node, boolean isRoot);
-
-    boolean canUnwrapInput();
-
-    DruidQuery buildQuery(boolean b);
-
-  }
-  /**
-   * Execution dag vertex - encapsulates a list of operators.
-   *
-   * Right now it relies on {@link PartialDruidQuery} to hold on to the operators it encapsulates.
-   */
   public class PDQVertex implements Vertex
   {
     PartialDruidQuery partialDruidQuery;
@@ -255,6 +253,8 @@ public class DruidQueryGenerator
     }
 
   }
+  }
+
 
   private Vertex buildVertexFor(RelNode node, boolean isRoot)
   {
@@ -271,7 +271,8 @@ public class DruidQueryGenerator
     if(false && node instanceof XInputProducer) {
       XInputProducer xInputProducer = (XInputProducer) node;
       xInputProducer.validate(newInputs, isRoot);
-      return createVertex(node);
+//      PDQVertexFactory.this.createVertex()
+      return vertexFactory .createVertex(node);
     }
     if (node instanceof DruidTableScan) {
       return processTableScan((DruidTableScan) node);
@@ -289,7 +290,7 @@ public class DruidQueryGenerator
         return newVertex;
       }
       // FIXME
-      inputVertex = createVertex(node, (PDQVertex) inputVertex);
+      inputVertex = vertexFactory .createVertex(node, (PDQVertex) inputVertex);
       newVertex = inputVertex.mergeIntoDruidQuery(node, false);
       if (newVertex != null) {
         return newVertex;
@@ -308,7 +309,7 @@ public class DruidQueryGenerator
             .defensive("Union operand with non-trivial remapping is not supported [%s]", inputVertex);
       }
     }
-    return createVertex(
+    return vertexFactory .createVertex(
         PartialDruidQuery.create(node),
         inputs
     );
@@ -333,7 +334,7 @@ public class DruidQueryGenerator
     );
     InlineTable inlineTable = new InlineTable(InlineDataSource.fromIterable(objectTuples, rowSignature));
 
-    PDQVertex vertex = createVertex(values);
+    PDQVertex vertex = vertexFactory .createVertex(values);
     vertex.currentTable = inlineTable;
 
     return vertex;
@@ -348,7 +349,7 @@ public class DruidQueryGenerator
     DruidTableScan druidTableScan = scan;
     Preconditions.checkArgument(scan.getInputs().size() == 0);
 
-    PDQVertex vertex = createVertex(scan);
+    PDQVertex vertex = vertexFactory .createVertex(scan);
 
     final RelOptTable table = scan.getTable();
     final DruidTable druidTable = table.unwrap(DruidTable.class);

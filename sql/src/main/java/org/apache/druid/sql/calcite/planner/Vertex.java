@@ -17,15 +17,25 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.rel.logical;
+package org.apache.druid.sql.calcite.planner;
 
-import org.apache.druid.sql.calcite.planner.Vertex;
+import org.apache.calcite.rel.RelNode;
+import org.apache.druid.sql.calcite.planner.DruidQueryGenerator.InputDesc;
+import org.apache.druid.sql.calcite.rel.DruidQuery;
+import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 
-import java.util.List;
-
-public interface XInputProducer
+/**
+ * Execution dag vertex - encapsulates a list of operators.
+ *
+ * Right now it relies on {@link PartialDruidQuery} to hold on to the operators it encapsulates.
+ */
+public interface Vertex
 {
+  boolean canUnwrapInput();
 
-  void validate(List<Vertex> newInputs, boolean isRoot);
+  InputDesc unwrapInputDesc();
 
+  Vertex mergeIntoDruidQuery(RelNode node, boolean isRoot);
+
+  DruidQuery buildQuery(boolean isRoot);
 }

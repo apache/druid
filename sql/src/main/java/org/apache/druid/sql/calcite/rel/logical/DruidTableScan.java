@@ -33,7 +33,8 @@ import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.schema.Table;
-import org.apache.druid.sql.calcite.planner.DruidQueryGenerator.Vertex;
+import org.apache.druid.sql.calcite.planner.Vertex;
+
 import java.util.List;
 
 /**
