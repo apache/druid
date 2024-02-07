@@ -94,7 +94,7 @@ public class PDQVertex implements Vertex
         input.rowSignature,
         plannerContext,
         rexBuilder,
-        currentTable != null && !topLevel
+        !topLevel
     );
   }
 

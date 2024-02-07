@@ -104,7 +104,7 @@ public class DruidTableScan extends TableScan implements DruidLogicalNode, XInpu
   {
     Preconditions.checkArgument(inputs.size() == 0);
     Preconditions.checkArgument(getDruidTable() != null);
-    return vertexFactory.createTableScanVertex(this, getDruidTable(), null);
+    return vertexFactory.createTableScanVertex(this, null, null);
   }
 
   @Override
