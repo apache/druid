@@ -96,6 +96,7 @@ import {
   getIoConfigTuningFormFields,
   getIssueWithSpec,
   getMetricSpecName,
+  getPossibleSystemFields,
   getRequiredModule,
   getRollup,
   getSchemaMode,
@@ -1520,6 +1521,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       ? STREAMING_INPUT_FORMAT_FIELDS
       : BATCH_INPUT_FORMAT_FIELDS;
 
+    const possibleSystemFields = getPossibleSystemFields(spec);
+
     const normalInputAutoForm = (
       <AutoForm
         fields={inputFormatFields}
@@ -1582,6 +1585,20 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                     />
                   )}
                 </>
+              )}
+              {possibleSystemFields.length > 0 && (
+                <AutoForm
+                  fields={[
+                    {
+                      name: 'spec.ioConfig.inputSource.systemFields',
+                      label: 'System fields',
+                      type: 'string-array',
+                      suggestions: possibleSystemFields,
+                    },
+                  ]}
+                  model={spec}
+                  onChange={this.updateSpecPreview}
+                />
               )}
               {this.renderApplyButtonBar(
                 parserQueryState,
