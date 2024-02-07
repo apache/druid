@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 public class S3ExportConfig
@@ -32,15 +33,15 @@ public class S3ExportConfig
   @JsonProperty("chunkSize")
   private final HumanReadableBytes chunkSize;
   @JsonProperty("maxRetry")
-  private final int maxRetry;
+  private final Integer maxRetry;
   @JsonProperty("allowedExportPaths")
   private final List<String> allowedExportPaths;
 
   @JsonCreator
   public S3ExportConfig(
       @JsonProperty("tempDir") final String tempDir,
-      @JsonProperty("chunkSize") final HumanReadableBytes chunkSize,
-      @JsonProperty("maxRetry") final int maxRetry,
+      @JsonProperty("chunkSize") @Nullable final HumanReadableBytes chunkSize,
+      @JsonProperty("maxRetry") @Nullable final Integer maxRetry,
       @JsonProperty("allowedExportPaths") final List<String> allowedExportPaths)
   {
     this.tempDir = tempDir;
@@ -59,7 +60,7 @@ public class S3ExportConfig
     return chunkSize;
   }
 
-  public int getMaxRetry()
+  public Integer getMaxRetry()
   {
     return maxRetry;
   }
