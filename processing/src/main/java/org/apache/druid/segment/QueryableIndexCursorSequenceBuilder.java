@@ -295,16 +295,14 @@ public class QueryableIndexCursorSequenceBuilder
     if (metrics != null) {
       final long buildTime = System.nanoTime() - bitmapConstructionStartNs;
       metrics.reportBitmapConstructionTime(buildTime);
+      final FilterBundle.BundleInfo info = filterBundle.getInfo();
+      metrics.filterBundle(info);
+      log.debug("Filter partitioning (%sms):%s", TimeUnit.NANOSECONDS.toMillis(buildTime), info);
       if (filterBundle.getIndex() != null) {
         metrics.reportPreFilteredRows(filterBundle.getIndex().getBitmap().size());
-        metrics.indexFilters(filterBundle.getIndex().getIndexMetrics());
       } else {
         metrics.reportPreFilteredRows(0);
       }
-      if (filterBundle.getMatcherBundle() != null) {
-        metrics.matcherFilters(filterBundle.getMatcherBundle().getMatcherMetrics());
-      }
-      log.debug("Filter partitioning (%sms):%s", TimeUnit.NANOSECONDS.toMillis(buildTime), filterBundle);
     }
     return filterBundle;
   }

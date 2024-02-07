@@ -147,7 +147,7 @@ public class OrFilter implements BooleanFilter
     if (index != null) {
       indexBundle = new FilterBundle.SimpleIndexBundle(
           Collections.singletonList(
-              new FilterBundle.IndexMetric(OR_JOINER.join(indexFilters), index.size(), totalBitmapConstructTimeNs)
+              new FilterBundle.IndexBundleInfo(OR_JOINER.join(indexFilters), index.size(), totalBitmapConstructTimeNs)
           ),
           index
       );
@@ -160,13 +160,13 @@ public class OrFilter implements BooleanFilter
       matcherBundle = new FilterBundle.MatcherBundle()
       {
         @Override
-        public List<FilterBundle.MatcherMetric> getMatcherMetrics()
+        public List<FilterBundle.MatcherBundleInfo> getMatcherMetrics()
         {
           if (!indexFilters.isEmpty()) {
             return Collections.singletonList(
-                new FilterBundle.MatcherMetric(
+                new FilterBundle.MatcherBundleInfo(
                     OR_JOINER.join(Iterables.concat(matcherFilters, indexFilters)),
-                    new FilterBundle.IndexMetric(
+                    new FilterBundle.IndexBundleInfo(
                         OR_JOINER.join(indexFilters),
                         partialIndex == null ? 0 : partialIndex.size(),
                         totalBitmapConstructTimeNs
@@ -175,7 +175,7 @@ public class OrFilter implements BooleanFilter
             );
           }
           return Collections.singletonList(
-              new FilterBundle.MatcherMetric(
+              new FilterBundle.MatcherBundleInfo(
                   OR_JOINER.join(matcherFilters),
                   null
               )

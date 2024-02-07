@@ -244,8 +244,9 @@ public interface QueryMetrics<QueryType extends Query<?>>
   void segment(String segmentIdentifier);
 
   /**
-   * @deprecated use {@link #indexFilters(List)} instead to emit metrics for filters which were used to construct
-   * {@link org.apache.druid.segment.BitmapOffset} or {@link org.apache.druid.segment.vector.BitmapVectorOffset}..
+   * @deprecated use {@link #filterBundle(FilterBundle.BundleInfo)} instead to collect details about filters which were
+   * used to construct {@link org.apache.druid.segment.BitmapOffset} or
+   * {@link org.apache.druid.segment.vector.BitmapVectorOffset}
    */
   @Deprecated
   @SuppressWarnings({"unreachable", "unused"})
@@ -255,8 +256,8 @@ public interface QueryMetrics<QueryType extends Query<?>>
   }
 
   /**
-   * @deprecated use {@link #matcherFilters(List)} instead to emit metrics for filters which were used as value
-   * matchers for {@link org.apache.druid.segment.FilteredOffset} or
+   * @deprecated use {@link #filterBundle(FilterBundle.BundleInfo)} instead to collect details about filters which were
+   * used as value matchers for {@link org.apache.druid.segment.FilteredOffset} or
    * {@link org.apache.druid.segment.vector.FilteredVectorOffset}
    */
   @SuppressWarnings({"unreachable", "unused"})
@@ -265,12 +266,7 @@ public interface QueryMetrics<QueryType extends Query<?>>
     // do nothing, nothing calls this
   }
 
-  default void indexFilters(List<FilterBundle.IndexMetric> preFilters)
-  {
-    // Emit nothing by default.
-  }
-
-  default void matcherFilters(List<FilterBundle.MatcherMetric> postFilters)
+  default void filterBundle(FilterBundle.BundleInfo bundleInfo)
   {
     // Emit nothing by default.
   }

@@ -79,16 +79,17 @@ public class FilterBundle
     return matcherBundle;
   }
 
-  @Override
-  public String toString()
+  public BundleInfo getInfo()
   {
-    return "indexes=" + (index != null ? index.getIndexMetrics() : null) +
-           ", matcher=" + (matcherBundle != null ? matcherBundle.getMatcherMetrics() : null);
+    return new BundleInfo(
+        index == null ? null : index.getIndexMetrics(),
+        matcherBundle == null ? null : matcherBundle.getMatcherMetrics()
+    );
   }
 
   public interface IndexBundle
   {
-    List<IndexMetric> getIndexMetrics();
+    List<IndexBundleInfo> getIndexMetrics();
     ImmutableBitmap getBitmap();
   }
   /**
@@ -101,19 +102,57 @@ public class FilterBundle
    */
   public interface MatcherBundle
   {
-    List<MatcherMetric> getMatcherMetrics();
+    List<MatcherBundleInfo> getMatcherMetrics();
     ValueMatcher valueMatcher(ColumnSelectorFactory selectorFactory, Offset baseOffset, boolean descending);
     VectorValueMatcher vectorMatcher(VectorColumnSelectorFactory selectorFactory);
   }
 
-  public static class IndexMetric
+  public static class BundleInfo
+  {
+    private final List<IndexBundleInfo> indexes;
+    private final List<MatcherBundleInfo> matchers;
+
+    @JsonCreator
+    public BundleInfo(
+        @JsonProperty("indexes") List<IndexBundleInfo> indexes,
+        @JsonProperty("matchers") List<MatcherBundleInfo> matchers
+    )
+    {
+      this.indexes = indexes;
+      this.matchers = matchers;
+    }
+
+    @JsonProperty
+    public List<IndexBundleInfo> getIndexes()
+    {
+      return indexes;
+    }
+
+    @JsonProperty
+    public List<MatcherBundleInfo> getMatchers()
+    {
+      return matchers;
+    }
+
+    @Override
+    public String toString()
+    {
+      return "{indexes=" + indexes + ", matcher=" + matchers + '}';
+    }
+  }
+
+  public static class IndexBundleInfo
   {
     private final String filter;
     private final int selectionSize;
     private final long buildTimeNs;
 
     @JsonCreator
-    public IndexMetric(String filter, int selectionSize, long buildTimeNs)
+    public IndexBundleInfo(
+        @JsonProperty("filter") String filter,
+        @JsonProperty("selectionSize") int selectionSize,
+        @JsonProperty("buildTimeNs") long buildTimeNs
+    )
     {
       this.filter = filter;
       this.selectionSize = selectionSize;
@@ -149,14 +188,17 @@ public class FilterBundle
     }
   }
 
-  public static class MatcherMetric
+  public static class MatcherBundleInfo
   {
     private final String filter;
     @Nullable
-    private final IndexMetric partialIndex;
+    private final IndexBundleInfo partialIndex;
 
     @JsonCreator
-    public MatcherMetric(String filter, @Nullable IndexMetric partialIndex)
+    public MatcherBundleInfo(
+        @JsonProperty("filter") String filter,
+        @JsonProperty("partialIndex") @Nullable IndexBundleInfo partialIndex
+    )
     {
       this.filter = filter;
       this.partialIndex = partialIndex;
@@ -170,7 +212,7 @@ public class FilterBundle
 
     @Nullable
     @JsonProperty
-    public IndexMetric getPartialIndex()
+    public IndexBundleInfo getPartialIndex()
     {
       return partialIndex;
     }
@@ -187,20 +229,20 @@ public class FilterBundle
 
   public static class SimpleIndexBundle implements IndexBundle
   {
-    private final List<IndexMetric> indexMetrics;
+    private final List<IndexBundleInfo> indexBundles;
 
     private final ImmutableBitmap index;
 
-    public SimpleIndexBundle(List<IndexMetric> indexMetrics, ImmutableBitmap index)
+    public SimpleIndexBundle(List<IndexBundleInfo> indexBundles, ImmutableBitmap index)
     {
-      this.indexMetrics = Preconditions.checkNotNull(indexMetrics);
+      this.indexBundles = Preconditions.checkNotNull(indexBundles);
       this.index = Preconditions.checkNotNull(index);
     }
 
     @Override
-    public List<IndexMetric> getIndexMetrics()
+    public List<IndexBundleInfo> getIndexMetrics()
     {
-      return indexMetrics;
+      return indexBundles;
     }
 
     @Override
@@ -213,29 +255,33 @@ public class FilterBundle
 
   public static class SimpleMatcherBundle implements MatcherBundle
   {
-    private final List<MatcherMetric> matcherMetrics;
+    private final List<MatcherBundleInfo> matcherBundles;
     private final Function<ColumnSelectorFactory, ValueMatcher> matcherFn;
     private final Function<VectorColumnSelectorFactory, VectorValueMatcher> vectorMatcherFn;
 
     public SimpleMatcherBundle(
-        List<MatcherMetric> matcherMetrics,
+        List<MatcherBundleInfo> matcherBundles,
         Function<ColumnSelectorFactory, ValueMatcher> matcherFn,
         Function<VectorColumnSelectorFactory, VectorValueMatcher> vectorMatcherFn
     )
     {
-      this.matcherMetrics = Preconditions.checkNotNull(matcherMetrics);
+      this.matcherBundles = Preconditions.checkNotNull(matcherBundles);
       this.matcherFn = Preconditions.checkNotNull(matcherFn);
       this.vectorMatcherFn = Preconditions.checkNotNull(vectorMatcherFn);
     }
 
     @Override
-    public List<MatcherMetric> getMatcherMetrics()
+    public List<MatcherBundleInfo> getMatcherMetrics()
     {
-      return matcherMetrics;
+      return matcherBundles;
     }
 
     @Override
-    public ValueMatcher valueMatcher(ColumnSelectorFactory selectorFactory, Offset baseOffset, boolean descending)
+    public ValueMatcher valueMatcher(
+        ColumnSelectorFactory selectorFactory,
+        Offset baseOffset,
+        boolean descending
+    )
     {
       return matcherFn.apply(selectorFactory);
     }

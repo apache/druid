@@ -27,8 +27,6 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.FilterBundle;
 
-import java.util.List;
-
 /**
  * This class is implemented with delegation to another QueryMetrics for compatibility, see "Making subinterfaces of
  * QueryMetrics for emitting custom dimensions and/or metrics for specific query types" section in {@link QueryMetrics}
@@ -154,15 +152,9 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   }
 
   @Override
-  public void indexFilters(List<FilterBundle.IndexMetric> preFilters)
+  public void filterBundle(FilterBundle.BundleInfo bundleInfo)
   {
-    delegateQueryMetrics.indexFilters(preFilters);
-  }
-
-  @Override
-  public void matcherFilters(List<FilterBundle.MatcherMetric> postFilters)
-  {
-    delegateQueryMetrics.matcherFilters(postFilters);
+    delegateQueryMetrics.filterBundle(bundleInfo);
   }
 
   @Override

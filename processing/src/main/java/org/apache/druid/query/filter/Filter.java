@@ -66,7 +66,7 @@ public interface Filter
       if (result != null) {
         ImmutableBitmap bitmap = bitmapResultFactory.toImmutableBitmap(result);
         indexBundle = new FilterBundle.SimpleIndexBundle(
-            Collections.singletonList(new FilterBundle.IndexMetric(toString(), bitmap.size(), totalConstructionTimeNs)),
+            Collections.singletonList(new FilterBundle.IndexBundleInfo(toString(), bitmap.size(), totalConstructionTimeNs)),
             bitmap
         );
       } else {
@@ -80,7 +80,7 @@ public interface Filter
     final FilterBundle.SimpleMatcherBundle matcherBundle;
     if (needMatcher) {
       matcherBundle = new FilterBundle.SimpleMatcherBundle(
-          Collections.singletonList(new FilterBundle.MatcherMetric(toString(), null)),
+          Collections.singletonList(new FilterBundle.MatcherBundleInfo(toString(), null)),
           this::makeMatcher,
           this::makeVectorMatcher
       );

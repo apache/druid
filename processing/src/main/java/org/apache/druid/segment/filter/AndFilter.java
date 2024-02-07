@@ -83,7 +83,7 @@ public class AndFilter implements BooleanFilter
       boolean allowPartialIndex
   )
   {
-    final List<FilterBundle.IndexMetric> indexMetrics = new ArrayList<>();
+    final List<FilterBundle.IndexBundleInfo> indexBundles = new ArrayList<>();
     final List<FilterBundle.MatcherBundle> matcherBundles = new ArrayList<>();
 
     int selectionCount = selectionRowCount;
@@ -105,7 +105,7 @@ public class AndFilter implements BooleanFilter
           return new FilterBundle(
               new FilterBundle.SimpleIndexBundle(
                   Collections.singletonList(
-                      new FilterBundle.IndexMetric(
+                      new FilterBundle.IndexBundleInfo(
                           FalseFilter.instance().toString(),
                           0,
                           System.nanoTime() - bitmapConstructionStartNs
@@ -116,7 +116,7 @@ public class AndFilter implements BooleanFilter
               null
           );
         }
-        indexMetrics.addAll(subBundle.getIndex().getIndexMetrics());
+        indexBundles.addAll(subBundle.getIndex().getIndexMetrics());
         if (index == null) {
           index = subBundle.getIndex().getBitmap();
         } else {
@@ -132,7 +132,7 @@ public class AndFilter implements BooleanFilter
     final FilterBundle.IndexBundle indexBundle;
     if (index != null) {
       indexBundle = new FilterBundle.SimpleIndexBundle(
-          indexMetrics,
+          indexBundles,
           index
       );
     } else {
@@ -144,9 +144,9 @@ public class AndFilter implements BooleanFilter
       matcherBundle = new FilterBundle.MatcherBundle()
       {
         @Override
-        public List<FilterBundle.MatcherMetric> getMatcherMetrics()
+        public List<FilterBundle.MatcherBundleInfo> getMatcherMetrics()
         {
-          ImmutableList.Builder<FilterBundle.MatcherMetric> bob = new ImmutableList.Builder<>();
+          ImmutableList.Builder<FilterBundle.MatcherBundleInfo> bob = new ImmutableList.Builder<>();
           for (FilterBundle.MatcherBundle bundle : matcherBundles) {
             bob.addAll(bundle.getMatcherMetrics());
           }
