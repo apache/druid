@@ -232,4 +232,10 @@ return xInputProducer.getInputDesc();
     return vertex;
   }
 
+  // FIXME ok?
+  public PlannerContext getPlannerContext()
+  {
+    return plannerContext;
+  }
+
 }

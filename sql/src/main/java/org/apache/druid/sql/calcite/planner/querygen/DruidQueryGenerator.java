@@ -93,9 +93,9 @@ return        xInputProducer.buildVertexRoot(vertexFactory, newInputs);
       if (node instanceof DruidTableScan) {
         return processTableScan((DruidTableScan) node);
       }
-    }
-    if (node instanceof DruidValues) {
-      return processValues((DruidValues) node);
+      if (node instanceof DruidValues) {
+        return processValues((DruidValues) node);
+      }
     }
     if (node instanceof Union) {
       return processUnion((Union) node, newInputs, isRoot);

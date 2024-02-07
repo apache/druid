@@ -29,22 +29,34 @@ import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexLiteral;
+import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.querygen.PDQVertexFactory;
+import org.apache.druid.sql.calcite.planner.querygen.Vertex;
+import org.apache.druid.sql.calcite.planner.querygen.Vertex.InputDesc;
+import org.apache.druid.sql.calcite.planner.querygen.XInputProducer;
 import org.apache.druid.sql.calcite.rel.CostEstimates;
+import org.apache.druid.sql.calcite.rule.DruidLogicalValuesRule;
+import org.apache.druid.sql.calcite.table.InlineTable;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * {@link DruidLogicalNode} convention node for {@link LogicalValues} plan node.
  */
-public class DruidValues extends LogicalValues implements DruidLogicalNode
+public class DruidValues extends LogicalValues implements DruidLogicalNode, XInputProducer
 {
+
+  private InlineTable inlineTable;
 
   public DruidValues(
       RelOptCluster cluster,
       RelTraitSet traitSet,
       RelDataType rowType,
-      ImmutableList<ImmutableList<RexLiteral>> tuples
-  )
+      ImmutableList<ImmutableList<RexLiteral>> tuples)
   {
     super(cluster, traitSet, rowType, tuples);
     assert getConvention() instanceof DruidLogicalConvention;
@@ -60,5 +72,44 @@ public class DruidValues extends LogicalValues implements DruidLogicalNode
   public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq)
   {
     return planner.getCostFactory().makeCost(CostEstimates.COST_BASE, 0, 0);
+  }
+
+  @Override
+  public Vertex buildVertexRoot(PDQVertexFactory vertexFactory, List<Vertex> inputs)
+  {
+    if (inlineTable == null) {
+      inlineTable = buildInlineTable(vertexFactory.getPlannerContext());
+    }
+    return vertexFactory.createTableScanVertex(this, null, null);
+  }
+
+  private InlineTable buildInlineTable(PlannerContext plannerContext)
+  {
+
+    final List<ImmutableList<RexLiteral>> tuples = getTuples();
+    final List<Object[]> objectTuples = tuples
+        .stream()
+        .map(
+            tuple -> tuple
+                .stream()
+                .map(v -> DruidLogicalValuesRule.getValueFromLiteral(v, plannerContext))
+                .collect(Collectors.toList())
+                .toArray(new Object[0])
+        )
+        .collect(Collectors.toList());
+    RowSignature rowSignature = RowSignatures.fromRelDataType(
+        getRowType().getFieldNames(),
+        getRowType()
+    );
+    InlineTable inlineTable = new InlineTable(InlineDataSource.fromIterable(objectTuples, rowSignature));
+
+    return inlineTable;
+  }
+
+  @Override
+  public InputDesc getInputDesc()
+  {
+    return new InputDesc(inlineTable.getDataSource(), inlineTable.getRowSignature());
+
   }
 }
