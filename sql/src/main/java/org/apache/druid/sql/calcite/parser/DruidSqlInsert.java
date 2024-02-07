@@ -44,7 +44,8 @@ public class DruidSqlInsert extends DruidSqlIngest
   public static DruidSqlInsert create(
       @Nonnull SqlInsert insertNode,
       @Nullable SqlNode partitionedBy,
-      @Nullable SqlNodeList clusteredBy
+      @Nullable SqlNodeList clusteredBy,
+      @Nullable String exportFileFormat
   )
   {
     return new DruidSqlInsert(
@@ -54,10 +55,17 @@ public class DruidSqlInsert extends DruidSqlIngest
         insertNode.getSource(),
         insertNode.getTargetColumnList(),
         partitionedBy,
-        clusteredBy
+        clusteredBy,
+        exportFileFormat
     );
   }
 
+  /**
+   * While partitionedBy and partitionedByStringForUnparse can be null as arguments to the constructor, this is
+   * disallowed (semantically) and the constructor performs checks to ensure that. This helps in producing friendly
+   * errors when the PARTITIONED BY custom clause is not present, and keeps its error separate from JavaCC/Calcite's
+   * custom errors which can be cryptic when someone accidentally forgets to explicitly specify the PARTITIONED BY clause
+   */
   public DruidSqlInsert(
       SqlParserPos pos,
       SqlNodeList keywords,
@@ -65,7 +73,8 @@ public class DruidSqlInsert extends DruidSqlIngest
       SqlNode source,
       SqlNodeList columnList,
       @Nullable SqlNode partitionedBy,
-      @Nullable SqlNodeList clusteredBy
+      @Nullable SqlNodeList clusteredBy,
+      @Nullable String exportFileFormat
   )
   {
     super(
@@ -75,7 +84,8 @@ public class DruidSqlInsert extends DruidSqlIngest
         source,
         columnList,
         partitionedBy,
-        clusteredBy
+        clusteredBy,
+        exportFileFormat
     );
   }
 
@@ -89,11 +99,28 @@ public class DruidSqlInsert extends DruidSqlIngest
   @Override
   public void unparse(SqlWriter writer, int leftPrec, int rightPrec)
   {
-    super.unparse(writer, leftPrec, rightPrec);
+    writer.startList(SqlWriter.FrameTypeEnum.SELECT);
+    writer.sep(isUpsert() ? "UPSERT INTO" : "INSERT INTO");
+    final int opLeft = getOperator().getLeftPrec();
+    final int opRight = getOperator().getRightPrec();
+    getTargetTable().unparse(writer, opLeft, opRight);
+    if (getTargetColumnList() != null) {
+      getTargetColumnList().unparse(writer, opLeft, opRight);
+    }
+    writer.newlineAndIndent();
+    if (getExportFileFormat() != null) {
+      writer.keyword("AS");
+      writer.print(getExportFileFormat());
+      writer.newlineAndIndent();
+    }
+    getSource().unparse(writer, 0, 0);
+    writer.newlineAndIndent();
+
     if (getPartitionedBy() != null) {
       writer.keyword("PARTITIONED BY");
       writer.keyword(partitionedBy.toString());
     }
+
     if (getClusteredBy() != null) {
       writer.keyword("CLUSTERED BY");
       SqlWriter.Frame frame = writer.startList("", "");

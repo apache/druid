@@ -35,11 +35,15 @@ import java.util.List;
  */
 public abstract class DruidSqlIngest extends SqlInsert
 {
+  public static final String SQL_EXPORT_FILE_FORMAT = "__exportFileFormat";
+
   @Nullable
   protected final SqlNode partitionedBy;
 
   @Nullable
   protected final SqlNodeList clusteredBy;
+  @Nullable
+  private final String exportFileFormat;
 
   public DruidSqlIngest(
       SqlParserPos pos,
@@ -48,13 +52,15 @@ public abstract class DruidSqlIngest extends SqlInsert
       SqlNode source,
       SqlNodeList columnList,
       @Nullable SqlNode partitionedBy,
-      @Nullable SqlNodeList clusteredBy
+      @Nullable SqlNodeList clusteredBy,
+      @Nullable String exportFileFormat
   )
   {
     super(pos, keywords, targetTable, source, columnList);
 
     this.partitionedBy = partitionedBy;
     this.clusteredBy = clusteredBy;
+    this.exportFileFormat = exportFileFormat;
   }
 
   @Nullable
@@ -67,6 +73,12 @@ public abstract class DruidSqlIngest extends SqlInsert
   public SqlNodeList getClusteredBy()
   {
     return clusteredBy;
+  }
+
+  @Nullable
+  public String getExportFileFormat()
+  {
+    return exportFileFormat;
   }
 
   @Override

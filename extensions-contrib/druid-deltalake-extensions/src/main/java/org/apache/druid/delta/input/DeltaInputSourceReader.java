@@ -29,6 +29,7 @@ import org.apache.druid.data.input.InputStats;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
@@ -38,28 +39,29 @@ import java.util.NoSuchElementException;
  */
 public class DeltaInputSourceReader implements InputSourceReader
 {
-  private final io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch> filteredColumnarBatchCloseableIterator;
+  private final Iterator<io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch>> filteredColumnarBatchIterators;
   private final InputRowSchema inputRowSchema;
 
   public DeltaInputSourceReader(
-      io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch> filteredColumnarBatchCloseableIterator,
+      Iterator<io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch>> filteredColumnarBatchIterators,
       InputRowSchema inputRowSchema
+
   )
   {
-    this.filteredColumnarBatchCloseableIterator = filteredColumnarBatchCloseableIterator;
+    this.filteredColumnarBatchIterators = filteredColumnarBatchIterators;
     this.inputRowSchema = inputRowSchema;
   }
 
   @Override
   public CloseableIterator<InputRow> read()
   {
-    return new DeltaInputSourceIterator(filteredColumnarBatchCloseableIterator, inputRowSchema);
+    return new DeltaInputSourceIterator(filteredColumnarBatchIterators, inputRowSchema);
   }
 
   @Override
   public CloseableIterator<InputRow> read(InputStats inputStats)
   {
-    return new DeltaInputSourceIterator(filteredColumnarBatchCloseableIterator, inputRowSchema);
+    return new DeltaInputSourceIterator(filteredColumnarBatchIterators, inputRowSchema);
   }
 
   @Override
@@ -92,17 +94,17 @@ public class DeltaInputSourceReader implements InputSourceReader
 
   private static class DeltaInputSourceIterator implements CloseableIterator<InputRow>
   {
-    private final io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch> filteredColumnarBatchCloseableIterator;
+    private final Iterator<io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch>> filteredColumnarBatchIterators;
 
     private io.delta.kernel.utils.CloseableIterator<Row> currentBatch = null;
     private final InputRowSchema inputRowSchema;
 
     public DeltaInputSourceIterator(
-        io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch> filteredColumnarBatchCloseableIterator,
+        Iterator<io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch>> filteredColumnarBatchCloseableIterator,
         InputRowSchema inputRowSchema
     )
     {
-      this.filteredColumnarBatchCloseableIterator = filteredColumnarBatchCloseableIterator;
+      this.filteredColumnarBatchIterators = filteredColumnarBatchCloseableIterator;
       this.inputRowSchema = inputRowSchema;
     }
 
@@ -110,10 +112,19 @@ public class DeltaInputSourceReader implements InputSourceReader
     public boolean hasNext()
     {
       while (currentBatch == null || !currentBatch.hasNext()) {
-        if (!filteredColumnarBatchCloseableIterator.hasNext()) {
+        if (!filteredColumnarBatchIterators.hasNext()) {
           return false; // No more batches or records to read!
         }
-        currentBatch = filteredColumnarBatchCloseableIterator.next().getRows();
+
+        final io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch> filteredBatchIterator =
+            filteredColumnarBatchIterators.next();
+
+        while (filteredBatchIterator.hasNext()) {
+          currentBatch = filteredBatchIterator.next().getRows();
+          if (currentBatch.hasNext()) {
+            return true;
+          }
+        }
       }
       return true;
     }
@@ -132,7 +143,13 @@ public class DeltaInputSourceReader implements InputSourceReader
     @Override
     public void close() throws IOException
     {
-      filteredColumnarBatchCloseableIterator.close();
+      if (currentBatch != null) {
+        currentBatch.close();
+      }
+
+      if (filteredColumnarBatchIterators.hasNext()) {
+        filteredColumnarBatchIterators.next().close();
+      }
     }
   }
 }

@@ -47,17 +47,12 @@ public class DruidSqlReplace extends DruidSqlIngest
 
   private final SqlNode replaceTimeQuery;
 
-  /**
-   * While partitionedBy and partitionedByStringForUnparse can be null as arguments to the constructor, this is
-   * disallowed (semantically) and the constructor performs checks to ensure that. This helps in producing friendly
-   * errors when the PARTITIONED BY custom clause is not present, and keeps its error separate from JavaCC/Calcite's
-   * custom errors which can be cryptic when someone accidentally forgets to explicitly specify the PARTITIONED BY clause
-   */
   public static DruidSqlReplace create(
       @Nonnull SqlInsert insertNode,
       @Nullable SqlNode partitionedBy,
       @Nullable SqlNodeList clusteredBy,
-      @Nullable SqlNode replaceTimeQuery
+      @Nullable SqlNode replaceTimeQuery,
+      @Nullable String exportFileFormat
   )
   {
     return new DruidSqlReplace(
@@ -68,10 +63,17 @@ public class DruidSqlReplace extends DruidSqlIngest
         insertNode.getTargetColumnList(),
         partitionedBy,
         clusteredBy,
-        replaceTimeQuery
+        replaceTimeQuery,
+        exportFileFormat
     );
   }
 
+  /**
+   * While partitionedBy and partitionedByStringForUnparse can be null as arguments to the constructor, this is
+   * disallowed (semantically) and the constructor performs checks to ensure that. This helps in producing friendly
+   * errors when the PARTITIONED BY custom clause is not present, and keeps its error separate from JavaCC/Calcite's
+   * custom errors which can be cryptic when someone accidentally forgets to explicitly specify the PARTITIONED BY clause
+   */
   public DruidSqlReplace(
       SqlParserPos pos,
       SqlNodeList keywords,
@@ -80,7 +82,8 @@ public class DruidSqlReplace extends DruidSqlIngest
       SqlNodeList columnList,
       @Nullable SqlNode partitionedBy,
       @Nullable SqlNodeList clusteredBy,
-      @Nullable SqlNode replaceTimeQuery
+      @Nullable SqlNode replaceTimeQuery,
+      @Nullable String exportFileFormat
   )
   {
     super(
@@ -90,7 +93,8 @@ public class DruidSqlReplace extends DruidSqlIngest
         source,
         columnList,
         partitionedBy,
-        clusteredBy
+        clusteredBy,
+        exportFileFormat
     );
 
     this.replaceTimeQuery = replaceTimeQuery;
@@ -130,6 +134,12 @@ public class DruidSqlReplace extends DruidSqlIngest
       getTargetColumnList().unparse(writer, opLeft, opRight);
     }
     writer.newlineAndIndent();
+
+    if (getExportFileFormat() != null) {
+      writer.keyword("AS");
+      writer.print(getExportFileFormat());
+      writer.newlineAndIndent();
+    }
 
     writer.keyword("OVERWRITE");
     if (replaceTimeQuery instanceof SqlLiteral) {

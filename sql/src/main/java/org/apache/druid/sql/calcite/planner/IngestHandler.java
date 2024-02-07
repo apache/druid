@@ -46,8 +46,13 @@ import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
 import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
+import org.apache.druid.sql.calcite.parser.ExternalDestinationSqlIdentifier;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
+import org.apache.druid.sql.destination.ExportDestination;
+import org.apache.druid.sql.destination.IngestDestination;
+import org.apache.druid.sql.destination.TableDestination;
+import org.apache.druid.storage.ExportStorageProvider;
 
 import java.util.List;
 import java.util.regex.Pattern;
@@ -57,7 +62,7 @@ public abstract class IngestHandler extends QueryHandler
   private static final Pattern UNNAMED_COLUMN_PATTERN = Pattern.compile("^EXPR\\$\\d+$", Pattern.CASE_INSENSITIVE);
 
   protected final Granularity ingestionGranularity;
-  protected String targetDatasource;
+  protected IngestDestination targetDatasource;
 
   IngestHandler(
       HandlerContext handlerContext,
@@ -103,15 +108,56 @@ public abstract class IngestHandler extends QueryHandler
 
   protected abstract DruidSqlIngest ingestNode();
 
+  private void validateExport()
+  {
+    if (!handlerContext.plannerContext().featureAvailable(EngineFeature.WRITE_EXTERNAL_DATA)) {
+      throw InvalidSqlInput.exception(
+          "Writing to external sources are not supported by requested SQL engine [%s], consider using MSQ.",
+          handlerContext.engine().name()
+      );
+    }
+
+    if (ingestNode().getPartitionedBy() != null) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.UNSUPPORTED)
+                          .build("Export statements do not support a PARTITIONED BY or CLUSTERED BY clause.");
+    }
+
+    final String exportFileFormat = ingestNode().getExportFileFormat();
+    if (exportFileFormat == null) {
+      throw InvalidSqlInput.exception(
+          "Exporting rows into an EXTERN destination requires an AS clause to specify the format, but none was found.",
+          operationName()
+      );
+    } else {
+      handlerContext.plannerContext().queryContextMap().put(
+          DruidSqlIngest.SQL_EXPORT_FILE_FORMAT,
+          exportFileFormat
+      );
+    }
+  }
+
   @Override
   public void validate()
   {
-    if (ingestNode().getPartitionedBy() == null) {
-      throw InvalidSqlInput.exception(
-          "Operation [%s] requires a PARTITIONED BY to be explicitly defined, but none was found.",
-          operationName()
-      );
+    if (ingestNode().getTargetTable() instanceof ExternalDestinationSqlIdentifier) {
+      validateExport();
+    } else {
+      if (ingestNode().getPartitionedBy() == null) {
+        throw InvalidSqlInput.exception(
+            "Operation [%s] requires a PARTITIONED BY to be explicitly defined, but none was found.",
+            operationName()
+        );
+      }
+
+      if (ingestNode().getExportFileFormat() != null) {
+        throw InvalidSqlInput.exception(
+            "The AS <format> clause should only be specified while exporting rows into an EXTERN destination.",
+            operationName()
+        );
+      }
     }
+
     try {
       PlannerContext plannerContext = handlerContext.plannerContext();
       if (ingestionGranularity != null) {
@@ -135,7 +181,6 @@ public abstract class IngestHandler extends QueryHandler
       );
     }
     targetDatasource = validateAndGetDataSourceForIngest();
-    resourceActions.add(new ResourceAction(new Resource(targetDatasource, ResourceType.DATASOURCE), Action.WRITE));
   }
 
   @Override
@@ -149,10 +194,12 @@ public abstract class IngestHandler extends QueryHandler
   }
 
   /**
-   * Extract target datasource from a {@link SqlInsert}, and also validate that the ingestion is of a form we support.
-   * Expects the target datasource to be either an unqualified name, or a name qualified by the default schema.
+   * Extract target destination from a {@link SqlInsert}, validates that the ingestion is of a form we support, and
+   * adds the resource action required (if the destination is a druid datasource).
+   * Expects the target datasource to be an unqualified name, a name qualified by the default schema or an external
+   * destination.
    */
-  private String validateAndGetDataSourceForIngest()
+  private IngestDestination validateAndGetDataSourceForIngest()
   {
     final SqlInsert insert = ingestNode();
     if (insert.isUpsert()) {
@@ -168,23 +215,34 @@ public abstract class IngestHandler extends QueryHandler
     }
 
     final SqlIdentifier tableIdentifier = (SqlIdentifier) insert.getTargetTable();
-    final String dataSource;
+    final IngestDestination dataSource;
 
     if (tableIdentifier.names.isEmpty()) {
       // I don't think this can happen, but include a branch for it just in case.
       throw DruidException.forPersona(DruidException.Persona.USER)
           .ofCategory(DruidException.Category.DEFENSIVE)
           .build("Operation [%s] requires a target table", operationName());
+    } else if (tableIdentifier instanceof ExternalDestinationSqlIdentifier) {
+      ExternalDestinationSqlIdentifier externalDestination = ((ExternalDestinationSqlIdentifier) tableIdentifier);
+      ExportStorageProvider storageProvider = externalDestination.toExportStorageProvider(handlerContext.jsonMapper());
+      dataSource = new ExportDestination(storageProvider);
+      resourceActions.add(new ResourceAction(new Resource(externalDestination.getDestinationType(), ResourceType.EXTERNAL), Action.WRITE));
     } else if (tableIdentifier.names.size() == 1) {
       // Unqualified name.
-      dataSource = Iterables.getOnlyElement(tableIdentifier.names);
+      String tableName = Iterables.getOnlyElement(tableIdentifier.names);
+      IdUtils.validateId("table", tableName);
+      dataSource = new TableDestination(tableName);
+      resourceActions.add(new ResourceAction(new Resource(tableName, ResourceType.DATASOURCE), Action.WRITE));
     } else {
       // Qualified name.
       final String defaultSchemaName =
           Iterables.getOnlyElement(CalciteSchema.from(handlerContext.defaultSchema()).path(null));
 
       if (tableIdentifier.names.size() == 2 && defaultSchemaName.equals(tableIdentifier.names.get(0))) {
-        dataSource = tableIdentifier.names.get(1);
+        String tableName = tableIdentifier.names.get(1);
+        IdUtils.validateId("table", tableName);
+        dataSource = new TableDestination(tableName);
+        resourceActions.add(new ResourceAction(new Resource(tableName, ResourceType.DATASOURCE), Action.WRITE));
       } else {
         throw InvalidSqlInput.exception(
             "Table [%s] does not support operation [%s] because it is not a Druid datasource",
@@ -193,8 +251,6 @@ public abstract class IngestHandler extends QueryHandler
         );
       }
     }
-
-    IdUtils.validateId("table", dataSource);
 
     return dataSource;
   }
@@ -315,6 +371,11 @@ public abstract class IngestHandler extends QueryHandler
     @Override
     public void validate()
     {
+      if (ingestNode().getTargetTable() instanceof ExternalDestinationSqlIdentifier) {
+        throw InvalidSqlInput.exception(
+            "REPLACE operations do no support EXTERN destinations. Use INSERT statements to write to an external destination."
+        );
+      }
       if (!handlerContext.plannerContext().featureAvailable(EngineFeature.CAN_REPLACE)) {
         throw InvalidSqlInput.exception(
             "REPLACE operations are not supported by the requested SQL engine [%s].  Consider using MSQ.",

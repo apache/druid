@@ -35,6 +35,7 @@ import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
 import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
+import org.apache.druid.sql.destination.IngestDestination;
 
 import java.util.Map;
 import java.util.Set;
@@ -112,6 +113,7 @@ public class NativeSqlEngine implements SqlEngine
       case CAN_INSERT:
       case CAN_REPLACE:
       case READ_EXTERNAL_DATA:
+      case WRITE_EXTERNAL_DATA:
       case SCAN_ORDER_BY_NON_TIME:
       case SCAN_NEEDS_SIGNATURE:
         return false;
@@ -133,7 +135,7 @@ public class NativeSqlEngine implements SqlEngine
 
   @Override
   public QueryMaker buildQueryMakerForInsert(
-      final String targetDataSource,
+      final IngestDestination destination,
       final RelRoot relRoot,
       final PlannerContext plannerContext
   )

@@ -20,32 +20,51 @@
 // Taken from syntax of SqlInsert statement from calcite parser, edited for replace syntax
 SqlNode DruidSqlReplaceEof() :
 {
-    SqlNode table;
+    final SqlIdentifier destination;
     SqlNode source;
     SqlNodeList columnList = null;
     final Span s;
+    SqlNode tableRef = null;
     SqlInsert sqlInsert;
     SqlNode partitionedBy = null;
     SqlNodeList clusteredBy = null;
     final Pair<SqlNodeList, SqlNodeList> p;
     SqlNode replaceTimeQuery = null;
+    String exportFileFormat = null;
 }
 {
     <REPLACE> { s = span(); }
     <INTO>
-    table = CompoundIdentifier()
-    [
-        p = ParenthesizedCompoundIdentifierList() {
-            if (p.left.size() > 0) {
-                columnList = p.left;
-            }
+    (
+      LOOKAHEAD(2)
+      <EXTERN> <LPAREN> destination = ExternalDestination() <RPAREN>
+      |
+      destination = CompoundTableIdentifier()
+      ( tableRef = TableHints(destination) | { tableRef = destination; } )
+      [ LOOKAHEAD(5) tableRef = ExtendTable(tableRef) ]
+    )
+    (
+      LOOKAHEAD(2)
+      p = ParenthesizedCompoundIdentifierList() {
+        if (p.right.size() > 0) {
+          tableRef = extend(tableRef, p.right);
         }
+        if (p.left.size() > 0) {
+          columnList = p.left;
+        } else {
+          columnList = null;
+        }
+      }
+      | { columnList = null; }
+    )
+    [
+      <AS> exportFileFormat = FileFormat()
     ]
     [
-	<OVERWRITE>
-	[
-		replaceTimeQuery = ReplaceTimeQuery()
-	]
+	    <OVERWRITE>
+	    [
+		    replaceTimeQuery = ReplaceTimeQuery()
+	    ]
     ]
     source = OrderedQueryOrExpr(ExprContext.ACCEPT_QUERY)
     // PARTITIONED BY is necessary, but is kept optional in the grammar. It is asserted that it is not missing in the
@@ -70,8 +89,8 @@ SqlNode DruidSqlReplaceEof() :
     // actual error message.
     <EOF>
     {
-        sqlInsert = new SqlInsert(s.end(source), SqlNodeList.EMPTY, table, source, columnList);
-        return DruidSqlReplace.create(sqlInsert, partitionedBy, clusteredBy, replaceTimeQuery);
+      sqlInsert = new SqlInsert(s.end(source), SqlNodeList.EMPTY, destination, source, columnList);
+        return DruidSqlReplace.create(sqlInsert, partitionedBy, clusteredBy, replaceTimeQuery, exportFileFormat);
     }
 }
 
