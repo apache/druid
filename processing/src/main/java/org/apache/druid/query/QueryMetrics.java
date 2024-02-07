@@ -260,6 +260,7 @@ public interface QueryMetrics<QueryType extends Query<?>>
    * used as value matchers for {@link org.apache.druid.segment.FilteredOffset} or
    * {@link org.apache.druid.segment.vector.FilteredVectorOffset}
    */
+  @Deprecated
   @SuppressWarnings({"unreachable", "unused"})
   default void postFilters(List<Filter> postFilters)
   {
