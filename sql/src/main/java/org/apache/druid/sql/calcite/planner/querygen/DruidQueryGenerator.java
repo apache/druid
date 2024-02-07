@@ -20,29 +20,15 @@
 package org.apache.druid.sql.calcite.planner.querygen;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.rex.RexBuilder;
-import org.apache.calcite.rex.RexLiteral;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.query.InlineDataSource;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
-import org.apache.druid.sql.calcite.rel.logical.DruidTableScan;
-import org.apache.druid.sql.calcite.rel.logical.DruidValues;
-import org.apache.druid.sql.calcite.rule.DruidLogicalValuesRule;
-import org.apache.druid.sql.calcite.table.DruidTable;
-import org.apache.druid.sql.calcite.table.InlineTable;
-import org.apache.druid.sql.calcite.table.RowSignatures;
-
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Converts a DAG of {@link org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode} convention
@@ -50,16 +36,12 @@ import java.util.stream.Collectors;
  */
 public class DruidQueryGenerator
 {
-  private final PlannerContext plannerContext;
   private final RelNode relRoot;
-  private final RexBuilder rexBuilder;
   private final PDQVertexFactory vertexFactory ;
 
   public DruidQueryGenerator(PlannerContext plannerContext, RelNode relRoot, RexBuilder rexBuilder)
   {
-    this.plannerContext = plannerContext;
     this.relRoot = relRoot;
-    this.rexBuilder = rexBuilder;
     this.vertexFactory = new PDQVertexFactory(plannerContext,rexBuilder);
   }
 
@@ -82,20 +64,10 @@ public class DruidQueryGenerator
 
   private Vertex processNodeWithInputs(RelNode node, List<Vertex> newInputs, boolean isRoot)
   {
-    if(true) {
       if( node instanceof XInputProducer) {
         XInputProducer xInputProducer = (XInputProducer) node;
 return        xInputProducer.buildVertexRoot(vertexFactory, newInputs);
       }
-    }
-      else {
-      if (node instanceof DruidTableScan) {
-        return processTableScan((DruidTableScan) node);
-      }
-      if (node instanceof DruidValues) {
-        return processValues((DruidValues) node);
-      }
-    }
     if (node instanceof Union) {
       return processUnion((Union) node, newInputs, isRoot);
     }
@@ -130,44 +102,4 @@ return        xInputProducer.buildVertexRoot(vertexFactory, newInputs);
         inputs
     );
   }
-
-  private Vertex processValues(DruidValues values)
-  {
-    final List<ImmutableList<RexLiteral>> tuples = values.getTuples();
-    final List<Object[]> objectTuples = tuples
-        .stream()
-        .map(
-            tuple -> tuple
-                .stream()
-                .map(v -> DruidLogicalValuesRule.getValueFromLiteral(v, plannerContext))
-                .collect(Collectors.toList())
-                .toArray(new Object[0])
-        )
-        .collect(Collectors.toList());
-    RowSignature rowSignature = RowSignatures.fromRelDataType(
-        values.getRowType().getFieldNames(),
-        values.getRowType()
-    );
-    InlineTable inlineTable = new InlineTable(InlineDataSource.fromIterable(objectTuples, rowSignature));
-
-    return vertexFactory .createTableScanVertex(values, inlineTable, null);
-
-  }
-
-  private Vertex processTableScan(DruidTableScan scan)
-  {
-    if (!(scan instanceof DruidTableScan)) {
-      throw new ISE("Planning hasn't converted logical table scan to druid convention");
-    }
-    Preconditions.checkArgument(scan.getInputs().size() == 0);
-
-
-    final RelOptTable table = scan.getTable();
-    final DruidTable druidTable = table.unwrap(DruidTable.class);
-
-    Preconditions.checkArgument(druidTable != null);
-
-    return vertexFactory .createTableScanVertex(scan, druidTable, null);
-  }
-
 }
