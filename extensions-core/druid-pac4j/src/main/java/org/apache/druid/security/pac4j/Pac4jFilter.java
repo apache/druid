@@ -29,8 +29,7 @@ import org.pac4j.core.engine.CallbackLogic;
 import org.pac4j.core.engine.DefaultCallbackLogic;
 import org.pac4j.core.engine.DefaultSecurityLogic;
 import org.pac4j.core.engine.SecurityLogic;
-import org.pac4j.core.exception.http.HttpAction;
-import org.pac4j.core.http.adapter.HttpActionAdapter;
+import org.pac4j.core.http.adapter.JEEHttpActionAdapter;
 import org.pac4j.core.profile.UserProfile;
 
 import javax.servlet.Filter;
@@ -48,11 +47,9 @@ public class Pac4jFilter implements Filter
 {
   private static final Logger LOGGER = new Logger(Pac4jFilter.class);
 
-  private static final HttpActionAdapter<String, JEEContext> NOOP_HTTP_ACTION_ADAPTER = (HttpAction code, JEEContext ctx) -> null;
-
   private final Config pac4jConfig;
-  private final SecurityLogic<String, JEEContext> securityLogic;
-  private final CallbackLogic<String, JEEContext> callbackLogic;
+  private final SecurityLogic<Object, JEEContext> securityLogic;
+  private final CallbackLogic<Object, JEEContext> callbackLogic;
   private final SessionStore<JEEContext> sessionStore;
 
   private final String name;
@@ -95,11 +92,11 @@ public class Pac4jFilter implements Filter
       callbackLogic.perform(
           context,
           pac4jConfig,
-          NOOP_HTTP_ACTION_ADAPTER,
+          JEEHttpActionAdapter.INSTANCE,
           "/",
           true, false, false, null);
     } else {
-      String uid = securityLogic.perform(
+      Object uid = securityLogic.perform(
           context,
           pac4jConfig,
           (JEEContext ctx, Collection<UserProfile> profiles, Object... parameters) -> {
@@ -110,11 +107,13 @@ public class Pac4jFilter implements Filter
               return profiles.iterator().next().getId();
             }
           },
-          NOOP_HTTP_ACTION_ADAPTER,
-          null, null, null, null);
-
+          JEEHttpActionAdapter.INSTANCE,
+          null, "none", null, null);
+      // Changed the Authorizer from null to "none".
+      // In the older version, if it is null, it simply grant access and returns authorized.
+      // But in the newer pac4j version, it uses CsrfAuthorizer as default, And because of this, It was returning 403 in API calls.
       if (uid != null) {
-        AuthenticationResult authenticationResult = new AuthenticationResult(uid, authorizerName, name, null);
+        AuthenticationResult authenticationResult = new AuthenticationResult(uid.toString(), authorizerName, name, null);
         servletRequest.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
         filterChain.doFilter(servletRequest, servletResponse);
       }
