@@ -1183,10 +1183,7 @@ public interface Function extends NamedFunction
     protected ExprEval eval(final long x, final long y)
     {
       if (y == 0) {
-        if (x != 0) {
-          return ExprEval.ofLong(null);
-        }
-        return ExprEval.ofLong(NullHandling.defaultLongValue());
+        return ExprEval.ofLong(null);
       }
       return ExprEval.ofLong(x / y);
     }

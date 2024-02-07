@@ -571,7 +571,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSafeDivideVectorizable()
+  public void testSafeDivide()
   {
     skipVectorize();
     cannotVectorize();

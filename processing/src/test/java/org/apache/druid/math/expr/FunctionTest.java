@@ -857,12 +857,14 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("safe_divide(4.5, 2)", 2.25);
     assertExpr("safe_divide(3, 0)", null);
     assertExpr("safe_divide(1, 0.0)", null);
-    // NaN. Infinity and other weird cases
+    // NaN, Infinity and other weird cases
     assertExpr("safe_divide(NaN, 0.0)", null);
     assertExpr("safe_divide(0, NaN)", 0.0);
-    assertExpr("safe_divide(0, POSITIVE_INFINITY)", NullHandling.defaultLongValue());
-    assertExpr("safe_divide(POSITIVE_INFINITY,0)", NullHandling.defaultLongValue());
-    assertExpr("safe_divide(0,0)", NullHandling.defaultLongValue());
+    assertExpr("safe_divide(0, maxLong)", 0L);
+    assertExpr("safe_divide(maxLong,0)", null);
+    assertExpr("safe_divide(0.0, inf)", 0.0);
+    assertExpr("safe_divide(0.0, -inf)", -0.0);
+    assertExpr("safe_divide(0,0)", null);
   }
 
   @Test
