@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.planner;
+package org.apache.druid.sql.calcite.planner.querygen;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.rel.RelNode;
@@ -33,8 +33,7 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.sql.calcite.planner.DruidQueryGenerator.InputDesc;
-import org.apache.druid.sql.calcite.planner.querygen.Vertex;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery.Stage;
@@ -43,7 +42,7 @@ import org.apache.druid.sql.calcite.table.DruidTable;
 import java.util.ArrayList;
 import java.util.List;
 
-class PDQVertexFactory {
+public class PDQVertexFactory {
 
   private final PlannerContext plannerContext;
   private final RexBuilder rexBuilder;

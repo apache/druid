@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.planner;
+package org.apache.druid.sql.calcite.planner.querygen;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -28,11 +28,10 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.sql.calcite.planner.PDQVertexFactory.PDQVertex;
-import org.apache.druid.sql.calcite.planner.querygen.Vertex;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.querygen.PDQVertexFactory.PDQVertex;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 import org.apache.druid.sql.calcite.rel.logical.DruidTableScan;
@@ -178,20 +177,5 @@ public class DruidQueryGenerator
       vertex.partialDruidQuery = vertex.partialDruidQuery.withSelectProject(druidTableScan.getProject());
     }
     return vertex;
-  }
-
-  /**
-   * Utility class to return represent input related things.
-   */
-  public static class InputDesc
-  {
-    DataSource dataSource;
-    RowSignature rowSignature;
-
-    public InputDesc(DataSource dataSource, RowSignature rowSignature)
-    {
-      this.dataSource = dataSource;
-      this.rowSignature = rowSignature;
-    }
   }
 }
