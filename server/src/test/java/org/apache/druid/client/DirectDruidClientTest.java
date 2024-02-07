@@ -70,6 +70,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class DirectDruidClientTest
 {
@@ -131,7 +132,7 @@ public class DirectDruidClientTest
   public void teardown() throws InterruptedException
   {
     queryCancellationExecutor.shutdown();
-    queryCancellationExecutor.awaitTermination(1, java.util.concurrent.TimeUnit.SECONDS);
+    queryCancellationExecutor.awaitTermination(1, TimeUnit.SECONDS);
   }
 
   @Test
