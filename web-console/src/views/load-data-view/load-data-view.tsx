@@ -1594,6 +1594,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                       label: 'System fields',
                       type: 'string-array',
                       suggestions: possibleSystemFields,
+                      info: 'JSON array of system fields to return as part of input rows.',
                     },
                   ]}
                   model={spec}
