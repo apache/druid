@@ -979,6 +979,228 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     Assert.assertTrue(supervisor.getNoticesQueueSize() == 0);
   }
 
+  @Test(timeout = 60_000L)
+  public void testEarlyStoppingOfTaskGroupBasedOnStopTaskCount() throws InterruptedException, JsonProcessingException
+  {
+    // Assuming tasks have surpassed their duration limit at test execution
+    DateTime startTime = DateTimes.nowUtc().minusHours(2);
+    // Configure supervisor to stop only one task at a time
+    int stopTaskCount = 1;
+    SeekableStreamSupervisorIOConfig ioConfig = new SeekableStreamSupervisorIOConfig(
+        STREAM,
+        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
+        1,
+        3,
+        new Period("PT1H"),
+        new Period("PT1S"),
+        new Period("PT30S"),
+        false,
+        new Period("PT30M"),
+        null,
+        null,
+        null,
+        null,
+        new IdleConfig(true, 200L),
+        stopTaskCount
+    )
+    {
+    };
+
+    EasyMock.reset(spec);
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
+    EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
+    EasyMock.expect(spec.getMonitorSchedulerConfig()).andReturn(new DruidMonitorSchedulerConfig()
+    {
+      @Override
+      public Duration getEmissionDuration()
+      {
+        return new Period("PT2S").toStandardDuration();
+      }
+    }).anyTimes();
+    EasyMock.expect(spec.getType()).andReturn("stream").anyTimes();
+    EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
+    EasyMock.expect(spec.getContextValue("tags")).andReturn("").anyTimes();
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+
+    SeekableStreamIndexTaskTuningConfig taskTuningConfig = getTuningConfig().convertToTaskTuningConfig();
+
+    TreeMap<Integer, Map<String, Long>> sequenceOffsets = new TreeMap<>();
+    sequenceOffsets.put(0, ImmutableMap.of("0", 10L, "1", 20L));
+
+    Map<String, Object> context = new HashMap<>();
+    context.put("checkpoints", new ObjectMapper().writeValueAsString(sequenceOffsets));
+
+    TestSeekableStreamIndexTask id1 = new TestSeekableStreamIndexTask(
+        "id1",
+        null,
+        getDataSchema(),
+        taskTuningConfig,
+        createTaskIoConfigExt(
+            0,
+            Collections.singletonMap("0", "10"),
+            Collections.singletonMap("0", "20"),
+            "test",
+            startTime,
+            null,
+            Collections.emptySet(),
+            ioConfig
+        ),
+        context,
+        "0"
+    );
+
+    TestSeekableStreamIndexTask id2 = new TestSeekableStreamIndexTask(
+        "id2",
+        null,
+        getDataSchema(),
+        taskTuningConfig,
+        createTaskIoConfigExt(
+            1,
+            Collections.singletonMap("1", "10"),
+            Collections.singletonMap("1", "20"),
+            "test",
+            startTime,
+            null,
+            Collections.emptySet(),
+            ioConfig
+        ),
+        context,
+        "1"
+    );
+
+    TestSeekableStreamIndexTask id3 = new TestSeekableStreamIndexTask(
+        "id3",
+        null,
+        getDataSchema(),
+        taskTuningConfig,
+        createTaskIoConfigExt(
+            2,
+            Collections.singletonMap("2", "10"),
+            Collections.singletonMap("2", "20"),
+            "test",
+            startTime,
+            null,
+            Collections.emptySet(),
+            ioConfig
+        ),
+        context,
+        "2"
+    );
+
+    final TaskLocation location1 = TaskLocation.create("testHost", 1234, -1);
+    final TaskLocation location2 = TaskLocation.create("testHost2", 145, -1);
+    final TaskLocation location3 = TaskLocation.create("testHost3", 145, -1);
+
+    Collection workItems = new ArrayList<>();
+    workItems.add(new TestTaskRunnerWorkItem(id1, null, location1));
+    workItems.add(new TestTaskRunnerWorkItem(id2, null, location2));
+    workItems.add(new TestTaskRunnerWorkItem(id3, null, location3));
+
+    EasyMock.expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE))
+            .andReturn(ImmutableList.of(id1, id2, id3))
+            .anyTimes();
+    EasyMock.expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
+    EasyMock.expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
+    EasyMock.expect(taskStorage.getStatus("id3")).andReturn(Optional.of(TaskStatus.running("id3"))).anyTimes();
+    EasyMock.expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
+    EasyMock.expect(taskStorage.getTask("id2")).andReturn(Optional.of(id2)).anyTimes();
+    EasyMock.expect(taskStorage.getTask("id3")).andReturn(Optional.of(id2)).anyTimes();
+
+    EasyMock.reset(indexerMetadataStorageCoordinator);
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE))
+            .andReturn(new TestSeekableStreamDataSourceMetadata(null)).anyTimes();
+    EasyMock.expect(indexTaskClient.getStatusAsync("id1"))
+            .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.READING))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.getStatusAsync("id2"))
+            .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.READING))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.getStatusAsync("id3"))
+            .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.READING))
+            .anyTimes();
+
+    EasyMock.expect(indexTaskClient.getStartTimeAsync("id1"))
+            .andReturn(Futures.immediateFuture(startTime.plusSeconds(1)))
+            .anyTimes();
+    // Mocking to return the earliest start time for task id2, indicating it's the first group to start
+    EasyMock.expect(indexTaskClient.getStartTimeAsync("id2"))
+            .andReturn(Futures.immediateFuture(startTime)).anyTimes();
+    EasyMock.expect(indexTaskClient.getStartTimeAsync("id3"))
+            .andReturn(Futures.immediateFuture(startTime.plusSeconds(2)))
+            .anyTimes();
+
+    ImmutableMap<String, String> partitionOffset = ImmutableMap.of("0", "10");
+    final TreeMap<Integer, Map<String, String>> checkpoints = new TreeMap<>();
+    checkpoints.put(0, partitionOffset);
+
+    EasyMock.expect(indexTaskClient.getCheckpointsAsync(EasyMock.contains("id1"), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(checkpoints))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.getCheckpointsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(checkpoints))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.getCheckpointsAsync(EasyMock.contains("id3"), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(checkpoints))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.setEndOffsetsAsync("id1", partitionOffset, false))
+            .andReturn(Futures.immediateFuture(true))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.setEndOffsetsAsync("id2", partitionOffset, false))
+            .andReturn(Futures.immediateFuture(true))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.setEndOffsetsAsync("id3", partitionOffset, false))
+            .andReturn(Futures.immediateFuture(true))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.resumeAsync("id1"))
+            .andReturn(Futures.immediateFuture(true))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.resumeAsync("id2"))
+            .andReturn(Futures.immediateFuture(true))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.resumeAsync("id3"))
+            .andReturn(Futures.immediateFuture(true))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.pauseAsync("id1"))
+            .andReturn(Futures.immediateFuture(true))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.pauseAsync("id2"))
+            .andReturn(Futures.immediateFuture(true))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.pauseAsync("id3"))
+            .andReturn(Futures.immediateFuture(true))
+            .anyTimes();
+
+    // Expect the earliest-started task (id2) to transition to publishing first
+    taskQueue.shutdown("id2", "All tasks in group[%s] failed to transition to publishing state", 1);
+
+    replayAll();
+
+    SeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+
+    supervisor.start();
+    supervisor.runInternal();
+
+    supervisor.checkpoint(
+        0,
+        new TestSeekableStreamDataSourceMetadata(
+            new SeekableStreamStartSequenceNumbers<>(STREAM, checkpoints.get(0), ImmutableSet.of())
+        )
+    );
+
+    while (supervisor.getNoticesQueueSize() > 0) {
+      Thread.sleep(100);
+    }
+
+    verifyAll();
+
+    Assert.assertTrue(supervisor.getNoticesQueueSize() == 0);
+  }
+
   @Test
   public void testEmitBothLag() throws Exception
   {
