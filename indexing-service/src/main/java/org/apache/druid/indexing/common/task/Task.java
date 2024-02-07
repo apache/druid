@@ -41,10 +41,13 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 
 import javax.annotation.Nonnull;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -296,6 +299,11 @@ public interface Task
   }
 
   Map<String, Object> getContext();
+
+  default Optional<Resource> getDestinationResource()
+  {
+    return Optional.of(new Resource(getDataSource(), ResourceType.DATASOURCE));
+  }
 
   default <ContextValueType> ContextValueType getContextValue(String key)
   {
