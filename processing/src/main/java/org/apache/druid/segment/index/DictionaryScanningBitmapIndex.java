@@ -23,17 +23,27 @@ import org.apache.druid.query.BitmapResultFactory;
 
 import javax.annotation.Nullable;
 
-public abstract class DictionaryScanningSimpleImmutableBitmapIndex extends SimpleImmutableBitmapIterableIndex
+/**
+ * Common {@link BitmapColumnIndex} implementation for indexes which are computed by scanning the entire value
+ * dictionary of the underlying column to check if the value index matches the filter. Contains logic to skip computing
+ * indexes with {@link #computeBitmapResult(BitmapResultFactory, int, int, boolean)} if 'selectionRowCount' does not
+ * equal 'totalRowCount' and 'selectionRowCount' is smaller than {@link #dictionarySize} multiplied by
+ * {@link #scaleThreshold}. The default {@link #scaleThreshold} value is 1.0, meaning that if {@link #dictionarySize}
+ * is larger than 'selectionRowCount' we skip using indexes, the idea being we would either have to perform the check
+ * against the values in the dictionary or the values in the remaining rows, since remaining rows is smaller we should
+ * just do that instead of spending time to compute indexes to further shrink 'selectionRowCount'.
+ */
+public abstract class DictionaryScanningBitmapIndex extends SimpleImmutableBitmapIterableIndex
 {
   private final int dictionarySize;
   private final double scaleThreshold;
 
-  public DictionaryScanningSimpleImmutableBitmapIndex(int dictionarySize)
+  public DictionaryScanningBitmapIndex(int dictionarySize)
   {
     this(dictionarySize, 1.0);
   }
 
-  public DictionaryScanningSimpleImmutableBitmapIndex(int dictionarySize, double scaleThreshold)
+  public DictionaryScanningBitmapIndex(int dictionarySize, double scaleThreshold)
   {
     this.dictionarySize = dictionarySize;
     this.scaleThreshold = scaleThreshold;

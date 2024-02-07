@@ -71,7 +71,7 @@ public final class IndexedUtf8LexicographicalRangeIndexes<TDictionary extends In
   {
     final IntIntPair range = getRange(startValue, startStrict, endValue, endStrict);
     final int start = range.leftInt(), end = range.rightInt();
-    return new DictionaryRangeScanningSimpleImmutableBitmapIndex(1.0, end - start)
+    return new DictionaryRangeScanningBitmapIndex(1.0, end - start)
     {
       @Override
       public Iterable<ImmutableBitmap> getBitmapIterable()
@@ -120,7 +120,7 @@ public final class IndexedUtf8LexicographicalRangeIndexes<TDictionary extends In
   {
     final IntIntPair range = getRange(startValue, startStrict, endValue, endStrict);
     final int start = range.leftInt(), end = range.rightInt();
-    return new DictionaryRangeScanningSimpleImmutableBitmapIndex(1.0, end - start)
+    return new DictionaryRangeScanningBitmapIndex(1.0, end - start)
     {
       @Override
       public Iterable<ImmutableBitmap> getBitmapIterable()

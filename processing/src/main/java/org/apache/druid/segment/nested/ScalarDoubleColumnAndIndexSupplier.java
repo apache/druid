@@ -55,8 +55,8 @@ import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.VByte;
 import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
-import org.apache.druid.segment.index.DictionaryRangeScanningSimpleImmutableBitmapIndex;
-import org.apache.druid.segment.index.DictionaryScanningSimpleImmutableBitmapIndex;
+import org.apache.druid.segment.index.DictionaryRangeScanningBitmapIndex;
+import org.apache.druid.segment.index.DictionaryScanningBitmapIndex;
 import org.apache.druid.segment.index.SimpleBitmapColumnIndex;
 import org.apache.druid.segment.index.SimpleImmutableBitmapDelegatingIterableIndex;
 import org.apache.druid.segment.index.SimpleImmutableBitmapIndex;
@@ -417,7 +417,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
 
       final int startIndex = range.leftInt();
       final int endIndex = range.rightInt();
-      return new DictionaryRangeScanningSimpleImmutableBitmapIndex(
+      return new DictionaryRangeScanningBitmapIndex(
           columnConfig.skipValueRangeIndexScale(),
           endIndex - startIndex
       )
@@ -460,7 +460,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
     public BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory)
     {
       final FixedIndexed<Double> dictionary = doubleDictionarySupplier.get();
-      return new DictionaryScanningSimpleImmutableBitmapIndex(dictionary.size())
+      return new DictionaryScanningBitmapIndex(dictionary.size())
       {
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable(boolean includeUnknown)

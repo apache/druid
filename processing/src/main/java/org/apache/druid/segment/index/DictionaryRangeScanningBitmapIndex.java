@@ -20,16 +20,27 @@
 package org.apache.druid.segment.index;
 
 import org.apache.druid.query.BitmapResultFactory;
+import org.apache.druid.segment.column.ColumnConfig;
 
 import javax.annotation.Nullable;
 
-public abstract class DictionaryRangeScanningSimpleImmutableBitmapIndex
-    extends SimpleImmutableBitmapDelegatingIterableIndex
+/**
+ * Common {@link BitmapColumnIndex} implementation for indexes which need to scan a range of values. Contains logic
+ * to skip computing indexes with {@link #computeBitmapResult(BitmapResultFactory, int, int, boolean)} if
+ * {@link #rangeSize} is larger than {@link #sizeScale} multiplied by the number of selected rows. Numeric range
+ * indexes will typically want to set {@link #sizeScale} to a double closer to 0.0 than to 1.0 because numeric
+ * comparisons are relatively cheap compared to bitmap operations. Most numerical implementations should use the
+ * value of {@link ColumnConfig#skipValueRangeIndexScale()}.
+ * <p>
+ * Other implementations should adjust {@link #sizeScale} as appropriate for the expense of the value matcher compared
+ * to the expense of the bitmap operations.
+ */
+public abstract class DictionaryRangeScanningBitmapIndex extends SimpleImmutableBitmapDelegatingIterableIndex
 {
   private final double sizeScale;
   private final int rangeSize;
 
-  public DictionaryRangeScanningSimpleImmutableBitmapIndex(double sizeScale, int rangeSize)
+  public DictionaryRangeScanningBitmapIndex(double sizeScale, int rangeSize)
   {
     this.sizeScale = sizeScale;
     this.rangeSize = rangeSize;

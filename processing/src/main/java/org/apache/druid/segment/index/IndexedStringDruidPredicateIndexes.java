@@ -54,7 +54,7 @@ public final class IndexedStringDruidPredicateIndexes<TDictionary extends Indexe
   {
     final DruidObjectPredicate<String> stringPredicate = matcherFactory.makeStringPredicate();
 
-    return new DictionaryScanningSimpleImmutableBitmapIndex(dictionary.size())
+    return new DictionaryScanningBitmapIndex(dictionary.size())
     {
       @Override
       public Iterable<ImmutableBitmap> getBitmapIterable(boolean includeUnknown)
