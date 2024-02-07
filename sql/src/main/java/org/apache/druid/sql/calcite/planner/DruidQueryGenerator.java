@@ -77,17 +77,17 @@ public class DruidQueryGenerator
     return vertex.buildQuery(true);
   }
 
-  private Vertex createVertex(RelNode scan)
+  private PDQVertex createVertex(RelNode scan)
   {
-    Vertex vertex = new Vertex();
+    PDQVertex vertex = new PDQVertex();
     vertex.partialDruidQuery = PartialDruidQuery.create(scan);
     return vertex;
   }
 
   // FIXME
-  private Vertex createVertex(RelNode node, Vertex inputVertex)
+  private PDQVertex createVertex(RelNode node, PDQVertex inputVertex)
   {
-    Vertex vertex = new Vertex();
+    PDQVertex vertex = new PDQVertex();
     vertex.inputs = ImmutableList.of(inputVertex);
     vertex.partialDruidQuery = PartialDruidQuery.createOuterQuery(inputVertex.partialDruidQuery);
     return vertex;
@@ -95,18 +95,29 @@ public class DruidQueryGenerator
 
   private Vertex createVertex(PartialDruidQuery partialDruidQuery, List<Vertex> inputs)
   {
-    Vertex vertex = new Vertex();
+    PDQVertex vertex = new PDQVertex();
     vertex.inputs = inputs;
     vertex.partialDruidQuery = partialDruidQuery;
     return vertex;
   }
 
+  public interface Vertex{
+
+    InputDesc unwrapInputDesc();
+
+    Vertex mergeIntoDruidQuery(RelNode node, boolean isRoot);
+
+    boolean canUnwrapInput();
+
+    DruidQuery buildQuery(boolean b);
+
+  }
   /**
    * Execution dag vertex - encapsulates a list of operators.
    *
    * Right now it relies on {@link PartialDruidQuery} to hold on to the operators it encapsulates.
    */
-  public class Vertex
+  public class PDQVertex implements Vertex
   {
     PartialDruidQuery partialDruidQuery;
     List<Vertex> inputs;
@@ -154,9 +165,9 @@ public class DruidQueryGenerator
       throw new IllegalStateException();
     }
 
-    private Vertex newVertex(PartialDruidQuery partialDruidQuery)
+    private PDQVertex newVertex(PartialDruidQuery partialDruidQuery)
     {
-      Vertex vertex = new Vertex();
+      PDQVertex vertex = new PDQVertex();
       vertex.inputs = inputs;
       vertex.currentTable = currentTable;
       vertex.queryTable = queryTable;
@@ -169,7 +180,7 @@ public class DruidQueryGenerator
      *
      * @return the new merged vertex - or null if its not possible to merge
      */
-    private Vertex mergeIntoDruidQuery(RelNode node, boolean isRoot)
+    public Vertex mergeIntoDruidQuery(RelNode node, boolean isRoot)
     {
       if (accepts(node, Stage.WHERE_FILTER, Filter.class)) {
         PartialDruidQuery newPartialQuery = partialDruidQuery.withWhereFilter((Filter) node);
@@ -277,7 +288,8 @@ public class DruidQueryGenerator
       if (newVertex != null) {
         return newVertex;
       }
-      inputVertex = createVertex(node, inputVertex);
+      // FIXME
+      inputVertex = createVertex(node, (PDQVertex) inputVertex);
       newVertex = inputVertex.mergeIntoDruidQuery(node, false);
       if (newVertex != null) {
         return newVertex;
@@ -293,7 +305,7 @@ public class DruidQueryGenerator
     for (Vertex inputVertex : inputs) {
       if (!inputVertex.canUnwrapInput()) {
         throw DruidException
-            .defensive("Union operand with non-trivial remapping is not supported [%s]", inputVertex.partialDruidQuery);
+            .defensive("Union operand with non-trivial remapping is not supported [%s]", inputVertex);
       }
     }
     return createVertex(
@@ -321,7 +333,7 @@ public class DruidQueryGenerator
     );
     InlineTable inlineTable = new InlineTable(InlineDataSource.fromIterable(objectTuples, rowSignature));
 
-    Vertex vertex = createVertex(values);
+    PDQVertex vertex = createVertex(values);
     vertex.currentTable = inlineTable;
 
     return vertex;
@@ -336,7 +348,7 @@ public class DruidQueryGenerator
     DruidTableScan druidTableScan = scan;
     Preconditions.checkArgument(scan.getInputs().size() == 0);
 
-    Vertex vertex = createVertex(scan);
+    PDQVertex vertex = createVertex(scan);
 
     final RelOptTable table = scan.getTable();
     final DruidTable druidTable = table.unwrap(DruidTable.class);
