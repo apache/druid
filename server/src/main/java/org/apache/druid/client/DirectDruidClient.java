@@ -78,6 +78,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -127,7 +128,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       HttpClient httpClient,
       String scheme,
       String host,
-      ServiceEmitter emitter
+      ServiceEmitter emitter,
+      ScheduledExecutorService queryCancellationExecutor
   )
   {
     this.warehouse = warehouse;
@@ -140,7 +142,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
     this.isSmile = this.objectMapper.getFactory() instanceof SmileFactory;
     this.openConnections = new AtomicInteger();
-    this.queryCancellationExecutor = Execs.scheduledSingleThreaded("query-cancellation-executor");
+    this.queryCancellationExecutor = queryCancellationExecutor;
   }
 
   public int getNumOpenConnections()
@@ -551,7 +553,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             if (!responseFuture.isDone()) {
               log.error("Error cancelling query[%s]", query);
             }
-            StatusResponseHolder response = responseFuture.get();
+            StatusResponseHolder response = responseFuture.get(30, TimeUnit.SECONDS);
             if (response.getStatus().getCode() >= 500) {
               log.error("Error cancelling query[%s]: queriable node returned status[%d] [%s].",
                   query,
@@ -561,6 +563,9 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           }
           catch (ExecutionException | InterruptedException e) {
             log.error(e, "Error cancelling query[%s]", query);
+          }
+          catch (TimeoutException e) {
+            log.error(e, "Timed out cancelling query[%s]", query);
           }
         };
         queryCancellationExecutor.schedule(checkRunnable, 5, TimeUnit.SECONDS);
