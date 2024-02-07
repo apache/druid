@@ -81,6 +81,7 @@ public @interface SqlTestFrameworkConfig
     private SqlTestFrameworkConfig config;
     private ClassRule classRule;
     private QueryComponentSupplier testHost;
+    private Description description;
 
     public MethodRule(ClassRule classRule, QueryComponentSupplier testHost)
     {
@@ -105,6 +106,7 @@ public @interface SqlTestFrameworkConfig
     @Override
     public Statement apply(Statement base, Description description)
     {
+      this.description = description;
       config = description.getAnnotation(SqlTestFrameworkConfig.class);
       if (config == null) {
         config = defaultConfig();
@@ -115,6 +117,11 @@ public @interface SqlTestFrameworkConfig
     public SqlTestFramework get()
     {
       return getConfigurationInstance().framework;
+    }
+
+    public Description getDescription()
+    {
+      return description;
     }
 
     private ConfigurationInstance getConfigurationInstance()
