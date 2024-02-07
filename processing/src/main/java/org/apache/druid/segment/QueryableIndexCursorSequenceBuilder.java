@@ -297,10 +297,14 @@ public class QueryableIndexCursorSequenceBuilder
       metrics.reportBitmapConstructionTime(buildTime);
       if (filterBundle.getIndex() != null) {
         metrics.reportPreFilteredRows(filterBundle.getIndex().getBitmap().size());
+        metrics.indexFilters(filterBundle.getIndex().getIndexMetrics());
       } else {
         metrics.reportPreFilteredRows(0);
       }
-      log.debug("Filter partitioning (%sms):[%s]", TimeUnit.NANOSECONDS.toMillis(buildTime), filterBundle);
+      if (filterBundle.getMatcherBundle() != null) {
+        metrics.matcherFilters(filterBundle.getMatcherBundle().getMatcherMetrics());
+      }
+      log.debug("Filter partitioning (%sms):%s", TimeUnit.NANOSECONDS.toMillis(buildTime), filterBundle);
     }
     return filterBundle;
   }

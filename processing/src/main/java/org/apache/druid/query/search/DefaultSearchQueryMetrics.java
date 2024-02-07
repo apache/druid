@@ -25,7 +25,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryMetrics;
-import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.FilterBundle;
 
 import java.util.List;
 
@@ -154,15 +154,15 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   }
 
   @Override
-  public void preFilters(List<Filter> preFilters)
+  public void indexFilters(List<FilterBundle.IndexMetric> preFilters)
   {
-    delegateQueryMetrics.preFilters(preFilters);
+    delegateQueryMetrics.indexFilters(preFilters);
   }
 
   @Override
-  public void postFilters(List<Filter> postFilters)
+  public void matcherFilters(List<FilterBundle.MatcherMetric> postFilters)
   {
-    delegateQueryMetrics.postFilters(postFilters);
+    delegateQueryMetrics.matcherFilters(postFilters);
   }
 
   @Override

@@ -20,6 +20,7 @@
 package org.apache.druid.query.filter;
 
 import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
+import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
@@ -29,6 +30,7 @@ import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
@@ -58,11 +60,19 @@ public interface Filter
     final FilterBundle.IndexBundle indexBundle;
     final boolean needMatcher;
     if (columnIndex != null) {
+      final long bitmapConstructionStartNs = System.nanoTime();
       T result = columnIndex.computeBitmapResult(bitmapResultFactory, selectionRowCount, totalRowCount, includeUnknown);
+      final long totalConstructionTimeNs = System.nanoTime() - bitmapConstructionStartNs;
+      if (result != null) {
+        ImmutableBitmap bitmap = bitmapResultFactory.toImmutableBitmap(result);
+        indexBundle = new FilterBundle.SimpleIndexBundle(
+            Collections.singletonList(new FilterBundle.IndexMetric(toString(), bitmap.size(), totalConstructionTimeNs)),
+            bitmap
+        );
+      } else {
+        indexBundle = null;
+      }
       needMatcher = result == null || !columnIndex.getIndexCapabilities().isExact();
-      indexBundle = result == null
-                    ? null
-                    : new FilterBundle.SimpleIndexBundle(toString(), bitmapResultFactory.toImmutableBitmap(result));
     } else {
       indexBundle = null;
       needMatcher = true;
@@ -70,7 +80,7 @@ public interface Filter
     final FilterBundle.SimpleMatcherBundle matcherBundle;
     if (needMatcher) {
       matcherBundle = new FilterBundle.SimpleMatcherBundle(
-          toString(),
+          Collections.singletonList(new FilterBundle.MatcherMetric(toString(), null)),
           this::makeMatcher,
           this::makeVectorMatcher
       );

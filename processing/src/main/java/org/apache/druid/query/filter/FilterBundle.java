@@ -19,6 +19,8 @@
 
 package org.apache.druid.query.filter;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
@@ -27,6 +29,8 @@ import org.apache.druid.segment.data.Offset;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 /**
@@ -78,41 +82,15 @@ public class FilterBundle
   @Override
   public String toString()
   {
-    return "index[" + (index != null ? index.getFilterString() : null) +
-           "], matcher[" + (matcherBundle != null ? matcherBundle.getFilterString() : null) +
-           ']';
+    return "indexes=" + (index != null ? index.getIndexMetrics() : null) +
+           ", matcher=" + (matcherBundle != null ? matcherBundle.getMatcherMetrics() : null);
   }
 
   public interface IndexBundle
   {
-    String getFilterString();
+    List<IndexMetric> getIndexMetrics();
     ImmutableBitmap getBitmap();
   }
-
-  public static class SimpleIndexBundle implements IndexBundle
-  {
-    private final String filterString;
-    private final ImmutableBitmap index;
-
-    public SimpleIndexBundle(String filterString, ImmutableBitmap index)
-    {
-      this.filterString = Preconditions.checkNotNull(filterString);
-      this.index = Preconditions.checkNotNull(index);
-    }
-
-    @Override
-    public String getFilterString()
-    {
-      return filterString;
-    }
-
-    @Override
-    public ImmutableBitmap getBitmap()
-    {
-      return index;
-    }
-  }
-
   /**
    * Builder of {@link ValueMatcher} and {@link VectorValueMatcher}. The
    * {@link #valueMatcher(ColumnSelectorFactory, Offset, boolean)} function also passes in the base offset and whether
@@ -123,32 +101,137 @@ public class FilterBundle
    */
   public interface MatcherBundle
   {
-    String getFilterString();
+    List<MatcherMetric> getMatcherMetrics();
     ValueMatcher valueMatcher(ColumnSelectorFactory selectorFactory, Offset baseOffset, boolean descending);
     VectorValueMatcher vectorMatcher(VectorColumnSelectorFactory selectorFactory);
   }
 
+  public static class IndexMetric
+  {
+    private final String filter;
+    private final int selectionSize;
+    private final long buildTimeNs;
+
+    @JsonCreator
+    public IndexMetric(String filter, int selectionSize, long buildTimeNs)
+    {
+      this.filter = filter;
+      this.selectionSize = selectionSize;
+      this.buildTimeNs = buildTimeNs;
+    }
+
+    @JsonProperty
+    public String getFilter()
+    {
+      return filter;
+    }
+
+    @JsonProperty
+    public int getSelectionSize()
+    {
+      return selectionSize;
+    }
+
+    @JsonProperty
+    public long getBuildTimeNs()
+    {
+      return buildTimeNs;
+    }
+
+    @Override
+    public String toString()
+    {
+      return "{" +
+             "filter=\"" + filter + '\"' +
+             ", selectionSize=" + selectionSize +
+             ", buildTime=" + TimeUnit.NANOSECONDS.toMicros(buildTimeNs) + "μs" +
+             '}';
+    }
+  }
+
+  public static class MatcherMetric
+  {
+    private final String filter;
+    @Nullable
+    private final IndexMetric partialIndex;
+
+    @JsonCreator
+    public MatcherMetric(String filter, @Nullable IndexMetric partialIndex)
+    {
+      this.filter = filter;
+      this.partialIndex = partialIndex;
+    }
+
+    @JsonProperty
+    public String getFilter()
+    {
+      return filter;
+    }
+
+    @Nullable
+    @JsonProperty
+    public IndexMetric getPartialIndex()
+    {
+      return partialIndex;
+    }
+
+    @Override
+    public String toString()
+    {
+      return "{" +
+             "filter=\"" + filter + '\"' +
+             (partialIndex != null ? ", partialIndex=" + partialIndex : "") +
+             '}';
+    }
+  }
+
+  public static class SimpleIndexBundle implements IndexBundle
+  {
+    private final List<IndexMetric> indexMetrics;
+
+    private final ImmutableBitmap index;
+
+    public SimpleIndexBundle(List<IndexMetric> indexMetrics, ImmutableBitmap index)
+    {
+      this.indexMetrics = Preconditions.checkNotNull(indexMetrics);
+      this.index = Preconditions.checkNotNull(index);
+    }
+
+    @Override
+    public List<IndexMetric> getIndexMetrics()
+    {
+      return indexMetrics;
+    }
+
+    @Override
+    public ImmutableBitmap getBitmap()
+    {
+      return index;
+    }
+
+  }
+
   public static class SimpleMatcherBundle implements MatcherBundle
   {
-    private final String filterString;
+    private final List<MatcherMetric> matcherMetrics;
     private final Function<ColumnSelectorFactory, ValueMatcher> matcherFn;
     private final Function<VectorColumnSelectorFactory, VectorValueMatcher> vectorMatcherFn;
 
     public SimpleMatcherBundle(
-        String filterString,
+        List<MatcherMetric> matcherMetrics,
         Function<ColumnSelectorFactory, ValueMatcher> matcherFn,
         Function<VectorColumnSelectorFactory, VectorValueMatcher> vectorMatcherFn
     )
     {
-      this.filterString = Preconditions.checkNotNull(filterString);
+      this.matcherMetrics = Preconditions.checkNotNull(matcherMetrics);
       this.matcherFn = Preconditions.checkNotNull(matcherFn);
       this.vectorMatcherFn = Preconditions.checkNotNull(vectorMatcherFn);
     }
 
     @Override
-    public String getFilterString()
+    public List<MatcherMetric> getMatcherMetrics()
     {
-      return filterString;
+      return matcherMetrics;
     }
 
     @Override

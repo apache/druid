@@ -49,6 +49,7 @@ import org.roaringbitmap.IntIterator;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -88,6 +89,7 @@ public class OrFilter implements BooleanFilter
     final List<Filter> indexFilters = new ArrayList<>();
     final List<Filter> matcherFilters = new ArrayList<>();
 
+    final long bitmapConstructionStartNs = System.nanoTime();
     for (Filter subfilter : filters) {
       boolean needMatcher = true;
       final BitmapColumnIndex index = subfilter.getBitmapColumnIndex(columnIndexSelector);
@@ -99,7 +101,9 @@ public class OrFilter implements BooleanFilter
             includeUnknown
         );
         if (bitmapResult != null) {
-          indexes.add(bitmapResult);
+          if (!bitmapResultFactory.isEmpty(bitmapResult)) {
+            indexes.add(bitmapResult);
+          }
           indexFilters.add(subfilter);
           needMatcher = !index.getIndexCapabilities().isExact();
         } else if (!allowPartialIndex) {
@@ -113,10 +117,11 @@ public class OrFilter implements BooleanFilter
         matcherFilters.add(subfilter);
       }
     }
+    final long totalBitmapConstructTimeNs = System.nanoTime() - bitmapConstructionStartNs;
 
     final ImmutableBitmap index;
     final ImmutableBitmap partialIndex;
-    if (indexes.size() == filters.size()) {
+    if (indexFilters.size() == filters.size()) {
       // all or nothing
       index = bitmapResultFactory.toImmutableBitmap(bitmapResultFactory.union(indexes));
       partialIndex = null;
@@ -138,21 +143,43 @@ public class OrFilter implements BooleanFilter
       }
     }
 
+    final FilterBundle.IndexBundle indexBundle;
+    if (index != null) {
+      indexBundle = new FilterBundle.SimpleIndexBundle(
+          Collections.singletonList(
+              new FilterBundle.IndexMetric(OR_JOINER.join(indexFilters), index.size(), totalBitmapConstructTimeNs)
+          ),
+          index
+      );
+    } else {
+      indexBundle = null;
+    }
+
     final FilterBundle.MatcherBundle matcherBundle;
     if (!matcherFilters.isEmpty()) {
       matcherBundle = new FilterBundle.MatcherBundle()
       {
         @Override
-        public String getFilterString()
+        public List<FilterBundle.MatcherMetric> getMatcherMetrics()
         {
-          if (partialIndex != null) {
-            return StringUtils.format(
-                "OrFilter:[partialIndex[%s], matcher[%s]]",
-                OR_JOINER.join(indexFilters),
-                OR_JOINER.join(matcherFilters)
+          if (!indexFilters.isEmpty()) {
+            return Collections.singletonList(
+                new FilterBundle.MatcherMetric(
+                    OR_JOINER.join(Iterables.concat(matcherFilters, indexFilters)),
+                    new FilterBundle.IndexMetric(
+                        OR_JOINER.join(indexFilters),
+                        partialIndex == null ? 0 : partialIndex.size(),
+                        totalBitmapConstructTimeNs
+                    )
+                )
             );
           }
-          return OR_JOINER.join(matcherFilters);
+          return Collections.singletonList(
+              new FilterBundle.MatcherMetric(
+                  OR_JOINER.join(matcherFilters),
+                  null
+              )
+          );
         }
 
         @Override
@@ -204,7 +231,7 @@ public class OrFilter implements BooleanFilter
     }
 
     return new FilterBundle(
-        index == null ? null : new FilterBundle.SimpleIndexBundle(OR_JOINER.join(indexFilters), index),
+        indexBundle,
         matcherBundle
     );
   }

@@ -24,6 +24,7 @@ import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.FilterBundle;
 import org.apache.druid.query.search.SearchQueryMetricsFactory;
 
 import java.util.List;
@@ -242,11 +243,37 @@ public interface QueryMetrics<QueryType extends Query<?>>
 
   void segment(String segmentIdentifier);
 
+  /**
+   * @deprecated use {@link #indexFilters(List)} instead to emit metrics for filters which were used to construct
+   * {@link org.apache.druid.segment.BitmapOffset} or {@link org.apache.druid.segment.vector.BitmapVectorOffset}..
+   */
+  @Deprecated
   @SuppressWarnings({"unreachable", "unused"})
-  void preFilters(List<Filter> preFilters);
+  default void preFilters(List<Filter> preFilters)
+  {
+    // do nothing, nothing calls this
+  }
 
+  /**
+   * @deprecated use {@link #matcherFilters(List)} instead to emit metrics for filters which were used as value
+   * matchers for {@link org.apache.druid.segment.FilteredOffset} or
+   * {@link org.apache.druid.segment.vector.FilteredVectorOffset}
+   */
   @SuppressWarnings({"unreachable", "unused"})
-  void postFilters(List<Filter> postFilters);
+  default void postFilters(List<Filter> postFilters)
+  {
+    // do nothing, nothing calls this
+  }
+
+  default void indexFilters(List<FilterBundle.IndexMetric> preFilters)
+  {
+    // Emit nothing by default.
+  }
+
+  default void matcherFilters(List<FilterBundle.MatcherMetric> postFilters)
+  {
+    // Emit nothing by default.
+  }
 
   /**
    * Sets identity of the requester for a query. See {@code AuthenticationResult}.
