@@ -23,25 +23,17 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.core.Aggregate;
-import org.apache.calcite.rel.core.Filter;
-import org.apache.calcite.rel.core.Project;
-import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.core.Union;
-import org.apache.calcite.rel.core.Window;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
-import org.apache.druid.query.QueryDataSource;
-import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.sql.calcite.planner.DruidQueryGenerator.PDQVertexFactory.PDQVertex;
+import org.apache.druid.sql.calcite.planner.PDQVertexFactory.PDQVertex;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
-import org.apache.druid.sql.calcite.rel.PartialDruidQuery.Stage;
 import org.apache.druid.sql.calcite.rel.logical.DruidTableScan;
 import org.apache.druid.sql.calcite.rel.logical.DruidValues;
 import org.apache.druid.sql.calcite.rel.logical.XInputProducer;
@@ -80,182 +72,6 @@ public class DruidQueryGenerator
     return vertex.buildQuery(true);
   }
 
-  static class PDQVertexFactory {
-
-    private final PlannerContext plannerContext;
-    private final RexBuilder rexBuilder;
-
-  public PDQVertexFactory(PlannerContext plannerContext, RexBuilder rexBuilder)
-    {
-      this.plannerContext = plannerContext;
-      this.rexBuilder = rexBuilder;
-    }
-
-    private PDQVertex createVertex(RelNode scan)
-  {
-    PDQVertex vertex = new PDQVertex();
-    vertex.partialDruidQuery = PartialDruidQuery.create(scan);
-    return vertex;
-  }
-
-  // FIXME
-  private PDQVertex createVertex(RelNode node, PDQVertex inputVertex)
-  {
-    PDQVertex vertex = new PDQVertex();
-    vertex.inputs = ImmutableList.of(inputVertex);
-    vertex.partialDruidQuery = PartialDruidQuery.createOuterQuery(inputVertex.partialDruidQuery);
-    return vertex;
-  }
-
-  private Vertex createVertex(PartialDruidQuery partialDruidQuery, List<Vertex> inputs)
-  {
-    PDQVertex vertex = new PDQVertex();
-    vertex.inputs = inputs;
-    vertex.partialDruidQuery = partialDruidQuery;
-    return vertex;
-  }
-
-  public class PDQVertex implements Vertex
-  {
-    PartialDruidQuery partialDruidQuery;
-    List<Vertex> inputs;
-    DruidTable queryTable;
-    public DruidTable currentTable;
-
-    public DruidQuery buildQuery(boolean topLevel)
-    {
-      InputDesc input = getInput();
-      return partialDruidQuery.build(
-          input.dataSource,
-          input.rowSignature,
-          plannerContext,
-          rexBuilder,
-          currentTable != null && !topLevel
-      );
-    }
-
-    private InputDesc getInput()
-    {
-      if (currentTable != null) {
-        return new InputDesc(currentTable.getDataSource(), currentTable.getRowSignature());
-      }
-      if (inputs.size() == 1) {
-        DruidQuery inputQuery = inputs.get(0).buildQuery(false);
-        return new InputDesc(new QueryDataSource(inputQuery.getQuery()), inputQuery.getOutputRowSignature());
-      }
-      if (partialDruidQuery.getScan() instanceof Union) {
-        List<DataSource> dataSources = new ArrayList<>();
-        RowSignature signature = null;
-        for (Vertex inputVertex : inputs) {
-          InputDesc unwrapInputDesc = inputVertex.unwrapInputDesc();
-          dataSources.add(unwrapInputDesc.dataSource);
-
-          if (signature == null) {
-            signature = unwrapInputDesc.rowSignature;
-          } else {
-            if (!signature.equals(unwrapInputDesc.rowSignature)) {
-              throw DruidException.defensive("Row signature mismatch FIXME");
-            }
-          }
-        }
-        return new InputDesc(new UnionDataSource(dataSources), signature);
-      }
-      throw new IllegalStateException();
-    }
-
-    private PDQVertex newVertex(PartialDruidQuery partialDruidQuery)
-    {
-      PDQVertex vertex = new PDQVertex();
-      vertex.inputs = inputs;
-      vertex.currentTable = currentTable;
-      vertex.queryTable = queryTable;
-      vertex.partialDruidQuery = partialDruidQuery;
-      return vertex;
-    }
-
-    /**
-     * Merges the given {@link RelNode} into the current partial query.
-     *
-     * @return the new merged vertex - or null if its not possible to merge
-     */
-    public Vertex mergeIntoDruidQuery(RelNode node, boolean isRoot)
-    {
-      if (accepts(node, Stage.WHERE_FILTER, Filter.class)) {
-        PartialDruidQuery newPartialQuery = partialDruidQuery.withWhereFilter((Filter) node);
-        return newVertex(newPartialQuery);
-      }
-      if (accepts(node, Stage.SELECT_PROJECT, Project.class)) {
-        PartialDruidQuery newPartialQuery = partialDruidQuery.withSelectProject((Project) node);
-        return newVertex(newPartialQuery);
-      }
-      if (accepts(node, Stage.AGGREGATE, Aggregate.class)) {
-        PartialDruidQuery newPartialQuery = partialDruidQuery.withAggregate((Aggregate) node);
-        return newVertex(newPartialQuery);
-      }
-      if (accepts(node, Stage.AGGREGATE_PROJECT, Project.class) && isRoot) {
-        PartialDruidQuery newPartialQuery = partialDruidQuery.withAggregateProject((Project) node);
-        return newVertex(newPartialQuery);
-      }
-      if (accepts(node, Stage.HAVING_FILTER, Filter.class)) {
-        PartialDruidQuery newPartialQuery = partialDruidQuery.withHavingFilter((Filter) node);
-        return newVertex(newPartialQuery);
-      }
-      if (accepts(node, Stage.SORT, Sort.class)) {
-        PartialDruidQuery newPartialQuery = partialDruidQuery.withSort((Sort) node);
-        return newVertex(newPartialQuery);
-      }
-      if (accepts(node, Stage.SORT_PROJECT, Project.class)) {
-        PartialDruidQuery newPartialQuery = partialDruidQuery.withSortProject((Project) node);
-        return newVertex(newPartialQuery);
-      }
-      if (accepts(node, Stage.WINDOW, Window.class)) {
-        PartialDruidQuery newPartialQuery = partialDruidQuery.withWindow((Window) node);
-        return newVertex(newPartialQuery);
-      }
-      if (accepts(node, Stage.WINDOW_PROJECT, Project.class)) {
-        PartialDruidQuery newPartialQuery = partialDruidQuery.withWindowProject((Project) node);
-        return newVertex(newPartialQuery);
-      }
-      return null;
-    }
-
-    private boolean accepts(RelNode node, Stage whereFilter, Class<? extends RelNode> class1)
-    {
-      return partialDruidQuery.canAccept(whereFilter) && class1.isInstance(node);
-    }
-
-    /**
-     * Unwraps the input of this vertex - if it doesn't do anything beyond reading its input.
-     *
-     * @throws DruidException if unwrap is not possible.
-     */
-    public InputDesc unwrapInputDesc()
-    {
-      if (canUnwrapInput()) {
-        DruidQuery q = buildQuery(false);
-        InputDesc origInput = getInput();
-        return new InputDesc(origInput.dataSource, q.getOutputRowSignature());
-      }
-      throw DruidException.defensive("Can't unwrap input of vertex[%s]", partialDruidQuery);
-    }
-
-    public boolean canUnwrapInput()
-    {
-      if (partialDruidQuery.stage() == Stage.SCAN) {
-        return true;
-      }
-      if (partialDruidQuery.stage() == PartialDruidQuery.Stage.SELECT_PROJECT &&
-          partialDruidQuery.getWhereFilter() == null &&
-          partialDruidQuery.getSelectProject().isMapping()) {
-        return true;
-      }
-      return false;
-    }
-
-  }
-  }
-
-
   private Vertex buildVertexFor(RelNode node, boolean isRoot)
   {
     List<Vertex> newInputs = new ArrayList<>();
@@ -290,7 +106,7 @@ public class DruidQueryGenerator
         return newVertex;
       }
       // FIXME
-      inputVertex = vertexFactory .createVertex(node, (PDQVertex) inputVertex);
+      inputVertex = vertexFactory .createVertex(node, inputVertex);
       newVertex = inputVertex.mergeIntoDruidQuery(node, false);
       if (newVertex != null) {
         return newVertex;
@@ -368,8 +184,8 @@ public class DruidQueryGenerator
    */
   public static class InputDesc
   {
-    private DataSource dataSource;
-    private RowSignature rowSignature;
+    DataSource dataSource;
+    RowSignature rowSignature;
 
     public InputDesc(DataSource dataSource, RowSignature rowSignature)
     {
