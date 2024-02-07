@@ -84,14 +84,16 @@ public class DruidQueryGenerator
 
   private Vertex processNodeWithInputs(RelNode node, List<Vertex> newInputs, boolean isRoot)
   {
-    if(false && node instanceof XInputProducer) {
-      XInputProducer xInputProducer = (XInputProducer) node;
-      xInputProducer.validate(newInputs, isRoot);
-//      PDQVertexFactory.this.createVertex()
-      return vertexFactory .createVertex(node);
+    if(true) {
+      if( node instanceof XInputProducer) {
+        XInputProducer xInputProducer = (XInputProducer) node;
+return        xInputProducer.buildVertexRoot(vertexFactory, newInputs);
+      }
     }
-    if (node instanceof DruidTableScan) {
-      return processTableScan((DruidTableScan) node);
+      else {
+      if (node instanceof DruidTableScan) {
+        return processTableScan((DruidTableScan) node);
+      }
     }
     if (node instanceof DruidValues) {
       return processValues((DruidValues) node);

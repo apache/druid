@@ -20,11 +20,15 @@
 package org.apache.druid.sql.calcite.planner.querygen;
 
 
+import org.apache.druid.sql.calcite.planner.querygen.Vertex.InputDesc;
+
 import java.util.List;
 
 public interface XInputProducer
 {
 
-  void validate(List<Vertex> newInputs, boolean isRoot);
+  Vertex buildVertexRoot(PDQVertexFactory vertexFactory, List<Vertex> inputs);
+
+  InputDesc getInputDesc();
 
 }

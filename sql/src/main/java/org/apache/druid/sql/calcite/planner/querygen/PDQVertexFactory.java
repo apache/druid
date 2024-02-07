@@ -100,6 +100,10 @@ public class PDQVertex implements Vertex
 
   private InputDesc getInput()
   {
+    if( partialDruidQuery.getScan() instanceof XInputProducer ) {
+XInputProducer xInputProducer = (XInputProducer) partialDruidQuery.getScan();
+return xInputProducer.getInputDesc();
+    }
     if (currentTable != null) {
       return new InputDesc(currentTable.getDataSource(), currentTable.getRowSignature());
     }
@@ -218,7 +222,7 @@ public class PDQVertex implements Vertex
 
 }
 
-  Vertex createTableScanVertex(RelNode scan, final DruidTable druidTable, Project project)
+  public Vertex createTableScanVertex(RelNode scan, final DruidTable druidTable, Project project)
   {
     PDQVertex vertex = createVertex(scan);
     vertex.currentTable = druidTable;
