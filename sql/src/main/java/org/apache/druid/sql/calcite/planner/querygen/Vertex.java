@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.planner;
+package org.apache.druid.sql.calcite.planner.querygen;
 
 import org.apache.calcite.rel.RelNode;
 import org.apache.druid.sql.calcite.planner.DruidQueryGenerator.InputDesc;

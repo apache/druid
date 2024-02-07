@@ -19,7 +19,8 @@
 
 package org.apache.druid.sql.calcite.rel.logical;
 
-import org.apache.druid.sql.calcite.planner.Vertex;
+
+import org.apache.druid.sql.calcite.planner.querygen.Vertex;
 
 import java.util.List;
 

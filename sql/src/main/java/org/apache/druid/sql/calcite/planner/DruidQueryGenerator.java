@@ -32,6 +32,7 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PDQVertexFactory.PDQVertex;
+import org.apache.druid.sql.calcite.planner.querygen.Vertex;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 import org.apache.druid.sql.calcite.rel.logical.DruidTableScan;
