@@ -23,16 +23,12 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
-import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 
 /**
  * Execution dag vertex - encapsulates a list of operators.
- *
- * Right now it relies on {@link PartialDruidQuery} to hold on to the operators it encapsulates.
  */
 public interface Vertex
 {
-
   /**
    * Utility class to return represent input related things.
    */
@@ -47,6 +43,7 @@ public interface Vertex
       this.rowSignature = rowSignature;
     }
   }
+
   boolean canUnwrapInput();
 
   InputDesc unwrapInputDesc();
