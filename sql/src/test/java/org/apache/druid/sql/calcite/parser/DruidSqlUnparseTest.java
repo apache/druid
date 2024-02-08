@@ -41,7 +41,8 @@ public class DruidSqlUnparseTest
     String sqlQuery = "INSERT INTO dst SELECT * FROM foo PARTITIONED BY ALL TIME";
     String prettySqlQuery = "INSERT INTO \"dst\"\n"
                      + "SELECT *\n"
-                     + "    FROM \"foo\" PARTITIONED BY ALL TIME";
+                     + "    FROM \"foo\"\n"
+                     + "PARTITIONED BY ALL TIME";
 
     DruidSqlParserImpl druidSqlParser = createTestParser(sqlQuery);
     DruidSqlInsert druidSqlReplace = (DruidSqlInsert) druidSqlParser.DruidSqlInsertEof();
@@ -94,5 +95,34 @@ public class DruidSqlUnparseTest
     druidSqlParser.setQuotedCasing(Casing.TO_LOWER);
     druidSqlParser.setIdentifierMaxLength(20);
     return druidSqlParser;
+  }
+
+  @Test
+  public void testUnparseExternalSqlIdentifierReplace() throws ParseException
+  {
+    String sqlQuery = "REPLACE INTO EXTERN( s3(bucket=>'bucket1',prefix=>'prefix1') ) AS CSV OVERWRITE ALL SELECT dim2 FROM foo";
+    String prettySqlQuery = "REPLACE INTO EXTERN(S3(bucket => 'bucket1', prefix => 'prefix1'))\n"
+                            + "AS csv\n"
+                            + "OVERWRITE ALL\n"
+                            + "SELECT \"dim2\"\n"
+                            + "    FROM \"foo\"\n";
+    DruidSqlParserImpl druidSqlParser = createTestParser(sqlQuery);
+    DruidSqlReplace druidSqlReplace = (DruidSqlReplace) druidSqlParser.DruidSqlReplaceEof();
+    druidSqlReplace.unparse(sqlWriter, 0, 0);
+    assertEquals(prettySqlQuery, sqlWriter.toSqlString().getSql());
+  }
+
+  @Test
+  public void testUnparseExternalSqlIdentifierInsert() throws ParseException
+  {
+    String sqlQuery = "INSERT INTO EXTERN( s3(bucket=>'bucket1',prefix=>'prefix1') ) AS CSV SELECT dim2 FROM foo";
+    String prettySqlQuery = "INSERT INTO EXTERN(S3(bucket => 'bucket1', prefix => 'prefix1'))\n"
+                            + "AS csv\n"
+                            + "SELECT \"dim2\"\n"
+                            + "    FROM \"foo\"\n";
+    DruidSqlParserImpl druidSqlParser = createTestParser(sqlQuery);
+    DruidSqlInsert druidSqlInsert = (DruidSqlInsert) druidSqlParser.DruidSqlInsertEof();
+    druidSqlInsert.unparse(sqlWriter, 0, 0);
+    assertEquals(prettySqlQuery, sqlWriter.toSqlString().getSql());
   }
 }
