@@ -78,11 +78,14 @@ public class DruidSqlParserUtils
   private static final Logger log = new Logger(DruidSqlParserUtils.class);
   public static final String ALL = "all";
 
+  private static final List<GranularityType> DOCUMENTED_GRANULARTIES = Arrays.stream(GranularityType.values())
+      .filter(g -> g != GranularityType.WEEK)
+      .collect(Collectors.toList());
   @VisibleForTesting
   public static final String PARTITION_ERROR_MESSAGE =
       "Invalid granularity[%s] specified after PARTITIONED BY clause.  "
       + "Expected "
-      + StringUtils.replace(StringUtils.replace(Arrays.toString(GranularityType.values()), "[", ""), "]", ",").trim()
+      + StringUtils.replace(StringUtils.replace(DOCUMENTED_GRANULARTIES.toString(), "[", ""), "]", ",").trim()
       + " ALL TIME, FLOOR() or TIME_FLOOR()";
 
   /**
@@ -149,6 +152,14 @@ public class DruidSqlParserUtils
         throw makeInvalidPartitionByException(literal);
       }
 
+      validateSupportedGranularityForPartitionedBy(sqlNode, retVal);
+      return retVal;
+    }
+
+    if (sqlNode instanceof SqlIdentifier) {
+      SqlIdentifier identifier = (SqlIdentifier) sqlNode;
+      final Granularity retVal;
+      retVal = convertSqlIdentiferToGranularity(identifier);
       validateSupportedGranularityForPartitionedBy(sqlNode, retVal);
       return retVal;
     }
@@ -249,6 +260,25 @@ public class DruidSqlParserUtils
       }
       catch (Exception e2) {
         throw makeInvalidPartitionByException(literal);
+      }
+    }
+  }
+
+  private static Granularity convertSqlIdentiferToGranularity(SqlIdentifier identifier)
+  {
+    if (identifier.names.isEmpty()) {
+      throw makeInvalidPartitionByException(identifier);
+    }
+    String value = identifier.names.get(0);
+    try {
+      return Granularity.fromString(value);
+    }
+    catch (IllegalArgumentException e) {
+      try {
+        return new PeriodGranularity(new Period(value), null, null);
+      }
+      catch (Exception e2) {
+        throw makeInvalidPartitionByException(identifier);
       }
     }
   }

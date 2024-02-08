@@ -151,6 +151,17 @@ public class DruidSqlParserUtilsTest
     }
 
     /**
+     * Tests clause like "PARTITIONED BY PT1D"
+     */
+    @Test
+    public void testConvertSqlNodeToPeriodFormGranularityAsIdentifier() throws ParseException
+    {
+      SqlNode sqlNode = new SqlIdentifier(period.toString(), SqlParserPos.ZERO);
+      Granularity actualGranularity = DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode);
+      Assert.assertEquals(expectedGranularity, actualGranularity);
+    }
+
+    /**
      * Tests clause like "PARTITIONED BY 'PT1D'"
      */
     @Test
