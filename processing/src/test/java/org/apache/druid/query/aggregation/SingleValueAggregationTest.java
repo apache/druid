@@ -46,6 +46,11 @@ public class SingleValueAggregationTest extends InitializedNullHandlingTest
   private ColumnCapabilities columnCapabilitiesDouble;
   private TestDoubleColumnSelectorImpl selectorDouble;
 
+  private SingleValueAggregatorFactory floatAggFactory;
+  private ColumnSelectorFactory colSelectorFactoryFloat;
+  private ColumnCapabilities columnCapabilitiesFloat;
+  private TestFloatColumnSelector selectorFloat;
+
   private SingleValueAggregatorFactory stringAggFactory;
   private ColumnSelectorFactory colSelectorFactoryString;
   private ColumnCapabilities columnCapabilitiesString;
@@ -53,6 +58,7 @@ public class SingleValueAggregationTest extends InitializedNullHandlingTest
 
   private final long[] longValues = {9223372036854775802L, 9223372036854775803L};
   private final double[] doubleValues = {5.2d, 2.8976552d};
+  private final float[] floatValues = {5.2f, 2.89f};
   private final String[] strValues = {"str1", "str2"};
 
   public SingleValueAggregationTest() throws Exception
@@ -62,6 +68,9 @@ public class SingleValueAggregationTest extends InitializedNullHandlingTest
 
     String doubleAggSpecJson = "{\"type\": \"singleValue\", \"name\": \"dbl\", \"fieldName\": \"dblFld\", \"columnType\": \"DOUBLE\"}";
     doubleAggFactory = TestHelper.makeJsonMapper().readValue(doubleAggSpecJson, SingleValueAggregatorFactory.class);
+
+    String floatAggSpecJson = "{\"type\": \"singleValue\", \"name\": \"dbl\", \"fieldName\": \"fltFld\", \"columnType\": \"FLOAT\"}";
+    floatAggFactory = TestHelper.makeJsonMapper().readValue(floatAggSpecJson, SingleValueAggregatorFactory.class);
 
     String strAggSpecJson = "{\"type\": \"singleValue\", \"name\": \"str\", \"fieldName\": \"strFld\", \"columnType\": \"STRING\"}";
     stringAggFactory = TestHelper.makeJsonMapper().readValue(strAggSpecJson, SingleValueAggregatorFactory.class);
@@ -82,6 +91,12 @@ public class SingleValueAggregationTest extends InitializedNullHandlingTest
         .addCapabilities("dblFld", columnCapabilitiesDouble)
         .addColumnSelector("dblFld", selectorDouble);
 
+    selectorFloat = new TestFloatColumnSelector(floatValues);
+    columnCapabilitiesFloat = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT);
+    colSelectorFactoryFloat = new TestColumnSelectorFactory()
+        .addCapabilities("fltFld", columnCapabilitiesFloat)
+        .addColumnSelector("fltFld", selectorFloat);
+
     selectorString = new TestObjectColumnSelector(strValues);
     columnCapabilitiesString = ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities();
     colSelectorFactoryString = new TestColumnSelectorFactory()
@@ -100,8 +115,10 @@ public class SingleValueAggregationTest extends InitializedNullHandlingTest
 
     Aggregator agg = longAggFactory.factorize(colSelectorFactoryLong);
     if (NullHandling.replaceWithDefault()) {
+      Assert.assertFalse(agg.isNull());
       Assert.assertEquals(0L, agg.getLong());
     } else {
+      Assert.assertTrue(agg.isNull());
       Assert.assertThrows(AssertionError.class, () -> agg.getLong());
     }
 
@@ -117,8 +134,9 @@ public class SingleValueAggregationTest extends InitializedNullHandlingTest
   {
     BufferAggregator agg = longAggFactory.factorizeBuffered(colSelectorFactoryLong);
 
-    ByteBuffer buffer = ByteBuffer.wrap(new byte[SingleValueAggregatorFactory.DEFAULT_MAX_VALUE_SIZE + Byte.BYTES]);
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[Double.BYTES + Byte.BYTES]);
     agg.init(buffer, 0);
+    Assert.assertEquals(0L, agg.getLong(buffer, 0));
 
     aggregate(selectorLong, agg, buffer, 0);
     Assert.assertEquals(longValues[0], ((Long) agg.get(buffer, 0)).longValue());
@@ -137,6 +155,11 @@ public class SingleValueAggregationTest extends InitializedNullHandlingTest
   public void testDoubleAggregator()
   {
     Aggregator agg = doubleAggFactory.factorize(colSelectorFactoryDouble);
+    if (NullHandling.replaceWithDefault()) {
+      Assert.assertEquals(0.0d, agg.getDouble(), 0.000001);
+    } else {
+      Assert.assertThrows(AssertionError.class, () -> agg.getDouble());
+    }
 
     aggregate(selectorDouble, agg);
     Assert.assertEquals(doubleValues[0], ((Double) agg.get()).doubleValue(), 0.000001);
@@ -152,12 +175,46 @@ public class SingleValueAggregationTest extends InitializedNullHandlingTest
 
     ByteBuffer buffer = ByteBuffer.wrap(new byte[SingleValueAggregatorFactory.DEFAULT_MAX_VALUE_SIZE + Byte.BYTES]);
     agg.init(buffer, 0);
+    Assert.assertEquals(0.0d, agg.getDouble(buffer, 0), 0.000001);
 
     aggregate(selectorDouble, agg, buffer, 0);
     Assert.assertEquals(doubleValues[0], ((Double) agg.get(buffer, 0)).doubleValue(), 0.000001);
     Assert.assertEquals(doubleValues[0], agg.getDouble(buffer, 0), 0.000001);
 
     Assert.assertThrows(DruidException.class, () -> aggregate(selectorDouble, agg, buffer, 0));
+  }
+
+  @Test
+  public void testFloatAggregator()
+  {
+    Aggregator agg = floatAggFactory.factorize(colSelectorFactoryFloat);
+    if (NullHandling.replaceWithDefault()) {
+      Assert.assertEquals(0.0f, agg.getFloat(), 0.000001);
+    } else {
+      Assert.assertThrows(AssertionError.class, () -> agg.getFloat());
+    }
+
+    aggregate(selectorFloat, agg);
+    Assert.assertEquals(floatValues[0], ((Float) agg.get()).floatValue(), 0.000001);
+    Assert.assertEquals(floatValues[0], agg.getFloat(), 0.000001);
+
+    Assert.assertThrows(DruidException.class, () -> aggregate(selectorFloat, agg));
+  }
+
+  @Test
+  public void testFloatBufferAggregator()
+  {
+    BufferAggregator agg = floatAggFactory.factorizeBuffered(colSelectorFactoryFloat);
+
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[Double.BYTES + Byte.BYTES]);
+    agg.init(buffer, 0);
+    Assert.assertEquals(0.0f, agg.getFloat(buffer, 0), 0.000001);
+
+    aggregate(selectorFloat, agg, buffer, 0);
+    Assert.assertEquals(floatValues[0], ((Float) agg.get(buffer, 0)).floatValue(), 0.000001);
+    Assert.assertEquals(floatValues[0], agg.getFloat(buffer, 0), 0.000001);
+
+    Assert.assertThrows(DruidException.class, () -> aggregate(selectorFloat, agg, buffer, 0));
   }
 
   @Test
@@ -207,6 +264,18 @@ public class SingleValueAggregationTest extends InitializedNullHandlingTest
   }
 
   private void aggregate(TestLongColumnSelector selector, BufferAggregator agg, ByteBuffer buff, int position)
+  {
+    agg.aggregate(buff, position);
+    selector.increment();
+  }
+
+  private void aggregate(TestFloatColumnSelector selector, Aggregator agg)
+  {
+    agg.aggregate();
+    selector.increment();
+  }
+
+  private void aggregate(TestFloatColumnSelector selector, BufferAggregator agg, ByteBuffer buff, int position)
   {
     agg.aggregate(buff, position);
     selector.increment();
