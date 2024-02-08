@@ -143,13 +143,7 @@ public class DruidSqlParserUtils
     if (sqlNode instanceof SqlLiteral) {
       final Granularity retVal;
       SqlLiteral literal = (SqlLiteral) sqlNode;
-      if (SqlLiteral.valueMatchesType(literal.getValue(), SqlTypeName.SYMBOL)) {
-        GranularityType value = literal.getValueAs(GranularityType.class);
-        if (value == null) {
-          throw makeInvalidPartitionByException(null);
-        }
-        retVal = value.getDefaultGranularity();
-      } else if (SqlLiteral.valueMatchesType(literal.getValue(), SqlTypeName.CHAR)) {
+      if (SqlLiteral.valueMatchesType(literal.getValue(), SqlTypeName.CHAR)) {
         retVal = convertSqlLiteralCharToGranularity(literal);
       } else {
         throw makeInvalidPartitionByException(literal);
@@ -245,12 +239,17 @@ public class DruidSqlParserUtils
 
   private static Granularity convertSqlLiteralCharToGranularity(SqlLiteral literal)
   {
+    String value = literal.getValueAs(String.class);
     try {
-      String value = literal.getValueAs(String.class);
       return Granularity.fromString(value);
     }
     catch (IllegalArgumentException e) {
-      throw makeInvalidPartitionByException(literal);
+      try {
+        return new PeriodGranularity(new Period(value), null, null);
+      }
+      catch (Exception e2) {
+        throw makeInvalidPartitionByException(literal);
+      }
     }
   }
 

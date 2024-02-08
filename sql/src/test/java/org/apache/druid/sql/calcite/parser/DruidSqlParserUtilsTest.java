@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.parser;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.avatica.util.TimeUnit;
+import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.sql.SqlAsOperator;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlIdentifier;
@@ -39,13 +40,14 @@ import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.granularity.GranularityType;
+import org.apache.druid.sql.calcite.expression.TimeUnits;
 import org.apache.druid.sql.calcite.expression.builtin.TimeFloorOperatorConversion;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
@@ -103,23 +105,25 @@ public class DruidSqlParserUtilsTest
     public static Iterable<Object[]> constructorFeeder()
     {
       return ImmutableList.of(
-          new Object[]{TimeUnit.SECOND, Granularities.SECOND},
-          new Object[]{TimeUnit.MINUTE, Granularities.MINUTE},
-          new Object[]{TimeUnit.HOUR, Granularities.HOUR},
-          new Object[]{TimeUnit.DAY, Granularities.DAY},
-          new Object[]{TimeUnit.WEEK, Granularities.WEEK},
-          new Object[]{TimeUnit.MONTH, Granularities.MONTH},
-          new Object[]{TimeUnit.QUARTER, Granularities.QUARTER},
-          new Object[]{TimeUnit.YEAR, Granularities.YEAR}
+          new Object[]{TimeUnit.SECOND, TimeUnits.toPeriod(TimeUnitRange.SECOND), Granularities.SECOND},
+          new Object[]{TimeUnit.MINUTE, TimeUnits.toPeriod(TimeUnitRange.MINUTE), Granularities.MINUTE},
+          new Object[]{TimeUnit.HOUR, TimeUnits.toPeriod(TimeUnitRange.HOUR), Granularities.HOUR},
+          new Object[]{TimeUnit.DAY, TimeUnits.toPeriod(TimeUnitRange.DAY), Granularities.DAY},
+          new Object[]{TimeUnit.WEEK, TimeUnits.toPeriod(TimeUnitRange.WEEK), Granularities.WEEK},
+          new Object[]{TimeUnit.MONTH, TimeUnits.toPeriod(TimeUnitRange.MONTH), Granularities.MONTH},
+          new Object[]{TimeUnit.QUARTER, TimeUnits.toPeriod(TimeUnitRange.QUARTER), Granularities.QUARTER},
+          new Object[]{TimeUnit.YEAR, TimeUnits.toPeriod(TimeUnitRange.YEAR), Granularities.YEAR}
       );
     }
 
     TimeUnit timeUnit;
+    Period period;
     Granularity expectedGranularity;
 
-    public FloorToGranularityConversionTest(TimeUnit timeUnit, Granularity expectedGranularity)
+    public FloorToGranularityConversionTest(TimeUnit timeUnit, Period period, Granularity expectedGranularity)
     {
       this.timeUnit = timeUnit;
+      this.period = period;
       this.expectedGranularity = expectedGranularity;
     }
 
@@ -147,12 +151,12 @@ public class DruidSqlParserUtilsTest
     }
 
     /**
-     * Tests that Granularity literal SqlNode can be converted properly to Granularity.
+     * Tests clause like "PARTITIONED BY 'PT1D'"
      */
     @Test
-    public void testConvertSqlNodeToGranularityAsSymbol() throws ParseException
+    public void testConvertSqlNodeToPeriodFormGranularityAsLiteral() throws ParseException
     {
-      SqlNode sqlNode = SqlLiteral.createSymbol(GranularityType.valueOf(timeUnit.name()), SqlParserPos.ZERO);
+      SqlNode sqlNode = SqlLiteral.createCharString(period.toString(), SqlParserPos.ZERO);
       Granularity actualGranularity = DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode);
       Assert.assertEquals(expectedGranularity, actualGranularity);
     }

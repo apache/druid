@@ -70,6 +70,11 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
       "{\"type\":\"all\"}"
   );
 
+  protected static final Map<String, Object> PARTITIONED_BY_DAY_QUERY_CONTEXT = ImmutableMap.of(
+      DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
+      "{\"type\":\"day\"}"
+  );
+
   @Test
   public void testInsertFromTable()
   {
@@ -1453,6 +1458,37 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                     )
                 )
                 .context(PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .build()
+        )
+        .verify();
+  }
+
+  @Test
+  public void testInsertPeriodFormGranularityFromExternalProjectSort()
+  {
+    // INSERT with a particular column ordering.
+
+    testIngestionQuery()
+        .sql(
+            "INSERT INTO dst SELECT x || y AS xy, z FROM %s PARTITIONED BY 'P1D' CLUSTERED BY 1, 2",
+            externSql(externalDataSource)
+        )
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectTarget("dst", RowSignature.builder().add("xy", ColumnType.STRING).add("z", ColumnType.LONG).build())
+        .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource(externalDataSource)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("v0", "concat(\"x\",\"y\")", ColumnType.STRING))
+                .columns("v0", "z")
+                .orderBy(
+                    ImmutableList.of(
+                        new ScanQuery.OrderBy("v0", ScanQuery.Order.ASCENDING),
+                        new ScanQuery.OrderBy("z", ScanQuery.Order.ASCENDING)
+                    )
+                )
+                .context(PARTITIONED_BY_DAY_QUERY_CONTEXT)
                 .build()
         )
         .verify();
