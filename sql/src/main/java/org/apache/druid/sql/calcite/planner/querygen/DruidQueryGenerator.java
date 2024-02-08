@@ -129,6 +129,19 @@ public class DruidQueryGenerator
   public interface Vertex
   {
     /**
+     * Builds the query.
+     */
+    DruidQuery buildQuery(boolean isRoot);
+
+    /**
+     * Merges the given node into the current {@link Vertex}
+     *
+     * @return the new {@link Vertex} or <code>null</code> if merging is not possible.
+     */
+    @Nullable
+    Vertex mergeNode(RelNode node, boolean isRoot);
+
+    /**
      * Decides wether this {@link Vertex} can be unwrapped into an {@link InputDesc}.
      */
     boolean canUnwrapInput();
@@ -143,18 +156,6 @@ public class DruidQueryGenerator
      */
     InputDesc unwrapInputDesc();
 
-    /**
-     * Merges the given node into the current {@link Vertex}
-     *
-     * @return the new {@link Vertex} or <code>null</code> if merging is not possible.
-     */
-    @Nullable
-    Vertex mergeNode(RelNode node, boolean isRoot);
-
-    /**
-     * Builds the query.
-     */
-    DruidQuery buildQuery(boolean isRoot);
   }
 
   /**
