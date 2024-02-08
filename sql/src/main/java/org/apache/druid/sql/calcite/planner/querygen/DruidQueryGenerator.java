@@ -37,7 +37,9 @@ import org.apache.druid.sql.calcite.planner.querygen.InputDescProducer.InputDesc
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery.Stage;
+
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -189,6 +191,9 @@ public class DruidQueryGenerator
         );
       }
 
+      /**
+       * Creates the {@link InputDesc} for the current {@link Vertex}.
+       */
       private InputDesc getInput()
       {
         List<InputDesc> inputDescs = new ArrayList<>();
@@ -210,7 +215,7 @@ public class DruidQueryGenerator
         if (inputs.size() == 1) {
           return inputDescs.get(0);
         }
-        throw new IllegalStateException();
+        throw DruidException.defensive("Unable to create InputDesc for Operator [%s]", scan);
       }
 
       /**

@@ -25,7 +25,11 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import java.util.List;
 
-
+/**
+ * Abstracts away non-trivial input operation handlings between {@link DataSource}s.
+ *
+ * Example: TableScan ; Union; Join.
+ */
 public interface InputDescProducer
 {
   /**
