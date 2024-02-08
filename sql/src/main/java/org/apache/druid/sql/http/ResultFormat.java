@@ -133,7 +133,7 @@ public enum ResultFormat
 
     void writeHeader(RelDataType rowType, boolean includeTypes, boolean includeSqlTypes) throws IOException;
 
-    void writeHeaderFromRowSignature(RowSignature rowSignature, boolean includeTypes) throws IOException;
+    default void writeHeaderFromRowSignature(RowSignature rowSignature, boolean includeTypes) throws IOException {}
 
     /**
      * Start of each result row.
