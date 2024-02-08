@@ -118,7 +118,7 @@ public class DruidQueryGenerator
   /**
    * Execution dag vertex - encapsulates a list of operators.
    */
-  public interface Vertex
+  private interface Vertex
   {
     /**
      * Builds the query.
@@ -151,7 +151,7 @@ public class DruidQueryGenerator
   /**
    * {@link PartialDruidQuery} based {@link Vertex} factory.
    */
-  public static class PDQVertexFactory
+  protected static class PDQVertexFactory
   {
     private final PlannerContext plannerContext;
     private final RexBuilder rexBuilder;
