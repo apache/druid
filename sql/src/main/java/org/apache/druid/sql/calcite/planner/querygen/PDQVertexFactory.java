@@ -143,7 +143,7 @@ public class PDQVertexFactory
      *
      * @return the new merged vertex - or null if its not possible to merge
      */
-    public Vertex mergeIntoDruidQuery(RelNode node, boolean isRoot)
+    public Vertex mergeNode(RelNode node, boolean isRoot)
     {
       if (accepts(node, Stage.WHERE_FILTER, Filter.class)) {
         PartialDruidQuery newPartialQuery = partialDruidQuery.withWhereFilter((Filter) node);

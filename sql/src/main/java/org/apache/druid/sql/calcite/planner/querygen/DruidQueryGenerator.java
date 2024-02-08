@@ -73,13 +73,13 @@ public class DruidQueryGenerator
     }
     if (newInputs.size() == 1) {
       Vertex inputVertex = newInputs.get(0);
-      Vertex newVertex = inputVertex.mergeIntoDruidQuery(node, isRoot);
+      Vertex newVertex = inputVertex.mergeNode(node, isRoot);
       if (newVertex != null) {
         return newVertex;
       }
       // FIXME
       inputVertex = vertexFactory.createVertex(node, inputVertex);
-      newVertex = inputVertex.mergeIntoDruidQuery(node, false);
+      newVertex = inputVertex.mergeNode(node, false);
       if (newVertex != null) {
         return newVertex;
       }

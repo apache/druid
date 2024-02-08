@@ -48,7 +48,7 @@ public interface Vertex
 
   InputDesc unwrapInputDesc();
 
-  Vertex mergeIntoDruidQuery(RelNode node, boolean isRoot);
+  Vertex mergeNode(RelNode node, boolean isRoot);
 
   DruidQuery buildQuery(boolean isRoot);
 }
