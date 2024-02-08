@@ -35,6 +35,7 @@ import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator.PDQVertexFactory.PDQVertex;
 import org.apache.druid.sql.calcite.planner.querygen.InputDescProducer.InputDesc;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
@@ -42,6 +43,7 @@ import org.apache.druid.sql.calcite.rel.PartialDruidQuery.Stage;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -82,7 +84,7 @@ public class DruidQueryGenerator
       InputDescProducer in = (InputDescProducer) node;
       // ensure that inputDesc is available (checks should happen in this method)
       in.getInputDesc(vertexFactory.getPlannerContext());
-      return vertexFactory.createVertex(node);
+      return vertexFactory.createVertex(PartialDruidQuery.create(node),Collections.emptyList());
     }
     if (node instanceof Union) {
       return processUnion((Union) node, newInputs);
@@ -94,7 +96,9 @@ public class DruidQueryGenerator
         return newVertex;
       }
       // FIXME
-      inputVertex = vertexFactory.createVertex(node, inputVertex);
+      inputVertex = vertexFactory.createVertex(
+      PartialDruidQuery.createOuterQuery(((PDQVertex) inputVertex).partialDruidQuery),
+      ImmutableList.of(inputVertex));
       newVertex = inputVertex.mergeNode(node, false);
       if (newVertex != null) {
         return newVertex;
@@ -123,12 +127,24 @@ public class DruidQueryGenerator
    */
   public interface Vertex
   {
+    /**
+     * Decides wether this {@link Vertex} can be unwrapped into an {@link InputDesc}.
+     */
     boolean canUnwrapInput();
 
+    /**
+     * Unwraps this {@link Vertex} into an {@link InputDesc}.
+     */
     InputDesc unwrapInputDesc();
 
+    /**
+     * Merges the given node into the current {@link Vertex}
+     */
     Vertex mergeNode(RelNode node, boolean isRoot);
 
+    /**
+     * Builds the query.
+     */
     DruidQuery buildQuery(boolean isRoot);
   }
 
@@ -144,23 +160,6 @@ public class DruidQueryGenerator
     {
       this.plannerContext = plannerContext;
       this.rexBuilder = rexBuilder;
-    }
-
-    // FIXME
-    public PDQVertex createVertex(RelNode scan)
-    {
-      PDQVertex vertex = new PDQVertex();
-      vertex.partialDruidQuery = PartialDruidQuery.create(scan);
-      return vertex;
-    }
-
-    // FIXME
-    Vertex createVertex(RelNode node, Vertex inputVertex)
-    {
-      PDQVertex vertex = new PDQVertex();
-      vertex.inputs = ImmutableList.of(inputVertex);
-      vertex.partialDruidQuery = PartialDruidQuery.createOuterQuery(((PDQVertex) inputVertex).partialDruidQuery);
-      return vertex;
     }
 
     Vertex createVertex(PartialDruidQuery partialDruidQuery, List<Vertex> inputs)
