@@ -44,9 +44,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Converts a DAG of
- * {@link org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode} convention
- * to a native {@link DruidQuery} for execution.
+ * Converts a DAG of {@link org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode} convention to a native
+ * {@link DruidQuery} for execution.
  */
 public class DruidQueryGenerator
 {
@@ -142,8 +141,7 @@ public class DruidQueryGenerator
     /**
      * Unwraps this {@link Vertex} into an {@link InputDesc}.
      *
-     * Unwraps the input of this vertex - if it doesn't do anything beyond
-     * reading its input.
+     * Unwraps the input of this vertex - if it doesn't do anything beyond reading its input.
      *
      * @throws DruidException if unwrap is not possible.
      */
@@ -192,23 +190,23 @@ public class DruidQueryGenerator
 
       private InputDesc getInput()
       {
-        List<InputDesc> inputDescs =new ArrayList<>();
+        List<InputDesc> inputDescs = new ArrayList<>();
         for (Vertex inputVertex : inputs) {
           final InputDesc desc;
-          if(inputVertex.canUnwrapInput()) {
-            desc=inputVertex.unwrapInputDesc();
+          if (inputVertex.canUnwrapInput()) {
+            desc = inputVertex.unwrapInputDesc();
           } else {
             DruidQuery inputQuery = inputs.get(0).buildQuery(false);
-            desc= new InputDesc(new QueryDataSource(inputQuery.getQuery()), inputQuery.getOutputRowSignature());
+            desc = new InputDesc(new QueryDataSource(inputQuery.getQuery()), inputQuery.getOutputRowSignature());
           }
           inputDescs.add(desc);
-      }
+        }
         RelNode scan = partialDruidQuery.getScan();
         if (scan instanceof InputDescProducer) {
           InputDescProducer inp = (InputDescProducer) scan;
           return inp.getInputDesc(plannerContext, inputDescs);
         }
-        if(inputs.size() == 1 ) {
+        if (inputs.size() == 1) {
           return inputDescs.get(0);
         }
         throw new IllegalStateException();
