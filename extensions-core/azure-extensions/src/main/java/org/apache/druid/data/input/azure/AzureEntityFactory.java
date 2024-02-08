@@ -20,11 +20,16 @@
 package org.apache.druid.data.input.azure;
 
 import org.apache.druid.data.input.impl.CloudObjectLocation;
+import org.apache.druid.storage.azure.AzureStorage;
 
 /**
  * Factory for creating {@link AzureEntity} objects
  */
 public interface AzureEntityFactory
 {
-  AzureEntity create(CloudObjectLocation location);
+  AzureEntity create(
+      CloudObjectLocation location,
+      AzureStorage azureStorage,
+      String scheme
+  );
 }

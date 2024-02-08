@@ -78,6 +78,12 @@ public class ObjectWriter implements ResultFormat.Writer
   }
 
   @Override
+  public void writeHeaderFromRowSignature(final RowSignature signature, final boolean includeTypes) throws IOException
+  {
+    writeHeader(jsonGenerator, signature, includeTypes);
+  }
+
+  @Override
   public void writeRowStart() throws IOException
   {
     jsonGenerator.writeStartObject();
@@ -134,6 +140,34 @@ public class ObjectWriter implements ResultFormat.Writer
               rowType.getFieldList().get(i).getType().getSqlTypeName().getName()
           );
         }
+
+        jsonGenerator.writeEndObject();
+      }
+    }
+
+    jsonGenerator.writeEndObject();
+  }
+
+  static void writeHeader(
+      final JsonGenerator jsonGenerator,
+      final RowSignature signature,
+      final boolean includeTypes
+  ) throws IOException
+  {
+    jsonGenerator.writeStartObject();
+
+    for (int i = 0; i < signature.size(); i++) {
+      jsonGenerator.writeFieldName(signature.getColumnName(i));
+
+      if (!includeTypes) {
+        jsonGenerator.writeNull();
+      } else {
+        jsonGenerator.writeStartObject();
+
+        jsonGenerator.writeStringField(
+            ObjectWriter.TYPE_HEADER_NAME,
+            signature.getColumnType(i).map(TypeSignature::asTypeString).orElse(null)
+        );
 
         jsonGenerator.writeEndObject();
       }

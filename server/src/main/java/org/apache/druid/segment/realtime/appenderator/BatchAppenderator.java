@@ -214,11 +214,11 @@ public class BatchAppenderator implements Appenderator
     log.debug("There will be up to[%d] pending persists", maxPendingPersists);
 
     if (persistExecutor == null) {
-      // use a blocking single threaded executor to throttle the firehose when write to disk is slow
+      log.info("Number of persist threads [%d]", tuningConfig.getNumPersistThreads());
       persistExecutor = MoreExecutors.listeningDecorator(
-          Execs.newBlockingSingleThreaded(
+          Execs.newBlockingThreaded(
               "[" + StringUtils.encodeForFormat(myId) + "]-batch-appenderator-persist",
-              maxPendingPersists
+              tuningConfig.getNumPersistThreads(), maxPendingPersists
           )
       );
     }

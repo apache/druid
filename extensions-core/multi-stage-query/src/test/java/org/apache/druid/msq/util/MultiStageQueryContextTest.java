@@ -22,6 +22,8 @@ package org.apache.druid.msq.util;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.query.BadQueryContextException;
@@ -291,6 +293,22 @@ public class MultiStageQueryContextTest
         e,
         ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo(
             "Expected key [indexSpec] to be an indexSpec, but got [{]"))
+    );
+  }
+
+  @Test
+  public void testUseConcurrentLocks()
+  {
+    final QueryContext context = QueryContext.of(ImmutableMap.of(Tasks.USE_CONCURRENT_LOCKS, true));
+
+    Assert.assertEquals(
+        TaskLockType.REPLACE,
+        MultiStageQueryContext.validateAndGetTaskLockType(context, true)
+    );
+
+    Assert.assertEquals(
+        TaskLockType.APPEND,
+        MultiStageQueryContext.validateAndGetTaskLockType(context, false)
     );
   }
 

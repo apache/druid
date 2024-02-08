@@ -30,6 +30,7 @@ import org.apache.druid.metadata.DynamicConfigProvider;
 import org.apache.druid.metadata.MapStringDynamicConfigProvider;
 import org.apache.kafka.clients.producer.ProducerConfig;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.Map;
@@ -124,6 +125,7 @@ public class KafkaEmitterConfig
   }
 
   @JsonProperty
+  @Nonnull
   public Set<EventType> getEventTypes()
   {
     return eventTypes;

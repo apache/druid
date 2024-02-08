@@ -697,25 +697,6 @@ public class SqlSegmentsMetadataManagerTest
     );
   }
 
-  @Test(expected = IllegalArgumentException.class)
-  public void testMarkAsUsedNonOvershadowedSegmentsInIntervalWithInvalidInterval() throws IOException
-  {
-    sqlSegmentsMetadataManager.startPollingDatabasePeriodically();
-    sqlSegmentsMetadataManager.poll();
-    Assert.assertTrue(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
-
-    final String newDataSource = "wikipedia2";
-    final DataSegment newSegment1 = createNewSegment1(newDataSource);
-
-    final DataSegment newSegment2 = createNewSegment2(newDataSource);
-
-    publish(newSegment1, false);
-    publish(newSegment2, false);
-    // invalid interval start > end
-    final Interval theInterval = Intervals.of("2017-10-22T00:00:00.000/2017-10-02T00:00:00.000");
-    sqlSegmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(newDataSource, theInterval);
-  }
-
   @Test
   public void testMarkAsUsedNonOvershadowedSegmentsInIntervalWithOverlappingInterval() throws IOException
   {
@@ -831,25 +812,6 @@ public class SqlSegmentsMetadataManagerTest
         ImmutableSet.of(segment1, segment2, newSegment3),
         ImmutableSet.copyOf(sqlSegmentsMetadataManager.iterateAllUsedSegments())
     );
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void testMarkAsUnusedSegmentsInIntervalWithInvalidInterval() throws IOException
-  {
-    sqlSegmentsMetadataManager.startPollingDatabasePeriodically();
-    sqlSegmentsMetadataManager.poll();
-    Assert.assertTrue(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
-
-    final String newDataSource = "wikipedia2";
-    final DataSegment newSegment1 = createNewSegment1(newDataSource);
-
-    final DataSegment newSegment2 = createNewSegment2(newDataSource);
-
-    publisher.publishSegment(newSegment1);
-    publisher.publishSegment(newSegment2);
-    // invalid interval start > end
-    final Interval theInterval = Intervals.of("2017-10-22T00:00:00.000/2017-10-02T00:00:00.000");
-    sqlSegmentsMetadataManager.markAsUnusedSegmentsInInterval(newDataSource, theInterval);
   }
 
   @Test

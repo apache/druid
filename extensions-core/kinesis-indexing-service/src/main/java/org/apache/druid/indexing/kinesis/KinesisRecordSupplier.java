@@ -46,11 +46,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Queues;
 import org.apache.druid.common.aws.AWSClientUtil;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.common.aws.AWSCredentialsUtils;
 import org.apache.druid.data.input.impl.ByteEntity;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisor;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
@@ -58,6 +58,7 @@ import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.MemoryBoundLinkedBlockingQueue;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -78,12 +79,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -212,7 +211,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
         // used for retrying on InterruptedException
         GetRecordsResult recordsResult = null;
         OrderedPartitionableRecord<String, String, ByteEntity> currRecord;
-
+        long recordBufferOfferWaitMillis;
         try {
 
           if (shardIterator == null) {
@@ -228,44 +227,46 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
 
             recordsResult = null;
 
-            if (!records.offer(currRecord, recordBufferOfferTimeout, TimeUnit.MILLISECONDS)) {
+            recordBufferOfferWaitMillis = recordBufferOfferTimeout;
+            while (!records.offer(
+                new MemoryBoundLinkedBlockingQueue.ObjectContainer<>(currRecord, 0),
+                recordBufferOfferWaitMillis,
+                TimeUnit.MILLISECONDS
+            )) {
               log.warn("Kinesis records are being processed slower than they are fetched. "
                        + "OrderedPartitionableRecord buffer full, retrying in [%,dms].",
                        recordBufferFullWait);
-              scheduleBackgroundFetch(recordBufferFullWait);
+              recordBufferOfferWaitMillis = recordBufferFullWait;
             }
 
             return;
           }
 
-          recordsResult = kinesis.getRecords(new GetRecordsRequest().withShardIterator(
-              shardIterator).withLimit(recordsPerFetch));
+          recordsResult = kinesis.getRecords(new GetRecordsRequest().withShardIterator(shardIterator));
 
           currentLagMillis = recordsResult.getMillisBehindLatest();
 
           // list will come back empty if there are no records
           for (Record kinesisRecord : recordsResult.getRecords()) {
-
             final List<ByteEntity> data;
 
-
-            if (deaggregate) {
-              if (deaggregateHandle == null || getDataHandle == null) {
-                throw new ISE("deaggregateHandle or getDataHandle is null!");
-              }
-
-              data = new ArrayList<>();
-
-              final List userRecords = (List) deaggregateHandle.invokeExact(
-                  Collections.singletonList(kinesisRecord)
-              );
-
-              for (Object userRecord : userRecords) {
-                data.add(new ByteEntity((ByteBuffer) getDataHandle.invoke(userRecord)));
-              }
-            } else {
-              data = Collections.singletonList(new ByteEntity(kinesisRecord.getData()));
+            if (deaggregateHandle == null || getDataHandle == null) {
+              throw new ISE("deaggregateHandle or getDataHandle is null!");
             }
+
+            data = new ArrayList<>();
+
+            final List userRecords = (List) deaggregateHandle.invokeExact(
+                Collections.singletonList(kinesisRecord)
+            );
+
+            int recordSize = 0;
+            for (Object userRecord : userRecords) {
+              ByteEntity byteEntity = new ByteEntity((ByteBuffer) getDataHandle.invoke(userRecord));
+              recordSize += byteEntity.getBuffer().array().length;
+              data.add(byteEntity);
+            }
+
 
             currRecord = new OrderedPartitionableRecord<>(
                 streamPartition.getStream(),
@@ -277,10 +278,11 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
 
             if (log.isTraceEnabled()) {
               log.trace(
-                  "Stream[%s] / partition[%s] / sequenceNum[%s] / bufferRemainingCapacity[%d]: %s",
+                  "Stream[%s] / partition[%s] / sequenceNum[%s] / bufferByteSize[%d] / bufferRemainingByteCapacity[%d]: %s",
                   currRecord.getStream(),
                   currRecord.getPartitionId(),
                   currRecord.getSequenceNumber(),
+                  records.byteSize(),
                   records.remainingCapacity(),
                   currRecord.getData()
                             .stream()
@@ -292,24 +294,18 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
               );
             }
 
-            // If the buffer was full and we weren't able to add the message, grab a new stream iterator starting
-            // from this message and back off for a bit to let the buffer drain before retrying.
-            if (!records.offer(currRecord, recordBufferOfferTimeout, TimeUnit.MILLISECONDS)) {
+            recordBufferOfferWaitMillis = recordBufferOfferTimeout;
+            while (!records.offer(
+                new MemoryBoundLinkedBlockingQueue.ObjectContainer<>(currRecord, recordSize),
+                recordBufferOfferWaitMillis,
+                TimeUnit.MILLISECONDS
+            )) {
               log.warn(
                   "Kinesis records are being processed slower than they are fetched. "
                   + "OrderedPartitionableRecord buffer full, storing iterator and retrying in [%,dms].",
                   recordBufferFullWait
               );
-
-              shardIterator = kinesis.getShardIterator(
-                  currRecord.getStream(),
-                  currRecord.getPartitionId(),
-                  ShardIteratorType.AT_SEQUENCE_NUMBER.toString(),
-                  currRecord.getSequenceNumber()
-              ).getShardIterator();
-
-              scheduleBackgroundFetch(recordBufferFullWait);
-              return;
+              recordBufferOfferWaitMillis = recordBufferFullWait;
             }
           }
 
@@ -399,15 +395,12 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
   private final MethodHandle getDataHandle;
 
   private final AmazonKinesis kinesis;
-
-  private final int recordsPerFetch;
   private final int fetchDelayMillis;
-  private final boolean deaggregate;
   private final int recordBufferOfferTimeout;
   private final int recordBufferFullWait;
-  private final int maxRecordsPerPoll;
+  private final int maxBytesPerPoll;
   private final int fetchThreads;
-  private final int recordBufferSize;
+  private final int recordBufferSizeBytes;
   private final boolean useEarliestSequenceNumber;
   private final boolean useListShards;
 
@@ -415,7 +408,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
 
   private final ConcurrentMap<StreamPartition<String>, PartitionResource> partitionResources =
       new ConcurrentHashMap<>();
-  private BlockingQueue<OrderedPartitionableRecord<String, String, ByteEntity>> records;
+  private MemoryBoundLinkedBlockingQueue<OrderedPartitionableRecord<String, String, ByteEntity>> records;
 
   private final boolean backgroundFetchEnabled;
   private volatile boolean closed = false;
@@ -423,56 +416,48 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
 
   public KinesisRecordSupplier(
       AmazonKinesis amazonKinesis,
-      int recordsPerFetch,
       int fetchDelayMillis,
       int fetchThreads,
-      boolean deaggregate,
-      int recordBufferSize,
+      int recordBufferSizeBytes,
       int recordBufferOfferTimeout,
       int recordBufferFullWait,
-      int maxRecordsPerPoll,
+      int maxBytesPerPoll,
       boolean useEarliestSequenceNumber,
       boolean useListShards
   )
   {
     Preconditions.checkNotNull(amazonKinesis);
     this.kinesis = amazonKinesis;
-    this.recordsPerFetch = recordsPerFetch;
     this.fetchDelayMillis = fetchDelayMillis;
-    this.deaggregate = deaggregate;
     this.recordBufferOfferTimeout = recordBufferOfferTimeout;
     this.recordBufferFullWait = recordBufferFullWait;
-    this.maxRecordsPerPoll = maxRecordsPerPoll;
+    this.maxBytesPerPoll = maxBytesPerPoll;
     this.fetchThreads = fetchThreads;
-    this.recordBufferSize = recordBufferSize;
+    this.recordBufferSizeBytes = recordBufferSizeBytes;
     this.useEarliestSequenceNumber = useEarliestSequenceNumber;
     this.useListShards = useListShards;
     this.backgroundFetchEnabled = fetchThreads > 0;
 
-    // the deaggregate function is implemented by the amazon-kinesis-client, whose license is not compatible with Apache.
-    // The work around here is to use reflection to find the deaggregate function in the classpath. See details on the
-    // docs page for more information on how to use deaggregation
-    if (deaggregate) {
-      try {
-        Class<?> kclUserRecordclass = Class.forName("com.amazonaws.services.kinesis.clientlibrary.types.UserRecord");
-        MethodHandles.Lookup lookup = MethodHandles.publicLookup();
+    // The deaggregate function is implemented by the amazon-kinesis-client, whose license was formerly not compatible
+    // with Apache. The code here avoids the license issue by using reflection, but is no longer necessary since
+    // amazon-kinesis-client is now Apache-licensed and is now a dependency of Druid. This code could safely be
+    // modified to use regular calls rather than reflection.
+    try {
+      Class<?> kclUserRecordclass = Class.forName("com.amazonaws.services.kinesis.clientlibrary.types.UserRecord");
+      MethodHandles.Lookup lookup = MethodHandles.publicLookup();
 
-        Method deaggregateMethod = kclUserRecordclass.getMethod("deaggregate", List.class);
-        Method getDataMethod = kclUserRecordclass.getMethod("getData");
+      Method deaggregateMethod = kclUserRecordclass.getMethod("deaggregate", List.class);
+      Method getDataMethod = kclUserRecordclass.getMethod("getData");
 
-        deaggregateHandle = lookup.unreflect(deaggregateMethod);
-        getDataHandle = lookup.unreflect(getDataMethod);
-      }
-      catch (ClassNotFoundException e) {
-        throw new ISE(e, "cannot find class[com.amazonaws.services.kinesis.clientlibrary.types.UserRecord], "
-                         + "note that when using deaggregate=true, you must provide the Kinesis Client Library jar in the classpath");
-      }
-      catch (Exception e) {
-        throw new RuntimeException(e);
-      }
-    } else {
-      deaggregateHandle = null;
-      getDataHandle = null;
+      deaggregateHandle = lookup.unreflect(deaggregateMethod);
+      getDataHandle = lookup.unreflect(getDataMethod);
+    }
+    catch (ClassNotFoundException e) {
+      throw new ISE(e, "cannot find class[com.amazonaws.services.kinesis.clientlibrary.types.UserRecord], "
+                       + "note that when using deaggregate=true, you must provide the Kinesis Client Library jar in the classpath");
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
     }
 
     if (backgroundFetchEnabled) {
@@ -488,7 +473,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
       );
     }
 
-    records = new LinkedBlockingQueue<>(recordBufferSize);
+    records = new MemoryBoundLinkedBlockingQueue<>(recordBufferSizeBytes);
   }
 
   public static AmazonKinesis getAmazonKinesisClient(
@@ -635,23 +620,19 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
     start();
 
     try {
-      int expectedSize = Math.min(Math.max(records.size(), 1), maxRecordsPerPoll);
+      List<MemoryBoundLinkedBlockingQueue.ObjectContainer<OrderedPartitionableRecord<String, String, ByteEntity>>> polledRecords = new ArrayList<>();
 
-      List<OrderedPartitionableRecord<String, String, ByteEntity>> polledRecords = new ArrayList<>(expectedSize);
-
-      Queues.drain(
-          records,
+      records.drain(
           polledRecords,
-          expectedSize,
+          maxBytesPerPoll,
           timeout,
           TimeUnit.MILLISECONDS
       );
 
-      polledRecords = polledRecords.stream()
-                                   .filter(x -> partitionResources.containsKey(x.getStreamPartition()))
-                                   .collect(Collectors.toList());
-
-      return polledRecords;
+      return polledRecords.stream()
+          .filter(x -> partitionResources.containsKey(x.getData().getStreamPartition()))
+          .map(MemoryBoundLinkedBlockingQueue.ObjectContainer::getData)
+          .collect(Collectors.toList());
     }
     catch (InterruptedException e) {
       log.warn(e, "Interrupted while polling");
@@ -1059,11 +1040,22 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
     }
 
     // filter records in buffer and only retain ones whose partition was not seeked
-    BlockingQueue<OrderedPartitionableRecord<String, String, ByteEntity>> newQ = new LinkedBlockingQueue<>(recordBufferSize);
+    MemoryBoundLinkedBlockingQueue<OrderedPartitionableRecord<String, String, ByteEntity>> newQ =
+        new MemoryBoundLinkedBlockingQueue<>(recordBufferSizeBytes);
 
     records.stream()
-           .filter(x -> !partitions.contains(x.getStreamPartition()))
-           .forEachOrdered(newQ::offer);
+        .filter(x -> !partitions.contains(x.getData().getStreamPartition()))
+        .forEachOrdered(x -> {
+          if (!newQ.offer(x)) {
+            // this should never really happen in practice but adding check here for safety.
+            throw DruidException.defensive("Failed to insert item to new queue when resetting background fetch. "
+                + "[stream: '%s', partitionId: '%s', sequenceNumber: '%s']",
+                x.getData().getStream(),
+                x.getData().getPartitionId(),
+                x.getData().getSequenceNumber()
+            );
+          }
+        });
 
     records = newQ;
 
