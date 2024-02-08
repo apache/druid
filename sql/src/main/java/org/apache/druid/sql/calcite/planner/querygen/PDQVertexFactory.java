@@ -101,8 +101,8 @@ public class PDQVertexFactory
 
     private InputDesc getInput()
     {
-      if (partialDruidQuery.getScan() instanceof XInputProducer) {
-        XInputProducer xInputProducer = (XInputProducer) partialDruidQuery.getScan();
+      if (partialDruidQuery.getScan() instanceof InputDescProducer) {
+        InputDescProducer xInputProducer = (InputDescProducer) partialDruidQuery.getScan();
         return xInputProducer.getInputDesc();
       }
       if (inputs.size() == 1) {
@@ -225,5 +225,4 @@ public class PDQVertexFactory
   {
     return plannerContext;
   }
-
 }

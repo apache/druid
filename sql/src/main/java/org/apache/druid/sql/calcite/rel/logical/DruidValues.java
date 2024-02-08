@@ -35,7 +35,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.querygen.PDQVertexFactory;
 import org.apache.druid.sql.calcite.planner.querygen.Vertex;
 import org.apache.druid.sql.calcite.planner.querygen.Vertex.InputDesc;
-import org.apache.druid.sql.calcite.planner.querygen.XInputProducer;
+import org.apache.druid.sql.calcite.planner.querygen.InputDescProducer;
 import org.apache.druid.sql.calcite.rel.CostEstimates;
 import org.apache.druid.sql.calcite.rule.DruidLogicalValuesRule;
 import org.apache.druid.sql.calcite.table.InlineTable;
@@ -47,7 +47,7 @@ import java.util.stream.Collectors;
 /**
  * {@link DruidLogicalNode} convention node for {@link LogicalValues} plan node.
  */
-public class DruidValues extends LogicalValues implements DruidLogicalNode, XInputProducer
+public class DruidValues extends LogicalValues implements DruidLogicalNode, InputDescProducer
 {
 
   private InlineTable inlineTable;
@@ -75,12 +75,12 @@ public class DruidValues extends LogicalValues implements DruidLogicalNode, XInp
   }
 
   @Override
-  public Vertex buildVertexRoot(PDQVertexFactory vertexFactory, List<Vertex> inputs)
+  public InputDesc getInputDesc(PlannerContext plannerContext)
   {
     if (inlineTable == null) {
-      inlineTable = buildInlineTable(vertexFactory.getPlannerContext());
+      inlineTable = buildInlineTable(plannerContext);
     }
-    return vertexFactory.createVertex(this);
+    return new InputDesc(inlineTable.getDataSource(), inlineTable.getRowSignature());
   }
 
   private InlineTable buildInlineTable(PlannerContext plannerContext)
@@ -104,12 +104,5 @@ public class DruidValues extends LogicalValues implements DruidLogicalNode, XInp
     InlineTable inlineTable = new InlineTable(InlineDataSource.fromIterable(objectTuples, rowSignature));
 
     return inlineTable;
-  }
-
-  @Override
-  public InputDesc getInputDesc()
-  {
-    return new InputDesc(inlineTable.getDataSource(), inlineTable.getRowSignature());
-
   }
 }

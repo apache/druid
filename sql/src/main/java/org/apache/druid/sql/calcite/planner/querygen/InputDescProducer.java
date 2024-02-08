@@ -19,13 +19,29 @@
 
 package org.apache.druid.sql.calcite.planner.querygen;
 
-import org.apache.druid.sql.calcite.planner.querygen.Vertex.InputDesc;
+import org.apache.druid.query.DataSource;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 
-import java.util.List;
 
-public interface XInputProducer
+public interface InputDescProducer
 {
-  Vertex buildVertexRoot(PDQVertexFactory vertexFactory, List<Vertex> inputs);
+  /**
+   * Utility class to input related things details.
+   *
+   * Main reason to have this was that {@link DataSource} doesn't contain the {@link RowSignature}.
+   */
+  public class InputDesc
+  {
+    public DataSource dataSource;
+    public RowSignature rowSignature;
 
-  InputDesc getInputDesc();
+    public InputDesc(DataSource dataSource, RowSignature rowSignature)
+    {
+      this.dataSource = dataSource;
+      this.rowSignature = rowSignature;
+    }
+  }
+
+  InputDesc getInputDesc(PlannerContext plannerContext);
 }

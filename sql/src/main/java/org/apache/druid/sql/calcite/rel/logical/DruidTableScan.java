@@ -33,10 +33,8 @@ import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.schema.Table;
-import org.apache.druid.sql.calcite.planner.querygen.PDQVertexFactory;
-import org.apache.druid.sql.calcite.planner.querygen.Vertex;
-import org.apache.druid.sql.calcite.planner.querygen.Vertex.InputDesc;
-import org.apache.druid.sql.calcite.planner.querygen.XInputProducer;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.querygen.InputDescProducer;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
 import java.util.List;
@@ -44,7 +42,7 @@ import java.util.List;
 /**
  * {@link DruidLogicalNode} convention node for {@link TableScan} plan node.
  */
-public class DruidTableScan extends TableScan implements DruidLogicalNode, XInputProducer
+public class DruidTableScan extends TableScan implements DruidLogicalNode, InputDescProducer
 {
   public DruidTableScan(
       RelOptCluster cluster,
@@ -100,15 +98,7 @@ public class DruidTableScan extends TableScan implements DruidLogicalNode, XInpu
   }
 
   @Override
-  public Vertex buildVertexRoot(PDQVertexFactory vertexFactory, List<Vertex> inputs)
-  {
-    Preconditions.checkArgument(inputs.size() == 0);
-    Preconditions.checkArgument(getDruidTable() != null);
-    return vertexFactory.createVertex(this);
-  }
-
-  @Override
-  public InputDesc getInputDesc()
+  public InputDesc getInputDesc(PlannerContext plannerContext)
   {
     final DruidTable druidTable = getDruidTable();
     return new InputDesc(druidTable.getDataSource(), druidTable.getRowSignature());
@@ -118,6 +108,7 @@ public class DruidTableScan extends TableScan implements DruidLogicalNode, XInpu
   {
     final RelOptTable table = getTable();
     final DruidTable druidTable = table.unwrap(DruidTable.class);
+    Preconditions.checkNotNull(druidTable, "DruidTable may not be null");
     return druidTable;
   }
 }

@@ -64,9 +64,11 @@ public class DruidQueryGenerator
 
   private Vertex processNodeWithInputs(RelNode node, List<Vertex> newInputs, boolean isRoot)
   {
-    if (node instanceof XInputProducer) {
-      XInputProducer xInputProducer = (XInputProducer) node;
-      return xInputProducer.buildVertexRoot(vertexFactory, newInputs);
+    if (node instanceof InputDescProducer) {
+      InputDescProducer in = (InputDescProducer) node;
+      // ensure that inputDesc is available (checks should happen in this method)
+      in.getInputDesc(vertexFactory.getPlannerContext());
+      return vertexFactory.createVertex(node);
     }
     if (node instanceof Union) {
       return processUnion((Union) node, newInputs);
