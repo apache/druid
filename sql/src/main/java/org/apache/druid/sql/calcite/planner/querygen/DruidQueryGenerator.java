@@ -31,24 +31,24 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Converts a DAG of {@link org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode} convention
- * to a native Druid query for execution.
+ * Converts a DAG of
+ * {@link org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode} convention
+ * to a native {@link DruidQuery} for execution.
  */
 public class DruidQueryGenerator
 {
   private final RelNode relRoot;
-  private final PDQVertexFactory vertexFactory ;
+  private final PDQVertexFactory vertexFactory;
 
   public DruidQueryGenerator(PlannerContext plannerContext, RelNode relRoot, RexBuilder rexBuilder)
   {
     this.relRoot = relRoot;
-    this.vertexFactory = new PDQVertexFactory(plannerContext,rexBuilder);
+    this.vertexFactory = new PDQVertexFactory(plannerContext, rexBuilder);
   }
 
   public DruidQuery buildQuery()
   {
     Vertex vertex = buildVertexFor(relRoot, true);
-
     return vertex.buildQuery(true);
   }
 
@@ -64,12 +64,12 @@ public class DruidQueryGenerator
 
   private Vertex processNodeWithInputs(RelNode node, List<Vertex> newInputs, boolean isRoot)
   {
-      if( node instanceof XInputProducer) {
-        XInputProducer xInputProducer = (XInputProducer) node;
-return        xInputProducer.buildVertexRoot(vertexFactory, newInputs);
-      }
+    if (node instanceof XInputProducer) {
+      XInputProducer xInputProducer = (XInputProducer) node;
+      return xInputProducer.buildVertexRoot(vertexFactory, newInputs);
+    }
     if (node instanceof Union) {
-      return processUnion((Union) node, newInputs, isRoot);
+      return processUnion((Union) node, newInputs);
     }
     if (newInputs.size() == 1) {
       Vertex inputVertex = newInputs.get(0);
@@ -78,7 +78,7 @@ return        xInputProducer.buildVertexRoot(vertexFactory, newInputs);
         return newVertex;
       }
       // FIXME
-      inputVertex = vertexFactory .createVertex(node, inputVertex);
+      inputVertex = vertexFactory.createVertex(node, inputVertex);
       newVertex = inputVertex.mergeIntoDruidQuery(node, false);
       if (newVertex != null) {
         return newVertex;
@@ -87,9 +87,8 @@ return        xInputProducer.buildVertexRoot(vertexFactory, newInputs);
     throw DruidException.defensive().build("Unable to process relNode[%s]", node);
   }
 
-  private Vertex processUnion(Union node, List<Vertex> inputs, boolean isRoot)
+  private Vertex processUnion(Union node, List<Vertex> inputs)
   {
-    Preconditions.checkArgument(!isRoot, "Root level Union is not supported!");
     Preconditions.checkArgument(inputs.size() > 1, "Union needs multiple inputs");
     for (Vertex inputVertex : inputs) {
       if (!inputVertex.canUnwrapInput()) {
@@ -97,7 +96,7 @@ return        xInputProducer.buildVertexRoot(vertexFactory, newInputs);
             .defensive("Union operand with non-trivial remapping is not supported [%s]", inputVertex);
       }
     }
-    return vertexFactory .createVertex(
+    return vertexFactory.createVertex(
         PartialDruidQuery.create(node),
         inputs
     );
