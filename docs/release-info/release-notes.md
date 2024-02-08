@@ -57,6 +57,12 @@ For tips about how to write a good release note, see [Release notes](https://git
 
 This section contains important information about new and existing features.
 
+### MSQ export statements (experimental)
+
+Druid 29.0.0 adds experimental support for export statements to the MSQ task engine. This allows query tasks to write data to an external destination through the [`EXTERN` function](https://druid.apache.org/docs/latest/multi-stage-query/reference#extern-function).
+
+[#15689](https://github.com/apache/druid/pull/15689)
+
 ### SQL PIVOT and UNPIVOT (experimental)
 
 Druid 29.0.0 adds experimental support for the SQL PIVOT and UNPIVOT operators.
@@ -78,12 +84,6 @@ UNPIVOT (values_column
   IN (unpivoted_column1 [, unpivoted_column2 ... ])
 )
 ```
-
-### MSQ export statements (experimental)
-
-Druid 29.0.0 adds experimental support for export statements to the MSQ task engine. This allows query tasks to write data to an external destination through the [`EXTERN` function](https://druid.apache.org/docs/latest/multi-stage-query/reference#extern-function).
-
-[#15689](https://github.com/apache/druid/pull/15689)
 
 ### Range support in window functions
 
@@ -119,9 +119,34 @@ Druid now supports for first and last aggregators for the double, float, and lon
 
 ### Support for logging audit events
 
-Added support for logging audit events and improved coverage of audited REST API endpoints. To log audit events, set config `druid.audit.manager.type` to `log`.
+Added support for logging audit events and improved coverage of audited REST API endpoints. To log audit events, set config `druid.audit.manager.type` to `log`. When you set `druid.audit.manager.type` to `sql`, audit events are persisted to metadata store.
+
+In both cases, Druid audits the following events:
+
+* Coordinator
+  * Update load rules
+  * Update lookups
+  * Update coordinator dynamic config
+  * Update auto-compaction config
+* Overlord
+  * Submit a task
+  * Create/update a supervisor
+  * Update worker config
+* Basic security extension
+  * Create user
+  * Delete user
+  * Update user credentials
+  * Create role
+  * Delete role
+  * Assign role to user
+  * Set role permissions
+
 
 [#15480](https://github.com/apache/druid/pull/15480) [#15653](https://github.com/apache/druid/pull/15653)
+
+Also fixed an issue with the basic auth intergration test by not persisting logs to the database.
+
+[#15561](https://github.com/apache/druid/pull/15561)
 
 ### Enabled empty ingest queries
 
@@ -170,6 +195,22 @@ This section contains detailed release notes separated by areas.
 
 ### Web console
 
+#### Support for array types
+
+Added support for array types for all the ingestion wizards.
+
+![Load data](./assets/image03.png)
+
+[#15588](https://github.com/apache/druid/pull/15588)
+
+#### File inputs for query detail archive
+
+The **Load query detail archive** now supports loading queries by selecting a JSON file directly or dragging the file into the dialog.
+
+![Load query detail archive](./assets/image02.png)
+
+[#15632](https://github.com/apache/druid/pull/15632)
+
 #### Improved lookup dialog
 
 The lookup dialog in the web console now includes following optional fields:
@@ -181,14 +222,6 @@ The lookup dialog in the web console now includes following optional fields:
 ![Lookup dialog](./assets/image01.png)
 
 [#15472](https://github.com/apache/druid/pull/15472/)
-
-#### File inputs for query detail archive
-
-The **Load query detail archive** now supports loading queries by selecting a JSON file directly or dragging the file into the dialog.
-
-![Load query detail archive](./assets/image02.png)
-
-[#15632](https://github.com/apache/druid/pull/15632)
 
 #### Improved time chart brush and added auto-granularity
 
@@ -213,7 +246,9 @@ Added a new toggle that controls whether an ingestion fails if the ingestion que
 * Improved the time shift for compare logic in the web console to include literals [#15433](https://github.com/apache/druid/pull/15433)
 * Improved robustness of time shifting in tables in Explore view [#15359](https://github.com/apache/druid/pull/15359)
 * Improved ingesting data using the web console [#15339](https://github.com/apache/druid/pull/15339)
+* Improved management proxy detection [#15453](https://github.com/apache/druid/pull/15453)
 * Fixed rendering on a disabled worker [#15712](https://github.com/apache/druid/pull/15712)
+* Fix an issue where `waitUntilSegmentLoad` would always be set to `true` even if explicitly set to `false` [#15781](https://github.com/apache/druid/pull/15781)
 * Enabled table driven query modification actions to work with slices [#15779](https://github.com/apache/druid/pull/15779)
 
 ### General ingestion
@@ -243,6 +278,15 @@ Druid now skips compaction for datasources with segments that have an interval s
 
 [#15542](https://github.com/apache/druid/pull/15542)
 
+#### Kill task improvements
+
+Improved kill tasks as follows:
+
+* Resolved an issue where the auto-kill feature failed to honor the specified buffer period. This occurred when multiple unused segments within an interval were marked as unused at different times.
+* You can submit kill tasks with an optional parameter `maxUsedStatusLastUpdatedTime`. When set to a date time, the kill task considers segments in the specified interval marked as unused no later than this time. The default behavior is to kill all unused segments in the interval regardless of the time when segments where marked as unused.
+
+[#15710](https://github.com/apache/druid/pull/15710)
+
 #### Segment allocation improvements
 
 Improved segment allocation as follows:
@@ -255,6 +299,7 @@ Improved segment allocation as follows:
 * Added a default implementation for the `evalDimension` method in the RowFunction interface [#15452](https://github.com/apache/druid/pull/15452)
 * Added a configurable delay to the Peon service that determines how long a Peon should wait before dropping a segment [#15373](https://github.com/apache/druid/pull/15373)
 * Improved metadata store updates by attempting to retry updates rather than failing [#15141](https://github.com/apache/druid/pull/15141)
+* Improved the error message you get when `taskQueue` reaches `maxSize` [#15409](https://github.com/apache/druid/pull/15409)
 * Fixed an issue where `systemField` values weren't properly decorated in the sampling response [#15536](https://github.com/apache/druid/pull/15536)
 * Fixed an issue with columnar frames always writing multi-valued columns where the input column had `hasMultipleValues = UNKNOWN` [#15300](https://github.com/apache/druid/pull/15300)
 * Fixed a race condition where there were multiple attempts to publish segments for the same sequence [#14995](https://github.com/apache/druid/pull/14995)
@@ -265,6 +310,7 @@ Improved segment allocation as follows:
 * Fixed empty strings being incorrectly converted to null values [#15525](https://github.com/apache/druid/pull/15525)
 * Simplified `IncrementalIndex` and `OnHeapIncrementalIndex` by removing some parameters [#15448](https://github.com/apache/druid/pull/15448)
 * Updated active task payloads being accessed from memory before reverting to the metadata store [#15377](https://github.com/apache/druid/pull/15377)
+* Updated `OnheapIncrementalIndex` to no longer try to offer a thread-safe "add" method [#15697](https://github.com/apache/druid/pull/15697)
 
 ### SQL-based ingestion
 
@@ -330,7 +376,7 @@ Added JSON_QUERY_ARRAY which is similar to JSON_QUERY except the return type is 
 
 [#15521](https://github.com/apache/druid/pull/15521)
 
-#### Added support for numeric support for EARLIEST and LATEST functions
+#### Added numeric support for EARLIEST and LATEST functions
 
 In addition to string support, the following functions can now return numeric values:
 
@@ -352,6 +398,19 @@ Improved the `ANY_VALUE(expr)` function to support the boolean option `aggregate
 Added native `array contains element` filter to improve performance when using ARRAY_CONTAINS on array columns.
 
 [#15366](https://github.com/apache/druid/pull/15366) [#15455](https://github.com/apache/druid/pull/15455)
+
+#### Added authorize method
+
+Added an `authorize` method to the `QueryLifecycle` class to authorise a query based on authentication result.
+
+[#15816](https://github.com/apache/druid/pull/15816)
+
+#### Added index support
+
+Added `ValueIndexes` and `ArrayElementIndexes` for nested arrays.  
+Added `ValueIndexes` for nested long and double columns.
+
+[#15752](https://github.com/apache/druid/pull/15752)
 
 #### Changed `equals` filter for native queries
 
@@ -385,6 +444,7 @@ Updated `FunctionalExpr` to streamline the handling of class cast exceptions as 
 
 Enhanced lookups as follows:
 
+* Added `sqlReverseLookupThreshold` SQL query context parameter. `sqlReverseLookupThreshold` represents the maximum size of an IN filter that will be created as part of lookup reversal [#15832](https://github.com/apache/druid/pull/15832)
 * Improved loading and dropping of containers for lookups to reduce inconsistencies during updates [#14806](https://github.com/apache/druid/pull/14806)
 * Changed behavior for initialization of lookups to load the first lookup as is, regardless of cache status [#15598](https://github.com/apache/druid/pull/15598)
 
@@ -414,6 +474,7 @@ Increased memory available for subqueries when the query scheduler is configured
 * Added a supplier that can return `NullValueIndex` to be used by `NullFilter`. This improvement should speed up `is null` and `is not null` filters on JSON columns [#15687](https://github.com/apache/druid/pull/15687)
 * Added an option to compare results with relative error tolerance [#15429](https://github.com/apache/druid/pull/15429)
 * Added capability for the Broker to access datasource schemas defined in the catalog when processing SQL queries [#15469](https://github.com/apache/druid/pull/15469)
+* Added CONCAT flattening and filter decomposition [#15634](https://github.com/apache/druid/pull/15634)
 * Enabled ARRAY_TO_MV to support expression inputs [#15528](https://github.com/apache/druid/pull/15528)
 * Improved the error message you get when there's an error in the specified interval [#15454](https://github.com/apache/druid/pull/15454)
 * Improved how three-valued logic is handled [#15629](https://github.com/apache/druid/pull/15629)
@@ -471,6 +532,7 @@ The JSON parser unexpected token error now includes the context of the expected 
 * Improved process to retrieve segments from metadata store by retrieving segments in batches [#15305](https://github.com/apache/druid/pull/15305)
 * Improved logging messages when skipping auto-compaction for a data source [#15460](https://github.com/apache/druid/pull/15460)
 * Improved compaction by modifying the segment iterator to skip intervals without data [#15676](https://github.com/apache/druid/pull/15676)
+* Increased `_acceptQueueSize` based on value of `net.core.somaxconn` [#15596](https://github.com/apache/druid/pull/15596)
 * Optimized the process to mark segments as unused [#15352](https://github.com/apache/druid/pull/15352)
 * Renamed the `virtualColumns.getColumnCapabilities` method to `getColumnCapabilitiesWithoutFallback` to emphasize that it doesn't return capabilities for regular columns [#15614](https://github.com/apache/druid/pull/15614)
 
@@ -498,6 +560,7 @@ The computed hash values of passwords are now cached for the `druid-basic-securi
 
 * Added support for Azure Storage Accounts authentication options [#15287](https://github.com/apache/druid/pull/15287)
 * Added support for Azure Government when using Microsoft Azure Storage for deep storage [#15523](https://github.com/apache/druid/pull/15523)
+* Fixed the `batchDeleteFiles` method in Azure Storage [#15730](https://github.com/apache/druid/pull/15730)
 
 #### Kubernetes improvements
 
@@ -521,9 +584,11 @@ You can configure the `pushgateway` strategy to delete metrics from Prometheus p
 
 #### Iceberg improvements
 
-Added a parameter `snapshotTime` to the iceberg input source spec that allows the user to ingest data files associated with the most recent snapshot. This helps the user ingest data based on older snapshots by specifying the associated snapshot time.
+Improved the Iceberg extension as follows:
 
-[#15348](https://github.com/apache/druid/pull/15348)
+* Added a parameter `snapshotTime` to the iceberg input source spec that allows the user to ingest data files associated with the most recent snapshot. This helps the user ingest data based on older snapshots by specifying the associated snapshot time [#15348](https://github.com/apache/druid/pull/15348)
+* Added a new Iceberg ingestion filter of type `range` to filter on ranges of column values [#15782](https://github.com/apache/druid/pull/15782)
+* Fixed a typo in the Iceberg warehouse path for s3 [#15823](https://github.com/apache/druid/pull/15823)
 
 ## Upgrade notes and incompatible changes
 
@@ -593,6 +658,10 @@ If your extensions provide a DimFilter, you may need to rebuild them to ensure c
 
 [#15611](https://github.com/apache/druid/pull/15611)
 
+#### Other developer improvements
+
+* Fixed an issue with the Druid Docker image [#15264](https://github.com/apache/druid/pull/15264)
+
 #### Web console logging
 
 The web console now logs request errors in end-to-end tests to help with debugging.
@@ -607,6 +676,7 @@ The following dependencies have been updated:
 * Added `gson` to `pom.xml` [#15488](https://github.com/apache/druid/pull/15488/)
 * Updated Confluent's dependencies to 6.2.12 [#15441](https://github.com/apache/druid/pull/15441)
 * Excluded `jackson-jaxrs` from `ranger-plugin-common`, which isn't required, to address CVEs [#15481](https://github.com/apache/druid/pull/15481)
+* Updated AWS SDK version to `1.12.638` [#15814](https://github.com/apache/druid/pull/15814)
 * Updated Avro to 1.11.3 [#15419](https://github.com/apache/druid/pull/15419)
 * Updated Ranger libraries to the newest available version [#15363](https://github.com/apache/druid/pull/15363)
 * Updated the iceberg core version to 1.4.1 [#15348](https://github.com/apache/druid/pull/15348)
@@ -637,3 +707,4 @@ The following dependencies have been updated:
 * Updated `com.google.code.gson:gson` from 2.2.4 to 2.10.1 since 2.2.4 is affected by CVE-2022-25647 [#15461](https://github.com/apache/druid/pull/15461)
 * Updated Jedis to version 5.0.2 [#15344](https://github.com/apache/druid/pull/15344)
 * Updated `commons-codec:commons-codec` from 1.13 to 1.16.0 [#14819](https://github.com/apache/druid/pull/14819)
+* Updated Nimbus version to `8.22.1` [#15753](https://github.com/apache/druid/pull/15753)
