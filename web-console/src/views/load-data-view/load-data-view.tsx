@@ -96,7 +96,7 @@ import {
   getIoConfigTuningFormFields,
   getIssueWithSpec,
   getMetricSpecName,
-  getPossibleSystemFields,
+  getPossibleSystemFieldsForSpec,
   getRequiredModule,
   getRollup,
   getSchemaMode,
@@ -1521,7 +1521,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       ? STREAMING_INPUT_FORMAT_FIELDS
       : BATCH_INPUT_FORMAT_FIELDS;
 
-    const possibleSystemFields = getPossibleSystemFields(spec);
+    const possibleSystemFields = getPossibleSystemFieldsForSpec(spec);
 
     const normalInputAutoForm = (
       <AutoForm

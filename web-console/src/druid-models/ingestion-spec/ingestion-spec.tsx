@@ -375,8 +375,14 @@ export function isDruidSource(spec: Partial<IngestionSpec>): boolean {
   return deepGet(spec, 'spec.ioConfig.inputSource.type') === 'druid';
 }
 
-export function getPossibleSystemFields(spec: Partial<IngestionSpec>): string[] {
-  switch (deepGet(spec, 'spec.ioConfig.inputSource.type')) {
+export function getPossibleSystemFieldsForSpec(spec: Partial<IngestionSpec>): string[] {
+  const inputSource = deepGet(spec, 'spec.ioConfig.inputSource');
+  if (!inputSource) return [];
+  return getPossibleSystemFieldsForInputSource(inputSource);
+}
+
+export function getPossibleSystemFieldsForInputSource(inputSource: InputSource): string[] {
+  switch (inputSource.type) {
     case 's3':
     case 'google':
     case 'azureStorage':
