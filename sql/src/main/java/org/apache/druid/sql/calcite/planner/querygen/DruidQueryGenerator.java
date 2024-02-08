@@ -37,8 +37,6 @@ import org.apache.druid.sql.calcite.planner.querygen.InputDescProducer.InputDesc
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery.Stage;
-import org.apache.druid.sql.calcite.table.DruidTable;
-
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
@@ -174,7 +172,6 @@ public class DruidQueryGenerator
     {
       PartialDruidQuery partialDruidQuery;
       List<Vertex> inputs;
-      DruidTable queryTable;
 
       @Override
       public DruidQuery buildQuery(boolean topLevel)
@@ -285,7 +282,6 @@ public class DruidQueryGenerator
       {
         PDQVertex vertex = new PDQVertex();
         vertex.inputs = inputs;
-        vertex.queryTable = queryTable;
         vertex.partialDruidQuery = partialDruidQuery;
         return vertex;
       }
