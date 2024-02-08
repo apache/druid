@@ -20,48 +20,55 @@
 SqlGranularityLiteral PartitionGranularity() :
 {
   SqlNode e;
-  Granularity g;
+  Granularity granularity;
+  String unparseString;
 }
 {
   (
     <HOUR>
     {
-      g = GranularityType.HOUR.getDefaultGranularity();
+      granularity = Granularities.HOUR;
+      unparseString = "HOUR";
     }
   |
     <DAY>
     {
-      g = GranularityType.DAY.getDefaultGranularity();
+      granularity = Granularities.DAY;
+      unparseString = "DAY";
     }
   |
     <MONTH>
     {
-      g = GranularityType.MONTH.getDefaultGranularity();
+      granularity = Granularities.MONTH;
+      unparseString = "MONTH";
     }
   |
     <YEAR>
     {
-      g = GranularityType.YEAR.getDefaultGranularity();
+      granularity = Granularities.YEAR;
+      unparseString = "YEAR";
     }
   |
     <ALL>
     {
-      g = GranularityType.ALL.getDefaultGranularity();
+          granularity = Granularities.ALL;
+          unparseString = "ALL";
     }
     [
-      <TIME>
-      {
-        g = GranularityType.ALL.getDefaultGranularity();
-      }
+       <TIME>
+       {
+            unparseString += " TIME";
+       }
     ]
   |
     e = Expression(ExprContext.ACCEPT_SUB_QUERY)
     {
-      g = DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(e);
+      granularity = DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(e);
+      unparseString = e.toString();
     }
   )
   {
-    return new SqlGranularityLiteral(g, getPos());
+    return new SqlGranularityLiteral(granularity, unparseString, getPos());
   }
 }
 

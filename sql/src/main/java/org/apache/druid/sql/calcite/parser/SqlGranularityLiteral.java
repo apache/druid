@@ -1,34 +1,63 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.apache.druid.sql.calcite.parser;
 
-import java.util.Map;
-
+import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.util.NlsString;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
-public class SqlGranularityLiteral extends SqlLiteral {
+import javax.annotation.Nonnull;
+
+/**
+ * Extends the {@link SqlIdentifier} to hold parameters for the PARTITIONED BY clause.
+ */
+public class SqlGranularityLiteral extends SqlLiteral
+{
+  private String unparseString;
+  private Granularity granularity;
+
   public SqlGranularityLiteral(
-      @Nullable Granularity value,
+      @Nonnull Granularity granularity,
+      @Nonnull String unparseString,
       SqlParserPos pos)
   {
-    super(value, SqlTypeName.UNKNOWN, pos);
+    super(new NlsString(unparseString, null, null), SqlTypeName.CHAR, pos);
+    this.granularity = granularity;
+    this.unparseString = unparseString;
   }
 
-  @Override
-  @Nullable
-  public Granularity getValue() {
-    return (Granularity) value;
+  @Nonnull
+  public Granularity getGranularity()
+  {
+    return granularity;
   }
 
   @Override
   public void unparse(SqlWriter writer, int leftPrec, int rightPrec)
   {
-    if (value != null) {
-      writer.keyword("PARTITIONED BY");
-      writer.keyword(value.toString());
+    if (unparseString != null) {
+      writer.keyword(unparseString);
     }
   }
 }

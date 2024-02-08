@@ -118,7 +118,7 @@ public class DruidSqlInsert extends DruidSqlIngest
 
     if (getPartitionedBy() != null) {
       writer.keyword("PARTITIONED BY");
-      writer.keyword(partitionedBy.toString());
+      getPartitionedBy().unparse(writer, leftPrec, rightPrec);
     }
 
     if (getClusteredBy() != null) {
