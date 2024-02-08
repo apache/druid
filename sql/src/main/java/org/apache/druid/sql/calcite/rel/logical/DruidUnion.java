@@ -75,7 +75,11 @@ public class DruidUnion extends Union implements DruidLogicalNode, InputDescProd
         signature = inputDesc.rowSignature;
       } else {
         if (!signature.equals(inputDesc.rowSignature)) {
-          throw DruidException.defensive("Row signature mismatch FIXME");
+          throw DruidException.defensive(
+              "Row signature mismatch in Union inputs [%s] and [%s]",
+              signature,
+              inputDesc.rowSignature
+          );
         }
       }
     }
@@ -84,7 +88,7 @@ public class DruidUnion extends Union implements DruidLogicalNode, InputDescProd
 
   private void checkDataSourceSupported(DataSource dataSource)
   {
-    if(dataSource instanceof TableDataSource || dataSource instanceof InlineDataSource) {
+    if (dataSource instanceof TableDataSource || dataSource instanceof InlineDataSource) {
       return;
     }
     throw DruidException.defensive("Only Table and Values are supported as inputs for Union [%s]", dataSource);
