@@ -375,6 +375,30 @@ export function isDruidSource(spec: Partial<IngestionSpec>): boolean {
   return deepGet(spec, 'spec.ioConfig.inputSource.type') === 'druid';
 }
 
+export function getPossibleSystemFieldsForSpec(spec: Partial<IngestionSpec>): string[] {
+  const inputSource = deepGet(spec, 'spec.ioConfig.inputSource');
+  if (!inputSource) return [];
+  return getPossibleSystemFieldsForInputSource(inputSource);
+}
+
+export function getPossibleSystemFieldsForInputSource(inputSource: InputSource): string[] {
+  switch (inputSource.type) {
+    case 's3':
+    case 'google':
+    case 'azureStorage':
+      return ['__file_uri', '__file_bucket', '__file_path'];
+
+    case 'hdfs':
+    case 'local':
+      return ['__file_uri', '__file_path'];
+
+    default:
+      return [];
+  }
+}
+
+export const ALL_POSSIBLE_SYSTEM_FIELDS: string[] = ['__file_uri', '__file_bucket', '__file_path'];
+
 // ---------------------------------
 // Spec cleanup and normalization
 

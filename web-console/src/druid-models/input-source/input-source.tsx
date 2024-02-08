@@ -44,6 +44,7 @@ export interface InputSource {
   prefixes?: string[];
   objects?: { bucket: string; path: string }[];
   fetchTimeout?: number;
+  systemFields?: string[];
 
   // druid
   dataSource?: string;
