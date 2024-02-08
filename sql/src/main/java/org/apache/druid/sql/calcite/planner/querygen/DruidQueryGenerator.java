@@ -213,15 +213,6 @@ public class DruidQueryGenerator
         throw new IllegalStateException();
       }
 
-      private PDQVertex newVertex(PartialDruidQuery partialDruidQuery)
-      {
-        PDQVertex vertex = new PDQVertex();
-        vertex.inputs = inputs;
-        vertex.queryTable = queryTable;
-        vertex.partialDruidQuery = partialDruidQuery;
-        return vertex;
-      }
-
       /**
        * Merges the given {@link RelNode} into the current partial query.
        *
@@ -231,7 +222,11 @@ public class DruidQueryGenerator
       @Nullable
       public Vertex mergeNode(RelNode node, boolean isRoot)
       {
-        return newVertex(mergeNode1(node, isRoot));
+        PartialDruidQuery newPartialQuery = mergeNode1(node, isRoot);
+        if(newPartialQuery == null ) {
+          return null;
+        }
+        return newVertex(newPartialQuery);
       }
 
       /**
@@ -244,51 +239,55 @@ public class DruidQueryGenerator
       {
         if (accepts(node, Stage.WHERE_FILTER, Filter.class)) {
           PartialDruidQuery newPartialQuery = partialDruidQuery.withWhereFilter((Filter) node);
-          return newVertex1(newPartialQuery);
+          return newPartialQuery;
         }
         if (accepts(node, Stage.SELECT_PROJECT, Project.class)) {
           PartialDruidQuery newPartialQuery = partialDruidQuery.withSelectProject((Project) node);
-          return newVertex1(newPartialQuery);
+          return newPartialQuery;
         }
         if (accepts(node, Stage.AGGREGATE, Aggregate.class)) {
           PartialDruidQuery newPartialQuery = partialDruidQuery.withAggregate((Aggregate) node);
-          return newVertex1(newPartialQuery);
+          return newPartialQuery;
         }
         if (accepts(node, Stage.AGGREGATE_PROJECT, Project.class) && isRoot) {
           PartialDruidQuery newPartialQuery = partialDruidQuery.withAggregateProject((Project) node);
-          return newVertex1(newPartialQuery);
+          return newPartialQuery;
         }
         if (accepts(node, Stage.HAVING_FILTER, Filter.class)) {
           PartialDruidQuery newPartialQuery = partialDruidQuery.withHavingFilter((Filter) node);
-          return newVertex1(newPartialQuery);
+          return newPartialQuery;
         }
         if (accepts(node, Stage.SORT, Sort.class)) {
           PartialDruidQuery newPartialQuery = partialDruidQuery.withSort((Sort) node);
-          return newVertex1(newPartialQuery);
+          return newPartialQuery;
         }
         if (accepts(node, Stage.SORT_PROJECT, Project.class)) {
           PartialDruidQuery newPartialQuery = partialDruidQuery.withSortProject((Project) node);
-          return newVertex1(newPartialQuery);
+          return newPartialQuery;
         }
         if (accepts(node, Stage.WINDOW, Window.class)) {
           PartialDruidQuery newPartialQuery = partialDruidQuery.withWindow((Window) node);
-          return newVertex1(newPartialQuery);
+          return newPartialQuery;
         }
         if (accepts(node, Stage.WINDOW_PROJECT, Project.class)) {
           PartialDruidQuery newPartialQuery = partialDruidQuery.withWindowProject((Project) node);
-          return newVertex1(newPartialQuery);
+          return newPartialQuery;
         }
         return null;
-      }
-
-      private PartialDruidQuery newVertex1(PartialDruidQuery newPartialQuery)
-      {
-        return newPartialQuery;
       }
 
       private boolean accepts(RelNode node, Stage whereFilter, Class<? extends RelNode> class1)
       {
         return partialDruidQuery.canAccept(whereFilter) && class1.isInstance(node);
+      }
+
+      private PDQVertex newVertex(PartialDruidQuery partialDruidQuery)
+      {
+        PDQVertex vertex = new PDQVertex();
+        vertex.inputs = inputs;
+        vertex.queryTable = queryTable;
+        vertex.partialDruidQuery = partialDruidQuery;
+        return vertex;
       }
 
       @Override
