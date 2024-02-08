@@ -123,7 +123,7 @@ Be sure to check out [segment size optimization](./segment-optimization.md) to h
 
 The biggest contributions to heap usage on Brokers are:
 - Partial unmerged query results from Historicals and Tasks
-- The segment timeline: this consists of location information (which Historical/Task is serving a segment) for all currently [available](../design/architecture.md#segment-lifecycle) segments.
+- The segment timeline: this consists of location information (which Historical/Task is serving a segment) for all currently [available](../design/storage.md#segment-lifecycle) segments.
 - Cached segment metadata: this consists of metadata, such as per-segment schemas, for all currently available segments.
 
 The Broker heap requirements scale based on the number of segments in the cluster, and the total data size of the segments.

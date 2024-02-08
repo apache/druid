@@ -22,6 +22,8 @@ package org.apache.druid.segment.generator;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.Interval;
 
 import java.util.List;
@@ -80,6 +82,17 @@ public class GeneratorSchemaInfo
   public boolean isWithRollup()
   {
     return withRollup;
+  }
+
+  public DataSegment makeSegmentDescriptor(final String dataSource)
+  {
+    return DataSegment.builder()
+                      .dataSource(dataSource)
+                      .interval(getDataInterval())
+                      .version("1")
+                      .shardSpec(new LinearShardSpec(0))
+                      .size(0)
+                      .build();
   }
 
   @Override

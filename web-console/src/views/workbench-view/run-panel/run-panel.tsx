@@ -38,6 +38,7 @@ import { IndexSpecDialog } from '../../../dialogs/index-spec-dialog/index-spec-d
 import type { DruidEngine, IndexSpec, QueryContext, WorkbenchQuery } from '../../../druid-models';
 import {
   changeDurableShuffleStorage,
+  changeFailOnEmptyInsert,
   changeFinalizeAggregations,
   changeGroupByEnableMultiValueUnnesting,
   changeMaxParseExceptions,
@@ -47,6 +48,7 @@ import {
   changeUseCache,
   changeWaitUntilSegmentsLoad,
   getDurableShuffleStorage,
+  getFailOnEmptyInsert,
   getFinalizeAggregations,
   getGroupByEnableMultiValueUnnesting,
   getMaxParseExceptions,
@@ -111,6 +113,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
   const queryParameters = query.queryParameters;
 
   const maxParseExceptions = getMaxParseExceptions(queryContext);
+  const failOnEmptyInsert = getFailOnEmptyInsert(queryContext);
   const finalizeAggregations = getFinalizeAggregations(queryContext);
   const waitUntilSegmentsLoad = getWaitUntilSegmentsLoad(queryContext);
   const groupByEnableMultiValueUnnesting = getGroupByEnableMultiValueUnnesting(queryContext);
@@ -306,6 +309,15 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                       ))}
                     </MenuItem>
                     <MenuTristate
+                      icon={IconNames.DISABLE}
+                      text="Fail on empty insert"
+                      value={failOnEmptyInsert}
+                      undefinedEffectiveValue={false}
+                      onValueChange={v =>
+                        changeQueryContext(changeFailOnEmptyInsert(queryContext, v))
+                      }
+                    />
+                    <MenuTristate
                       icon={IconNames.TRANSLATE}
                       text="Finalize aggregations"
                       value={finalizeAggregations}
@@ -318,7 +330,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                       icon={IconNames.STOPWATCH}
                       text="Wait until segments have loaded"
                       value={waitUntilSegmentsLoad}
-                      undefinedEffectiveValue /* ={true} */
+                      undefinedEffectiveValue={ingestMode}
                       onValueChange={v =>
                         changeQueryContext(changeWaitUntilSegmentsLoad(queryContext, v))
                       }

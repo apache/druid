@@ -355,12 +355,16 @@ public class Windowing
 
     public WindowFrame getWindowFrame()
     {
+      if (group.lowerBound.isUnbounded() && group.upperBound.isUnbounded()) {
+        return WindowFrame.unbounded();
+      }
       return new WindowFrame(
-          WindowFrame.PeerType.ROWS,
+          group.isRows ? WindowFrame.PeerType.ROWS : WindowFrame.PeerType.RANGE,
           group.lowerBound.isUnbounded(),
           figureOutOffset(group.lowerBound),
           group.upperBound.isUnbounded(),
-          figureOutOffset(group.upperBound)
+          figureOutOffset(group.upperBound),
+          group.isRows ? null : getOrdering()
       );
     }
 

@@ -19,15 +19,9 @@
 
 package org.apache.druid.indexer;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -35,15 +29,11 @@ import java.io.IOException;
 
 public class TaskStatusPlusTest
 {
+  private final ObjectMapper jsonMapper = new DefaultObjectMapper();
+
   @Test
   public void testSerde() throws IOException
   {
-    final ObjectMapper mapper = new ObjectMapper();
-    mapper.registerModule(
-        new SimpleModule()
-            .addDeserializer(DateTime.class, new DateTimeDeserializer())
-            .addSerializer(DateTime.class, ToStringSerializer.instance)
-    );
     final TaskStatusPlus status = new TaskStatusPlus(
         "testId",
         "testGroupId",
@@ -57,19 +47,13 @@ public class TaskStatusPlusTest
         "ds_test",
         null
     );
-    final String json = mapper.writeValueAsString(status);
-    Assert.assertEquals(status, mapper.readValue(json, TaskStatusPlus.class));
+    final String json = jsonMapper.writeValueAsString(status);
+    Assert.assertEquals(status, jsonMapper.readValue(json, TaskStatusPlus.class));
   }
 
   @Test
   public void testJsonAttributes() throws IOException
   {
-    final ObjectMapper mapper = new ObjectMapper();
-    mapper.registerModule(
-        new SimpleModule()
-            .addDeserializer(DateTime.class, new DateTimeDeserializer())
-            .addSerializer(DateTime.class, ToStringSerializer.instance)
-    );
     final String json = "{\n"
                         + "\"id\": \"testId\",\n"
                         + "\"groupId\": \"testGroupId\",\n"
@@ -88,43 +72,16 @@ public class TaskStatusPlusTest
                         + "\"dataSource\": \"ds_test\",\n"
                         + "\"errorMsg\": null\n"
                         + "}";
-    TaskStatusPlus taskStatusPlus = mapper.readValue(json, TaskStatusPlus.class);
+    TaskStatusPlus taskStatusPlus = jsonMapper.readValue(json, TaskStatusPlus.class);
     Assert.assertNotNull(taskStatusPlus);
     Assert.assertNotNull(taskStatusPlus.getStatusCode());
     Assert.assertTrue(taskStatusPlus.getStatusCode().isRunnable());
     Assert.assertNotNull(taskStatusPlus.getRunnerStatusCode());
 
-    String serialized = mapper.writeValueAsString(taskStatusPlus);
+    String serialized = jsonMapper.writeValueAsString(taskStatusPlus);
 
     Assert.assertTrue(serialized.contains("\"status\":"));
     Assert.assertTrue(serialized.contains("\"statusCode\":"));
     Assert.assertTrue(serialized.contains("\"runnerStatusCode\":"));
-  }
-
-  // Copied from org.apache.druid.jackson.JodaStuff
-  private static class DateTimeDeserializer extends StdDeserializer<DateTime>
-  {
-    public DateTimeDeserializer()
-    {
-      super(DateTime.class);
-    }
-
-    @Override
-    public DateTime deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException
-    {
-      JsonToken t = jp.getCurrentToken();
-      if (t == JsonToken.VALUE_NUMBER_INT) {
-        return DateTimes.utc(jp.getLongValue());
-      }
-      if (t == JsonToken.VALUE_STRING) {
-        String str = jp.getText().trim();
-        if (str.length() == 0) { // [JACKSON-360]
-          return null;
-        }
-        // make sure to preserve time zone information when parsing timestamps
-        return DateTimes.ISO_DATE_OR_TIME_WITH_OFFSET.parse(str);
-      }
-      throw ctxt.mappingException(getValueClass());
-    }
   }
 }

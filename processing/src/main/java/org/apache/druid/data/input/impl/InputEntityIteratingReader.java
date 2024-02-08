@@ -30,10 +30,12 @@ import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.impl.systemfield.SystemFieldDecoratorFactory;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.segment.RowAdapter;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * InputSourceReader iterating multiple {@link InputEntity}s. This class could be used for
@@ -86,14 +88,28 @@ public class InputEntityIteratingReader implements InputSourceReader
   {
     return createIterator(entity -> {
       // InputEntityReader is stateful and so a new one should be created per entity.
+      final Function<InputRow, InputRow> systemFieldDecorator = systemFieldDecoratorFactory.decorator(entity);
       try {
         final InputEntityReader reader = inputFormat.createReader(inputRowSchema, entity, temporaryDirectory);
-        return reader.sample();
+        return reader.sample()
+            .map(i -> InputRowListPlusRawValues.ofList(i.getRawValuesList(),
+                i.getInputRows() == null
+                    ? null
+                    : i.getInputRows().stream().map(
+                        systemFieldDecorator).collect(Collectors.toList()),
+                i.getParseException()
+            ));
       }
       catch (IOException e) {
         throw new RuntimeException(e);
       }
     });
+  }
+
+  @Override
+  public RowAdapter<InputRow> rowAdapter()
+  {
+    return inputFormat.createRowAdapter(inputRowSchema);
   }
 
   private <R> CloseableIterator<R> createIterator(Function<InputEntity, CloseableIterator<R>> rowPopulator)

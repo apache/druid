@@ -58,9 +58,9 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
-import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
 import org.apache.druid.query.scan.ScanQueryConfig;
 import org.apache.druid.query.scan.ScanQueryEngine;
 import org.apache.druid.query.scan.ScanQueryQueryToolChest;
@@ -480,7 +480,6 @@ public class AggregationTestHelper implements Closeable
           outDir,
           minTimestamp,
           gran,
-          true,
           maxRowCount,
           rollup
       );
@@ -498,7 +497,6 @@ public class AggregationTestHelper implements Closeable
       File outDir,
       long minTimestamp,
       Granularity gran,
-      boolean deserializeComplexMetrics,
       int maxRowCount,
       boolean rollup
   ) throws Exception
@@ -517,7 +515,6 @@ public class AggregationTestHelper implements Closeable
                   .withRollup(rollup)
                   .build()
           )
-          .setDeserializeComplexMetrics(deserializeComplexMetrics)
           .setMaxRowCount(maxRowCount)
           .build();
 
@@ -538,7 +535,6 @@ public class AggregationTestHelper implements Closeable
                       .withRollup(rollup)
                       .build()
               )
-              .setDeserializeComplexMetrics(deserializeComplexMetrics)
               .setMaxRowCount(maxRowCount)
               .build();
         }
@@ -594,7 +590,6 @@ public class AggregationTestHelper implements Closeable
       final AggregatorFactory[] metrics,
       long minTimestamp,
       Granularity gran,
-      boolean deserializeComplexMetrics,
       int maxRowCount,
       boolean rollup
   ) throws Exception
@@ -609,7 +604,6 @@ public class AggregationTestHelper implements Closeable
                 .withRollup(rollup)
                 .build()
         )
-        .setDeserializeComplexMetrics(deserializeComplexMetrics)
         .setMaxRowCount(maxRowCount)
         .build();
 
@@ -636,7 +630,6 @@ public class AggregationTestHelper implements Closeable
       final AggregatorFactory[] metrics,
       long minTimestamp,
       Granularity gran,
-      boolean deserializeComplexMetrics,
       int maxRowCount,
       boolean rollup
   ) throws Exception
@@ -648,7 +641,6 @@ public class AggregationTestHelper implements Closeable
         metrics,
         minTimestamp,
         gran,
-        deserializeComplexMetrics,
         maxRowCount,
         rollup
     );
@@ -782,7 +774,7 @@ public class AggregationTestHelper implements Closeable
                 resultRows.stream()
                           .peek(row -> {
                             GroupByQuery query = (GroupByQuery) queryPlus.getQuery();
-                            GroupByQueryEngineV2.convertRowTypesToOutputTypes(
+                            GroupingEngine.convertRowTypesToOutputTypes(
                                 query.getDimensions(),
                                 row,
                                 query.getResultRowDimensionStart()

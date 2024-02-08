@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-import hasOwnProp from 'has-own-prop';
-
 import type { LocalStorageKeys } from './local-storage-keys';
 import { localStorageGetJson, localStorageSetJson } from './local-storage-keys';
 
@@ -57,7 +55,7 @@ export class LocalStorageBackedVisibility {
     const visibilityKeys = Object.keys(visibility);
     return visibilityKeys
       .filter(k => !visibility[k])
-      .concat(defaultHidden.filter(k => !hasOwnProp(visibility, k)));
+      .concat(defaultHidden.filter(k => !Object.hasOwn(visibility, k)));
   }
 
   public toggle(value: string): LocalStorageBackedVisibility {

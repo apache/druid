@@ -156,6 +156,13 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
       Arrays.asList(null, 3.3)
   );
 
+  static List<List<Object>> NO_TYPE_ARRAY = Arrays.asList(
+      Collections.emptyList(),
+      null,
+      Collections.emptyList(),
+      Arrays.asList(null, null)
+  );
+
 
   @BeforeClass
   public static void staticSetup()
@@ -186,7 +193,9 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
         new Object[]{"ARRAY<LONG>,ARRAY<STRING>,DOUBLE,LONG,STRING", VARIANT_SCALAR_AND_ARRAY, IndexSpec.DEFAULT},
         new Object[]{"ARRAY<LONG>,ARRAY<STRING>,DOUBLE,LONG,STRING", VARIANT_SCALAR_AND_ARRAY, fancy},
         new Object[]{"ARRAY<DOUBLE>,ARRAY<LONG>,ARRAY<STRING>", VARIANT_ARRAY, IndexSpec.DEFAULT},
-        new Object[]{"ARRAY<DOUBLE>,ARRAY<LONG>,ARRAY<STRING>", VARIANT_ARRAY, fancy}
+        new Object[]{"ARRAY<DOUBLE>,ARRAY<LONG>,ARRAY<STRING>", VARIANT_ARRAY, fancy},
+        new Object[]{"ARRAY<LONG>", NO_TYPE_ARRAY, IndexSpec.DEFAULT},
+        new Object[]{"ARRAY<LONG>", NO_TYPE_ARRAY, fancy}
     );
 
     return constructors;
@@ -253,6 +262,9 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
       expectedTypes = new FieldTypeInfo.MutableTypeSet((byte) (sortedFields.get(NestedPathFinder.JSON_PATH_ROOT).getByteValue() & 0x7F));
       for (ColumnType type : FieldTypeInfo.convertToSet(expectedTypes.getByteValue())) {
         expectedLogicalType = ColumnType.leastRestrictiveType(expectedLogicalType, type);
+      }
+      if (expectedLogicalType == null && sortedFields.get(NestedPathFinder.JSON_PATH_ROOT).hasUntypedArray()) {
+        expectedLogicalType = ColumnType.LONG_ARRAY;
       }
       VariantColumnSerializer serializer = new VariantColumnSerializer(
           fileNameBase,
@@ -461,9 +473,7 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
         }
         Assert.assertTrue(nullValueIndex.get().computeBitmapResult(resultFactory, false).get(i));
         if (expectedType.getSingleType() != null) {
-          Assert.assertFalse(arrayElementIndexes.containsValue(null, expectedType.getSingleType()).computeBitmapResult(resultFactory,
-                                                                                                                       false
-          ).get(i));
+          Assert.assertFalse(arrayElementIndexes.containsValue(null, expectedType.getSingleType()).computeBitmapResult(resultFactory, false).get(i));
         }
       }
 

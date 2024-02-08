@@ -67,6 +67,7 @@ import org.apache.druid.server.coordinator.duty.KillRules;
 import org.apache.druid.server.coordinator.duty.KillStalePendingSegments;
 import org.apache.druid.server.coordinator.duty.KillSupervisors;
 import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
+import org.apache.druid.server.coordinator.duty.MarkEternityTombstonesAsUnused;
 import org.apache.druid.server.coordinator.duty.MarkOvershadowedSegmentsAsUnused;
 import org.apache.druid.server.coordinator.duty.PrepareBalancerAndLoadQueues;
 import org.apache.druid.server.coordinator.duty.RunRules;
@@ -515,6 +516,7 @@ public class DruidCoordinator
         new UpdateReplicationStatus(),
         new UnloadUnusedSegments(loadQueueManager),
         new MarkOvershadowedSegmentsAsUnused(segments -> metadataManager.segments().markSegmentsAsUnused(segments)),
+        new MarkEternityTombstonesAsUnused(segments -> metadataManager.segments().markSegmentsAsUnused(segments)),
         new BalanceSegments(config.getCoordinatorPeriod()),
         new CollectSegmentAndServerStats(taskMaster)
     );

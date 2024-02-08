@@ -37,7 +37,7 @@ public class DimensionPredicateFilterTest
   public void testEqualsContractForDelegatingStringPredicateFactory()
   {
     EqualsVerifier.forClass(DimensionPredicateFilter.DelegatingStringPredicateFactory.class)
-                  .withIgnoredFields("baseStringPredicate", "isNullUnknown")
+                  .withIgnoredFields("baseStringPredicate")
                   .usingGetClass()
                   .verify();
   }

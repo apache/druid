@@ -67,8 +67,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
 
   public IncrementalIndexTest(
       String indexType,
-      String mode,
-      boolean deserializeComplexMetrics
+      String mode
   ) throws JsonProcessingException
   {
     this.mode = mode;
@@ -101,18 +100,16 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         .build();
     indexCreator = closer.closeLater(new IncrementalIndexCreator(indexType, (builder, args) -> builder
         .setIndexSchema(schema)
-        .setDeserializeComplexMetrics(deserializeComplexMetrics)
         .setMaxRowCount(1_000_000)
         .build())
     );
   }
 
-  @Parameterized.Parameters(name = "{index}: {0}, {1}, deserialize={2}")
+  @Parameterized.Parameters(name = "{index}: {0}, {1}")
   public static Collection<?> constructorFeeder()
   {
     return IncrementalIndexCreator.indexTypeCartesianProduct(
-        ImmutableList.of("rollup", "plain"),
-        ImmutableList.of(true, false)
+        ImmutableList.of("rollup", "plain")
     );
   }
 

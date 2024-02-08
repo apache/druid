@@ -99,15 +99,10 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
         QueryKitUtils.getSegmentGranularityFromContext(jsonMapper, queryToRun.getContext());
     final RowSignature intermediateSignature = computeIntermediateSignature(queryToRun);
     final ClusterBy resultClusterByWithoutGranularity = computeClusterByForResults(queryToRun);
-    final ClusterBy resultClusterBy =
+    final ClusterBy resultClusterByWithoutPartitionBoost =
         QueryKitUtils.clusterByWithSegmentGranularity(resultClusterByWithoutGranularity, segmentGranularity);
-    final RowSignature resultSignature =
-        QueryKitUtils.sortableSignature(
-            QueryKitUtils.signatureWithSegmentGranularity(computeResultSignature(queryToRun), segmentGranularity),
-            resultClusterBy.getColumns()
-        );
     final ClusterBy intermediateClusterBy = computeIntermediateClusterBy(queryToRun);
-    final boolean doOrderBy = !resultClusterBy.equals(intermediateClusterBy);
+    final boolean doOrderBy = !resultClusterByWithoutPartitionBoost.equals(intermediateClusterBy);
     final boolean doLimitOrOffset =
         queryToRun.getLimitSpec() instanceof DefaultLimitSpec
         && (((DefaultLimitSpec) queryToRun.getLimitSpec()).isLimited()
@@ -115,23 +110,30 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
 
     final ShuffleSpecFactory shuffleSpecFactoryPreAggregation;
     final ShuffleSpecFactory shuffleSpecFactoryPostAggregation;
+    boolean partitionBoost;
 
-    // There can be a situation where intermediateClusterBy is empty, while the result is non-empty
-    // if we have PARTITIONED BY on anything except ALL, however we don't have a grouping dimension
-    // (i.e. no GROUP BY clause)
-    // __time in such queries is generated using either an aggregator (e.g. sum(metric) as __time) or using a
-    // post-aggregator (e.g. TIMESTAMP '2000-01-01' as __time)
-    if (intermediateClusterBy.isEmpty() && resultClusterBy.isEmpty()) {
+    if (intermediateClusterBy.isEmpty() && resultClusterByWithoutPartitionBoost.isEmpty()) {
       // Ignore shuffleSpecFactory, since we know only a single partition will come out, and we can save some effort.
+      // This condition will be triggered when we don't have a grouping dimension, no partitioning granularity
+      // (PARTITIONED BY ALL) and no ordering/clustering dimensions
+      // For example: INSERT INTO foo SELECT COUNT(*) FROM bar PARTITIONED BY ALL
       shuffleSpecFactoryPreAggregation = ShuffleSpecFactories.singlePartition();
       shuffleSpecFactoryPostAggregation = ShuffleSpecFactories.singlePartition();
+      partitionBoost = false;
     } else if (doOrderBy) {
+      // There can be a situation where intermediateClusterBy is empty, while the resultClusterBy is non-empty
+      // if we have PARTITIONED BY on anything except ALL, however we don't have a grouping dimension
+      // (i.e. no GROUP BY clause)
+      // __time in such queries is generated using either an aggregator (e.g. sum(metric) as __time) or using a
+      // post-aggregator (e.g. TIMESTAMP '2000-01-01' as __time)
+      // For example: INSERT INTO foo SELECT COUNT(*), TIMESTAMP '2000-01-01' AS __time FROM bar PARTITIONED BY DAY
       shuffleSpecFactoryPreAggregation = intermediateClusterBy.isEmpty()
                                          ? ShuffleSpecFactories.singlePartition()
                                          : ShuffleSpecFactories.globalSortWithMaxPartitionCount(maxWorkerCount);
       shuffleSpecFactoryPostAggregation = doLimitOrOffset
                                           ? ShuffleSpecFactories.singlePartition()
                                           : resultShuffleSpecFactory;
+      partitionBoost = true;
     } else {
       shuffleSpecFactoryPreAggregation = doLimitOrOffset
                                          ? ShuffleSpecFactories.singlePartition()
@@ -139,6 +141,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
 
       // null: retain partitions from input (i.e. from preAggregation).
       shuffleSpecFactoryPostAggregation = null;
+      partitionBoost = false;
     }
 
     queryDefBuilder.add(
@@ -149,6 +152,18 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
                        .shuffleSpec(shuffleSpecFactoryPreAggregation.build(intermediateClusterBy, true))
                        .maxWorkerCount(dataSourcePlan.isSingleWorker() ? 1 : maxWorkerCount)
                        .processorFactory(new GroupByPreShuffleFrameProcessorFactory(queryToRun))
+    );
+
+    ClusterBy resultClusterBy = computeResultClusterBy(
+        queryToRun,
+        segmentGranularity,
+        partitionBoost
+    );
+    RowSignature resultSignature = computeResultSignature(
+        queryToRun,
+        segmentGranularity,
+        resultClusterBy,
+        partitionBoost
     );
 
     queryDefBuilder.add(
@@ -188,7 +203,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
    * Intermediate signature of a particular {@link GroupByQuery}. Does not include post-aggregators, and all
    * aggregations are nonfinalized.
    */
-  static RowSignature computeIntermediateSignature(final GroupByQuery query)
+  private static RowSignature computeIntermediateSignature(final GroupByQuery query)
   {
     final RowSignature postAggregationSignature = query.getResultRowSignature(RowSignature.Finalization.NO);
     final RowSignature.Builder builder = RowSignature.builder();
@@ -207,11 +222,65 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
    * Result signature of a particular {@link GroupByQuery}. Includes post-aggregators, and aggregations are
    * finalized by default. (But may be nonfinalized, depending on {@link #isFinalize}.
    */
-  static RowSignature computeResultSignature(final GroupByQuery query)
+  private static RowSignature computeResultSignature(final GroupByQuery query)
   {
     final RowSignature.Finalization finalization =
         isFinalize(query) ? RowSignature.Finalization.YES : RowSignature.Finalization.NO;
     return query.getResultRowSignature(finalization);
+  }
+
+  /**
+   * Computes the result clusterBy which may or may not have the partition boosted column, depending on the
+   * {@code partitionBoost} parameter passed
+   */
+  private static ClusterBy computeResultClusterBy(
+      final GroupByQuery query,
+      final Granularity segmentGranularity,
+      final boolean partitionBoost
+  )
+  {
+    final ClusterBy resultClusterByWithoutGranularity = computeClusterByForResults(query);
+    final ClusterBy resultClusterByWithoutPartitionBoost =
+        QueryKitUtils.clusterByWithSegmentGranularity(resultClusterByWithoutGranularity, segmentGranularity);
+    if (!partitionBoost) {
+      return resultClusterByWithoutPartitionBoost;
+    }
+    List<KeyColumn> resultClusterByWithPartitionBoostColumns = new ArrayList<>(resultClusterByWithoutPartitionBoost.getColumns());
+    resultClusterByWithPartitionBoostColumns.add(new KeyColumn(
+        QueryKitUtils.PARTITION_BOOST_COLUMN,
+        KeyOrder.ASCENDING
+    ));
+    return new ClusterBy(
+        resultClusterByWithPartitionBoostColumns,
+        resultClusterByWithoutPartitionBoost.getBucketByCount()
+    );
+  }
+
+  /**
+   * Computes the result signature which may or may not have the partition boosted column depending on the
+   * {@code partitionBoost} passed. It expects that the clusterBy already has the partition boost column
+   * if the parameter {@code partitionBoost} is set as true.
+   */
+  private static RowSignature computeResultSignature(
+      final GroupByQuery query,
+      final Granularity segmentGranularity,
+      final ClusterBy resultClusterBy,
+      final boolean partitionBoost
+  )
+  {
+    final RowSignature resultSignatureWithoutPartitionBoost =
+        QueryKitUtils.signatureWithSegmentGranularity(computeResultSignature(query), segmentGranularity);
+
+    if (!partitionBoost) {
+      return QueryKitUtils.sortableSignature(resultSignatureWithoutPartitionBoost, resultClusterBy.getColumns());
+    }
+
+    final RowSignature resultSignatureWithPartitionBoost =
+        RowSignature.builder().addAll(resultSignatureWithoutPartitionBoost)
+                    .add(QueryKitUtils.PARTITION_BOOST_COLUMN, ColumnType.LONG)
+                    .build();
+
+    return QueryKitUtils.sortableSignature(resultSignatureWithPartitionBoost, resultClusterBy.getColumns());
   }
 
   /**
