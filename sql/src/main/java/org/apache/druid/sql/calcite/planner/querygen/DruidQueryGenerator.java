@@ -56,9 +56,11 @@ public class DruidQueryGenerator
 {
   private final RelNode relRoot;
   private final PDQVertexFactory vertexFactory;
+  private PlannerContext plannerContext;
 
   public DruidQueryGenerator(PlannerContext plannerContext, RelNode relRoot, RexBuilder rexBuilder)
   {
+    this.plannerContext = plannerContext;
     this.relRoot = relRoot;
     this.vertexFactory = new PDQVertexFactory(plannerContext, rexBuilder);
   }
@@ -84,7 +86,7 @@ public class DruidQueryGenerator
     if (node instanceof InputDescProducer) {
       InputDescProducer in = (InputDescProducer) node;
       // ensure that inputDesc is available (checks should happen in this method)
-      in.getInputDesc(vertexFactory.getPlannerContext());
+      in.getInputDesc(vertexFactory.plannerContext);
       return vertexFactory.createVertex(PartialDruidQuery.create(node), Collections.emptyList());
     }
     if (node instanceof Union) {
@@ -155,13 +157,12 @@ public class DruidQueryGenerator
      * @throws DruidException if unwrap is not possible.
      */
     InputDesc unwrapInputDesc();
-
   }
 
   /**
    * {@link PartialDruidQuery} based {@link Vertex} factory.
    */
-  public class PDQVertexFactory
+  public static class PDQVertexFactory
   {
     private final PlannerContext plannerContext;
     private final RexBuilder rexBuilder;
@@ -316,10 +317,5 @@ public class DruidQueryGenerator
       }
     }
 
-    // FIXME ok?
-    public PlannerContext getPlannerContext()
-    {
-      return plannerContext;
-    }
   }
 }
