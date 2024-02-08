@@ -71,7 +71,7 @@ public class SegmentSchemaBackfillQueue
   {
     SchemaPayload schemaPayload = new SchemaPayload(rowSignature, aggregators);
     SegmentSchemaMetadata schemaMetadata = new SegmentSchemaMetadata(schemaPayload, numRows);
-    queue.add(new SegmentSchemaMetadataPlus(segmentId.toString(), schemaMetadata, schemaFingerprintGenerator.generateId(schemaMetadata.getSchemaPayload())));
+    queue.add(new SegmentSchemaMetadataPlus(segmentId, schemaMetadata, schemaFingerprintGenerator.generateId(schemaMetadata.getSchemaPayload())));
   }
 
   private void add(SegmentSchemaMetadataPlus plus)
@@ -109,9 +109,7 @@ public class SegmentSchemaBackfillQueue
       polled.forEach(this::add);
     } finally {
       for (SegmentSchemaMetadataPlus plus : polled) {
-        // keep SegmentId in metadataPlus
-        //
-        // segmentSchemaCache.markInTransitSMQResultPublished(SegmentId.tryParse(plus.getSegmentId()));
+        segmentSchemaCache.markInTransitSMQResultPublished(plus.getSegmentId());
       }
     }
   }

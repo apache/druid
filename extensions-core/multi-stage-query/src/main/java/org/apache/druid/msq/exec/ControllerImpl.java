@@ -194,6 +194,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.DruidNode;
@@ -1538,9 +1539,9 @@ public class ControllerImpl implements Controller
   )
   {
     if (taskLockType.equals(TaskLockType.APPEND)) {
-      return SegmentTransactionalAppendAction.forSegments(segments, Collections.emptyMap());
+      return SegmentTransactionalAppendAction.forSegments(segments, null);
     } else if (taskLockType.equals(TaskLockType.SHARED)) {
-      return SegmentTransactionalInsertAction.appendAction(segments, null, null, Collections.emptyMap());
+      return SegmentTransactionalInsertAction.appendAction(segments, null, null, null);
     } else {
       throw DruidException.defensive("Invalid lock type [%s] received for append action", taskLockType);
     }
@@ -1552,9 +1553,9 @@ public class ControllerImpl implements Controller
   )
   {
     if (taskLockType.equals(TaskLockType.REPLACE)) {
-      return SegmentTransactionalReplaceAction.create(segmentsWithTombstones, Collections.emptyMap());
+      return SegmentTransactionalReplaceAction.create(segmentsWithTombstones, null);
     } else if (taskLockType.equals(TaskLockType.EXCLUSIVE)) {
-      return SegmentTransactionalInsertAction.overwriteAction(null, segmentsWithTombstones, Collections.emptyMap());
+      return SegmentTransactionalInsertAction.overwriteAction(null, segmentsWithTombstones, null);
     } else {
       throw DruidException.defensive("Invalid lock type [%s] received for overwrite action", taskLockType);
     }
@@ -1846,7 +1847,9 @@ public class ControllerImpl implements Controller
                              new SegmentGeneratorFrameProcessorFactory(
                                  dataSchema,
                                  columnMappings,
-                                 tuningConfig
+                                 tuningConfig,
+                                 jsonMapper,
+                                 CentralizedDatasourceSchemaConfig.create()
                              )
                          )
       );

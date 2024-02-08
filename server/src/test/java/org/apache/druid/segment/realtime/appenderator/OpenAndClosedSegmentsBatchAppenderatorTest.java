@@ -104,7 +104,7 @@ public class OpenAndClosedSegmentsBatchAppenderatorTest extends InitializedNullH
       Assert.assertEquals(
           IDENTIFIERS.subList(0, 2),
           Lists.transform(
-              segmentsAndCommitMetadata.getSegmentWithSchemas(),
+              segmentsAndCommitMetadata.getSegments(),
               new Function<DataSegment, SegmentIdWithShardSpec>()
               {
                 @Override
@@ -116,7 +116,7 @@ public class OpenAndClosedSegmentsBatchAppenderatorTest extends InitializedNullH
           ).stream().sorted().collect(Collectors.toList())
       );
       Assert.assertEquals(tester.getPushedSegments().stream().sorted().collect(Collectors.toList()),
-                          segmentsAndCommitMetadata.getSegmentWithSchemas().stream().sorted().collect(Collectors.toList()));
+                          segmentsAndCommitMetadata.getSegments().stream().sorted().collect(Collectors.toList()));
 
       appenderator.clear();
       Assert.assertTrue(appenderator.getSegments().isEmpty());
@@ -182,7 +182,7 @@ public class OpenAndClosedSegmentsBatchAppenderatorTest extends InitializedNullH
       Assert.assertEquals(
           IDENTIFIERS.subList(0, 2),
           Lists.transform(
-              segmentsAndCommitMetadata.getSegmentWithSchemas(),
+              segmentsAndCommitMetadata.getSegments(),
               new Function<DataSegment, SegmentIdWithShardSpec>()
               {
                 @Override
@@ -194,7 +194,7 @@ public class OpenAndClosedSegmentsBatchAppenderatorTest extends InitializedNullH
           ).stream().sorted().collect(Collectors.toList())
       );
       Assert.assertEquals(tester.getPushedSegments().stream().sorted().collect(Collectors.toList()),
-                          segmentsAndCommitMetadata.getSegmentWithSchemas().stream().sorted().collect(Collectors.toList()));
+                          segmentsAndCommitMetadata.getSegments().stream().sorted().collect(Collectors.toList()));
 
       appenderator.clear();
       Assert.assertTrue(appenderator.getSegments().isEmpty());
@@ -226,4 +226,3 @@ public class OpenAndClosedSegmentsBatchAppenderatorTest extends InitializedNullH
   }
 
 }
-

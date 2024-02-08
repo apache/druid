@@ -23,10 +23,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.indexing.common.TaskReport;
-import org.apache.druid.segment.column.SegmentSchemaMetadata;
+import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.timeline.DataSegment;
 
-import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -44,7 +43,7 @@ public class PushedSegmentsReport implements SubTaskReport
   private final Set<DataSegment> oldSegments;
   private final Set<DataSegment> newSegments;
   private final Map<String, TaskReport> taskReport;
-  private final Map<String, SegmentSchemaMetadata> schemaMetadataMap;
+  private final MinimalSegmentSchemas minimalSegmentSchemas;
 
   @JsonCreator
   public PushedSegmentsReport(
@@ -52,14 +51,14 @@ public class PushedSegmentsReport implements SubTaskReport
       @JsonProperty("oldSegments") Set<DataSegment> oldSegments,
       @JsonProperty("segments") Set<DataSegment> newSegments,
       @JsonProperty("taskReport") Map<String, TaskReport> taskReport,
-      @JsonProperty("schemaMetadataMap") Map<String, SegmentSchemaMetadata> schemaMetadataMap
+      @JsonProperty("minimalSegmentSchemas") MinimalSegmentSchemas minimalSegmentSchemas
   )
   {
     this.taskId = Preconditions.checkNotNull(taskId, "taskId");
     this.oldSegments = Preconditions.checkNotNull(oldSegments, "oldSegments");
     this.newSegments = Preconditions.checkNotNull(newSegments, "newSegments");
     this.taskReport = taskReport;
-    this.schemaMetadataMap = schemaMetadataMap;
+    this.minimalSegmentSchemas = minimalSegmentSchemas;
   }
 
   @Override
@@ -87,10 +86,10 @@ public class PushedSegmentsReport implements SubTaskReport
     return taskReport;
   }
 
-  @JsonProperty("schemaMetadataMap")
-  public Map<String, SegmentSchemaMetadata> getSchemaMetadataMap()
+  @JsonProperty("minimalSegmentSchemas")
+  public MinimalSegmentSchemas getMinimalSegmentSchemas()
   {
-    return schemaMetadataMap;
+    return minimalSegmentSchemas;
   }
 
   @Override

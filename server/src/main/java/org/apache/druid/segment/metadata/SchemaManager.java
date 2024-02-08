@@ -10,11 +10,11 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
 import org.apache.druid.segment.column.SchemaPayload;
 import org.apache.druid.segment.column.SegmentSchemaMetadata;
+import org.apache.druid.timeline.SegmentId;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.PreparedBatch;
 import org.skife.jdbi.v2.TransactionCallback;
@@ -66,21 +66,20 @@ public class SchemaManager
   public void persistSchemaAndUpdateSegmentsTable(List<SegmentSchemaMetadataPlus> segmentSchemas)
   {
     connector.retryTransaction((TransactionCallback<Void>) (handle, status) -> {
-      persistSchema(handle, segmentSchemas);
+      Map<String, SchemaPayload> schemaPayloadMap = new HashMap<>();
+
+      for (SegmentSchemaMetadataPlus segmentSchema : segmentSchemas) {
+        schemaPayloadMap.put(segmentSchema.getFingerprint(), segmentSchema.getSegmentSchemaMetadata().getSchemaPayload());
+      }
+      persistSchema(handle, schemaPayloadMap);
       updateSegments(handle, segmentSchemas);
       return null;
     }, 1, 3);
   }
 
-  public void persistSchema(Handle handle, List<SegmentSchemaMetadataPlus> batch)
+  public void persistSchema(Handle handle, Map<String, SchemaPayload> schemaPayloadMap)
       throws JsonProcessingException
   {
-    Map<String, SchemaPayload> schemaPayloadMap = new HashMap<>();
-
-    for (SegmentSchemaMetadataPlus segmentSchema : batch) {
-      schemaPayloadMap.put(segmentSchema.getFingerprint(), segmentSchema.getSegmentSchemaMetadata().getSchemaPayload());
-    }
-
     try {
       // find out all the unique schema insert them and get their id
       // update the segment table with the schema id
@@ -139,10 +138,12 @@ public class SchemaManager
   public void updateSegments(Handle handle, List<SegmentSchemaMetadataPlus> batch)
   {
     Set<String> updatedSegments =
-        segmentUpdatedBatch(handle, batch.stream().map(SegmentSchemaMetadataPlus::getSegmentId).collect(Collectors.toSet()));
+        segmentUpdatedBatch(handle, batch.stream().map(plus -> plus.getSegmentId().toString()).collect(Collectors.toSet()));
 
-    List<SegmentSchemaMetadataPlus> segmentsToUpdate = batch.stream().filter(v -> !updatedSegments.contains(v.getSegmentId())).collect(
-        Collectors.toList());
+    List<SegmentSchemaMetadataPlus> segmentsToUpdate =
+        batch.stream()
+             .filter(v -> !updatedSegments.contains(v.getSegmentId().toString()))
+             .collect(Collectors.toList());
 
     // fetch schemaId
     Map<String, Long> fingerprintSchemaIdMap =
@@ -181,7 +182,7 @@ public class SchemaManager
         final List<String> failedToPublish = IntStream.range(0, partition.size())
                                                       .filter(i -> affectedRows[i] != 1)
                                                       .mapToObj(partition::get)
-                                                      .map(SegmentSchemaMetadataPlus::getSegmentId)
+                                                      .map(plus -> plus.getSegmentId().toString())
                                                       .collect(Collectors.toList());
         throw new ISE("Failed to publish schemas to DB: %s", failedToPublish);
       }
@@ -274,18 +275,18 @@ public class SchemaManager
 
   public static class SegmentSchemaMetadataPlus
   {
-    private final String segmentId;
+    private final SegmentId segmentId;
     private final String fingerprint;
     private final SegmentSchemaMetadata segmentSchemaMetadata;
 
-    public SegmentSchemaMetadataPlus(String segmentId, SegmentSchemaMetadata segmentSchemaMetadata, String fingerprint)
+    public SegmentSchemaMetadataPlus(SegmentId segmentId, SegmentSchemaMetadata segmentSchemaMetadata, String fingerprint)
     {
       this.segmentId = segmentId;
       this.segmentSchemaMetadata = segmentSchemaMetadata;
       this.fingerprint = fingerprint;
     }
 
-    public String getSegmentId()
+    public SegmentId getSegmentId()
     {
       return segmentId;
     }

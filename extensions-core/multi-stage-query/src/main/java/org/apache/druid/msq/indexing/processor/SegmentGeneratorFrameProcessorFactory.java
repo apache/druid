@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
@@ -57,6 +58,7 @@ import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
 import org.apache.druid.segment.realtime.appenderator.Appenderators;
@@ -81,17 +83,23 @@ public class SegmentGeneratorFrameProcessorFactory
   private final DataSchema dataSchema;
   private final ColumnMappings columnMappings;
   private final MSQTuningConfig tuningConfig;
+  private ObjectMapper mapper;
+  private CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
   @JsonCreator
   public SegmentGeneratorFrameProcessorFactory(
       @JsonProperty("dataSchema") final DataSchema dataSchema,
       @JsonProperty("columnMappings") final ColumnMappings columnMappings,
-      @JsonProperty("tuningConfig") final MSQTuningConfig tuningConfig
+      @JsonProperty("tuningConfig") final MSQTuningConfig tuningConfig,
+      @JsonProperty("mapper") final ObjectMapper mapper,
+      @JsonProperty("centralizedDatasourceSchemaConfig") final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     this.dataSchema = Preconditions.checkNotNull(dataSchema, "dataSchema");
     this.columnMappings = Preconditions.checkNotNull(columnMappings, "columnMappings");
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
+    this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
+    this.mapper = mapper;
   }
 
   @JsonProperty
@@ -192,7 +200,9 @@ public class SegmentGeneratorFrameProcessorFactory
                   frameContext.indexMerger(),
                   meters,
                   parseExceptionHandler,
-                  true
+                  true,
+                  mapper,
+                  centralizedDatasourceSchemaConfig
               );
 
           return new SegmentGeneratorFrameProcessor(

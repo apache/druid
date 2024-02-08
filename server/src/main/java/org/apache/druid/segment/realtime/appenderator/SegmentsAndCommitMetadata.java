@@ -20,34 +20,32 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.segment.SegmentUtils;
-import org.apache.druid.segment.column.SegmentSchemaMetadata;
+import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 public class SegmentsAndCommitMetadata
 {
-  private static final SegmentsAndCommitMetadata NIL = new SegmentsAndCommitMetadata(Collections.emptyList(), null, Collections.emptyMap());
+  private static final SegmentsAndCommitMetadata NIL = new SegmentsAndCommitMetadata(Collections.emptyList(), null, null);
 
   private final Object commitMetadata;
   private final ImmutableList<DataSegment> segments;
-  private final ImmutableMap<String, SegmentSchemaMetadata> segmentSchema;
+  private final MinimalSegmentSchemas minimalSegmentSchemas;
 
   public SegmentsAndCommitMetadata(
       List<DataSegment> segments,
       @Nullable Object commitMetadata,
-      Map<String, SegmentSchemaMetadata> segmentSchema
+      @Nullable MinimalSegmentSchemas minimalSegmentSchemas
   )
   {
     this.segments = ImmutableList.copyOf(segments);
     this.commitMetadata = commitMetadata;
-    this.segmentSchema = ImmutableMap.copyOf(segmentSchema);
+    this.minimalSegmentSchemas = minimalSegmentSchemas;
   }
 
   @Nullable
@@ -61,9 +59,9 @@ public class SegmentsAndCommitMetadata
     return segments;
   }
 
-  public ImmutableMap<String, SegmentSchemaMetadata> getSegmentSchema()
+  public MinimalSegmentSchemas getMinimalSegmentSchemas()
   {
-    return segmentSchema;
+    return minimalSegmentSchemas;
   }
 
   @Override

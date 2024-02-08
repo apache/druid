@@ -112,7 +112,9 @@ public class Appenderators
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      ObjectMapper mapper,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     // Use newest, slated to be the permanent batch appenderator but for now keeping it as a non-default
@@ -129,7 +131,9 @@ public class Appenderators
         indexMerger,
         rowIngestionMeters,
         parseExceptionHandler,
-        useMaxMemoryEstimates
+        useMaxMemoryEstimates,
+        mapper,
+        centralizedDatasourceSchemaConfig
     );
   }
 
@@ -144,7 +148,8 @@ public class Appenderators
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     // fallback to original code known to be working, this is just a fallback option in case new
@@ -165,7 +170,8 @@ public class Appenderators
         rowIngestionMeters,
         parseExceptionHandler,
         true,
-        useMaxMemoryEstimates
+        useMaxMemoryEstimates,
+        centralizedDatasourceSchemaConfig
     );
   }
 
@@ -180,7 +186,8 @@ public class Appenderators
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     return new AppenderatorImpl(
@@ -198,7 +205,8 @@ public class Appenderators
         rowIngestionMeters,
         parseExceptionHandler,
         false,
-        useMaxMemoryEstimates
+        useMaxMemoryEstimates,
+        centralizedDatasourceSchemaConfig
     );
   }
 }

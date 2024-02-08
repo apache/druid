@@ -545,7 +545,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
           return new SegmentsAndCommitMetadata(
               segmentsAndCommitMetadata.getSegments(),
               metadata == null ? null : ((AppenderatorDriverMetadata) metadata).getCallerMetadata(),
-              segmentsAndCommitMetadata.getSegmentSchema()
+              segmentsAndCommitMetadata.getMinimalSegmentSchemas()
           );
         },
         MoreExecutors.directExecutor()
@@ -609,7 +609,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
                     ourSegments,
                     outputSegmentsAnnotateFunction,
                     callerMetadata,
-                    segmentsAndCommitMetadata.getSegmentSchema()
+                    segmentsAndCommitMetadata.getMinimalSegmentSchemas()
                 );
 
                 if (publishResult.isSuccess()) {

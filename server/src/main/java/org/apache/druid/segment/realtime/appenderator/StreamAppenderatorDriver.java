@@ -332,7 +332,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
             new SegmentsAndCommitMetadata(
                 segmentsAndCommitMetadata.getSegments(),
                 ((AppenderatorDriverMetadata) metadata).getCallerMetadata(),
-                Collections.emptyMap()
+                segmentsAndCommitMetadata.getMinimalSegmentSchemas()
             )
         );
       }
@@ -376,7 +376,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
                             new SegmentsAndCommitMetadata(
                                 segments,
                                 ((AppenderatorDriverMetadata) metadata).getCallerMetadata(),
-                                Collections.emptyMap()
+                                segmentsAndCommitMetadata.getMinimalSegmentSchemas()
                             )
                         );
                       }

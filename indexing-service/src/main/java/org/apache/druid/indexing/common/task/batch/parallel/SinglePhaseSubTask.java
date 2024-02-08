@@ -55,6 +55,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
@@ -272,7 +273,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
           ingestionSchema.getTuningConfig().getChatHandlerNumRetries()
       );
       ingestionState = IngestionState.BUILD_SEGMENTS;
-      final Pair<Set<DataSegment>, Map<String, SegmentSchemaMetadata>> pushedSegments = generateAndPushSegments(
+      final Pair<Set<DataSegment>, MinimalSegmentSchemas> pushedSegments = generateAndPushSegments(
           toolbox,
           taskClient,
           inputSource,
@@ -362,7 +363,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
    *
    * @return true if generated segments are successfully published, otherwise false
    */
-  private Pair<Set<DataSegment>, Map<String, SegmentSchemaMetadata>> generateAndPushSegments(
+  private Pair<Set<DataSegment>, MinimalSegmentSchemas> generateAndPushSegments(
       final TaskToolbox toolbox,
       final ParallelIndexSupervisorTaskClient taskClient,
       final InputSource inputSource,
@@ -418,7 +419,8 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
         tuningConfig,
         rowIngestionMeters,
         parseExceptionHandler,
-        useMaxMemoryEstimates
+        useMaxMemoryEstimates,
+        toolbox.getCentralizedTableSchemaConfig()
     );
     boolean exceptionOccurred = false;
     try (
@@ -445,7 +447,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
       driver.startJob();
 
       final Set<DataSegment> pushedSegments = new HashSet<>();
-      final Map<String, SegmentSchemaMetadata> schemaMetadataMap = new HashMap<>();
+      final MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas();
 
       while (inputRowIterator.hasNext()) {
         final InputRow inputRow = inputRowIterator.next();
@@ -465,8 +467,8 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
             // which makes the size of segments smaller.
             final SegmentsAndCommitMetadata pushed = driver.pushAllAndClear(pushTimeout);
             pushedSegments.addAll(pushed.getSegments());
-            schemaMetadataMap.putAll(pushed.getSegmentSchema());
-            LOG.info("Pushed [%s] segments", pushed.getSegmentSchema().size());
+            minimalSegmentSchemas.add(pushed.getMinimalSegmentSchemas());
+            LOG.info("Pushed [%s] segments", pushed.getSegments().size());
             LOG.infoSegments(pushed.getSegments(), "Pushed segments");
           }
         } else {
@@ -478,12 +480,12 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
 
       final SegmentsAndCommitMetadata pushed = driver.pushAllAndClear(pushTimeout);
       pushedSegments.addAll(pushed.getSegments());
-      schemaMetadataMap.putAll(pushed.getSegmentSchema());
+      minimalSegmentSchemas.add(pushed.getMinimalSegmentSchemas());
       LOG.info("Pushed [%s] segments", pushed.getSegments().size());
       LOG.infoSegments(pushed.getSegments(), "Pushed segments");
       appenderator.close();
 
-      return Pair.of(pushedSegments, schemaMetadataMap);
+      return Pair.of(pushedSegments, minimalSegmentSchemas);
     }
     catch (TimeoutException | ExecutionException e) {
       exceptionOccurred = true;

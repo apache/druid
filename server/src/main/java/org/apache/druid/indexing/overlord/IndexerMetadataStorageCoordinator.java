@@ -21,6 +21,7 @@ package org.apache.druid.indexing.overlord;
 
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.ReplaceTaskLock;
+import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
@@ -171,7 +172,7 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @return set of segments actually added
    */
-  Set<DataSegment> commitSegments(Set<DataSegment> segments, Map<String, SegmentSchemaMetadata> segmentSchemaMetadataMap) throws IOException;
+  Set<DataSegment> commitSegments(Set<DataSegment> segments, MinimalSegmentSchemas minimalSegmentSchemas) throws IOException;
 
   /**
    * Allocates pending segments for the given requests in the pending segments table.
@@ -280,7 +281,7 @@ public interface IndexerMetadataStorageCoordinator
       Set<DataSegment> segments,
       @Nullable DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata,
-      Map<String, SegmentSchemaMetadata> segmentSchemaMetadataMap
+      MinimalSegmentSchemas minimalSegmentSchemas
       ) throws IOException;
 
   /**
@@ -303,7 +304,7 @@ public interface IndexerMetadataStorageCoordinator
   SegmentPublishResult commitAppendSegments(
       Set<DataSegment> appendSegments,
       Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
-      Map<String, SegmentSchemaMetadata> segmentSchemaMetadataMap
+      MinimalSegmentSchemas minimalSegmentSchemas
   );
 
   /**
@@ -319,7 +320,7 @@ public interface IndexerMetadataStorageCoordinator
       Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
       DataSourceMetadata startMetadata,
       DataSourceMetadata endMetadata,
-      Map<String, SegmentSchemaMetadata> segmentSchemaMetadataMap
+      MinimalSegmentSchemas minimalSegmentSchemas
   );
 
   /**
@@ -339,7 +340,7 @@ public interface IndexerMetadataStorageCoordinator
   SegmentPublishResult commitReplaceSegments(
       Set<DataSegment> replaceSegments,
       Set<ReplaceTaskLock> locksHeldByReplaceTask,
-      Map<String, SegmentSchemaMetadata> segmentSchemaMetadataMap
+      MinimalSegmentSchemas minimalSegmentSchemas
   );
 
   /**

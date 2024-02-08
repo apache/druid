@@ -65,6 +65,7 @@ import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.SchemaPayload;
 import org.apache.druid.segment.column.SegmentSchemaMetadata;
@@ -74,6 +75,8 @@ import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.SchemaFingerprintGenerator;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.plumber.Sink;
@@ -98,6 +101,7 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -195,6 +199,10 @@ public class AppenderatorImpl implements Appenderator
   private final Map<FireHydrant, Pair<File, SegmentId>> persistedHydrantMetadata =
       Collections.synchronizedMap(new IdentityHashMap<>());
 
+  private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
+
+  private final SchemaFingerprintGenerator fingerprintGenerator;
+
   /**
    * This constructor allows the caller to provide its own SinkQuerySegmentWalker.
    *
@@ -219,7 +227,8 @@ public class AppenderatorImpl implements Appenderator
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
       boolean isOpenSegments,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     this.myId = id;
@@ -254,6 +263,8 @@ public class AppenderatorImpl implements Appenderator
     } else {
       log.debug("Running closed segments appenderator");
     }
+    this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
+    this.fingerprintGenerator = new SchemaFingerprintGenerator(objectMapper);
   }
 
   @Override
@@ -773,7 +784,7 @@ public class AppenderatorImpl implements Appenderator
         persistAll(committer),
         (Function<Object, SegmentsAndCommitMetadata>) commitMetadata -> {
           final List<DataSegment> dataSegments = new ArrayList<>();
-          final Map<String, SegmentSchemaMetadata> segmentSchema = new HashMap<>();
+          final MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas();
 
           log.info("Preparing to push (stats): processed rows: [%d], sinks: [%d], fireHydrants (across sinks): [%d]",
                    rowIngestionMeters.getProcessed(), theSinks.size(), pushedHydrantsCount.get()
@@ -796,8 +807,18 @@ public class AppenderatorImpl implements Appenderator
                 useUniquePath
             );
             if (segmentAndSchema != null) {
-              dataSegments.add(segmentAndSchema.lhs);
-              segmentSchema.put(segmentAndSchema.lhs.getId().toString(), segmentAndSchema.rhs);
+              DataSegment segment = segmentAndSchema.lhs;
+              dataSegments.add(segment);
+              SegmentSchemaMetadata segmentSchemaMetadata = segmentAndSchema.rhs;
+              if (segmentSchemaMetadata != null) {
+                SchemaPayload schemaPayload = segmentSchemaMetadata.getSchemaPayload();
+                minimalSegmentSchemas.addSchema(
+                    segment.getId().toString(),
+                    fingerprintGenerator.generateId(schemaPayload),
+                    segmentSchemaMetadata.getNumRows(),
+                    schemaPayload
+                );
+              }
             } else {
               log.warn("mergeAndPush[%s] returned null, skipping.", entry.getKey());
             }
@@ -805,7 +826,7 @@ public class AppenderatorImpl implements Appenderator
 
           log.info("Push complete...");
 
-          return new SegmentsAndCommitMetadata(dataSegments, commitMetadata, segmentSchema);
+          return new SegmentsAndCommitMetadata(dataSegments, commitMetadata, minimalSegmentSchemas);
         },
         pushExecutor
     );
@@ -878,7 +899,13 @@ public class AppenderatorImpl implements Appenderator
           );
         } else {
           log.info("Segment[%s] already pushed, skipping.", identifier);
-          return Pair.of(objectMapper.readValue(descriptorFile, DataSegment.class), getSegmentSchema(mergedTarget));
+          return Pair.of(
+              objectMapper.readValue(descriptorFile, DataSegment.class),
+              centralizedDatasourceSchemaConfig.isEnabled() ? TaskSegmentSchemaUtil.getSegmentSchema(
+                  mergedTarget,
+                  indexIO
+              ) : null
+          );
         }
       }
 
@@ -998,29 +1025,18 @@ public class AppenderatorImpl implements Appenderator
           objectMapper.writeValueAsString(segment.getLoadSpec())
       );
 
-      return Pair.of(segment, getSegmentSchema(mergedFile));
+      return Pair.of(
+          segment,
+          centralizedDatasourceSchemaConfig.isEnabled()
+          ? TaskSegmentSchemaUtil.getSegmentSchema(mergedTarget, indexIO)
+          : null
+      );
     }
     catch (Exception e) {
       metrics.incrementFailedHandoffs();
       log.warn(e, "Failed to push merged index for segment[%s].", identifier);
       throw new RuntimeException(e);
     }
-  }
-
-  private SegmentSchemaMetadata getSegmentSchema(File segmentFile) throws IOException
-  {
-    final QueryableIndex queryableIndex = indexIO.loadIndex(segmentFile);
-    final StorageAdapter storageAdapter = new QueryableIndexStorageAdapter(queryableIndex);
-    final RowSignature rowSignature = storageAdapter.getRowSignature();
-    final long numRows = storageAdapter.getNumRows();
-    final AggregatorFactory[] aggregatorFactories = storageAdapter.getMetadata().getAggregators();
-    Map<String, AggregatorFactory> aggregatorFactoryMap = new HashMap<>();
-    if (null != aggregatorFactories) {
-      for (AggregatorFactory aggregatorFactory : aggregatorFactories) {
-        aggregatorFactoryMap.put(aggregatorFactory.getName(), aggregatorFactory);
-      }
-    }
-    return new SegmentSchemaMetadata(new SchemaPayload(rowSignature, aggregatorFactoryMap), numRows);
   }
 
   @Override

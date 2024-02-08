@@ -172,7 +172,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
             new SegmentIdWithShardSpec(DATA_SOURCE, Intervals.of("2000/PT1H"), VERSION, new NumberedShardSpec(0, 0)),
             new SegmentIdWithShardSpec(DATA_SOURCE, Intervals.of("2000T01/PT1H"), VERSION, new NumberedShardSpec(0, 0))
         ),
-        asIdentifiers(segmentsAndCommitMetadata.getSegmentWithSchemas())
+        asIdentifiers(segmentsAndCommitMetadata.getSegments())
     );
 
     Assert.assertEquals(3, segmentsAndCommitMetadata.getCommitMetadata());
@@ -216,7 +216,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
 
     final SegmentsAndCommitMetadata segmentsAndCommitMetadata = driver.registerHandoff(published)
                                                                       .get(HANDOFF_CONDITION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
-    Assert.assertEquals(numSegments, segmentsAndCommitMetadata.getSegmentWithSchemas().size());
+    Assert.assertEquals(numSegments, segmentsAndCommitMetadata.getSegments().size());
     Assert.assertEquals(numSegments * MAX_ROWS_PER_SEGMENT, segmentsAndCommitMetadata.getCommitMetadata());
   }
 
@@ -268,7 +268,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
           ImmutableSet.of(
               new SegmentIdWithShardSpec(DATA_SOURCE, Intervals.of("2000/PT1H"), VERSION, new NumberedShardSpec(0, 0))
           ),
-          asIdentifiers(segmentsAndCommitMetadata.getSegmentWithSchemas())
+          asIdentifiers(segmentsAndCommitMetadata.getSegments())
       );
 
       Assert.assertEquals(1, segmentsAndCommitMetadata.getCommitMetadata());
@@ -291,7 +291,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
               // different partitionNum
               new SegmentIdWithShardSpec(DATA_SOURCE, Intervals.of("2000T01/PT1H"), VERSION, new NumberedShardSpec(i - 1, 0))
           ),
-          asIdentifiers(segmentsAndCommitMetadata.getSegmentWithSchemas())
+          asIdentifiers(segmentsAndCommitMetadata.getSegments())
       );
 
       Assert.assertEquals(i + 1, segmentsAndCommitMetadata.getCommitMetadata());
@@ -308,7 +308,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
 
     Assert.assertEquals(
         ImmutableSet.of(),
-        asIdentifiers(segmentsAndCommitMetadata.getSegmentWithSchemas())
+        asIdentifiers(segmentsAndCommitMetadata.getSegments())
     );
 
     Assert.assertEquals(3, segmentsAndCommitMetadata.getCommitMetadata());
@@ -354,14 +354,14 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
         ImmutableSet.of(
             new SegmentIdWithShardSpec(DATA_SOURCE, Intervals.of("2000/PT1H"), VERSION, new NumberedShardSpec(0, 0))
         ),
-        asIdentifiers(handedoffFromSequence0.getSegmentWithSchemas())
+        asIdentifiers(handedoffFromSequence0.getSegments())
     );
 
     Assert.assertEquals(
         ImmutableSet.of(
             new SegmentIdWithShardSpec(DATA_SOURCE, Intervals.of("2000T01/PT1H"), VERSION, new NumberedShardSpec(0, 0))
         ),
-        asIdentifiers(handedoffFromSequence1.getSegmentWithSchemas())
+        asIdentifiers(handedoffFromSequence1.getSegments())
     );
 
     Assert.assertEquals(3, handedoffFromSequence0.getCommitMetadata());

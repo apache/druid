@@ -65,6 +65,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -203,7 +204,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   private volatile Pair<Map<String, Object>, Map<String, Object>> indexGenerateRowStats;
 
   private IngestionState ingestionState;
-
 
   @JsonCreator
   public ParallelIndexSupervisorTask(
@@ -344,7 +344,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         getGroupId(),
         baseSubtaskSpecName,
         ingestionSchema,
-        getContext()
+        getContext(),
+        toolbox.getCentralizedTableSchemaConfig()
     );
   }
 
@@ -425,7 +426,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         ingestionSchema.getDataSchema(),
         ioConfigs,
         ingestionSchema.getTuningConfig(),
-        getContext()
+        getContext(),
+        toolbox.getJsonMapper(),
+        toolbox.getCentralizedTableSchemaConfig()
     );
   }
 
@@ -1129,14 +1132,14 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   {
     final Set<DataSegment> oldSegments = new HashSet<>();
     final Set<DataSegment> newSegments = new HashSet<>();
-    final Map<String, SegmentSchemaMetadata> schemaMetadataMap = new HashMap<>();
+    final MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas();
 
     reportsMap
         .values()
         .forEach(report -> {
           oldSegments.addAll(report.getOldSegments());
           newSegments.addAll(report.getNewSegments());
-          schemaMetadataMap.putAll(report.getSchemaMetadataMap());
+          minimalSegmentSchemas.add(report.getMinimalSegmentSchemas());
         });
     final boolean storeCompactionState = getContextValue(
         Tasks.STORE_COMPACTION_STATE_KEY,
@@ -1177,11 +1180,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
             buildPublishAction(segmentsToBeOverwritten, segmentsToPublish, map, taskLockType)
         );
 
-    LOG.info("Schema metadata map is [%s]", schemaMetadataMap);
+    LOG.info("Minimal segment schema is [%s]", minimalSegmentSchemas);
 
     final boolean published =
         newSegments.isEmpty()
-        || publisher.publishSegments(oldSegments, newSegments, annotateFunction, null, schemaMetadataMap).isSuccess();
+        || publisher.publishSegments(oldSegments, newSegments, annotateFunction, null, minimalSegmentSchemas).isSuccess();
 
     if (published) {
       LOG.info("Published [%d] segments", newSegments.size());

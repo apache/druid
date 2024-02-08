@@ -34,6 +34,7 @@ import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.SegmentUtils;
+import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -64,32 +65,32 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
    */
   private final Set<DataSegment> segments;
 
-  private final Map<String, SegmentSchemaMetadata> schemaMetadataMap;
-
   @Nullable
   private final DataSourceMetadata startMetadata;
   @Nullable
   private final DataSourceMetadata endMetadata;
   @Nullable
   private final String dataSource;
+  @Nullable
+  private final MinimalSegmentSchemas minimalSegmentSchemas;
 
   public static SegmentTransactionalInsertAction overwriteAction(
       @Nullable Set<DataSegment> segmentsToBeOverwritten,
       Set<DataSegment> segmentsToPublish,
-      Map<String, SegmentSchemaMetadata> schemaMetadataMap
+      @Nullable MinimalSegmentSchemas minimalSegmentSchemas
   )
   {
-    return new SegmentTransactionalInsertAction(segmentsToBeOverwritten, segmentsToPublish, null, null, null, schemaMetadataMap);
+    return new SegmentTransactionalInsertAction(segmentsToBeOverwritten, segmentsToPublish, null, null, null, minimalSegmentSchemas);
   }
 
   public static SegmentTransactionalInsertAction appendAction(
       Set<DataSegment> segments,
       @Nullable DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata,
-      Map<String, SegmentSchemaMetadata> schemaMetadataMap
+      @Nullable MinimalSegmentSchemas minimalSegmentSchemas
   )
   {
-    return new SegmentTransactionalInsertAction(null, segments, startMetadata, endMetadata, null, schemaMetadataMap);
+    return new SegmentTransactionalInsertAction(null, segments, startMetadata, endMetadata, null, minimalSegmentSchemas);
   }
 
   public static SegmentTransactionalInsertAction commitMetadataOnlyAction(
@@ -98,7 +99,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       DataSourceMetadata endMetadata
   )
   {
-    return new SegmentTransactionalInsertAction(null, null, startMetadata, endMetadata, dataSource, Collections.emptyMap());
+    return new SegmentTransactionalInsertAction(null, null, startMetadata, endMetadata, dataSource, null);
   }
 
   @JsonCreator
@@ -108,7 +109,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       @JsonProperty("startMetadata") @Nullable DataSourceMetadata startMetadata,
       @JsonProperty("endMetadata") @Nullable DataSourceMetadata endMetadata,
       @JsonProperty("dataSource") @Nullable String dataSource,
-      @JsonProperty("schemaMetadataMap") @Nullable Map<String, SegmentSchemaMetadata> schemaMetadataMap
+      @JsonProperty("minimalSegmentSchemas") @Nullable MinimalSegmentSchemas minimalSegmentSchemas
   )
   {
     this.segmentsToBeOverwritten = segmentsToBeOverwritten;
@@ -116,7 +117,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
     this.startMetadata = startMetadata;
     this.endMetadata = endMetadata;
     this.dataSource = dataSource;
-    this.schemaMetadataMap = schemaMetadataMap;
+    this.minimalSegmentSchemas = minimalSegmentSchemas;
   }
 
   @JsonProperty
@@ -155,9 +156,9 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
 
   @JsonProperty
   @Nullable
-  public Map<String, SegmentSchemaMetadata> getSchemaMetadataMap()
+  public MinimalSegmentSchemas getMinimalSegmentSchemas()
   {
-    return schemaMetadataMap;
+    return minimalSegmentSchemas;
   }
 
   @Override
@@ -217,7 +218,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
                       segments,
                       startMetadata,
                       endMetadata,
-                      schemaMetadataMap
+                      minimalSegmentSchemas
                   )
               )
               .onInvalidLocks(

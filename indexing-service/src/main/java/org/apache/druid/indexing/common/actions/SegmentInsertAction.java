@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.segment.SegmentUtils;
+import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.timeline.DataSegment;
 
@@ -41,16 +42,16 @@ public class SegmentInsertAction implements TaskAction<Set<DataSegment>>
 {
   private final Set<DataSegment> segments;
 
-  private final Map<String, SegmentSchemaMetadata> schemaMetadataMap;
+  private final MinimalSegmentSchemas minimalSegmentSchemas;
 
   @JsonCreator
   public SegmentInsertAction(
       @JsonProperty("segments") Set<DataSegment> segments,
-      @JsonProperty("schemaMetadataMap") Map<String, SegmentSchemaMetadata> schemaMetadataMap
+      @JsonProperty("minimalSegmentSchemas") MinimalSegmentSchemas minimalSegmentSchemas
   )
   {
     this.segments = ImmutableSet.copyOf(segments);
-    this.schemaMetadataMap = ImmutableMap.copyOf(schemaMetadataMap);
+    this.minimalSegmentSchemas = minimalSegmentSchemas;
   }
 
   @JsonProperty
@@ -75,7 +76,7 @@ public class SegmentInsertAction implements TaskAction<Set<DataSegment>>
   @Override
   public Set<DataSegment> perform(Task task, TaskActionToolbox toolbox)
   {
-    return SegmentTransactionalInsertAction.appendAction(segments, null, null, schemaMetadataMap).perform(task, toolbox).getSegments();
+    return SegmentTransactionalInsertAction.appendAction(segments, null, null, minimalSegmentSchemas).perform(task, toolbox).getSegments();
   }
 
   @Override

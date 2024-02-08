@@ -956,7 +956,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           pushTimeout
       );
 
-      log.info("Schema for pushed segments is [%s]", pushed.getSegmentSchema());
+      log.info("Schema for pushed segments is [%s]", pushed.getMinimalSegmentSchemas());
 
       // If we use timeChunk lock, then we don't have to specify what segments will be overwritten because
       // it will just overwrite all segments overlapped with the new segments.
@@ -1006,7 +1006,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
               tombStones,
               publisher,
               annotateFunction,
-              pushed.getSegmentSchema()
+              pushed.getMinimalSegmentSchemas()
           ), pushTimeout);
       appenderator.close();
 
@@ -1038,13 +1038,13 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
             buildSegmentsMeters.getUnparseable(),
             buildSegmentsMeters.getThrownAway()
         );
-        log.info("Published [%s] segments", published.getSegmentSchema().size());
+        log.info("Published [%s] segments", published.getSegments().size());
 
         // publish metrics:
         emitMetric(toolbox.getEmitter(), "ingest/tombstones/count", tombStones.size());
         // segments count metric is documented to include tombstones
         emitMetric(toolbox.getEmitter(), "ingest/segments/count",
-                   published.getSegmentSchema().size() + tombStones.size()
+                   published.getSegments().size() + tombStones.size()
         );
 
         log.debugSegments(published.getSegments(), "Published segments");

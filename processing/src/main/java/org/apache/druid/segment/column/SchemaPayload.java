@@ -6,6 +6,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 public class SchemaPayload
 {
@@ -37,6 +38,28 @@ public class SchemaPayload
   public Map<String, AggregatorFactory> getAggregatorFactories()
   {
     return aggregatorFactories;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    SchemaPayload that = (SchemaPayload) o;
+    return Objects.equals(rowSignature, that.rowSignature) && Objects.equals(
+        aggregatorFactories,
+        that.aggregatorFactories
+    );
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(rowSignature, aggregatorFactories);
   }
 
   @Override

@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
@@ -49,11 +50,15 @@ import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.SchemaPayload;
 import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.SchemaFingerprintGenerator;
+import org.apache.druid.segment.realtime.appenderator.TaskSegmentSchemaUtil;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
@@ -80,10 +85,11 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
 {
   private static final Logger LOG = new Logger(PartialSegmentMergeTask.class);
 
-
   private final PartialSegmentMergeIOConfig ioConfig;
   private final int numAttempts;
   private final String subtaskSpecId;
+  private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
+  private final SchemaFingerprintGenerator fingerprintGenerator;
 
   PartialSegmentMergeTask(
       // id shouldn't be null except when this task is created by ParallelIndexSupervisorTask
@@ -96,7 +102,9 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
       PartialSegmentMergeIOConfig ioConfig,
       ParallelIndexTuningConfig tuningConfig,
       final int numAttempts, // zero-based counting
-      final Map<String, Object> context
+      final Map<String, Object> context,
+      final ObjectMapper mapper,
+      final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     super(
@@ -116,6 +124,8 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
     this.subtaskSpecId = subtaskSpecId;
     this.ioConfig = ioConfig;
     this.numAttempts = numAttempts;
+    this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
+    this.fingerprintGenerator = new SchemaFingerprintGenerator(mapper);
   }
 
   @JsonProperty
@@ -186,7 +196,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
     org.apache.commons.io.FileUtils.deleteQuietly(persistDir);
     FileUtils.mkdirp(persistDir);
 
-    final Pair<Set<DataSegment>, Map<String, SegmentSchemaMetadata>> pushedSegments = mergeAndPushSegments(
+    final Pair<Set<DataSegment>, MinimalSegmentSchemas> pushedSegments = mergeAndPushSegments(
         toolbox,
         getDataSchema(),
         getTuningConfig(),
@@ -240,7 +250,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
    */
   abstract S createShardSpec(TaskToolbox toolbox, Interval interval, int bucketId);
 
-  private Pair<Set<DataSegment>, Map<String, SegmentSchemaMetadata>> mergeAndPushSegments(
+  private Pair<Set<DataSegment>, MinimalSegmentSchemas> mergeAndPushSegments(
       TaskToolbox toolbox,
       DataSchema dataSchema,
       ParallelIndexTuningConfig tuningConfig,
@@ -251,7 +261,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
   {
     final DataSegmentPusher segmentPusher = toolbox.getSegmentPusher();
     final Set<DataSegment> pushedSegments = new HashSet<>();
-    final Map<String, SegmentSchemaMetadata> schemaMetadataMap = new HashMap<>();
+    final MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas();
 
     for (Entry<Interval, Int2ObjectMap<List<File>>> entryPerInterval : intervalToUnzippedFiles.entrySet()) {
       final Interval interval = entryPerInterval.getKey();
@@ -308,9 +318,16 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
         long pushFinishTime = System.nanoTime();
         pushedSegments.add(segment);
 
-        schemaMetadataMap.put(
-            segment.getId().toString(),
-            getSegmentSchema(mergedFileAndDimensionNames.lhs, toolbox.getIndexIO()));
+        if (centralizedDatasourceSchemaConfig.isEnabled()) {
+          SegmentSchemaMetadata segmentSchemaMetadata =
+              TaskSegmentSchemaUtil.getSegmentSchema(mergedFileAndDimensionNames.lhs, toolbox.getIndexIO());
+          minimalSegmentSchemas.addSchema(
+              segment.getId().toString(),
+              fingerprintGenerator.generateId(segmentSchemaMetadata.getSchemaPayload()),
+              segmentSchemaMetadata.getNumRows(),
+              segmentSchemaMetadata.getSchemaPayload()
+          );
+        }
 
         LOG.info("Built segment [%s] for interval [%s] (from [%d] input segment(s) in [%,d]ms) of "
             + "size [%d] bytes and pushed ([%,d]ms) to deep storage [%s].",
@@ -324,23 +341,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
         );
       }
     }
-    return Pair.of(pushedSegments, schemaMetadataMap);
-  }
-
-  private SegmentSchemaMetadata getSegmentSchema(File segmentFile, IndexIO indexIO) throws IOException
-  {
-    final QueryableIndex queryableIndex = indexIO.loadIndex(segmentFile);
-    final StorageAdapter storageAdapter = new QueryableIndexStorageAdapter(queryableIndex);
-    final RowSignature rowSignature = storageAdapter.getRowSignature();
-    final long numRows = storageAdapter.getNumRows();
-    final AggregatorFactory[] aggregatorFactories = storageAdapter.getMetadata().getAggregators();
-    Map<String, AggregatorFactory> aggregatorFactoryMap = new HashMap<>();
-    if (null != aggregatorFactories) {
-      for (AggregatorFactory aggregatorFactory : aggregatorFactories) {
-        aggregatorFactoryMap.put(aggregatorFactory.getName(), aggregatorFactory);
-      }
-    }
-    return new SegmentSchemaMetadata(new SchemaPayload(rowSignature, aggregatorFactoryMap), numRows);
+    return Pair.of(pushedSegments, minimalSegmentSchemas);
   }
 
   private static Pair<File, List<String>> mergeSegmentsInSamePartition(
