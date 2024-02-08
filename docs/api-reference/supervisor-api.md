@@ -845,7 +845,7 @@ Retrieves the specification for a single supervisor. The returned specification 
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/supervisor/:supervisorId</code>
+<code class="getAPI">GET</code> <code>/druid/indexer/v1/supervisor/{supervisorId}</code>
 
 #### Responses
 
@@ -1211,7 +1211,7 @@ For additional information about the status report, see the topic for each strea
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/supervisor/:supervisorId/status</code>
+<code class="getAPI">GET</code> <code>/druid/indexer/v1/supervisor/{supervisorId}/status</code>
 
 #### Responses
 
@@ -1679,7 +1679,7 @@ Retrieves an audit history of specs for a single supervisor.
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/supervisor/:supervisorId/history</code>
+<code class="getAPI">GET</code> <code>/druid/indexer/v1/supervisor/{supervisorId}/history</code>
 
 
 #### Responses
@@ -2220,7 +2220,7 @@ Content-Length: 1359
 Suspends a single running supervisor. Returns the updated supervisor spec, where the `suspended` property is set to `true`. The suspended supervisor continues to emit logs and metrics.
 
 #### URL
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/:supervisorId/suspend</code>
+<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/{supervisorId}/suspend</code>
 
 #### Responses
 
@@ -2643,7 +2643,7 @@ Resumes indexing tasks for a supervisor. Returns an updated supervisor spec with
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/:supervisorId/resume</code>
+<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/{supervisorId}/resume</code>
 
 #### Responses
 
@@ -3069,7 +3069,7 @@ Use this endpoint to recover from a stopped state due to missing offsets in Kafk
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/:supervisorId/reset</code>
+<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/{supervisorId}/reset</code>
 
 #### Responses
 
@@ -3138,7 +3138,7 @@ Use this endpoint to selectively reset offsets for partitions without resetting 
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/:supervisorId/resetOffsets</code>
+<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/{supervisorId}/resetOffsets</code>
 
 #### Responses
 
@@ -3242,7 +3242,7 @@ The terminated supervisor still exists in the metadata store and its history can
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/:supervisorId/terminate</code>
+<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/{supervisorId}/terminate</code>
 
 #### Responses
 
@@ -3362,4 +3362,4 @@ Shuts down a supervisor. This endpoint is deprecated and will be removed in futu
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/:supervisorId/shutdown</code>
+<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/{supervisorId}/shutdown</code>

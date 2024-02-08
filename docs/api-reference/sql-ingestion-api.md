@@ -151,7 +151,7 @@ You can retrieve status of a query to see if it is still running, completed succ
 
 
 ```
-GET /druid/indexer/v1/task/<taskId>/status
+GET /druid/indexer/v1/task/{taskId}/status
 ```
 
 </TabItem>
@@ -238,7 +238,7 @@ For an explanation of the fields in a report, see [Report response fields](#repo
 
 
 ```
-GET /druid/indexer/v1/task/<taskId>/reports
+GET /druid/indexer/v1/task/{taskId}/reports
 ```
 
 </TabItem>
@@ -653,7 +653,7 @@ The following table describes the response fields when you retrieve a report for
 
 
 ```
-POST /druid/indexer/v1/task/<taskId>/shutdown
+POST /druid/indexer/v1/task/{taskId}/shutdown
 ```
 
 </TabItem>

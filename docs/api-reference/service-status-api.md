@@ -921,16 +921,16 @@ Retrieves task log output stream by task ID. For normal usage, you should use th
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/worker/v1/task/:taskId/log</code>
+<code class="getAPI">GET</code> <code>/druid/worker/v1/task/{taskId}/log</code>
 
 ### Shut down running task
 
-Shuts down a running task by ID. For normal usage, you should use the `/druid/indexer/v1/task/:taskId/shutdown`
+Shuts down a running task by ID. For normal usage, you should use the `/druid/indexer/v1/task/{taskId}/shutdown`
 [Tasks API](./tasks-api.md) endpoint instead.
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/worker/v1/task/:taskId/shutdown</code>
+<code class="postAPI">POST</code> <code>/druid/worker/v1/task/{taskId}/shutdown</code>
 
 #### Responses
 <Tabs>

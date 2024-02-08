@@ -296,7 +296,7 @@ Cancellation requests require READ permission on all resources used in the SQL q
 
 #### URL
 
-<code class="deleteAPI">DELETE</code> <code>/druid/v2/sql/:sqlQueryId</code>
+<code class="deleteAPI">DELETE</code> <code>/druid/v2/sql/{sqlQueryId}</code>
 
 #### Responses
 
@@ -607,7 +607,7 @@ Retrieves information about the query associated with the given query ID. The re
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/v2/sql/statements/:queryId</code>
+<code class="getAPI">GET</code> <code>/druid/v2/sql/statements/{queryId}</code>
 
 #### Responses
 
@@ -828,7 +828,7 @@ Getting the query results for an ingestion query returns an empty response.
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/v2/sql/statements/:queryId/results</code>
+<code class="getAPI">GET</code> <code>/druid/v2/sql/statements/{queryId}/results</code>
 
 #### Query parameters
 * `page` (optional)
@@ -1154,7 +1154,7 @@ Cancels a running or accepted query.
 
 #### URL
 
-<code class="deleteAPI">DELETE</code> <code>/druid/v2/sql/statements/:queryId</code>
+<code class="deleteAPI">DELETE</code> <code>/druid/v2/sql/statements/{queryId}</code>
 
 #### Responses
 

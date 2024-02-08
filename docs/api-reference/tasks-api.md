@@ -620,7 +620,7 @@ Retrieves the payload of a task given the task ID. It returns a JSON object with
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/task/:taskId</code>
+<code class="getAPI">GET</code> <code>/druid/indexer/v1/task/{taskId}</code>
 
 #### Responses
 
@@ -835,7 +835,7 @@ Retrieves the status of a task given the task ID. It returns a JSON object with 
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/task/:taskId/status</code>
+<code class="getAPI">GET</code> <code>/druid/indexer/v1/task/{taskId}/status</code>
 
 #### Responses
 
@@ -926,7 +926,7 @@ In addition to enabling audit logs, configure a cleanup strategy to prevent over
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/task/:taskId/segments</code>
+<code class="getAPI">GET</code> <code>/druid/indexer/v1/task/{taskId}/segments</code>
 
 #### Responses
 
@@ -981,11 +981,11 @@ Task logs are automatically retrieved from the Middle Manager/Indexer or in long
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/task/:taskId/log</code>
+<code class="getAPI">GET</code> <code>/druid/indexer/v1/task/{taskId}/log</code>
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/task/:taskId/log</code>
+<code class="getAPI">GET</code> <code>/druid/indexer/v1/task/{taskId}/log</code>
 
 #### Query parameters
 
@@ -1109,7 +1109,7 @@ Retrieves a [task completion report](../ingestion/tasks.md#task-reports) for a t
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/task/:taskId/reports</code>
+<code class="getAPI">GET</code> <code>/druid/indexer/v1/task/{taskId}/reports</code>
 
 #### Responses
 
@@ -1371,7 +1371,7 @@ Shuts down a task if it not already complete. Returns a JSON object with the ID 
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/task/:taskId/shutdown</code>
+<code class="postAPI">POST</code> <code>/druid/indexer/v1/task/{taskId}/shutdown</code>
 
 #### Responses
 
@@ -1441,7 +1441,7 @@ Shuts down all tasks for a specified datasource. If successful, it returns a JSO
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/datasources/:datasource/shutdownAllTasks</code>
+<code class="postAPI">POST</code> <code>/druid/indexer/v1/datasources/{datasource}/shutdownAllTasks</code>
 
 #### Responses
 
@@ -1614,7 +1614,7 @@ which automates this operation to perform periodically.
 
 #### URL
 
-<code class="deleteAPI">DELETE</code> <code>/druid/indexer/v1/pendingSegments/:datasource</code>
+<code class="deleteAPI">DELETE</code> <code>/druid/indexer/v1/pendingSegments/{datasource}</code>
 
 #### Responses
 
