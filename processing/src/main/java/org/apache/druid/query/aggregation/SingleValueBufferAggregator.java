@@ -63,7 +63,7 @@ public class SingleValueBufferAggregator implements BufferAggregator
     int written = typeStrategy.write(
         buf,
         position,
-        selector.getObject(),
+        getSelectorObject(),
         maxbufferSixe
     );
     if (written < 0) {
@@ -72,6 +72,24 @@ public class SingleValueBufferAggregator implements BufferAggregator
                           .build("Subquery result exceeds the buffer limit [%s]", maxbufferSixe);
     }
     isAggregateInvoked = true;
+  }
+
+  @Nullable
+  private Object getSelectorObject()
+  {
+    if (columnType.isNumeric() && selector.isNull()) {
+      return null;
+    }
+    switch (columnType.getType()) {
+      case LONG:
+        return selector.getLong();
+      case FLOAT:
+        return selector.getFloat();
+      case DOUBLE:
+        return selector.getDouble();
+      default:
+        return selector.getObject();
+    }
   }
 
   @Nullable
