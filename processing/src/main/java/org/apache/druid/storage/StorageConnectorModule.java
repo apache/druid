@@ -23,7 +23,9 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.storage.local.LocalFileExportStorageProvider;
 import org.apache.druid.storage.local.LocalFileStorageConnectorProvider;
 
 import java.util.List;
@@ -36,12 +38,13 @@ public class StorageConnectorModule implements DruidModule
     return ImmutableList.of(
         new SimpleModule(StorageConnector.class.getSimpleName())
             .registerSubtypes(LocalFileStorageConnectorProvider.class)
+            .registerSubtypes(LocalFileExportStorageProvider.class)
     );
   }
 
   @Override
   public void configure(Binder binder)
   {
-
+    JsonConfigProvider.bind(binder, "druid.export.storage", StorageConfig.class);
   }
 }

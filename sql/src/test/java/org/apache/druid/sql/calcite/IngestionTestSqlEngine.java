@@ -31,6 +31,7 @@ import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.run.SqlEngines;
 import org.apache.druid.sql.calcite.table.RowSignatures;
+import org.apache.druid.sql.destination.IngestDestination;
 
 import java.util.Map;
 
@@ -88,6 +89,7 @@ public class IngestionTestSqlEngine implements SqlEngine
       case CAN_INSERT:
       case CAN_REPLACE:
       case READ_EXTERNAL_DATA:
+      case WRITE_EXTERNAL_DATA:
       case SCAN_ORDER_BY_NON_TIME:
       case ALLOW_BROADCAST_RIGHTY_JOIN:
       case ALLOW_TOP_LEVEL_UNION_ALL:
@@ -104,13 +106,13 @@ public class IngestionTestSqlEngine implements SqlEngine
   }
 
   @Override
-  public QueryMaker buildQueryMakerForInsert(String targetDataSource, RelRoot relRoot, PlannerContext plannerContext)
+  public QueryMaker buildQueryMakerForInsert(IngestDestination destination, RelRoot relRoot, PlannerContext plannerContext)
   {
     final RowSignature signature = RowSignatures.fromRelDataType(
         relRoot.validatedRowType.getFieldNames(),
         relRoot.validatedRowType
     );
 
-    return new TestInsertQueryMaker(targetDataSource, signature);
+    return new TestInsertQueryMaker(destination, signature);
   }
 }

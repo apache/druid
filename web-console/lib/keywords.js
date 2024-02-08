@@ -68,6 +68,8 @@ exports.SQL_KEYWORDS = [
   'PRECEDING',
   'FOLLOWING',
   'EXTEND',
+  'PIVOT',
+  'UNPIVOT',
 ];
 
 exports.SQL_EXPRESSION_PARTS = [

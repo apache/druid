@@ -186,10 +186,10 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
       ) : inputFormat && inputSource ? (
         <TitleFrame title="Load data" subtitle="Parse">
           <InputFormatStep
-            inputSource={inputSource}
+            initInputSource={inputSource}
             initInputFormat={inputFormat}
             doneButton={false}
-            onSet={({ inputFormat, signature, timeExpression, arrayMode }) => {
+            onSet={({ inputSource, inputFormat, signature, timeExpression, arrayMode }) => {
               setContent({
                 queryString: ingestQueryPatternToQuery(
                   externalConfigToIngestQueryPattern(
@@ -203,7 +203,7 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
               });
             }}
             altText="Skip the wizard and continue with custom SQL"
-            onAltSet={({ inputFormat, signature, timeExpression, arrayMode }) => {
+            onAltSet={({ inputSource, inputFormat, signature, timeExpression, arrayMode }) => {
               goToQuery({
                 queryString: ingestQueryPatternToQuery(
                   externalConfigToIngestQueryPattern(

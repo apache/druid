@@ -96,6 +96,7 @@ import {
   getIoConfigTuningFormFields,
   getIssueWithSpec,
   getMetricSpecName,
+  getPossibleSystemFieldsForSpec,
   getRequiredModule,
   getRollup,
   getSchemaMode,
@@ -1520,6 +1521,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       ? STREAMING_INPUT_FORMAT_FIELDS
       : BATCH_INPUT_FORMAT_FIELDS;
 
+    const possibleSystemFields = getPossibleSystemFieldsForSpec(spec);
+
     const normalInputAutoForm = (
       <AutoForm
         fields={inputFormatFields}
@@ -1582,6 +1585,21 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                     />
                   )}
                 </>
+              )}
+              {possibleSystemFields.length > 0 && (
+                <AutoForm
+                  fields={[
+                    {
+                      name: 'spec.ioConfig.inputSource.systemFields',
+                      label: 'System fields',
+                      type: 'string-array',
+                      suggestions: possibleSystemFields,
+                      info: 'JSON array of system fields to return as part of input rows.',
+                    },
+                  ]}
+                  model={spec}
+                  onChange={this.updateSpecPreview}
+                />
               )}
               {this.renderApplyButtonBar(
                 parserQueryState,
@@ -3236,23 +3254,39 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             model={spec}
             onChange={this.updateSpec}
           />
-          <Switch
-            label="Allow concurrent tasks (experimental)"
-            checked={typeof deepGet(spec, 'context.taskLockType') === 'string'}
-            onChange={() => {
-              this.updateSpec(
-                typeof deepGet(spec, 'context.taskLockType') === 'string'
-                  ? deepDelete(spec, 'context.taskLockType')
-                  : deepSet(
-                      spec,
-                      'context.taskLockType',
-                      isStreamingSpec(spec) || deepGet(spec, 'spec.ioConfig.appendToExisting')
-                        ? 'APPEND'
-                        : 'REPLACE',
-                    ),
-              );
-            }}
-          />
+          <FormGroupWithInfo
+            inlineInfo
+            info={
+              <PopoverText>
+                <p>
+                  If you want to append data to a datasource while compaction is running, you need
+                  to enable concurrent append and replace for the datasource by updating the
+                  compaction settings.
+                </p>
+                <p>
+                  For more information refer to the{' '}
+                  <ExternalLink
+                    href={`${getLink('DOCS')}/ingestion/concurrent-append-replace.html`}
+                  >
+                    documentation
+                  </ExternalLink>
+                  .
+                </p>
+              </PopoverText>
+            }
+          >
+            <Switch
+              label="Use concurrent locks (experimental)"
+              checked={Boolean(deepGet(spec, 'context.useConcurrentLocks'))}
+              onChange={() => {
+                this.updateSpec(
+                  deepGet(spec, 'context.useConcurrentLocks')
+                    ? deepDelete(spec, 'context.useConcurrentLocks')
+                    : deepSet(spec, 'context.useConcurrentLocks', true),
+                );
+              }}
+            />
+          </FormGroupWithInfo>
         </div>
         <div className="other">
           <H5>Parse error reporting</H5>
