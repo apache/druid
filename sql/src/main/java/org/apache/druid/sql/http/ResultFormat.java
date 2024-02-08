@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -133,7 +134,10 @@ public enum ResultFormat
 
     void writeHeader(RelDataType rowType, boolean includeTypes, boolean includeSqlTypes) throws IOException;
 
-    default void writeHeaderFromRowSignature(RowSignature rowSignature, boolean includeTypes) throws IOException {}
+    default void writeHeaderFromRowSignature(RowSignature rowSignature, boolean includeTypes) throws IOException
+    {
+      throw DruidException.defensive("Writing header from RowSignature is not supported.");
+    }
 
     /**
      * Start of each result row.
