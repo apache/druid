@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
@@ -48,13 +47,10 @@ import java.util.Objects;
 public class SingleValueAggregatorFactory extends AggregatorFactory
 {
   @JsonProperty
-  @JsonInclude
   private final String name;
   @JsonProperty
-  @JsonInclude
   private final String fieldName;
   @JsonProperty
-  @JsonInclude
   private final ColumnType columnType;
   public static final int DEFAULT_MAX_VALUE_SIZE = 1024;
 
@@ -82,7 +78,11 @@ public class SingleValueAggregatorFactory extends AggregatorFactory
   {
     ColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
     ColumnCapabilities columnCapabilities = metricFactory.getColumnCapabilities(fieldName);
-    Preconditions.checkNotNull(columnCapabilities, "Unable to get the capabilities of [%s]", fieldName);
+    if (columnCapabilities == null) {
+      throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
+                          .ofCategory(DruidException.Category.DEFENSIVE)
+                          .build("Unable to get the capabilities of field [%s]", fieldName);
+    }
     ColumnType columnType = new ColumnType(columnCapabilities.getType(), null, null);
     return new SingleValueBufferAggregator(selector, columnType);
   }

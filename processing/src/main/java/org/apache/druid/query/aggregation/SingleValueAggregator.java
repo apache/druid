@@ -57,21 +57,21 @@ public class SingleValueAggregator implements Aggregator
   public float getFloat()
   {
     assert validObjectValue();
-    return isNull() ? NullHandling.ZERO_FLOAT : ((Number) value).floatValue();
+    return (value == null) ? NullHandling.ZERO_FLOAT : ((Number) value).floatValue();
   }
 
   @Override
   public long getLong()
   {
     assert validObjectValue();
-    return isNull() ? NullHandling.ZERO_LONG : ((Number) value).longValue();
+    return (value == null) ? NullHandling.ZERO_LONG : ((Number) value).longValue();
   }
 
   @Override
   public double getDouble()
   {
     assert validObjectValue();
-    return isNull() ? NullHandling.ZERO_DOUBLE : ((Number) value).doubleValue();
+    return (value == null) ? NullHandling.ZERO_DOUBLE : ((Number) value).doubleValue();
   }
 
   @Override
