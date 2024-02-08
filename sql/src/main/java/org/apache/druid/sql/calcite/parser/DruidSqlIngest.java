@@ -38,7 +38,7 @@ public abstract class DruidSqlIngest extends SqlInsert
   public static final String SQL_EXPORT_FILE_FORMAT = "__exportFileFormat";
 
   @Nullable
-  protected final SqlNode partitionedBy;
+  protected final SqlGranularityLiteral partitionedBy;
 
   @Nullable
   protected final SqlNodeList clusteredBy;
@@ -51,7 +51,7 @@ public abstract class DruidSqlIngest extends SqlInsert
       SqlNode targetTable,
       SqlNode source,
       SqlNodeList columnList,
-      @Nullable SqlNode partitionedBy,
+      @Nullable SqlGranularityLiteral partitionedBy,
       @Nullable SqlNodeList clusteredBy,
       @Nullable String exportFileFormat
   )
@@ -64,7 +64,7 @@ public abstract class DruidSqlIngest extends SqlInsert
   }
 
   @Nullable
-  public SqlNode getPartitionedBy()
+  public SqlGranularityLiteral getPartitionedBy()
   {
     return partitionedBy;
   }

@@ -49,7 +49,7 @@ public class DruidSqlReplace extends DruidSqlIngest
 
   public static DruidSqlReplace create(
       @Nonnull SqlInsert insertNode,
-      @Nullable SqlNode partitionedBy,
+      @Nullable SqlGranularityLiteral partitionedBy,
       @Nullable SqlNodeList clusteredBy,
       @Nullable SqlNode replaceTimeQuery,
       @Nullable String exportFileFormat
@@ -80,7 +80,7 @@ public class DruidSqlReplace extends DruidSqlIngest
       SqlNode targetTable,
       SqlNode source,
       SqlNodeList columnList,
-      @Nullable SqlNode partitionedBy,
+      @Nullable SqlGranularityLiteral partitionedBy,
       @Nullable SqlNodeList clusteredBy,
       @Nullable SqlNode replaceTimeQuery,
       @Nullable String exportFileFormat

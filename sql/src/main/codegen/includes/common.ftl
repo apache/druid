@@ -17,53 +17,51 @@
  * under the License.
  */
 
-SqlNode PartitionGranularity() :
+SqlGranularityLiteral PartitionGranularity() :
 {
   SqlNode e;
-  SqlNode result;
+  Granularity g;
 }
 {
   (
     <HOUR>
     {
-      result = SqlLiteral.createSymbol(GranularityType.HOUR, getPos());
+      g = GranularityType.HOUR.getDefaultGranularity();
     }
   |
     <DAY>
     {
-      result = SqlLiteral.createSymbol(GranularityType.DAY, getPos());
+      g = GranularityType.DAY.getDefaultGranularity();
     }
   |
     <MONTH>
     {
-      result = SqlLiteral.createSymbol(GranularityType.MONTH, getPos());
+      g = GranularityType.MONTH.getDefaultGranularity();
     }
   |
     <YEAR>
     {
-      result = SqlLiteral.createSymbol(GranularityType.YEAR, getPos());
+      g = GranularityType.YEAR.getDefaultGranularity();
     }
   |
     <ALL>
     {
-      result = SqlLiteral.createSymbol(GranularityType.ALL, getPos());
+      g = GranularityType.ALL.getDefaultGranularity();
     }
     [
       <TIME>
       {
-        result = SqlLiteral.createSymbol(GranularityType.ALL, getPos());
+        g = GranularityType.ALL.getDefaultGranularity();
       }
     ]
   |
     e = Expression(ExprContext.ACCEPT_SUB_QUERY)
     {
-      // validate, the return Granularity value is not needed
-      DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(e);
-      result = e;
+      g = DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(e);
     }
   )
   {
-    return result;
+    return new SqlGranularityLiteral(g, getPos());
   }
 }
 

@@ -43,7 +43,7 @@ public class DruidSqlInsert extends DruidSqlIngest
 
   public static DruidSqlInsert create(
       @Nonnull SqlInsert insertNode,
-      @Nullable SqlNode partitionedBy,
+      @Nullable SqlGranularityLiteral partitionedBy,
       @Nullable SqlNodeList clusteredBy,
       @Nullable String exportFileFormat
   )
@@ -72,7 +72,7 @@ public class DruidSqlInsert extends DruidSqlIngest
       SqlNode targetTable,
       SqlNode source,
       SqlNodeList columnList,
-      @Nullable SqlNode partitionedBy,
+      @Nullable SqlGranularityLiteral partitionedBy,
       @Nullable SqlNodeList clusteredBy,
       @Nullable String exportFileFormat
   )

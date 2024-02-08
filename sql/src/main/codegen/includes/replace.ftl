@@ -26,7 +26,7 @@ SqlNode DruidSqlReplaceEof() :
     final Span s;
     SqlNode tableRef = null;
     SqlInsert sqlInsert;
-    SqlNode partitionedBy = null;
+    SqlGranularityLiteral partitionedBy = null;
     SqlNodeList clusteredBy = null;
     final Pair<SqlNodeList, SqlNodeList> p;
     SqlNode replaceTimeQuery = null;
