@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.planner.querygen;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Aggregate;
@@ -42,6 +43,7 @@ import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery.Stage;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -84,7 +86,7 @@ public class DruidQueryGenerator
       InputDescProducer in = (InputDescProducer) node;
       // ensure that inputDesc is available (checks should happen in this method)
       in.getInputDesc(vertexFactory.getPlannerContext());
-      return vertexFactory.createVertex(PartialDruidQuery.create(node),Collections.emptyList());
+      return vertexFactory.createVertex(PartialDruidQuery.create(node), Collections.emptyList());
     }
     if (node instanceof Union) {
       return processUnion((Union) node, newInputs);
@@ -95,10 +97,10 @@ public class DruidQueryGenerator
       if (newVertex != null) {
         return newVertex;
       }
-      // FIXME
       inputVertex = vertexFactory.createVertex(
-      PartialDruidQuery.createOuterQuery(((PDQVertex) inputVertex).partialDruidQuery),
-      ImmutableList.of(inputVertex));
+          PartialDruidQuery.createOuterQuery(((PDQVertex) inputVertex).partialDruidQuery),
+          ImmutableList.of(inputVertex)
+      );
       newVertex = inputVertex.mergeNode(node, false);
       if (newVertex != null) {
         return newVertex;
@@ -111,7 +113,7 @@ public class DruidQueryGenerator
   {
     Preconditions.checkArgument(inputs.size() > 1, "Union needs multiple inputs");
     for (Vertex inputVertex : inputs) {
-      if (!inputVertex.canUnwrapInput()) {
+      if (!inputVertex.unwrapInputDesc()) {
         throw DruidException
             .defensive("Union operand with non-trivial remapping is not supported [%s]", inputVertex);
       }
@@ -128,18 +130,21 @@ public class DruidQueryGenerator
   public interface Vertex
   {
     /**
-     * Decides wether this {@link Vertex} can be unwrapped into an {@link InputDesc}.
-     */
-    boolean canUnwrapInput();
-
-    /**
      * Unwraps this {@link Vertex} into an {@link InputDesc}.
+     *
+     * Unwraps the input of this vertex - if it doesn't do anything beyond
+     * reading its input.
+     *
+     * @throws DruidException if unwrap is not possible.
      */
-    InputDesc unwrapInputDesc();
+    Supplier<InputDesc> unwrapInputDesc();
 
     /**
      * Merges the given node into the current {@link Vertex}
+     *
+     * @return the new {@link Vertex} or <code>null</code> if merging is not possible.
      */
+    @Nullable
     Vertex mergeNode(RelNode node, boolean isRoot);
 
     /**
@@ -202,7 +207,7 @@ public class DruidQueryGenerator
           List<DataSource> dataSources = new ArrayList<>();
           RowSignature signature = null;
           for (Vertex inputVertex : inputs) {
-            InputDesc unwrapInputDesc = inputVertex.unwrapInputDesc();
+            InputDesc unwrapInputDesc = inputVertex.unwrapInputDesc().get();
             dataSources.add(unwrapInputDesc.dataSource);
 
             if (signature == null) {
@@ -232,6 +237,8 @@ public class DruidQueryGenerator
        *
        * @return the new merged vertex - or null if its not possible to merge
        */
+      @Override
+      @Nullable
       public Vertex mergeNode(RelNode node, boolean isRoot)
       {
         if (accepts(node, Stage.WHERE_FILTER, Filter.class)) {
@@ -278,19 +285,15 @@ public class DruidQueryGenerator
         return partialDruidQuery.canAccept(whereFilter) && class1.isInstance(node);
       }
 
-      /**
-       * Unwraps the input of this vertex - if it doesn't do anything beyond
-       * reading its input.
-       *
-       * @throws DruidException
-       *           if unwrap is not possible.
-       */
-      public InputDesc unwrapInputDesc()
+      @Override
+      public Supplier<InputDesc> unwrapInputDesc()
       {
         if (canUnwrapInput()) {
-          DruidQuery q = buildQuery(false);
-          InputDesc origInput = getInput();
-          return new InputDesc(origInput.dataSource, q.getOutputRowSignature());
+          return () -> {
+            DruidQuery q = buildQuery(false);
+            InputDesc origInput = getInput();
+            return new InputDesc(origInput.dataSource, q.getOutputRowSignature());
+          };
         }
         throw DruidException.defensive("Can't unwrap input of vertex[%s]", partialDruidQuery);
       }
