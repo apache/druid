@@ -162,16 +162,19 @@ public class DruidQueryGenerator
 
     Vertex createVertex(PartialDruidQuery partialDruidQuery, List<Vertex> inputs)
     {
-      PDQVertex vertex = new PDQVertex();
-      vertex.inputs = inputs;
-      vertex.partialDruidQuery = partialDruidQuery;
-      return vertex;
+      return new PDQVertex(partialDruidQuery, inputs);
     }
 
     public class PDQVertex implements Vertex
     {
-      PartialDruidQuery partialDruidQuery;
-      List<Vertex> inputs;
+      final PartialDruidQuery partialDruidQuery;
+      final List<Vertex> inputs;
+
+      public PDQVertex(PartialDruidQuery partialDruidQuery, List<Vertex> inputs)
+      {
+        this.partialDruidQuery = partialDruidQuery;
+        this.inputs = inputs;
+      }
 
       @Override
       public DruidQuery buildQuery(boolean topLevel)
@@ -220,10 +223,10 @@ public class DruidQueryGenerator
       public Vertex mergeNode(RelNode node, boolean isRoot)
       {
         PartialDruidQuery newPartialQuery = mergeNode1(node, isRoot);
-        if(newPartialQuery == null ) {
+        if (newPartialQuery == null) {
           return null;
         }
-        return newVertex(newPartialQuery);
+        return createVertex(newPartialQuery, inputs);
       }
 
       /**
@@ -276,14 +279,6 @@ public class DruidQueryGenerator
       private boolean accepts(RelNode node, Stage whereFilter, Class<? extends RelNode> class1)
       {
         return partialDruidQuery.canAccept(whereFilter) && class1.isInstance(node);
-      }
-
-      private PDQVertex newVertex(PartialDruidQuery partialDruidQuery)
-      {
-        PDQVertex vertex = new PDQVertex();
-        vertex.inputs = inputs;
-        vertex.partialDruidQuery = partialDruidQuery;
-        return vertex;
       }
 
       @Override
