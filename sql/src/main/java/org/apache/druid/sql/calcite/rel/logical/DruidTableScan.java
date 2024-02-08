@@ -98,7 +98,7 @@ public class DruidTableScan extends TableScan implements DruidLogicalNode, Input
   }
 
   @Override
-  public InputDesc getInputDesc(PlannerContext plannerContext)
+  public InputDesc getInputDesc(PlannerContext plannerContext, List<InputDesc> inputs)
   {
     final DruidTable druidTable = getDruidTable();
     return new InputDesc(druidTable.getDataSource(), druidTable.getRowSignature());

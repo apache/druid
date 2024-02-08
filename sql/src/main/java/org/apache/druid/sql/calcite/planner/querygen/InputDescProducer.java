@@ -23,6 +23,8 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
+import java.util.List;
+
 
 public interface InputDescProducer
 {
@@ -43,5 +45,5 @@ public interface InputDescProducer
     }
   }
 
-  InputDesc getInputDesc(PlannerContext plannerContext);
+  InputDesc getInputDesc(PlannerContext plannerContext, List<InputDesc> inputs);
 }

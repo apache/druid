@@ -30,10 +30,7 @@ import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.rel.core.Window;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.query.DataSource;
 import org.apache.druid.query.QueryDataSource;
-import org.apache.druid.query.UnionDataSource;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator.PDQVertexFactory.PDQVertex;
 import org.apache.druid.sql.calcite.planner.querygen.InputDescProducer.InputDesc;
@@ -44,7 +41,6 @@ import org.apache.druid.sql.calcite.table.DruidTable;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -56,11 +52,9 @@ public class DruidQueryGenerator
 {
   private final RelNode relRoot;
   private final PDQVertexFactory vertexFactory;
-  private PlannerContext plannerContext;
 
   public DruidQueryGenerator(PlannerContext plannerContext, RelNode relRoot, RexBuilder rexBuilder)
   {
-    this.plannerContext = plannerContext;
     this.relRoot = relRoot;
     this.vertexFactory = new PDQVertexFactory(plannerContext, rexBuilder);
   }
@@ -84,10 +78,7 @@ public class DruidQueryGenerator
   private Vertex processNodeWithInputs(RelNode node, List<Vertex> newInputs, boolean isRoot)
   {
     if (node instanceof InputDescProducer) {
-      InputDescProducer in = (InputDescProducer) node;
-      // ensure that inputDesc is available (checks should happen in this method)
-      in.getInputDesc(vertexFactory.plannerContext);
-      return vertexFactory.createVertex(PartialDruidQuery.create(node), Collections.emptyList());
+      return vertexFactory.createVertex(PartialDruidQuery.create(node), newInputs);
     }
     if (node instanceof Union) {
       return processUnion((Union) node, newInputs);
@@ -201,30 +192,24 @@ public class DruidQueryGenerator
 
       private InputDesc getInput()
       {
-        if (partialDruidQuery.getScan() instanceof InputDescProducer) {
-          InputDescProducer xInputProducer = (InputDescProducer) partialDruidQuery.getScan();
-          return xInputProducer.getInputDesc(plannerContext);
-        }
-        if (inputs.size() == 1) {
-          DruidQuery inputQuery = inputs.get(0).buildQuery(false);
-          return new InputDesc(new QueryDataSource(inputQuery.getQuery()), inputQuery.getOutputRowSignature());
-        }
-        if (partialDruidQuery.getScan() instanceof Union) {
-          List<DataSource> dataSources = new ArrayList<>();
-          RowSignature signature = null;
-          for (Vertex inputVertex : inputs) {
-            InputDesc unwrapInputDesc = inputVertex.unwrapInputDesc();
-            dataSources.add(unwrapInputDesc.dataSource);
-
-            if (signature == null) {
-              signature = unwrapInputDesc.rowSignature;
-            } else {
-              if (!signature.equals(unwrapInputDesc.rowSignature)) {
-                throw DruidException.defensive("Row signature mismatch FIXME");
-              }
-            }
+        List<InputDesc> inputDescs =new ArrayList<>();
+        for (Vertex inputVertex : inputs) {
+          final InputDesc desc;
+          if(inputVertex.canUnwrapInput()) {
+            desc=inputVertex.unwrapInputDesc();
+          } else {
+            DruidQuery inputQuery = inputs.get(0).buildQuery(false);
+            desc= new InputDesc(new QueryDataSource(inputQuery.getQuery()), inputQuery.getOutputRowSignature());
           }
-          return new InputDesc(new UnionDataSource(dataSources), signature);
+          inputDescs.add(desc);
+      }
+        RelNode scan = partialDruidQuery.getScan();
+        if (scan instanceof InputDescProducer) {
+          InputDescProducer inp = (InputDescProducer) scan;
+          return inp.getInputDesc(plannerContext, inputDescs);
+        }
+        if(inputs.size() == 1 ) {
+          return inputDescs.get(0);
         }
         throw new IllegalStateException();
       }

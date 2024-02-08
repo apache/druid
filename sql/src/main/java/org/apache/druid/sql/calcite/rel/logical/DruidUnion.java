@@ -28,9 +28,18 @@ import org.apache.calcite.rel.core.SetOp;
 import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.rel.hint.RelHint;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.query.DataSource;
+import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnionDataSource;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.querygen.InputDescProducer;
+import java.util.ArrayList;
 import java.util.List;
 
-public class DruidUnion extends Union implements DruidLogicalNode
+public class DruidUnion extends Union implements DruidLogicalNode, InputDescProducer
 {
   public DruidUnion(
       RelOptCluster cluster,
@@ -52,5 +61,32 @@ public class DruidUnion extends Union implements DruidLogicalNode
   public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq)
   {
     return planner.getCostFactory().makeCost(mq.getRowCount(this), 0, 0);
+  }
+
+  @Override
+  public InputDesc getInputDesc(PlannerContext plannerContext, List<InputDesc> inputs)
+  {
+    List<DataSource> dataSources = new ArrayList<>();
+    RowSignature signature = null;
+    for (InputDesc inputDesc : inputs) {
+      checkDataSourceSupported(inputDesc.dataSource);
+      dataSources.add(inputDesc.dataSource);
+      if (signature == null) {
+        signature = inputDesc.rowSignature;
+      } else {
+        if (!signature.equals(inputDesc.rowSignature)) {
+          throw DruidException.defensive("Row signature mismatch FIXME");
+        }
+      }
+    }
+    return new InputDesc(new UnionDataSource(dataSources), signature);
+  }
+
+  private void checkDataSourceSupported(DataSource dataSource)
+  {
+    if(dataSource instanceof TableDataSource || dataSource instanceof InlineDataSource) {
+      return;
+    }
+    throw DruidException.defensive("Only Table and Values are supported as inputs for Union [%s]", dataSource);
   }
 }

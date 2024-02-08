@@ -72,7 +72,7 @@ public class DruidValues extends LogicalValues implements DruidLogicalNode, Inpu
   }
 
   @Override
-  public InputDesc getInputDesc(PlannerContext plannerContext)
+  public InputDesc getInputDesc(PlannerContext plannerContext, List<InputDesc> inputs)
   {
     if (inlineTable == null) {
       inlineTable = buildInlineTable(plannerContext);
