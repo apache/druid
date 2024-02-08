@@ -20,8 +20,7 @@
 package org.apache.druid.sql.calcite.planner.querygen;
 
 import org.apache.calcite.rel.RelNode;
-import org.apache.druid.query.DataSource;
-import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.calcite.planner.querygen.InputDescProducer.InputDesc;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 
 /**
@@ -29,21 +28,6 @@ import org.apache.druid.sql.calcite.rel.DruidQuery;
  */
 public interface Vertex
 {
-  /**
-   * Utility class to return represent input related things.
-   */
-  public class InputDesc
-  {
-    public DataSource dataSource;
-    public RowSignature rowSignature;
-
-    public InputDesc(DataSource dataSource, RowSignature rowSignature)
-    {
-      this.dataSource = dataSource;
-      this.rowSignature = rowSignature;
-    }
-  }
-
   boolean canUnwrapInput();
 
   InputDesc unwrapInputDesc();

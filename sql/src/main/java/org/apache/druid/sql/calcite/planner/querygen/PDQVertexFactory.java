@@ -34,6 +34,7 @@ import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.querygen.InputDescProducer.InputDesc;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery.Stage;
@@ -103,7 +104,7 @@ public class PDQVertexFactory
     {
       if (partialDruidQuery.getScan() instanceof InputDescProducer) {
         InputDescProducer xInputProducer = (InputDescProducer) partialDruidQuery.getScan();
-        return xInputProducer.getInputDesc();
+        return xInputProducer.getInputDesc(plannerContext);
       }
       if (inputs.size() == 1) {
         DruidQuery inputQuery = inputs.get(0).buildQuery(false);
