@@ -21,14 +21,16 @@ package org.apache.druid.query.aggregation.datasketches.hll;
 
 import org.apache.datasketches.common.SketchesArgumentException;
 import org.apache.datasketches.hll.HllSketch;
+import org.apache.datasketches.hll.TgtHllType;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Random;
 
-public class HllSketchObjectStrategyTest
+public class HllSketchHolderObjectStrategyTest
 {
   @Test
   public void testSafeRead()
@@ -73,5 +75,76 @@ public class HllSketchObjectStrategyTest
         SketchesArgumentException.class,
         () -> objectStrategy.fromByteBufferSafe(buf4, garbageLonger.length).getSketch().copy()
     );
+  }
+
+  @Test
+  public void testHllSketchIsNullEquivalent()
+  {
+    final Random random = new Random(0);
+    for (final TgtHllType tgtHllType : TgtHllType.values()) {
+      for (int lgK = 7; lgK < 22; lgK++) {
+        for (int sz : new int[]{0, 1, 2, 127, 128, 129, 255, 256, 257, 511, 512, 513, 16383, 16384, 16385}) {
+          final String description = StringUtils.format("tgtHllType[%s], lgK[%s], sz[%s]", tgtHllType, lgK, sz);
+          final HllSketch sketch = new HllSketch(lgK, tgtHllType);
+          for (int i = 0; i < sz; i++) {
+            sketch.update(random.nextLong());
+          }
+
+          final boolean expectEmpty = sz == 0;
+
+          // --------------------------------
+          // Compact array, little endian buf
+          final byte[] compactBytes = sketch.toCompactByteArray();
+          // Add a byte of padding on either side
+          ByteBuffer buf = ByteBuffer.allocate(compactBytes.length + 2);
+          buf.order(ByteOrder.LITTLE_ENDIAN);
+          buf.position(1);
+          buf.put(compactBytes);
+          buf.position(1);
+          Assert.assertEquals(
+              "Compact array littleEndian " + description,
+              expectEmpty,
+              HllSketchHolderObjectStrategy.isSafeToConvertToNullSketch(buf, compactBytes.length)
+          );
+          Assert.assertEquals(1, buf.position());
+
+          // -----------------------------
+          // Compact array, big endian buf
+          buf.order(ByteOrder.BIG_ENDIAN);
+          Assert.assertEquals(
+              "Compact array bigEndian " + description,
+              expectEmpty,
+              HllSketchHolderObjectStrategy.isSafeToConvertToNullSketch(buf, compactBytes.length)
+          );
+          Assert.assertEquals(1, buf.position());
+
+          // ----------------------------------
+          // Updatable array, little endian buf
+          final byte[] updatableBytes = sketch.toUpdatableByteArray();
+          // Add a byte of padding on either side
+          buf = ByteBuffer.allocate(updatableBytes.length + 2);
+          buf.order(ByteOrder.LITTLE_ENDIAN);
+          buf.position(1);
+          buf.put(updatableBytes);
+          buf.position(1);
+          Assert.assertEquals(
+              "Updatable array littleEndian " + description,
+              expectEmpty,
+              HllSketchHolderObjectStrategy.isSafeToConvertToNullSketch(buf, updatableBytes.length)
+          );
+          Assert.assertEquals(1, buf.position());
+
+          // -------------------------------
+          // Updatable array, big endian buf
+          buf.order(ByteOrder.BIG_ENDIAN);
+          Assert.assertEquals(
+              "Updatable array bigEndian " + description,
+              expectEmpty,
+              HllSketchHolderObjectStrategy.isSafeToConvertToNullSketch(buf, updatableBytes.length)
+          );
+          Assert.assertEquals(1, buf.position());
+        }
+      }
+    }
   }
 }
