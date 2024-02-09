@@ -202,7 +202,7 @@ public class DruidQueryGenerator
           if (inputVertex.canUnwrapInput()) {
             desc = inputVertex.unwrapInputDesc();
           } else {
-            DruidQuery inputQuery = inputs.get(0).buildQuery(false);
+            DruidQuery inputQuery = inputVertex.buildQuery(false);
             desc = new InputDesc(new QueryDataSource(inputQuery.getQuery()), inputQuery.getOutputRowSignature());
           }
           inputDescs.add(desc);
