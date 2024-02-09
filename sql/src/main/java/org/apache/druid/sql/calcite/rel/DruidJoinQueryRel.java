@@ -137,22 +137,39 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     );
   }
 
-  @Override
-  public DruidQuery toDruidQuery(final boolean finalizeAggregations)
+  private InputDesc buildLeftDesc()
   {
-    final InputDesc leftDesc = buildLeftDesc();
-    final InputDesc rightDesc = buildRightDesc();
+    final InputDesc leftDesc;
+    final DruidRel<?> leftDruidRel = (DruidRel<?>) left;
+    final DruidQuery leftQuery = Preconditions.checkNotNull(leftDruidRel.toDruidQuery(false), "leftQuery");
+    final RowSignature leftSignature = leftQuery.getOutputRowSignature();
+    final DataSource leftDataSource;
+    if (computeLeftRequiresSubquery(getPlannerContext(), leftDruidRel)) {
+      leftDataSource = new QueryDataSource(leftQuery.getQuery());
+      if (leftFilter != null) {
+        throw new ISE("Filter on left table is supposed to be null if left child is a query source");
+      }
+    } else {
+      leftDataSource = leftQuery.getDataSource();
+    }
+    leftDesc = new InputDesc(leftDataSource, leftSignature);
+    return leftDesc;
+  }
 
-    InputDesc inputDesc = buildJoinDataSource(leftDesc, rightDesc);
-
-    return partialQuery.build(
-        inputDesc.dataSource,
-        inputDesc.rowSignature,
-        getPlannerContext(),
-        getCluster().getRexBuilder(),
-        finalizeAggregations,
-        inputDesc.virtualColumnRegistry
-    );
+  private InputDesc buildRightDesc()
+  {
+    final InputDesc rightDesc;
+    final DruidRel<?> rightDruidRel = (DruidRel<?>) right;
+    final DruidQuery rightQuery = Preconditions.checkNotNull(rightDruidRel.toDruidQuery(false), "rightQuery");
+    final RowSignature rightSignature = rightQuery.getOutputRowSignature();
+    final DataSource rightDataSource;
+    if (computeRightRequiresSubquery(getPlannerContext(), rightDruidRel)) {
+      rightDataSource = new QueryDataSource(rightQuery.getQuery());
+    } else {
+      rightDataSource = rightQuery.getDataSource();
+    }
+    rightDesc = new InputDesc(rightDataSource, rightSignature);
+    return rightDesc;
   }
 
   private InputDesc buildJoinDataSource(final InputDesc leftDesc, final InputDesc rightDesc)
@@ -208,39 +225,23 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     return inputDesc;
   }
 
-  private InputDesc buildRightDesc()
-  {
-    final InputDesc rightDesc;
-    final DruidRel<?> rightDruidRel = (DruidRel<?>) right;
-    final DruidQuery rightQuery = Preconditions.checkNotNull(rightDruidRel.toDruidQuery(false), "rightQuery");
-    final RowSignature rightSignature = rightQuery.getOutputRowSignature();
-    final DataSource rightDataSource;
-    if (computeRightRequiresSubquery(getPlannerContext(), rightDruidRel)) {
-      rightDataSource = new QueryDataSource(rightQuery.getQuery());
-    } else {
-      rightDataSource = rightQuery.getDataSource();
-    }
-    rightDesc = new InputDesc(rightDataSource, rightSignature, null);
-    return rightDesc;
-  }
 
-  private InputDesc buildLeftDesc()
+  @Override
+  public DruidQuery toDruidQuery(final boolean finalizeAggregations)
   {
-    final InputDesc leftDesc;
-    final DruidRel<?> leftDruidRel = (DruidRel<?>) left;
-    final DruidQuery leftQuery = Preconditions.checkNotNull(leftDruidRel.toDruidQuery(false), "leftQuery");
-    final RowSignature leftSignature = leftQuery.getOutputRowSignature();
-    final DataSource leftDataSource;
-    if (computeLeftRequiresSubquery(getPlannerContext(), leftDruidRel)) {
-      leftDataSource = new QueryDataSource(leftQuery.getQuery());
-      if (leftFilter != null) {
-        throw new ISE("Filter on left table is supposed to be null if left child is a query source");
-      }
-    } else {
-      leftDataSource = leftQuery.getDataSource();
-    }
-    leftDesc = new InputDesc(leftDataSource, leftSignature, null);
-    return leftDesc;
+    final InputDesc leftDesc = buildLeftDesc();
+    final InputDesc rightDesc = buildRightDesc();
+
+    InputDesc inputDesc = buildJoinDataSource(leftDesc, rightDesc);
+
+    return partialQuery.build(
+        inputDesc.dataSource,
+        inputDesc.rowSignature,
+        getPlannerContext(),
+        getCluster().getRexBuilder(),
+        finalizeAggregations,
+        inputDesc.virtualColumnRegistry
+    );
   }
 
   @Override
