@@ -172,7 +172,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     return rightDesc;
   }
 
-  private InputDesc buildJoinDataSource(final InputDesc leftDesc, final InputDesc rightDesc)
+  private static InputDesc buildJoinDataSource(final InputDesc leftDesc, final InputDesc rightDesc, PlannerContext plannerContext, Join joinRel, Filter leftFilter)
   {
     final Pair<String, RowSignature> prefixSignaturePair = computeJoinRowSignature(
         leftDesc.rowSignature,
@@ -185,21 +185,21 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
 
     VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(
         signature,
-        getPlannerContext().getExpressionParser(),
-        getPlannerContext().getPlannerConfig().isForceExpressionVirtualColumns()
+        plannerContext.getExpressionParser(),
+        plannerContext.getPlannerConfig().isForceExpressionVirtualColumns()
     );
-    getPlannerContext().setJoinExpressionVirtualColumnRegistry(virtualColumnRegistry);
+    plannerContext.setJoinExpressionVirtualColumnRegistry(virtualColumnRegistry);
 
     // Generate the condition for this join as a Druid expression.
     final DruidExpression condition = Expressions.toDruidExpression(
-        getPlannerContext(),
+        plannerContext,
         signature,
         joinRel.getCondition()
     );
 
     // Unsetting it to avoid any VC Registry leaks incase there are multiple druid quries for the SQL
     // It should be fixed soon with changes in interface for SqlOperatorConversion and Expressions bridge class
-    getPlannerContext().setJoinExpressionVirtualColumnRegistry(null);
+    plannerContext.setJoinExpressionVirtualColumnRegistry(null);
 
     // DruidJoinRule should not have created us if "condition" is null. Check defensively anyway, which also
     // quiets static code analysis.
@@ -213,12 +213,12 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
         prefix,
         JoinConditionAnalysis.forExpression(
             condition.getExpression(),
-            getPlannerContext().parseExpression(condition.getExpression()),
+            plannerContext.parseExpression(condition.getExpression()),
             prefix
         ),
         toDruidJoinType(joinRel.getJoinType()),
-        getDimFilter(getPlannerContext(), leftDesc.rowSignature, leftFilter),
-        getPlannerContext().getJoinableFactoryWrapper()
+        getDimFilter(plannerContext, leftDesc.rowSignature, leftFilter),
+        plannerContext.getJoinableFactoryWrapper()
     );
 
     InputDesc inputDesc = new InputDesc(joinDataSource, signature, virtualColumnRegistry);
@@ -232,7 +232,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     final InputDesc leftDesc = buildLeftDesc();
     final InputDesc rightDesc = buildRightDesc();
 
-    InputDesc inputDesc = buildJoinDataSource(leftDesc, rightDesc);
+    InputDesc inputDesc = buildJoinDataSource(leftDesc, rightDesc, getPlannerContext(),joinRel,leftFilter);
 
     return partialQuery.build(
         inputDesc.dataSource,
