@@ -170,8 +170,11 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
         findExistingJoinPrefixes(leftDataSource, rightDataSource)
     );
 
+    String prefix = prefixSignaturePair.lhs;
+    RowSignature signature = prefixSignaturePair.rhs;
+
     VirtualColumnRegistry virtualColumnRegistry = VirtualColumnRegistry.create(
-        prefixSignaturePair.rhs,
+        signature,
         getPlannerContext().getExpressionParser(),
         getPlannerContext().getPlannerConfig().isForceExpressionVirtualColumns()
     );
@@ -180,7 +183,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     // Generate the condition for this join as a Druid expression.
     final DruidExpression condition = Expressions.toDruidExpression(
         getPlannerContext(),
-        prefixSignaturePair.rhs,
+        signature,
         joinRel.getCondition()
     );
 
@@ -197,19 +200,20 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     JoinDataSource joinDataSource = JoinDataSource.create(
         leftDataSource,
         rightDataSource,
-        prefixSignaturePair.lhs,
+        prefix,
         JoinConditionAnalysis.forExpression(
             condition.getExpression(),
             getPlannerContext().parseExpression(condition.getExpression()),
-            prefixSignaturePair.lhs
+            prefix
         ),
         toDruidJoinType(joinRel.getJoinType()),
         getDimFilter(getPlannerContext(), leftSignature, leftFilter),
         getPlannerContext().getJoinableFactoryWrapper()
     );
+
     return partialQuery.build(
         joinDataSource,
-        prefixSignaturePair.rhs,
+        signature,
         getPlannerContext(),
         getCluster().getRexBuilder(),
         finalizeAggregations,
