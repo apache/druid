@@ -149,14 +149,14 @@ affects both storage and querying, and must be set on all Druid service types to
 and query time. There is some overhead associated with the ability to handle NULLs; see
 the [segment internals](../design/segments.md#handling-null-values) documentation for more details.
 
-When `druid.generic.useDefaultValueForNull = true` (legacy), Druid treats NULLs and empty strings interchangeably,
-rather than according to the SQL standard. In this mode Druid SQL only has partial support for NULLs. For example, the
-expressions `col IS NULL` and `col = ''` are equivalent, and both evaluate to true if `col` contains an empty string.
-Similarly, the expression `COALESCE(col1, col2)` returns `col2` if `col1` is an empty string. While the `COUNT(*)`
-aggregator counts all rows, the `COUNT(expr)` aggregator counts the number of rows where `expr` is neither null nor the
-empty string. Numeric columns in this mode are not nullable; any null or missing values are treated as zeroes. This was
-the default prior to Druid 28.0.0, but will be removed in a future release so that Druid always behaves in an SQL
-compatible manner.
+When `druid.generic.useDefaultValueForNull = true` (deprecated legacy mode), Druid treats NULLs and empty strings
+interchangeably, rather than according to the SQL standard. In this mode Druid SQL only has partial support for NULLs.
+For example, the expressions `col IS NULL` and `col = ''` are equivalent, and both evaluate to true if `col` contains
+an empty string. Similarly, the expression `COALESCE(col1, col2)` returns `col2` if `col1` is an empty string. While
+the `COUNT(*)` aggregator counts all rows, the `COUNT(expr)` aggregator counts the number of rows where `expr` is
+neither null nor the empty string. Numeric columns in this mode are not nullable; any null or missing values are
+treated as zeroes. This was the default prior to Druid 28.0.0, but will be removed in a future release so that Druid
+always behaves in an SQL compatible manner.
 
 ## Boolean logic
 
