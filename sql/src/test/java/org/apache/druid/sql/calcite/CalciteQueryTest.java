@@ -12125,7 +12125,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.MISSING_JOIN_CONVERSION)
   @Test
   public void testRequireTimeConditionPositive()
   {
@@ -12154,7 +12153,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{3L, timestamp("2001-01-01")}
         )
     );
+  }
 
+  @Test
+  public void testRequireTimeConditionPositive2()
+  {
     // nested GROUP BY only requires time condition for inner most query
     testQuery(
         PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
@@ -12197,7 +12200,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{6L, 4L}
         )
     );
+  }
 
+  @NotYetSupported(Modes.MISSING_JOIN_CONVERSION)
+  @Test
+  public void testRequireTimeConditionPositive3()
+  {
     // Cannot vectorize next test due to extraction dimension spec.
     cannotVectorize();
 
