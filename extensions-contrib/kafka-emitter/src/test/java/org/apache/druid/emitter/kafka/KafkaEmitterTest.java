@@ -269,6 +269,47 @@ public class KafkaEmitterTest
     Assert.assertEquals(REQUEST_LOG_EVENTS.size(), kafkaEmitter.getRequestLostCount());
   }
 
+  @Test(timeout = 10_000)
+  public void testAllEventsWithCommonTopic() throws JsonProcessingException, InterruptedException
+  {
+    final KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig(
+        "",
+        new HashSet<>(Arrays.asList(KafkaEmitterConfig.EventType.values())),
+        "topic",
+        "topic",
+        "topic",
+        "topic",
+        null,
+        null,
+        null,
+        null
+    );
+
+    final KafkaEmitter kafkaEmitter = initKafkaEmitter(kafkaEmitterConfig);
+
+    final List<Event> inputEvents = flattenEvents(
+        SERVICE_METRIC_EVENTS,
+        ALERT_EVENTS,
+        SEGMENT_METADATA_EVENTS,
+        REQUEST_LOG_EVENTS
+    );
+
+    final CountDownLatch eventLatch = new CountDownLatch(inputEvents.size());
+
+    final Map<String, List<String>> feedToExpectedEvents = trackExpectedEvents(inputEvents, kafkaEmitterConfig);
+    final Map<String, List<String>> feedToActualEvents = trackActualEventsInCallback(eventLatch);
+
+    emitEvents(kafkaEmitter, inputEvents, eventLatch);
+
+    validateEvents(feedToExpectedEvents, feedToActualEvents);
+
+    Assert.assertEquals(0, kafkaEmitter.getMetricLostCount());
+    Assert.assertEquals(0, kafkaEmitter.getAlertLostCount());
+    Assert.assertEquals(0, kafkaEmitter.getSegmentMetadataLostCount());
+    Assert.assertEquals(0, kafkaEmitter.getSegmentMetadataLostCount());
+    Assert.assertEquals(0, kafkaEmitter.getInvalidLostCount());
+  }
+
   private KafkaEmitter initKafkaEmitter(
       final KafkaEmitterConfig kafkaEmitterConfig
   )
