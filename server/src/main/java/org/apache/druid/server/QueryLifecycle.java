@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.guava.SequenceWrapper;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.math.expr.LookupNameExtractionShuttle;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.DruidMetrics;
@@ -48,7 +49,11 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.dimension.ExtractionDimensionSpec;
+import org.apache.druid.query.dimension.LookupDimensionSpec;
+import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -72,6 +77,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -230,7 +236,7 @@ public class QueryLifecycle
   public Access authorize(HttpServletRequest req)
   {
     transition(State.INITIALIZED, State.AUTHORIZING);
-    final Iterable<ResourceAction> resourcesToAuthorize = Iterables.concat(
+    Iterable<ResourceAction> resourcesToAuthorize = Iterables.concat(
         Iterables.transform(
             baseQuery.getDataSource().getTableNames(),
             AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
@@ -299,6 +305,19 @@ public class QueryLifecycle
             authorizerMapper
         )
     );
+  }
+
+  private String getLookUpName(DimensionSpec dimension)
+  {
+    if (dimension instanceof LookupDimensionSpec) {
+      return ((LookupDimensionSpec) dimension).getName();
+    } else if (dimension instanceof ExtractionDimensionSpec) {
+      ExtractionFn extractionFn = ((ExtractionDimensionSpec) dimension).getExtractionFn();
+      if (extractionFn instanceof RegisteredLookupExtractionFn) {
+        return ((RegisteredLookupExtractionFn) extractionFn).getLookupName();
+      }
+    }
+    return null;
   }
 
   /**
