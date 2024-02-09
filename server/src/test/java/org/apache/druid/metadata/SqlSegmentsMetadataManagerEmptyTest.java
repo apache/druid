@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -44,8 +45,9 @@ public class SqlSegmentsMetadataManagerEmptyTest
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
-  private SqlSegmentsMetadataManager sqlSegmentsMetadataManager;
   private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
+  private SqlSegmentsMetadataManager sqlSegmentsMetadataManager;
+  private SegmentSchemaCache segmentSchemaCache;
 
   @Before
   public void setUp()
@@ -53,11 +55,13 @@ public class SqlSegmentsMetadataManagerEmptyTest
     TestDerbyConnector connector = derbyConnectorRule.getConnector();
     SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig();
     config.setPollDuration(Period.seconds(1));
+    segmentSchemaCache = new SegmentSchemaCache();
     sqlSegmentsMetadataManager = new SqlSegmentsMetadataManager(
         jsonMapper,
         Suppliers.ofInstance(config),
         derbyConnectorRule.metadataTablesConfigSupplier(),
-        connector
+        connector,
+        segmentSchemaCache
     );
     sqlSegmentsMetadataManager.start();
 

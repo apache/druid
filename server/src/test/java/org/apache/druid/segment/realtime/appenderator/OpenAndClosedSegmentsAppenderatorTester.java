@@ -45,6 +45,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.DataSegment;
@@ -218,7 +219,8 @@ public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
           indexMerger,
           rowIngestionMeters,
           new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-          true
+          true,
+          CentralizedDatasourceSchemaConfig.create()
       );
     } else {
       appenderator = Appenderators.createClosedSegmentsOffline(
@@ -232,7 +234,8 @@ public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
           indexMerger,
           rowIngestionMeters,
           new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-          true
+          true,
+          CentralizedDatasourceSchemaConfig.create()
       );
     }
   }

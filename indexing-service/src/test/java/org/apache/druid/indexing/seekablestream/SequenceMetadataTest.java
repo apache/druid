@@ -80,7 +80,7 @@ public class SequenceMetadataTest
 
     ISE exception = Assert.assertThrows(
         ISE.class,
-        () -> transactionalSegmentPublisher.publishAnnotatedSegments(notNullNotEmptySegment, ImmutableSet.of(), null)
+        () -> transactionalSegmentPublisher.publishAnnotatedSegments(notNullNotEmptySegment, ImmutableSet.of(), null, null)
     );
     Assert.assertEquals(
         "Stream ingestion task unexpectedly attempted to overwrite segments: "
@@ -115,6 +115,6 @@ public class SequenceMetadataTest
     );
     TransactionalSegmentPublisher transactionalSegmentPublisher = sequenceMetadata.createPublisher(mockSeekableStreamIndexTaskRunner, mockTaskToolbox, false);
 
-    transactionalSegmentPublisher.publishAnnotatedSegments(null, notNullNotEmptySegment, ImmutableMap.of());
+    transactionalSegmentPublisher.publishAnnotatedSegments(null, notNullNotEmptySegment, ImmutableMap.of(), null);
   }
 }

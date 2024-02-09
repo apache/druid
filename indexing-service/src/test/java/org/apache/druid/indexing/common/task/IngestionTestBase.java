@@ -77,6 +77,8 @@ import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.NoopDataSegmentKiller;
 import org.apache.druid.segment.loading.SegmentCacheManager;
+import org.apache.druid.segment.metadata.SchemaManager;
+import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -115,6 +117,8 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   private SegmentsMetadataManager segmentsMetadataManager;
   private TaskLockbox lockbox;
   private File baseDir;
+  private SchemaManager schemaManager;
+  private SegmentSchemaCache segmentSchemaCache;
 
   @Before
   public void setUpIngestionTestBase() throws IOException
@@ -127,16 +131,24 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     connector.createTaskTables();
     connector.createSegmentTable();
     taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
+    schemaManager = new SchemaManager(
+        derbyConnectorRule.metadataTablesConfigSupplier().get(),
+        objectMapper,
+        derbyConnectorRule.getConnector()
+    );
+
     storageCoordinator = new IndexerSQLMetadataStorageCoordinator(
         objectMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
-        derbyConnectorRule.getConnector()
+        derbyConnectorRule.getConnector(),
+        schemaManager
     );
     segmentsMetadataManager = new SqlSegmentsMetadataManager(
         objectMapper,
         SegmentsMetadataManagerConfig::new,
         derbyConnectorRule.metadataTablesConfigSupplier(),
-        derbyConnectorRule.getConnector()
+        derbyConnectorRule.getConnector(),
+        segmentSchemaCache
     );
     lockbox = new TaskLockbox(taskStorage, storageCoordinator);
     segmentCacheManagerFactory = new SegmentCacheManagerFactory(getObjectMapper());

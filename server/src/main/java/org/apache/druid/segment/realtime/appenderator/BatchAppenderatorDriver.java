@@ -29,7 +29,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.column.MinimalSegmentSchemas;
-import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
 import org.apache.druid.timeline.DataSegment;
@@ -210,7 +209,7 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
   {
     final Map<String, SegmentsForSequence> snapshot;
     synchronized (segments) {
-    snapshot = ImmutableMap.copyOf(segments);
+      snapshot = ImmutableMap.copyOf(segments);
     }
 
     return publishInBackground(

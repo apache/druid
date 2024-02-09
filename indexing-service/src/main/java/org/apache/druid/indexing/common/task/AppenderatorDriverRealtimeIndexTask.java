@@ -362,7 +362,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
             segments,
             null,
             null,
-            Collections.emptyMap()
+            null
         );
         return toolbox.getTaskActionClient().submit(action);
       };

@@ -50,17 +50,13 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.ReferenceCountingSegment;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.MinimalSegmentSchemas;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.SchemaPayload;
 import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
@@ -91,7 +87,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -177,7 +172,6 @@ public class BatchAppenderator implements Appenderator
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
       boolean useMaxMemoryEstimates,
-      ObjectMapper mapper,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
@@ -197,7 +191,7 @@ public class BatchAppenderator implements Appenderator
     maxPendingPersists = tuningConfig.getMaxPendingPersists();
     this.useMaxMemoryEstimates = useMaxMemoryEstimates;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
-    this.fingerprintGenerator = new SchemaFingerprintGenerator(mapper);
+    this.fingerprintGenerator = new SchemaFingerprintGenerator(objectMapper);
   }
 
   @Override

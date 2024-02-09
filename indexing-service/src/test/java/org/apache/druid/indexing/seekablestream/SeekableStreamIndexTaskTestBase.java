@@ -117,6 +117,7 @@ import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.SchemaManager;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderator;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
@@ -204,6 +205,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
   protected TaskLockbox taskLockbox;
   protected IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   protected final Set<Integer> checkpointRequestsHash = new HashSet<>();
+  protected SchemaManager schemaManager;
 
   static {
     OBJECT_MAPPER = new TestUtils().getTestObjectMapper();
@@ -591,10 +593,12 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
             objectMapper
         )
     );
+    schemaManager = new SchemaManager(derby.metadataTablesConfigSupplier().get(), objectMapper, derbyConnector);
     metadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
         objectMapper,
         derby.metadataTablesConfigSupplier().get(),
-        derbyConnector
+        derbyConnector,
+        schemaManager
     );
     taskLockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
     final TaskActionToolbox taskActionToolbox = new TaskActionToolbox(

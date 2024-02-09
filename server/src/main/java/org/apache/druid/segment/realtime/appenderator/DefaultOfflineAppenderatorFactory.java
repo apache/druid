@@ -30,6 +30,7 @@ import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 
 
@@ -74,7 +75,8 @@ public class DefaultOfflineAppenderatorFactory implements AppenderatorFactory
             config.isReportParseExceptions() ? 0 : Integer.MAX_VALUE,
             0
         ),
-        true
+        true,
+        CentralizedDatasourceSchemaConfig.create()
     );
   }
 }

@@ -113,7 +113,6 @@ public class Appenderators
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
       boolean useMaxMemoryEstimates,
-      ObjectMapper mapper,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
@@ -132,7 +131,6 @@ public class Appenderators
         rowIngestionMeters,
         parseExceptionHandler,
         useMaxMemoryEstimates,
-        mapper,
         centralizedDatasourceSchemaConfig
     );
   }

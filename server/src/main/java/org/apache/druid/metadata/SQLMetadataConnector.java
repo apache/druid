@@ -549,7 +549,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     if (!columnsToAdd.isEmpty()) {
       StringBuilder alterCommand = new StringBuilder("ALTER TABLE %1$s ADD");
       for (String columnName : columnsToAdd) {
-        alterCommand.append(String.format(" %s %s,", columnName, columnNameTypes.get(columnName)));
+        alterCommand.append(StringUtils.format(" %s %s,", columnName, columnNameTypes.get(columnName)));
       }
 
       alterCommand.deleteCharAt(alterCommand.length() - 1);

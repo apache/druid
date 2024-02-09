@@ -498,7 +498,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
                                                       .collect(Collectors.toList());
         return Futures.transform(
             persistAll(committer),
-            (Function<Object, SegmentsAndCommitMetadata>) commitMetadata -> new SegmentsAndCommitMetadata(segments, commitMetadata),
+            (Function<Object, SegmentsAndCommitMetadata>) commitMetadata -> new SegmentsAndCommitMetadata(segments, commitMetadata, null),
             MoreExecutors.directExecutor()
         );
       } else {

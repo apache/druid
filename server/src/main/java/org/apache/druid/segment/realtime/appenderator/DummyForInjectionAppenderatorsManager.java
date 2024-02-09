@@ -95,7 +95,8 @@ public class DummyForInjectionAppenderatorsManager implements AppenderatorsManag
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     throw new UOE(ERROR_MSG);
@@ -113,7 +114,8 @@ public class DummyForInjectionAppenderatorsManager implements AppenderatorsManag
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     throw new UOE(ERROR_MSG);
@@ -131,7 +133,8 @@ public class DummyForInjectionAppenderatorsManager implements AppenderatorsManag
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     throw new UOE(ERROR_MSG);

@@ -201,7 +201,6 @@ public class SegmentGeneratorFrameProcessorFactory
                   meters,
                   parseExceptionHandler,
                   true,
-                  mapper,
                   centralizedDatasourceSchemaConfig
               );
 

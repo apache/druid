@@ -61,6 +61,7 @@ import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.metadata.SchemaManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
@@ -100,6 +101,7 @@ public class TaskLockboxTest
   private IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private TaskLockbox lockbox;
   private TaskLockboxValidator validator;
+  private SchemaManager schemaManager;
 
   private final int HIGH_PRIORITY = 15;
   private final int MEDIUM_PRIORITY = 10;
@@ -113,12 +115,14 @@ public class TaskLockboxTest
   {
     objectMapper = TestHelper.makeJsonMapper();
     objectMapper.registerSubtypes(NumberedShardSpec.class, HashBasedNumberedShardSpec.class);
-
     final TestDerbyConnector derbyConnector = derby.getConnector();
     derbyConnector.createTaskTables();
     derbyConnector.createPendingSegmentsTable();
     derbyConnector.createSegmentTable();
     final MetadataStorageTablesConfig tablesConfig = derby.metadataTablesConfigSupplier().get();
+
+    schemaManager = new SchemaManager(tablesConfig, objectMapper, derbyConnector);
+
     taskStorage = new MetadataTaskStorage(
         derbyConnector,
         new TaskStorageConfig(null),
@@ -132,7 +136,7 @@ public class TaskLockboxTest
     EmittingLogger.registerEmitter(emitter);
     EasyMock.replay(emitter);
 
-    metadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(objectMapper, tablesConfig, derbyConnector);
+    metadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(objectMapper, tablesConfig, derbyConnector, schemaManager);
 
     lockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
     validator = new TaskLockboxValidator(lockbox, taskStorage);
@@ -449,10 +453,12 @@ public class TaskLockboxTest
             loadedMapper
         )
     );
+
     IndexerMetadataStorageCoordinator loadedMetadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
         loadedMapper,
         derby.metadataTablesConfigSupplier().get(),
-        derbyConnector
+        derbyConnector,
+        schemaManager
     );
 
     TaskLockbox theBox = new TaskLockbox(taskStorage, metadataStorageCoordinator);

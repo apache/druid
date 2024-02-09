@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -88,6 +89,7 @@ public class SqlSegmentsMetadataManagerTest
 
   private SqlSegmentsMetadataManager sqlSegmentsMetadataManager;
   private SQLMetadataSegmentPublisher publisher;
+  private SegmentSchemaCache segmentSchemaCache;
   private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
   private final DataSegment segment1 = createSegment(
@@ -139,11 +141,13 @@ public class SqlSegmentsMetadataManagerTest
     TestDerbyConnector connector = derbyConnectorRule.getConnector();
     SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig();
     config.setPollDuration(Period.seconds(3));
+
     sqlSegmentsMetadataManager = new SqlSegmentsMetadataManager(
         jsonMapper,
         Suppliers.ofInstance(config),
         derbyConnectorRule.metadataTablesConfigSupplier(),
-        connector
+        connector,
+        segmentSchemaCache
     );
     sqlSegmentsMetadataManager.start();
 

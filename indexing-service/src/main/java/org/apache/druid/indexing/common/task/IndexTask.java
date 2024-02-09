@@ -87,6 +87,7 @@ import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
@@ -936,7 +937,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         tuningConfig,
         buildSegmentsMeters,
         buildSegmentsParseExceptionHandler,
-        isUseMaxMemoryEstimates()
+        isUseMaxMemoryEstimates(),
+        CentralizedDatasourceSchemaConfig.create()
     );
     boolean exceptionOccurred = false;
     try (final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator)) {

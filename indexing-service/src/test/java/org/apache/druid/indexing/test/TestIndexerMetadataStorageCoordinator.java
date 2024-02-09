@@ -31,10 +31,9 @@ import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.ReplaceTaskLock;
-import org.apache.druid.segment.column.SegmentSchemaMetadata;
+import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.joda.time.Interval;
 
@@ -141,7 +140,10 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public Set<DataSegment> commitSegments(Set<DataSegment> segments, final Map<SegmentId, SegmentSchemaMetadata> segmentSchemaMetadataMap)
+  public Set<DataSegment> commitSegments(
+      Set<DataSegment> segments,
+      final MinimalSegmentSchemas minimalSegmentSchemas
+  )
   {
     Set<DataSegment> added = new HashSet<>();
     for (final DataSegment segment : segments) {
@@ -166,19 +168,21 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   @Override
   public SegmentPublishResult commitReplaceSegments(
       Set<DataSegment> replaceSegments,
-      Set<ReplaceTaskLock> locksHeldByReplaceTask
+      Set<ReplaceTaskLock> locksHeldByReplaceTask,
+      MinimalSegmentSchemas minimalSegmentSchemas
   )
   {
-    return SegmentPublishResult.ok(commitSegments(replaceSegments));
+    return SegmentPublishResult.ok(commitSegments(replaceSegments, minimalSegmentSchemas));
   }
 
   @Override
   public SegmentPublishResult commitAppendSegments(
       Set<DataSegment> appendSegments,
-      Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock
+      Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
+      MinimalSegmentSchemas minimalSegmentSchemas
   )
   {
-    return SegmentPublishResult.ok(commitSegments(appendSegments));
+    return SegmentPublishResult.ok(commitSegments(appendSegments, minimalSegmentSchemas));
   }
 
   @Override
@@ -187,10 +191,10 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
       Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
       DataSourceMetadata startMetadata,
       DataSourceMetadata endMetadata,
-      Map<String, SegmentSchemaMetadata> segmentSchemaMetadataMap
+      MinimalSegmentSchemas minimalSegmentSchemas
   )
   {
-    return SegmentPublishResult.ok(commitSegments(appendSegments));
+    return SegmentPublishResult.ok(commitSegments(appendSegments, minimalSegmentSchemas));
   }
 
   @Override
@@ -198,11 +202,11 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
       Set<DataSegment> segments,
       @Nullable DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata,
-      Map<SegmentId, SegmentSchemaMetadata> segmentSchemaMetadataMap
-      )
+      MinimalSegmentSchemas minimalSegmentSchemas
+  )
   {
     // Don't actually compare metadata, just do it!
-    return SegmentPublishResult.ok(commitSegments(segments));
+    return SegmentPublishResult.ok(commitSegments(segments, minimalSegmentSchemas));
   }
 
   @Override

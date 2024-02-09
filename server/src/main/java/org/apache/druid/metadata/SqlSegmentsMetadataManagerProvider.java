@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
-import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 
 public class SqlSegmentsMetadataManagerProvider implements SegmentsMetadataManagerProvider

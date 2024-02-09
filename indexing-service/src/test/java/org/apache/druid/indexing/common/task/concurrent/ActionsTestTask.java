@@ -74,14 +74,14 @@ public class ActionsTestTask extends CommandQueueTask
   public SegmentPublishResult commitReplaceSegments(DataSegment... segments)
   {
     return runAction(
-        SegmentTransactionalReplaceAction.create(Sets.newHashSet(segments))
+        SegmentTransactionalReplaceAction.create(Sets.newHashSet(segments), null)
     );
   }
 
   public SegmentPublishResult commitAppendSegments(DataSegment... segments)
   {
     return runAction(
-        SegmentTransactionalAppendAction.forSegments(Sets.newHashSet(segments))
+        SegmentTransactionalAppendAction.forSegments(Sets.newHashSet(segments), null)
     );
   }
 

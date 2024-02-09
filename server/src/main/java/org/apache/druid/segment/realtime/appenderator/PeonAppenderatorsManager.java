@@ -150,7 +150,6 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
           rowIngestionMeters,
           parseExceptionHandler,
           useMaxMemoryEstimates,
-          objectMapper,
           centralizedDatasourceSchemaConfig
       );
       return batchAppenderator;

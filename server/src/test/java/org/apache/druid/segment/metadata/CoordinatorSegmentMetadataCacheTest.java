@@ -127,7 +127,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        CentralizedDatasourceSchemaConfig.create()
+        null,
+        null
     )
     {
       @Override
@@ -389,7 +390,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        CentralizedDatasourceSchemaConfig.create()
+        null,
+        null
     )
     {
       @Override
@@ -599,7 +601,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        CentralizedDatasourceSchemaConfig.create()
+        null,
+        null
     )
     {
       @Override
@@ -641,7 +644,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        CentralizedDatasourceSchemaConfig.create()
+        null,
+        null
     )
     {
       @Override
@@ -687,7 +691,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        CentralizedDatasourceSchemaConfig.create()
+        null,
+        null
     )
     {
       @Override
@@ -730,7 +735,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        CentralizedDatasourceSchemaConfig.create()
+        null,
+        null
     )
     {
       @Override
@@ -770,7 +776,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        CentralizedDatasourceSchemaConfig.create()
+        null,
+        null
     )
     {
       @Override
@@ -827,7 +834,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        CentralizedDatasourceSchemaConfig.create()
+        null,
+        null
     )
     {
       @Override
@@ -887,7 +895,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        CentralizedDatasourceSchemaConfig.create()
+        null,
+        null
     )
     {
       @Override
@@ -921,7 +930,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        CentralizedDatasourceSchemaConfig.create()
+        null,
+        null
     )
     {
       @Override
@@ -968,7 +978,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        CentralizedDatasourceSchemaConfig.create()
+        null,
+        null
     )
     {
       @Override
@@ -1039,7 +1050,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         internalQueryConfig,
         new NoopServiceEmitter(),
-        CentralizedDatasourceSchemaConfig.create()
+        null,
+        null
     );
 
     Map<String, Object> queryContext = ImmutableMap.of(
@@ -1207,7 +1219,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         emitter,
-        CentralizedDatasourceSchemaConfig.create()
+        null,
+        null
     )
     {
       @Override
@@ -1364,10 +1377,6 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     // test schema update is applied and realtime segments are not refereshed via segment metadata query
     CountDownLatch schemaAddedLatch = new CountDownLatch(1);
 
-    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = new CentralizedDatasourceSchemaConfig();
-    centralizedDatasourceSchemaConfig.setEnabled(true);
-    centralizedDatasourceSchemaConfig.setAnnounceRealtimeSegmentSchema(true);
-
     CoordinatorSegmentMetadataCache schema = new CoordinatorSegmentMetadataCache(
         getQueryLifecycleFactory(walker),
         serverView,
@@ -1375,7 +1384,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        centralizedDatasourceSchemaConfig
+        null,
+        null
     ) {
       @Override
       void updateSchemaForRealtimeSegments(SegmentSchemas segmentSchemas)
@@ -1446,10 +1456,6 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     CountDownLatch refresh1Latch = new CountDownLatch(1);
     CountDownLatch refresh2Latch = new CountDownLatch(1);
 
-    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = new CentralizedDatasourceSchemaConfig();
-    centralizedDatasourceSchemaConfig.setEnabled(true);
-    centralizedDatasourceSchemaConfig.setAnnounceRealtimeSegmentSchema(true);
-
     CoordinatorSegmentMetadataCache schema = new CoordinatorSegmentMetadataCache(
         getQueryLifecycleFactory(walker),
         serverView,
@@ -1457,7 +1463,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        centralizedDatasourceSchemaConfig
+        null,
+        null
     ) {
       @Override
       public void refresh(Set<SegmentId> segmentsToRefresh, Set<String> dataSourcesToRebuild)

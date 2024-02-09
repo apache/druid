@@ -1090,9 +1090,9 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
 
     String schemaPollQuery;
     if (latestSegmentSchemaPoll == null) {
-      schemaPollQuery = String.format("SELECT id, payload, created_date FROM %s", getSegmentSchemaTable());
+      schemaPollQuery = StringUtils.format("SELECT id, payload, created_date FROM %s", getSegmentSchemaTable());
     } else {
-      schemaPollQuery = String.format("SELECT id, payload, created_date FROM %1$s where created_date > '%2$s'", getSegmentSchemaTable(), latestSegmentSchemaPoll.toString());
+      schemaPollQuery = StringUtils.format("SELECT id, payload, created_date FROM %1$s where created_date > '%2$s'", getSegmentSchemaTable(), latestSegmentSchemaPoll.toString());
     }
     String finalSchemaPollQuery = schemaPollQuery;
     final DateTime[] maxCreatedDate = {latestSegmentSchemaPoll};

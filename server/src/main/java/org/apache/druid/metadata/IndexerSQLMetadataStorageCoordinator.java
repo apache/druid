@@ -50,10 +50,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.column.MinimalSegmentSchemas;
-import org.apache.druid.segment.column.SegmentSchemaMetadata;
-import org.apache.druid.segment.metadata.SchemaFingerprintGenerator;
 import org.apache.druid.segment.metadata.SchemaManager;
-import org.apache.druid.segment.metadata.SchemaManager.SegmentSchemaMetadataPlus;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
@@ -73,7 +70,6 @@ import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.PreparedBatch;
-import org.skife.jdbi.v2.PreparedBatchPart;
 import org.skife.jdbi.v2.Query;
 import org.skife.jdbi.v2.ResultIterator;
 import org.skife.jdbi.v2.StatementContext;
@@ -2184,10 +2180,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    * might fail due to race conditions.
    */
   private Set<DataSegment> insertSegments(
-      Handle handle, Set<DataSegment> segments,
+      Handle handle,
+      Set<DataSegment> segments,
       MinimalSegmentSchemas minimalSegmentSchemas,
-      Set<DataSegmentPlus> appendAfterReplaceSegmentMetadata)
-      throws IOException
+      Set<DataSegmentPlus> appendAfterReplaceSegmentMetadata
+  ) throws IOException
   {
     Map<String, Long> fingerprintSchemaIdMap = null;
     boolean schemaPresent = false;

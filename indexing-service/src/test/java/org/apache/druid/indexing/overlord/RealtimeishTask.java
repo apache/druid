@@ -38,7 +38,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.junit.Assert;
 
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -107,7 +106,7 @@ public class RealtimeishTask extends AbstractTask
                        .size(0)
                        .build()
         ),
-        Collections.emptyMap()
+        null
     );
     toolbox.getTaskActionClient().submit(firstSegmentInsertAction);
 
@@ -128,7 +127,7 @@ public class RealtimeishTask extends AbstractTask
                        .size(0)
                        .build()
         ),
-        Collections.emptyMap()
+        null
     );
     toolbox.getTaskActionClient().submit(secondSegmentInsertAction);
 

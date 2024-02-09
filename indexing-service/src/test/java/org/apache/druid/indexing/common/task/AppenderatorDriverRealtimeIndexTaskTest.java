@@ -94,6 +94,7 @@ import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
+import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.DirectQueryProcessingPool;
@@ -113,7 +114,7 @@ import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.column.SegmentSchemaMetadata;
+import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -122,6 +123,7 @@ import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.SchemaManager;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
@@ -131,7 +133,6 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
@@ -172,6 +173,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
       "host",
       new NoopEmitter()
   );
+
   private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
 
   private static final String FAIL_DIM = "__fail__";
@@ -256,6 +258,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
 
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+  private final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
   private DateTime now;
   private ListeningExecutorService taskExec;
@@ -268,6 +271,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
   private TaskToolboxFactory taskToolboxFactory;
   private File baseDir;
   private File reportsFile;
+  private SchemaManager schemaManager;
 
   @Before
   public void setUp() throws IOException
@@ -286,6 +290,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     baseDir = tempFolder.newFolder();
     reportsFile = File.createTempFile("KafkaIndexTaskTestReports-" + System.currentTimeMillis(), "json");
     makeToolboxFactory(baseDir);
+    schemaManager = new SchemaManager(MetadataStorageTablesConfig.fromBase(null), mapper, derbyConnector);
   }
 
   @After
@@ -1506,13 +1511,14 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     IndexerSQLMetadataStorageCoordinator mdc = new IndexerSQLMetadataStorageCoordinator(
         mapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
-        derbyConnectorRule.getConnector()
+        derbyConnectorRule.getConnector(),
+        schemaManager
     )
     {
       @Override
-      public Set<DataSegment> commitSegments(Set<DataSegment> segments, Map<SegmentId, SegmentSchemaMetadata> segmentSchemaMetadataMap) throws IOException
+      public Set<DataSegment> commitSegments(Set<DataSegment> segments, MinimalSegmentSchemas minimalSegmentSchemas) throws IOException
       {
-        Set<DataSegment> result = super.commitSegments(segments, segmentSchemaMetadataMap);
+        Set<DataSegment> result = super.commitSegments(segments, minimalSegmentSchemas);
 
         Assert.assertFalse(
             "Segment latch not initialized, did you forget to call expectPublishSegments?",
@@ -1530,10 +1536,10 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
           Set<DataSegment> segments,
           DataSourceMetadata startMetadata,
           DataSourceMetadata endMetadata,
-          final Map<String, SegmentSchemaMetadata> segmentSchemaMetadataMap
-          ) throws IOException
+          MinimalSegmentSchemas minimalSegmentSchemas
+      ) throws IOException
       {
-        SegmentPublishResult result = super.commitSegmentsAndMetadata(segments, startMetadata, endMetadata, segmentSchemaMetadataMap);
+        SegmentPublishResult result = super.commitSegmentsAndMetadata(segments, startMetadata, endMetadata, minimalSegmentSchemas);
 
         Assert.assertNotNull(
             "Segment latch not initialized, did you forget to call expectPublishSegments?",
@@ -1563,11 +1569,13 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
         EasyMock.createMock(SupervisorManager.class),
         OBJECT_MAPPER
     );
+
     final TaskActionClientFactory taskActionClientFactory = new LocalTaskActionClientFactory(
         taskStorage,
         taskActionToolbox,
         new TaskAuditLogConfig(false)
     );
+
     final QueryRunnerFactoryConglomerate conglomerate = new DefaultQueryRunnerFactoryConglomerate(
         ImmutableMap.of(
             TimeseriesQuery.class,
@@ -1580,6 +1588,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
             )
         )
     );
+
     handOffCallbacks = new ConcurrentHashMap<>();
     final SegmentHandoffNotifierFactory handoffNotifierFactory = dataSource -> new SegmentHandoffNotifier()
     {

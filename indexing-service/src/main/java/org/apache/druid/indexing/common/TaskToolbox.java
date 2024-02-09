@@ -74,8 +74,6 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
 
 /**
  * Stuff that may be needed by a Task in order to conduct its business.
@@ -350,7 +348,7 @@ public class TaskToolbox
     for (final Collection<DataSegment> segmentCollection : segmentMultimap.asMap().values()) {
       getTaskActionClient().submit(
           SegmentTransactionalInsertAction.appendAction(
-              ImmutableSet.copyOf(segmentCollection), null, null, Collections.emptyMap()
+              ImmutableSet.copyOf(segmentCollection), null, null, null
           )
       );
     }

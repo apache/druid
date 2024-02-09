@@ -47,6 +47,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.metadata.SchemaManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -85,6 +86,7 @@ public class MaterializedViewSupervisorTest
   private String derivativeDatasourceName;
   private MaterializedViewSupervisorSpec spec;
   private final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+  private SchemaManager schemaManager;
 
   @Before
   public void setUp()
@@ -94,10 +96,12 @@ public class MaterializedViewSupervisorTest
     derbyConnector.createSegmentTable();
     taskStorage = EasyMock.createMock(TaskStorage.class);
     taskMaster = EasyMock.createMock(TaskMaster.class);
+    schemaManager = new SchemaManager(derbyConnectorRule.metadataTablesConfigSupplier().get(), objectMapper, derbyConnector);
     indexerMetadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
         objectMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
-        derbyConnector
+        derbyConnector,
+        schemaManager
     );
     metadataSupervisorManager = EasyMock.createMock(MetadataSupervisorManager.class);
     sqlSegmentsMetadataManager = EasyMock.createMock(SqlSegmentsMetadataManager.class);
@@ -192,8 +196,8 @@ public class MaterializedViewSupervisorTest
             1024
         )
     );
-    indexerMetadataStorageCoordinator.commitSegments(baseSegments);
-    indexerMetadataStorageCoordinator.commitSegments(derivativeSegments);
+    indexerMetadataStorageCoordinator.commitSegments(baseSegments, null);
+    indexerMetadataStorageCoordinator.commitSegments(derivativeSegments, null);
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
     EasyMock.expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
@@ -252,7 +256,7 @@ public class MaterializedViewSupervisorTest
             1024
         )
     );
-    indexerMetadataStorageCoordinator.commitSegments(baseSegments);
+    indexerMetadataStorageCoordinator.commitSegments(baseSegments, null);
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
     EasyMock.expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
