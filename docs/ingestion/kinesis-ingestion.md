@@ -129,11 +129,9 @@ For configuration properties shared across all streaming ingestion methods, refe
 |`stream`|String|The Kinesis stream to read.|Yes||
 |`endpoint`|String|The AWS Kinesis stream endpoint for a region. You can find a list of endpoints in the [AWS service endpoints](http://docs.aws.amazon.com/general/latest/gr/rande.html#ak_region) document.|No|`kinesis.us-east-1.amazonaws.com`|
 |`useEarliestSequenceNumber`|Boolean|If a supervisor is managing a datasource for the first time, it obtains a set of starting sequence numbers from Kinesis. This flag determines whether a supervisor retrieves the earliest or latest sequence numbers in Kinesis. Under normal circumstances, subsequent tasks start from where the previous segments ended so this flag is only used on the first run.|No|`false`|
-|`recordsPerFetch`|Integer|The number of records to request per call to fetch records from Kinesis.|No| See [Determine fetch settings](#determine-fetch-settings) for defaults.|
 |`fetchDelayMillis`|Integer|Time in milliseconds to wait between subsequent calls to fetch records from Kinesis. See [Determine fetch settings](#determine-fetch-settings).|No|0|
 |`awsAssumedRoleArn`|String|The AWS assumed role to use for additional permissions.|No||
 |`awsExternalId`|String|The AWS external ID to use for additional permissions.|No||
-|`deaggregate`|Boolean|Whether to use the deaggregate function of the Kinesis Client Library (KCL).|No||
 
 #### Data format
 
@@ -158,11 +156,11 @@ For configuration properties shared across all streaming ingestion methods, refe
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
 |`skipSequenceNumberAvailabilityCheck`|Boolean|Whether to enable checking if the current sequence number is still available in a particular Kinesis shard. If `false`, the indexing task attempts to reset the current sequence number, depending on the value of `resetOffsetAutomatically`.|No|`false`|
-|`recordBufferSize`|Integer|The size of the buffer (number of events) Druid uses between the Kinesis fetch threads and the main ingestion thread.|No|See [Determine fetch settings](#determine-fetch-settings) for defaults.|
+|`recordBufferSizeBytes`|Integer| The size of the buffer (heap memory bytes) Druid uses between the Kinesis fetch threads and the main ingestion thread.|No| See [Determine fetch settings](#determine-fetch-settings) for defaults.|
 |`recordBufferOfferTimeout`|Integer|The number of milliseconds to wait for space to become available in the buffer before timing out.|No|5000|
 |`recordBufferFullWait`|Integer|The number of milliseconds to wait for the buffer to drain before Druid attempts to fetch records from Kinesis again.|No|5000|
 |`fetchThreads`|Integer|The size of the pool of threads fetching data from Kinesis. There is no benefit in having more threads than Kinesis shards.|No| `procs * 2`, where `procs` is the number of processors available to the task.|
-|`maxRecordsPerPoll`|Integer|The maximum number of records to be fetched from buffer per poll. The actual maximum will be `Max(maxRecordsPerPoll, Max(bufferSize, 1))`.|No| See [Determine fetch settings](#determine-fetch-settings) for defaults.|
+|`maxBytesPerPoll`|Integer| The maximum number of bytes to be fetched from buffer per poll. At least one record is polled from the buffer regardless of this config.|No| 1000000 bytes|
 |`repartitionTransitionDuration`|ISO 8601 period|When shards are split or merged, the supervisor recomputes shard to task group mappings. The supervisor also signals any running tasks created under the old mappings to stop early at current time + `repartitionTransitionDuration`. Stopping the tasks early allows Druid to begin reading from the new shards more quickly. The repartition transition wait time controlled by this property gives the stream additional time to write records to the new shards after the split or merge, which helps avoid issues with [empty shard handling](https://github.com/apache/druid/issues/7600).|No|`PT2M`|
 |`useListShards`|Boolean|Indicates if `listShards` API of AWS Kinesis SDK can be used to prevent `LimitExceededException` during ingestion. You must set the necessary `IAM` permissions.|No|`false`|
 
@@ -268,25 +266,20 @@ For information on how to optimize the segment size, see [Segment size optimizat
 
 Kinesis indexing tasks fetch records using `fetchThreads` threads.
 If `fetchThreads` is higher than the number of Kinesis shards, the excess threads are unused.
-Each fetch thread fetches up to `recordsPerFetch` records at once from a Kinesis shard, with a delay between fetches
-of `fetchDelayMillis`.
-The records fetched by each thread are pushed into a shared queue of size `recordBufferSize`.
-The main runner thread for each task polls up to `maxRecordsPerPoll` records from the queue at once.
-
-When using Kinesis Producer Library's aggregation feature, that is when [`deaggregate`](#deaggregation) is set,
-each of these parameters refers to aggregated records rather than individual records.
+Each fetch thread fetches up to 10 MB of records at once from a Kinesis shard, with a delay between fetches of `fetchDelayMillis`.
+The records fetched by each thread are pushed into a shared queue of size `recordBufferSizeBytes`.
 
 The default values for these parameters are:
 
 - `fetchThreads`: Twice the number of processors available to the task. The number of processors available to the task
 is the total number of processors on the server, divided by `druid.worker.capacity` (the number of task slots on that
-particular server).
+particular server). This value is further limited so that the total data record data fetched at a given time does not
+exceed 5% of the max heap configured, assuming that each thread fetches 10 MB of records at once. If the value specified
+for this configuration is higher than this limit, no failure occurs, but a warning is logged, and the value is
+implicitly lowered to the max allowed by this constraint.
 - `fetchDelayMillis`: 0 (no delay between fetches).
-- `recordsPerFetch`: 100 MB or an estimated 5% of available heap, whichever is smaller, divided by `fetchThreads`.
-For estimation purposes, Druid uses a figure of 10 KB for regular records and 1 MB for [aggregated records](#deaggregation).
-- `recordBufferSize`: 100 MB or an estimated 10% of available heap, whichever is smaller.
-For estimation purposes, Druid uses a figure of 10 KB for regular records and 1 MB for [aggregated records](#deaggregation).
-- `maxRecordsPerPoll`: 100 for regular records, 1 for [aggregated records](#deaggregation).
+- `recordBufferSizeBytes`: 100 MB or an estimated 10% of available heap, whichever is smaller.
+- `maxBytesPerPoll`: 1000000.
 
 Kinesis places the following restrictions on calls to fetch records:
 
@@ -307,8 +300,6 @@ Kinesis stream.
 ## Deaggregation
 
 The Kinesis indexing service supports de-aggregation of multiple rows stored within a single [Kinesis Data Streams](https://docs.aws.amazon.com/streams/latest/dev/introduction.html) record for more efficient data transfer.
-
-To enable this feature, set `deaggregate` to true in your `ioConfig` when submitting a supervisor spec.
 
 ## Resharding
 
