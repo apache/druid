@@ -845,7 +845,7 @@ Retrieves the specification for a single supervisor. The returned specification 
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/supervisor/{supervisorId}</code>
+<code class="getAPI">GET</code> <code>/druid/indexer/v1/supervisor/:supervisorId</code>
 
 #### Responses
 
@@ -1209,7 +1209,7 @@ For additional information about the status report, see [Supervisor reference](.
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/supervisor/{supervisorId}/status</code>
+<code class="getAPI">GET</code> <code>/druid/indexer/v1/supervisor/:supervisorId/status</code>
 
 #### Responses
 
@@ -1313,7 +1313,7 @@ Retrieves the current health report for a single supervisor. The health of a sup
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/supervisor/{supervisorI}/health</code>
+<code class="getAPI">GET</code> <code>/druid/indexer/v1/supervisor/:supervisorId/health</code>
 
 #### Responses
 
@@ -1382,7 +1382,7 @@ Returns a snapshot of the current ingestion row counters for each task being man
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/supervisor/{supervisorI}/stats</code>
+<code class="getAPI">GET</code> <code>/druid/indexer/v1/supervisor/:supervisorId/stats</code>
 
 #### Responses
 
@@ -1848,7 +1848,7 @@ Retrieves an audit history of specs for a single supervisor.
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/supervisor/{supervisorI}/history</code>
+<code class="getAPI">GET</code> <code>/druid/indexer/v1/supervisor/:supervisorId/history</code>
 
 
 #### Responses
@@ -2400,7 +2400,7 @@ Suspends a single running supervisor. Returns the updated supervisor spec, where
 Indexing tasks remain suspended until you [resume the supervisor](#resume-a-supervisor).
 
 #### URL
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/{supervisorId}/suspend</code>
+<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/:supervisorId/suspend</code>
 
 #### Responses
 
@@ -2823,7 +2823,7 @@ Resumes indexing tasks for a supervisor. Returns an updated supervisor spec with
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/{supervisorId}/resume</code>
+<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/:supervisorId/resume</code>
 
 #### Responses
 
@@ -3255,7 +3255,7 @@ The indexing service keeps track of the latest persisted offsets in Kafka or seq
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/{supervisorI}/reset</code>
+<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/:supervisorId/reset</code>
 
 #### Responses
 
@@ -3330,7 +3330,7 @@ Use this endpoint with caution. It can cause skipped messages, leading to data l
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/{supervisorId}/resetOffsets</code>
+<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/:supervisorId/resetOffsets</code>
 
 #### Responses
 
@@ -3433,7 +3433,7 @@ The terminated supervisor still exists in the metadata store and its history can
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/{supervisorId}/terminate</code>
+<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/:supervisorId/terminate</code>
 
 #### Responses
 
@@ -3553,4 +3553,4 @@ Shuts down a supervisor. This endpoint is deprecated and will be removed in futu
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/{supervisorId}/shutdown</code>
+<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/:supervisorId/shutdown</code>
