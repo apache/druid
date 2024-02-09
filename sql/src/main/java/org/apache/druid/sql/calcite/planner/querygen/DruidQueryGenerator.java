@@ -19,14 +19,12 @@
 
 package org.apache.druid.sql.calcite.planner.querygen;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Sort;
-import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.rel.core.Window;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.druid.error.DruidException;
@@ -79,9 +77,6 @@ public class DruidQueryGenerator
     if (node instanceof InputDescProducer) {
       return vertexFactory.createVertex(PartialDruidQuery.create(node), newInputs);
     }
-    if (node instanceof Union) {
-      return processUnion((Union) node, newInputs);
-    }
     if (newInputs.size() == 1) {
       Vertex inputVertex = newInputs.get(0);
       Vertex newVertex = inputVertex.mergeNode(node, isRoot);
@@ -98,21 +93,6 @@ public class DruidQueryGenerator
       }
     }
     throw DruidException.defensive().build("Unable to process relNode[%s]", node);
-  }
-
-  private Vertex processUnion(Union node, List<Vertex> inputs)
-  {
-    Preconditions.checkArgument(inputs.size() > 1, "Union needs multiple inputs");
-    for (Vertex inputVertex : inputs) {
-      if (!inputVertex.canUnwrapInput()) {
-        throw DruidException
-            .defensive("Union operand with non-trivial remapping is not supported [%s]", inputVertex);
-      }
-    }
-    return vertexFactory.createVertex(
-        PartialDruidQuery.create(node),
-        inputs
-    );
   }
 
   /**
