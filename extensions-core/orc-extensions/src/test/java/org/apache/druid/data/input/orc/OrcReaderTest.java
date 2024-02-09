@@ -314,7 +314,7 @@ public class OrcReaderTest extends InitializedNullHandlingTest
         //deviation of [7,8,9] is 1/3, stddev is sqrt(1/3), approximately 0.8165
         Assert.assertEquals(0.8165, Double.parseDouble(Iterables.getOnlyElement(row.getDimension("stddev"))), 0.0001);
 
-        //Support for append has been added in json-path-2.9.0 but it is unused
+        // we do not support json-path append function for ORC format (see https://github.com/apache/druid/pull/11722)
         Exception exception = Assert.assertThrows(UnsupportedOperationException.class, () -> {
           row.getDimension("append");
         });
