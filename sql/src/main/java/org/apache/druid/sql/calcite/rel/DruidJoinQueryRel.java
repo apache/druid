@@ -172,7 +172,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     return rightDesc;
   }
 
-  private static InputDesc buildJoinDataSource(final InputDesc leftDesc, final InputDesc rightDesc, PlannerContext plannerContext, Join joinRel, Filter leftFilter)
+  public static InputDesc buildJoinDataSource(final InputDesc leftDesc, final InputDesc rightDesc, PlannerContext plannerContext, Join joinRel, Filter leftFilter)
   {
     final Pair<String, RowSignature> prefixSignaturePair = computeJoinRowSignature(
         leftDesc.rowSignature,

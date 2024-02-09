@@ -32,6 +32,8 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rex.RexNode;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.querygen.InputDescProducer;
+import org.apache.druid.sql.calcite.rel.DruidJoinQueryRel;
+
 import java.util.List;
 import java.util.Set;
 
@@ -70,24 +72,8 @@ public class DruidJoin extends Join implements DruidLogicalNode, InputDescProduc
   @Override
   public InputDesc getInputDesc(PlannerContext plannerContext, List<InputDesc> inputs)
   {
-    return null;
-//    List<DataSource> dataSources = new ArrayList<>();
-//    RowSignature signature = null;
-//    for (InputDesc inputDesc : inputs) {
-//      checkDataSourceSupported(inputDesc.dataSource);
-//      dataSources.add(inputDesc.dataSource);
-//      if (signature == null) {
-//        signature = inputDesc.rowSignature;
-//      } else {
-//        if (!signature.equals(inputDesc.rowSignature)) {
-//          throw DruidException.defensive(
-//              "Row signature mismatch in Union inputs [%s] and [%s]",
-//              signature,
-//              inputDesc.rowSignature
-//          );
-//        }
-//      }
-//    }
-//    return new InputDesc(new UnionDataSource(dataSources), signature);
+    InputDesc leftDesc = inputs.get(0);
+    InputDesc rightDesc = inputs.get(1);
+    return DruidJoinQueryRel.buildJoinDataSource(leftDesc, rightDesc, plannerContext, this, null);
   }
 }
