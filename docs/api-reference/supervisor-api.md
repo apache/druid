@@ -2215,7 +2215,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 Creates a new supervisor spec or updates an existing one with new configuration and schema information. When updating a supervisor spec, the datasource must remain the same as the previous supervisor.
 
-You can define a supervisor spec for [Apache Kafka](../ingestion/kafka-ingestion.md#supervisor-spec) or [Amazon Kinesis](../ingestion/kinesis-ingestion.md#supervisor-spec) streaming ingestion methods.
+You can define a supervisor spec for [Apache Kafka](../ingestion/kafka-ingestion.md) or [Amazon Kinesis](../ingestion/kinesis-ingestion.md) streaming ingestion methods.
 
 The following table lists the properties of a supervisor spec:
 

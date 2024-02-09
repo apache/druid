@@ -35,7 +35,7 @@ This topic contains configuration information for the Kinesis indexing service s
 
 To use the Kinesis indexing service, you must first load the `druid-kinesis-indexing-service` core extension on both the Overlord and the MiddleManager. See [Loading extensions](../configuration/extensions.md#loading-extensions) for more information.
 
-Review [Kinesis known issues](#kinesis-known-issues) before deploying the `druid-kinesis-indexing-service` extension to production.
+Review [Known issues](#known-issues) before deploying the `druid-kinesis-indexing-service` extension to production.
 
 ## Supervisor spec configuration
 
