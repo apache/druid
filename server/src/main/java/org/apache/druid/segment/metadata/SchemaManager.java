@@ -149,7 +149,7 @@ public class SchemaManager
       throw e;
     }
   }
-  
+
   public void updateSegments(Handle handle, List<SegmentSchemaMetadataPlus> batch)
   {
     Set<String> updatedSegments =

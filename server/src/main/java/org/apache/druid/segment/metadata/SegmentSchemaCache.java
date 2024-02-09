@@ -20,13 +20,11 @@
 package org.apache.druid.segment.metadata;
 
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.SchemaPayload;
 import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.timeline.SegmentId;
 
-import javax.swing.text.html.Option;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
