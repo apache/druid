@@ -25,6 +25,7 @@ import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.NlsString;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.granularity.Granularity;
 
 import javax.annotation.Nonnull;
@@ -45,6 +46,19 @@ public class SqlGranularityLiteral extends SqlLiteral
     super(new NlsString(unparseString, null, null), SqlTypeName.CHAR, pos);
     this.granularity = granularity;
     this.unparseString = unparseString;
+  }
+
+  @Override
+  public SqlGranularityLiteral clone(SqlParserPos pos)
+  {
+    return new SqlGranularityLiteral(granularity, unparseString, pos);
+  }
+
+  @Override
+  @Deprecated
+  public Object clone()
+  {
+    throw DruidException.defensive("Function is deprecated, please use clone(SqlNode) instead.");
   }
 
   @Nonnull
