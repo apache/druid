@@ -116,12 +116,24 @@ public class KafkaEmitterConfigTest
   }
 
   @Test
-  public void testSerDeNotRequiredKafkaProducerConfigOrKafkaSecretProducer()
+  public void testSerDeNotRequiredKafkaProducerConfigOrKafkaSecretProducer() throws JsonProcessingException
   {
-    KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig("localhost:9092", null, "metricTest",
-                                                                   "alertTest", null, "metadataTest",
-                                                                   "clusterNameTest", null, null, null
+    KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig(
+        "localhost:9092",
+        null,
+        "metricTest",
+        "alertTest",
+        null,
+        "metadataTest",
+        null,
+        ImmutableMap.of("env", "preProd"),
+        null,
+        null
     );
+    String kafkaEmitterConfigString = MAPPER.writeValueAsString(kafkaEmitterConfig);
+    KafkaEmitterConfig kafkaEmitterConfigExpected = MAPPER.readerFor(KafkaEmitterConfig.class)
+                                                          .readValue(kafkaEmitterConfigString);
+    Assert.assertEquals(kafkaEmitterConfigExpected, kafkaEmitterConfig);
     try {
       @SuppressWarnings("unused")
       KafkaEmitter emitter = new KafkaEmitter(kafkaEmitterConfig, MAPPER);
