@@ -143,7 +143,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
       false,
       false
   );
-  private static final String TOPIC_PREFIX = "testTopi";
+  private static final String TOPIC_PREFIX = "testTopic";
   private static final String DATASOURCE = "testDS";
   private static final int NUM_PARTITIONS = 3;
   private static final long TEST_CHAT_RETRIES = 9L;
