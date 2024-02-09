@@ -91,7 +91,6 @@ public class FlushingPlumber extends RealtimePlumber
         conglomerate,
         segmentAnnouncer,
         queryProcessingPool,
-        joinableFactory,
         null,
         null,
         null,

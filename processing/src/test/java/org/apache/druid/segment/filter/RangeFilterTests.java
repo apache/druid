@@ -43,6 +43,7 @@ import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.AfterClass;
@@ -78,7 +79,17 @@ public class RangeFilterTests
                          10L,
                          new Object[]{"x", "y"},
                          new Object[]{100, 200},
-                         new Object[]{1.1, null, 3.3}
+                         new Object[]{1.1, null, 3.3},
+                         null,
+                         TestHelper.makeMapWithExplicitNull(
+                             "s0", "d",
+                             "d0", 6.6,
+                             "f0", null,
+                             "l0", 10L,
+                             "arrayString", new Object[]{"x", "y"},
+                             "arrayLong", new Object[]{100, 200},
+                             "arrayDouble", new Object[]{1.1, null, 3.3}
+                         )
                      ))
                      .add(makeDefaultSchemaRow(
                          "7",
@@ -91,7 +102,17 @@ public class RangeFilterTests
                          null,
                          new Object[]{null, "hello", "world"},
                          new Object[]{1234, 3456L, null},
-                         new Object[]{1.23, 4.56, 6.78}
+                         new Object[]{1.23, 4.56, 6.78},
+                         null,
+                         TestHelper.makeMapWithExplicitNull(
+                             "s0", "e",
+                             "d0", null,
+                             "f0", 3.0f,
+                             "l0", null,
+                             "arrayString", new Object[]{null, "hello", "world"},
+                             "arrayLong", new Object[]{1234, 3456L, null},
+                             "arrayDouble", new Object[]{1.23, 4.56, 6.78}
+                         )
                      ))
                      .build();
 
@@ -875,6 +896,55 @@ public class RangeFilterTests
           ? ImmutableList.of("0", "3", "7")
           : ImmutableList.of("0")
       );
+
+      if (NullHandling.sqlCompatible() || canTestNumericNullsAsDefaultValues) {
+        // these fail in default value mode that cannot be tested as numeric default values becuase of type
+        // mismatch for subtract operation
+        assertFilterMatches(
+            new RangeFilter(
+                "vd0-add-sub",
+                ColumnType.DOUBLE,
+                0.0,
+                1.0,
+                false,
+                false,
+                null
+            ),
+            NullHandling.replaceWithDefault() && canTestNumericNullsAsDefaultValues
+            ? ImmutableList.of("0", "2", "7")
+            : ImmutableList.of("0")
+        );
+
+        assertFilterMatches(
+            new RangeFilter(
+                "vf0-add-sub",
+                ColumnType.FLOAT,
+                0.0,
+                1.0,
+                false,
+                false,
+                null
+            ),
+            NullHandling.replaceWithDefault() && canTestNumericNullsAsDefaultValues
+            ? ImmutableList.of("0", "4", "6")
+            : ImmutableList.of("0")
+        );
+
+        assertFilterMatches(
+            new RangeFilter(
+                "vl0-add-sub",
+                ColumnType.LONG,
+                0L,
+                1L,
+                false,
+                false,
+                null
+            ),
+            NullHandling.replaceWithDefault() && canTestNumericNullsAsDefaultValues
+            ? ImmutableList.of("0", "3", "7")
+            : ImmutableList.of("0")
+        );
+      }
     }
 
     @Test
@@ -1579,6 +1649,196 @@ public class RangeFilterTests
           ImmutableList.of("1", "2", "5")
       );
     }
+
+    @Test
+    public void testNested()
+    {
+      // nested column mirrors the top level columns, so these cases are copied from other tests
+      Assume.assumeTrue(canTestArrayColumns());
+      assertFilterMatches(
+          new RangeFilter("nested.d0", ColumnType.DOUBLE, 120.0, 120.03, false, false, null),
+          ImmutableList.of("3")
+      );
+      assertFilterMatches(
+          new RangeFilter("nested.d0", ColumnType.FLOAT, 120.02f, 120.03f, false, false, null),
+          ImmutableList.of("3")
+      );
+      assertFilterMatches(
+          new RangeFilter("nested.d0", ColumnType.FLOAT, 59.5f, 60.01f, false, false, null),
+          ImmutableList.of("4")
+      );
+      assertFilterMatches(
+          new RangeFilter("nested.l0", ColumnType.LONG, 12344L, 12346L, false, false, null),
+          ImmutableList.of("5")
+      );
+      assertFilterMatches(
+          new RangeFilter("nested.l0", ColumnType.DOUBLE, 12344.0, 12345.5, false, false, null),
+          ImmutableList.of("5")
+      );
+      assertFilterMatches(
+          new RangeFilter("nested.l0", ColumnType.FLOAT, 12344.0f, 12345.5f, false, false, null),
+          ImmutableList.of("5")
+      );
+
+      assertFilterMatches(
+          new RangeFilter(
+              "nested.arrayLong",
+              ColumnType.DOUBLE_ARRAY,
+              null,
+              new Object[]{1.0, 2.0, 3.0},
+              true,
+              false,
+              null
+          ),
+          ImmutableList.of("0", "1", "2", "4")
+      );
+      assertFilterMatches(
+          new RangeFilter(
+              "nested.arrayLong",
+              ColumnType.DOUBLE_ARRAY,
+              null,
+              new Object[]{1.0, 2.0, 3.0},
+              true,
+              true,
+              null
+          ),
+          ImmutableList.of("1", "4")
+      );
+      assertFilterMatches(
+          new RangeFilter(
+              "nested.arrayLong",
+              ColumnType.DOUBLE_ARRAY,
+              null,
+              new Object[]{1.1, 2.1, 3.1},
+              true,
+              true,
+              null
+          ),
+          ImmutableList.of("0", "1", "2", "4")
+      );
+
+      assertFilterMatches(
+          new RangeFilter(
+              "nested.arrayLong",
+              ColumnType.DOUBLE_ARRAY,
+              new Object[]{1.0, 2.0, 3.0},
+              null,
+              false,
+              false,
+              null
+          ),
+          ImmutableList.of("0", "2", "5", "6", "7")
+      );
+      assertFilterMatches(
+          new RangeFilter(
+              "nested.arrayLong",
+              ColumnType.DOUBLE_ARRAY,
+              new Object[]{0.8, 1.8, 2.8},
+              null,
+              false,
+              false,
+              null
+          ),
+          ImmutableList.of("0", "2", "5", "6", "7")
+      );
+      assertFilterMatches(
+          new RangeFilter(
+              "nested.arrayLong",
+              ColumnType.DOUBLE_ARRAY,
+              new Object[]{0.8, 1.8, 2.8},
+              null,
+              true,
+              false,
+              null
+          ),
+          ImmutableList.of("0", "2", "5", "6", "7")
+      );
+      assertFilterMatches(
+          new RangeFilter(
+              "nested.arrayLong",
+              ColumnType.DOUBLE_ARRAY,
+              new Object[]{1.0, 2.0, 3.0},
+              null,
+              true,
+              true,
+              null
+          ),
+          ImmutableList.of("5", "6", "7")
+      );
+      assertFilterMatches(
+          new RangeFilter(
+              "nested.arrayLong",
+              ColumnType.DOUBLE_ARRAY,
+              new Object[]{1.1, 2.1, 3.1},
+              null,
+              false,
+              true,
+              null
+          ),
+          ImmutableList.of("5", "6", "7")
+      );
+      assertFilterMatches(
+          new RangeFilter(
+              "nested.arrayLong",
+              ColumnType.DOUBLE_ARRAY,
+              new Object[]{1.1, 2.1, 3.1},
+              null,
+              true,
+              true,
+              null
+          ),
+          ImmutableList.of("5", "6", "7")
+      );
+
+      assertFilterMatches(
+          new RangeFilter(
+              "nested.arrayLong",
+              ColumnType.DOUBLE_ARRAY,
+              new Object[]{0.8, 1.8, 2.8},
+              new Object[]{1.1, 2.1, 3.1},
+              true,
+              true,
+              null
+          ),
+          ImmutableList.of("0", "2")
+      );
+      assertFilterMatches(
+          new RangeFilter(
+              "nested.arrayLong",
+              ColumnType.DOUBLE_ARRAY,
+              new Object[]{0.8, 1.8, 2.8},
+              new Object[]{1.1, 2.1, 3.1},
+              false,
+              true,
+              null
+          ),
+          ImmutableList.of("0", "2")
+      );
+      assertFilterMatches(
+          new RangeFilter(
+              "nested.arrayLong",
+              ColumnType.DOUBLE_ARRAY,
+              new Object[]{0.8, 1.8, 2.8},
+              new Object[]{1.1, 2.1, 3.1},
+              true,
+              false,
+              null
+          ),
+          ImmutableList.of("0", "2")
+      );
+      assertFilterMatches(
+          new RangeFilter(
+              "nested.arrayLong",
+              ColumnType.DOUBLE_ARRAY,
+              new Object[]{0.8, 1.8, 2.8},
+              new Object[]{1.1, 2.1, 3.1},
+              false,
+              false,
+              null
+          ),
+          ImmutableList.of("0", "2")
+      );
+    }
   }
 
   public static class RangeFilterNonParameterizedTests extends InitializedNullHandlingTest
@@ -1924,7 +2184,8 @@ public class RangeFilterTests
                     .withIgnoredFields(
                         "lower",
                         "upper",
-                        "cachedOptimizedFilter",
+                        "optimizedFilterIncludeUnknown",
+                        "optimizedFilterNoIncludeUnknown",
                         "stringPredicateSupplier",
                         "longPredicateSupplier",
                         "floatPredicateSupplier",

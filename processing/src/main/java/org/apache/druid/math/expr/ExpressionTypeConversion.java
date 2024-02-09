@@ -55,6 +55,9 @@ public class ExpressionTypeConversion
   {
     ExpressionType type = eval.type();
     ExpressionType otherType = otherEval.type();
+    if (type == otherType && type.getType().isPrimitive()) {
+      return type;
+    }
     if (Types.is(type, ExprType.STRING) && Types.is(otherType, ExprType.STRING)) {
       return ExpressionType.STRING;
     }

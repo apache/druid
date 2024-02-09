@@ -96,6 +96,7 @@
       },
       "ingestion/ingestion-spec",
       "ingestion/schema-design",
+      "ingestion/concurrent-append-replace",
       "ingestion/faq"
     ],
     "Data management": [

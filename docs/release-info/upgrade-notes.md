@@ -34,13 +34,13 @@ For the full release notes for a specific version, see the [releases page](https
 
 Druid 28.0.0 adds a new column to the Druid metadata table that requires an update to the table.
 
-If `druid.metadata.storage.connector.createTables` is set to `true` and the metadata store user has DDL privileges, the segments table gets automatically updated at startup to include the new `used_flag_last_updated` column. No additional work is needed for the upgrade.
+If `druid.metadata.storage.connector.createTables` is set to `true` and the metadata store user has DDL privileges, the segments table gets automatically updated at startup to include the new `used_status_last_updated` column. No additional work is needed for the upgrade.
 
 If either of those requirements are not met, pre-upgrade steps are required. You must make these updates before you upgrade to Druid 28.0.0, or the Coordinator and Overlord processes fail.
 
-Although you can manually alter your table to add the new `used_flag_last_updated` column, Druid also provides a CLI tool to do it.
+Although you can manually alter your table to add the new `used_status_last_updated` column, Druid also provides a [CLI tool](https://druid.apache.org/docs/latest/operations/metadata-migration/#create-druid-tables) to do it.
 
-[#12599](https://github.com/apache/druid/pull/12599)
+[#12599](https://github.com/apache/druid/pull/12599) [#14868](https://github.com/apache/druid/pull/14868)
 
 In the example commands below:
 
@@ -70,7 +70,7 @@ java -classpath "lib/*" -Dlog4j.configurationFile=conf/druid/cluster/_common/log
 
 ```SQL
 ALTER TABLE druid_segments
-ADD used_flag_last_updated varchar(255);
+ADD used_status_last_updated varchar(255);
 ```
 
 #### Recommended syntax for SQL UNNEST
@@ -340,7 +340,7 @@ The following Coordinator dynamic configs have been removed:
 * `emitBalancingStats`: Stats for errors encountered while balancing will always be emitted. Other debugging stats will not be emitted but can be logged by setting the appropriate `debugDimensions`.
 * `useBatchedSegmentSampler` and `percentOfSegmentsToConsiderPerMove`: Batched segment sampling is now the standard and will always be on.
 
-Use the new [smart segment loading](#smart-segment-loading) mode instead.
+Use the new [smart segment loading](https://druid.apache.org/docs/latest/configuration/#smart-segment-loading) mode instead.
 
 [#14524](https://github.com/apache/druid/pull/14524)
 
@@ -413,7 +413,7 @@ To restore old behavior, you can set `sqlFinalizeOuterSketches=true` in the quer
 
 #### Kill tasks mark segments as unused only if specified
 
-When you issue a kill task, Druid marks the underlying segments as unused only if explicitly specified. For more information, see the [API reference](https://druid.apache.org/docs/latest/operations/api-reference.html#coordinator).
+When you issue a kill task, Druid marks the underlying segments as unused only if explicitly specified. For more information, see the [API reference](https://druid.apache.org/docs/latest/api-reference/data-management-api).
 
 [#13104](https://github.com/apache/druid/pull/13104)
 

@@ -34,6 +34,7 @@ import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.ArrayContainsElementFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.EqualityFilter;
+import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -99,9 +100,7 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
 
     // if the input column is not actually an ARRAY type, but rather an MVD, we can optimize this into
     // selector/equality filters on the individual array elements
-    if (leftExpr.isSimpleExtraction()
-        && !leftExpr.isArray()
-        && (plannerContext.isUseBoundsAndSelectors() || leftExpr.isDirectColumnAccess())) {
+    if (leftExpr.isSimpleExtraction() && !leftExpr.isArray()) {
       Expr expr = plannerContext.parseExpression(rightExpr.getExpression());
       // To convert this expression filter into an And of Selector filters, we need to extract all array elements.
       // For now, we can optimize only when rightExpr is a literal because there is no way to extract the array elements
@@ -125,15 +124,24 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
             if (plannerContext.isUseBoundsAndSelectors()) {
               filters.add(newSelectorDimFilter(leftExpr.getSimpleExtraction(), Evals.asString(val)));
             } else {
-              // Cannot handle extractionFn here. We won't get one due to the isDirectColumnAccess check above.
-              filters.add(
-                  new EqualityFilter(
-                      leftExpr.getSimpleExtraction().getColumn(),
-                      ExpressionType.toColumnType(ExpressionType.elementType(exprEval.type())),
-                      val,
-                      null
-                  )
-              );
+              final String column = leftExpr.isDirectColumnAccess()
+                                    ? leftExpr.getSimpleExtraction().getColumn()
+                                    : virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
+                                        leftExpr,
+                                        leftExpr.getDruidType()
+                                    );
+              if (val == null) {
+                filters.add(NullFilter.forColumn(column));
+              } else {
+                filters.add(
+                    new EqualityFilter(
+                        column,
+                        ExpressionType.toColumnType(ExpressionType.elementType(exprEval.type())),
+                        val,
+                        null
+                    )
+                );
+              }
             }
           }
 

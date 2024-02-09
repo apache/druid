@@ -105,12 +105,6 @@ public class ExpressionDimFilter extends AbstractOptimizableDimFilter implements
   }
 
   @Override
-  public DimFilter optimize()
-  {
-    return this;
-  }
-
-  @Override
   public Filter toFilter()
   {
     return new ExpressionFilter(parsed, filterTuning);

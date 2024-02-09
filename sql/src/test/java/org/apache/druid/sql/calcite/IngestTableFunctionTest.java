@@ -322,7 +322,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
         "\"signature\":[{\"name\":\"x\",\"type\":\"STRING\"},{\"name\":\"y\",\"type\":\"STRING\"},{\"name\":\"z\",\"type\":\"LONG\"}]," +
         "\"columnMappings\":[{\"queryColumn\":\"x\",\"outputColumn\":\"x\"},{\"queryColumn\":\"y\",\"outputColumn\":\"y\"},{\"queryColumn\":\"z\",\"outputColumn\":\"z\"}]}]";
     final String resources = "[{\"name\":\"EXTERNAL\",\"type\":\"EXTERNAL\"},{\"name\":\"dst\",\"type\":\"DATASOURCE\"}]";
-    final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"dst\",\"partitionedBy\":{\"type\":\"all\"}}";
+    final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":{\"type\":\"table\",\"tableName\":\"dst\"},\"partitionedBy\":{\"type\":\"all\"}}";
 
     testQuery(
         PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN,
@@ -481,9 +481,9 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
       buf.append(sig.getColumnName(i)).append(" ");
       ColumnType type = sig.getColumnType(i).get();
       if (type == ColumnType.STRING) {
-        buf.append(Columns.VARCHAR);
+        buf.append(Columns.SQL_VARCHAR);
       } else if (type == ColumnType.LONG) {
-        buf.append(Columns.BIGINT);
+        buf.append(Columns.SQL_BIGINT);
       } else if (type == ColumnType.DOUBLE) {
         buf.append(Columns.DOUBLE);
       } else if (type == ColumnType.FLOAT) {

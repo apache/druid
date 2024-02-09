@@ -20,17 +20,17 @@
 package org.apache.druid.data.input.impl;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
-import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.data.input.ListBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.segment.column.RowSignature;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -163,59 +163,63 @@ public class CsvReaderTest
             "65,Here I write \\n slash n,2018-05-09T10:00:00Z"
         )
     );
+    final RowSignature signature =
+        RowSignature.builder()
+                    .add("Value", null)
+                    .add("Comment", null)
+                    .add("Timestamp", null)
+                    .build();
+
     final List<InputRow> expectedResults = ImmutableList.of(
-        new MapBasedInputRow(
+        new ListBasedInputRow(
+            signature,
             DateTimes.of("2018-05-05T10:00:00Z"),
             ImmutableList.of("Timestamp"),
-            ImmutableMap.of(
-                "Value",
+            ImmutableList.of(
                 "3",
-                "Comment",
                 "Lets do some \"normal\" quotes",
-                "Timestamp",
                 "2018-05-05T10:00:00Z"
             )
         ),
-        new MapBasedInputRow(
+        new ListBasedInputRow(
+            signature,
             DateTimes.of("2018-05-06T10:00:00Z"),
             ImmutableList.of("Timestamp"),
-            ImmutableMap.of(
-                "Value",
+            ImmutableList.of(
                 "34",
-                "Comment",
                 "Lets do some \"normal\", quotes with comma",
-                "Timestamp",
                 "2018-05-06T10:00:00Z"
             )
         ),
-        new MapBasedInputRow(
+        new ListBasedInputRow(
+            signature,
             DateTimes.of("2018-05-07T10:00:00Z"),
             ImmutableList.of("Timestamp"),
-            ImmutableMap.of(
-                "Value",
+            ImmutableList.of(
                 "343",
-                "Comment",
                 "Lets try \\\"it\\\" with slash quotes",
-                "Timestamp",
                 "2018-05-07T10:00:00Z"
             )
         ),
-        new MapBasedInputRow(
+        new ListBasedInputRow(
+            signature,
             DateTimes.of("2018-05-08T10:00:00Z"),
             ImmutableList.of("Timestamp"),
-            ImmutableMap.of(
-                "Value",
+            ImmutableList.of(
                 "545",
-                "Comment",
                 "Lets try \\\"it\\\", with slash quotes and comma",
-                "Timestamp",
                 "2018-05-08T10:00:00Z"
             )
         ),
-        new MapBasedInputRow(
+        new ListBasedInputRow(
+            signature,
             DateTimes.of("2018-05-09T10:00:00Z"),
             ImmutableList.of("Timestamp"),
-            ImmutableMap.of("Value", "65", "Comment", "Here I write \\n slash n", "Timestamp", "2018-05-09T10:00:00Z")
+            ImmutableList.of(
+                "65",
+                "Here I write \\n slash n",
+                "2018-05-09T10:00:00Z"
+            )
         )
     );
     final CsvInputFormat format = new CsvInputFormat(

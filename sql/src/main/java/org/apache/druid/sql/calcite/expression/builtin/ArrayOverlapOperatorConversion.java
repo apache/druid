@@ -34,6 +34,7 @@ import org.apache.druid.query.filter.ArrayContainsElementFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.InDimFilter;
+import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -114,9 +115,7 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
     }
 
     final Expr expr = plannerContext.parseExpression(complexExpr.getExpression());
-    if (expr.isLiteral()
-        && !simpleExtractionExpr.isArray()
-        && (plannerContext.isUseBoundsAndSelectors() || simpleExtractionExpr.isDirectColumnAccess())) {
+    if (expr.isLiteral() && !simpleExtractionExpr.isArray()) {
       // Evaluate the expression to take out the array elements.
       // We can safely pass null if the expression is literal.
       ExprEval<?> exprEval = expr.eval(InputBindings.nilBindings());
@@ -131,11 +130,20 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
         if (plannerContext.isUseBoundsAndSelectors()) {
           return newSelectorDimFilter(simpleExtractionExpr.getSimpleExtraction(), Evals.asString(arrayElements[0]));
         } else {
-          // Cannot handle extractionFn here. We won't get one due to the isDirectColumnAccess check above.
+          final String column = simpleExtractionExpr.isDirectColumnAccess()
+                                ? simpleExtractionExpr.getSimpleExtraction().getColumn()
+                                : virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
+                                    simpleExtractionExpr,
+                                    simpleExtractionExpr.getDruidType()
+                                );
+          final Object elementValue = arrayElements[0];
+          if (elementValue == null) {
+            return NullFilter.forColumn(column);
+          }
           return new EqualityFilter(
-              simpleExtractionExpr.getSimpleExtraction().getColumn(),
+              column,
               ExpressionType.toColumnType(exprEval.type()),
-              arrayElements[0],
+              elementValue,
               null
           );
         }

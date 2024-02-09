@@ -66,18 +66,21 @@ The following table describes how Druid maps SQL types onto native types when ru
 |ARRAY|ARRAY|`NULL`|Druid native array types work as SQL arrays, and multi-value strings can be converted to arrays. See [Arrays](#arrays) for more information.|
 |OTHER|COMPLEX|none|May represent various Druid column types such as hyperUnique, approxHistogram, etc.|
 
-<sup>*</sup> The default value is `NULL` for all types, except in legacy mode (`druid.generic.useDefaultValueForNull = true`) which initialize a default value. 
+<sup>*</sup> 
+The default value is <code>NULL</code> for all types, except in legacy mode (<code>druid.generic.useDefaultValueForNull = true</code>) which initialize a default value. 
+<br /><br />
+For casts between two SQL types, the behavior depends on the runtime type:
 
-Casts between two SQL types with the same Druid runtime type have no effect other than the exceptions noted in the table.
+* Casts between two SQL types with the same Druid runtime type have no effect other than the exceptions noted in the table.
 
-Casts between two SQL types that have different Druid runtime types generate a runtime cast in Druid.
+* Casts between two SQL types that have different Druid runtime types generate a runtime cast in Druid.
 
 If a value cannot be cast to the target type, as in `CAST('foo' AS BIGINT)`, Druid a substitutes [NULL](#null-values).
 When `druid.generic.useDefaultValueForNull = true` (legacy mode), Druid instead substitutes a default value, including when NULL values cast to non-nullable types. For example, if `druid.generic.useDefaultValueForNull = true`, a null VARCHAR cast to BIGINT is converted to a zero.
 
 ## Arrays
 
-Druid supports [`ARRAY` types](arrays.md), which behave as standard SQL arrays, where results are grouped by matching entire arrays. The [`UNNEST` operator](./sql-array-functions.md#unn) can be used to perform operations on individual array elements, translating each element into a separate row. 
+Druid supports [`ARRAY` types](arrays.md), which behave as standard SQL arrays, where results are grouped by matching entire arrays. The [`UNNEST` operator](./sql.md#unnest) can be used to perform operations on individual array elements, translating each element into a separate row. 
 
 `ARRAY` typed columns can be stored in segments with JSON-based ingestion using the 'auto' typed dimension schema shared with [schema auto-discovery](../ingestion/schema-design.md#schema-auto-discovery-for-dimensions) to detect and ingest arrays as ARRAY typed columns. For [SQL based ingestion](../multi-stage-query/index.md), the query context parameter `arrayIngestMode` must be specified as `"array"` to ingest ARRAY types. In Druid 28, the default mode for this parameter is `"mvd"` for backwards compatibility, which instead can only handle `ARRAY<STRING>` which it stores in [multi-value string columns](#multi-value-strings). 
 

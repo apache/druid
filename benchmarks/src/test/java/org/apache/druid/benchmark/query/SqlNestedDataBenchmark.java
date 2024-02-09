@@ -112,7 +112,7 @@ public class SqlNestedDataBenchmark
     {
       return 1;
     }
-    
+
     @Override
     public String getFormatString()
     {
@@ -326,7 +326,7 @@ public class SqlNestedDataBenchmark
         PROCESSING_CONFIG
     );
 
-    final SpecificSegmentsQuerySegmentWalker walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
+    final SpecificSegmentsQuerySegmentWalker walker = SpecificSegmentsQuerySegmentWalker.createWalker(conglomerate).add(
         dataSegment,
         index
     );

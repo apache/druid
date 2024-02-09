@@ -124,4 +124,9 @@ public abstract class CalciteTestBase
   {
     return new ResourceAction(new Resource(inputSourceType, ResourceType.EXTERNAL), Action.READ);
   }
+
+  protected static ResourceAction externalWrite(final String inputSourceType)
+  {
+    return new ResourceAction(new Resource(inputSourceType, ResourceType.EXTERNAL), Action.WRITE);
+  }
 }

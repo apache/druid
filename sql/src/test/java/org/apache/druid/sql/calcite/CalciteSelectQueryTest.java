@@ -43,6 +43,7 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.topn.DimensionTopNMetricSpec;
 import org.apache.druid.query.topn.InvertedTopNMetricSpec;
 import org.apache.druid.query.topn.TopNQueryBuilder;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -482,6 +483,52 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testSafeDivideWithoutTable()
+  {
+    skipVectorize();
+    cannotVectorize();
+    final Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+
+    testQuery(
+        "select SAFE_DIVIDE(0, 0), SAFE_DIVIDE(1,0), SAFE_DIVIDE(10,2.5), "
+        + " SAFE_DIVIDE(10.5,3.5), SAFE_DIVIDE(10.5,3), SAFE_DIVIDE(10,2)",
+        context,
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(
+                      InlineDataSource.fromIterable(
+                          ImmutableList.of(
+                              new Object[]{0L}
+                          ),
+                          RowSignature.builder().add("ZERO", ColumnType.LONG).build()
+                      )
+                  )
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .columns("v0", "v1", "v2", "v3", "v4")
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", NullHandling.sqlCompatible() ? "null" : "0", ColumnType.LONG),
+                      expressionVirtualColumn("v1", "4.0", ColumnType.DOUBLE),
+                      expressionVirtualColumn("v2", "3.0", ColumnType.DOUBLE),
+                      expressionVirtualColumn("v3", "3.5", ColumnType.DOUBLE),
+                      expressionVirtualColumn("v4", "5", ColumnType.LONG)
+                  )
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .context(context)
+                  .build()
+        ),
+        ImmutableList.of(new Object[]{
+            NullHandling.sqlCompatible() ? null : 0,
+            NullHandling.sqlCompatible() ? null : 0,
+            4.0D,
+            3.0D,
+            3.5D,
+            5
+        })
+    );
+  }
+
+  @Test
   public void testSafeDivideExpressions()
   {
     List<Object[]> expected;
@@ -497,8 +544,8 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
     } else {
       expected = ImmutableList.of(
           new Object[]{null, null, null, 7.0F},
-          new Object[]{1.0F, 1L, 1.0, 3253230.0F},
-          new Object[]{0.0F, 0L, 0.0, 0.0F},
+          new Object[]{1.0F, 1L, 1.0D, 3253230.0F},
+          new Object[]{0.0F, null, 0.0D, 0.0F},
           new Object[]{null, null, null, null},
           new Object[]{null, null, null, null},
           new Object[]{null, null, null, null}
@@ -623,10 +670,17 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         "SELECT distinct dim1 FROM druid.foo WHERE substring(substring(dim1, 2), 1, 1) = 'e' OR dim2 = 'a'",
         ImmutableList.of(
             GroupByQuery.builder()
-                .setDataSource(CalciteTests.DATASOURCE1)
-                .setInterval(querySegmentSpec(Filtration.eternity()))
-                .setGranularity(Granularities.ALL)
-                .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
+                        .setVirtualColumns(
+                            NullHandling.replaceWithDefault()
+                            ? VirtualColumns.EMPTY
+                            : VirtualColumns.create(
+                                expressionVirtualColumn("v0", "substring(substring(\"dim1\", 1, -1), 0, 1)", ColumnType.STRING)
+                            )
+                        )
                 .setDimFilter(
                     or(
                         NullHandling.replaceWithDefault()
@@ -638,7 +692,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                                 new SubstringDimExtractionFn(0, 1)
                             )
                         )
-                        : expressionFilter("(substring(substring(\"dim1\", 1, -1), 0, 1) == 'e')"),
+                        : equality("v0", "e", ColumnType.STRING),
                         equality("dim2", "a", ColumnType.STRING)
                     )
                 )
@@ -1090,10 +1144,10 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{"a", "xa"},
             new Object[]{"abc", "xabc"},
-            new Object[]{"nosuchkey", "mysteryvalue"},
-            new Object[]{"6", "x6"}
+            new Object[]{"6", "x6"},
+            new Object[]{"a", "xa"},
+            new Object[]{"nosuchkey", "mysteryvalue"}
         )
     );
   }

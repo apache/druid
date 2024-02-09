@@ -218,6 +218,7 @@ exports[`SegmentsView matches snapshot 1`] = `
             "width": 100,
           },
           Object {
+            "Aggregated": [Function],
             "Cell": [Function],
             "Header": "Shard spec",
             "accessor": "shard_spec",

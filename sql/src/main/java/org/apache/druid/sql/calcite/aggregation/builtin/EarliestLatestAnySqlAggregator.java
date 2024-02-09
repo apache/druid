@@ -44,6 +44,9 @@ import org.apache.calcite.util.Optionality;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.SerializablePairLongDoubleComplexMetricSerde;
+import org.apache.druid.query.aggregation.SerializablePairLongFloatComplexMetricSerde;
+import org.apache.druid.query.aggregation.SerializablePairLongLongComplexMetricSerde;
 import org.apache.druid.query.aggregation.any.DoubleAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.any.FloatAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.any.LongAnyAggregatorFactory;
@@ -68,6 +71,7 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -225,7 +229,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
                           );
     }
 
-    final String fieldName = getColumnName(plannerContext, virtualColumnRegistry, args.get(0), rexNodes.get(0));
+    final String fieldName = getColumnName(virtualColumnRegistry, args.get(0), rexNodes.get(0));
 
     if (!inputAccessor.getInputRowSignature().contains(ColumnHolder.TIME_COLUMN_NAME)
         && (aggregatorType == AggregatorType.LATEST || aggregatorType == AggregatorType.EARLIEST)) {
@@ -287,7 +291,6 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
   }
 
   static String getColumnName(
-      PlannerContext plannerContext,
       VirtualColumnRegistry virtualColumnRegistry,
       DruidExpression arg,
       RexNode rexNode
@@ -316,6 +319,25 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
     public RelDataType inferReturnType(SqlOperatorBinding sqlOperatorBinding)
     {
       RelDataType type = sqlOperatorBinding.getOperandType(this.ordinal);
+
+      // If complex and of type SerializablePairLong*, return scalar type
+      if (type instanceof RowSignatures.ComplexSqlType) {
+        ColumnType complexColumnType = ((RowSignatures.ComplexSqlType) type).getColumnType();
+        String complexTypeName = complexColumnType.getComplexTypeName();
+        if (complexTypeName != null) {
+          switch (complexTypeName) {
+            case SerializablePairLongLongComplexMetricSerde.TYPE_NAME:
+              return sqlOperatorBinding.getTypeFactory().createSqlType(SqlTypeName.BIGINT);
+            case SerializablePairLongFloatComplexMetricSerde.TYPE_NAME:
+              return sqlOperatorBinding.getTypeFactory().createSqlType(SqlTypeName.FLOAT);
+            case SerializablePairLongDoubleComplexMetricSerde.TYPE_NAME:
+              return sqlOperatorBinding.getTypeFactory().createSqlType(SqlTypeName.DOUBLE);
+            default:
+              return sqlOperatorBinding.getTypeFactory().createSqlType(SqlTypeName.VARCHAR);
+          }
+        }
+      }
+
       // For non-number and non-string type, which is COMPLEX type, we set the return type to VARCHAR.
       if (!SqlTypeUtil.isNumeric(type) &&
           !SqlTypeUtil.isString(type)) {
@@ -337,7 +359,9 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
     @Override
     public <R> R accept(SqlVisitor<R> visitor)
     {
-
+      // We overridde the "accept()" method, because the __time column's presence is determined when Calcite is converting
+      // the identifiers to the fully qualified column names with prefixes. This is where the validation exception can
+      // trigger
       try {
         return super.accept(visitor);
       }

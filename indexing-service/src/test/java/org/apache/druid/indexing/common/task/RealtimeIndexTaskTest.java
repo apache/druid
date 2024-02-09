@@ -108,6 +108,7 @@ import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.plumber.ServerTimeRejectionPolicyFactory;
@@ -861,6 +862,7 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
         handoffTimeout,
         null,
         null,
+        null,
         null
     );
     return new RealtimeIndexTask(
@@ -979,6 +981,7 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
     };
     final TestUtils testUtils = new TestUtils();
     final TaskToolboxFactory toolboxFactory = new TaskToolboxFactory(
+        null,
         taskConfig,
         null, // taskExecutorNode
         taskActionClientFactory,
@@ -1016,7 +1019,8 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        "1"
+        "1",
+        CentralizedDatasourceSchemaConfig.create()
     );
 
     return toolboxFactory.build(task);

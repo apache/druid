@@ -66,15 +66,19 @@ public class PassthroughAggregatorFactory extends AggregatorFactory
     this.complexTypeName = complexTypeName;
   }
 
-  @JsonProperty
+  @JsonProperty("columnName")
   public String getColumnName()
   {
     return columnName;
   }
 
-  @Override
-  @JsonProperty
-  public String getComplexTypeName()
+  /**
+   * The getter for this variable is named differently because the 'getComplexTypeName' is a deprecated method present
+   * in the super class {@link AggregatorFactory}, and can be removed discriminately here, leading to incorrect serde of
+   * the aggregator factory over the wire
+   */
+  @JsonProperty("complexTypeName")
+  public String getComplexName()
   {
     return complexTypeName;
   }

@@ -44,6 +44,7 @@ import { WorkbenchRunningPromises } from '../../../singletons/workbench-running-
 import type { ColumnMetadata, QueryAction, QuerySlice, RowColumn } from '../../../utils';
 import {
   DruidError,
+  findAllSqlQueriesInText,
   localStorageGet,
   LocalStorageKeys,
   localStorageSet,
@@ -122,15 +123,40 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     onQueryChange(query.changeQueryString(queryString));
   });
 
-  const parsedQuery = query.getParsedQuery();
-  const handleQueryAction = usePermanentCallback((queryAction: QueryAction) => {
-    if (!(parsedQuery instanceof SqlQuery)) return;
-    onQueryChange(query.changeQueryString(parsedQuery.apply(queryAction).toString()));
+  const handleQueryAction = usePermanentCallback(
+    (queryAction: QueryAction, sliceIndex: number | undefined) => {
+      let newQueryString: string;
+      if (typeof sliceIndex === 'number') {
+        const { queryString } = query;
+        const foundQuery = findAllSqlQueriesInText(queryString)[sliceIndex];
+        if (!foundQuery) return;
+        const parsedQuery = SqlQuery.maybeParse(foundQuery.sql);
+        if (!parsedQuery) return;
+        newQueryString =
+          queryString.slice(0, foundQuery.startOffset) +
+          parsedQuery.apply(queryAction) +
+          queryString.slice(foundQuery.endOffset);
+      } else {
+        const parsedQuery = query.getParsedQuery();
+        if (!(parsedQuery instanceof SqlQuery)) return;
+        newQueryString = parsedQuery.apply(queryAction).toString();
+      }
+      onQueryChange(query.changeQueryString(newQueryString));
 
-    if (shouldAutoRun()) {
-      setTimeout(() => void handleRun(false), 20);
-    }
-  });
+      if (shouldAutoRun()) {
+        setTimeout(() => {
+          if (typeof sliceIndex === 'number') {
+            const slice = findAllSqlQueriesInText(newQueryString)[sliceIndex];
+            if (slice) {
+              void handleRun(false, slice);
+            }
+          } else {
+            void handleRun(false);
+          }
+        }, 20);
+      }
+    },
+  );
 
   function shouldAutoRun(): boolean {
     if (query.getEffectiveEngine() !== 'sql-native') return false;
@@ -296,38 +322,37 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     if (querySlice) {
       effectiveQuery = effectiveQuery
         .changeQueryString(querySlice.sql)
+        .changeQueryContext({ ...effectiveQuery.queryContext, sliceIndex: querySlice.index })
         .changePrefixLines(querySlice.startRowColumn.row);
     }
 
-    if (effectiveQuery.getEffectiveEngine() !== 'sql-msq-task') {
-      WorkbenchHistory.addQueryToHistory(effectiveQuery);
-      queryManager.runQuery(effectiveQuery);
-      return;
-    }
+    if (effectiveQuery.getEffectiveEngine() === 'sql-msq-task') {
+      effectiveQuery = preview
+        ? effectiveQuery.makePreview()
+        : effectiveQuery.setMaxNumTasksIfUnset(clusterCapacity);
 
-    effectiveQuery = preview
-      ? effectiveQuery.makePreview()
-      : effectiveQuery.setMaxNumTasksIfUnset(clusterCapacity);
+      const capacityInfo = await maybeGetClusterCapacity();
 
-    const capacityInfo = await maybeGetClusterCapacity();
-
-    const effectiveMaxNumTasks = effectiveQuery.queryContext.maxNumTasks ?? 2;
-    if (capacityInfo && capacityInfo.availableTaskSlots < effectiveMaxNumTasks) {
-      setAlertElement(
-        <CapacityAlert
-          maxNumTasks={effectiveMaxNumTasks}
-          capacityInfo={capacityInfo}
-          onRun={() => {
-            queryManager.runQuery(effectiveQuery);
-          }}
-          onClose={() => {
-            setAlertElement(undefined);
-          }}
-        />,
-      );
+      const effectiveMaxNumTasks = effectiveQuery.queryContext.maxNumTasks ?? 2;
+      if (capacityInfo && capacityInfo.availableTaskSlots < effectiveMaxNumTasks) {
+        setAlertElement(
+          <CapacityAlert
+            maxNumTasks={effectiveMaxNumTasks}
+            capacityInfo={capacityInfo}
+            onRun={() => {
+              queryManager.runQuery(effectiveQuery);
+            }}
+            onClose={() => {
+              setAlertElement(undefined);
+            }}
+          />,
+        );
+        return;
+      }
     } else {
-      queryManager.runQuery(effectiveQuery);
+      WorkbenchHistory.addQueryToHistory(effectiveQuery);
     }
+    queryManager.runQuery(effectiveQuery);
   });
 
   const statsTaskId: string | undefined = execution?.id;

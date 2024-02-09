@@ -36,6 +36,7 @@ services:
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
       - druid_centralizedDatasourceSchema_enabled=true
+      - druid_centralizedDatasourceSchema_announceRealtimeSegmentSchema=true
       - druid_coordinator_segmentMetadata_metadataRefreshPeriod=PT15S
     depends_on:
       - druid-overlord
@@ -67,6 +68,7 @@ services:
       service: druid-middlemanager
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
+      - druid_centralizedDatasourceSchema_announceRealtimeSegmentSchema=true
     depends_on:
       - druid-zookeeper-kafka
       - druid-overlord

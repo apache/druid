@@ -19,8 +19,6 @@
 
 package org.apache.druid.query.filter;
 
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import org.apache.druid.segment.DimensionHandlerUtils;
 
 import javax.annotation.Nullable;
@@ -40,18 +38,19 @@ public class SelectorPredicateFactory implements DruidPredicateFactory
   private volatile DruidLongPredicate longPredicate;
   private volatile DruidFloatPredicate floatPredicate;
   private volatile DruidDoublePredicate doublePredicate;
-  private final boolean isNullUnknown;
 
   public SelectorPredicateFactory(@Nullable String value)
   {
     this.value = value;
-    this.isNullUnknown = value != null;
   }
 
   @Override
-  public Predicate<String> makeStringPredicate()
+  public DruidObjectPredicate<String> makeStringPredicate()
   {
-    return Predicates.equalTo(value);
+    if (value == null) {
+      return DruidObjectPredicate.isNull();
+    }
+    return DruidObjectPredicate.equalTo(value);
   }
 
   @Override
@@ -75,12 +74,6 @@ public class SelectorPredicateFactory implements DruidPredicateFactory
     return doublePredicate;
   }
 
-  @Override
-  public boolean isNullInputUnknown()
-  {
-    return isNullUnknown;
-  }
-
   private void initLongPredicate()
   {
     if (longPredicate != null) {
@@ -97,11 +90,11 @@ public class SelectorPredicateFactory implements DruidPredicateFactory
       final Long valueAsLong = DimensionHandlerUtils.convertObjectToLong(value);
 
       if (valueAsLong == null) {
-        longPredicate = DruidLongPredicate.ALWAYS_FALSE;
+        longPredicate = DruidLongPredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
       } else {
         // store the primitive, so we don't unbox for every comparison
         final long unboxedLong = valueAsLong;
-        longPredicate = input -> input == unboxedLong;
+        longPredicate = input -> DruidPredicateMatch.of(input == unboxedLong);
       }
     }
   }
@@ -123,11 +116,11 @@ public class SelectorPredicateFactory implements DruidPredicateFactory
       final Float valueAsFloat = DimensionHandlerUtils.convertObjectToFloat(value);
 
       if (valueAsFloat == null) {
-        floatPredicate = DruidFloatPredicate.ALWAYS_FALSE;
+        floatPredicate = DruidFloatPredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
       } else {
         // Compare with floatToIntBits instead of == to canonicalize NaNs.
         final int floatBits = Float.floatToIntBits(valueAsFloat);
-        floatPredicate = input -> Float.floatToIntBits(input) == floatBits;
+        floatPredicate = input -> DruidPredicateMatch.of(Float.floatToIntBits(input) == floatBits);
       }
     }
   }
@@ -148,11 +141,11 @@ public class SelectorPredicateFactory implements DruidPredicateFactory
       final Double aDouble = DimensionHandlerUtils.convertObjectToDouble(value);
 
       if (aDouble == null) {
-        doublePredicate = DruidDoublePredicate.ALWAYS_FALSE;
+        doublePredicate = DruidDoublePredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
       } else {
         // Compare with doubleToLongBits instead of == to canonicalize NaNs.
         final long bits = Double.doubleToLongBits(aDouble);
-        doublePredicate = input -> Double.doubleToLongBits(input) == bits;
+        doublePredicate = input -> DruidPredicateMatch.of(Double.doubleToLongBits(input) == bits);
       }
     }
   }

@@ -66,8 +66,9 @@ The following built-in functions are available.
 |name|description|
 |----|-----------|
 |cast|cast(expr,LONG or DOUBLE or STRING or ARRAY<LONG\>, or ARRAY<DOUBLE\> or ARRAY<STRING\>) returns expr with specified type. exception can be thrown. Scalar types may be cast to array types and will take the form of a single element list (null will still be null). |
+|coalesce|coalesce(exprs) returns the first non-null expression, or null if all expressions are null. |
 |if|if(predicate,then,else) returns 'then' if 'predicate' evaluates to a positive number, otherwise it returns 'else' |
-|nvl|nvl(expr,expr-for-null) returns 'expr-for-null' if 'expr' is null (or empty string for string type) |
+|nvl|nvl(expr,expr-for-null) returns 'expr-for-null' if 'expr' is null. |
 |like|like(expr, pattern[, escape]) is equivalent to SQL `expr LIKE pattern`|
 |case_searched|case_searched(expr1, result1, \[\[expr2, result2, ...\], else-result\]) is similar to `CASE WHEN expr1 THEN result1 [ELSE else_result] END` in SQL|
 |case_simple|case_simple(expr, value1, result1, \[\[value2, result2, ...\], else-result\]) is similar to `CASE expr WHEN value THEN result [ELSE else_result] END` in SQL|
@@ -192,7 +193,7 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 | array_set_add_all(arr1,arr2) | combines the unique set of elements of 2 arrays, the resulting array type determined by the type of the first array |
 | array_slice(arr,start,end) | return the subarray of arr from the 0 based index start(inclusive) to end(exclusive), or `null`, if start is less than 0, greater than length of arr or less than end|
 | array_to_string(arr,str) | joins all elements of arr by the delimiter specified by str |
-| string_to_array(str1,str2) | splits str1 into an array on the delimiter specified by str2 |
+| string_to_array(str1,str2) | splits str1 into an array on the delimiter specified by str2, which is a regular expression |
 
 
 ## Apply functions
@@ -237,7 +238,7 @@ JSON functions provide facilities to extract, transform, and create `COMPLEX<jso
 |---|---|
 | json_value(expr, path[, type]) | Extract a Druid literal (`STRING`, `LONG`, `DOUBLE`, `ARRAY<STRING>`, `ARRAY<LONG>`, or `ARRAY<DOUBLE>`) value from `expr` using JSONPath syntax of `path`. The optional `type` argument can be set to `'LONG'`,`'DOUBLE'`, `'STRING'`, `'ARRAY<LONG>'`, `'ARRAY<DOUBLE>'`, or `'ARRAY<STRING>'` to cast values to that type. |
 | json_query(expr, path) | Extract a `COMPLEX<json>` value from `expr` using JSONPath syntax of `path` |
-| json_query_array(expr, path) | Extract an `ARRAY<COMPLEX<json>>` value from `expr` using JSONPath syntax of `path`. If value is not an `ARRAY`, it will be translated into a single element `ARRAY` containing the value at `path`. |
+| json_query_array(expr, path) | Extract an `ARRAY<COMPLEX<json>>` value from `expr` using JSONPath syntax of `path`. If value is not an `ARRAY`, it gets translated into a single element `ARRAY` containing the value at `path`. The primary use of this function is to extract arrays of objects to use as inputs to other [array functions](#array-functions). |
 | json_object(expr1, expr2[, expr3, expr4 ...]) | Construct a `COMPLEX<json>` with alternating 'key' and 'value' arguments|
 | parse_json(expr) | Deserialize a JSON `STRING` into a `COMPLEX<json>`. If the input is not a `STRING` or it is invalid JSON, this function will result in an error.|
 | try_parse_json(expr) | Deserialize a JSON `STRING` into a `COMPLEX<json>`. If the input is not a `STRING` or it is invalid JSON, this function will result in a `NULL` value. |

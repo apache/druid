@@ -31,8 +31,8 @@ refers to a dimension value to match, and a "value" refers to its replacement. S
 
 It is worth noting that lookups support not just use cases where keys map one-to-one to unique values, such as country
 code and country name, but also support use cases where multiple IDs map to the same value, e.g. multiple app-ids
-mapping to a single account manager. When lookups are one-to-one, Druid is able to apply additional optimizations at
-query time; see [Query execution](#query-execution) below for more details.
+mapping to a single account manager. When lookups are one-to-one, Druid is able to apply additional
+[query rewrites](#query-rewrites); see below for more details.
 
 Lookups do not have history. They always use the current data. This means that if the chief account manager for a
 particular app-id changes, and you issue a query with a lookup to store the app-id to account manager relationship,
@@ -62,14 +62,13 @@ SELECT
 FROM sales
 GROUP BY 1
 ```
-The lookup function also accepts the 3rd argument called `replaceMissingValueWith` as a constant string. If your value is missing a lookup for the queried key, the lookup function returns the result value from `replaceMissingValueWith`
-For example:
-```
-LOOKUP(store, 'store_to_country', 'NA')
-```
-If value is missing from `store_to_country` lookup for given key 'store' then it will return `NA`.
 
-They can also be queried using the [JOIN operator](datasource.md#join):
+The `LOOKUP` function also accepts a third argument called `replaceMissingValueWith` as a constant string. If the lookup
+does not contain a value for the provided key, then the `LOOKUP` function returns this `replaceMissingValueWith` value
+rather than `NULL`, just like `COALESCE`. For example, `LOOKUP(store, 'store_to_country', 'NA')` is equivalent to
+`COALESCE(LOOKUP(store, 'store_to_country'), 'NA')`.
+
+Lookups can be queried using the [JOIN operator](datasource.md#join):
 
 ```sql
 SELECT
@@ -81,45 +80,145 @@ FROM
 GROUP BY 1
 ```
 
+:::info
+The `LOOKUP` function has automatic [query rewrites](#query-rewrites) available that the `JOIN` approach does not,
+including [reverse lookups](#reverse-lookup) and [pulling up through `GROUP BY`](#pull-up). If these rewrites are
+important for you, consider using the `LOOKUP` function instead of `JOIN`.
+:::
+
 In native queries, lookups can be queried with [dimension specs or extraction functions](dimensionspecs.md).
 
-Query Execution
----------------
-When executing an aggregation query involving lookup functions, like the SQL [`LOOKUP` function](sql-scalar.md#string-functions),
-Druid can decide to apply them while scanning and aggregating rows, or to apply them after aggregation is complete. It
-is more efficient to apply lookups after aggregation is complete, so Druid will do this if it can. Druid decides this
-by checking if the lookup is marked as "injective" or not. In general, you should set this property for any lookup that
-is naturally one-to-one, to allow Druid to run your queries as fast as possible.
+Query Rewrites
+--------------
+Druid can perform two automatic query rewrites when using the `LOOKUP` function: [reverse lookups](#reverse-lookup) and
+[pulling up through `GROUP BY`](#pull-up). These rewrites and their requirements are described in the following
+sections.
 
-Injective lookups should include _all_ possible keys that may show up in your dataset, and should also map all keys to
-_unique values_. This matters because non-injective lookups may map different keys to the same value, which must be
-accounted for during aggregation, lest query results contain two result values that should have been aggregated into
-one.
+### Reverse lookup
 
-This lookup is injective (assuming it contains all possible keys from your data):
+When `LOOKUP` function calls appear in the `WHERE` clause of a query, Druid reverses them [when possible](#table).
+For example, if the lookup table `sku_to_name` contains the mapping `'WB00013' => 'WhizBang Sprocket'`, then Druid
+automatically rewrites this query:
 
-```
-1 -> Foo
-2 -> Bar
-3 -> Billy
-```
-
-But this one is not, since both "2" and "3" map to the same value:
-
-```
-1 -> Foo
-2 -> Bar
-3 -> Bar
+```sql
+SELECT
+  LOOKUP(sku, 'sku_to_name') AS name,
+  SUM(revenue)
+FROM sales
+WHERE LOOKUP(sku, 'sku_to_name') = 'WhizBang Sprocket'
+GROUP BY LOOKUP(sku, 'sku_to_name')
 ```
 
-To tell Druid that your lookup is injective, you must specify `"injective" : true` in the lookup configuration. Druid
-will not detect this automatically.
+Into this:
 
-:::info
- Currently, the injective lookup optimization is not triggered when lookups are inputs to a
- [join datasource](datasource.md#join). It is only used when lookup functions are used directly, without the join
- operator.
-:::
+```sql
+SELECT
+  LOOKUP(sku, 'sku_to_name') AS name,
+  SUM(revenue)
+FROM sales
+WHERE sku = 'WB00013'
+GROUP BY LOOKUP(sku, 'sku_to_name')
+```
+
+The difference is that in the latter case, data servers do not need to apply the `LOOKUP` function while filtering, and
+can make more efficient use of indexes for `sku`.
+
+<a name="table">The following table</a> contains examples of when it is possible to reverse calls to `LOOKUP` while in
+Druid's default null handling mode. The list of examples is illustrative, albeit not exhaustive.
+
+|SQL|Reversible?|
+|---|-----------|
+|`LOOKUP(sku, 'sku_to_name') = 'WhizBang Sprocket'`|Yes|
+|`LOOKUP(sku, 'sku_to_name') IS NOT DISTINCT FROM 'WhizBang Sprocket'`|Yes, for non-null literals|
+|`LOOKUP(sku, 'sku_to_name') <> 'WhizBang Sprocket'`|No, unless `sku_to_name` is [injective](#injective-lookups)|
+|`LOOKUP(sku, 'sku_to_name') IS DISTINCT FROM 'WhizBang Sprocket'`|Yes, for non-null literals|
+|`LOOKUP(sku, 'sku_to_name') = 'WhizBang Sprocket' IS NOT TRUE`|Yes|
+|`LOOKUP(sku, 'sku_to_name') IN ('WhizBang Sprocket', 'WhizBang Chain')`|Yes|
+|`LOOKUP(sku, 'sku_to_name') NOT IN ('WhizBang Sprocket', 'WhizBang Chain')`|No, unless `sku_to_name` is [injective](#injective-lookups)|
+|`LOOKUP(sku, 'sku_to_name') IN ('WhizBang Sprocket', 'WhizBang Chain') IS NOT TRUE`|Yes|
+|`LOOKUP(sku, 'sku_to_name') IS NULL`|No|
+|`LOOKUP(sku, 'sku_to_name') IS NOT NULL`|No|
+|`LOOKUP(UPPER(sku), 'sku_to_name') = 'WhizBang Sprocket'`|Yes, to `UPPER(sku) = [key for 'WhizBang Sprocket']` (the `UPPER` function remains)|
+|`COALESCE(LOOKUP(sku, 'sku_to_name'), 'N/A') = 'WhizBang Sprocket'`|Yes, but see next item for `= 'N/A'`|
+|`COALESCE(LOOKUP(sku, 'sku_to_name'), 'N/A') = 'N/A'`|No, unless `sku_to_name` is [injective](#injective-lookups), which allows Druid to ignore the `COALESCE`|
+|`COALESCE(LOOKUP(sku, 'sku_to_name'), 'N/A') = 'WhizBang Sprocket' IS NOT TRUE`|Yes|
+|`COALESCE(LOOKUP(sku, 'sku_to_name'), 'N/A') <> 'WhizBang Sprocket'`|Yes, but see next item for `<> 'N/A'`|
+|`COALESCE(LOOKUP(sku, 'sku_to_name'), 'N/A') <> 'N/A'`|No, unless `sku_to_name` is [injective](#injective-lookups), which allows Druid to ignore the `COALESCE`|
+|`COALESCE(LOOKUP(sku, 'sku_to_name'), sku) = 'WhizBang Sprocket'`|No, `COALESCE` is only reversible when the second argument is a constant|
+|`LOWER(LOOKUP(sku, 'sku_to_name')) = 'whizbang sprocket'`|No, functions other than `COALESCE` are not reversible|
+|`MV_CONTAINS(LOOKUP(sku, 'sku_to_name'), 'WhizBang Sprocket')`|Yes|
+|`NOT MV_CONTAINS(LOOKUP(sku, 'sku_to_name'), 'WhizBang Sprocket')`|No, unless `sku_to_name` is [injective](#injective-lookups)|
+|`MV_OVERLAP(LOOKUP(sku, 'sku_to_name'), ARRAY['WhizBang Sprocket'])`|Yes|
+|`NOT MV_OVERLAP(LOOKUP(sku, 'sku_to_name'), ARRAY['WhizBang Sprocket'])`|No, unless `sku_to_name` is [injective](#injective-lookups)|
+
+You can see the difference in the native query that is generated during SQL planning, which you
+can retrieve with [`EXPLAIN PLAN FOR`](sql.md#explain-plan). When a lookup is reversed in this way, the `lookup`
+function disappears and is replaced by a simpler filter, typically of type `equals` or `in`.
+
+Lookups are not reversed if the number of matching keys exceeds the [`sqlReverseLookupThreshold`](sql-query-context.md)
+or [`inSubQueryThreshold`](sql-query-context.md) for the query.
+
+This rewrite adds some planning time that may become noticeable for larger lookups, especially if many keys map to the
+same value. You can see the impact on planning time in the `sqlQuery/planningTimeMs` metric. You can also measure the
+time taken by `EXPLAIN PLAN FOR`, which plans the query but does not execute it.
+
+This rewrite can be disabled by setting [`sqlReverseLookup: false`](sql-query-context.md) in your query context.
+
+### Pull up
+
+Lookups marked as [_injective_](#injective-lookups) can be pulled up through a `GROUP BY`. For example, if the lookup
+`sku_to_name` is injective, Druid automatically rewrites this query:
+
+```sql
+SELECT
+  LOOKUP(sku, 'sku_to_name') AS name,
+  SUM(revenue)
+FROM sales
+GROUP BY LOOKUP(sku, 'sku_to_name')
+```
+
+Into this:
+
+```sql
+SELECT
+  LOOKUP(sku, 'sku_to_name') AS name,
+  SUM(revenue)
+FROM sales
+GROUP BY sku
+```
+
+The difference is that the `LOOKUP` function is not applied until after the `GROUP BY` is finished, which speeds up
+the `GROUP BY`.
+
+You can see the difference in the native query that is generated during SQL planning, which you
+can retrieve with [`EXPLAIN PLAN FOR`](sql.md#explain-plan). When a lookup is pulled up in this way, the `lookup`
+function call typically moves from the `virtualColumns` or `dimensions` section of a native query into the
+`postAggregations`.
+
+This rewrite can be disabled by setting [`sqlPullUpLookup: false`](sql-query-context.md) in your query context.
+
+### Injective lookups
+
+Injective lookups are eligible for the largest set of query rewrites. Injective lookups must satisfy the following
+"one-to-one lookup" properties:
+
+- All values in the lookup table must be unique. That is, no two keys can map to the same value.
+- The lookup table must have a key-value pair defined for every input that the `LOOKUP` function call may
+  encounter. For example, when calling `LOOKUP(sku, 'sku_to_name')`, the `sku_to_name` lookup table must have a key
+  for all possible `sku`.
+- In SQL-compatible null handling mode (when `druid.generic.useDefaultValueForNull = false`, the default) injective
+  lookup tables are not required to have keys for `null`, since `LOOKUP` of `null` is always `null` itself.
+- When `druid.generic.useDefaultValueForNull = true`, a `LOOKUP` of `null` retrieves the value mapped to the
+  empty-string key (`""`). In this mode, injective lookup tables must have an empty-string key if the `LOOKUP`
+  function may encounter null input values.
+
+To determine whether a lookup is injective, Druid relies on an `injective` property that you can set in the
+[lookup definition](../development/extensions-core/lookups-cached-global.md). In general, you should set
+`injective: true` for any lookup that satisfies the required properties, to allow Druid to run your queries as fast as
+possible.
+
+Druid does not verify whether lookups satisfy these required properties. Druid may return incorrect query results
+if you set `injective: true` for a lookup table that is not actually a one-to-one lookup.
 
 Dynamic Configuration
 ---------------------

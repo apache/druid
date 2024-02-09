@@ -68,8 +68,8 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(ImmutableMap.of("type", HttpInputSource.TYPE_KEY))
         .inputFormat(CSV_FORMAT)
-        .column("x", Columns.VARCHAR)
-        .column("y", Columns.BIGINT)
+        .column("x", Columns.STRING)
+        .column("y", Columns.LONG)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
     assertThrows(IAE.class, () -> resolved.validate());
@@ -83,8 +83,8 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         .inputSource(ImmutableMap.of("type", HttpInputSource.TYPE_KEY))
         .property(HttpInputSourceDefn.URI_TEMPLATE_PROPERTY, "http://example.com/")
         .inputFormat(CSV_FORMAT)
-        .column("x", Columns.VARCHAR)
-        .column("y", Columns.BIGINT)
+        .column("x", Columns.STRING)
+        .column("y", Columns.LONG)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
     assertThrows(IAE.class, () -> resolved.validate());
@@ -103,8 +103,8 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     );
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(inputSource))
-        .column("x", Columns.VARCHAR)
-        .column("y", Columns.BIGINT)
+        .column("x", Columns.STRING)
+        .column("y", Columns.LONG)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
     assertThrows(IAE.class, () -> resolved.validate());
@@ -221,8 +221,8 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(inputSource))
         .inputFormat(CSV_FORMAT)
-        .column("x", Columns.VARCHAR)
-        .column("y", Columns.BIGINT)
+        .column("x", Columns.STRING)
+        .column("y", Columns.LONG)
         .build();
 
     // Check validation
@@ -256,8 +256,8 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         .inputSource(ImmutableMap.of("type", HttpInputSource.TYPE_KEY))
         .inputFormat(CSV_FORMAT)
         .property(HttpInputSourceDefn.URI_TEMPLATE_PROPERTY, "http://foo.com/{}")
-        .column("x", Columns.VARCHAR)
-        .column("y", Columns.BIGINT)
+        .column("x", Columns.STRING)
+        .column("y", Columns.LONG)
         .build();
 
     // Check validation
@@ -305,8 +305,8 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
          ))
         .inputFormat(CSV_FORMAT)
         .property(HttpInputSourceDefn.URI_TEMPLATE_PROPERTY, "http://foo.com/{}")
-        .column("x", Columns.VARCHAR)
-        .column("y", Columns.BIGINT)
+        .column("x", Columns.STRING)
+        .column("y", Columns.LONG)
         .build();
 
     table.validate();
@@ -387,8 +387,8 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(inputSource))
         .inputFormat(CSV_FORMAT)
-        .column("x", Columns.VARCHAR)
-        .column("y", Columns.BIGINT)
+        .column("x", Columns.STRING)
+        .column("y", Columns.LONG)
         .build();
 
     // Check validation
@@ -421,8 +421,8 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         .inputSource(httpToMap(inputSource))
         .inputFormat(CSV_FORMAT)
         .property(HttpInputSourceDefn.URI_TEMPLATE_PROPERTY, "http://foo.com/{}")
-        .column("x", Columns.VARCHAR)
-        .column("y", Columns.BIGINT)
+        .column("x", Columns.STRING)
+        .column("y", Columns.LONG)
         .build();
 
     // Check validation
@@ -489,8 +489,8 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(inputSource))
         .inputFormat(CSV_FORMAT)
-        .column("x", Columns.VARCHAR)
-        .column("y", Columns.BIGINT)
+        .column("x", Columns.STRING)
+        .column("y", Columns.LONG)
         .build();
 
     // Check validation

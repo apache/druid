@@ -75,8 +75,7 @@ public class ArrayContainsElementFilterTests
     @Test
     public void testArrayStringColumn()
     {
-      // only auto schema supports array columns... skip other segment types
-      Assume.assumeTrue(isAutoSchema());
+      Assume.assumeFalse(testName.contains("frame (columnar)") || testName.contains("rowBasedWithoutTypeSignature"));
         /*
             dim0 .. arrayString
             "0", .. ["a", "b", "c"]
@@ -160,8 +159,7 @@ public class ArrayContainsElementFilterTests
     @Test
     public void testArrayLongColumn()
     {
-      // only auto schema supports array columns... skip other segment types
-      Assume.assumeTrue(isAutoSchema());
+      Assume.assumeFalse(testName.contains("frame (columnar)") || testName.contains("rowBasedWithoutTypeSignature"));
         /*
             dim0 .. arrayLong
             "0", .. [1L, 2L, 3L]
@@ -241,8 +239,7 @@ public class ArrayContainsElementFilterTests
     @Test
     public void testArrayDoubleColumn()
     {
-      // only auto schema supports array columns... skip other segment types
-      Assume.assumeTrue(isAutoSchema());
+      Assume.assumeFalse(testName.contains("frame (columnar)") || testName.contains("rowBasedWithoutTypeSignature"));
         /*
             dim0 .. arrayDouble
             "0", .. [1.1, 2.2, 3.3]
@@ -300,8 +297,7 @@ public class ArrayContainsElementFilterTests
     @Test
     public void testArrayStringColumnContainsArrays()
     {
-      // only auto schema supports array columns... skip other segment types
-      Assume.assumeTrue(isAutoSchema());
+      Assume.assumeFalse(testName.contains("frame (columnar)") || testName.contains("rowBasedWithoutTypeSignature"));
       // these are not nested arrays, expect no matches
       assertFilterMatches(
           new ArrayContainsElementFilter(
@@ -330,8 +326,7 @@ public class ArrayContainsElementFilterTests
     @Test
     public void testArrayLongColumnContainsArrays()
     {
-      // only auto schema supports array columns... skip other segment types
-      Assume.assumeTrue(isAutoSchema());
+      Assume.assumeFalse(testName.contains("frame (columnar)") || testName.contains("rowBasedWithoutTypeSignature"));
 
       // these are not nested arrays, expect no matches
       assertFilterMatches(
@@ -361,8 +356,7 @@ public class ArrayContainsElementFilterTests
     @Test
     public void testArrayDoubleColumnContainsArrays()
     {
-      // only auto schema supports array columns... skip other segment types
-      Assume.assumeTrue(isAutoSchema());
+      Assume.assumeFalse(testName.contains("frame (columnar)") || testName.contains("rowBasedWithoutTypeSignature"));
       // these are not nested arrays, expect no matches
       assertFilterMatches(
           new ArrayContainsElementFilter(
@@ -471,7 +465,7 @@ public class ArrayContainsElementFilterTests
     public void testArrayContainsNestedArray()
     {
       // only auto schema supports array columns... skip other segment types
-      Assume.assumeTrue(isAutoSchema());
+      Assume.assumeFalse(testName.contains("frame (columnar)") || testName.contains("rowBasedWithoutTypeSignature"));
       assertFilterMatchesSkipVectorize(
           new ArrayContainsElementFilter("nestedArrayLong", ColumnType.LONG_ARRAY, new Object[]{1L, 2L, 3L}, null),
           ImmutableList.of("0", "2")
@@ -515,8 +509,404 @@ public class ArrayContainsElementFilterTests
             ImmutableList.of()
         );
       }
+    }
 
+    @Test
+    public void testNestedArrayStringColumn()
+    {
+      // duplicate of testArrayStringColumn but targeting nested.arrayString
+      Assume.assumeFalse(testName.contains("frame (columnar)") || testName.contains("rowBasedWithoutTypeSignature"));
+        /*
+            dim0 .. arrayString
+            "0", .. ["a", "b", "c"]
+            "1", .. []
+            "2", .. null
+            "3", .. ["a", "b", "c"]
+            "4", .. ["c", "d"]
+            "5", .. [null]
+         */
 
+      assertFilterMatches(
+          new ArrayContainsElementFilter(
+              "nested.arrayString",
+              ColumnType.STRING,
+              "a",
+              null
+          ),
+          ImmutableList.of("0", "3")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(
+              new ArrayContainsElementFilter(
+                  "nested.arrayString",
+                  ColumnType.STRING,
+                  "a",
+                  null
+              )
+          ),
+          NullHandling.sqlCompatible()
+          ? ImmutableList.of("1", "4", "5")
+          : ImmutableList.of("1", "2", "4", "5")
+      );
+
+      assertFilterMatches(
+          new ArrayContainsElementFilter(
+              "nested.arrayString",
+              ColumnType.STRING,
+              "c",
+              null
+          ),
+          ImmutableList.of("0", "3", "4")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(
+              new ArrayContainsElementFilter(
+                  "nested.arrayString",
+                  ColumnType.STRING,
+                  "c",
+                  null
+              )
+          ),
+          NullHandling.sqlCompatible()
+          ? ImmutableList.of("1", "5")
+          : ImmutableList.of("1", "2", "5")
+      );
+
+      assertFilterMatches(
+          new ArrayContainsElementFilter(
+              "nested.arrayString",
+              ColumnType.STRING,
+              null,
+              null
+          ),
+          ImmutableList.of("5")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(
+              new ArrayContainsElementFilter(
+                  "nested.arrayString",
+                  ColumnType.STRING,
+                  null,
+                  null
+              )
+          ),
+          NullHandling.sqlCompatible()
+          ? ImmutableList.of("0", "1", "3", "4")
+          : ImmutableList.of("0", "1", "2", "3", "4")
+      );
+    }
+
+    @Test
+    public void testNestedArrayLongColumn()
+    {
+      // duplicate of testArrayLongColumn but targeting nested.arrayLong
+      Assume.assumeFalse(testName.contains("frame (columnar)") || testName.contains("rowBasedWithoutTypeSignature"));
+        /*
+            dim0 .. arrayLong
+            "0", .. [1L, 2L, 3L]
+            "1", .. []
+            "2", .. [1L, 2L, 3L]
+            "3", .. null
+            "4", .. [null]
+            "5", .. [123L, 345L]
+         */
+      assertFilterMatches(
+          new ArrayContainsElementFilter(
+              "nested.arrayLong",
+              ColumnType.LONG,
+              2L,
+              null
+          ),
+          ImmutableList.of("0", "2")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(
+              new ArrayContainsElementFilter(
+                  "nested.arrayLong",
+                  ColumnType.LONG,
+                  2L,
+                  null
+              )
+          ),
+          NullHandling.sqlCompatible()
+          ? ImmutableList.of("1", "4", "5")
+          : ImmutableList.of("1", "3", "4", "5")
+      );
+
+      assertFilterMatches(
+          new ArrayContainsElementFilter(
+              "nested.arrayLong",
+              ColumnType.LONG,
+              null,
+              null
+          ),
+          ImmutableList.of("4")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(
+              new ArrayContainsElementFilter(
+                  "nested.arrayLong",
+                  ColumnType.LONG,
+                  null,
+                  null
+              )
+          ),
+          NullHandling.sqlCompatible()
+          ? ImmutableList.of("0", "1", "2", "5")
+          : ImmutableList.of("0", "1", "2", "3", "5")
+      );
+
+      assertFilterMatches(
+          new ArrayContainsElementFilter(
+              "nested.arrayLong",
+              ColumnType.DOUBLE,
+              2.0,
+              null
+          ),
+          ImmutableList.of("0", "2")
+      );
+
+      assertFilterMatches(
+          new ArrayContainsElementFilter(
+              "nested.arrayLong",
+              ColumnType.STRING,
+              "2",
+              null
+          ),
+          ImmutableList.of("0", "2")
+      );
+    }
+
+    @Test
+    public void testNestedArrayDoubleColumn()
+    {
+      // duplicate of testArrayDoubleColumn but targeting nested.arrayDouble
+      Assume.assumeTrue(canTestArrayColumns());
+        /*
+            dim0 .. arrayDouble
+            "0", .. [1.1, 2.2, 3.3]
+            "1", .. [1.1, 2.2, 3.3]
+            "2", .. [null]
+            "3", .. []
+            "4", .. [-1.1, -333.3]
+            "5", .. null
+         */
+
+      assertFilterMatches(
+          new ArrayContainsElementFilter(
+              "nested.arrayDouble",
+              ColumnType.DOUBLE,
+              2.2,
+              null
+          ),
+          ImmutableList.of("0", "1")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(
+              new ArrayContainsElementFilter(
+                  "nested.arrayDouble",
+                  ColumnType.DOUBLE,
+                  2.2,
+                  null
+              )
+          ),
+          NullHandling.sqlCompatible()
+          ? ImmutableList.of("2", "3", "4")
+          : ImmutableList.of("2", "3", "4", "5")
+      );
+
+      assertFilterMatches(
+          new ArrayContainsElementFilter(
+              "nested.arrayDouble",
+              ColumnType.STRING,
+              "2.2",
+              null
+          ),
+          ImmutableList.of("0", "1")
+      );
+
+      assertFilterMatches(
+          new ArrayContainsElementFilter(
+              "nested.arrayDouble",
+              ColumnType.DOUBLE,
+              null,
+              null
+          ),
+          ImmutableList.of("2")
+      );
+    }
+
+    @Test
+    public void testNestedArrayStringColumnContainsArrays()
+    {
+      // duplicate of testArrayStringColumnContainsArrays but targeting nested.arrayString
+      Assume.assumeTrue(canTestArrayColumns());
+      // these are not nested arrays, expect no matches
+      assertFilterMatches(
+          new ArrayContainsElementFilter(
+              "nested.arrayString",
+              ColumnType.STRING_ARRAY,
+              ImmutableList.of("a", "b", "c"),
+              null
+          ),
+          ImmutableList.of()
+      );
+      assertFilterMatches(
+          NotDimFilter.of(
+              new ArrayContainsElementFilter(
+                  "nested.arrayString",
+                  ColumnType.STRING_ARRAY,
+                  ImmutableList.of("a", "b", "c"),
+                  null
+              )
+          ),
+          NullHandling.sqlCompatible()
+          ? ImmutableList.of("0", "1", "3", "4", "5")
+          : ImmutableList.of("0", "1", "2", "3", "4", "5")
+      );
+    }
+
+    @Test
+    public void testNestedArrayLongColumnContainsArrays()
+    {
+      // duplicate of testArrayLongColumnContainsArrays but targeting nested.arrayLong
+      Assume.assumeTrue(canTestArrayColumns());
+
+      // these are not nested arrays, expect no matches
+      assertFilterMatches(
+          new ArrayContainsElementFilter(
+              "nested.arrayLong",
+              ColumnType.LONG_ARRAY,
+              ImmutableList.of(1L, 2L, 3L),
+              null
+          ),
+          ImmutableList.of()
+      );
+      assertFilterMatches(
+          NotDimFilter.of(
+              new ArrayContainsElementFilter(
+                  "nested.arrayLong",
+                  ColumnType.LONG_ARRAY,
+                  ImmutableList.of(1L, 2L, 3L),
+                  null
+              )
+          ),
+          NullHandling.sqlCompatible()
+          ? ImmutableList.of("0", "1", "2", "4", "5")
+          : ImmutableList.of("0", "1", "2", "3", "4", "5")
+      );
+    }
+
+    @Test
+    public void testNestedArrayDoubleColumnContainsArrays()
+    {
+      // duplicate of testArrayDoubleColumnContainsArrays but targeting nested.arrayDouble
+      Assume.assumeTrue(canTestArrayColumns());
+      // these are not nested arrays, expect no matches
+      assertFilterMatches(
+          new ArrayContainsElementFilter(
+              "nested.arrayDouble",
+              ColumnType.DOUBLE_ARRAY,
+              ImmutableList.of(1.1, 2.2, 3.3),
+              null
+          ),
+          ImmutableList.of()
+      );
+      assertFilterMatches(
+          NotDimFilter.of(
+              new ArrayContainsElementFilter(
+                  "nested.arrayDouble",
+                  ColumnType.DOUBLE_ARRAY,
+                  ImmutableList.of(1.1, 2.2, 3.3),
+                  null
+              )
+          ),
+          NullHandling.sqlCompatible()
+          ? ImmutableList.of("0", "1", "2", "3", "4")
+          : ImmutableList.of("0", "1", "2", "3", "4", "5")
+      );
+    }
+
+    @Test
+    public void testNestedScalarColumnContains()
+    {
+      Assume.assumeTrue(canTestArrayColumns());
+
+      // duplicate of testScalarColumnContains but targeting nested columns
+      assertFilterMatches(
+          new ArrayContainsElementFilter("nested.s0", ColumnType.STRING, "a", null),
+          ImmutableList.of("1", "5")
+      );
+      assertFilterMatches(
+          new ArrayContainsElementFilter("nested.s0", ColumnType.STRING, "b", null),
+          ImmutableList.of("2")
+      );
+      assertFilterMatches(
+          new ArrayContainsElementFilter("nested.s0", ColumnType.STRING, "c", null),
+          ImmutableList.of("4")
+      );
+      assertFilterMatches(
+          new ArrayContainsElementFilter("nested.s0", ColumnType.STRING, "noexist", null),
+          ImmutableList.of()
+      );
+      assertFilterMatches(
+          new ArrayContainsElementFilter("nested.s0", ColumnType.STRING_ARRAY, ImmutableList.of("c"), null),
+          ImmutableList.of("4")
+      );
+      assertFilterMatches(
+          new ArrayContainsElementFilter("nested.s0", ColumnType.STRING_ARRAY, ImmutableList.of("a", "c"), null),
+          ImmutableList.of()
+      );
+
+      assertFilterMatches(
+          new ArrayContainsElementFilter("nested.d0", ColumnType.DOUBLE, 10.1, null),
+          ImmutableList.of("1")
+      );
+      assertFilterMatches(
+          new ArrayContainsElementFilter("nested.d0", ColumnType.DOUBLE, 120.0245, null),
+          ImmutableList.of("3")
+      );
+      assertFilterMatches(
+          new ArrayContainsElementFilter("nested.d0", ColumnType.DOUBLE, 765.432, null),
+          ImmutableList.of("5")
+      );
+      assertFilterMatches(
+          new ArrayContainsElementFilter("nested.d0", ColumnType.DOUBLE, 765.431, null),
+          ImmutableList.of()
+      );
+      assertFilterMatches(
+          new ArrayContainsElementFilter("nested.d0", ColumnType.DOUBLE_ARRAY, new Object[]{10.1}, null),
+          ImmutableList.of("1")
+      );
+      assertFilterMatches(
+          new ArrayContainsElementFilter("nested.d0", ColumnType.DOUBLE_ARRAY, new Object[]{10.1, 120.0245}, null),
+          ImmutableList.of()
+      );
+
+      assertFilterMatches(
+          new ArrayContainsElementFilter("nested.l0", ColumnType.LONG, 100L, null),
+          ImmutableList.of("1")
+      );
+      assertFilterMatches(
+          new ArrayContainsElementFilter("nested.l0", ColumnType.LONG, 40L, null),
+          ImmutableList.of("2")
+      );
+      assertFilterMatches(
+          new ArrayContainsElementFilter("nested.l0", ColumnType.LONG, 9001L, null),
+          ImmutableList.of("4")
+      );
+      assertFilterMatches(
+          new ArrayContainsElementFilter("nested.l0", ColumnType.LONG, 9000L, null),
+          ImmutableList.of()
+      );
+      assertFilterMatches(
+          new ArrayContainsElementFilter("nested.l0", ColumnType.LONG_ARRAY, ImmutableList.of(9001L), null),
+          ImmutableList.of("4")
+      );
+      assertFilterMatches(
+          new ArrayContainsElementFilter("nested.l0", ColumnType.LONG_ARRAY, ImmutableList.of(40L, 9001L), null),
+          ImmutableList.of()
+      );
     }
   }
 
@@ -655,9 +1045,24 @@ public class ArrayContainsElementFilterTests
       Assert.assertFalse(Arrays.equals(f1.getCacheKey(), f2.getCacheKey()));
       Assert.assertArrayEquals(f1.getCacheKey(), f3.getCacheKey());
 
-      f1 = new ArrayContainsElementFilter("x", ColumnType.DOUBLE_ARRAY, new Object[]{1.001, null, 20.0002, 300.0003}, null);
-      f1_2 = new ArrayContainsElementFilter("x", ColumnType.DOUBLE_ARRAY, Arrays.asList(1.001, null, 20.0002, 300.0003), null);
-      f2 = new ArrayContainsElementFilter("x", ColumnType.DOUBLE_ARRAY, new Object[]{1.001, 20.0002, 300.0003, null}, null);
+      f1 = new ArrayContainsElementFilter(
+          "x",
+          ColumnType.DOUBLE_ARRAY,
+          new Object[]{1.001, null, 20.0002, 300.0003},
+          null
+      );
+      f1_2 = new ArrayContainsElementFilter(
+          "x",
+          ColumnType.DOUBLE_ARRAY,
+          Arrays.asList(1.001, null, 20.0002, 300.0003),
+          null
+      );
+      f2 = new ArrayContainsElementFilter(
+          "x",
+          ColumnType.DOUBLE_ARRAY,
+          new Object[]{1.001, 20.0002, 300.0003, null},
+          null
+      );
       f3 = new ArrayContainsElementFilter(
           "x",
           ColumnType.DOUBLE_ARRAY,
@@ -669,7 +1074,12 @@ public class ArrayContainsElementFilterTests
       Assert.assertArrayEquals(f1.getCacheKey(), f3.getCacheKey());
 
       NestedDataModule.registerHandlersAndSerde();
-      f1 = new ArrayContainsElementFilter("x", ColumnType.NESTED_DATA, ImmutableMap.of("x", ImmutableList.of(1, 2, 3)), null);
+      f1 = new ArrayContainsElementFilter(
+          "x",
+          ColumnType.NESTED_DATA,
+          ImmutableMap.of("x", ImmutableList.of(1, 2, 3)),
+          null
+      );
       f1_2 = new ArrayContainsElementFilter(
           "x",
           ColumnType.NESTED_DATA,
@@ -722,10 +1132,16 @@ public class ArrayContainsElementFilterTests
                         "elementMatchValueEval",
                         "elementMatchValue",
                         "predicateFactory",
-                        "cachedOptimizedFilter"
+                        "optimizedFilterIncludeUnknown",
+                        "optimizedFilterNoIncludeUnknown"
                     )
                     .withPrefabValues(ColumnType.class, ColumnType.STRING, ColumnType.DOUBLE)
-                    .withIgnoredFields("predicateFactory", "cachedOptimizedFilter", "elementMatchValue")
+                    .withIgnoredFields(
+                        "predicateFactory",
+                        "optimizedFilterIncludeUnknown",
+                        "optimizedFilterNoIncludeUnknown",
+                        "elementMatchValue"
+                    )
                     .verify();
     }
   }
