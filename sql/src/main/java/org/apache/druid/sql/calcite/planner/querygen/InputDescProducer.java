@@ -37,7 +37,7 @@ public interface InputDescProducer
    *
    * Main reason to have this was that {@link DataSource} doesn't contain the {@link RowSignature}.
    */
-  public class InputDesc
+  class InputDesc
   {
     public DataSource dataSource;
     public RowSignature rowSignature;
