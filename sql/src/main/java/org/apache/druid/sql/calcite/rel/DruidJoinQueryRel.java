@@ -194,20 +194,21 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
       throw new CannotBuildQueryException(joinRel, joinRel.getCondition());
     }
 
-    return partialQuery.build(
-        JoinDataSource.create(
-            leftDataSource,
-            rightDataSource,
-            prefixSignaturePair.lhs,
-            JoinConditionAnalysis.forExpression(
-                condition.getExpression(),
-                getPlannerContext().parseExpression(condition.getExpression()),
-                prefixSignaturePair.lhs
-            ),
-            toDruidJoinType(joinRel.getJoinType()),
-            getDimFilter(getPlannerContext(), leftSignature, leftFilter),
-            getPlannerContext().getJoinableFactoryWrapper()
+    JoinDataSource joinDataSource = JoinDataSource.create(
+        leftDataSource,
+        rightDataSource,
+        prefixSignaturePair.lhs,
+        JoinConditionAnalysis.forExpression(
+            condition.getExpression(),
+            getPlannerContext().parseExpression(condition.getExpression()),
+            prefixSignaturePair.lhs
         ),
+        toDruidJoinType(joinRel.getJoinType()),
+        getDimFilter(getPlannerContext(), leftSignature, leftFilter),
+        getPlannerContext().getJoinableFactoryWrapper()
+    );
+    return partialQuery.build(
+        joinDataSource,
         prefixSignaturePair.rhs,
         getPlannerContext(),
         getCluster().getRexBuilder(),

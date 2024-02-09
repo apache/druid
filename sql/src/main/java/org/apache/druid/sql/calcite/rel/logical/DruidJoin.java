@@ -30,15 +30,8 @@ import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.hint.RelHint;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rex.RexNode;
-import org.apache.druid.error.DruidException;
-import org.apache.druid.query.DataSource;
-import org.apache.druid.query.InlineDataSource;
-import org.apache.druid.query.TableDataSource;
-import org.apache.druid.query.UnionDataSource;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.querygen.InputDescProducer;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -77,31 +70,24 @@ public class DruidJoin extends Join implements DruidLogicalNode, InputDescProduc
   @Override
   public InputDesc getInputDesc(PlannerContext plannerContext, List<InputDesc> inputs)
   {
-    List<DataSource> dataSources = new ArrayList<>();
-    RowSignature signature = null;
-    for (InputDesc inputDesc : inputs) {
-      checkDataSourceSupported(inputDesc.dataSource);
-      dataSources.add(inputDesc.dataSource);
-      if (signature == null) {
-        signature = inputDesc.rowSignature;
-      } else {
-        if (!signature.equals(inputDesc.rowSignature)) {
-          throw DruidException.defensive(
-              "Row signature mismatch in Union inputs [%s] and [%s]",
-              signature,
-              inputDesc.rowSignature
-          );
-        }
-      }
-    }
-    return new InputDesc(new UnionDataSource(dataSources), signature);
-  }
-
-  private void checkDataSourceSupported(DataSource dataSource)
-  {
-    if (dataSource instanceof TableDataSource || dataSource instanceof InlineDataSource) {
-      return;
-    }
-    throw DruidException.defensive("Only Table and Values are supported as inputs for Union [%s]", dataSource);
+    return null;
+//    List<DataSource> dataSources = new ArrayList<>();
+//    RowSignature signature = null;
+//    for (InputDesc inputDesc : inputs) {
+//      checkDataSourceSupported(inputDesc.dataSource);
+//      dataSources.add(inputDesc.dataSource);
+//      if (signature == null) {
+//        signature = inputDesc.rowSignature;
+//      } else {
+//        if (!signature.equals(inputDesc.rowSignature)) {
+//          throw DruidException.defensive(
+//              "Row signature mismatch in Union inputs [%s] and [%s]",
+//              signature,
+//              inputDesc.rowSignature
+//          );
+//        }
+//      }
+//    }
+//    return new InputDesc(new UnionDataSource(dataSources), signature);
   }
 }
