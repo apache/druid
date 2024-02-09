@@ -775,7 +775,6 @@ public class StreamAppenderator implements Appenderator
         persistAll(committer),
         (Function<Object, SegmentsAndCommitMetadata>) commitMetadata -> {
           final List<DataSegment> dataSegments = new ArrayList<>();
-          final Map<String, SegmentSchemaMetadata> schemaMetadataMap = new HashMap<>();
           final MinimalSegmentSchemas minimalSegmentSchemas = new MinimalSegmentSchemas();
 
           log.info("Preparing to push (stats): processed rows: [%d], sinks: [%d], fireHydrants (across sinks): [%d]",

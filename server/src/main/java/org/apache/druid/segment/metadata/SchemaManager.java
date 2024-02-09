@@ -145,15 +145,11 @@ public class SchemaManager
     }
     catch (Exception e) {
       log.error("Exception inserting schemas to DB: %s", schemaPayloadMap);
+      // log the schema
       throw e;
     }
   }
-
-  private void logSchema(Map<String, SchemaPayload> schemaPayloadMap)
-  {
-
-  }
-
+  
   public void updateSegments(Handle handle, List<SegmentSchemaMetadataPlus> batch)
   {
     Set<String> updatedSegments =

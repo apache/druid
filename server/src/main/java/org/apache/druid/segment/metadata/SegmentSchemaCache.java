@@ -20,23 +20,25 @@
 package org.apache.druid.segment.metadata;
 
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.SchemaPayload;
 import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.timeline.SegmentId;
 
+import javax.swing.text.html.Option;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 
-// schema cache for published segments only
-//
+/**
+ *
+ */
 @LazySingleton
 public class SegmentSchemaCache
 {
-
-  private CountDownLatch initialized = new CountDownLatch(1);
+  private final CountDownLatch initialized = new CountDownLatch(1);
 
   // Mapping from segmentId to segmentStats, reference is updated on each database poll.
   // edge case what happens if first this map is build from db
@@ -50,9 +52,9 @@ public class SegmentSchemaCache
   // if transaction failed revert stuff by storing in temporary structure
   private volatile ConcurrentMap<Long, SchemaPayload> finalizedSegmentSchema = new ConcurrentHashMap<>();
 
-  private ConcurrentMap<SegmentId, SegmentSchemaMetadata> realtimeSegmentSchemaMap = new ConcurrentHashMap<>();
+  private final ConcurrentMap<SegmentId, SegmentSchemaMetadata> realtimeSegmentSchemaMap = new ConcurrentHashMap<>();
 
-  private ConcurrentMap<SegmentId, SegmentSchemaMetadata> inTransitSMQResults = new ConcurrentHashMap<>();
+  private final ConcurrentMap<SegmentId, SegmentSchemaMetadata> inTransitSMQResults = new ConcurrentHashMap<>();
   private volatile ConcurrentMap<SegmentId, SegmentSchemaMetadata> inTransitSMQPublishedResults = new ConcurrentHashMap<>();
 
   public void setInitialized()
@@ -64,7 +66,6 @@ public class SegmentSchemaCache
   {
     initialized.await();
   }
-
 
   public void updateFinalizedSegmentStatsReference(ConcurrentMap<SegmentId, SegmentStats> segmentStatsMap)
   {
@@ -109,32 +110,55 @@ public class SegmentSchemaCache
 
   public Optional<SegmentSchemaMetadata> getSchemaForSegment(SegmentId segmentId)
   {
-    // check realtime
-    if (!finalizedSegmentStats.containsKey(segmentId)) {
-      return Optional.empty();
+    // realtime segment
+    if (realtimeSegmentSchemaMap.containsKey(segmentId)) {
+      return Optional.of(realtimeSegmentSchemaMap.get(segmentId));
     }
 
-    SegmentStats segmentStats = finalizedSegmentStats.get(segmentId);
-    if (!finalizedSegmentSchema.containsKey(segmentStats.getSchemaId())) {
-      return Optional.empty();
+    // segment schema has been fetched via SMQ
+    if (inTransitSMQResults.containsKey(segmentId)) {
+      return Optional.of(inTransitSMQResults.get(segmentId));
+    }
+    // segment schema has been fetched via SMQ and the schema has been published to the DB
+    if (inTransitSMQPublishedResults.containsKey(segmentId)) {
+      return Optional.of(inTransitSMQPublishedResults.get(segmentId));
     }
 
-    long schemaId = segmentStats.getSchemaId();
+    // segment schema has been polled from the DB
+    if (finalizedSegmentStats.containsKey(segmentId)) {
+      SegmentStats segmentStats = finalizedSegmentStats.get(segmentId);
+      long schemaId = segmentStats.getSchemaId();
+      if (finalizedSegmentSchema.containsKey(schemaId)) {
+        return Optional.of(new SegmentSchemaMetadata(
+            finalizedSegmentSchema.get(schemaId),
+            segmentStats.getNumRows()
+        ));
+      }
+    }
 
-    return Optional.of(new SegmentSchemaMetadata(
-        finalizedSegmentSchema.get(schemaId),
-        segmentStats.getNumRows()
-    ));
+    return Optional.empty();
   }
 
   public boolean isSchemaCached(SegmentId segmentId)
   {
-    return finalizedSegmentStats.containsKey(segmentId);
+    return realtimeSegmentSchemaMap.containsKey(segmentId) ||
+           inTransitSMQResults.containsKey(segmentId) ||
+           inTransitSMQPublishedResults.containsKey(segmentId) ||
+           finalizedSegmentStats.containsKey(segmentId) &&
+           finalizedSegmentSchema.containsKey(finalizedSegmentStats.get(segmentId).getSchemaId());
   }
 
   public boolean segmentRemoved(SegmentId segmentId)
   {
-    return false;
+    if (!isSchemaCached(segmentId)) {
+      return false;
+    }
+    // remove the segment from all the maps
+    realtimeSegmentSchemaMap.remove(segmentId);
+    inTransitSMQResults.remove(segmentId);
+    inTransitSMQPublishedResults.remove(segmentId);
+    finalizedSegmentStats.remove(segmentId);
+    return true;
   }
 
   public static class SegmentStats

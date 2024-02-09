@@ -1102,7 +1102,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     connector.inReadOnlyTransaction(new TransactionCallback<Object>()
     {
       @Override
-      public Object inTransaction(Handle handle, TransactionStatus status) throws Exception
+      public Object inTransaction(Handle handle, TransactionStatus status)
       {
         return handle.createQuery(finalSchemaPollQuery)
             .map(new ResultSetMapper<Void>()
@@ -1140,6 +1140,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
 
     schemaMap.forEach(segmentSchemaCache::addFinalizedSegmentSchema);
     segmentSchemaCache.updateFinalizedSegmentStatsReference(segmentStats);
+    segmentSchemaCache.resetInTransitSMQResultPublishedOnDBPoll();
 
     if (latestSegmentSchemaPoll == null) {
       log.info("Marking SegmentSchemaCache as initialized.");

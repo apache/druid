@@ -2108,7 +2108,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     final Set<Interval> replaceIntervals = intervalToNumCorePartitions.keySet();
 
     final Set<DataSegmentPlus> upgradedSegments = new HashSet<>();
-    final Map<SegmentId, Pair<Long, Long>> upgradeSegmentSchemaMetadata = new HashMap<>();
     for (DataSegmentPlus oldSegmentMetadata : segmentsToUpgrade) {
       // Determine interval of the upgraded segment
       DataSegment oldSegment = oldSegmentMetadata.getDataSegment();
@@ -2249,7 +2248,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         }
 
         batch.add()
-             .bind("id", segmentId.toString())
+             .bind("id", segmentId)
              .bind("dataSource", segment.getDataSource())
              .bind("created_date", now)
              .bind("start", segment.getInterval().getStart().toString())
