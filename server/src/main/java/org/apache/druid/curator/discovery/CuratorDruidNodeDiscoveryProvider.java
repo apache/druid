@@ -228,6 +228,14 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
     public Collection<DiscoveryDruidNode> getAllNodes()
     {
       while (baseNodeRoleWatcher.getAllNodes() == null) {
+        log.warn("BaseNodeRoleWatcher could not return all nodes for role[%s]. Retrying with new cache.", nodeRole);
+        try {
+          cache.close();
+        }
+        catch (IOException e) {
+          log.error("Could not close previous cache");
+          throw new RuntimeException(e);
+        }
         refreshCache();
       }
       return baseNodeRoleWatcher.getAllNodes();
