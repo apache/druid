@@ -29,7 +29,6 @@ import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.WarningCounters;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
-import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.SegmentId;
@@ -142,7 +141,7 @@ public class ExternalSegment extends RowBasedSegment<InputRow>
               }
             }
         ),
-        RowAdapters.standardRow(),
+        reader.rowAdapter(),
         signature
     );
     this.inputSource = inputSource;

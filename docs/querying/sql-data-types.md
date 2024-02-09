@@ -66,11 +66,14 @@ The following table describes how Druid maps SQL types onto native types when ru
 |ARRAY|ARRAY|`NULL`|Druid native array types work as SQL arrays, and multi-value strings can be converted to arrays. See [Arrays](#arrays) for more information.|
 |OTHER|COMPLEX|none|May represent various Druid column types such as hyperUnique, approxHistogram, etc.|
 
-<sup>*</sup> The default value is `NULL` for all types, except in the deprecated legacy mode (`druid.generic.useDefaultValueForNull = true`) which initialize a default value. 
+<sup>*</sup> 
+The default value is <code>NULL</code> for all types, except in the deprecated legacy mode (<code>druid.generic.useDefaultValueForNull = true</code>) which initialize a default value. 
+<br /><br />
+For casts between two SQL types, the behavior depends on the runtime type:
 
-Casts between two SQL types with the same Druid runtime type have no effect other than the exceptions noted in the table.
+* Casts between two SQL types with the same Druid runtime type have no effect other than the exceptions noted in the table.
 
-Casts between two SQL types that have different Druid runtime types generate a runtime cast in Druid.
+* Casts between two SQL types that have different Druid runtime types generate a runtime cast in Druid.
 
 If a value cannot be cast to the target type, as in `CAST('foo' AS BIGINT)`, Druid a substitutes [NULL](#null-values).
 When `druid.generic.useDefaultValueForNull = true` (deprecated legacy mode), Druid instead substitutes a default value, including when NULL values cast to non-nullable types. For example, if `druid.generic.useDefaultValueForNull = true`, a null VARCHAR cast to BIGINT is converted to a zero.

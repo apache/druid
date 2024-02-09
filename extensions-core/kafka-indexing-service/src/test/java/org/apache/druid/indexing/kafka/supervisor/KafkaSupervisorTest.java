@@ -75,12 +75,14 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.indexing.seekablestream.supervisor.TaskReportData;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.LagBasedAutoScalerConfig;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.AlertBuilder;
+import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
@@ -90,7 +92,6 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.FireDepartment;
-import org.apache.druid.server.metrics.ExceptionCapturingServiceEmitter;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
@@ -166,7 +167,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   private TaskQueue taskQueue;
   private String topic;
   private RowIngestionMetersFactory rowIngestionMetersFactory;
-  private ExceptionCapturingServiceEmitter serviceEmitter;
+  private StubServiceEmitter serviceEmitter;
   private SupervisorStateManagerConfig supervisorConfig;
   private KafkaSupervisorIngestionSpec ingestionSchema;
 
@@ -222,7 +223,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     topic = getTopic();
     rowIngestionMetersFactory = new TestUtils().getRowIngestionMetersFactory();
-    serviceEmitter = new ExceptionCapturingServiceEmitter();
+    serviceEmitter = new StubServiceEmitter("KafkaSupervisorTest", "localhost");
     EmittingLogger.registerEmitter(serviceEmitter);
     supervisorConfig = new SupervisorStateManagerConfig();
     ingestionSchema = EasyMock.createMock(KafkaSupervisorIngestionSpec.class);
@@ -331,6 +332,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             TEST_CHAT_RETRIES,
             TEST_HTTP_TIMEOUT,
             TEST_SHUTDOWN_TIMEOUT,
+            null,
             null,
             null,
             null,
@@ -470,6 +472,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null
         ),
         new KafkaIndexTaskTuningConfig(
+            null,
             null,
             null,
             null,
@@ -3340,9 +3343,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     verifyAll();
 
-    Assert.assertNull(serviceEmitter.getStackTrace(), serviceEmitter.getStackTrace());
-    Assert.assertNull(serviceEmitter.getExceptionMessage(), serviceEmitter.getExceptionMessage());
-    Assert.assertNull(serviceEmitter.getExceptionClass());
+    Assert.assertTrue(serviceEmitter.getAlerts().isEmpty());
   }
 
   @Test(timeout = 60_000L)
@@ -3426,18 +3427,19 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     verifyAll();
 
-    while (serviceEmitter.getStackTrace() == null) {
+    while (serviceEmitter.getAlerts().isEmpty()) {
       Thread.sleep(100);
     }
 
-    Assert.assertTrue(
-        serviceEmitter.getStackTrace().startsWith("org.apache.druid.java.util.common.ISE: Cannot find")
+    AlertEvent alert = serviceEmitter.getAlerts().get(0);
+    Assert.assertEquals(
+        "SeekableStreamSupervisor[testDS] failed to handle notice",
+        alert.getDescription()
     );
     Assert.assertEquals(
         "Cannot find taskGroup [0] among all activelyReadingTaskGroups [{}]",
-        serviceEmitter.getExceptionMessage()
+        alert.getDataMap().get(AlertBuilder.EXCEPTION_MESSAGE_KEY)
     );
-    Assert.assertEquals(ISE.class.getName(), serviceEmitter.getExceptionClass());
   }
 
   @Test
@@ -3997,6 +3999,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null,
             null,
             null,
+            null,
             null
         )
     );
@@ -4031,6 +4034,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         TEST_CHAT_RETRIES,
         TEST_HTTP_TIMEOUT,
         TEST_SHUTDOWN_TIMEOUT,
+        null,
         null,
         null,
         null,
@@ -4183,6 +4187,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             TEST_CHAT_RETRIES,
             TEST_HTTP_TIMEOUT,
             TEST_SHUTDOWN_TIMEOUT,
+            null,
             null,
             null,
             null,
@@ -4661,7 +4666,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        10
+        10,
+        null
     );
 
     return new TestableKafkaSupervisor(
@@ -4770,6 +4776,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         TEST_CHAT_RETRIES,
         TEST_HTTP_TIMEOUT,
         TEST_SHUTDOWN_TIMEOUT,
+        null,
         null,
         null,
         null,

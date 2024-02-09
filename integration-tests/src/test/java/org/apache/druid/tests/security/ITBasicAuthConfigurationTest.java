@@ -78,6 +78,21 @@ public class ITBasicAuthConfigurationTest extends AbstractAuthConfigurationTest
   }
 
   @Override
+  protected void setupHttpClientsAndUsers() throws Exception
+  {
+    super.setupHttpClientsAndUsers();
+
+    // Add a large enough delay to allow propagation of credentials to all services. It'd be ideal
+    // to have a "readiness" endpoint exposed by different services that'd return the version of auth creds cached.
+    try {
+      Thread.sleep(10000);
+    }
+    catch (InterruptedException e) {
+      // Ignore exception
+    }
+  }
+
+  @Override
   protected void setupDatasourceOnlyUser() throws Exception
   {
     createUserAndRoleWithPermissions(

@@ -108,6 +108,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -1494,7 +1495,7 @@ public class DruidQuery
   {
     if (sorting == null
         || sorting.getOrderBys().isEmpty()
-        || sorting.getProjection() != null) {
+        || (sorting.getProjection() != null && !sorting.getProjection().getVirtualColumns().isEmpty())) {
       return null;
     }
 
@@ -1505,13 +1506,7 @@ public class DruidQuery
 
     if (dataSource.isConcrete()) {
       // Currently only non-time orderings of subqueries are allowed.
-      List<String> orderByColumnNames = sorting.getOrderBys()
-          .stream().map(OrderByColumnSpec::getDimension)
-          .collect(Collectors.toList());
-      plannerContext.setPlanningError(
-          "SQL query requires ordering a table by non-time column [%s], which is not supported.",
-          orderByColumnNames
-      );
+      setPlanningErrorOrderByNonTimeIsUnsupported();
       return null;
     }
 
@@ -1521,13 +1516,25 @@ public class DruidQuery
     List<OperatorFactory> operators = new ArrayList<>();
 
     operators.add(new NaiveSortOperatorFactory(sortColumns));
-    if (!sorting.getOffsetLimit().isNone()) {
+
+
+    final Projection projection = sorting.getProjection();
+
+    final org.apache.druid.query.operator.OffsetLimit offsetLimit = sorting.getOffsetLimit().isNone()
+        ? null
+        : sorting.getOffsetLimit().toOperatorOffsetLimit();
+
+    final List<String> projectedColumns = projection == null
+        ? null
+        : projection.getOutputRowSignature().getColumnNames();
+
+    if (offsetLimit != null || projectedColumns != null) {
       operators.add(
           new ScanOperatorFactory(
               null,
               null,
-              sorting.getOffsetLimit().toOperatorOffsetLimit(),
-              null,
+              offsetLimit,
+              projectedColumns,
               null,
               null
           )
@@ -1541,6 +1548,17 @@ public class DruidQuery
         signature,
         operators,
         null
+    );
+  }
+
+  private void setPlanningErrorOrderByNonTimeIsUnsupported()
+  {
+    List<String> orderByColumnNames = sorting.getOrderBys()
+        .stream().map(OrderByColumnSpec::getDimension)
+        .collect(Collectors.toList());
+    plannerContext.setPlanningError(
+        "SQL query requires ordering a table by non-time column [%s], which is not supported.",
+        orderByColumnNames
     );
   }
 
@@ -1623,10 +1641,7 @@ public class DruidQuery
         // potential branches of exploration rather than being a semantic requirement of the query itself.  So, it is
         // not safe to send an error message telling the end-user exactly what is happening, instead we need to set the
         // planning error and hope.
-        plannerContext.setPlanningError(
-            "SQL query requires order by non-time column [%s], which is not supported.",
-            orderByColumns
-        );
+        setPlanningErrorOrderByNonTimeIsUnsupported();
         return null;
       }
     }

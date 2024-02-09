@@ -38,6 +38,7 @@ import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -54,11 +55,10 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.NavigableMap;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
@@ -179,18 +179,18 @@ public abstract class BaseAppenderatorDriver implements Closeable
     // Interval Start millis -> List of Segments for this interval
     // there might be multiple segments for a start interval, for example one segment
     // can be in APPENDING state and others might be in PUBLISHING state
-    private final NavigableMap<Long, SegmentsOfInterval> intervalToSegmentStates;
+    private final Map<Interval, SegmentsOfInterval> intervalToSegmentStates;
 
     // most recently allocated segment
     private String lastSegmentId;
 
     SegmentsForSequence()
     {
-      this.intervalToSegmentStates = new TreeMap<>();
+      this.intervalToSegmentStates = new HashMap<>();
     }
 
     SegmentsForSequence(
-        NavigableMap<Long, SegmentsOfInterval> intervalToSegmentStates,
+        Map<Interval, SegmentsOfInterval> intervalToSegmentStates,
         String lastSegmentId
     )
     {
@@ -200,21 +200,40 @@ public abstract class BaseAppenderatorDriver implements Closeable
 
     void add(SegmentIdWithShardSpec identifier)
     {
+      for (Map.Entry<Interval, SegmentsOfInterval> entry : intervalToSegmentStates.entrySet()) {
+        final SegmentWithState appendingSegment = entry.getValue().getAppendingSegment();
+        if (appendingSegment == null) {
+          continue;
+        }
+        if (identifier.getInterval().contains(entry.getKey())) {
+          if (identifier.getVersion().compareTo(appendingSegment.getSegmentIdentifier().getVersion()) > 0) {
+            entry.getValue().finishAppendingToCurrentActiveSegment(SegmentWithState::finishAppending);
+          }
+        }
+      }
       intervalToSegmentStates.computeIfAbsent(
-          identifier.getInterval().getStartMillis(),
+          identifier.getInterval(),
           k -> new SegmentsOfInterval(identifier.getInterval())
       ).setAppendingSegment(SegmentWithState.newSegment(identifier));
       lastSegmentId = identifier.toString();
     }
 
-    Entry<Long, SegmentsOfInterval> floor(long timestamp)
+    SegmentsOfInterval findCandidate(long timestamp)
     {
-      return intervalToSegmentStates.floorEntry(timestamp);
+      Interval interval = Intervals.utc(timestamp, timestamp);
+      SegmentsOfInterval retVal = null;
+      for (Map.Entry<Interval, SegmentsOfInterval> entry : intervalToSegmentStates.entrySet()) {
+        if (entry.getKey().contains(interval)) {
+          interval = entry.getKey();
+          retVal = entry.getValue();
+        }
+      }
+      return retVal;
     }
 
-    SegmentsOfInterval get(long timestamp)
+    SegmentsOfInterval get(Interval interval)
     {
-      return intervalToSegmentStates.get(timestamp);
+      return intervalToSegmentStates.get(interval);
     }
 
     public Stream<SegmentWithState> allSegmentStateStream()
@@ -291,16 +310,15 @@ public abstract class BaseAppenderatorDriver implements Closeable
         return null;
       }
 
-      final Map.Entry<Long, SegmentsOfInterval> candidateEntry = segmentsForSequence.floor(
+      final SegmentsOfInterval candidate = segmentsForSequence.findCandidate(
           timestamp.getMillis()
       );
 
-      if (candidateEntry != null) {
-        final SegmentsOfInterval segmentsOfInterval = candidateEntry.getValue();
-        if (segmentsOfInterval.interval.contains(timestamp)) {
-          return segmentsOfInterval.appendingSegment == null ?
+      if (candidate != null) {
+        if (candidate.interval.contains(timestamp)) {
+          return candidate.appendingSegment == null ?
                  null :
-                 segmentsOfInterval.appendingSegment.getSegmentIdentifier();
+                 candidate.appendingSegment.getSegmentIdentifier();
         } else {
           return null;
         }

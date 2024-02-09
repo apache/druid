@@ -21,13 +21,10 @@ package org.apache.druid.msq.test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TimeChunkLock;
 import org.apache.druid.indexing.common.actions.LockListAction;
-import org.apache.druid.indexing.common.actions.RetrieveSegmentsToReplaceAction;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalAppendAction;
@@ -47,8 +44,6 @@ import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -60,10 +55,6 @@ public class MSQTestTaskActionClient implements TaskActionClient
   public static final String VERSION = "test";
   private final ObjectMapper mapper;
   private final ConcurrentHashMap<SegmentId, AtomicInteger> segmentIdPartitionIdMap = new ConcurrentHashMap<>();
-  private final Map<String, List<Interval>> usedIntervals = ImmutableMap.of(
-      "foo", ImmutableList.of(Intervals.of("2001-01-01/2001-01-04"), Intervals.of("2000-01-01/2000-01-04")),
-      "foo2", ImmutableList.of(Intervals.of("2000-01-01/P1D"))
-  );
   private final Set<DataSegment> publishedSegments = new HashSet<>();
   private final Injector injector;
 
@@ -115,21 +106,6 @@ public class MSQTestTaskActionClient implements TaskActionClient
       ));
     } else if (taskAction instanceof RetrieveUsedSegmentsAction) {
       String dataSource = ((RetrieveUsedSegmentsAction) taskAction).getDataSource();
-      if (!usedIntervals.containsKey(dataSource)) {
-        return (RetType) ImmutableSet.of();
-      } else {
-        return (RetType) usedIntervals.get(dataSource)
-                                      .stream()
-                                      .map(interval -> DataSegment.builder()
-                                                                 .dataSource(dataSource)
-                                                                 .interval(interval)
-                                                                 .version(VERSION)
-                                                                 .size(1)
-                                                                 .build()
-                                     ).collect(Collectors.toSet());
-      }
-    } else if (taskAction instanceof RetrieveSegmentsToReplaceAction) {
-      String dataSource = ((RetrieveSegmentsToReplaceAction) taskAction).getDataSource();
       return (RetType) injector.getInstance(SpecificSegmentsQuerySegmentWalker.class)
                                .getSegments()
                                .stream()
