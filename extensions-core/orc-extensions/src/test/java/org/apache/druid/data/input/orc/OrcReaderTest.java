@@ -318,9 +318,7 @@ public class OrcReaderTest extends InitializedNullHandlingTest
         Exception exception = Assert.assertThrows(UnsupportedOperationException.class, () -> {
           row.getDimension("append");
         });
-        String expectedMessage = "Unused";
-        String actualMessage = exception.getMessage();
-        Assert.assertTrue(actualMessage.contains(expectedMessage));
+        Assert.assertEquals("Unused", exception.getMessage());
       }
       Assert.assertEquals(1, actualRowCount);
     }
