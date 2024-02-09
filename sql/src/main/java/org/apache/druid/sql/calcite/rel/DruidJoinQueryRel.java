@@ -55,6 +55,8 @@ import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.querygen.InputDescProducer;
+import org.apache.druid.sql.calcite.planner.querygen.InputDescProducer.InputDesc;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
@@ -210,6 +212,8 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
         getDimFilter(getPlannerContext(), leftSignature, leftFilter),
         getPlannerContext().getJoinableFactoryWrapper()
     );
+
+    InputDesc inputDesc=new InputDesc(joinDataSource, signature , virtualColumnRegistry);
 
     return partialQuery.build(
         joinDataSource,
