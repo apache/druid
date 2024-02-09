@@ -212,8 +212,34 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
       testBuilder()
           .skipVectorize(true)
           .sql(testCase.getSql())
+          .queryContext(ImmutableMap.of(
+              PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
+              QueryContexts.ENABLE_DEBUG, true,
+              QueryContexts.WINDOWING_STRICT_VALIDATION, false
+              ))
+          .addCustomVerification(QueryVerification.ofResults(testCase))
+          .run();
+    }
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void windowQueryTestWithCustomContextMaxSubqueryBytes() throws Exception
+  {
+    TestCase testCase = new TestCase(filename);
+
+    assumeThat(testCase.getType(), Matchers.not(TestType.failingTest));
+
+    if (testCase.getType() == TestType.operatorValidation) {
+      testBuilder()
+          .skipVectorize(true)
+          .sql(testCase.getSql())
           .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
-              QueryContexts.ENABLE_DEBUG, true))
+                                        QueryContexts.ENABLE_DEBUG, true,
+                                        QueryContexts.MAX_SUBQUERY_BYTES_KEY, "100000",
+                                        QueryContexts.WINDOWING_STRICT_VALIDATION, false
+                        )
+          )
           .addCustomVerification(QueryVerification.ofResults(testCase))
           .run();
     }

@@ -1305,6 +1305,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     @Nullable
     private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
 
+    private final int numPersistThreads;
+
     @Nullable
     private static PartitionsSpec getPartitionsSpec(
         boolean forceGuaranteedRollup,
@@ -1371,7 +1373,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
         @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
         @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge,
-        @JsonProperty("awaitSegmentAvailabilityTimeoutMillis") @Nullable Long awaitSegmentAvailabilityTimeoutMillis
+        @JsonProperty("awaitSegmentAvailabilityTimeoutMillis") @Nullable Long awaitSegmentAvailabilityTimeoutMillis,
+        @JsonProperty("numPersistThreads") @Nullable Integer numPersistThreads
     )
     {
       this(
@@ -1399,7 +1402,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           maxParseExceptions,
           maxSavedParseExceptions,
           maxColumnsToMerge,
-          awaitSegmentAvailabilityTimeoutMillis
+          awaitSegmentAvailabilityTimeoutMillis,
+          numPersistThreads
       );
 
       Preconditions.checkArgument(
@@ -1410,7 +1414,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
     private IndexTuningConfig()
     {
-      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     private IndexTuningConfig(
@@ -1431,7 +1435,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         @Nullable Integer maxParseExceptions,
         @Nullable Integer maxSavedParseExceptions,
         @Nullable Integer maxColumnsToMerge,
-        @Nullable Long awaitSegmentAvailabilityTimeoutMillis
+        @Nullable Long awaitSegmentAvailabilityTimeoutMillis,
+        @Nullable Integer numPersistThreads
     )
     {
       this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
@@ -1477,6 +1482,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       } else {
         this.awaitSegmentAvailabilityTimeoutMillis = awaitSegmentAvailabilityTimeoutMillis;
       }
+      this.numPersistThreads = numPersistThreads == null ?
+                                DEFAULT_NUM_PERSIST_THREADS : Math.max(numPersistThreads, DEFAULT_NUM_PERSIST_THREADS);
     }
 
     @Override
@@ -1500,7 +1507,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           maxParseExceptions,
           maxSavedParseExceptions,
           maxColumnsToMerge,
-          awaitSegmentAvailabilityTimeoutMillis
+          awaitSegmentAvailabilityTimeoutMillis,
+          numPersistThreads
       );
     }
 
@@ -1524,7 +1532,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           maxParseExceptions,
           maxSavedParseExceptions,
           maxColumnsToMerge,
-          awaitSegmentAvailabilityTimeoutMillis
+          awaitSegmentAvailabilityTimeoutMillis,
+          numPersistThreads
       );
     }
 
@@ -1713,6 +1722,13 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       return awaitSegmentAvailabilityTimeoutMillis;
     }
 
+    @JsonProperty
+    @Override
+    public int getNumPersistThreads()
+    {
+      return numPersistThreads;
+    }
+
     @Override
     public boolean equals(Object o)
     {
@@ -1735,6 +1751,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
              logParseExceptions == that.logParseExceptions &&
              maxParseExceptions == that.maxParseExceptions &&
              maxSavedParseExceptions == that.maxSavedParseExceptions &&
+             numPersistThreads == that.numPersistThreads &&
              Objects.equals(partitionsSpec, that.partitionsSpec) &&
              Objects.equals(indexSpec, that.indexSpec) &&
              Objects.equals(indexSpecForIntermediatePersists, that.indexSpecForIntermediatePersists) &&
@@ -1764,7 +1781,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           maxParseExceptions,
           maxSavedParseExceptions,
           segmentWriteOutMediumFactory,
-          awaitSegmentAvailabilityTimeoutMillis
+          awaitSegmentAvailabilityTimeoutMillis,
+          numPersistThreads
       );
     }
 
@@ -1789,6 +1807,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
              ", maxSavedParseExceptions=" + maxSavedParseExceptions +
              ", segmentWriteOutMediumFactory=" + segmentWriteOutMediumFactory +
              ", awaitSegmentAvailabilityTimeoutMillis=" + awaitSegmentAvailabilityTimeoutMillis +
+             ", numPersistThreads=" + numPersistThreads +
              '}';
     }
   }

@@ -1206,11 +1206,11 @@ public class StreamAppenderator implements Appenderator
     final int maxPendingPersists = tuningConfig.getMaxPendingPersists();
 
     if (persistExecutor == null) {
-      // use a blocking single threaded executor to throttle the firehose when write to disk is slow
+      log.info("Number of persist threads [%d]", tuningConfig.getNumPersistThreads());
       persistExecutor = MoreExecutors.listeningDecorator(
-          Execs.newBlockingSingleThreaded(
+          Execs.newBlockingThreaded(
               "[" + StringUtils.encodeForFormat(myId) + "]-appenderator-persist",
-              maxPendingPersists
+              tuningConfig.getNumPersistThreads(), maxPendingPersists
           )
       );
     }

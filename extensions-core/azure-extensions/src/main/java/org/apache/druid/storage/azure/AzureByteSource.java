@@ -40,7 +40,7 @@ public class AzureByteSource extends ByteSource
 
   @AssistedInject
   public AzureByteSource(
-      AzureStorage azureStorage,
+      @Assisted("azureStorage") AzureStorage azureStorage,
       @Assisted("containerName") String containerName,
       @Assisted("blobPath") String blobPath
   )

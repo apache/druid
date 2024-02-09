@@ -184,6 +184,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   private Long maxTotalRows = null;
   private final Period intermediateHandoffPeriod = null;
   private int maxRecordsPerPoll;
+  private int maxBytesPerPoll;
 
   @BeforeClass
   public static void setupClass()
@@ -218,6 +219,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     doHandoff = true;
     reportsFile = File.createTempFile("KinesisIndexTaskTestReports-" + System.currentTimeMillis(), "json");
     maxRecordsPerPoll = 1;
+    maxBytesPerPoll = 1_000_000;
 
     recordSupplier = mock(KinesisRecordSupplier.class);
 
@@ -562,6 +564,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     // as soon as any segment has more than one record, incremental publishing should happen
     maxRowsPerSegment = 2;
     maxRecordsPerPoll = 1;
+    maxBytesPerPoll = 1_000_000;
 
     recordSupplier.assign(EasyMock.anyObject());
     EasyMock.expectLastCall().anyTimes();
@@ -779,9 +782,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             "awsEndpoint",
             null,
             null,
-            null,
-            null,
-            false
+            null
         )
     );
 
@@ -843,9 +844,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             "awsEndpoint",
             null,
             null,
-            null,
-            null,
-            false
+            null
         )
     );
 
@@ -1697,6 +1696,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   {
     maxRowsPerSegment = 2;
     maxRecordsPerPoll = 1;
+    maxBytesPerPoll = 1_000_000;
     List<OrderedPartitionableRecord<String, String, ByteEntity>> records =
         clone(SINGLE_PARTITION_RECORDS);
 
@@ -1935,9 +1935,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             "awsEndpoint",
             null,
             null,
-            null,
-            null,
-            false
+            null
         ),
         context
     );
@@ -2099,9 +2097,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             "awsEndpoint",
             null,
             null,
-            null,
-            null,
-            false
+            null
         ),
         context
     );
@@ -2250,10 +2246,15 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   public void testComputeFetchThreads()
   {
     final DruidProcessingConfigTest.MockRuntimeInfo runtimeInfo =
-        new DruidProcessingConfigTest.MockRuntimeInfo(3, 1000, 2000);
+        new DruidProcessingConfigTest.MockRuntimeInfo(3, 1000, 10_000_000_000L);
 
     Assert.assertEquals(6, KinesisIndexTask.computeFetchThreads(runtimeInfo, null));
     Assert.assertEquals(2, KinesisIndexTask.computeFetchThreads(runtimeInfo, 2));
+
+    final DruidProcessingConfigTest.MockRuntimeInfo runtimeInfo2 =
+        new DruidProcessingConfigTest.MockRuntimeInfo(3, 1000, 1_000_000_000);
+    Assert.assertEquals(5, KinesisIndexTask.computeFetchThreads(runtimeInfo2, null));
+    Assert.assertEquals(5, KinesisIndexTask.computeFetchThreads(runtimeInfo2, 6));
     Assert.assertThrows(
         IllegalArgumentException.class,
         () -> KinesisIndexTask.computeFetchThreads(runtimeInfo, 0)
@@ -2297,9 +2298,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             "awsEndpoint",
             null,
             null,
-            null,
-            null,
-            false
+            null
         ),
         null
     );
@@ -2358,10 +2357,12 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         null,
         null,
         null,
+        null,
         logParseExceptions,
         maxParseExceptions,
         maxSavedParseExceptions,
         maxRecordsPerPoll,
+        maxBytesPerPoll,
         intermediateHandoffPeriod
     );
     return createTask(taskId, dataSchema, ioConfig, tuningConfig, context);

@@ -1183,9 +1183,9 @@ public class AppenderatorImpl implements Appenderator
     if (persistExecutor == null) {
       // use a blocking single threaded executor to throttle the firehose when write to disk is slow
       persistExecutor = MoreExecutors.listeningDecorator(
-          Execs.newBlockingSingleThreaded(
+          Execs.newBlockingThreaded(
               "[" + StringUtils.encodeForFormat(myId) + "]-appenderator-persist",
-              maxPendingPersists
+              tuningConfig.getNumPersistThreads(), maxPendingPersists
           )
       );
     }

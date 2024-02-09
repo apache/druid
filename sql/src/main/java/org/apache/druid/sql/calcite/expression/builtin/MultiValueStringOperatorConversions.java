@@ -54,6 +54,9 @@ import java.util.List;
  */
 public class MultiValueStringOperatorConversions
 {
+  public static final SqlOperatorConversion CONTAINS = new Contains();
+  public static final SqlOperatorConversion OVERLAP = new Overlap();
+
   public static class Append extends ArrayAppendOperatorConversion
   {
     private static final SqlFunction SQL_FUNCTION = OperatorConversions
@@ -132,7 +135,10 @@ public class MultiValueStringOperatorConversions
     }
   }
 
-  public static class Contains extends ArrayContainsOperatorConversion
+  /**
+   * Private: use singleton {@link #CONTAINS}.
+   */
+  private static class Contains extends ArrayContainsOperatorConversion
   {
     private static final SqlFunction SQL_FUNCTION = OperatorConversions
         .operatorBuilder("MV_CONTAINS")
@@ -300,7 +306,10 @@ public class MultiValueStringOperatorConversions
     }
   }
 
-  public static class Overlap extends AliasedOperatorConversion
+  /**
+   * Private: use singleton {@link #OVERLAP}.
+   */
+  private static class Overlap extends AliasedOperatorConversion
   {
     public Overlap()
     {

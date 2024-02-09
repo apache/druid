@@ -182,7 +182,8 @@ public class BatchAppenderatorsTest
           0L,
           OffHeapMemorySegmentWriteOutMediumFactory.instance(),
           IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE,
-          basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory
+          basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory,
+          null
       );
       metrics = new FireDepartmentMetrics();
 
@@ -381,6 +382,7 @@ public class BatchAppenderatorsTest
       private final IndexSpec indexSpecForIntermediatePersists;
       @Nullable
       private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
+      private final int numPersistThreads;
 
       public TestIndexTuningConfig(
           AppendableIndexSpec appendableIndexSpec,
@@ -393,7 +395,8 @@ public class BatchAppenderatorsTest
           Long pushTimeout,
           @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
           Integer maxColumnsToMerge,
-          File basePersistDirectory
+          File basePersistDirectory,
+          Integer numPersistThreads
       )
       {
         this.appendableIndexSpec = appendableIndexSpec;
@@ -410,6 +413,8 @@ public class BatchAppenderatorsTest
 
         this.partitionsSpec = null;
         this.indexSpecForIntermediatePersists = this.indexSpec;
+
+        this.numPersistThreads = numPersistThreads == null ? DEFAULT_NUM_PERSIST_THREADS : numPersistThreads;
       }
 
       @Override
@@ -499,6 +504,12 @@ public class BatchAppenderatorsTest
       }
 
       @Override
+      public int getNumPersistThreads()
+      {
+        return numPersistThreads;
+      }
+
+      @Override
       public boolean equals(Object o)
       {
         if (this == o) {
@@ -516,6 +527,7 @@ public class BatchAppenderatorsTest
                maxPendingPersists == that.maxPendingPersists &&
                reportParseExceptions == that.reportParseExceptions &&
                pushTimeout == that.pushTimeout &&
+               numPersistThreads == that.numPersistThreads &&
                Objects.equals(partitionsSpec, that.partitionsSpec) &&
                Objects.equals(indexSpec, that.indexSpec) &&
                Objects.equals(indexSpecForIntermediatePersists, that.indexSpecForIntermediatePersists) &&
@@ -539,7 +551,8 @@ public class BatchAppenderatorsTest
             maxPendingPersists,
             reportParseExceptions,
             pushTimeout,
-            segmentWriteOutMediumFactory
+            segmentWriteOutMediumFactory,
+            numPersistThreads
         );
       }
 
@@ -559,6 +572,7 @@ public class BatchAppenderatorsTest
                ", reportParseExceptions=" + reportParseExceptions +
                ", pushTimeout=" + pushTimeout +
                ", segmentWriteOutMediumFactory=" + segmentWriteOutMediumFactory +
+               ", numPersistThreads=" + numPersistThreads +
                '}';
       }
     }

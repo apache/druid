@@ -237,29 +237,33 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public List<DataSegment> retrieveUnusedSegmentsForInterval(final String dataSource, final Interval interval)
-  {
-    return retrieveUnusedSegmentsForInterval(dataSource, interval, null);
-  }
-
-  @Override
   public List<DataSegment> retrieveUnusedSegmentsForInterval(
       String dataSource,
       Interval interval,
-      @Nullable Integer limit
+      @Nullable Integer limit,
+      @Nullable DateTime maxUsedStatusLastUpdatedTime
   )
   {
     final List<DataSegment> matchingSegments = connector.inReadOnlyTransaction(
         (handle, status) -> {
           try (final CloseableIterator<DataSegment> iterator =
                    SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
-                       .retrieveUnusedSegments(dataSource, Collections.singletonList(interval), limit, null, null)) {
+                                           .retrieveUnusedSegments(
+                                               dataSource,
+                                               Collections.singletonList(interval),
+                                               limit,
+                                               null,
+                                               null,
+                                               maxUsedStatusLastUpdatedTime
+                                           )
+          ) {
             return ImmutableList.copyOf(iterator);
           }
         }
     );
 
-    log.info("Found %,d unused segments for %s for interval %s.", matchingSegments.size(), dataSource, interval);
+    log.info("Found [%,d] unused segments for datasource[%s] in interval[%s] with maxUsedStatusLastUpdatedTime[%s].",
+             matchingSegments.size(), dataSource, interval, maxUsedStatusLastUpdatedTime);
     return matchingSegments;
   }
 
@@ -2800,6 +2804,22 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         },
         3,
         SQLMetadataConnector.DEFAULT_MAX_TRIES
+    );
+  }
+
+  @Override
+  public int deleteUpgradeSegmentsForTask(final String taskId)
+  {
+    return connector.getDBI().inTransaction(
+        (handle, status) -> handle
+            .createStatement(
+                StringUtils.format(
+                    "DELETE FROM %s WHERE task_id = :task_id",
+                    dbTables.getUpgradeSegmentsTable()
+                )
+            )
+            .bind("task_id", taskId)
+            .execute()
     );
   }
 

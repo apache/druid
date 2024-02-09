@@ -225,6 +225,7 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
         null,
         null,
         null,
+        null,
         null
     );
 

@@ -1459,7 +1459,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
         null,
         logParseExceptions,
         maxParseExceptions,
-        maxSavedParseExceptions
+        maxSavedParseExceptions,
+        null
     );
     return new AppenderatorDriverRealtimeIndexTask(
         taskId,

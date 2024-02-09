@@ -20,9 +20,10 @@
 package org.apache.druid.indexing.common.actions;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.overlord.Segments;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -96,7 +97,7 @@ public class RetrieveSegmentsActionsTest
   public void testRetrieveUsedSegmentsAction()
   {
     final RetrieveUsedSegmentsAction action =
-        new RetrieveUsedSegmentsAction(task.getDataSource(), INTERVAL, null, Segments.ONLY_VISIBLE);
+        new RetrieveUsedSegmentsAction(task.getDataSource(), ImmutableList.of(INTERVAL));
     final Set<DataSegment> resultSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
     Assert.assertEquals(expectedUsedSegments, resultSegments);
   }
@@ -104,7 +105,23 @@ public class RetrieveSegmentsActionsTest
   @Test
   public void testRetrieveUnusedSegmentsAction()
   {
-    final RetrieveUnusedSegmentsAction action = new RetrieveUnusedSegmentsAction(task.getDataSource(), INTERVAL, null);
+    final RetrieveUnusedSegmentsAction action = new RetrieveUnusedSegmentsAction(task.getDataSource(), INTERVAL, null, null);
+    final Set<DataSegment> resultSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
+    Assert.assertEquals(expectedUnusedSegments, resultSegments);
+  }
+
+  @Test
+  public void testRetrieveUnusedSegmentsActionWithMinUsedLastUpdatedTime()
+  {
+    final RetrieveUnusedSegmentsAction action = new RetrieveUnusedSegmentsAction(task.getDataSource(), INTERVAL, null, DateTimes.MIN);
+    final Set<DataSegment> resultSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
+    Assert.assertEquals(ImmutableSet.of(), resultSegments);
+  }
+
+  @Test
+  public void testRetrieveUnusedSegmentsActionWithNowUsedLastUpdatedTime()
+  {
+    final RetrieveUnusedSegmentsAction action = new RetrieveUnusedSegmentsAction(task.getDataSource(), INTERVAL, null, DateTimes.nowUtc());
     final Set<DataSegment> resultSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
     Assert.assertEquals(expectedUnusedSegments, resultSegments);
   }
