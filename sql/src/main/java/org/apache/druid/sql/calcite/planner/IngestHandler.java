@@ -72,7 +72,7 @@ public abstract class IngestHandler extends QueryHandler
   )
   {
     super(handlerContext, queryNode, explain);
-    this.ingestionGranularity = ingestNode.getPartitionedBy();
+    ingestionGranularity = ingestNode.getPartitionedBy() != null ? ingestNode.getPartitionedBy().getGranularity() : null;
     handlerContext.hook().captureInsert(ingestNode);
   }
 
