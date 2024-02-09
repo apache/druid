@@ -248,4 +248,19 @@ public class ExprTest
     shuttle.visitAll(twoIdentifiers);
     Assert.assertEquals("Two identifiers", twoIdentifiers, visitedExprs);
   }
+
+  @Test
+  public void testLookupNameExtractionShuttle()
+  {
+    final LookupNameExtractionShuttle lookupNameshuttle = new LookupNameExtractionShuttle();
+    lookupNameshuttle.visitAll(Collections.emptyList());
+    Assert.assertNull("Visiting an empty lookup", lookupNameshuttle.getLookupName());
+
+    final List<Expr> lookupIdentifiers = ImmutableList.of(
+            new IdentifierExpr("cityName"),
+            new StringExpr("wikilookup")
+    );
+    lookupNameshuttle.visitAll(lookupIdentifiers);
+    Assert.assertEquals("Lookup identifiers", "wikilookup", lookupNameshuttle.getLookupName());
+  }
 }
