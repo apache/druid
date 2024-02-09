@@ -143,6 +143,20 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     final InputDesc leftDesc = buildLeftDesc();
     final InputDesc rightDesc = buildRightDesc();
 
+    InputDesc inputDesc = buildJoinDataSource(leftDesc, rightDesc);
+
+    return partialQuery.build(
+        inputDesc.dataSource,
+        inputDesc.rowSignature,
+        getPlannerContext(),
+        getCluster().getRexBuilder(),
+        finalizeAggregations,
+        inputDesc.virtualColumnRegistry
+    );
+  }
+
+  private InputDesc buildJoinDataSource(final InputDesc leftDesc, final InputDesc rightDesc)
+  {
     final Pair<String, RowSignature> prefixSignaturePair = computeJoinRowSignature(
         leftDesc.rowSignature,
         rightDesc.rowSignature,
@@ -191,15 +205,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     );
 
     InputDesc inputDesc = new InputDesc(joinDataSource, signature, virtualColumnRegistry);
-
-    return partialQuery.build(
-        inputDesc.dataSource,
-        inputDesc.rowSignature,
-        getPlannerContext(),
-        getCluster().getRexBuilder(),
-        finalizeAggregations,
-        inputDesc.virtualColumnRegistry
-    );
+    return inputDesc;
   }
 
   private InputDesc buildRightDesc()
