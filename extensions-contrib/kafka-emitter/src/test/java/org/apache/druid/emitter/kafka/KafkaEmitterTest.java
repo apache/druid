@@ -73,7 +73,8 @@ public class KafkaEmitterTest
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
 
   private static final List<Event> SERVICE_METRIC_EVENTS = ImmutableList.of(
-      ServiceMetricEvent.builder().setMetric("m1", 1).build("service", "host")
+      ServiceMetricEvent.builder().setMetric("m1", 1).build("service1", "host1"),
+      ServiceMetricEvent.builder().setMetric("m2", 100).build("service2", "host1")
   );
 
   private static final List<Event> ALERT_EVENTS = ImmutableList.of(
@@ -91,17 +92,25 @@ public class KafkaEmitterTest
 
   private static final List<Event> SEGMENT_METADATA_EVENTS = ImmutableList.of(
       new SegmentMetadataEvent(
-          "dummy_datasource",
+          "ds1",
           DateTimes.of("2001-01-01T00:00:00.000Z"),
           DateTimes.of("2001-01-02T00:00:00.000Z"),
           DateTimes.of("2001-01-03T00:00:00.000Z"),
-          "dummy_version",
+          "ds1",
+          true
+      ),
+      new SegmentMetadataEvent(
+          "ds2",
+          DateTimes.of("2020-01-01T00:00:00.000Z"),
+          DateTimes.of("2020-01-02T00:00:00.000Z"),
+          DateTimes.of("2020-01-03T00:00:00.000Z"),
+          "ds2",
           true
       )
   );
 
   @Test(timeout = 10_000)
-  public void testKafkaEmitterServiceMetricEvents() throws JsonProcessingException, InterruptedException
+  public void testServiceMetricEvents() throws JsonProcessingException, InterruptedException
   {
     final KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig(
         "",
@@ -109,7 +118,7 @@ public class KafkaEmitterTest
         "metrics",
         "alerts",
         "requests",
-        "segment_metadata",
+        "segments",
         "clusterName",
         ImmutableMap.of("clusterId", "cluster-101"),
         null,
@@ -121,12 +130,12 @@ public class KafkaEmitterTest
     final List<Event> inputEvents = flattenEvents(SERVICE_METRIC_EVENTS);
     final CountDownLatch eventLatch = new CountDownLatch(inputEvents.size());
 
-    final Map<String, List<String>> topicToExpectedEvents = trackExpectedEvents(SERVICE_METRIC_EVENTS, kafkaEmitterConfig);
-    final Map<String, List<String>> topicToActualEvents = trackActualEventsInCallback(eventLatch);
+    final Map<String, List<String>> feedToExpectedEvents = trackExpectedEvents(SERVICE_METRIC_EVENTS, kafkaEmitterConfig);
+    final Map<String, List<String>> feedToActualEvents = trackActualEventsInCallback(eventLatch);
 
     emitEvents(kafkaEmitter, SERVICE_METRIC_EVENTS, eventLatch);
 
-    validateEvents(topicToExpectedEvents, topicToActualEvents);
+    validateEvents(feedToExpectedEvents, feedToActualEvents);
 
     Assert.assertEquals(0, kafkaEmitter.getMetricLostCount());
     Assert.assertEquals(0, kafkaEmitter.getAlertLostCount());
@@ -134,11 +143,11 @@ public class KafkaEmitterTest
     Assert.assertEquals(0, kafkaEmitter.getSegmentMetadataLostCount());
     Assert.assertEquals(0, kafkaEmitter.getInvalidLostCount());
 
-    validateEvents(topicToExpectedEvents, topicToActualEvents);
+    validateEvents(feedToExpectedEvents, feedToActualEvents);
   }
 
   @Test(timeout = 10_000)
-  public void testKafkaEmitterAllEvents() throws JsonProcessingException, InterruptedException
+  public void testAllEvents() throws JsonProcessingException, InterruptedException
   {
     final KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig(
         "",
@@ -146,7 +155,7 @@ public class KafkaEmitterTest
         "metrics",
         "alerts",
         "requests",
-        "segment_metadata",
+        "segments",
         null,
         ImmutableMap.of("clusterId", "cluster-101", "env", "staging"),
         null,
@@ -163,12 +172,12 @@ public class KafkaEmitterTest
     );
     final CountDownLatch eventLatch = new CountDownLatch(inputEvents.size());
 
-    final Map<String, List<String>> topicToExpectedEvents = trackExpectedEvents(inputEvents, kafkaEmitterConfig);
-    final Map<String, List<String>> topicToActualEvents = trackActualEventsInCallback(eventLatch);
+    final Map<String, List<String>> feedToExpectedEvents = trackExpectedEvents(inputEvents, kafkaEmitterConfig);
+    final Map<String, List<String>> feedToActualEvents = trackActualEventsInCallback(eventLatch);
 
     emitEvents(kafkaEmitter, inputEvents, eventLatch);
 
-    validateEvents(topicToExpectedEvents, topicToActualEvents);
+    validateEvents(feedToExpectedEvents, feedToActualEvents);
 
     Assert.assertEquals(0, kafkaEmitter.getMetricLostCount());
     Assert.assertEquals(0, kafkaEmitter.getAlertLostCount());
@@ -179,7 +188,7 @@ public class KafkaEmitterTest
   }
 
   @Test(timeout = 10_000)
-  public void testKafkaEmitterDefaultEvents() throws JsonProcessingException, InterruptedException
+  public void testDefaultEvents() throws JsonProcessingException, InterruptedException
   {
     final KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig(
         "",
@@ -202,12 +211,12 @@ public class KafkaEmitterTest
     );
     final CountDownLatch eventLatch = new CountDownLatch(inputEvents.size());
 
-    final Map<String, List<String>> topicToExpectedEvents = trackExpectedEvents(inputEvents, kafkaEmitterConfig);
-    final Map<String, List<String>> topicToActualEvents = trackActualEventsInCallback(eventLatch);
+    final Map<String, List<String>> feedToExpectedEvents = trackExpectedEvents(inputEvents, kafkaEmitterConfig);
+    final Map<String, List<String>> feedToActualEvents = trackActualEventsInCallback(eventLatch);
 
     emitEvents(kafkaEmitter, inputEvents, eventLatch);
 
-    validateEvents(topicToExpectedEvents, topicToActualEvents);
+    validateEvents(feedToExpectedEvents, feedToActualEvents);
 
     Assert.assertEquals(0, kafkaEmitter.getMetricLostCount());
     Assert.assertEquals(0, kafkaEmitter.getAlertLostCount());
@@ -217,7 +226,7 @@ public class KafkaEmitterTest
   }
 
   @Test(timeout = 10_000)
-  public void testKafkaEmitterDefaultEventsMissing() throws JsonProcessingException, InterruptedException
+  public void testAlertsPlusUnsubscribedEvents() throws JsonProcessingException, InterruptedException
   {
     final KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig(
         "",
@@ -234,7 +243,7 @@ public class KafkaEmitterTest
 
     final KafkaEmitter kafkaEmitter = initKafkaEmitter(kafkaEmitterConfig);
 
-    // Includes everything, but we've only subscribed to alerts type.
+    // Emit everything, but we've only subscribed to alert events.
     final List<Event> inputEvents = flattenEvents(
         SERVICE_METRIC_EVENTS,
         ALERT_EVENTS,
@@ -244,17 +253,17 @@ public class KafkaEmitterTest
 
     final CountDownLatch eventLatch = new CountDownLatch(ALERT_EVENTS.size());
 
-    final Map<String, List<String>> topicToExpectedEvents = trackExpectedEvents(ALERT_EVENTS, kafkaEmitterConfig);
-    final Map<String, List<String>> topicToActualEvents = trackActualEventsInCallback(eventLatch);
+    final Map<String, List<String>> feedToExpectedEvents = trackExpectedEvents(ALERT_EVENTS, kafkaEmitterConfig);
+    final Map<String, List<String>> feedToActualEvents = trackActualEventsInCallback(eventLatch);
 
     emitEvents(kafkaEmitter, inputEvents, eventLatch);
 
-    validateEvents(topicToExpectedEvents, topicToActualEvents);
+    validateEvents(feedToExpectedEvents, feedToActualEvents);
 
     Assert.assertEquals(0, kafkaEmitter.getAlertLostCount());
     Assert.assertEquals(0, kafkaEmitter.getInvalidLostCount());
 
-    // Others would be dropped
+    // Others would be dropped as we've only subscribed to alert events.
     Assert.assertEquals(SERVICE_METRIC_EVENTS.size(), kafkaEmitter.getMetricLostCount());
     Assert.assertEquals(SEGMENT_METADATA_EVENTS.size(), kafkaEmitter.getSegmentMetadataLostCount());
     Assert.assertEquals(REQUEST_LOG_EVENTS.size(), kafkaEmitter.getRequestLostCount());
@@ -309,19 +318,19 @@ public class KafkaEmitterTest
       final CountDownLatch eventLatch
   )
   {
-    final Map<String, List<String>> topicToActualEvents = new HashMap<>();
+    final Map<String, List<String>> feedToActualEvents = new HashMap<>();
     when(producer.send(any(), any())).then((invocation) -> {
       final ProducerRecord<?, ?> producerRecord = invocation.getArgument(0);
-      final Object value = producerRecord.value();
-
-      topicToActualEvents.computeIfAbsent(
-          producerRecord.topic(), k -> new ArrayList<>()
-      ).add(String.valueOf(value));
+      final String value = String.valueOf(producerRecord.value());
+      final EventMap eventMap = MAPPER.readValue(value, EventMap.class);
+      feedToActualEvents.computeIfAbsent(
+          (String) eventMap.get("feed"), k -> new ArrayList<>()
+      ).add(value);
 
       eventLatch.countDown();
       return null;
     });
-    return topicToActualEvents;
+    return feedToActualEvents;
   }
 
   private Map<String, List<String>> trackExpectedEvents(
@@ -329,31 +338,31 @@ public class KafkaEmitterTest
       final KafkaEmitterConfig kafkaEmitterConfig
   ) throws JsonProcessingException
   {
-    final Map<String, List<String>> topicToExpectedEvents = new HashMap<>();
+    final Map<String, List<String>> feedToExpectedEvents = new HashMap<>();
     for (final Event event : events) {
       final EventMap eventMap = event.toMap();
       if (kafkaEmitterConfig.getExtraDimensions() != null) {
         eventMap.putAll(kafkaEmitterConfig.getExtraDimensions());
       }
       eventMap.computeIfAbsent("clusterName", k -> kafkaEmitterConfig.getClusterName());
-      topicToExpectedEvents.computeIfAbsent(
+      feedToExpectedEvents.computeIfAbsent(
           event.getFeed(), k -> new ArrayList<>()).add(MAPPER.writeValueAsString(eventMap)
       );
     }
-    return topicToExpectedEvents;
+    return feedToExpectedEvents;
   }
 
   private void validateEvents(
-      final Map<String, List<String>> topicToExpectedEvents,
-      final Map<String, List<String>> topicToActualEvents
+      final Map<String, List<String>> feedToExpectedEvents,
+      final Map<String, List<String>> feedToActualEvents
   )
   {
-    Assert.assertEquals(topicToExpectedEvents.size(), topicToActualEvents.size());
+    Assert.assertEquals(feedToExpectedEvents.size(), feedToActualEvents.size());
 
-    for (final Map.Entry<String, List<String>> actualEntry : topicToActualEvents.entrySet()) {
-      final String topic = actualEntry.getKey();
+    for (final Map.Entry<String, List<String>> actualEntry : feedToActualEvents.entrySet()) {
+      final String feed = actualEntry.getKey();
       final List<String> actualEvents = actualEntry.getValue();
-      final List<String> expectedEvents = topicToExpectedEvents.get(topic);
+      final List<String> expectedEvents = feedToExpectedEvents.get(feed);
       Assert.assertEquals(expectedEvents, actualEvents);
     }
   }
