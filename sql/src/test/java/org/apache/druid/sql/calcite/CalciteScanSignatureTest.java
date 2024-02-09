@@ -36,6 +36,7 @@ import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.destination.IngestDestination;
 import org.junit.Test;
 
 import java.util.HashMap;
@@ -168,7 +169,7 @@ public class CalciteScanSignatureTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public QueryMaker buildQueryMakerForInsert(String targetDataSource, RelRoot relRoot, PlannerContext plannerContext)
+    public QueryMaker buildQueryMakerForInsert(IngestDestination destination, RelRoot relRoot, PlannerContext plannerContext)
     {
       throw new UnsupportedOperationException();
     }

@@ -21,7 +21,7 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
-  <groupId>org.apache.druid.extensions</groupId>
+  <groupId>org.apache.druid.extensions.contrib</groupId>
   <artifactId>druid-deltalake-extensions</artifactId>
   <name>druid-deltalake-extensions</name>
   <description>Delta Lake connector for Druid</description>

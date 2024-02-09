@@ -101,7 +101,7 @@ public class LocalFileStorageConnector implements StorageConnector
   {
     File toWrite = fileWithBasePath(path);
     FileUtils.mkdirp(toWrite.getParentFile());
-    return Files.newOutputStream(toWrite.toPath());
+    return Files.newOutputStream(toWrite.toPath(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
   }
 
   /**

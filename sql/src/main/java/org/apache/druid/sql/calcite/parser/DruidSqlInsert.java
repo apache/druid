@@ -51,7 +51,8 @@ public class DruidSqlInsert extends DruidSqlIngest
       @Nonnull SqlInsert insertNode,
       @Nullable Granularity partitionedBy,
       @Nullable String partitionedByStringForUnparse,
-      @Nullable SqlNodeList clusteredBy
+      @Nullable SqlNodeList clusteredBy,
+      @Nullable String exportFileFormat
   )
   {
     super(
@@ -62,7 +63,8 @@ public class DruidSqlInsert extends DruidSqlIngest
         insertNode.getTargetColumnList(),
         partitionedBy,
         partitionedByStringForUnparse,
-        clusteredBy
+        clusteredBy,
+        exportFileFormat
     );
   }
 
@@ -76,9 +78,28 @@ public class DruidSqlInsert extends DruidSqlIngest
   @Override
   public void unparse(SqlWriter writer, int leftPrec, int rightPrec)
   {
-    super.unparse(writer, leftPrec, rightPrec);
-    writer.keyword("PARTITIONED BY");
-    writer.keyword(partitionedByStringForUnparse);
+    writer.startList(SqlWriter.FrameTypeEnum.SELECT);
+    writer.sep(isUpsert() ? "UPSERT INTO" : "INSERT INTO");
+    final int opLeft = getOperator().getLeftPrec();
+    final int opRight = getOperator().getRightPrec();
+    getTargetTable().unparse(writer, opLeft, opRight);
+    if (getTargetColumnList() != null) {
+      getTargetColumnList().unparse(writer, opLeft, opRight);
+    }
+    writer.newlineAndIndent();
+    if (getExportFileFormat() != null) {
+      writer.keyword("AS");
+      writer.print(getExportFileFormat());
+      writer.newlineAndIndent();
+    }
+    getSource().unparse(writer, 0, 0);
+    writer.newlineAndIndent();
+
+    if (partitionedByStringForUnparse != null) {
+      writer.keyword("PARTITIONED BY");
+      writer.keyword(partitionedByStringForUnparse);
+    }
+
     if (getClusteredBy() != null) {
       writer.keyword("CLUSTERED BY");
       SqlWriter.Frame frame = writer.startList("", "");

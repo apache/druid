@@ -95,6 +95,22 @@ public class CsvWriter implements ResultFormat.Writer
   }
 
   @Override
+  public void writeHeaderFromRowSignature(final RowSignature signature, final boolean includeTypes)
+  {
+    writer.writeNext(signature.getColumnNames().toArray(new String[0]), false);
+
+    if (includeTypes) {
+      final String[] types = new String[signature.size()];
+
+      for (int i = 0; i < signature.size(); i++) {
+        types[i] = signature.getColumnType(i).map(TypeSignature::asTypeString).orElse(null);
+      }
+
+      writer.writeNext(types, false);
+    }
+  }
+
+  @Override
   public void writeRowStart()
   {
     // Do nothing.
