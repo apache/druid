@@ -20,18 +20,21 @@
 package org.apache.druid.emitter.kafka;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.metadata.DynamicConfigProvider;
 import org.apache.druid.metadata.MapStringDynamicConfigProvider;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -40,12 +43,6 @@ public class KafkaEmitterConfigTest
   private static final DynamicConfigProvider<String> DEFAULT_PRODUCER_SECRETS = new MapStringDynamicConfigProvider(
       ImmutableMap.of("testSecretKey", "testSecretValue"));
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
-
-  @Before
-  public void setUp()
-  {
-    MAPPER.setInjectableValues(new InjectableValues.Std().addValue(ObjectMapper.class, new DefaultObjectMapper()));
-  }
 
   @Test
   public void testSerDeserKafkaEmitterConfig() throws IOException
@@ -164,5 +161,141 @@ public class KafkaEmitterConfigTest
   public void testJacksonModules()
   {
     Assert.assertTrue(new KafkaEmitterModule().getJacksonModules().isEmpty());
+  }
+
+
+  @Test
+  public void testNullBootstrapServers()
+  {
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> new KafkaEmitterConfig(
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            )
+        ),
+        operatorExceptionMatcher()
+            .expectMessageIs("druid.emitter.kafka.bootstrap.servers must be specified.")
+    );
+  }
+
+  @Test
+  public void testNullMetricTopic()
+  {
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> new KafkaEmitterConfig(
+                "foo",
+                new HashSet<>(Collections.singletonList(KafkaEmitterConfig.EventType.METRICS)),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            )
+        ),
+        operatorExceptionMatcher()
+            .expectMessageIs("druid.emitter.kafka.metric.topic must be specified if druid.emitter.kafka.event.types contains metrics.")
+    );
+  }
+
+  @Test
+  public void testNullAlertTopic()
+  {
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> new KafkaEmitterConfig(
+                "foo",
+                null,
+                "foo",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            )
+        ),
+        operatorExceptionMatcher()
+            .expectMessageIs(
+                "druid.emitter.kafka.alert.topic must be specified if druid.emitter.kafka.event.types contains alerts."
+            )
+    );
+  }
+
+  @Test
+  public void testNullRequestTopic()
+  {
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> new KafkaEmitterConfig(
+                "foo",
+                new HashSet<>(Arrays.asList(KafkaEmitterConfig.EventType.values())),
+                "foo",
+                "foo",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            )
+        ),
+        operatorExceptionMatcher()
+            .expectMessageIs(
+                "druid.emitter.kafka.request.topic must be specified if druid.emitter.kafka.event.types contains requests."
+            )
+    );
+  }
+
+  @Test
+  public void testNullSegmentMetadataTopic()
+  {
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> new KafkaEmitterConfig(
+                "foo",
+                new HashSet<>(Arrays.asList(KafkaEmitterConfig.EventType.values())),
+                "foo",
+                "bar",
+                "baz",
+                null,
+                null,
+                null,
+                null,
+                null
+            )
+        ),
+        operatorExceptionMatcher()
+            .expectMessageIs(
+                "druid.emitter.kafka.segmentMetadata.topic must be specified if druid.emitter.kafka.event.types contains segment_metadata."
+            )
+    );
+  }
+
+  private DruidExceptionMatcher operatorExceptionMatcher()
+  {
+    return new DruidExceptionMatcher(
+        DruidException.Persona.OPERATOR,
+        DruidException.Category.NOT_FOUND,
+        "general"
+    );
   }
 }
