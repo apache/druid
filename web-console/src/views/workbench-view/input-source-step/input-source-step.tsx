@@ -224,7 +224,7 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
     <div className="input-source-step">
       <div className="ingestion-cards">
         {renderIngestionCard('s3')}
-        {renderIngestionCard('azure')}
+        {renderIngestionCard('azureStorage')}
         {renderIngestionCard('google')}
         {renderIngestionCard('hdfs')}
         {renderIngestionCard('http')}

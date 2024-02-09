@@ -84,6 +84,7 @@ export interface Field<M> {
 }
 
 function toNumberOrUndefined(n: unknown): number | undefined {
+  if (n == null) return;
   const r = Number(n);
   return isNaN(r) ? undefined : r;
 }

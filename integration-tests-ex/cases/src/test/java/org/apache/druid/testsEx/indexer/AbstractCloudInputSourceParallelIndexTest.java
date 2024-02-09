@@ -48,9 +48,11 @@ public abstract class AbstractCloudInputSourceParallelIndexTest extends Abstract
   private static final String WIKIPEDIA_DATA_3 = "wikipedia_index_data3.json";
   private static final String GOOGLE = "google";
   private static final String AZURE = "azure";
+  private static final String AZURE_V2 = "azureStorage";
   private static final String GOOGLE_PREFIX = "googlePrefix";
   private static final String GOOGLE_BUCKET = "googleBucket";
   private static final String AZURE_CONTAINER = "azureContainer";
+  private static final String AZURE_STORAGE_ACCOUNT = "azureAccount";
   private static final Logger LOG = new Logger(AbstractCloudInputSourceParallelIndexTest.class);
 
   String indexDatasource = "wikipedia_cloud_index_test_";
@@ -106,6 +108,8 @@ public abstract class AbstractCloudInputSourceParallelIndexTest extends Abstract
   {
     if (GOOGLE.equals(inputSourceType)) {
       return config.getProperty(GOOGLE_PREFIX);
+    } else if (AZURE_V2.equals(inputSourceType)) {
+      return config.getProperty(AZURE_CONTAINER) + "/" + config.getCloudPath();
     } else {
       return config.getCloudPath();
     }
@@ -117,6 +121,8 @@ public abstract class AbstractCloudInputSourceParallelIndexTest extends Abstract
       return config.getProperty(GOOGLE_BUCKET);
     } else if (AZURE.equals(inputSourceType)) {
       return config.getProperty(AZURE_CONTAINER);
+    } else if (AZURE_V2.equals(inputSourceType)) {
+      return config.getProperty(AZURE_STORAGE_ACCOUNT);
     } else {
       return config.getCloudBucket();
     }
@@ -128,8 +134,9 @@ public abstract class AbstractCloudInputSourceParallelIndexTest extends Abstract
    * @param segmentAvailabilityConfirmationPair   set lhs in the pair to true if you want to confirm that the task waited longer than 0ms for the task to complete.
    *                                              set rhs to true to verify that the segment is actually available.
    * @param inputSourceType     Input source type (eg : s3, gcs, azure)
+   * @return                    The datasource used to test.
    */
-  void doTest(
+  String doTest(
       Pair<String, List<?>> inputSource,
       Pair<Boolean, Boolean> segmentAvailabilityConfirmationPair,
       String inputSourceType
@@ -194,6 +201,7 @@ public abstract class AbstractCloudInputSourceParallelIndexTest extends Abstract
           true,
           segmentAvailabilityConfirmationPair
       );
+      return indexDatasource;
     }
   }
 

@@ -98,7 +98,6 @@ import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
-import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
@@ -1399,12 +1398,12 @@ public class SqlResourceTest extends CalciteTestBase
   }
 
   /**
-   * This test is for {@link UnsupportedSQLQueryException} exceptions that are thrown by druid rules during query
+   * This test is for {@link org.apache.druid.error.InvalidSqlInput} exceptions that are thrown by druid rules during query
    * planning. e.g. doing max aggregation on string type. The test checks that the API returns correct error messages
    * for such planning errors.
    */
   @Test
-  public void testCannotConvert_UnsupportedSQLQueryException() throws Exception
+  public void testCannotConvert_InvalidSQL() throws Exception
   {
     // max(string) unsupported
     ErrorResponse errorResponse = postSyncForException(

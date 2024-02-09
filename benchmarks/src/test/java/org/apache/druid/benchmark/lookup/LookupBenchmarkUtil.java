@@ -77,7 +77,7 @@ public class LookupBenchmarkUtil
         return new MapLookupExtractor(map, false);
       }
     },
-    REVERSIBLE {
+    IMMUTABLE {
       @Override
       public LookupExtractor build(Iterable<Pair<String, String>> keyValuePairs)
       {

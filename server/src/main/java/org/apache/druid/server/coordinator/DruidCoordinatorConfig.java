@@ -19,8 +19,8 @@
 
 package org.apache.druid.server.coordinator;
 
-import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
 import org.apache.druid.server.coordinator.config.CoordinatorKillConfigs;
 import org.apache.druid.server.coordinator.config.CoordinatorPeriodConfig;
@@ -102,11 +102,15 @@ public class DruidCoordinatorConfig
     validateKillConfig(killConfigs.rules(), "rule");
     validateKillConfig(killConfigs.supervisors(), "supervisor");
 
+    // Validate config for killing unused segments
     final KillUnusedSegmentsConfig killUnusedConfig = killConfigs.unusedSegments();
-    Preconditions.checkArgument(
-        killUnusedConfig.getCleanupPeriod().getMillis() >= getCoordinatorIndexingPeriod().getMillis(),
-        "[druid.coordinator.kill.period] must be greater than or equal to [druid.coordinator.period.indexingPeriod]"
-    );
+    if (killUnusedConfig.getCleanupPeriod().getMillis() > getCoordinatorIndexingPeriod().getMillis()) {
+      throw InvalidInput.exception(
+          "'druid.coordinator.kill.period'[%s] must be greater than or equal to"
+          + " 'druid.coordinator.period.indexingPeriod'[%s]",
+          killUnusedConfig.getCleanupPeriod(), getCoordinatorIndexingPeriod()
+      );
+    }
   }
 
   private void validateKillConfig(MetadataCleanupConfig config, String propertyPrefix)
@@ -118,23 +122,27 @@ public class DruidCoordinatorConfig
 
     final Duration metadataManagementPeriod = getCoordinatorMetadataStoreManagementPeriod();
     final Duration period = config.getCleanupPeriod();
-    Preconditions.checkArgument(
-        period != null && period.getMillis() >= metadataManagementPeriod.getMillis(),
-        "[druid.coordinator.kill.%s.period] must be greater than [druid.coordinator.period.metadataStoreManagementPeriod]",
-        propertyPrefix
-    );
+    if (period == null || period.getMillis() < metadataManagementPeriod.getMillis()) {
+      throw InvalidInput.exception(
+          "'druid.coordinator.kill.%s.period'[%s] must be greater than"
+          + " 'druid.coordinator.period.metadataStoreManagementPeriod'[%s]",
+          propertyPrefix, period, metadataManagementPeriod
+      );
+    }
 
     final Duration retainDuration = config.getDurationToRetain();
-    Preconditions.checkArgument(
-        retainDuration != null && retainDuration.getMillis() >= 0,
-        "[druid.coordinator.kill.%s.durationToRetain] must be 0 milliseconds or higher",
-        propertyPrefix
-    );
-    Preconditions.checkArgument(
-        retainDuration.getMillis() < System.currentTimeMillis(),
-        "[druid.coordinator.kill.%s.durationToRetain] cannot be greater than current time in milliseconds",
-        propertyPrefix
-    );
+    if (retainDuration == null || retainDuration.getMillis() < 0) {
+      throw InvalidInput.exception(
+          "'druid.coordinator.kill.%s.durationToRetain'[%s] must be 0 milliseconds or higher",
+          propertyPrefix, retainDuration
+      );
+    }
+    if (retainDuration.getMillis() > System.currentTimeMillis()) {
+      throw InvalidInput.exception(
+          "'druid.coordinator.kill.%s.durationToRetain'[%s] cannot be greater than current time in milliseconds",
+          propertyPrefix, retainDuration
+      );
+    }
   }
 
 }

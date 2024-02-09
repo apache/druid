@@ -324,7 +324,7 @@ public class SqlExpressionBenchmark
         PROCESSING_CONFIG
     );
 
-    final SpecificSegmentsQuerySegmentWalker walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
+    final SpecificSegmentsQuerySegmentWalker walker = SpecificSegmentsQuerySegmentWalker.createWalker(conglomerate).add(
         dataSegment,
         index
     );

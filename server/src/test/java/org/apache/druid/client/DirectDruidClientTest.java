@@ -31,6 +31,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
@@ -54,6 +55,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.timeout.ReadTimeoutException;
 import org.joda.time.Duration;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -67,6 +69,8 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class DirectDruidClientTest
 {
@@ -88,6 +92,7 @@ public class DirectDruidClientTest
   private HttpClient httpClient;
   private DirectDruidClient client;
   private QueryableDruidServer queryableDruidServer;
+  private ScheduledExecutorService queryCancellationExecutor;
 
   @Before
   public void setup()
@@ -97,6 +102,7 @@ public class DirectDruidClientTest
         dataSegment,
         new HighestPriorityTierSelectorStrategy(new ConnectionCountServerSelectorStrategy())
     );
+    queryCancellationExecutor = Execs.scheduledSingleThreaded("query-cancellation-executor");
     client = new DirectDruidClient(
         new ReflectionQueryToolChestWarehouse(),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER,
@@ -104,7 +110,8 @@ public class DirectDruidClientTest
         httpClient,
         "http",
         hostName,
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        queryCancellationExecutor
     );
     queryableDruidServer = new QueryableDruidServer(
         new DruidServer(
@@ -121,6 +128,12 @@ public class DirectDruidClientTest
     serverSelector.addServerAndUpdateSegment(queryableDruidServer, serverSelector.getSegment());
   }
 
+  @After
+  public void teardown() throws InterruptedException
+  {
+    queryCancellationExecutor.shutdown();
+    queryCancellationExecutor.awaitTermination(1, TimeUnit.SECONDS);
+  }
 
   @Test
   public void testRun() throws Exception
@@ -169,7 +182,8 @@ public class DirectDruidClientTest
         httpClient,
         "http",
         "foo2",
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        queryCancellationExecutor
     );
 
     QueryableDruidServer queryableDruidServer2 = new QueryableDruidServer(

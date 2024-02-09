@@ -125,7 +125,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
       ImmutableMap.of(),
       false,
       false,
-      false,
       false
   );
   private static final String DATASOURCE = "testDS";
@@ -198,6 +197,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
         TEST_CHAT_RETRIES,
         TEST_HTTP_TIMEOUT,
         TEST_SHUTDOWN_TIMEOUT,
+        null,
+        null,
         null,
         null,
         null,
@@ -319,7 +320,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
             null,
             false,
             null,
-            null,
             autoScalerConfig
             );
     KinesisSupervisorSpec kinesisSupervisorSpec = supervisor.getKinesisSupervisorSpec();
@@ -392,7 +392,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
             null,
             null,
             false,
-            null,
             null,
             autoScalerConfig
     );
@@ -510,26 +509,26 @@ public class KinesisSupervisorTest extends EasyMockSupport
   {
     // create KinesisSupervisorIOConfig with autoScalerConfig null
     KinesisSupervisorIOConfig kinesisSupervisorIOConfigWithNullAutoScalerConfig = new KinesisSupervisorIOConfig(
-            STREAM,
-            INPUT_FORMAT,
-            "awsEndpoint",
-            null,
-            1,
-            1,
-            new Period("PT30M"),
-            new Period("P1D"),
-            new Period("PT30S"),
-            false,
-            new Period("PT30M"),
-            null,
-            null,
-            null,
-            100,
-            1000,
-            null,
-            null,
-            null,
-            false
+        STREAM,
+        INPUT_FORMAT,
+        "awsEndpoint",
+        null,
+        1,
+        1,
+        new Period("PT30M"),
+        new Period("P1D"),
+        new Period("PT30S"),
+        false,
+        new Period("PT30M"),
+        null,
+        null,
+        null,
+        100,
+        1000,
+        null,
+        null,
+        null,
+        false
     );
 
     AutoScalerConfig autoscalerConfigNull = kinesisSupervisorIOConfigWithNullAutoScalerConfig.getAutoScalerConfig();
@@ -537,26 +536,26 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     // create KinesisSupervisorIOConfig with autoScalerConfig Empty
     KinesisSupervisorIOConfig kinesisSupervisorIOConfigWithEmptyAutoScalerConfig = new KinesisSupervisorIOConfig(
-            STREAM,
-            INPUT_FORMAT,
-            "awsEndpoint",
-            null,
-            1,
-            1,
-            new Period("PT30M"),
-            new Period("P1D"),
-            new Period("PT30S"),
-            false,
-            new Period("PT30M"),
-            null,
-            null,
-            null,
-            100,
-            1000,
-            null,
-            null,
-             OBJECT_MAPPER.convertValue(new HashMap<>(), AutoScalerConfig.class),
-            false
+        STREAM,
+        INPUT_FORMAT,
+        "awsEndpoint",
+        null,
+        1,
+        1,
+        new Period("PT30M"),
+        new Period("P1D"),
+        new Period("PT30S"),
+        false,
+        new Period("PT30M"),
+        null,
+        null,
+        null,
+        100,
+        1000,
+        null,
+        null,
+        OBJECT_MAPPER.convertValue(new HashMap<>(), AutoScalerConfig.class),
+        false
     );
 
     AutoScalerConfig autoscalerConfig = kinesisSupervisorIOConfigWithEmptyAutoScalerConfig.getAutoScalerConfig();
@@ -3741,7 +3740,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
         new Period("P1D"),
         new Period("P1D"),
         false,
-        42,
         1000,
         true
     );
@@ -3839,7 +3837,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
         new Period("P1D"),
         new Period("P1D"),
         false,
-        42,
         1000,
         false
     );
@@ -3925,7 +3922,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
         new Period("P1D"),
         false,
         42,
-        42,
         dataSchema,
         tuningConfig
     );
@@ -3968,7 +3964,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         42, // This property is different from tuningConfig
+        1_000_000,
         null,
         null,
         null,
@@ -4074,7 +4072,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
         new Period("P1D"),
         new Period("P1D"),
         false,
-        42,
         42,
         dataSchema,
         tuningConfig
@@ -5150,6 +5147,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
+        null,
         null
     );
 
@@ -5199,7 +5198,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
         earlyMessageRejectionPeriod,
         false,
         null,
-        null,
         null
     );
   }
@@ -5212,7 +5210,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
       Period lateMessageRejectionPeriod,
       Period earlyMessageRejectionPeriod,
       boolean suspended,
-      Integer recordsPerFetch,
       Integer fetchDelayMillis,
       AutoScalerConfig autoScalerConfig
   )
@@ -5232,7 +5229,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
         null,
-        recordsPerFetch,
+        null,
         fetchDelayMillis,
         null,
         null,
@@ -5302,7 +5299,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
       Period lateMessageRejectionPeriod,
       Period earlyMessageRejectionPeriod,
       boolean suspended,
-      Integer recordsPerFetch,
       Integer fetchDelayMillis,
       boolean isTaskCurrentReturn
   )
@@ -5322,7 +5318,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
         null,
-        recordsPerFetch,
+        null,
         fetchDelayMillis,
         null,
         null,
@@ -5390,7 +5386,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
       Period lateMessageRejectionPeriod,
       Period earlyMessageRejectionPeriod,
       boolean suspended,
-      Integer recordsPerFetch,
       Integer fetchDelayMillis,
       DataSchema dataSchema,
       KinesisSupervisorTuningConfig tuningConfig
@@ -5411,7 +5406,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
         null,
-        recordsPerFetch,
+        null,
         fetchDelayMillis,
         null,
         null,
@@ -5560,9 +5555,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
             "awsEndpoint",
             null,
             null,
-            null,
-            null,
-            false
+            null
         ),
         Collections.emptyMap(),
         false,
