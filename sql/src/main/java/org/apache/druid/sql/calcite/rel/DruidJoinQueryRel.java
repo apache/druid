@@ -55,11 +55,11 @@ import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.planner.querygen.InputDescProducer;
 import org.apache.druid.sql.calcite.planner.querygen.InputDescProducer.InputDesc;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -140,36 +140,13 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
   @Override
   public DruidQuery toDruidQuery(final boolean finalizeAggregations)
   {
-    final DruidRel<?> leftDruidRel = (DruidRel<?>) left;
-    final DruidQuery leftQuery = Preconditions.checkNotNull(leftDruidRel.toDruidQuery(false), "leftQuery");
-    final RowSignature leftSignature = leftQuery.getOutputRowSignature();
-    final DataSource leftDataSource;
-
-    final DruidRel<?> rightDruidRel = (DruidRel<?>) right;
-    final DruidQuery rightQuery = Preconditions.checkNotNull(rightDruidRel.toDruidQuery(false), "rightQuery");
-    final RowSignature rightSignature = rightQuery.getOutputRowSignature();
-    final DataSource rightDataSource;
-
-    if (computeLeftRequiresSubquery(getPlannerContext(), leftDruidRel)) {
-      leftDataSource = new QueryDataSource(leftQuery.getQuery());
-      if (leftFilter != null) {
-        throw new ISE("Filter on left table is supposed to be null if left child is a query source");
-      }
-    } else {
-      leftDataSource = leftQuery.getDataSource();
-    }
-
-    if (computeRightRequiresSubquery(getPlannerContext(), rightDruidRel)) {
-      rightDataSource = new QueryDataSource(rightQuery.getQuery());
-    } else {
-      rightDataSource = rightQuery.getDataSource();
-    }
-
+    final InputDesc leftDesc = buildLeftDesc();
+    final InputDesc rightDesc = buildRightDesc();
 
     final Pair<String, RowSignature> prefixSignaturePair = computeJoinRowSignature(
-        leftSignature,
-        rightSignature,
-        findExistingJoinPrefixes(leftDataSource, rightDataSource)
+        leftDesc.rowSignature,
+        rightDesc.rowSignature,
+        findExistingJoinPrefixes(leftDesc.dataSource, rightDesc.dataSource)
     );
 
     String prefix = prefixSignaturePair.lhs;
@@ -200,8 +177,8 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     }
 
     JoinDataSource joinDataSource = JoinDataSource.create(
-        leftDataSource,
-        rightDataSource,
+        leftDesc.dataSource,
+        rightDesc.dataSource,
         prefix,
         JoinConditionAnalysis.forExpression(
             condition.getExpression(),
@@ -209,20 +186,55 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
             prefix
         ),
         toDruidJoinType(joinRel.getJoinType()),
-        getDimFilter(getPlannerContext(), leftSignature, leftFilter),
+        getDimFilter(getPlannerContext(), leftDesc.rowSignature, leftFilter),
         getPlannerContext().getJoinableFactoryWrapper()
     );
 
-    InputDesc inputDesc=new InputDesc(joinDataSource, signature , virtualColumnRegistry);
+    InputDesc inputDesc = new InputDesc(joinDataSource, signature, virtualColumnRegistry);
 
     return partialQuery.build(
-        joinDataSource,
-        signature,
+        inputDesc.dataSource,
+        inputDesc.rowSignature,
         getPlannerContext(),
         getCluster().getRexBuilder(),
         finalizeAggregations,
-        virtualColumnRegistry
+        inputDesc.virtualColumnRegistry
     );
+  }
+
+  private InputDesc buildRightDesc()
+  {
+    final InputDesc rightDesc;
+    final DruidRel<?> rightDruidRel = (DruidRel<?>) right;
+    final DruidQuery rightQuery = Preconditions.checkNotNull(rightDruidRel.toDruidQuery(false), "rightQuery");
+    final RowSignature rightSignature = rightQuery.getOutputRowSignature();
+    final DataSource rightDataSource;
+    if (computeRightRequiresSubquery(getPlannerContext(), rightDruidRel)) {
+      rightDataSource = new QueryDataSource(rightQuery.getQuery());
+    } else {
+      rightDataSource = rightQuery.getDataSource();
+    }
+    rightDesc = new InputDesc(rightDataSource, rightSignature, null);
+    return rightDesc;
+  }
+
+  private InputDesc buildLeftDesc()
+  {
+    final InputDesc leftDesc;
+    final DruidRel<?> leftDruidRel = (DruidRel<?>) left;
+    final DruidQuery leftQuery = Preconditions.checkNotNull(leftDruidRel.toDruidQuery(false), "leftQuery");
+    final RowSignature leftSignature = leftQuery.getOutputRowSignature();
+    final DataSource leftDataSource;
+    if (computeLeftRequiresSubquery(getPlannerContext(), leftDruidRel)) {
+      leftDataSource = new QueryDataSource(leftQuery.getQuery());
+      if (leftFilter != null) {
+        throw new ISE("Filter on left table is supposed to be null if left child is a query source");
+      }
+    } else {
+      leftDataSource = leftQuery.getDataSource();
+    }
+    leftDesc = new InputDesc(leftDataSource, leftSignature, null);
+    return leftDesc;
   }
 
   @Override
