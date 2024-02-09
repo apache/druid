@@ -38,6 +38,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
+import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -97,6 +98,28 @@ public class MSQReplaceTest extends MSQTestBase
                                             .add("__time", ColumnType.LONG)
                                             .add("m1", ColumnType.FLOAT)
                                             .build();
+
+    DataSegment existingDataSegment0 = DataSegment.builder()
+                                                  .interval(Intervals.of("2000-01-01T/2000-01-04T"))
+                                                  .size(50)
+                                                  .version(MSQTestTaskActionClient.VERSION)
+                                                  .dataSource("foo")
+                                                  .build();
+
+    DataSegment existingDataSegment1 = DataSegment.builder()
+                                                  .interval(Intervals.of("2001-01-01T/2001-01-04T"))
+                                                  .size(50)
+                                                  .version(MSQTestTaskActionClient.VERSION)
+                                                  .dataSource("foo")
+                                                  .build();
+
+    Mockito.doCallRealMethod()
+           .doReturn(ImmutableSet.of(existingDataSegment0, existingDataSegment1))
+           .when(testTaskActionClient)
+           .submit(new RetrieveUsedSegmentsAction(
+               EasyMock.eq("foo"),
+               EasyMock.eq(ImmutableList.of(Intervals.ETERNITY))
+           ));
 
     testIngestQuery().setSql(" REPLACE INTO foo OVERWRITE ALL "
                              + "SELECT __time, m1 "
@@ -418,6 +441,28 @@ public class MSQReplaceTest extends MSQTestBase
                                             .add("m1", ColumnType.FLOAT)
                                             .build();
 
+    DataSegment existingDataSegment0 = DataSegment.builder()
+                                                  .interval(Intervals.of("2000-01-01T/2000-01-04T"))
+                                                  .size(50)
+                                                  .version(MSQTestTaskActionClient.VERSION)
+                                                  .dataSource("foo")
+                                                  .build();
+    DataSegment existingDataSegment1 = DataSegment.builder()
+                                                  .interval(Intervals.of("2001-01-01T/2001-01-04T"))
+                                                  .size(50)
+                                                  .version(MSQTestTaskActionClient.VERSION)
+                                                  .dataSource("foo")
+                                                  .build();
+
+    Mockito.doCallRealMethod()
+           .doReturn(ImmutableSet.of(existingDataSegment0, existingDataSegment1))
+           .when(testTaskActionClient)
+           .submit(new RetrieveUsedSegmentsAction(
+               EasyMock.eq("foo"),
+               EasyMock.eq(ImmutableList.of(Intervals.ETERNITY))
+           ));
+
+
     testIngestQuery().setSql(" REPLACE INTO foo "
                              + "OVERWRITE ALL "
                              + "SELECT __time, m1 "
@@ -479,6 +524,20 @@ public class MSQReplaceTest extends MSQTestBase
                                             .add("m1", ColumnType.FLOAT)
                                             .build();
 
+    DataSegment existingDataSegment0 = DataSegment.builder()
+                                                  .interval(Intervals.of("2000-01-01T/2000-01-04T"))
+                                                  .size(50)
+                                                  .version(MSQTestTaskActionClient.VERSION)
+                                                  .dataSource("foo")
+                                                  .build();
+
+    Mockito.doReturn(ImmutableSet.of(existingDataSegment0))
+           .when(testTaskActionClient)
+           .submit(new RetrieveUsedSegmentsAction(
+               EasyMock.eq("foo"),
+               EasyMock.eq(ImmutableList.of(Intervals.of("2000-01-01/2000-03-01")))
+           ));
+
     testIngestQuery().setSql(" REPLACE INTO foo "
                              + "OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01' AND __time < TIMESTAMP '2000-03-01' "
                              + "SELECT __time, m1 "
@@ -537,6 +596,28 @@ public class MSQReplaceTest extends MSQTestBase
                                             .add("__time", ColumnType.LONG)
                                             .add("m1", ColumnType.FLOAT)
                                             .build();
+
+    DataSegment existingDataSegment0 = DataSegment.builder()
+                                                  .interval(Intervals.of("2000-01-01T/2000-01-04T"))
+                                                  .size(50)
+                                                  .version(MSQTestTaskActionClient.VERSION)
+                                                  .dataSource("foo")
+                                                  .build();
+
+    DataSegment existingDataSegment1 = DataSegment.builder()
+                                                  .interval(Intervals.of("2001-01-01T/2001-01-04T"))
+                                                  .size(50)
+                                                  .version(MSQTestTaskActionClient.VERSION)
+                                                  .dataSource("foo")
+                                                  .build();
+
+    Mockito.doReturn(ImmutableSet.of(existingDataSegment0, existingDataSegment1))
+           .when(testTaskActionClient)
+           .submit(new RetrieveUsedSegmentsAction(
+               EasyMock.eq("foo"),
+               EasyMock.eq(ImmutableList.of(Intervals.of("2000-01-01/2002-01-01")))
+           ));
+
 
     testIngestQuery().setSql(" REPLACE INTO foo "
                              + "OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01' AND __time < TIMESTAMP '2002-01-01' "
@@ -625,6 +706,19 @@ public class MSQReplaceTest extends MSQTestBase
                                             .add("m1", ColumnType.FLOAT)
                                             .build();
 
+    final DataSegment existingDataSegment = DataSegment.builder()
+                                                       .dataSource("foo")
+                                                       .interval(Intervals.of("2000-01-01/2000-01-04"))
+                                                       .version(MSQTestTaskActionClient.VERSION)
+                                                       .size(1)
+                                                       .build();
+    Mockito.doReturn(ImmutableSet.of(existingDataSegment))
+           .when(testTaskActionClient)
+           .submit(new RetrieveUsedSegmentsAction(
+               EasyMock.eq("foo"),
+               EasyMock.eq(ImmutableList.of(Intervals.of("2000-01-01/2000-03-01")))
+           ));
+
     testIngestQuery().setSql(" REPLACE INTO foo "
                              + "OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01' AND __time < TIMESTAMP '2000-03-01'"
                              + "SELECT __time, m1 "
@@ -658,6 +752,26 @@ public class MSQReplaceTest extends MSQTestBase
                                             .add("__time", ColumnType.LONG)
                                             .add("m1", ColumnType.FLOAT)
                                             .build();
+
+    DataSegment existingDataSegment0 = DataSegment.builder()
+                                                  .interval(Intervals.of("2000-01-01T/2000-01-04T"))
+                                                  .size(50)
+                                                  .version(MSQTestTaskActionClient.VERSION)
+                                                  .dataSource("foo")
+                                                  .build();
+    DataSegment existingDataSegment1 = DataSegment.builder()
+                                                  .interval(Intervals.of("2001-01-01T/2001-01-04T"))
+                                                  .size(50)
+                                                  .version(MSQTestTaskActionClient.VERSION)
+                                                  .dataSource("foo")
+                                                  .build();
+
+    Mockito.doReturn(ImmutableSet.of(existingDataSegment0, existingDataSegment1))
+           .when(testTaskActionClient)
+           .submit(new RetrieveUsedSegmentsAction(
+               EasyMock.eq("foo"),
+               EasyMock.eq(ImmutableList.of(Intervals.of("2000/2002")))
+           ));
 
     testIngestQuery().setSql(" REPLACE INTO foo "
                              + "OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01' AND __time < TIMESTAMP '2002-01-01'"
@@ -939,6 +1053,26 @@ public class MSQReplaceTest extends MSQTestBase
                                             .add("d", ColumnType.STRING)
                                             .build();
 
+    DataSegment existingDataSegment0 = DataSegment.builder()
+                                                  .interval(Intervals.of("2000-01-01T/2000-01-04T"))
+                                                  .size(50)
+                                                  .version(MSQTestTaskActionClient.VERSION)
+                                                  .dataSource("foo")
+                                                  .build();
+    DataSegment existingDataSegment1 = DataSegment.builder()
+                                                  .interval(Intervals.of("2001-01-01T/2001-01-04T"))
+                                                  .size(50)
+                                                  .version(MSQTestTaskActionClient.VERSION)
+                                                  .dataSource("foo")
+                                                  .build();
+
+    Mockito.doReturn(ImmutableSet.of(existingDataSegment0, existingDataSegment1))
+           .when(testTaskActionClient)
+           .submit(new RetrieveUsedSegmentsAction(
+               EasyMock.eq("foo"),
+               EasyMock.eq(ImmutableList.of(Intervals.of("1999/2002")))
+           ));
+
     testIngestQuery().setSql(" REPLACE INTO foo "
                              + "OVERWRITE WHERE __time >= TIMESTAMP '1999-01-01 00:00:00' and __time < TIMESTAMP '2002-01-01 00:00:00'"
                              + "SELECT __time, d "
@@ -1003,7 +1137,10 @@ public class MSQReplaceTest extends MSQTestBase
 
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))
            .when(testTaskActionClient)
-           .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
+           .submit(new RetrieveUsedSegmentsAction(
+               EasyMock.eq("foo1"),
+               EasyMock.eq(ImmutableList.of(Intervals.of("2000/2002")))
+           ));
 
     List<Object[]> expectedResults;
     if (NullHandling.sqlCompatible()) {

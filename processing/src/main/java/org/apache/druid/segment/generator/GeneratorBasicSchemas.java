@@ -365,6 +365,27 @@ public class GeneratorBasicSchemas
   }
 
   static {
+    List<GeneratorColumnSchema> inTestsSchemaColumns = ImmutableList.of(
+        GeneratorColumnSchema.makeSequential("long1", ValueType.LONG, false, 1, null, 0, 40000),
+        GeneratorColumnSchema.makeSequential("string1", ValueType.STRING, false, 1, null, 0, 40000)
+    );
+
+    List<AggregatorFactory> aggs = new ArrayList<>();
+
+    Interval interval = Intervals.of("2000-01-01/P1D");
+
+    GeneratorSchemaInfo expressionsTestsSchema = new GeneratorSchemaInfo(
+        inTestsSchemaColumns,
+        aggs,
+        interval,
+        false
+    );
+
+    SCHEMA_INFO_BUILDER.put("in-testbench", expressionsTestsSchema);
+
+  }
+
+  static {
     // simple 'wide' schema with null valued rows, high cardinality columns, no aggs on numeric columns
     // essentially 'nulls-and-non-nulls' with a ton of extra zipf columns of each type with a variety of value
     // distributions

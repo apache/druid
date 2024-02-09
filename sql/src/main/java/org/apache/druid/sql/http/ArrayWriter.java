@@ -75,6 +75,12 @@ public class ArrayWriter implements ResultFormat.Writer
   }
 
   @Override
+  public void writeHeaderFromRowSignature(final RowSignature rowSignature, final boolean includeTypes) throws IOException
+  {
+    writeHeader(jsonGenerator, rowSignature, includeTypes);
+  }
+
+  @Override
   public void writeRowStart() throws IOException
   {
     jsonGenerator.writeStartArray();
@@ -125,6 +131,27 @@ public class ArrayWriter implements ResultFormat.Writer
       jsonGenerator.writeStartArray();
       for (int i = 0; i < signature.size(); i++) {
         jsonGenerator.writeString(rowType.getFieldList().get(i).getType().getSqlTypeName().getName());
+      }
+      jsonGenerator.writeEndArray();
+    }
+  }
+
+  static void writeHeader(
+      final JsonGenerator jsonGenerator,
+      final RowSignature signature,
+      final boolean includeTypes
+  ) throws IOException
+  {
+    jsonGenerator.writeStartArray();
+    for (String columnName : signature.getColumnNames()) {
+      jsonGenerator.writeString(columnName);
+    }
+    jsonGenerator.writeEndArray();
+
+    if (includeTypes) {
+      jsonGenerator.writeStartArray();
+      for (int i = 0; i < signature.size(); i++) {
+        jsonGenerator.writeString(signature.getColumnType(i).map(TypeSignature::asTypeString).orElse(null));
       }
       jsonGenerator.writeEndArray();
     }

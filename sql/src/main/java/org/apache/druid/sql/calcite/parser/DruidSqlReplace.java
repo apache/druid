@@ -56,7 +56,8 @@ public class DruidSqlReplace extends DruidSqlIngest
       @Nullable Granularity partitionedBy,
       @Nullable String partitionedByStringForUnparse,
       @Nullable SqlNodeList clusteredBy,
-      @Nullable SqlNode replaceTimeQuery
+      @Nullable SqlNode replaceTimeQuery,
+      @Nullable String exportFileFormat
   )
   {
     super(
@@ -67,7 +68,8 @@ public class DruidSqlReplace extends DruidSqlIngest
         insertNode.getTargetColumnList(),
         partitionedBy,
         partitionedByStringForUnparse,
-        clusteredBy
+        clusteredBy,
+        exportFileFormat
     );
 
     this.replaceTimeQuery = replaceTimeQuery;
@@ -99,6 +101,12 @@ public class DruidSqlReplace extends DruidSqlIngest
     }
     writer.newlineAndIndent();
 
+    if (getExportFileFormat() != null) {
+      writer.keyword("AS");
+      writer.print(getExportFileFormat());
+      writer.newlineAndIndent();
+    }
+
     writer.keyword("OVERWRITE");
     if (replaceTimeQuery instanceof SqlLiteral) {
       writer.keyword("ALL");
@@ -110,8 +118,10 @@ public class DruidSqlReplace extends DruidSqlIngest
     getSource().unparse(writer, 0, 0);
     writer.newlineAndIndent();
 
-    writer.keyword("PARTITIONED BY");
-    writer.keyword(partitionedByStringForUnparse);
+    if (partitionedByStringForUnparse != null) {
+      writer.keyword("PARTITIONED BY");
+      writer.keyword(partitionedByStringForUnparse);
+    }
 
     if (getClusteredBy() != null) {
       writer.keyword("CLUSTERED BY");

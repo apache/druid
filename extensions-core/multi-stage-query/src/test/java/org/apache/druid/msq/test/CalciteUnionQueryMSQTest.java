@@ -43,8 +43,6 @@ import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -53,25 +51,13 @@ import org.junit.Test;
  */
 public class CalciteUnionQueryMSQTest extends CalciteUnionQueryTest
 {
-  private TestGroupByBuffers groupByBuffers;
-
-  @Before
-  public void setup2()
-  {
-    groupByBuffers = TestGroupByBuffers.createDefault();
-  }
-
-  @After
-  public void teardown2()
-  {
-    groupByBuffers.close();
-  }
-
   @Override
   public void configureGuice(DruidInjectorBuilder builder)
   {
     super.configureGuice(builder);
-    builder.addModules(CalciteMSQTestsHelper.fetchModules(temporaryFolder, groupByBuffers).toArray(new Module[0]));
+    builder.addModules(
+        CalciteMSQTestsHelper.fetchModules(temporaryFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0])
+    );
   }
 
 

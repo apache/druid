@@ -20,6 +20,13 @@
 package org.apache.druid.msq.indexing.destination;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import org.apache.druid.msq.indexing.MSQControllerTask;
+import org.apache.druid.msq.querykit.ShuffleSpecFactories;
+import org.apache.druid.msq.querykit.ShuffleSpecFactory;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceType;
+
+import java.util.Optional;
 
 public class TaskReportMSQDestination implements MSQDestination
 {
@@ -43,4 +50,15 @@ public class TaskReportMSQDestination implements MSQDestination
     return "TaskReportMSQDestination{}";
   }
 
+  @Override
+  public ShuffleSpecFactory getShuffleSpecFactory(int targetSize)
+  {
+    return ShuffleSpecFactories.singlePartition();
+  }
+
+  @Override
+  public Optional<Resource> getDestinationResource()
+  {
+    return Optional.of(new Resource(MSQControllerTask.DUMMY_DATASOURCE_FOR_SELECT, ResourceType.DATASOURCE));
+  }
 }
