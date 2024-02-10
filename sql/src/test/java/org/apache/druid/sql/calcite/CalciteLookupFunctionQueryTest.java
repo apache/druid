@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
@@ -381,12 +382,12 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   {
     cannotVectorize();
 
-    // Set CTX_MAX_IN_SIZE = 1 to stop the LOOKUP call from being reversed.
+    // Set sqlReverseLookupThreshold = 1 to stop the LOOKUP call from being reversed.
     final ImmutableMap<String, Object> queryContext =
         ImmutableMap.<String, Object>builder()
                     .putAll(QUERY_CONTEXT_DEFAULT)
                     .put(PlannerContext.CTX_SQL_REVERSE_LOOKUP, true)
-                    .put(ReverseLookupRule.CTX_MAX_IN_SIZE, 1)
+                    .put(ReverseLookupRule.CTX_THRESHOLD, 1)
                     .build();
 
     testQuery(
@@ -399,6 +400,34 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         )
         : buildFilterTestExpectedQuery(
             in("dim1", ImmutableList.of("nonexistent", "x6", "xabc"), EXTRACTION_FN)
+        ),
+        ImmutableList.of(new Object[]{"xabc", 1L})
+    );
+  }
+
+  @Test
+  public void testFilterInOverMaxSize2()
+  {
+    cannotVectorize();
+
+    // Set inSubQueryThreshold = 1 to stop the LOOKUP call from being reversed.
+    final ImmutableMap<String, Object> queryContext =
+        ImmutableMap.<String, Object>builder()
+                    .putAll(QUERY_CONTEXT_DEFAULT)
+                    .put(PlannerContext.CTX_SQL_REVERSE_LOOKUP, true)
+                    .put(QueryContexts.IN_SUB_QUERY_THRESHOLD_KEY, 1)
+                    .build();
+
+    testQuery(
+        buildFilterTestSql("LOOKUP(dim1, 'lookyloo') = 'xabc' OR LOOKUP(dim1, 'lookyloo') = 'x6'"),
+        queryContext,
+        NullHandling.sqlCompatible()
+        ? buildFilterTestExpectedQuery(
+            expressionVirtualColumn("v0", "lookup(\"dim1\",'lookyloo')", ColumnType.STRING),
+            in("v0", ImmutableList.of("x6", "xabc"), null)
+        )
+        : buildFilterTestExpectedQuery(
+            in("dim1", ImmutableList.of("x6", "xabc"), EXTRACTION_FN)
         ),
         ImmutableList.of(new Object[]{"xabc", 1L})
     );

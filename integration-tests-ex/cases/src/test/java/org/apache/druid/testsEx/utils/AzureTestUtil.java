@@ -29,10 +29,13 @@ import org.apache.druid.testing.utils.ITRetryUtil;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.security.InvalidKeyException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 public class AzureTestUtil
 {
@@ -129,5 +132,21 @@ public class AzureTestUtil
     CloudBlockBlob blob = container.getBlockBlobReference(DRUID_CLOUD_PATH + '/' + source.getName());
     LOG.info("Uploading file " + DRUID_CLOUD_PATH + '/' + source.getName() + " in azure container " + AZURE_CONTAINER);
     blob.upload(Files.newInputStream(source.toPath()), source.length());
+  }
+
+  /**
+   * Get a list of files under a path to be used for verification of kill tasks.
+   *
+   * @param  filePath path to look for files under
+   */
+  public List<URI> listFiles(String filePath) throws URISyntaxException, StorageException
+  {
+    // Retrieve reference to a previously created container.
+    CloudBlobContainer container = azureStorageClient.getContainerReference(AZURE_CONTAINER);
+    List<URI> activeFiles = new ArrayList<>();
+    container.listBlobs(DRUID_CLOUD_PATH + '/' + filePath).iterator().forEachRemaining(
+        blob -> activeFiles.add(blob.getUri())
+    );
+    return activeFiles;
   }
 }

@@ -76,7 +76,7 @@ export function summarizeInputSource(inputSource: InputSource, multiline: boolea
 
     case 's3':
     case 'google':
-    case 'azure': {
+    case 'azureStorage': {
       const possibleLines = inputSource.uris || inputSource.prefixes;
       if (nonEmptyArray(possibleLines)) {
         let lines: string[] = possibleLines;
