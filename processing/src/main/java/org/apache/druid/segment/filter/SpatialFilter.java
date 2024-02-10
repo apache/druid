@@ -154,7 +154,7 @@ public class SpatialFilter implements Filter
         if (input == null) {
           return DruidPredicateMatch.UNKNOWN;
         }
-        final float[] coordinate = SpatialDimensionRowTransformer.decode(input);
+        final double[] coordinate = SpatialDimensionRowTransformer.decode(input);
         return DruidPredicateMatch.of(bound.contains(coordinate));
       };
     }

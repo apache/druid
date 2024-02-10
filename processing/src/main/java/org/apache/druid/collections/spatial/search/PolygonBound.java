@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import org.apache.druid.collections.spatial.ImmutablePoint;
+import org.apache.druid.java.util.common.Numbers;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -35,19 +36,19 @@ public class PolygonBound extends RectangularBound
 {
   private static final byte CACHE_TYPE_ID = 0x02;
 
-  private final float[] abscissa;
-  private final float[] ordinate;
+  private final double[] abscissa;
+  private final double[] ordinate;
 
-  private PolygonBound(float[] abscissa, float[] ordinate, int limit)
+  private PolygonBound(double[] abscissa, double[] ordinate, int limit)
   {
     super(getMinCoords(abscissa, ordinate), getMaxCoords(abscissa, ordinate), limit);
     this.abscissa = abscissa;
     this.ordinate = ordinate;
   }
 
-  private static float[] getMinCoords(float[] abscissa, float[] ordinate)
+  private static double[] getMinCoords(double[] abscissa, double[] ordinate)
   {
-    float[] retVal = new float[2];
+    double[] retVal = new double[2];
     retVal[0] = abscissa[0];
     retVal[1] = ordinate[0];
 
@@ -62,9 +63,9 @@ public class PolygonBound extends RectangularBound
     return retVal;
   }
 
-  private static float[] getMaxCoords(float[] abscissa, float[] ordinate)
+  private static double[] getMaxCoords(double[] abscissa, double[] ordinate)
   {
-    float[] retVal = new float[2];
+    double[] retVal = new double[2];
     retVal[0] = abscissa[0];
     retVal[1] = ordinate[0];
     for (int i = 1; i < abscissa.length; i++) {
@@ -89,8 +90,8 @@ public class PolygonBound extends RectangularBound
    */
   @JsonCreator
   public static PolygonBound from(
-      @JsonProperty("abscissa") float[] abscissa,
-      @JsonProperty("ordinate") float[] ordinate,
+      @JsonProperty("abscissa") double[] abscissa,
+      @JsonProperty("ordinate") double[] ordinate,
       @JsonProperty("limit") int limit
   )
   {
@@ -99,25 +100,25 @@ public class PolygonBound extends RectangularBound
     return new PolygonBound(abscissa, ordinate, limit);
   }
 
-  public static PolygonBound from(float[] abscissa, float[] ordinate)
+  public static PolygonBound from(double[] abscissa, double[] ordinate)
   {
     return PolygonBound.from(abscissa, ordinate, 0);
   }
 
   @JsonProperty
-  public float[] getOrdinate()
+  public double[] getOrdinate()
   {
     return ordinate;
   }
 
   @JsonProperty
-  public float[] getAbscissa()
+  public double[] getAbscissa()
   {
     return abscissa;
   }
 
   @Override
-  public boolean contains(float[] coords)
+  public boolean contains(double[] coords)
   {
     int polyCorners = abscissa.length;
     int j = polyCorners - 1;
@@ -133,7 +134,7 @@ public class PolygonBound extends RectangularBound
       }
 
       if (between(ordinate[i], ordinate[j], coords[1]) && (abscissa[j] <= coords[0] || abscissa[i] <= coords[0])) {
-        float intersectionPointX = abscissa[i] + (coords[1] - ordinate[i]) / (ordinate[j] - ordinate[i]) * (abscissa[j] - abscissa[i]);
+        double intersectionPointX = abscissa[i] + (coords[1] - ordinate[i]) / (ordinate[j] - ordinate[i]) * (abscissa[j] - abscissa[i]);
 
         if (intersectionPointX == coords[0]) {
           return true;
@@ -146,12 +147,12 @@ public class PolygonBound extends RectangularBound
     return oddNodes;
   }
 
-  private boolean isPointLayingOnHorizontalBound(int i, int j, float[] coords)
+  private boolean isPointLayingOnHorizontalBound(int i, int j, double[] coords)
   {
     return ordinate[i] == ordinate[j] && ordinate[j] == coords[1] && between(abscissa[i], abscissa[j], coords[0]);
   }
 
-  private static boolean between(float a, float b, float x)
+  private static boolean between(double a, double b, double x)
   {
     if (a <= b) {
       return a <= x && x <= b;
@@ -170,7 +171,7 @@ public class PolygonBound extends RectangularBound
           @Override
           public boolean apply(ImmutablePoint immutablePoint)
           {
-            return contains(immutablePoint.getCoords());
+            return contains(Numbers.floatArrayToDouble(immutablePoint.getCoords()));
           }
         }
     );
@@ -179,12 +180,12 @@ public class PolygonBound extends RectangularBound
   @Override
   public byte[] getCacheKey()
   {
-    ByteBuffer abscissaBuffer = ByteBuffer.allocate(abscissa.length * Float.BYTES);
-    abscissaBuffer.asFloatBuffer().put(abscissa);
+    ByteBuffer abscissaBuffer = ByteBuffer.allocate(abscissa.length * Double.BYTES);
+    abscissaBuffer.asDoubleBuffer().put(abscissa);
     final byte[] abscissaCacheKey = abscissaBuffer.array();
 
-    ByteBuffer ordinateBuffer = ByteBuffer.allocate(ordinate.length * Float.BYTES);
-    ordinateBuffer.asFloatBuffer().put(ordinate);
+    ByteBuffer ordinateBuffer = ByteBuffer.allocate(ordinate.length * Double.BYTES);
+    ordinateBuffer.asDoubleBuffer().put(ordinate);
     final byte[] ordinateCacheKey = ordinateBuffer.array();
 
     final ByteBuffer cacheKey = ByteBuffer

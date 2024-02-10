@@ -25,6 +25,7 @@ import com.google.common.collect.Iterables;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.ImmutableNode;
 import org.apache.druid.collections.spatial.ImmutablePoint;
+import org.apache.druid.java.util.common.Numbers;
 
 /**
  */
@@ -116,7 +117,7 @@ public class GutmanSearchStrategy implements SearchStrategy
             @Override
             public boolean apply(ImmutableNode immutableNode)
             {
-              return bound.contains(immutableNode.getMinCoordinates());
+              return bound.contains(Numbers.floatArrayToDouble(immutableNode.getMinCoordinates()));
             }
           }
       );
@@ -155,7 +156,7 @@ public class GutmanSearchStrategy implements SearchStrategy
                       @Override
                       public boolean apply(ImmutableNode immutableNode)
                       {
-                        return bound.contains(immutableNode.getMinCoordinates());
+                        return bound.contains(Numbers.floatArrayToDouble(immutableNode.getMinCoordinates()));
                       }
                     }
                 );

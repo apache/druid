@@ -42,7 +42,7 @@ public interface Bound
 
   boolean overlaps(ImmutableNode node);
 
-  boolean contains(float[] coords);
+  boolean contains(double[] coords);
 
   Iterable<ImmutablePoint> filter(Iterable<ImmutablePoint> points);
 

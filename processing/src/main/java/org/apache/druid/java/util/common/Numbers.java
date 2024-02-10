@@ -207,6 +207,15 @@ public final class Numbers
     throw new NumberFormatException("Cannot parse string to long");
   }
 
+  public static double[] floatArrayToDouble(float[] arr) {
+    if(arr == null) return null;
+    double[] doubles = new double[arr.length];
+    for (int i = 0; i < arr.length; i++) {
+      doubles[i] = arr[i];
+    }
+    return doubles;
+  }
+
   private Numbers()
   {
   }

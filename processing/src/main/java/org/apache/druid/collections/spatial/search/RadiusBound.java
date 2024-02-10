@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import org.apache.druid.collections.spatial.ImmutablePoint;
+import org.apache.druid.java.util.common.Numbers;
 
 import java.nio.ByteBuffer;
 
@@ -32,12 +33,12 @@ import java.nio.ByteBuffer;
 public class RadiusBound extends RectangularBound
 {
   private static final byte CACHE_TYPE_ID = 0x01;
-  private final float[] coords;
+  private final double[] coords;
   private final float radius;
 
   @JsonCreator
   public RadiusBound(
-      @JsonProperty("coords") float[] coords,
+      @JsonProperty("coords") double[] coords,
       @JsonProperty("radius") float radius,
       @JsonProperty("limit") int limit
   )
@@ -49,25 +50,25 @@ public class RadiusBound extends RectangularBound
   }
 
   public RadiusBound(
-      float[] coords,
+      double[] coords,
       float radius
   )
   {
     this(coords, radius, 0);
   }
 
-  private static float[] getMinCoords(float[] coords, float radius)
+  private static double[] getMinCoords(double[] coords, double radius)
   {
-    float[] retVal = new float[coords.length];
+    double[] retVal = new double[coords.length];
     for (int i = 0; i < coords.length; i++) {
       retVal[i] = coords[i] - radius;
     }
     return retVal;
   }
 
-  private static float[] getMaxCoords(float[] coords, float radius)
+  private static double[] getMaxCoords(double[] coords, float radius)
   {
-    float[] retVal = new float[coords.length];
+    double[] retVal = new double[coords.length];
     for (int i = 0; i < coords.length; i++) {
       retVal[i] = coords[i] + radius;
     }
@@ -75,7 +76,7 @@ public class RadiusBound extends RectangularBound
   }
 
   @JsonProperty
-  public float[] getCoords()
+  public double[] getCoords()
   {
     return coords;
   }
@@ -87,7 +88,7 @@ public class RadiusBound extends RectangularBound
   }
 
   @Override
-  public boolean contains(float[] otherCoords)
+  public boolean contains(double[] otherCoords)
   {
     double total = 0.0;
     for (int i = 0; i < coords.length; i++) {
@@ -107,7 +108,7 @@ public class RadiusBound extends RectangularBound
           @Override
           public boolean apply(ImmutablePoint point)
           {
-            return contains(point.getCoords());
+            return contains(Numbers.floatArrayToDouble(point.getCoords()));
           }
         }
     );
@@ -116,11 +117,11 @@ public class RadiusBound extends RectangularBound
   @Override
   public byte[] getCacheKey()
   {
-    final ByteBuffer minCoordsBuffer = ByteBuffer.allocate(coords.length * Float.BYTES);
-    minCoordsBuffer.asFloatBuffer().put(coords);
+    final ByteBuffer minCoordsBuffer = ByteBuffer.allocate(coords.length * Double.BYTES);
+    minCoordsBuffer.asDoubleBuffer().put(coords);
     final byte[] minCoordsCacheKey = minCoordsBuffer.array();
     final ByteBuffer cacheKey = ByteBuffer
-        .allocate(1 + minCoordsCacheKey.length + Integer.BYTES + Float.BYTES)
+        .allocate(1 + minCoordsCacheKey.length + Integer.BYTES + Double.BYTES)
         .put(minCoordsCacheKey)
         .putFloat(radius)
         .putInt(getLimit())
