@@ -173,7 +173,7 @@ public class IngestSegmentFirehoseTest
           TransformSpec.NONE,
           ImmutableList.of("host", "spatial"),
           ImmutableList.of("visited_sum", "unique_hosts"),
-          new SpatialDimFilter("spatial", new RadiusBound(new float[]{1, 0}, 0.1f))
+          new SpatialDimFilter("spatial", new RadiusBound(new double[]{1, 0}, 0.1f))
       );
       final InputRow row = firehose2.nextRow();
       Assert.assertFalse(firehose2.hasMore());
