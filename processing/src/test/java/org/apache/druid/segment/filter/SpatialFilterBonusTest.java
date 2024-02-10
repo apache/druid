@@ -478,7 +478,7 @@ public class SpatialFilterBonusTest
                                   .filters(
                                       new SpatialDimFilter(
                                           "dim.geo",
-                                          new RadiusBound(new float[]{0.0f, 0.0f}, 5)
+                                          new RadiusBound(new double[]{0.0f, 0.0f}, 5)
                                       )
                                   )
                                   .aggregators(
@@ -528,7 +528,7 @@ public class SpatialFilterBonusTest
                                   .filters(
                                       new SpatialDimFilter(
                                           "dim.geo",
-                                          new RectangularBound(new float[]{0.0f, 0.0f}, new float[]{9.0f, 9.0f})
+                                          new RectangularBound(new double[]{0.0f, 0.0f}, new double[]{9.0f, 9.0f})
                                       )
                                   )
                                   .aggregators(
@@ -618,7 +618,7 @@ public class SpatialFilterBonusTest
                                               new LongSumAggregatorFactory("valFiltered", "val"),
                                               new SpatialDimFilter(
                                                   "dim.geo",
-                                                  new RectangularBound(new float[]{0.0f, 0.0f}, new float[]{9.0f, 9.0f})
+                                                  new RectangularBound(new double[]{0.0f, 0.0f}, new double[]{9.0f, 9.0f})
                                               )
                                           ),
                                           new LongSumAggregatorFactory("val", "val")

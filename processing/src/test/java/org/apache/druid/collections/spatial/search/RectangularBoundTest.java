@@ -31,20 +31,20 @@ public class RectangularBoundTest
   public void testCacheKey()
   {
     Assert.assertArrayEquals(
-        new RectangularBound(new float[]{1F, 1F}, new float[]{2F, 2F}, 1).getCacheKey(),
-        new RectangularBound(new float[]{1F, 1F}, new float[]{2F, 2F}, 1).getCacheKey()
+        new RectangularBound(new double[]{1F, 1F}, new double[]{2F, 2F}, 1).getCacheKey(),
+        new RectangularBound(new double[]{1F, 1F}, new double[]{2F, 2F}, 1).getCacheKey()
     );
     Assert.assertFalse(Arrays.equals(
-        new RectangularBound(new float[]{1F, 1F}, new float[]{2F, 2F}, 1).getCacheKey(),
-        new RectangularBound(new float[]{1F, 1F}, new float[]{2F, 3F}, 1).getCacheKey()
+        new RectangularBound(new double[]{1F, 1F}, new double[]{2F, 2F}, 1).getCacheKey(),
+        new RectangularBound(new double[]{1F, 1F}, new double[]{2F, 3F}, 1).getCacheKey()
     ));
     Assert.assertFalse(Arrays.equals(
-        new RectangularBound(new float[]{1F, 1F}, new float[]{2F, 2F}, 1).getCacheKey(),
-        new RectangularBound(new float[]{1F, 0F}, new float[]{2F, 2F}, 1).getCacheKey()
+        new RectangularBound(new double[]{1F, 1F}, new double[]{2F, 2F}, 1).getCacheKey(),
+        new RectangularBound(new double[]{1F, 0F}, new double[]{2F, 2F}, 1).getCacheKey()
     ));
     Assert.assertFalse(Arrays.equals(
-        new RectangularBound(new float[]{1F, 1F}, new float[]{2F, 2F}, 1).getCacheKey(),
-        new RectangularBound(new float[]{1F, 1F}, new float[]{2F, 2F}, 2).getCacheKey()
+        new RectangularBound(new double[]{1F, 1F}, new double[]{2F, 2F}, 1).getCacheKey(),
+        new RectangularBound(new double[]{1F, 1F}, new double[]{2F, 2F}, 2).getCacheKey()
     ));
   }
 

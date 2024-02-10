@@ -66,7 +66,7 @@ public class ImmutableRTreeTest
     ImmutableRTree firstTree = ImmutableRTree.newImmutableFromMutable(tree);
     ByteBuffer buffer = ByteBuffer.wrap(firstTree.toBytes());
     ImmutableRTree secondTree = new ImmutableRTree(buffer, bf);
-    Iterable<ImmutableBitmap> points = secondTree.search(new RadiusBound(new float[]{0, 0}, 10));
+    Iterable<ImmutableBitmap> points = secondTree.search(new RadiusBound(new double[]{0, 0}, 10));
     ImmutableBitmap finalSet = bf.union(points);
     Assert.assertTrue(finalSet.size() >= 5);
     Set<Integer> expected = Sets.newHashSet(1, 2, 3, 4, 5);
@@ -91,7 +91,7 @@ public class ImmutableRTreeTest
     ImmutableRTree firstTree = ImmutableRTree.newImmutableFromMutable(tree);
     ByteBuffer buffer = ByteBuffer.wrap(firstTree.toBytes());
     ImmutableRTree secondTree = new ImmutableRTree(buffer, bf);
-    Iterable<ImmutableBitmap> points = secondTree.search(new RadiusBound(new float[]{0, 0}, 10));
+    Iterable<ImmutableBitmap> points = secondTree.search(new RadiusBound(new double[]{0, 0}, 10));
     ImmutableBitmap finalSet = bf.union(points);
 
     Assert.assertTrue(finalSet.size() >= 5);
@@ -122,7 +122,7 @@ public class ImmutableRTreeTest
     Assert.assertEquals(tree.getRoot().getChildren().size(), 10);
 
     ImmutableRTree searchTree = ImmutableRTree.newImmutableFromMutable(tree);
-    Iterable<ImmutableBitmap> points = searchTree.search(new RadiusBound(new float[]{0, 0}, 5));
+    Iterable<ImmutableBitmap> points = searchTree.search(new RadiusBound(new double[]{0, 0}, 5));
     ImmutableBitmap finalSet = bf.union(points);
     Assert.assertTrue(finalSet.size() >= 5);
 
@@ -152,7 +152,7 @@ public class ImmutableRTreeTest
     Assert.assertEquals(tree.getRoot().getChildren().size(), 10);
 
     ImmutableRTree searchTree = ImmutableRTree.newImmutableFromMutable(tree);
-    Iterable<ImmutableBitmap> points = searchTree.search(new RadiusBound(new float[]{0, 0}, 5));
+    Iterable<ImmutableBitmap> points = searchTree.search(new RadiusBound(new double[]{0, 0}, 5));
     ImmutableBitmap finalSet = bf.union(points);
     Assert.assertTrue(finalSet.size() >= 5);
 
@@ -183,7 +183,7 @@ public class ImmutableRTreeTest
     }
 
     ImmutableRTree searchTree = ImmutableRTree.newImmutableFromMutable(tree);
-    Iterable<ImmutableBitmap> points = searchTree.search(new RadiusBound(new float[]{0, 0}, 5));
+    Iterable<ImmutableBitmap> points = searchTree.search(new RadiusBound(new double[]{0, 0}, 5));
     ImmutableBitmap finalSet = bf.union(points);
     Assert.assertTrue(finalSet.size() >= 5);
 
@@ -214,7 +214,7 @@ public class ImmutableRTreeTest
     }
 
     ImmutableRTree searchTree = ImmutableRTree.newImmutableFromMutable(tree);
-    Iterable<ImmutableBitmap> points = searchTree.search(new RadiusBound(new float[]{0, 0}, 5));
+    Iterable<ImmutableBitmap> points = searchTree.search(new RadiusBound(new double[]{0, 0}, 5));
     ImmutableBitmap finalSet = bf.union(points);
     Assert.assertTrue(finalSet.size() >= 5);
 
@@ -248,8 +248,8 @@ public class ImmutableRTreeTest
     ImmutableRTree searchTree = ImmutableRTree.newImmutableFromMutable(tree);
     Iterable<ImmutableBitmap> points = searchTree.search(
         new RectangularBound(
-            new float[]{0, 0},
-            new float[]{9, 9}
+            new double[]{0, 0},
+            new double[]{9, 9}
         )
     );
     ImmutableBitmap finalSet = bf.union(points);
@@ -284,8 +284,8 @@ public class ImmutableRTreeTest
     ImmutableRTree searchTree = ImmutableRTree.newImmutableFromMutable(tree);
     Iterable<ImmutableBitmap> points = searchTree.search(
         new RectangularBound(
-            new float[]{0, 0},
-            new float[]{9, 9}
+            new double[]{0, 0},
+            new double[]{9, 9}
         )
     );
     ImmutableBitmap finalSet = bf.union(points);
@@ -319,7 +319,7 @@ public class ImmutableRTreeTest
 
     ImmutableRTree searchTree = ImmutableRTree.newImmutableFromMutable(tree);
     Iterable<ImmutableBitmap> points = searchTree.search(
-        new RadiusBound(new float[]{0.0f, 0.0f}, 5)
+        new RadiusBound(new double[]{0.0f, 0.0f}, 5)
     );
     ImmutableBitmap finalSet = bf.union(points);
     Assert.assertTrue(finalSet.size() >= 3);
@@ -352,7 +352,7 @@ public class ImmutableRTreeTest
 
     ImmutableRTree searchTree = ImmutableRTree.newImmutableFromMutable(tree);
     Iterable<ImmutableBitmap> points = searchTree.search(
-        new RadiusBound(new float[]{0.0f, 0.0f}, 5)
+        new RadiusBound(new double[]{0.0f, 0.0f}, 5)
     );
     ImmutableBitmap finalSet = bf.union(points);
     Assert.assertTrue(finalSet.size() >= 3);
@@ -394,8 +394,8 @@ public class ImmutableRTreeTest
 
     ImmutableRTree searchTree = ImmutableRTree.newImmutableFromMutable(tree);
     Iterable<ImmutableBitmap> points = searchTree.search(PolygonBound.from(
-        new float[]{1.0f, 1.0f, 2.0f, 2.0f, 4.0f, 4.0f},
-        new float[]{1.0f, 2.0f, 2.0f, 3.0f, 3.0f, 1.0f}
+        new double[]{1.0f, 1.0f, 2.0f, 2.0f, 4.0f, 4.0f},
+        new double[]{1.0f, 2.0f, 2.0f, 3.0f, 3.0f, 1.0f}
     ));
     ImmutableBitmap finalSet = bf.union(points);
     Assert.assertTrue(finalSet.size() == 500);
@@ -440,8 +440,8 @@ public class ImmutableRTreeTest
 
     ImmutableRTree searchTree = ImmutableRTree.newImmutableFromMutable(tree);
     Iterable<ImmutableBitmap> points = searchTree.search(PolygonBound.from(
-        new float[]{1.0f, 1.0f, 2.0f, 2.0f, 4.0f, 4.0f},
-        new float[]{1.0f, 2.0f, 2.0f, 3.0f, 3.0f, 1.0f}
+        new double[]{1.0f, 1.0f, 2.0f, 2.0f, 4.0f, 4.0f},
+        new double[]{1.0f, 2.0f, 2.0f, 3.0f, 3.0f, 1.0f}
     ));
     ImmutableBitmap finalSet = bf.union(points);
     Assert.assertTrue(finalSet.size() == 500);
@@ -465,7 +465,7 @@ public class ImmutableRTreeTest
 
     ImmutableRTree searchTree = ImmutableRTree.newImmutableFromMutable(tree);
     Iterable<ImmutableBitmap> points = searchTree.search(
-        new RadiusBound(new float[]{0.0f, 0.0f}, 5)
+        new RadiusBound(new double[]{0.0f, 0.0f}, 5)
     );
     ImmutableBitmap finalSet = bf.union(points);
     Assert.assertEquals(finalSet.size(), 0);
@@ -480,7 +480,7 @@ public class ImmutableRTreeTest
 
     ImmutableRTree searchTree = ImmutableRTree.newImmutableFromMutable(tree);
     Iterable<ImmutableBitmap> points = searchTree.search(
-        new RadiusBound(new float[]{0.0f, 0.0f}, 5)
+        new RadiusBound(new double[]{0.0f, 0.0f}, 5)
     );
     ImmutableBitmap finalSet = bf.union(points);
     Assert.assertEquals(finalSet.size(), 0);
@@ -507,7 +507,7 @@ public class ImmutableRTreeTest
     }
 
     ImmutableRTree searchTree = ImmutableRTree.newImmutableFromMutable(tree);
-    Iterable<ImmutableBitmap> points = searchTree.search(new RadiusBound(new float[]{0, 0}, 5, 2));
+    Iterable<ImmutableBitmap> points = searchTree.search(new RadiusBound(new double[]{0, 0}, 5, 2));
     ImmutableBitmap finalSet = bf.union(points);
     Assert.assertTrue(finalSet.size() >= 5);
 
@@ -539,7 +539,7 @@ public class ImmutableRTreeTest
     }
 
     ImmutableRTree searchTree = ImmutableRTree.newImmutableFromMutable(tree);
-    Iterable<ImmutableBitmap> points = searchTree.search(new RadiusBound(new float[]{0, 0}, 5, 2));
+    Iterable<ImmutableBitmap> points = searchTree.search(new RadiusBound(new double[]{0, 0}, 5, 2));
     ImmutableBitmap finalSet = bf.union(points);
     Assert.assertTrue(finalSet.size() >= 5);
 
@@ -579,7 +579,7 @@ public class ImmutableRTreeTest
 
         stopwatch.reset().start();
 
-        Iterable<ImmutableBitmap> points = searchTree.search(new RadiusBound(new float[]{50, 50}, radius));
+        Iterable<ImmutableBitmap> points = searchTree.search(new RadiusBound(new double[]{50, 50}, radius));
 
         Iterables.size(points);
         stop = stopwatch.elapsed(TimeUnit.MILLISECONDS);
@@ -631,8 +631,8 @@ public class ImmutableRTreeTest
 
         Iterable<ImmutableBitmap> points = searchTree.search(
             new RectangularBound(
-                new float[]{40, 40},
-                new float[]{60, 60},
+                new double[]{40, 40},
+                new double[]{60, 60},
                 100
             )
         );

@@ -29,8 +29,8 @@ public class RadiusBoundTest
   @Test
   public void testCacheKey()
   {
-    final float[] coords0 = new float[]{1.0F, 2.0F};
-    final float[] coords1 = new float[]{1.1F, 2.1F};
+    final double[] coords0 = new double[]{1.0F, 2.0F};
+    final double[] coords1 = new double[]{1.1F, 2.1F};
     Assert.assertArrayEquals(
         new RadiusBound(coords0, 3.0F, 10).getCacheKey(),
         new RadiusBound(coords0, 3.0F, 10).getCacheKey()
