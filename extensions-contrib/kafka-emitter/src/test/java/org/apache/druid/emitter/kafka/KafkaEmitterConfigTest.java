@@ -163,7 +163,6 @@ public class KafkaEmitterConfigTest
     Assert.assertTrue(new KafkaEmitterModule().getJacksonModules().isEmpty());
   }
 
-
   @Test
   public void testNullBootstrapServers()
   {
