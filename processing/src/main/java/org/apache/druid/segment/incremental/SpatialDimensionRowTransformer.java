@@ -189,7 +189,7 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
       return false;
     }
     for (String dimVal : dimVals) {
-      if (tryParseFloat(dimVal) == null) {
+      if (tryParseDouble(dimVal) == null) {
         return false;
       }
     }
@@ -203,7 +203,7 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
     }
     Iterable<String> dimVals = SPLITTER.split(dimVal);
     for (String val : dimVals) {
-      if (tryParseFloat(val) == null) {
+      if (tryParseDouble(val) == null) {
         return false;
       }
     }
@@ -211,7 +211,7 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
   }
 
   @Nullable
-  private static Double tryParseFloat(String val)
+  private static Double tryParseDouble(String val)
   {
     try {
       return Double.parseDouble(val);
@@ -239,11 +239,11 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
     final double[] coordinate = new double[parts.size()];
 
     for (int i = 0; i < coordinate.length; i++) {
-      final Double floatPart = tryParseFloat(parts.get(i));
-      if (floatPart == null) {
+      final Double doublePart = tryParseDouble(parts.get(i));
+      if (doublePart == null) {
         return null;
       } else {
-        coordinate[i] = floatPart;
+        coordinate[i] = doublePart;
       }
     }
 
