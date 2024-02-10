@@ -130,10 +130,10 @@ public class KafkaEmitterTest
     final List<Event> inputEvents = flattenEvents(SERVICE_METRIC_EVENTS);
     final CountDownLatch eventLatch = new CountDownLatch(inputEvents.size());
 
-    final Map<String, List<String>> feedToExpectedEvents = trackExpectedEvents(SERVICE_METRIC_EVENTS, kafkaEmitterConfig);
-    final Map<String, List<String>> feedToActualEvents = trackActualEventsInCallback(eventLatch);
+    final Map<String, List<String>> feedToExpectedEvents = trackExpectedEventsPerFeed(inputEvents, kafkaEmitterConfig);
+    final Map<String, List<String>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
 
-    emitEvents(kafkaEmitter, SERVICE_METRIC_EVENTS, eventLatch);
+    emitEvents(kafkaEmitter, inputEvents, eventLatch);
 
     validateEvents(feedToExpectedEvents, feedToActualEvents);
 
@@ -172,8 +172,8 @@ public class KafkaEmitterTest
     );
     final CountDownLatch eventLatch = new CountDownLatch(inputEvents.size());
 
-    final Map<String, List<String>> feedToExpectedEvents = trackExpectedEvents(inputEvents, kafkaEmitterConfig);
-    final Map<String, List<String>> feedToActualEvents = trackActualEventsInCallback(eventLatch);
+    final Map<String, List<String>> feedToExpectedEvents = trackExpectedEventsPerFeed(inputEvents, kafkaEmitterConfig);
+    final Map<String, List<String>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
 
     emitEvents(kafkaEmitter, inputEvents, eventLatch);
 
@@ -211,8 +211,8 @@ public class KafkaEmitterTest
     );
     final CountDownLatch eventLatch = new CountDownLatch(inputEvents.size());
 
-    final Map<String, List<String>> feedToExpectedEvents = trackExpectedEvents(inputEvents, kafkaEmitterConfig);
-    final Map<String, List<String>> feedToActualEvents = trackActualEventsInCallback(eventLatch);
+    final Map<String, List<String>> feedToExpectedEvents = trackExpectedEventsPerFeed(inputEvents, kafkaEmitterConfig);
+    final Map<String, List<String>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
 
     emitEvents(kafkaEmitter, inputEvents, eventLatch);
 
@@ -243,7 +243,7 @@ public class KafkaEmitterTest
 
     final KafkaEmitter kafkaEmitter = initKafkaEmitter(kafkaEmitterConfig);
 
-    // Emit everything, but we've only subscribed to alert events.
+    // Emit everything. Since we only subscribe to alert feeds, everything else should be dropped.
     final List<Event> inputEvents = flattenEvents(
         SERVICE_METRIC_EVENTS,
         ALERT_EVENTS,
@@ -253,8 +253,8 @@ public class KafkaEmitterTest
 
     final CountDownLatch eventLatch = new CountDownLatch(ALERT_EVENTS.size());
 
-    final Map<String, List<String>> feedToExpectedEvents = trackExpectedEvents(ALERT_EVENTS, kafkaEmitterConfig);
-    final Map<String, List<String>> feedToActualEvents = trackActualEventsInCallback(eventLatch);
+    final Map<String, List<String>> feedToExpectedEvents = trackExpectedEventsPerFeed(ALERT_EVENTS, kafkaEmitterConfig);
+    final Map<String, List<String>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
 
     emitEvents(kafkaEmitter, inputEvents, eventLatch);
 
@@ -296,8 +296,8 @@ public class KafkaEmitterTest
 
     final CountDownLatch eventLatch = new CountDownLatch(inputEvents.size());
 
-    final Map<String, List<String>> feedToExpectedEvents = trackExpectedEvents(inputEvents, kafkaEmitterConfig);
-    final Map<String, List<String>> feedToActualEvents = trackActualEventsInCallback(eventLatch);
+    final Map<String, List<String>> feedToExpectedEvents = trackExpectedEventsPerFeed(inputEvents, kafkaEmitterConfig);
+    final Map<String, List<String>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
 
     emitEvents(kafkaEmitter, inputEvents, eventLatch);
 
@@ -314,7 +314,7 @@ public class KafkaEmitterTest
       final KafkaEmitterConfig kafkaEmitterConfig
   )
   {
-    final KafkaEmitter kafkaEmitter = new KafkaEmitter(
+    return new KafkaEmitter(
         kafkaEmitterConfig,
         new DefaultObjectMapper()
     )
@@ -327,7 +327,6 @@ public class KafkaEmitterTest
         return producer;
       }
     };
-    return kafkaEmitter;
   }
 
   private void emitEvents(
@@ -355,7 +354,7 @@ public class KafkaEmitterTest
     return flattenedList;
   }
 
-  private Map<String, List<String>> trackActualEventsInCallback(
+  private Map<String, List<String>> trackActualEventsPerFeed(
       final CountDownLatch eventLatch
   )
   {
@@ -374,7 +373,7 @@ public class KafkaEmitterTest
     return feedToActualEvents;
   }
 
-  private Map<String, List<String>> trackExpectedEvents(
+  private Map<String, List<String>> trackExpectedEventsPerFeed(
       final List<Event> events,
       final KafkaEmitterConfig kafkaEmitterConfig
   ) throws JsonProcessingException
