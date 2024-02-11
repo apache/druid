@@ -119,7 +119,7 @@ public class TaskReportSerdeTest
     @JsonProperty
     public String getTaskId()
     {
-      return "theTask";
+      throw new UnsupportedOperationException("cannot serialize task ID");
     }
 
     @Override
