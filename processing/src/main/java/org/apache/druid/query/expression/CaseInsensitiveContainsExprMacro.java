@@ -35,7 +35,7 @@ import java.util.List;
  * - {@code contains_string("foobar", "car") - 0 }
  * - {@code contains_string("foobar", "Bar") - 1 }
  * <p>
- * See {@link ContainsExprMacro} for the case-sensitive version.
+ * @see ContainsExprMacro for the case-sensitive version.
  */
 
 public class CaseInsensitiveContainsExprMacro implements ExprMacroTable.ExprMacro

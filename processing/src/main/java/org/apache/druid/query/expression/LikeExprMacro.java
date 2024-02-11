@@ -97,4 +97,3 @@ public class LikeExprMacro implements ExprMacroTable.ExprMacro
     return new LikeExtractExpr(args);
   }
 }
-

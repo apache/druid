@@ -702,7 +702,6 @@ public class NestedDataExpressions
           );
         }
 
-        @Nullable
         @Override
         public ExpressionType getOutputType(InputBindingInspector inspector)
         {
