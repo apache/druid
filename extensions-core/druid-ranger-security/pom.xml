@@ -41,6 +41,13 @@
                 <artifactId>woodstox-core</artifactId>
                 <version>6.4.0</version>
             </dependency>
+            <dependency>
+                <groupId>com.amazonaws</groupId>
+                <artifactId>aws-java-sdk-bundle</artifactId>
+                <!-- Deliberately not using the aws.sdk.version because the latter versions are very large.
+                  This is a temporary hack to reduce the size of the distribution -->
+                <version>1.12.497</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
