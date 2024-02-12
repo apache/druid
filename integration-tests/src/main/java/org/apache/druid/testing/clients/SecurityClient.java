@@ -71,7 +71,7 @@ public class SecurityClient
             )
         )
     );
-    Assert.assertEquals(HttpResponseStatus.OK ,sendRequest(request).getStatus());
+    Assert.assertEquals(HttpResponseStatus.OK, sendRequest(request).getStatus());
   }
 
   public void deleteAuthenticationUser(String username) throws IOException
@@ -86,7 +86,7 @@ public class SecurityClient
             )
         )
     );
-    Assert.assertEquals(HttpResponseStatus.OK ,sendRequest(request).getStatus());
+    Assert.assertEquals(HttpResponseStatus.OK, sendRequest(request).getStatus());
   }
 
   public void setUserPassword(String username, String password) throws IOException
@@ -103,7 +103,7 @@ public class SecurityClient
     );
 
     request.setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(ImmutableMap.of("password", password)));
-    Assert.assertEquals(HttpResponseStatus.OK ,sendRequest(request).getStatus());
+    Assert.assertEquals(HttpResponseStatus.OK, sendRequest(request).getStatus());
   }
 
   public void createAuthorizerUser(String username) throws IOException
@@ -118,7 +118,7 @@ public class SecurityClient
             )
         )
     );
-    Assert.assertEquals(HttpResponseStatus.OK ,sendRequest(request).getStatus());
+    Assert.assertEquals(HttpResponseStatus.OK, sendRequest(request).getStatus());
   }
 
   public void deleteAuthorizerUser(String username) throws IOException
@@ -133,7 +133,7 @@ public class SecurityClient
             )
         )
     );
-    Assert.assertEquals(HttpResponseStatus.OK ,sendRequest(request).getStatus());
+    Assert.assertEquals(HttpResponseStatus.OK, sendRequest(request).getStatus());
   }
 
   public void createAuthorizerRole(String role) throws IOException
@@ -148,7 +148,7 @@ public class SecurityClient
             )
         )
     );
-    Assert.assertEquals(HttpResponseStatus.OK ,sendRequest(request).getStatus());
+    Assert.assertEquals(HttpResponseStatus.OK, sendRequest(request).getStatus());
   }
 
   public void deleteAuthorizerRole(String role) throws IOException
@@ -163,7 +163,7 @@ public class SecurityClient
             )
         )
     );
-    Assert.assertEquals(HttpResponseStatus.OK ,sendRequest(request).getStatus());
+    Assert.assertEquals(HttpResponseStatus.OK, sendRequest(request).getStatus());
   }
 
   public void assignUserToRole(String user, String role) throws IOException
@@ -179,7 +179,7 @@ public class SecurityClient
             )
         )
     );
-    Assert.assertEquals(HttpResponseStatus.OK ,sendRequest(request).getStatus());
+    Assert.assertEquals(HttpResponseStatus.OK, sendRequest(request).getStatus());
   }
 
   public void setPermissionsToRole(String role, List<ResourceAction> permissions) throws IOException
@@ -194,7 +194,7 @@ public class SecurityClient
             )
         )
     ).setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(permissions));
-    Assert.assertEquals(HttpResponseStatus.OK ,sendRequest(request).getStatus());
+    Assert.assertEquals(HttpResponseStatus.OK, sendRequest(request).getStatus());
   }
 
   private StatusResponseHolder sendRequest(Request request)

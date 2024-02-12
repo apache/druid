@@ -192,11 +192,7 @@ public class Initializer
 
     @Provides
     @AdminClient
-    public HttpClient getAdminClientClient(
-        IntegrationTestingConfig config,
-        Lifecycle lifecycle,
-        @Client HttpClient delegate
-    )
+    public HttpClient getAdminClientClient(@Client HttpClient delegate)
     {
       BasicCredentials basicCredentials = new BasicCredentials("admin", "priest");
       return new CredentialedHttpClient(basicCredentials, delegate);
