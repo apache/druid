@@ -17,38 +17,40 @@
  * under the License.
  */
 
-package org.apache.druid.testsEx.msq;
+package org.apache.druid.testsEx.auth;
 
-import com.google.api.client.util.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.Yielder;
-import org.apache.druid.msq.indexing.report.MSQResultsReport;
-import org.apache.druid.msq.indexing.report.MSQTaskReport;
-import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
-import org.apache.druid.msq.sql.SqlTaskStatus;
+import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.storage.local.LocalFileExportStorageProvider;
+import org.apache.druid.storage.s3.output.S3ExportStorageProvider;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
+import org.apache.druid.testing.clients.SecurityClient;
 import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.testing.utils.MsqTestQueryHelper;
-import org.apache.druid.testsEx.categories.MultiStageQuery;
+import org.apache.druid.testsEx.categories.Security;
 import org.apache.druid.testsEx.config.DruidTestRunner;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.junit.After;
 import org.junit.Assert;
-import org.junit.Ignore;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.io.IOException;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 @RunWith(DruidTestRunner.class)
-@Category(MultiStageQuery.class)
-public class ITMultiStageQuery
+@Category(Security.class)
+public class ITSecurityBasicQuery
 {
   @Inject
   private MsqTestQueryHelper msqHelper;
@@ -58,15 +60,108 @@ public class ITMultiStageQuery
 
   @Inject
   private CoordinatorResourceTestClient coordinatorClient;
+  @Inject
+  private SecurityClient securityClient;
 
+  public static final String USER_1 = "user1";
+  public static final String ROLE_1 = "role1";
+  public static final String USER_1_PASSWORD = "password1";
   private static final String QUERY_FILE = "/multi-stage-query/wikipedia_msq_select_query1.json";
 
+  @Before
+  public void setUp() throws IOException
+  {
+    // TODO: pass details between auth.env and test
+    // Authentication setup
+    securityClient.createAuthenticationUser(USER_1);
+    securityClient.setUserPassword(USER_1, USER_1_PASSWORD);
+
+    // Authorizer setup
+    securityClient.createAuthorizerUser(USER_1);
+    securityClient.createAuthorizerRole(ROLE_1);
+    securityClient.assignUserToRole(USER_1, ROLE_1);
+  }
+
+  @After
+  public void tearDown() throws Exception
+  {
+    securityClient.deleteAuthenticationUser(USER_1);
+    securityClient.deleteAuthorizerUser(USER_1);
+    securityClient.deleteAuthorizerRole(ROLE_1);
+  }
+
   @Test
-  public void testMsqIngestionAndQuerying() throws Exception
+  public void testIngestionWithoutPermissions() throws Exception
   {
     String datasource = "dst";
+    coordinatorClient.unloadSegmentsForDataSource(datasource);
+
+    List<ResourceAction> permissions = ImmutableList.of();
+    securityClient.setPermissionsToRole(ROLE_1, permissions);
+
+    String queryLocal =
+        StringUtils.format(
+            "INSERT INTO %s\n"
+            + "SELECT\n"
+            + "  TIME_PARSE(\"timestamp\") AS __time,\n"
+            + "  isRobot,\n"
+            + "  diffUrl,\n"
+            + "  added,\n"
+            + "  countryIsoCode,\n"
+            + "  regionName,\n"
+            + "  channel,\n"
+            + "  flags,\n"
+            + "  delta,\n"
+            + "  isUnpatrolled,\n"
+            + "  isNew,\n"
+            + "  deltaBucket,\n"
+            + "  isMinor,\n"
+            + "  isAnonymous,\n"
+            + "  deleted,\n"
+            + "  cityName,\n"
+            + "  metroCode,\n"
+            + "  namespace,\n"
+            + "  comment,\n"
+            + "  page,\n"
+            + "  commentLength,\n"
+            + "  countryName,\n"
+            + "  user,\n"
+            + "  regionIsoCode\n"
+            + "FROM TABLE(\n"
+            + "  EXTERN(\n"
+            + "    '{\"type\":\"local\",\"files\":[\"/resources/data/batch_index/json/wikipedia_index_data1.json\"]}',\n"
+            + "    '{\"type\":\"json\"}',\n"
+            + "    '[{\"type\":\"string\",\"name\":\"timestamp\"},{\"type\":\"string\",\"name\":\"isRobot\"},{\"type\":\"string\",\"name\":\"diffUrl\"},{\"type\":\"long\",\"name\":\"added\"},{\"type\":\"string\",\"name\":\"countryIsoCode\"},{\"type\":\"string\",\"name\":\"regionName\"},{\"type\":\"string\",\"name\":\"channel\"},{\"type\":\"string\",\"name\":\"flags\"},{\"type\":\"long\",\"name\":\"delta\"},{\"type\":\"string\",\"name\":\"isUnpatrolled\"},{\"type\":\"string\",\"name\":\"isNew\"},{\"type\":\"double\",\"name\":\"deltaBucket\"},{\"type\":\"string\",\"name\":\"isMinor\"},{\"type\":\"string\",\"name\":\"isAnonymous\"},{\"type\":\"long\",\"name\":\"deleted\"},{\"type\":\"string\",\"name\":\"cityName\"},{\"type\":\"long\",\"name\":\"metroCode\"},{\"type\":\"string\",\"name\":\"namespace\"},{\"type\":\"string\",\"name\":\"comment\"},{\"type\":\"string\",\"name\":\"page\"},{\"type\":\"long\",\"name\":\"commentLength\"},{\"type\":\"string\",\"name\":\"countryName\"},{\"type\":\"string\",\"name\":\"user\"},{\"type\":\"string\",\"name\":\"regionIsoCode\"}]'\n"
+            + "  )\n"
+            + ")\n"
+            + "PARTITIONED BY DAY\n",
+            datasource
+        );
+
+    // Submit the task and wait for the datasource to get loaded
+    StatusResponseHolder statusResponseHolder = msqHelper.submitMsqTask(
+        new SqlQuery(queryLocal, null, false, false, false, ImmutableMap.of(), ImmutableList.of()),
+        USER_1,
+        USER_1_PASSWORD
+    );
+
+    Assert.assertEquals(HttpResponseStatus.FORBIDDEN, statusResponseHolder.getStatus());
+  }
+
+  @Test
+  public void testIngestionWithPermissions() throws Exception
+  {
+    List<ResourceAction> permissions = ImmutableList.of(
+        new ResourceAction(new Resource(".*", "DATASOURCE"), Action.READ),
+        new ResourceAction(new Resource("EXTERNAL", "EXTERNAL"), Action.READ),
+        new ResourceAction(new Resource("STATE", "STATE"), Action.READ),
+        new ResourceAction(new Resource(".*", "DATASOURCE"), Action.WRITE)
+    );
+    securityClient.setPermissionsToRole(ROLE_1, permissions);
+
 
     // Clear up the datasource from the previous runs
+    String datasource = "dst";
     coordinatorClient.unloadSegmentsForDataSource(datasource);
 
     String queryLocal =
@@ -109,163 +204,49 @@ public class ITMultiStageQuery
         );
 
     // Submit the task and wait for the datasource to get loaded
-    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTaskSuccesfully(queryLocal);
+    StatusResponseHolder statusResponseHolder = msqHelper.submitMsqTask(
+        new SqlQuery(queryLocal, null, false, false, false, ImmutableMap.of(), ImmutableList.of()),
+        USER_1,
+        USER_1_PASSWORD
+    );
 
-    if (sqlTaskStatus.getState().isFailure()) {
-      Assert.fail(StringUtils.format(
-          "Unable to start the task successfully.\nPossible exception: %s",
-          sqlTaskStatus.getError()
-      ));
-    }
-
-    msqHelper.pollTaskIdForSuccess(sqlTaskStatus.getTaskId());
-    dataLoaderHelper.waitUntilDatasourceIsReady(datasource);
-
-    msqHelper.testQueriesFromFile(QUERY_FILE, datasource);
+    Assert.assertEquals(HttpResponseStatus.ACCEPTED, statusResponseHolder.getStatus());
   }
 
   @Test
-  @Ignore("localfiles() is disabled")
-  public void testMsqIngestionAndQueryingWithLocalFn() throws Exception
+  public void testExportWithoutPermissions() throws IOException, ExecutionException, InterruptedException
   {
-    String datasource = "dst";
-
-    // Clear up the datasource from the previous runs
-    coordinatorClient.unloadSegmentsForDataSource(datasource);
-
-    String queryLocal =
-        StringUtils.format(
-            "INSERT INTO %s\n"
-            + "SELECT\n"
-            + "  TIME_PARSE(\"timestamp\") AS __time,\n"
-            + "  isRobot,\n"
-            + "  diffUrl,\n"
-            + "  added,\n"
-            + "  countryIsoCode,\n"
-            + "  regionName,\n"
-            + "  channel,\n"
-            + "  flags,\n"
-            + "  delta,\n"
-            + "  isUnpatrolled,\n"
-            + "  isNew,\n"
-            + "  deltaBucket,\n"
-            + "  isMinor,\n"
-            + "  isAnonymous,\n"
-            + "  deleted,\n"
-            + "  cityName,\n"
-            + "  metroCode,\n"
-            + "  namespace,\n"
-            + "  comment,\n"
-            + "  page,\n"
-            + "  commentLength,\n"
-            + "  countryName,\n"
-            + "  user,\n"
-            + "  regionIsoCode\n"
-            + "FROM TABLE(\n"
-            + "  LOCALFILES(\n"
-            + "    files => ARRAY['/resources/data/batch_index/json/wikipedia_index_data1.json'],\n"
-            + "    format => 'json'\n"
-            + "  ))\n"
-            + "  (\"timestamp\" VARCHAR, isRobot VARCHAR, diffUrl VARCHAR, added BIGINT, countryIsoCode VARCHAR, regionName VARCHAR,\n"
-            + "   channel VARCHAR, flags VARCHAR, delta BIGINT, isUnpatrolled VARCHAR, isNew VARCHAR, deltaBucket DOUBLE,\n"
-            + "   isMinor VARCHAR, isAnonymous VARCHAR, deleted BIGINT, cityName VARCHAR, metroCode BIGINT, namespace VARCHAR,\n"
-            + "   comment VARCHAR, page VARCHAR, commentLength BIGINT, countryName VARCHAR, \"user\" VARCHAR, regionIsoCode VARCHAR)\n"
-            + "PARTITIONED BY DAY\n",
-            datasource
-        );
-
-    // Submit the task and wait for the datasource to get loaded
-    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTaskSuccesfully(queryLocal);
-
-    if (sqlTaskStatus.getState().isFailure()) {
-      Assert.fail(StringUtils.format(
-          "Unable to start the task successfully.\nPossible exception: %s",
-          sqlTaskStatus.getError()
-      ));
-    }
-
-    msqHelper.pollTaskIdForSuccess(sqlTaskStatus.getTaskId());
-    dataLoaderHelper.waitUntilDatasourceIsReady(datasource);
-
-    msqHelper.testQueriesFromFile(QUERY_FILE, datasource);
-  }
-
-  @Test
-  public void testExport() throws Exception
-  {
-    String exportQuery =
-        StringUtils.format(
-            "INSERT INTO extern(%s(exportPath => '%s'))\n"
-            + "AS CSV\n"
-            + "SELECT page, added, delta\n"
-            + "FROM TABLE(\n"
-            + "  EXTERN(\n"
-            + "    '{\"type\":\"local\",\"files\":[\"/resources/data/batch_index/json/wikipedia_index_data1.json\"]}',\n"
-            + "    '{\"type\":\"json\"}',\n"
-            + "    '[{\"type\":\"string\",\"name\":\"timestamp\"},{\"type\":\"string\",\"name\":\"isRobot\"},{\"type\":\"string\",\"name\":\"diffUrl\"},{\"type\":\"long\",\"name\":\"added\"},{\"type\":\"string\",\"name\":\"countryIsoCode\"},{\"type\":\"string\",\"name\":\"regionName\"},{\"type\":\"string\",\"name\":\"channel\"},{\"type\":\"string\",\"name\":\"flags\"},{\"type\":\"long\",\"name\":\"delta\"},{\"type\":\"string\",\"name\":\"isUnpatrolled\"},{\"type\":\"string\",\"name\":\"isNew\"},{\"type\":\"double\",\"name\":\"deltaBucket\"},{\"type\":\"string\",\"name\":\"isMinor\"},{\"type\":\"string\",\"name\":\"isAnonymous\"},{\"type\":\"long\",\"name\":\"deleted\"},{\"type\":\"string\",\"name\":\"cityName\"},{\"type\":\"long\",\"name\":\"metroCode\"},{\"type\":\"string\",\"name\":\"namespace\"},{\"type\":\"string\",\"name\":\"comment\"},{\"type\":\"string\",\"name\":\"page\"},{\"type\":\"long\",\"name\":\"commentLength\"},{\"type\":\"string\",\"name\":\"countryName\"},{\"type\":\"string\",\"name\":\"user\"},{\"type\":\"string\",\"name\":\"regionIsoCode\"}]'\n"
-            + "  )\n"
-            + ")\n",
-            LocalFileExportStorageProvider.TYPE_NAME, "/shared/export/"
-        );
-
-    SqlTaskStatus exportTask = msqHelper.submitMsqTaskSuccesfully(exportQuery);
-
-    msqHelper.pollTaskIdForSuccess(exportTask.getTaskId());
-
-    if (exportTask.getState().isFailure()) {
-      Assert.fail(StringUtils.format(
-          "Unable to start the task successfully.\nPossible exception: %s",
-          exportTask.getError()
-      ));
-    }
-
-    String resultQuery = StringUtils.format(
-        "SELECT page, delta, added\n"
-        + "  FROM TABLE(\n"
-        + "    EXTERN(\n"
-        + "      '{\"type\":\"local\",\"baseDir\":\"/shared/export/\",\"filter\":\"*.csv\"}',\n"
-        + "      '{\"type\":\"csv\",\"findColumnsFromHeader\":true}'\n"
-        + "    )\n"
-        + "  ) EXTEND (\"added\" BIGINT, \"delta\" BIGINT, \"page\" VARCHAR)\n"
-        + "   WHERE delta != 0\n"
-        + "   ORDER BY page");
-
-    SqlTaskStatus resultTaskStatus = msqHelper.submitMsqTaskSuccesfully(resultQuery);
-
-    msqHelper.pollTaskIdForSuccess(resultTaskStatus.getTaskId());
-
-    Map<String, MSQTaskReport> statusReport = msqHelper.fetchStatusReports(resultTaskStatus.getTaskId());
-    MSQTaskReport taskReport = statusReport.get(MSQTaskReport.REPORT_KEY);
-    if (taskReport == null) {
-      throw new ISE("Unable to fetch the status report for the task [%]", resultTaskStatus.getTaskId());
-    }
-    MSQTaskReportPayload taskReportPayload = Preconditions.checkNotNull(
-        taskReport.getPayload(),
-        "payload"
+    // No external write permissions for s3
+    List<ResourceAction> permissions = ImmutableList.of(
+        new ResourceAction(new Resource(".*", "DATASOURCE"), Action.READ),
+        new ResourceAction(new Resource("EXTERNAL", "EXTERNAL"), Action.READ),
+        new ResourceAction(new Resource(S3ExportStorageProvider.TYPE_NAME, "EXTERNAL"), Action.WRITE),
+        new ResourceAction(new Resource("STATE", "STATE"), Action.READ),
+        new ResourceAction(new Resource(".*", "DATASOURCE"), Action.WRITE)
     );
-    MSQResultsReport resultsReport = Preconditions.checkNotNull(
-        taskReportPayload.getResults(),
-        "Results report for the task id is empty"
-    );
+    securityClient.setPermissionsToRole(ROLE_1, permissions);
 
-    Yielder<Object[]> yielder = resultsReport.getResultYielder();
-    List<List<Object>> actualResults = new ArrayList<>();
+      String exportQuery =
+          StringUtils.format(
+              "INSERT INTO extern(%s(exportPath => '%s'))\n"
+              + "AS CSV\n"
+              + "SELECT page, added, delta\n"
+              + "FROM TABLE(\n"
+              + "  EXTERN(\n"
+              + "    '{\"type\":\"local\",\"files\":[\"/resources/data/batch_index/json/wikipedia_index_data1.json\"]}',\n"
+              + "    '{\"type\":\"json\"}',\n"
+              + "    '[{\"type\":\"string\",\"name\":\"timestamp\"},{\"type\":\"string\",\"name\":\"isRobot\"},{\"type\":\"string\",\"name\":\"diffUrl\"},{\"type\":\"long\",\"name\":\"added\"},{\"type\":\"string\",\"name\":\"countryIsoCode\"},{\"type\":\"string\",\"name\":\"regionName\"},{\"type\":\"string\",\"name\":\"channel\"},{\"type\":\"string\",\"name\":\"flags\"},{\"type\":\"long\",\"name\":\"delta\"},{\"type\":\"string\",\"name\":\"isUnpatrolled\"},{\"type\":\"string\",\"name\":\"isNew\"},{\"type\":\"double\",\"name\":\"deltaBucket\"},{\"type\":\"string\",\"name\":\"isMinor\"},{\"type\":\"string\",\"name\":\"isAnonymous\"},{\"type\":\"long\",\"name\":\"deleted\"},{\"type\":\"string\",\"name\":\"cityName\"},{\"type\":\"long\",\"name\":\"metroCode\"},{\"type\":\"string\",\"name\":\"namespace\"},{\"type\":\"string\",\"name\":\"comment\"},{\"type\":\"string\",\"name\":\"page\"},{\"type\":\"long\",\"name\":\"commentLength\"},{\"type\":\"string\",\"name\":\"countryName\"},{\"type\":\"string\",\"name\":\"user\"},{\"type\":\"string\",\"name\":\"regionIsoCode\"}]'\n"
+              + "  )\n"
+              + ")\n",
+              LocalFileExportStorageProvider.TYPE_NAME, "/shared/export/"
+          );
 
-    while (!yielder.isDone()) {
-      Object[] row = yielder.get();
-      actualResults.add(Arrays.asList(row));
-      yielder = yielder.next(null);
-    }
+      StatusResponseHolder statusResponseHolder = msqHelper.submitMsqTask(
+          new SqlQuery(exportQuery, null, false, false, false, ImmutableMap.of(), ImmutableList.of()),
+          USER_1,
+          USER_1_PASSWORD
+      );
 
-    ImmutableList<ImmutableList<Object>> expectedResults = ImmutableList.of(
-        ImmutableList.of("Cherno Alpha", 111, 123),
-        ImmutableList.of("Gypsy Danger", -143, 57),
-        ImmutableList.of("Striker Eureka", 330, 459)
-    );
-
-    Assert.assertEquals(
-        expectedResults,
-        actualResults
-    );
+      Assert.assertEquals(HttpResponseStatus.FORBIDDEN, statusResponseHolder.getStatus());
   }
 }

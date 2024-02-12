@@ -59,6 +59,7 @@ public class OverlordResourceTestClient
   private final ObjectMapper jsonMapper;
   private final HttpClient httpClient;
   private final String indexer;
+  private final String adminPassword;
 
   @Inject
   protected OverlordResourceTestClient(
@@ -70,6 +71,7 @@ public class OverlordResourceTestClient
     this.jsonMapper = jsonMapper;
     this.httpClient = httpClient;
     this.indexer = config.getOverlordUrl();
+    adminPassword = "priest";
   }
 
   protected String getIndexerURL()
@@ -723,8 +725,10 @@ public class OverlordResourceTestClient
   protected StatusResponseHolder makeRequest(HttpMethod method, String url)
   {
     try {
-      StatusResponseHolder response = this.httpClient
-          .go(new Request(method, new URL(url)), StatusResponseHandler.getInstance()).get();
+      StatusResponseHolder response = this.httpClient.go(
+          new Request(method, new URL(url)).setBasicAuthentication("admin", adminPassword),
+          StatusResponseHandler.getInstance()
+      ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ISE("Error while making request to indexer [%s %s]", response.getStatus(), response.getContent());
       }
