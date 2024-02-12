@@ -7181,7 +7181,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                                                   .build()),
                                   expressionVirtualColumn(
                                       "j0.unnest",
-                                      "array(1,2,3)",
+                                      "d0",
                                       ColumnType.LONG_ARRAY
                                   ),
                                   null

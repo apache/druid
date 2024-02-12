@@ -161,6 +161,7 @@ public class DruidQuery
   private final Query<?> query;
   private final RowSignature outputRowSignature;
   private final RelDataType outputRowType;
+
   private final VirtualColumnRegistry virtualColumnRegistry;
   private final RowSignature sourceRowSignature;
 
@@ -953,6 +954,10 @@ public class DruidQuery
     return dataSource;
   }
 
+  public VirtualColumnRegistry getVirtualColumnRegistry()
+  {
+    return virtualColumnRegistry;
+  }
   @Nullable
   public Grouping getGrouping()
   {

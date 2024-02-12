@@ -44,13 +44,19 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexShuttle;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnnestDataSource;
+import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.topn.TopNQuery;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.builtin.MultiValueStringToArrayOperatorConversion;
@@ -295,11 +301,44 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
       leftDataSource1 = new QueryDataSource(updatedLeftQuery.getQuery());
     }
 
+    VirtualColumn unnestCol = null;
+    final String column = leftQuery.getVirtualColumnRegistry()
+                                   .getVirtualColumnByExpression(
+                                       expressionToUnnest,
+                                       rexNodeToUnnest.getType()
+                                   );
+
+    if (column != null) {
+      if (leftQuery.getQuery() instanceof GroupByQuery) {
+        List<DimensionSpec> dimensions = ((GroupByQuery) leftQuery.getQuery()).getDimensions();
+        for (DimensionSpec dimSpec : dimensions) {
+          if (dimSpec.getDimension().equals(column)) {
+            unnestCol = new ExpressionVirtualColumn(
+                correlateRowSignature.getColumnName(correlateRowSignature.size() - 1),
+                dimSpec.getOutputName(),
+                Calcites.getColumnTypeForRelDataType(rexNodeToUnnest.getType()),
+                ExprMacroTable.nil()
+            );
+            break;
+          }
+        }
+      } else if (leftQuery.getQuery() instanceof TopNQuery) {
+        DimensionSpec dimSpec = ((TopNQuery) leftQuery.getQuery()).getDimensionSpec();
+        if (dimSpec.getDimension().equals(column)) {
+          unnestCol = new ExpressionVirtualColumn(
+              correlateRowSignature.getColumnName(correlateRowSignature.size() - 1),
+              dimSpec.getOutputName(),
+              Calcites.getColumnTypeForRelDataType(rexNodeToUnnest.getType()),
+              ExprMacroTable.nil()
+          );
+        }
+      }
+    }
     leftDataSource = leftDataSource1;
     return partialQuery.build(
         UnnestDataSource.create(
             leftDataSource,
-            expressionToUnnest.toVirtualColumn(
+            (unnestCol != null) ? unnestCol : expressionToUnnest.toVirtualColumn(
                 correlateRowSignature.getColumnName(correlateRowSignature.size() - 1),
                 Calcites.getColumnTypeForRelDataType(rexNodeToUnnest.getType()),
                 getPlannerContext().getExpressionParser()
