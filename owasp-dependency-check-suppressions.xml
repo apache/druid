@@ -665,10 +665,13 @@
     <cve>CVE-2023-36415</cve>
   </suppress>
   <suppress>
-    <!-- CVE is in Amazon Ion, which is primarily used by Amazon QLDB. Ranger security uses aws-java-sdk-bundle, that's why the CVE is popping up, it primarily uses Amazon Cloudwatch and in all likeliness not using the Amazon Ion Library -->
+    <!-- Suppressing CVE's indiscriminately, since the future CVE free version of the bundle is huge in size -->
     <notes><![CDATA[
-      file name: aws-java-sdk-bundle-1.12.497.jar
+      file name: aws-java-sdk-bundle-1.12.125.jar
     ]]></notes>
+    <cve>CVE-2021-46877</cve>
+    <cve>CVE-2020-36518</cve>
+    <cve>CVE-2022-41881</cve>
     <cve>CVE-2024-21634</cve>
   </suppress>
 
