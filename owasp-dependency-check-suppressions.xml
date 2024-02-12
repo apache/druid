@@ -664,4 +664,15 @@
     ]]></notes>
     <cve>CVE-2023-36415</cve>
   </suppress>
+  <suppress>
+    <!-- Remove CVEs corresponding to the dependencies of Druid Ranger plugin -->
+    <notes><![CDATA[
+      file name: solr-solrj-7.7.1.jar
+    ]]></notes>
+    <cve>CVE-2019-0193</cve>
+    <cve>CVE-2020-13957</cve>
+    <cve>CVE-2021-44548</cve>
+    <cve>CVE-2021-29943</cve>
+    <cve>CVE-2021-27905</cve>
+  </suppress>
 </suppressions>
