@@ -45,6 +45,7 @@ import {
   externalConfigToIngestQueryPattern,
   ingestQueryPatternToQuery,
 } from '../ingest-query-pattern/ingest-query-pattern';
+import type { ArrayMode } from '../ingestion-spec/ingestion-spec';
 import type { QueryContext } from '../query-context/query-context';
 
 const ISSUE_MARKER = '--:ISSUE:';
@@ -89,20 +90,22 @@ export class WorkbenchQuery {
 
   static fromInitExternalConfig(
     externalConfig: ExternalConfig,
-    isArrays: boolean[],
     timeExpression: SqlExpression | undefined,
     partitionedByHint: string | undefined,
+    arrayMode: ArrayMode,
   ): WorkbenchQuery {
     return new WorkbenchQuery({
       queryString: ingestQueryPatternToQuery(
         externalConfigToIngestQueryPattern(
           externalConfig,
-          isArrays,
           timeExpression,
           partitionedByHint,
+          arrayMode,
         ),
       ).toString(),
-      queryContext: {},
+      queryContext: {
+        arrayIngestMode: 'array',
+      },
     });
   }
 
@@ -556,6 +559,10 @@ export class WorkbenchQuery {
         apiQuery.context.groupByEnableMultiValueUnnesting ??= false;
         apiQuery.context.waitUntilSegmentsLoad ??= true;
       }
+    }
+
+    if (engine === 'sql-native' || engine === 'sql-msq-task') {
+      apiQuery.context.sqlStringifyArrays ??= false;
     }
 
     if (Array.isArray(queryParameters) && queryParameters.length) {

@@ -198,11 +198,7 @@ public class KafkaEmitter implements Emitter
     if (event != null) {
       try {
         EventMap map = event.toMap();
-        if (config.getClusterName() != null) {
-          map = map.asBuilder()
-                   .put("clusterName", config.getClusterName())
-                   .build();
-        }
+        map = addExtraDimensionsToEvent(map);
 
         String resultJson = jsonMapper.writeValueAsString(map);
 
@@ -237,6 +233,21 @@ public class KafkaEmitter implements Emitter
         log.warn(e, "Exception while serializing event");
       }
     }
+  }
+
+  private EventMap addExtraDimensionsToEvent(EventMap map)
+  {
+    if (config.getClusterName() != null || config.getExtraDimensions() != null) {
+      EventMap.Builder eventMapBuilder = map.asBuilder();
+      if (config.getClusterName() != null) {
+        eventMapBuilder.put("clusterName", config.getClusterName());
+      }
+      if (config.getExtraDimensions() != null) {
+        eventMapBuilder.putAll(config.getExtraDimensions());
+      }
+      map = eventMapBuilder.build();
+    }
+    return map;
   }
 
   @Override
