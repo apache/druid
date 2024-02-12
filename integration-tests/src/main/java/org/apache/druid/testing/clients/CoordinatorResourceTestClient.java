@@ -53,7 +53,6 @@ public class CoordinatorResourceTestClient
   private final HttpClient httpClient;
   private final String coordinator;
   private final StatusResponseHandler responseHandler;
-  private final String adminPassword;
 
   @Inject
   CoordinatorResourceTestClient(
@@ -66,7 +65,6 @@ public class CoordinatorResourceTestClient
     this.httpClient = httpClient;
     this.coordinator = config.getCoordinatorUrl();
     this.responseHandler = StatusResponseHandler.getInstance();
-    adminPassword = "priest";
   }
 
   private String getCoordinatorURL()
@@ -457,7 +455,7 @@ public class CoordinatorResourceTestClient
   {
     try {
       StatusResponseHolder response = httpClient.go(
-          new Request(method, new URL(url)).setBasicAuthentication("admin", adminPassword),
+          new Request(method, new URL(url)),
           responseHandler
       ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {

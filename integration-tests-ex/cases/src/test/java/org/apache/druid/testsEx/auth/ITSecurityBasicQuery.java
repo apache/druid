@@ -66,12 +66,10 @@ public class ITSecurityBasicQuery
   public static final String USER_1 = "user1";
   public static final String ROLE_1 = "role1";
   public static final String USER_1_PASSWORD = "password1";
-  private static final String QUERY_FILE = "/multi-stage-query/wikipedia_msq_select_query1.json";
 
   @Before
   public void setUp() throws IOException
   {
-    // TODO: pass details between auth.env and test
     // Authentication setup
     securityClient.createAuthenticationUser(USER_1);
     securityClient.setUserPassword(USER_1, USER_1_PASSWORD);
@@ -93,9 +91,6 @@ public class ITSecurityBasicQuery
   @Test
   public void testIngestionWithoutPermissions() throws Exception
   {
-    String datasource = "dst";
-    coordinatorClient.unloadSegmentsForDataSource(datasource);
-
     List<ResourceAction> permissions = ImmutableList.of();
     securityClient.setPermissionsToRole(ROLE_1, permissions);
 
@@ -135,7 +130,7 @@ public class ITSecurityBasicQuery
             + "  )\n"
             + ")\n"
             + "PARTITIONED BY DAY\n",
-            datasource
+            "dst"
         );
 
     // Submit the task and wait for the datasource to get loaded
@@ -158,11 +153,6 @@ public class ITSecurityBasicQuery
         new ResourceAction(new Resource(".*", "DATASOURCE"), Action.WRITE)
     );
     securityClient.setPermissionsToRole(ROLE_1, permissions);
-
-
-    // Clear up the datasource from the previous runs
-    String datasource = "dst";
-    coordinatorClient.unloadSegmentsForDataSource(datasource);
 
     String queryLocal =
         StringUtils.format(
@@ -200,7 +190,7 @@ public class ITSecurityBasicQuery
             + "  )\n"
             + ")\n"
             + "PARTITIONED BY DAY\n",
-            datasource
+            "dst"
         );
 
     // Submit the task and wait for the datasource to get loaded

@@ -45,13 +45,11 @@ public class SecurityClient
   private final HttpClient httpClient;
   private final String coordinator;
   private final StatusResponseHandler responseHandler;
-  // TODO: Inject this value
-  private final String adminPassword;
 
   @Inject
   SecurityClient(
       ObjectMapper jsonMapper,
-      @TestClient HttpClient httpClient,
+      @AdminClient HttpClient httpClient,
       IntegrationTestingConfig config
   )
   {
@@ -59,7 +57,6 @@ public class SecurityClient
     this.httpClient = httpClient;
     this.coordinator = config.getCoordinatorUrl();
     this.responseHandler = StatusResponseHandler.getInstance();
-    this.adminPassword = "priest";
   }
 
   public StatusResponseHolder createAuthenticationUser(String username) throws IOException
@@ -73,7 +70,7 @@ public class SecurityClient
                 StringUtils.urlEncode(username)
             )
         )
-    ).setBasicAuthentication("admin", adminPassword);
+    );
     return sendRequest(request);
   }
 
@@ -88,7 +85,7 @@ public class SecurityClient
                 StringUtils.urlEncode(username)
             )
         )
-    ).setBasicAuthentication("admin", adminPassword);
+    );
     return sendRequest(request);
   }
 
@@ -105,8 +102,7 @@ public class SecurityClient
         )
     );
 
-    request.setBasicAuthentication("admin", adminPassword)
-           .setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(ImmutableMap.of("password", password)));
+    request.setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(ImmutableMap.of("password", password)));
     return sendRequest(request);
   }
 
@@ -121,7 +117,7 @@ public class SecurityClient
                 StringUtils.urlEncode(username)
             )
         )
-    ).setBasicAuthentication("admin", adminPassword);
+    );
     return sendRequest(request);
   }
 
@@ -136,7 +132,7 @@ public class SecurityClient
                 StringUtils.urlEncode(username)
             )
         )
-    ).setBasicAuthentication("admin", adminPassword);
+    );
     return sendRequest(request);
   }
 
@@ -151,7 +147,7 @@ public class SecurityClient
                 StringUtils.urlEncode(role)
             )
         )
-    ).setBasicAuthentication("admin", adminPassword);
+    );
     return sendRequest(request);
   }
 
@@ -166,7 +162,7 @@ public class SecurityClient
                 StringUtils.urlEncode(role)
             )
         )
-    ).setBasicAuthentication("admin", adminPassword);
+    );
     return sendRequest(request);
   }
 
@@ -182,7 +178,7 @@ public class SecurityClient
                 StringUtils.urlEncode(role)
             )
         )
-    ).setBasicAuthentication("admin", adminPassword);
+    );
     return sendRequest(request);
   }
 
@@ -197,8 +193,7 @@ public class SecurityClient
                 StringUtils.urlEncode(role)
             )
         )
-    ).setBasicAuthentication("admin", adminPassword)
-     .setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(permissions));
+    ).setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(permissions));
     return sendRequest(request);
   }
 
