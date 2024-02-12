@@ -21,7 +21,6 @@ package org.apache.druid.query.expression;
 
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.doubles.DoubleList;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -70,11 +69,11 @@ public class ArrayQuantileExprMacro implements ExprMacroTable.ExprMacro
 
     final double rank = ((Number) rankArg.getLiteralValue()).doubleValue();
 
-    class ArrayQuantileExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
+    class ArrayQuantileExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
     {
-      private ArrayQuantileExpr(Expr arg)
+      private ArrayQuantileExpr(List<Expr> args)
       {
-        super(FN_NAME, arg);
+        super(ArrayQuantileExprMacro.this, args);
       }
 
       @Nonnull
@@ -92,27 +91,15 @@ public class ArrayQuantileExprMacro implements ExprMacroTable.ExprMacro
         return ExprEval.ofDouble(quantileFromSortedArray(doubles, rank));
       }
 
-      @Override
-      public Expr visit(Shuttle shuttle)
-      {
-        return shuttle.visit(apply(shuttle.visitAll(args)));
-      }
-
       @Nullable
       @Override
       public ExpressionType getOutputType(InputBindingInspector inspector)
       {
         return ExpressionType.DOUBLE;
       }
-
-      @Override
-      public String stringify()
-      {
-        return StringUtils.format("%s(%s, %s)", FN_NAME, arg.stringify(), rankArg.stringify());
-      }
     }
 
-    return new ArrayQuantileExpr(arg);
+    return new ArrayQuantileExpr(args);
   }
 
   /**
