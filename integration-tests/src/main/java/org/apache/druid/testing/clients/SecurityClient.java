@@ -30,9 +30,9 @@ import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.testing.IntegrationTestingConfig;
-import org.apache.druid.testing.guice.TestClient;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.testng.Assert;
 
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
@@ -59,7 +59,7 @@ public class SecurityClient
     this.responseHandler = StatusResponseHandler.getInstance();
   }
 
-  public StatusResponseHolder createAuthenticationUser(String username) throws IOException
+  public void createAuthenticationUser(String username) throws IOException
   {
     final Request request = new Request(
         HttpMethod.POST,
@@ -71,10 +71,10 @@ public class SecurityClient
             )
         )
     );
-    return sendRequest(request);
+    Assert.assertEquals(HttpResponseStatus.OK ,sendRequest(request).getStatus());
   }
 
-  public StatusResponseHolder deleteAuthenticationUser(String username) throws IOException
+  public void deleteAuthenticationUser(String username) throws IOException
   {
     final Request request = new Request(
         HttpMethod.DELETE,
@@ -86,10 +86,10 @@ public class SecurityClient
             )
         )
     );
-    return sendRequest(request);
+    Assert.assertEquals(HttpResponseStatus.OK ,sendRequest(request).getStatus());
   }
 
-  public StatusResponseHolder setUserPassword(String username, String password) throws IOException
+  public void setUserPassword(String username, String password) throws IOException
   {
     final Request request = new Request(
         HttpMethod.POST,
@@ -103,10 +103,10 @@ public class SecurityClient
     );
 
     request.setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(ImmutableMap.of("password", password)));
-    return sendRequest(request);
+    Assert.assertEquals(HttpResponseStatus.OK ,sendRequest(request).getStatus());
   }
 
-  public StatusResponseHolder createAuthorizerUser(String username) throws IOException
+  public void createAuthorizerUser(String username) throws IOException
   {
     final Request request = new Request(
         HttpMethod.POST,
@@ -118,10 +118,10 @@ public class SecurityClient
             )
         )
     );
-    return sendRequest(request);
+    Assert.assertEquals(HttpResponseStatus.OK ,sendRequest(request).getStatus());
   }
 
-  public StatusResponseHolder deleteAuthorizerUser(String username) throws IOException
+  public void deleteAuthorizerUser(String username) throws IOException
   {
     final Request request = new Request(
         HttpMethod.DELETE,
@@ -133,10 +133,10 @@ public class SecurityClient
             )
         )
     );
-    return sendRequest(request);
+    Assert.assertEquals(HttpResponseStatus.OK ,sendRequest(request).getStatus());
   }
 
-  public StatusResponseHolder createAuthorizerRole(String role) throws IOException
+  public void createAuthorizerRole(String role) throws IOException
   {
     final Request request = new Request(
         HttpMethod.POST,
@@ -148,10 +148,10 @@ public class SecurityClient
             )
         )
     );
-    return sendRequest(request);
+    Assert.assertEquals(HttpResponseStatus.OK ,sendRequest(request).getStatus());
   }
 
-  public StatusResponseHolder deleteAuthorizerRole(String role) throws IOException
+  public void deleteAuthorizerRole(String role) throws IOException
   {
     final Request request = new Request(
         HttpMethod.DELETE,
@@ -163,10 +163,10 @@ public class SecurityClient
             )
         )
     );
-    return sendRequest(request);
+    Assert.assertEquals(HttpResponseStatus.OK ,sendRequest(request).getStatus());
   }
 
-  public StatusResponseHolder assignUserToRole(String user, String role) throws IOException
+  public void assignUserToRole(String user, String role) throws IOException
   {
     final Request request = new Request(
         HttpMethod.POST,
@@ -179,10 +179,10 @@ public class SecurityClient
             )
         )
     );
-    return sendRequest(request);
+    Assert.assertEquals(HttpResponseStatus.OK ,sendRequest(request).getStatus());
   }
 
-  public StatusResponseHolder setPermissionsToRole(String role, List<ResourceAction> permissions) throws IOException
+  public void setPermissionsToRole(String role, List<ResourceAction> permissions) throws IOException
   {
     final Request request = new Request(
         HttpMethod.POST,
@@ -194,7 +194,7 @@ public class SecurityClient
             )
         )
     ).setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(permissions));
-    return sendRequest(request);
+    Assert.assertEquals(HttpResponseStatus.OK ,sendRequest(request).getStatus());
   }
 
   private StatusResponseHolder sendRequest(Request request)
