@@ -162,7 +162,7 @@ public class KafkaEmitterTest
 
     Assert.assertEquals(0, kafkaEmitter.getMetricLostCount());
     Assert.assertEquals(0, kafkaEmitter.getAlertLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getSegmentMetadataLostCount());
+    Assert.assertEquals(0, kafkaEmitter.getRequestLostCount());
     Assert.assertEquals(0, kafkaEmitter.getSegmentMetadataLostCount());
     Assert.assertEquals(0, kafkaEmitter.getInvalidLostCount());
   }
@@ -206,7 +206,7 @@ public class KafkaEmitterTest
 
     Assert.assertEquals(0, kafkaEmitter.getMetricLostCount());
     Assert.assertEquals(0, kafkaEmitter.getAlertLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getSegmentMetadataLostCount());
+    Assert.assertEquals(0, kafkaEmitter.getRequestLostCount());
     Assert.assertEquals(0, kafkaEmitter.getSegmentMetadataLostCount());
     Assert.assertEquals(0, kafkaEmitter.getInvalidLostCount());
 
@@ -249,7 +249,7 @@ public class KafkaEmitterTest
 
     Assert.assertEquals(0, kafkaEmitter.getMetricLostCount());
     Assert.assertEquals(0, kafkaEmitter.getAlertLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getSegmentMetadataLostCount());
+    Assert.assertEquals(0, kafkaEmitter.getRequestLostCount());
     Assert.assertEquals(0, kafkaEmitter.getSegmentMetadataLostCount());
     Assert.assertEquals(0, kafkaEmitter.getInvalidLostCount());
   }
@@ -342,7 +342,7 @@ public class KafkaEmitterTest
 
     Assert.assertEquals(0, kafkaEmitter.getMetricLostCount());
     Assert.assertEquals(0, kafkaEmitter.getAlertLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getSegmentMetadataLostCount());
+    Assert.assertEquals(0, kafkaEmitter.getRequestLostCount());
     Assert.assertEquals(0, kafkaEmitter.getSegmentMetadataLostCount());
     Assert.assertEquals(0, kafkaEmitter.getInvalidLostCount());
   }
@@ -385,7 +385,7 @@ public class KafkaEmitterTest
 
     Assert.assertEquals(0, kafkaEmitter.getMetricLostCount());
     Assert.assertEquals(0, kafkaEmitter.getAlertLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getSegmentMetadataLostCount());
+    Assert.assertEquals(0, kafkaEmitter.getRequestLostCount());
     Assert.assertEquals(0, kafkaEmitter.getSegmentMetadataLostCount());
     Assert.assertEquals(UNKNOWN_EVENTS.size(), kafkaEmitter.getInvalidLostCount());
   }
@@ -460,7 +460,7 @@ public class KafkaEmitterTest
 
     Assert.assertEquals(bufferEventsDrop, kafkaEmitter.getMetricLostCount());
     Assert.assertEquals(0, kafkaEmitter.getAlertLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getSegmentMetadataLostCount());
+    Assert.assertEquals(0, kafkaEmitter.getRequestLostCount());
     Assert.assertEquals(0, kafkaEmitter.getSegmentMetadataLostCount());
     Assert.assertEquals(0, kafkaEmitter.getInvalidLostCount());
   }
