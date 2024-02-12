@@ -80,10 +80,10 @@
         "type": "category",
         "label": "Streaming",
         "items": [
-          "development/extensions-core/kafka-ingestion",
-          "development/extensions-core/kafka-supervisor-reference",
-          "development/extensions-core/kafka-supervisor-operations",
-          "development/extensions-core/kinesis-ingestion"
+          "ingestion/streaming",
+          "ingestion/supervisor",
+          "ingestion/kafka-ingestion",
+          "ingestion/kinesis-ingestion"
         ]
       },
       {
