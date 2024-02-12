@@ -301,7 +301,6 @@ def build_compatible_license_names():
 
     compatible_licenses['Creative Commons CC0'] = 'Creative Commons CC0'
     compatible_licenses['CC0'] = 'Creative Commons CC0'
-    compatible_licenses['Public Domain, per Creative Commons CC0'] = 'Creative Commons CC0'
 
     compatible_licenses['The MIT License'] = 'MIT License'
     compatible_licenses['MIT License'] = 'MIT License'
