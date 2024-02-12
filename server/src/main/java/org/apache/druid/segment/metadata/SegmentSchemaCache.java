@@ -20,6 +20,7 @@
 package org.apache.druid.segment.metadata;
 
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.SchemaPayload;
 import org.apache.druid.segment.column.SegmentSchemaMetadata;
@@ -36,6 +37,7 @@ import java.util.concurrent.CountDownLatch;
 @LazySingleton
 public class SegmentSchemaCache
 {
+  private static final EmittingLogger log = new EmittingLogger(SchemaManager.class);
   private final CountDownLatch initialized = new CountDownLatch(1);
 
   // Mapping from segmentId to segmentStats, reference is updated on each database poll.
@@ -95,10 +97,12 @@ public class SegmentSchemaCache
   public void markInTransitSMQResultPublished(SegmentId segmentId)
   {
     if (!inTransitSMQResults.containsKey(segmentId)) {
-      // error how come it is not present?
+      log.error("Segment not found in InTransitSMQResultPublished map");
+      return;
     }
 
     inTransitSMQPublishedResults.put(segmentId, inTransitSMQResults.get(segmentId));
+    inTransitSMQResults.remove(segmentId);
   }
 
   public void resetInTransitSMQResultPublishedOnDBPoll()

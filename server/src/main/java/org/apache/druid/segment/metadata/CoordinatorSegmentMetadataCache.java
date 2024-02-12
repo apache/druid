@@ -20,6 +20,7 @@
 package org.apache.druid.segment.metadata;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import org.apache.druid.client.CoordinatorServerView;
@@ -64,7 +65,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
 
   private final ColumnTypeMergePolicy columnTypeMergePolicy;
   private final SegmentSchemaCache segmentSchemaCache;
-  private final SegmentSchemaBackfillQueue segmentSchemaBackfillQueue;
+  private final SegmentSchemaBackFillQueue segmentSchemaBackfillQueue;
 
   @Inject
   public CoordinatorSegmentMetadataCache(
@@ -75,7 +76,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       InternalQueryConfig internalQueryConfig,
       ServiceEmitter emitter,
       SegmentSchemaCache segmentSchemaCache,
-      SegmentSchemaBackfillQueue segmentSchemaBackfillQueue
+      SegmentSchemaBackFillQueue segmentSchemaBackfillQueue
   )
   {
     super(queryLifecycleFactory, config, escalator, internalQueryConfig, emitter);
@@ -201,6 +202,44 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     );
 
     return added.get();
+  }
+
+  @Override
+  public Map<SegmentId, AvailableSegmentMetadata> getSegmentMetadataSnapshot()
+  {
+    final Map<SegmentId, AvailableSegmentMetadata> segmentMetadata = Maps.newHashMapWithExpectedSize(getTotalSegments());
+    for (ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> val : segmentMetadataInfo.values()) {
+      for (Map.Entry<SegmentId, AvailableSegmentMetadata> entry : val.entrySet()) {
+        Optional<SegmentSchemaMetadata> metadata = segmentSchemaCache.getSchemaForSegment(entry.getKey());
+        AvailableSegmentMetadata copied = entry.getValue();
+        if (metadata.isPresent()) {
+          copied = AvailableSegmentMetadata.from(entry.getValue())
+                                           .withRowSignature(metadata.get().getSchemaPayload().getRowSignature())
+                                           .withNumRows(metadata.get().getNumRows())
+                                           .build();
+        }
+        segmentMetadata.put(entry.getKey(), copied);
+      }
+    }
+    return segmentMetadata;
+  }
+
+  @Nullable
+  @Override
+  public AvailableSegmentMetadata getAvailableSegmentMetadata(String datasource, SegmentId segmentId)
+  {
+    if (!segmentMetadataInfo.containsKey(datasource)) {
+      return null;
+    }
+    AvailableSegmentMetadata availableSegmentMetadata = segmentMetadataInfo.get(datasource).get(segmentId);
+    Optional<SegmentSchemaMetadata> metadata = segmentSchemaCache.getSchemaForSegment(segmentId);
+    if (metadata.isPresent()) {
+      availableSegmentMetadata = AvailableSegmentMetadata.from(availableSegmentMetadata)
+                                       .withRowSignature(metadata.get().getSchemaPayload().getRowSignature())
+                                       .withNumRows(metadata.get().getNumRows())
+                                       .build();
+    }
+    return availableSegmentMetadata;
   }
 
   /**

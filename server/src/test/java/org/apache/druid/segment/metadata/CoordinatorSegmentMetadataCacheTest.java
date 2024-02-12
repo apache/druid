@@ -127,8 +127,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        null,
-        null
+        segmentSchemaCache,
+        backFillQueue
     )
     {
       @Override
@@ -390,8 +390,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        null,
-        null
+        segmentSchemaCache,
+        backFillQueue
     )
     {
       @Override
@@ -601,8 +601,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        null,
-        null
+        segmentSchemaCache,
+        backFillQueue
     )
     {
       @Override
@@ -644,8 +644,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        null,
-        null
+        segmentSchemaCache,
+        backFillQueue
     )
     {
       @Override
@@ -691,8 +691,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        null,
-        null
+        segmentSchemaCache,
+        backFillQueue
     )
     {
       @Override
@@ -735,8 +735,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        null,
-        null
+        segmentSchemaCache,
+        backFillQueue
     )
     {
       @Override
@@ -776,8 +776,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        null,
-        null
+        segmentSchemaCache,
+        backFillQueue
     )
     {
       @Override
@@ -834,8 +834,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        null,
-        null
+        segmentSchemaCache,
+        backFillQueue
     )
     {
       @Override
@@ -895,8 +895,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        null,
-        null
+        segmentSchemaCache,
+        backFillQueue
     )
     {
       @Override
@@ -930,8 +930,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        null,
-        null
+        segmentSchemaCache,
+        backFillQueue
     )
     {
       @Override
@@ -978,8 +978,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        null,
-        null
+        segmentSchemaCache,
+        backFillQueue
     )
     {
       @Override
@@ -1050,8 +1050,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         internalQueryConfig,
         new NoopServiceEmitter(),
-        null,
-        null
+        segmentSchemaCache,
+        backFillQueue
     );
 
     Map<String, Object> queryContext = ImmutableMap.of(
@@ -1219,8 +1219,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         emitter,
-        null,
-        null
+        segmentSchemaCache,
+        backFillQueue
     )
     {
       @Override
@@ -1384,8 +1384,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        null,
-        null
+        segmentSchemaCache,
+        backFillQueue
     ) {
       @Override
       void updateSchemaForRealtimeSegments(SegmentSchemas segmentSchemas)
@@ -1401,7 +1401,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     AvailableSegmentMetadata availableSegmentMetadata = schema.getAvailableSegmentMetadata(DATASOURCE3, realtimeSegment1.getId());
     Assert.assertNull(availableSegmentMetadata.getRowSignature());
 
-    // refresh all segments, verify that realtime segments isn't referesh
+    // refresh all segments, verify that realtime segments isn't refreshed
     schema.refresh(walker.getSegments().stream().map(DataSegment::getId).collect(Collectors.toSet()), new HashSet<>());
 
     Assert.assertNull(schema.getDatasource(DATASOURCE3));
@@ -1463,8 +1463,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        null,
-        null
+        segmentSchemaCache,
+        backFillQueue
     ) {
       @Override
       public void refresh(Set<SegmentId> segmentsToRefresh, Set<String> dataSourcesToRebuild)

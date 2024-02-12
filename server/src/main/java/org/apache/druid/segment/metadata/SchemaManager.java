@@ -74,7 +74,7 @@ public class SchemaManager
     connector.retryTransaction(
         (handle, transactionStatus) -> {
           Update deleteStatement = handle.createStatement(
-              StringUtils.format("DELETE FROM %1$s WHERE schema_id NOT IN (SELECT schema_id FROM %2$s)",
+              StringUtils.format("DELETE FROM %1$s WHERE id NOT IN (SELECT schema_id FROM %2$s)",
                                  dbTables.getSegmentSchemaTable(), dbTables.getSegmentsTable()
               ));
           return deleteStatement.execute();
@@ -94,6 +94,7 @@ public class SchemaManager
       updateSegments(handle, segmentSchemas);
       return null;
     }, 1, 3);
+    log.info("Successfull updated segments.");
   }
 
   public void persistSchema(Handle handle, Map<String, SchemaPayload> schemaPayloadMap)
@@ -176,6 +177,7 @@ public class SchemaManager
 
     for (List<SegmentSchemaMetadataPlus> partition : partitionedSegmentIds) {
       for (SegmentSchemaMetadataPlus segmentSchema : segmentsToUpdate) {
+        log.info("Updating segment schema %s", segmentSchema);
         String fingerprint = segmentSchema.getFingerprint();
         if (!fingerprintSchemaIdMap.containsKey(fingerprint)) {
           // this should not happen
@@ -183,7 +185,7 @@ public class SchemaManager
         }
 
         segmentUpdateBatch.add()
-                          .bind("id", segmentSchema.getSegmentId())
+                          .bind("id", segmentSchema.getSegmentId().toString())
                           .bind("schema_id", fingerprintSchemaIdMap.get(fingerprint))
                           .bind("num_rows", segmentSchema.getSegmentSchemaMetadata().getNumRows());
       }
@@ -276,7 +278,7 @@ public class SchemaManager
       List<String> updatedSegmentIds =
           handle.createQuery(
                     StringUtils.format(
-                        "SELECT id from %s where id in (%s) and schema_id != null",
+                        "SELECT id from %s where id in (%s) and schema_id IS NOT NULL",
                         dbTables.getSegmentsTable(),
                         ids
                     ))

@@ -21,6 +21,7 @@ package org.apache.druid.segment.metadata;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
+import org.joda.time.Period;
 
 /**
  * Config for centralizing datasource schema management in Coordinator.
@@ -29,12 +30,23 @@ public class CentralizedDatasourceSchemaConfig
 {
   @JsonProperty
   private boolean enabled = false;
+  private boolean backFillEnabled = false;
+  private Period backFillPeriod = new Period("PT1M");
 
   public boolean isEnabled()
   {
     return enabled;
   }
 
+  public boolean isBackFillEnabled()
+  {
+    return backFillEnabled;
+  }
+
+  public Period getBackFillPeriod()
+  {
+    return backFillPeriod;
+  }
 
   public static CentralizedDatasourceSchemaConfig create()
   {
@@ -45,5 +57,17 @@ public class CentralizedDatasourceSchemaConfig
   public void setEnabled(boolean enabled)
   {
     this.enabled = enabled;
+  }
+
+  @VisibleForTesting
+  public void setBackFillEnabled(boolean backFillEnabled)
+  {
+    this.backFillEnabled = backFillEnabled;
+  }
+
+  @VisibleForTesting
+  public void setBackFillPeriod(Period backFillPeriod)
+  {
+    this.backFillPeriod = backFillPeriod;
   }
 }

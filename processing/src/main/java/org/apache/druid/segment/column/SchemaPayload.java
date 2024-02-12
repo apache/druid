@@ -23,19 +23,20 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 
-import java.util.HashMap;
+import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Objects;
 
 public class SchemaPayload
 {
   private final RowSignature rowSignature;
+  @Nullable
   private final Map<String, AggregatorFactory> aggregatorFactories;
 
   @JsonCreator
   public SchemaPayload(
       @JsonProperty("rowSignature") RowSignature rowSignature,
-      @JsonProperty("aggreagatorFactories") Map<String, AggregatorFactory> aggregatorFactories)
+      @JsonProperty("aggreagatorFactories") @Nullable Map<String, AggregatorFactory> aggregatorFactories)
   {
     this.rowSignature = rowSignature;
     this.aggregatorFactories = aggregatorFactories;
@@ -44,7 +45,7 @@ public class SchemaPayload
   public SchemaPayload(RowSignature rowSignature)
   {
     this.rowSignature = rowSignature;
-    this.aggregatorFactories = new HashMap<>();
+    this.aggregatorFactories = null;
   }
 
   @JsonProperty
@@ -53,6 +54,7 @@ public class SchemaPayload
     return rowSignature;
   }
 
+  @Nullable
   @JsonProperty
   public Map<String, AggregatorFactory> getAggregatorFactories()
   {

@@ -41,30 +41,34 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 @ManageLifecycle
-public class SegmentSchemaBackfillQueue
+public class SegmentSchemaBackFillQueue
 {
-  private static final EmittingLogger log = new EmittingLogger(SegmentSchemaBackfillQueue.class);
+  private static final EmittingLogger log = new EmittingLogger(SegmentSchemaBackFillQueue.class);
   private static final int MAX_BATCH_SIZE = 500;
   private final BlockingDeque<SegmentSchemaMetadataPlus> queue = new LinkedBlockingDeque<>();
   private final long executionPeriod;
-  private final ScheduledExecutorService executor;
 
   private final SegmentSchemaCache segmentSchemaCache;
   private final SchemaManager schemaManager;
   private final SchemaFingerprintGenerator schemaFingerprintGenerator;
+  private ScheduledExecutorService executor;
 
   @Inject
-  public SegmentSchemaBackfillQueue(
+  public SegmentSchemaBackFillQueue(
       SchemaManager schemaManager,
       ScheduledExecutorFactory scheduledExecutorFactory,
       SegmentSchemaCache segmentSchemaCache,
-      SchemaFingerprintGenerator schemaFingerprintGenerator
+      SchemaFingerprintGenerator schemaFingerprintGenerator,
+      CentralizedDatasourceSchemaConfig config
   )
   {
+    if (config.isEnabled() && config.isBackFillEnabled()) {
+      this.executor = scheduledExecutorFactory.create(1, "SegmentSchemaBackfillQueue-%s");
+    }
     this.schemaManager = schemaManager;
-    this.executor = scheduledExecutorFactory.create(1, "SegmentSchemaBackfillQueue-%s");
     this.segmentSchemaCache = segmentSchemaCache;
-    this.executionPeriod = TimeUnit.MINUTES.toMillis(1);
+    log.info("Backfill period is %d", config.getBackFillPeriod().getMillis());
+    this.executionPeriod = config.getBackFillPeriod().getMillis();
     this.schemaFingerprintGenerator = schemaFingerprintGenerator;
   }
 
@@ -106,8 +110,9 @@ public class SegmentSchemaBackfillQueue
     executor.schedule(this::processBatchesDue, delay, TimeUnit.MILLISECONDS);
   }
 
-  private void processBatchesDue()
+  public void processBatchesDue()
   {
+    log.info("Publishing schemas.");
     int itemsToProcess = Math.min(MAX_BATCH_SIZE, queue.size());
 
     List<SegmentSchemaMetadataPlus> polled = new ArrayList<>();
@@ -123,7 +128,9 @@ public class SegmentSchemaBackfillQueue
       schemaManager.persistSchemaAndUpdateSegmentsTable(polled);
     }
     catch (Exception e) {
+      log.info("exception persisting schema");
       // implies that the transaction failed
+      //
       polled.forEach(this::add);
     }
     finally {

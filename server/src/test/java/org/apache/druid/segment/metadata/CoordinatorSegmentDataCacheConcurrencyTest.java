@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.metadata;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import org.apache.druid.client.BrokerServerView;
@@ -35,11 +36,13 @@ import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
@@ -54,6 +57,7 @@ import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
+import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -87,6 +91,9 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
   private AbstractSegmentMetadataCache schema;
   private ExecutorService exec;
   private TestSegmentMetadataQueryWalker walker;
+  private SegmentSchemaCache segmentSchemaCache;
+  private SegmentSchemaBackFillQueue backFillQueue;
+  private final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
   @Before
   public void setUp() throws Exception
@@ -112,6 +119,24 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
         conglomerate,
         new HashMap<>()
     );
+
+    segmentSchemaCache = new SegmentSchemaCache();
+    SchemaFingerprintGenerator fingerprintGenerator = new SchemaFingerprintGenerator(mapper);
+    CentralizedDatasourceSchemaConfig config = CentralizedDatasourceSchemaConfig.create();
+    config.setEnabled(true);
+    config.setBackFillEnabled(false);
+    config.setBackFillPeriod(Period.millis(1));
+
+    backFillQueue =
+        new SegmentSchemaBackFillQueue(
+            null,
+            ScheduledExecutors::fixed,
+            segmentSchemaCache,
+            fingerprintGenerator,
+            config
+        );
+
+    segmentSchemaCache.setInitialized();
 
     CountDownLatch initLatch = new CountDownLatch(1);
     serverView.registerTimelineCallback(
@@ -187,8 +212,8 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        null,
-        null
+        segmentSchemaCache,
+        backFillQueue
     )
     {
       @Override
@@ -301,8 +326,8 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
         new NoopEscalator(),
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
-        null,
-        null
+        segmentSchemaCache,
+        backFillQueue
     )
     {
       @Override
