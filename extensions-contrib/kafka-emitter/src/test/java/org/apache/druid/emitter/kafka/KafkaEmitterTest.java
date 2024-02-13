@@ -226,7 +226,7 @@ public class KafkaEmitterTest
 
   /**
    * Unit test to validate the handling of the default event types - {@link ServiceMetricEvent} and {@link AlertEvent}.
-   * {@link KafkaEmitterConfig.DEFAULT_EVENT_TYPES} is subscribed in the config, so the expectation is that both input
+   * The default event types (alerts and metrics) are subscribed in the config, so the expectation is that both input
    * event types should be emitted without any drops.
    */
   @Test(timeout = 10_000)
@@ -274,7 +274,7 @@ public class KafkaEmitterTest
   /**
    * Unit test to validate the handling of all valid event types, including {@link ServiceMetricEvent},
    * {@link AlertEvent}, {@link org.apache.druid.server.log.RequestLogEvent}, and {@link SegmentMetadataEvent}.
-   * Only {@link KafkaEmitterConfig.ALERTS} is subscribed in the config, so the expectation is that only alert events
+   * Only alerts are subscribed in the config, so the expectation is that only alert events
    * should be emitted, and everything else should be dropped.
    */
   @Test(timeout = 10_000)
@@ -381,7 +381,7 @@ public class KafkaEmitterTest
 
   /**
    * Unit test to validate the handling of {@link ServiceMetricEvent}s and {@link TestEvent}s.
-   * {@link KafkaEmitterConfig.DEFAULT_EVENT_TYPES} is subscribed in the config, so the expectation is that only
+   * The default event types (alerts and metrics) are subscribed in the config, so the expectation is that only
    * {@link ServiceMetricEvent} is expected to be emitted, while dropping all unknown {@link TestEvent}s.
    * </p>
    */
@@ -430,8 +430,8 @@ public class KafkaEmitterTest
 
   /**
    * Unit test to validate the handling of {@link ServiceMetricEvent}s when the Kafka emitter queue, which buffers up events
-   * becomes full. The queue size in the config is set via {@link ProducerConfig.BUFFER_MEMORY_CONFIG} and is computed from
-   * the input events using {@code bufferEventsDrop}. {@link KafkaEmitterConfig.DEFAULT_EVENT_TYPES} is subscribed in
+   * becomes full. The queue size in the config is set via {@code buffer.memory} and is computed from
+   * the input events using {@code bufferEventsDrop}. The default event types (alerts and metrics) are subscribed in
    * the config, so the expectation is that all {@link ServiceMetricEvent}s up to {@code n - bufferEventsDrop} will be
    * emitted, {@code n} being the total number of input events, while dropping the last {@code bufferEventsDrop} events.
    */
