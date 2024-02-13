@@ -46,6 +46,13 @@ public class DruidConformance extends SqlAbstractConformance
   }
 
   @Override
+  public boolean allowLenientCoercion()
+  {
+    // for CAST boolean to INTEGER
+    return true;
+  }
+
+  @Override
   public boolean isSortByOrdinal()
   {
     // For ORDER BY 1
@@ -78,4 +85,5 @@ public class DruidConformance extends SqlAbstractConformance
   {
     return true;
   }
+
 }
