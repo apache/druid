@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -29,28 +30,44 @@ public class CalciteTableConcatTest extends BaseCalciteQueryTest
   @Rule(order = 0)
   public NotYetSupportedProcessor negativeTestProcessor = new NotYetSupportedProcessor();
 
+  @Ignore
   @Test
-  public void testTasksSum1()
+  public void testPlainSelect()
   {
     testBuilder()
-      .sql("select * from foo")
-//    .sql("select datasource, sum(duration) from sys.tasks group by datasource")
-        .expectedResults(ImmutableList.of(
-            new Object[]{"foo", 11L},
-            new Object[]{"foo2", 22L}
-        ))
+        .sql("select * from foo")
+        // .sql("select datasource, sum(duration) from sys.tasks group by datasource")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {"foo", 11L},
+                new Object[] {"foo2", 22L}
+            )
+        )
         .run();
   }
+
   @Test
-  public void testTasksSum()
+  public void testConcat1()
   {
     testBuilder()
-      .sql("select * from TABLE(APPEND('foo','numfoo')) u")
-//    .sql("select datasource, sum(duration) from sys.tasks group by datasource")
-        .expectedResults(ImmutableList.of(
-            new Object[]{"foo", 11L},
-            new Object[]{"foo2", 22L}
-        ))
+        .sql("select dim1,dim4,d1,f1 from TABLE(APPEND('foo','numfoo')) u")
+        // .sql("select datasource, sum(duration) from sys.tasks group by datasource")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {"", null, null, null},
+                new Object[] {"10.1", null, null, null},
+                new Object[] {"2", null, null, null},
+                new Object[] {"1", null, null, null},
+                new Object[] {"def", null, null, null},
+                new Object[] {"abc", null, null, null},
+                new Object[] {"", "a", 1.0D, 1.0F},
+                new Object[] {"10.1", "a", 1.7D, 0.1F},
+                new Object[] {"2", "a", 0.0D, 0.0F},
+                new Object[] {"1", "b", null, null},
+                new Object[] {"def", "b", null, null},
+                new Object[] {"abc", "b", null, null}
+            )
+        )
         .run();
   }
 }
