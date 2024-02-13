@@ -18,7 +18,7 @@
 */}}
 
 {{- if .Values.middleManager.autoscaling.enabled }}
-apiVersion: autoscaling/v2beta2
+apiVersion: {{ include "capabilities.hpa.apiVersion" . }}
 kind: HorizontalPodAutoscaler
 metadata:
   name: {{ include "druid.middleManager.fullname" . }}
@@ -36,5 +36,5 @@ spec:
   minReplicas: {{ .Values.middleManager.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.middleManager.autoscaling.maxReplicas }}
   metrics:
-{{ toYaml .Values.middleManager.autoscaling.metrics | indent 4 }}
+  {{- toYaml .Values.middleManager.autoscaling.metrics | nindent 4 }}
 {{- end }}

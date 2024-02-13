@@ -79,7 +79,10 @@ broker:
     annotations: {}
       # kubernetes.io/ingress.class: nginx
       # kubernetes.io/tls-acme: "true"
+    labels: {}
+    ingressClassName: ""
     path: /
+    pathType: ""
     hosts:
       - chart-example.local
     tls: []
@@ -134,7 +137,10 @@ coordinator:
     annotations: {}
       # kubernetes.io/ingress.class: nginx
       # kubernetes.io/tls-acme: "true"
+    labels: {}
+    ingressClassName: ""
     path: /
+    pathType: ""
     hosts:
       - chart-example.local
     tls: []
@@ -186,7 +192,10 @@ overlord:
     annotations: {}
       # kubernetes.io/ingress.class: nginx
       # kubernetes.io/tls-acme: "true"
+    labels: {}
+    ingressClassName: ""
     path: /
+    pathType: ""
     hosts:
       - chart-example.local
     tls: []
@@ -240,7 +249,10 @@ historical:
     annotations: {}
       # kubernetes.io/ingress.class: nginx
       # kubernetes.io/tls-acme: "true"
+    labels: {}
+    ingressClassName: ""
     path: /
+    pathType: ""
     hosts:
       - chart-example.local
     tls: []
@@ -337,7 +349,10 @@ middleManager:
     annotations: {}
       # kubernetes.io/ingress.class: nginx
       # kubernetes.io/tls-acme: "true"
+    labels: {}
+    ingressClassName: ""
     path: /
+    pathType: ""
     hosts:
       - chart-example.local
     tls: []
@@ -412,7 +427,10 @@ router:
     annotations: {}
       # kubernetes.io/ingress.class: nginx
       # kubernetes.io/tls-acme: "true"
+    labels: {}
+    ingressClassName: ""
     path: /
+    pathType: ""
     hosts:
       - chart-example.local
     tls: []
