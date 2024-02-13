@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -30,17 +29,26 @@ public class CalciteTableConcatTest extends BaseCalciteQueryTest
   @Rule(order = 0)
   public NotYetSupportedProcessor negativeTestProcessor = new NotYetSupportedProcessor();
 
-  @Ignore
   @Test
-  public void testPlainSelect()
+  public void testUnion()
   {
     testBuilder()
-        .sql("select * from foo")
+        .sql("select dim1,null as dim4 from foo union all select dim1,dim4 from numfoo")
         // .sql("select datasource, sum(duration) from sys.tasks group by datasource")
         .expectedResults(
             ImmutableList.of(
-                new Object[] {"foo", 11L},
-                new Object[] {"foo2", 22L}
+                new Object[]{"", null},
+                new Object[]{"10.1", null},
+                new Object[]{"2", null},
+                new Object[]{"1", null},
+                new Object[]{"def", null},
+                new Object[]{"abc", null},
+                new Object[]{"", "a"},
+                new Object[]{"10.1", "a"},
+                new Object[]{"2", "a"},
+                new Object[]{"1", "b"},
+                new Object[]{"def", "b"},
+                new Object[]{"abc", "b"}
             )
         )
         .run();
