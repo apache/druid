@@ -181,8 +181,8 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             onClick={[Function]}
           >
             <img
-              alt="Ingestion tile for index_parallel:azure"
-              src="/some/base_url/assets/azure.png"
+              alt="Ingestion tile for index_parallel:azureStorage"
+              src="/some/base_url/assets/azurestorage.png"
             />
             <p>
               Azure Data Lake
@@ -200,6 +200,20 @@ exports[`LoadDataView matches snapshot batch 1`] = `
             />
             <p>
               Google Cloud Storage
+            </p>
+          </Blueprint4.Card>
+          <Blueprint4.Card
+            className="ingestion-card"
+            elevation={1}
+            interactive={true}
+            onClick={[Function]}
+          >
+            <img
+              alt="Ingestion tile for index_parallel:delta"
+              src="/some/base_url/assets/delta.png"
+            />
+            <p>
+              Delta Lake
             </p>
           </Blueprint4.Card>
           <Blueprint4.Card

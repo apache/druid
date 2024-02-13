@@ -118,5 +118,9 @@ public enum EngineFeature
    * and cannot concat the results together (as * the result for broker is the query id). Therefore, we don't get the
    * correct result back, while the MSQ engine is executing the partial query
    */
-  ALLOW_TOP_LEVEL_UNION_ALL;
+  ALLOW_TOP_LEVEL_UNION_ALL,
+  /**
+   * Queries can write to an external datasource using {@link org.apache.druid.sql.destination.ExportDestination}
+   */
+  WRITE_EXTERNAL_DATA;
 }

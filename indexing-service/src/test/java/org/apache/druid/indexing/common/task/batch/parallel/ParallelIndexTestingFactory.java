@@ -184,7 +184,8 @@ class ParallelIndexTestingFactory
           25,
           null,
           null,
-          null
+          null,
+          2
       );
     }
   }

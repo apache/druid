@@ -178,6 +178,7 @@ jobs:
           { for i in 1 2 3; do npm run codecov && break || sleep 15; done }
 
       - name: web console end-to-end test
+        id: web-console-test
         run: |
           ./.github/scripts/setup_generate_license.sh
           web-console/script/druid build
@@ -186,11 +187,11 @@ jobs:
           web-console/script/druid stop
 
       - name: Tar druid logs
-        if: ${{ failure() }}
-        run: tar cvzf ./druid-logs.tgz -C ./distribution/target/apache-druid-*-SNAPSHOT/ logs
+        if: ${{ failure() && steps.web-console-test.conclusion == 'failure' }}
+        run: tar cvzf ./druid-logs.tgz -C ./distribution/target/apache-druid-*-SNAPSHOT/ log
 
       - name: Upload druid logs to GitHub
-        if: ${{ failure() }}
+        if: ${{ failure() && steps.web-console-test.conclusion == 'failure' }}
         uses: actions/upload-artifact@master
         with:
           name: Druid logs web-checks

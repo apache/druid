@@ -45,8 +45,11 @@ making it easy to reuse the same SQL statement for each ingest: just specify the
 
 ### `EXTERN` Function
 
-Use the `EXTERN` function to read external data. The function has two variations.
+Use the `EXTERN` function to read external data or write to an external location.
 
+#### `EXTERN` as an input source
+
+The function has two variations.
 Function variation 1, with the input schema expressed as JSON:
 
 ```sql
@@ -89,6 +92,91 @@ Example: `(timestamp VARCHAR, metricType VARCHAR, value BIGINT)`. The optional `
 can precede the column list: `EXTEND (timestamp VARCHAR...)`.
 
 For more information, see [Read external data with EXTERN](concepts.md#read-external-data-with-extern).
+
+#### `EXTERN` to export to a destination
+
+`EXTERN` can be used to specify a destination where you want to export data to.
+This variation of EXTERN requires one argument, the details of the destination as specified below.
+This variation additionally requires an `AS` clause to specify the format of the exported rows.
+
+Keep the following in mind when using EXTERN to export rows:
+- Only INSERT statements are supported.
+- Only `CSV` format is supported as an export format.
+- Partitioning (`PARTITIONED BY`) and clustering (`CLUSTERED BY`) aren't supported with export statements.
+- You can export to Amazon S3 or local storage.
+- The destination provided should contain no other files or directories.
+
+When you export data, use the `rowsPerPage` context parameter to control how many rows get exported. The default is 100,000.
+
+```sql
+INSERT INTO
+  EXTERN(<destination function>)
+AS CSV
+SELECT
+  <column>
+FROM <table>
+```
+
+##### S3
+
+Export results to S3 by passing the function `S3()` as an argument to the `EXTERN` function. Note that this requires the `druid-s3-extensions`.
+The `S3()` function is a Druid function that configures the connection. Arguments for `S3()` should be passed as named parameters with the value in single quotes like the following example:
+
+```sql
+INSERT INTO
+  EXTERN(
+    S3(bucket => 'your_bucket', prefix => 'prefix/to/files')
+  )
+AS CSV
+SELECT
+  <column>
+FROM <table>
+```
+
+Supported arguments for the function:
+
+| Parameter   | Required | Description                                                                                                                                                                                                                                                                    | Default |
+|-------------|----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|
+| `bucket`    | Yes      | The S3 bucket to which the files are exported to. The bucket and prefix combination should be whitelisted in `druid.export.storage.s3.allowedExportPaths`.                                                                                                                     | n/a     |
+| `prefix`    | Yes      | Path where the exported files would be created. The export query expects the destination to be empty. If the location includes other files, then the query will fail. The bucket and prefix combination should be whitelisted in `druid.export.storage.s3.allowedExportPaths`. | n/a     |
+
+The following runtime parameters must be configured to export into an S3 destination:
+
+| Runtime Parameter                            | Required | Description                                                                                                                                                                                                                          | Default |
+|----------------------------------------------|----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----|
+| `druid.export.storage.s3.tempLocalDir`       | Yes      | Directory used on the local storage of the worker to store temporary files required while uploading the data.                                                                                                                        | n/a |
+| `druid.export.storage.s3.allowedExportPaths` | Yes      | An array of S3 prefixes that are whitelisted as export destinations. Export queries fail if the export destination does not match any of the configured prefixes. Example: `[\"s3://bucket1/export/\", \"s3://bucket2/export/\"]`    | n/a |
+| `druid.export.storage.s3.maxRetry`           | No       | Defines the max number times to attempt S3 API calls to avoid failures due to transient errors.                                                                                                                                      | 10  |
+| `druid.export.storage.s3.chunkSize`          | No       | Defines the size of each chunk to temporarily store in `tempDir`. The chunk size must be between 5 MiB and 5 GiB. A large chunk size reduces the API calls to S3, however it requires more disk space to store the temporary chunks. | 100MiB |
+
+##### LOCAL
+
+You can export to the local storage, which exports the results to the filesystem of the MSQ worker.
+This is useful in a single node setup or for testing but is not suitable for production use cases.
+
+Export results to local storage by passing the function `LOCAL()` as an argument for the `EXTERN FUNCTION`.
+To use local storage as an export destination, the runtime property `druid.export.storage.baseDir` must be configured on the Indexer/Middle Manager.
+This value must be set to an absolute path on the local machine. Exporting data will be allowed to paths which match the prefix set by this value.
+Arguments to `LOCAL()` should be passed as named parameters with the value in single quotes in the following example:
+
+```sql
+INSERT INTO
+  EXTERN(
+    local(exportPath => 'exportLocation/query1')
+  )
+AS CSV
+SELECT
+  <column>
+FROM <table>
+```
+
+Supported arguments to the function:
+
+| Parameter   | Required | Description                                                                                                                                                                                                                                              | Default |
+|-------------|--------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| --|
+| `exportPath`  | Yes | Absolute path to a subdirectory of `druid.export.storage.baseDir` used as the destination to export the results to. The export query expects the destination to be empty. If the location includes other files or directories, then the query will fail. | n/a |
+
+For more information, see [Read external data with EXTERN](concepts.md#write-to-an-external-destination-with-extern).
 
 ### `INSERT`
 
@@ -198,6 +286,33 @@ The following ISO 8601 periods are supported for `TIME_FLOOR` and the string con
 - P1M
 - P3M
 - P1Y
+
+The string constant can also include any of the keywords mentioned above:
+
+- `HOUR` - Same as `'PT1H'`
+- `DAY` - Same as `'P1D'`
+- `MONTH` - Same as `'P1M'`
+- `YEAR` - Same as `'P1Y'`
+- `ALL TIME`
+- `ALL` - Alias for `ALL TIME`
+
+The `WEEK` granularity is deprecated and not supported in MSQ.
+
+Examples:
+
+```SQL
+-- Keyword
+PARTITIONED BY HOUR
+
+-- String literal
+PARTITIONED BY 'HOUR'
+
+-- ISO 8601 period
+PARTITIONED BY 'PT1H'
+
+-- TIME_FLOOR function
+PARTITIONED BY TIME_FLOOR(__time, 'PT1H')
+```
 
 For more information about partitioning, see [Partitioning](concepts.md#partitioning-by-time). <br /><br />
 *Avoid  partitioning by week, `P1W`, because weeks don't align neatly with months and years, making it difficult to partition by coarser granularities later.
@@ -433,7 +548,7 @@ The following table describes error codes you may encounter in the `multiStageQu
 | <a name="error_InsertLockPreempted">`InsertLockPreempted`</a> | An INSERT or REPLACE query was canceled by a higher-priority ingestion job, such as a real-time ingestion task. | |
 | <a name="error_InsertTimeNull">`InsertTimeNull`</a> | An INSERT or REPLACE query encountered a null timestamp in the `__time` field.<br /><br />This can happen due to using an expression like `TIME_PARSE(timestamp) AS __time` with a timestamp that cannot be parsed. ([`TIME_PARSE`](../querying/sql-scalar.md#date-and-time-functions) returns null when it cannot parse a timestamp.) In this case, try parsing your timestamps using a different function or pattern. Or, if your timestamps may genuinely be null, consider using [`COALESCE`](../querying/sql-scalar.md#other-scalar-functions) to provide a default value. One option is [`CURRENT_TIMESTAMP`](../querying/sql-scalar.md#date-and-time-functions), which represents the start time of the job.|
 | <a name="error_InsertTimeOutOfBounds">`InsertTimeOutOfBounds`</a> | A REPLACE query generated a timestamp outside the bounds of the TIMESTAMP parameter for your OVERWRITE WHERE clause.<br /> <br />To avoid this error, verify that the you specified is valid. | `interval`: time chunk interval corresponding to the out-of-bounds timestamp |
-| <a name="error_InvalidNullByte">`InvalidNullByte`</a> | A string column included a null byte. Null bytes in strings are not permitted. |`source`: The source that included the null byte <br /></br /> `rowNumber`: The row number (1-indexed) that included the null byte <br /><br /> `column`: The column that included the null byte <br /><br /> `value`: Actual string containing the null byte <br /><br /> `position`: Position (1-indexed) of occurrence of null byte|
+| <a name="error_InvalidNullByte">`InvalidNullByte`</a> | A string column included a null byte. Null bytes in strings are not permitted. |`source`: The source that included the null byte <br /><br /> `rowNumber`: The row number (1-indexed) that included the null byte <br /><br /> `column`: The column that included the null byte <br /><br /> `value`: Actual string containing the null byte <br /><br /> `position`: Position (1-indexed) of occurrence of null byte|
 | <a name="error_QueryNotSupported">`QueryNotSupported`</a> | QueryKit could not translate the provided native query to a multi-stage query.<br /> <br />This can happen if the query uses features that aren't supported, like GROUPING SETS. | |
 | <a name="error_QueryRuntimeError">`QueryRuntimeError`</a> | MSQ uses the native query engine to run the leaf stages. This error tells MSQ that error is in native query runtime.<br /> <br /> Since this is a generic error, the user needs to look at logs for the error message and stack trace to figure out the next course of action. If the user is stuck, consider raising a `github` issue for assistance. |  `baseErrorMessage` error message from the native query runtime. |
 | <a name="error_RowTooLarge">`RowTooLarge`</a> | The query tried to process a row that was too large to write to a single frame. See the [Limits](#limits) table for specific limits on frame size. Note that the effective maximum row size is smaller than the maximum frame size due to alignment considerations during frame writing. | `maxFrameSize`: The limit on the frame size. |
