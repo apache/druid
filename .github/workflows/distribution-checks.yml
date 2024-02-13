@@ -14,8 +14,7 @@
 # limitations under the License.
 
 name: "Distribution Checks"
-on:
-  [push, pull_request]:
+on: [push, pull_request]
     branches:
       - master
       - '[0-9]+.[0-9]+.[0-9]+' # release branches
