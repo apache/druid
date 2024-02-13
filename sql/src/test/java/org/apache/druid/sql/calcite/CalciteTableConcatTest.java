@@ -45,7 +45,7 @@ public class CalciteTableConcatTest extends BaseCalciteQueryTest
   public void testTasksSum()
   {
     testBuilder()
-      .sql("select * from TABLE(APPEND('foo','numfoo'))")
+      .sql("select * from TABLE(APPEND('foo','numfoo')) u")
 //    .sql("select datasource, sum(duration) from sys.tasks group by datasource")
         .expectedResults(ImmutableList.of(
             new Object[]{"foo", 11L},

@@ -25,9 +25,11 @@ import org.apache.calcite.schema.FunctionParameter;
 import org.apache.calcite.schema.TableMacro;
 import org.apache.calcite.schema.TranslatableTable;
 import org.apache.calcite.schema.impl.ReflectiveFunctionBase;
+import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlCallBinding;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperatorBinding;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.ReturnTypes;
@@ -42,19 +44,27 @@ import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.RowSignature.Builder;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.sql.calcite.expression.AuthorizableOperator;
 import org.apache.druid.sql.calcite.table.DatasourceMetadata;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 /**
  * FIXME
  */
-public class ConcatTableMacro extends SqlUserDefinedTableMacro
+public class ConcatTableMacro extends SqlUserDefinedTableMacro implements AuthorizableOperator
 {
   public ConcatTableMacro(SqlOperandMetadata t)
   {
@@ -160,7 +170,7 @@ public class ConcatTableMacro extends SqlUserDefinedTableMacro
     Builder rowSignatureBuilder = RowSignature.builder();
     for (RelOptTable relOptTable : tables) {
 
-      if(false) {
+      if (false) {
         for (RelDataTypeField newField : relOptTable.getRowType().getFieldList()) {
 
           String key = newField.getKey();
@@ -191,8 +201,11 @@ public class ConcatTableMacro extends SqlUserDefinedTableMacro
         }
       }
 
-      rowSignatureBuilder.addAll(a.getRowSignature());
       dataSources.add(a.getDataSource());
+    }
+
+    for (Entry<String, ColumnType> col : fields2.entrySet()) {
+      rowSignatureBuilder.add(col.getKey(), col.getValue());
     }
     return new AppendDesc(rowSignatureBuilder.build(), dataSources);
   }
@@ -238,11 +251,22 @@ public class ConcatTableMacro extends SqlUserDefinedTableMacro
     public AppendTable(AppendDesc union)
     {
       super(
-          null,
-          union.buildPhysicalDatasourceMetadata (),
-          null
-          );
+          union.values,
+          union.buildPhysicalDatasourceMetadata(),
+          EffectiveMetadata.of(union.values)
+      );
     }
 
+  }
+
+  @Override
+  public Set<ResourceAction> computeResources(SqlCall call, boolean inputSourceTypeSecurityEnabled)
+  {
+    Set<ResourceAction> ret = new HashSet<>();
+    for (SqlNode operand : call.getOperandList()) {
+      Resource resource = new Resource(operand.toString(), ResourceType.DATASOURCE);
+      ret.add(new ResourceAction(resource, Action.READ));
+    }
+    return ret;
   }
 }

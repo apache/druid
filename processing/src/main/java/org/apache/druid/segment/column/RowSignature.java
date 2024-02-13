@@ -373,6 +373,15 @@ public class RowSignature implements ColumnInspector
     {
       return new RowSignature(columnTypeList);
     }
+
+    public void putAll(RowSignature rowSignature)
+    {
+      if(true)
+      {
+        throw new RuntimeException("FIXME: Unimplemented!");
+      }
+
+    }
   }
 
   public enum Finalization

@@ -83,12 +83,6 @@ public class DatasourceTable extends DruidTable
       return broadcast;
     }
 
-    public EffectiveMetadata toEffectiveMetadata()
-    {
-      return EffectiveMetadata.of(getRowSignature());
-    }
-
-
     @Override
     public boolean equals(Object o)
     {
@@ -178,7 +172,7 @@ public class DatasourceTable extends DruidTable
       this.columns = columns;
     }
 
-    public static Map<String, EffectiveColumnMetadata> toEffectiveColumns(RowSignature rowSignature)
+    private static Map<String, EffectiveColumnMetadata> toEffectiveColumns(RowSignature rowSignature)
     {
       Map<String, EffectiveColumnMetadata> columns = new HashMap<>();
       for (int i = 0; i < rowSignature.size(); i++) {
@@ -191,7 +185,7 @@ public class DatasourceTable extends DruidTable
       return columns;
     }
 
-    private static EffectiveMetadata of(RowSignature rowSignature)
+    public static EffectiveMetadata of(RowSignature rowSignature)
     {
       return new EffectiveMetadata(null, toEffectiveColumns(rowSignature), false);
     }
@@ -231,7 +225,7 @@ public class DatasourceTable extends DruidTable
     this(
         physicalMetadata.getRowSignature(),
         physicalMetadata,
-        physicalMetadata.toEffectiveMetadata()
+        EffectiveMetadata.of(physicalMetadata.getRowSignature())
     );
   }
 
