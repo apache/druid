@@ -78,8 +78,8 @@ public abstract class AbstractAuthConfigurationTest
   protected static final String INVALID_NAME = "invalid%2Fname";
 
   protected static final String DATA_SOURCE = "auth_test";
-  protected static final String WIKI_LOOKUP = "wiki-simple";
-  protected static final String WIKIPEDIA_LOOKUP_RESOURCE = "/queries/wiki-lookup-config.json";
+  protected static final String AUTH_LOOKUP = "auth-lookup";
+  protected static final String AUTH_LOOKUP_RESOURCE = "/queries/auth-lookup-config.json";
 
   protected static final String SYSTEM_SCHEMA_SEGMENTS_RESULTS_RESOURCE =
       "/results/auth_test_sys_schema_segments.json";
@@ -94,7 +94,7 @@ public abstract class AbstractAuthConfigurationTest
       "SELECT * FROM sys.segments WHERE datasource IN ('auth_test')";
 
   protected static final String LOOKUP_QUERY =
-      "SELECT LOOKUP(page, 'wiki-simple') FROM auth_test";
+      "SELECT LOOKUP(page, 'auth-lookup') FROM auth_test";
 
   protected static final String SYS_SCHEMA_SERVERS_QUERY =
       "SELECT * FROM sys.servers WHERE tier IS NOT NULL";
@@ -127,7 +127,7 @@ public abstract class AbstractAuthConfigurationTest
           Action.READ
       ),
       new ResourceAction(
-          new Resource(WIKI_LOOKUP, ResourceType.LOOKUP),
+          new Resource(AUTH_LOOKUP, ResourceType.LOOKUP),
           Action.READ
       ),
       new ResourceAction(
@@ -1054,10 +1054,10 @@ public abstract class AbstractAuthConfigurationTest
 
   protected void setExpectedLookupObjects() throws Exception
   {
-    if (!coordinatorClient.areLookupsLoaded(WIKI_LOOKUP)) {
-      coordinatorClient.initializeLookups(WIKIPEDIA_LOOKUP_RESOURCE);
+    if (!coordinatorClient.areLookupsLoaded(AUTH_LOOKUP)) {
+      coordinatorClient.initializeLookups(AUTH_LOOKUP_RESOURCE);
       ITRetryUtil.retryUntilTrue(
-          () -> coordinatorClient.areLookupsLoaded(WIKI_LOOKUP), "wikipedia lookup load"
+          () -> coordinatorClient.areLookupsLoaded(AUTH_LOOKUP), "auth lookup load"
       );
     }
   }
