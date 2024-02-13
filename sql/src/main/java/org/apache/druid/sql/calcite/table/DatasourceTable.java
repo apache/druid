@@ -49,7 +49,7 @@ public class DatasourceTable extends DruidTable
    * published in the Coordinator. Used only for datasources, since only
    * datasources are computed from segments.
    */
-  public static class PhysicalDatasourceMetadata extends DataSourceInformation
+  public static class PhysicalDatasourceMetadata extends DataSourceInformation implements DatasourceMetadata
   {
     private final TableDataSource tableDataSource;
     private final boolean joinable;
@@ -215,7 +215,7 @@ public class DatasourceTable extends DruidTable
     }
   }
 
-  private final PhysicalDatasourceMetadata physicalMetadata;
+  private final DatasourceMetadata physicalMetadata;
   private final EffectiveMetadata effectiveMetadata;
 
   public DatasourceTable(
@@ -231,7 +231,7 @@ public class DatasourceTable extends DruidTable
 
   public DatasourceTable(
       final RowSignature rowSignature,
-      final PhysicalDatasourceMetadata physicalMetadata,
+      final DatasourceMetadata physicalMetadata,
       final EffectiveMetadata effectiveMetadata
   )
   {
