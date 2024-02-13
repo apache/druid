@@ -38,7 +38,6 @@ import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
 import org.apache.calcite.sql.validate.SqlValidatorTable;
 import org.apache.curator.shaded.com.google.common.collect.ImmutableList;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -130,8 +129,9 @@ public class ConcatTableMacro extends SqlUserDefinedTableMacro
 
     public PhysicalDatasourceMetadata buildPhysicalDatasourceMetadata()
     {
-      return new PhysicalDatasourceMetadata(
-              buildDataSource(), values, false, false);
+      return null;
+//      return new PhysicalDatasourceMetadata(
+//              buildDataSource(), values, false, false);
 
     }
 
