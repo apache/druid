@@ -36,6 +36,7 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.BaseJettyTest;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
+import org.apache.http.HttpStatus;
 import org.easymock.EasyMock;
 import org.eclipse.jetty.server.Server;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -147,7 +148,7 @@ public class BrokerClientTest extends BaseJettyTest
         return Response.ok("hello").build();
       } else {
         attempt += 1;
-        return Response.status(504).build();
+        return Response.status(HttpStatus.SC_GATEWAY_TIMEOUT).build();
       }
     }
   }
