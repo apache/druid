@@ -88,11 +88,36 @@ You can use the OVER clause to treat other Druid aggregation functions as window
 
 Window functions support aliasing.
 
-## Define a window with the OVER clause
+## Window function syntax
+
+In general, Druid Window functions use the following syntax:
+
+```sql
+SELECT
+    dimensions,
+    aggregation function(s)
+    window_function()
+      OVER ( PARTITION BY partitioning expression
+             ORDER BY order expression
+             frame clause
+            )
+    FROM table
+    GROUP BY dimensions
+```
 
 The OVER clause defines the query windows for window functions as follows:
 - PARTITION BY indicates the dimension that defines the rows within the window
 - ORDER BY specifies the order of the rows within the windows.
+
+for example, the following OVER clause example sets the window dimension to `channel` and orders the results by the absolute value of `delta` ascending:
+
+```sql
+...
+RANK() OVER (PARTITION BY channel ORDER BY ABS(delta) ASC)
+...
+```
+
+Druid applies the GROUP BY dimensions first before calculating all non-window aggregation functions. Then it applies the window function over the aggregate results.
 
 :::note
 
@@ -100,13 +125,117 @@ Sometimes windows are called partitions. However, the partitioning for window fu
 
 :::
 
-The following OVER clause example sets the window dimension to `channel` and orders the results by the absolute value of `delta` ascending:
+### ORDER BY windows
+
+When the window definition only specifies ORDER BY , it sorts the aggregate data set and applies the function in that order.
+
+The following query uses ORDER BY SUM(delta) DESC to rank user hourly activity from the most changed the least changed within an hour:
 
 ```sql
-...
-RANK() OVER (PARTITION BY channel ORDER BY ABS(delta) ASC)
-...
+SELECT
+    TIME_FLOOR(__time, 'PT1H') as time_hour, 
+    channel, 
+    user,
+    SUM(delta) net_user_changes,
+    RANK( ) OVER ( ORDER BY SUM(delta) DESC ) editing_rank
+FROM "wikipedia"
+WHERE channel IN ('#kk.wikipedia', '#lt.wikipedia')
+  AND __time BETWEEN '2016-06-27' AND '2016-06-28'
+GROUP BY TIME_FLOOR(__time, 'PT1H'), channel, user
+ORDER BY 5 
 ```
+
+### PARTITION BY windows
+
+When a window only specifies PARTITION BY partition expression, Druid calculates the aggregate window function over all the rows that share a values within the selected dataset.
+
+The following example demonstrates a query that uses two different windows PARTITION BY channel and PARTITION BY user to calculate the total activity in the channel and total activity by the user so that they can be compared to individual hourly activity:
+
+```sql
+SELECT
+    TIME_FLOOR(__time, 'PT1H') as time_hour, channel, user,
+    SUM(delta) hourly_user_changes,
+    SUM(SUM(delta)) OVER (PARTITION BY user ) AS total_user_changes,
+    SUM(SUM(delta)) OVER (PARTITION BY channel ) AS total_channel_changes
+FROM "wikipedia"
+WHERE channel IN ('#kk.wikipedia', '#lt.wikipedia')
+  AND __time BETWEEN '2016-06-27' AND '2016-06-28'
+GROUP BY TIME_FLOOR(__time, 'PT1H'),2,3
+ORDER BY channel,TIME_FLOOR(__time, 'PT1H'), user
+```
+
+The windows only define the PARTITION BY clause of the window, so Druid performs the calculation over the whole dataset for each value of the \<partition expression\>.
+In this example, the dataset is filtered for a single day, therefore the window function results represent the total activity for the day, for the `user` and for the `channel` respectively.
+
+This type of result helps you analyze the impact of an individual user's hourly activity:
+- the impact to the channel by comparing hourly_user_changes to total_channel_changes
+- the impact of each user over the channel by total_user_changes to total_channel_changes
+- the progress of each user's inidividal activity by comparing hourly_user_changes to total_user_changes
+
+### Window frames
+
+You can use window frames to limit the set of rows used for the windowed aggregation. The general syntax is:
+
+window funtion
+OVER (
+        [ PARTITION BY partition expression] ORDER BY order expression
+        [ROWS, RANGE] BETWEEN range start AND range end
+     )
+
+ROWS AND RANGE accept the following values  start and end :
+- UNBOUND PRECEDING - from the beggining of the partition as order by the order expression
+- N ROWS PRECEDING - N rows before the current row as ordered by the order expression
+- CURRENT ROW - the current row
+- N ROWS FOLLOWING - N rows after the current row as ordered by the order expression
+UNBOUNDED FOLLOWING - to the end of the partition as ordered by the order expression
+
+The following query uses a few differnt window frames to calculate overall activity by channel:
+
+```sql
+SELECT
+    channel, 
+    TIME_FLOOR(__time, 'PT1H')      AS time_hour, 
+    SUM(delta)                      AS hourly_channel_changes,
+    SUM(SUM(delta)) OVER cumulative AS cumulative_activity_in_channel,
+    SUM(SUM(delta)) OVER moving5    AS csum5,
+    COUNT(1) OVER moving5           AS count5
+FROM "wikipedia"
+WHERE channel = '#en.wikipedia'
+  AND __time BETWEEN '2016-06-27' AND '2016-06-28'
+GROUP BY 1, TIME_FLOOR(__time, 'PT1H')
+WINDOW cumulative AS (   
+                         PARTITION BY channel 
+                         ORDER BY TIME_FLOOR(__time, 'PT1H') 
+                         ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                     )
+                     ,
+        moving5 AS ( 
+                    PARTITION BY channel 
+                    ORDER BY TIME_FLOOR(__time, 'PT1H') 
+                    ROWS BETWEEN 4 PRECEDING AND CURRENT ROW
+                  )
+```
+
+The example defines multiple window specifications in the WINDOW clause that you can use for various window function calculations.
+
+The query uses two windows:
+- cumulative is partitioned by channel and includes all rows from the beginning of partition up to the current row as ordered by `__time to enable cumulative aggregation
+- moving5 is also partitioned by channel but only includes up to the last 4 rows and the current row as ordered by time
+
+The number of rows considered for the moving5 window for the count  5 column:
+- starts at 1 because there are no rows before the current one
+- grows up to 5 as defined by ROWS BETWEEN 4 PRECEDING AND CURRENT ROW
+
+#### Window frame guardrails
+
+Druid has guardrail logic to prevent you from executing window function queries with window frame expressions that might return unexpected results.
+
+For example:
+- You cannot set expressions as bounds for window frames.
+- You cannot use two FOLLOWING expressions in the window frame. For example: "rows between 2 FOLLOWING and 3 FOLLOWING"
+- You can only use a RANGE frames when both endpoints are unbounded or current row.
+
+If you write a query that violates one of these conditions, Druid throws an error: "The query contains a window frame which may return incorrect results. To disregard this warning, set [windowingStrictValidation] to false in the query context."
 
 ## Window function reference
 
