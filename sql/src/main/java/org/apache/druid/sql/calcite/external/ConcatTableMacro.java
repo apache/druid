@@ -20,19 +20,20 @@
 package org.apache.druid.sql.calcite.external;
 
 import org.apache.calcite.plan.RelOptTable;
-import org.apache.calcite.rel.type.RelDataTypeField;
-import org.apache.calcite.schema.FunctionParameter;
-import org.apache.calcite.schema.TableMacro;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.TranslatableTable;
-import org.apache.calcite.schema.impl.ReflectiveFunctionBase;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlCallBinding;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlOperandCountRange;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOperatorBinding;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.ReturnTypes;
+import org.apache.calcite.sql.type.SqlOperandCountRanges;
 import org.apache.calcite.sql.type.SqlOperandMetadata;
 import org.apache.calcite.sql.validate.SqlUserDefinedTableMacro;
 import org.apache.calcite.sql.validate.SqlValidator;
@@ -51,8 +52,6 @@ import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.expression.AuthorizableOperator;
 import org.apache.druid.sql.calcite.table.DatasourceMetadata;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
-import org.checkerframework.checker.nullness.qual.Nullable;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -66,18 +65,49 @@ import java.util.Set;
  */
 public class ConcatTableMacro extends SqlUserDefinedTableMacro implements AuthorizableOperator
 {
-  public ConcatTableMacro(SqlOperandMetadata t)
+  public ConcatTableMacro()
   {
     super(
         new SqlIdentifier(TableConcatOperatorConversion.FUNCTION_NAME, SqlParserPos.ZERO),
         SqlKind.OTHER_FUNCTION,
         ReturnTypes.CURSOR,
         null,
-        t,
+        new MyMeta(),
         null
     );
+  }
 
-    // this.macro = new MyTableMacro();
+  static class MyMeta implements SqlOperandMetadata
+  {
+    @Override
+    public boolean checkOperandTypes(SqlCallBinding callBinding, boolean throwOnFailure)
+    {
+      return true;
+    }
+
+    @Override
+    public SqlOperandCountRange getOperandCountRange()
+    {
+      return SqlOperandCountRanges.from(2);
+    }
+
+    @Override
+    public String getAllowedSignatures(SqlOperator op, String opName)
+    {
+      return "FIXME( TABLE ...)";
+    }
+
+    @Override
+    public List<RelDataType> paramTypes(RelDataTypeFactory typeFactory)
+    {
+      throw new RuntimeException("FIXME: Unimplemented!");
+    }
+
+    @Override
+    public List<String> paramNames()
+    {
+      throw new RuntimeException("FIXME: Unimplemented!");
+    }
   }
 
   @Override
@@ -86,39 +116,12 @@ public class ConcatTableMacro extends SqlUserDefinedTableMacro implements Author
     return ImmutableList.<String>builder().add("t1", "t2").build();
   }
 
-  static class MyTableMacro implements TableMacro
-  {
-
-    @Override
-    public List<FunctionParameter> getParameters()
-    {
-      final ReflectiveFunctionBase.ParameterListBuilder params = ReflectiveFunctionBase.builder();
-
-      params.add(String.class, "T1");
-      params.add(String.class, "T2");
-      return params.build();
-
-    }
-
-    @Override
-    public TranslatableTable apply(List<? extends @Nullable Object> arguments)
-    {
-      if (true) {
-        throw new RuntimeException("FIXME: Unimplemented!");
-      }
-      return null;
-    }
-
-  }
-
   @Override
   public TranslatableTable getTable(SqlOperatorBinding callBinding)
   {
     SqlCallBinding ss = (SqlCallBinding) callBinding;
     SqlValidator validator = ss.getValidator();
     SqlValidatorCatalogReader catalogReader = validator.getCatalogReader();
-    Object t = catalogReader.getTable(ImmutableList.<String>builder().add("foo").build());
-
     List<String> tableNames = getTableNames(callBinding);
     List<RelOptTable> tables = getTables(catalogReader, tableNames);
 
@@ -165,25 +168,10 @@ public class ConcatTableMacro extends SqlUserDefinedTableMacro implements Author
   private AppendDesc buildUnionDataSource(List<RelOptTable> tables)
   {
     List<DataSource> dataSources = new ArrayList<>();
-    Map<String, RelDataTypeField> fields = new LinkedHashMap<>();
-    Map<String, ColumnType> fields2 = new LinkedHashMap<>();
+    Map<String, ColumnType> fields = new LinkedHashMap<>();
     Builder rowSignatureBuilder = RowSignature.builder();
     for (RelOptTable relOptTable : tables) {
 
-      if (false) {
-        for (RelDataTypeField newField : relOptTable.getRowType().getFieldList()) {
-
-          String key = newField.getKey();
-          RelDataTypeField existingField = fields.get(key);
-          if (existingField != null && !existingField.equals(newField)) {
-            // FIXME this could be more sophisticated
-            throw new IllegalArgumentException("incompatible operands");
-          }
-          if (existingField == null) {
-            fields.put(key, newField);
-          }
-        }
-      }
       DatasourceTable a = relOptTable.unwrapOrThrow(DatasourceTable.class);
 
       RowSignature rowSignature = a.getRowSignature();
@@ -191,20 +179,20 @@ public class ConcatTableMacro extends SqlUserDefinedTableMacro implements Author
 
         String key = currentColumn;
         ColumnType currentType = rowSignature.getColumnType(currentColumn).get();
-        ColumnType existingType = fields2.get(key);
+        ColumnType existingType = fields.get(key);
         if (existingType != null && !existingType.equals(currentType)) {
           // FIXME this could be more sophisticated
           throw new IllegalArgumentException("incompatible operands");
         }
         if (existingType == null) {
-          fields2.put(key, currentType);
+          fields.put(key, currentType);
         }
       }
 
       dataSources.add(a.getDataSource());
     }
 
-    for (Entry<String, ColumnType> col : fields2.entrySet()) {
+    for (Entry<String, ColumnType> col : fields.entrySet()) {
       rowSignatureBuilder.add(col.getKey(), col.getValue());
     }
     return new AppendDesc(rowSignatureBuilder.build(), dataSources);
@@ -236,18 +224,8 @@ public class ConcatTableMacro extends SqlUserDefinedTableMacro implements Author
     return ret;
   }
 
-  private TranslatableTable apply(List<RelOptTable> tables)
-  {
-    if (true) {
-      throw new RuntimeException("FIXME: Unimplemented!");
-    }
-    return null;
-
-  }
-
   static class AppendTable extends DatasourceTable
   {
-
     public AppendTable(AppendDesc union)
     {
       super(
@@ -256,7 +234,6 @@ public class ConcatTableMacro extends SqlUserDefinedTableMacro implements Author
           EffectiveMetadata.of(union.values)
       );
     }
-
   }
 
   @Override

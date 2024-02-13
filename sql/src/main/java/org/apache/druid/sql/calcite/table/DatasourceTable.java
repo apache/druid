@@ -68,16 +68,19 @@ public class DatasourceTable extends DruidTable
       this.broadcast = isBroadcast;
     }
 
+    @Override
     public TableDataSource dataSource()
     {
       return tableDataSource;
     }
 
+    @Override
     public boolean isJoinable()
     {
       return joinable;
     }
 
+    @Override
     public boolean isBroadcast()
     {
       return broadcast;
