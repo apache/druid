@@ -31,6 +31,7 @@ import org.apache.calcite.schema.Function;
 import org.apache.calcite.schema.FunctionParameter;
 import org.apache.calcite.schema.TableMacro;
 import org.apache.calcite.schema.TranslatableTable;
+import org.apache.calcite.sql.SqlCallBinding;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperatorBinding;
@@ -41,7 +42,9 @@ import org.apache.calcite.sql.type.SqlOperandMetadata;
 import org.apache.calcite.sql.type.SqlOperandTypeInference;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.validate.SqlUserDefinedTableMacro;
+import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.util.NlsString;
+import org.apache.curator.shaded.com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.IAE;
 
 import java.util.ArrayList;
@@ -76,7 +79,7 @@ public class ConcatTableMacro extends SqlUserDefinedTableMacro
         ReturnTypes.CURSOR,
         null,
         t,
-        a// IXME?
+        a
     );
   }
 
@@ -86,6 +89,13 @@ public class ConcatTableMacro extends SqlUserDefinedTableMacro
   @Override
   public TranslatableTable getTable(SqlOperatorBinding callBinding)
   {
+    RelDataTypeFactory tf = callBinding.getTypeFactory();
+
+    int operandCount = callBinding.getOperandCount();
+    SqlCallBinding ss = (SqlCallBinding) callBinding;
+    SqlValidator validator = ss.getValidator();
+    Object t = validator.getCatalogReader().getTable(ImmutableList.<String>builder().add("foo").build());
+
     List<Object> arguments = convertArguments(callBinding, macro, getNameAsId(), true);
     return macro.apply(arguments);
   }

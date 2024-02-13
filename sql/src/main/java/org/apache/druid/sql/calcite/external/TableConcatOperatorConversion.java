@@ -42,13 +42,8 @@ import java.util.List;
 /**
  * FIXME
  *
- * alternate names:
- *    * TABLE_CONCAT
- *       select * from  TABLE(TABLE_CONCAT('t1','t2'))
- *    * APPEND
- *      select * from  TABLE(APPEND('t1','t2'))
- *    * CONCAT
- *      select * from  TABLE(CONCAT('t1','t2'))
+ * alternate names: * TABLE_CONCAT select * from TABLE(TABLE_CONCAT('t1','t2')) * APPEND select * from
+ * TABLE(APPEND('t1','t2')) * CONCAT select * from TABLE(CONCAT('t1','t2'))
  */
 public class TableConcatOperatorConversion implements SqlOperatorConversion
 {
@@ -59,12 +54,13 @@ public class TableConcatOperatorConversion implements SqlOperatorConversion
   public TableConcatOperatorConversion()
   {
 
-    SqlOperandMetadata b=new MyMeta();
-    TableMacro u=new MyTableMacro();
-    macro = new ConcatTableMacro(u,b);
+    SqlOperandMetadata b = new MyMeta();
+    TableMacro u = new MyTableMacro();
+    macro = new ConcatTableMacro(u, b);
   }
 
-  static class MyMeta implements SqlOperandMetadata {
+  static class MyMeta implements SqlOperandMetadata
+  {
 
     @Override
     public boolean checkOperandTypes(SqlCallBinding callBinding, boolean throwOnFailure)
@@ -87,8 +83,7 @@ public class TableConcatOperatorConversion implements SqlOperatorConversion
     @Override
     public List<RelDataType> paramTypes(RelDataTypeFactory typeFactory)
     {
-      if(true)
-      {
+      if (true) {
         throw new RuntimeException("FIXME: Unimplemented!");
       }
       return null;
@@ -98,21 +93,20 @@ public class TableConcatOperatorConversion implements SqlOperatorConversion
     @Override
     public List<String> paramNames()
     {
-      if(true)
-      {
+      if (true) {
         throw new RuntimeException("FIXME: Unimplemented!");
       }
       return null;
     }
   }
 
-  static class MyTableMacro implements TableMacro{
+  static class MyTableMacro implements TableMacro
+  {
 
     @Override
     public List<FunctionParameter> getParameters()
     {
-      final ReflectiveFunctionBase.ParameterListBuilder params =
-          ReflectiveFunctionBase.builder();
+      final ReflectiveFunctionBase.ParameterListBuilder params = ReflectiveFunctionBase.builder();
 
       params.add(String.class, "T1");
       params.add(String.class, "T2");
@@ -123,8 +117,7 @@ public class TableConcatOperatorConversion implements SqlOperatorConversion
     @Override
     public TranslatableTable apply(List<? extends @Nullable Object> arguments)
     {
-      if(true)
-      {
+      if (true) {
         throw new RuntimeException("FIXME: Unimplemented!");
       }
       return null;
