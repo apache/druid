@@ -105,8 +105,8 @@ public class PartialGenericSegmentMergeTaskTest extends AbstractParallelIndexSup
         ParallelIndexTestingFactory.NUM_ATTEMPTS,
         ingestionSpec,
         ParallelIndexTestingFactory.CONTEXT,
-        null,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        null
     );
   }
 
@@ -144,8 +144,8 @@ public class PartialGenericSegmentMergeTaskTest extends AbstractParallelIndexSup
                 .build()
         ),
         ParallelIndexTestingFactory.CONTEXT,
-        null,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        null
     );
   }
 

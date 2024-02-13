@@ -598,6 +598,7 @@ public class BatchAppenderatorsTest
           .appenderatorsManager(new TestAppenderatorsManager())
           .taskLogPusher(null)
           .attemptId("1")
+          .centralizedTableSchemaConfig(CentralizedDatasourceSchemaConfig.create())
           .build();
 
     }

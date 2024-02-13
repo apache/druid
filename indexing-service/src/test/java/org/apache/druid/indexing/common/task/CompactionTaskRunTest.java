@@ -90,6 +90,7 @@ import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.loading.TombstoneLoadSpec;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
 import org.apache.druid.server.security.AuthTestUtils;
@@ -2028,6 +2029,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         .coordinatorClient(coordinatorClient)
         .taskLogPusher(null)
         .attemptId("1")
+        .centralizedTableSchemaConfig(CentralizedDatasourceSchemaConfig.create())
         .build();
   }
 

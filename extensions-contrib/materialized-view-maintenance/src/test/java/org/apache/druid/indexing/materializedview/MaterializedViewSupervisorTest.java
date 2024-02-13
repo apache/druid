@@ -93,6 +93,7 @@ public class MaterializedViewSupervisorTest
   {
     TestDerbyConnector derbyConnector = derbyConnectorRule.getConnector();
     derbyConnector.createDataSourceTable();
+    derbyConnector.createSegmentSchemaTable();
     derbyConnector.createSegmentTable();
     taskStorage = EasyMock.createMock(TaskStorage.class);
     taskMaster = EasyMock.createMock(TaskMaster.class);

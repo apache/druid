@@ -142,6 +142,7 @@ public class SqlSegmentsMetadataManagerTest
     SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig();
     config.setPollDuration(Period.seconds(3));
 
+    segmentSchemaCache = new SegmentSchemaCache();
     sqlSegmentsMetadataManager = new SqlSegmentsMetadataManager(
         jsonMapper,
         Suppliers.ofInstance(config),
@@ -157,6 +158,7 @@ public class SqlSegmentsMetadataManagerTest
         connector
     );
 
+    connector.createSegmentSchemaTable();
     connector.createSegmentTable();
 
     publisher.publishSegment(segment1);

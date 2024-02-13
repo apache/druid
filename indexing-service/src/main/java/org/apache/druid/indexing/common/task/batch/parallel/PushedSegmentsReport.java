@@ -105,12 +105,13 @@ public class PushedSegmentsReport implements SubTaskReport
     return Objects.equals(taskId, that.taskId)
            && Objects.equals(oldSegments, that.oldSegments)
            && Objects.equals(newSegments, that.newSegments)
-           && Objects.equals(taskReport, that.taskReport);
+           && Objects.equals(taskReport, that.taskReport)
+           && Objects.equals(minimalSegmentSchemas, that.minimalSegmentSchemas);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(taskId, oldSegments, newSegments, taskReport);
+    return Objects.hash(taskId, oldSegments, newSegments, taskReport, minimalSegmentSchemas);
   }
 }

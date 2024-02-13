@@ -1138,7 +1138,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         .forEach(report -> {
           oldSegments.addAll(report.getOldSegments());
           newSegments.addAll(report.getNewSegments());
-          minimalSegmentSchemas.add(report.getMinimalSegmentSchemas());
+          if (report.getMinimalSegmentSchemas() != null) {
+            minimalSegmentSchemas.add(report.getMinimalSegmentSchemas());
+          }
         });
     final boolean storeCompactionState = getContextValue(
         Tasks.STORE_COMPACTION_STATE_KEY,

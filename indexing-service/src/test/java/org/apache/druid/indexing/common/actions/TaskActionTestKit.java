@@ -102,6 +102,7 @@ public class TaskActionTestKit extends ExternalResource
       }
     };
     taskLockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
+    segmentSchemaCache = new SegmentSchemaCache();
     segmentsMetadataManager = new SqlSegmentsMetadataManager(
         objectMapper,
         Suppliers.ofInstance(new SegmentsMetadataManagerConfig()),
@@ -142,6 +143,7 @@ public class TaskActionTestKit extends ExternalResource
     );
     testDerbyConnector.createDataSourceTable();
     testDerbyConnector.createPendingSegmentsTable();
+    testDerbyConnector.createSegmentSchemaTable();
     testDerbyConnector.createSegmentTable();
     testDerbyConnector.createRulesTable();
     testDerbyConnector.createConfigTable();

@@ -77,6 +77,7 @@ import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.NoopDataSegmentKiller;
 import org.apache.druid.segment.loading.SegmentCacheManager;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SchemaManager;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
@@ -129,6 +130,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
 
     final SQLMetadataConnector connector = derbyConnectorRule.getConnector();
     connector.createTaskTables();
+    connector.createSegmentSchemaTable();
     connector.createSegmentTable();
     taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
     schemaManager = new SchemaManager(
@@ -143,6 +145,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         derbyConnectorRule.getConnector(),
         schemaManager
     );
+    segmentSchemaCache = new SegmentSchemaCache();
     segmentsMetadataManager = new SqlSegmentsMetadataManager(
         objectMapper,
         SegmentsMetadataManagerConfig::new,
@@ -260,6 +263,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         .appenderatorsManager(new TestAppenderatorsManager())
         .taskLogPusher(null)
         .attemptId("1")
+        .centralizedTableSchemaConfig(CentralizedDatasourceSchemaConfig.create())
         .build();
   }
 
@@ -432,6 +436,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
             .appenderatorsManager(new TestAppenderatorsManager())
             .taskLogPusher(null)
             .attemptId("1")
+            .centralizedTableSchemaConfig(CentralizedDatasourceSchemaConfig.create())
             .build();
 
 

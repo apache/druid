@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -52,6 +53,8 @@ public class PartialGenericSegmentMergeTask extends PartialSegmentMergeTask<Buil
   private final PartialSegmentMergeIngestionSpec ingestionSchema;
   private final Table<Interval, Integer, BuildingShardSpec<?>> intervalAndIntegerToShardSpec;
 
+  private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
+
   @JsonCreator
   public PartialGenericSegmentMergeTask(
       // id shouldn't be null except when this task is created by ParallelIndexSupervisorTask
@@ -64,8 +67,8 @@ public class PartialGenericSegmentMergeTask extends PartialSegmentMergeTask<Buil
       @JsonProperty("numAttempts") final int numAttempts, // zero-based counting
       @JsonProperty("spec") final PartialSegmentMergeIngestionSpec ingestionSchema,
       @JsonProperty("context") final Map<String, Object> context,
-      @JsonProperty("mapper") final ObjectMapper mapper,
-      @JsonProperty("centralizedDataSourceSchemaConfig") final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+      @JsonProperty("centralizedDatasourceSchemaConfig") CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
+      @JacksonInject ObjectMapper mapper
   )
   {
     super(
@@ -83,6 +86,7 @@ public class PartialGenericSegmentMergeTask extends PartialSegmentMergeTask<Buil
         centralizedDatasourceSchemaConfig
     );
 
+    this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
     this.ingestionSchema = ingestionSchema;
     this.intervalAndIntegerToShardSpec = createIntervalAndIntegerToShardSpec(
         ingestionSchema.getIOConfig().getPartitionLocations()
@@ -121,6 +125,12 @@ public class PartialGenericSegmentMergeTask extends PartialSegmentMergeTask<Buil
   private PartialSegmentMergeIngestionSpec getIngestionSchema()
   {
     return ingestionSchema;
+  }
+
+  @JsonProperty("centralizedDatasourceSchemaConfig")
+  private CentralizedDatasourceSchemaConfig getCentralizedDatasourceSchemaConfig()
+  {
+    return centralizedDatasourceSchemaConfig;
   }
 
   @Override

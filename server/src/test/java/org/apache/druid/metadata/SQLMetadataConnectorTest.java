@@ -74,6 +74,7 @@ public class SQLMetadataConnectorTest
     final List<String> tables = new ArrayList<>();
     final String entryType = tablesConfig.getTaskEntryType();
     tables.add(tablesConfig.getConfigTable());
+    tables.add(tablesConfig.getSegmentSchemaTable());
     tables.add(tablesConfig.getSegmentsTable());
     tables.add(tablesConfig.getRulesTable());
     tables.add(tablesConfig.getLockTable(entryType));
@@ -82,6 +83,18 @@ public class SQLMetadataConnectorTest
     tables.add(tablesConfig.getAuditTable());
     tables.add(tablesConfig.getSupervisorTable());
 
+    final List<String> dropSequence = new ArrayList<>();
+    dropSequence.add(tablesConfig.getConfigTable());
+    dropSequence.add(tablesConfig.getSegmentsTable());
+    dropSequence.add(tablesConfig.getSegmentSchemaTable());
+    dropSequence.add(tablesConfig.getRulesTable());
+    dropSequence.add(tablesConfig.getLockTable(entryType));
+    dropSequence.add(tablesConfig.getLogTable(entryType));
+    dropSequence.add(tablesConfig.getEntryTable(entryType));
+    dropSequence.add(tablesConfig.getAuditTable());
+    dropSequence.add(tablesConfig.getSupervisorTable());
+
+    connector.createSegmentSchemaTable();
     connector.createSegmentTable();
     connector.createConfigTable();
     connector.createRulesTable();
@@ -110,7 +123,7 @@ public class SQLMetadataConnectorTest
         }
     );
 
-    for (String table : tables) {
+    for (String table : dropSequence) {
       dropTable(table);
     }
   }
@@ -174,6 +187,7 @@ public class SQLMetadataConnectorTest
   @Test
   public void testAlterSegmentTableAddLastUsed()
   {
+    connector.createSegmentSchemaTable();
     connector.createSegmentTable();
 
     // Drop column used_status_last_updated to bring us in line with pre-upgrade state

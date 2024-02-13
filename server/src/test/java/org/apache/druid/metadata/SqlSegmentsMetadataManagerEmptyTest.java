@@ -65,6 +65,7 @@ public class SqlSegmentsMetadataManagerEmptyTest
     );
     sqlSegmentsMetadataManager.start();
 
+    connector.createSegmentSchemaTable();
     connector.createSegmentTable();
   }
 

@@ -111,8 +111,8 @@ class PartialGenericSegmentMergeParallelIndexTaskRunner
             numAttempts,
             ingestionSpec,
             getContext(),
-            mapper,
-            centralizedDatasourceSchemaConfig
+            centralizedDatasourceSchemaConfig,
+            mapper
         );
       }
     };

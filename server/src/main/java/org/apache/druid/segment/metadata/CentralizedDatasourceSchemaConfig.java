@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.metadata;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import org.joda.time.Period;
@@ -30,19 +31,43 @@ public class CentralizedDatasourceSchemaConfig
 {
   @JsonProperty
   private boolean enabled = false;
+
+  @JsonProperty
   private boolean backFillEnabled = false;
+  @JsonProperty
   private Period backFillPeriod = new Period("PT1M");
 
+  /**
+  @JsonCreator
+  public CentralizedDatasourceSchemaConfig(
+      @JsonProperty("enabled") boolean enabled,
+      @JsonProperty("backFillEnabled") boolean backFillEnabled,
+      @JsonProperty("backFillPeriod") Period backFillPeriod
+  )
+  {
+    this.enabled = enabled;
+    this.backFillEnabled = backFillEnabled;
+    this.backFillPeriod = backFillPeriod;
+  }
+
+  public CentralizedDatasourceSchemaConfig()
+  {
+  }
+  **/
+
+  @JsonProperty
   public boolean isEnabled()
   {
     return enabled;
   }
 
+  @JsonProperty
   public boolean isBackFillEnabled()
   {
     return backFillEnabled;
   }
 
+  @JsonProperty
   public Period getBackFillPeriod()
   {
     return backFillPeriod;
