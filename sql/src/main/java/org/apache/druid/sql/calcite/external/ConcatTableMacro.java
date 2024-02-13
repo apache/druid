@@ -69,14 +69,14 @@ public class ConcatTableMacro extends SqlUserDefinedTableMacro
     this.macro = tableMacro;
   }
 
-  public ConcatTableMacro()
+  public ConcatTableMacro(TableMacro a, SqlOperandMetadata t)
   {
     this(
-        new SqlIdentifier("TABLE_CONCAT", SqlParserPos.ZERO),
+        new SqlIdentifier(TableConcatOperatorConversion.FUNCTION_NAME, SqlParserPos.ZERO),
         ReturnTypes.CURSOR,
         null,
-        null, // FIXME?
-        null // FIXME?
+        t,
+        a// IXME?
     );
   }
 

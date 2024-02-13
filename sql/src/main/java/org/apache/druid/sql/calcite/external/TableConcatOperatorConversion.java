@@ -19,15 +19,25 @@
 
 package org.apache.druid.sql.calcite.external;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.Inject;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.schema.FunctionParameter;
+import org.apache.calcite.schema.TableMacro;
+import org.apache.calcite.schema.TranslatableTable;
+import org.apache.calcite.schema.impl.ReflectiveFunctionBase;
+import org.apache.calcite.sql.SqlCallBinding;
+import org.apache.calcite.sql.SqlOperandCountRange;
 import org.apache.calcite.sql.SqlOperator;
-import org.apache.druid.guice.annotations.Json;
+import org.apache.calcite.sql.type.SqlOperandCountRanges;
+import org.apache.calcite.sql.type.SqlOperandMetadata;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.checkerframework.checker.nullness.qual.Nullable;
+
+import java.util.List;
 
 /**
  * FIXME
@@ -42,13 +52,84 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
  */
 public class TableConcatOperatorConversion implements SqlOperatorConversion
 {
-  public static final String FUNCTION_NAME = "TABLE_CONCAT";
+  public static final String FUNCTION_NAME = "APPEND";
+  public static final TableConcatOperatorConversion INSTANCE = new TableConcatOperatorConversion();
   private ConcatTableMacro macro;
 
-  @Inject
-  public TableConcatOperatorConversion(@Json final ObjectMapper jsonMapper)
+  public TableConcatOperatorConversion()
   {
-    macro = new ConcatTableMacro();
+
+    SqlOperandMetadata b=new MyMeta();
+    TableMacro u=new MyTableMacro();
+    macro = new ConcatTableMacro(u,b);
+  }
+
+  static class MyMeta implements SqlOperandMetadata {
+
+    @Override
+    public boolean checkOperandTypes(SqlCallBinding callBinding, boolean throwOnFailure)
+    {
+      return true;
+    }
+
+    @Override
+    public SqlOperandCountRange getOperandCountRange()
+    {
+      return SqlOperandCountRanges.from(2);
+    }
+
+    @Override
+    public String getAllowedSignatures(SqlOperator op, String opName)
+    {
+      return "FIXME( TABLE ...)";
+    }
+
+    @Override
+    public List<RelDataType> paramTypes(RelDataTypeFactory typeFactory)
+    {
+      if(true)
+      {
+        throw new RuntimeException("FIXME: Unimplemented!");
+      }
+      return null;
+
+    }
+
+    @Override
+    public List<String> paramNames()
+    {
+      if(true)
+      {
+        throw new RuntimeException("FIXME: Unimplemented!");
+      }
+      return null;
+    }
+  }
+
+  static class MyTableMacro implements TableMacro{
+
+    @Override
+    public List<FunctionParameter> getParameters()
+    {
+      final ReflectiveFunctionBase.ParameterListBuilder params =
+          ReflectiveFunctionBase.builder();
+
+      params.add(String.class, "T1");
+      params.add(String.class, "T2");
+      return params.build();
+
+    }
+
+    @Override
+    public TranslatableTable apply(List<? extends @Nullable Object> arguments)
+    {
+      if(true)
+      {
+        throw new RuntimeException("FIXME: Unimplemented!");
+      }
+      return null;
+    }
+
   }
 
   @Override
