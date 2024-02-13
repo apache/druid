@@ -1154,6 +1154,10 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
               ],
             },
             {
+              group: 'China',
+              suggestions: ['kinesis.cn-north-1.amazonaws.com.cn'],
+            },
+            {
               group: 'Europe',
               suggestions: [
                 'kinesis.eu-central-1.amazonaws.com',
