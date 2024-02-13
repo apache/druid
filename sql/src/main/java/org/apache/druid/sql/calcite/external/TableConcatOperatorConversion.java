@@ -22,10 +22,6 @@ package org.apache.druid.sql.calcite.external;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.schema.FunctionParameter;
-import org.apache.calcite.schema.TableMacro;
-import org.apache.calcite.schema.TranslatableTable;
-import org.apache.calcite.schema.impl.ReflectiveFunctionBase;
 import org.apache.calcite.sql.SqlCallBinding;
 import org.apache.calcite.sql.SqlOperandCountRange;
 import org.apache.calcite.sql.SqlOperator;
@@ -35,8 +31,6 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.checkerframework.checker.nullness.qual.Nullable;
-
 import java.util.List;
 
 /**
@@ -55,8 +49,7 @@ public class TableConcatOperatorConversion implements SqlOperatorConversion
   {
 
     SqlOperandMetadata b = new MyMeta();
-    TableMacro u = new MyTableMacro();
-    macro = new ConcatTableMacro(u, b);
+    macro = new ConcatTableMacro(b);
   }
 
   static class MyMeta implements SqlOperandMetadata
@@ -98,31 +91,6 @@ public class TableConcatOperatorConversion implements SqlOperatorConversion
       }
       return null;
     }
-  }
-
-  static class MyTableMacro implements TableMacro
-  {
-
-    @Override
-    public List<FunctionParameter> getParameters()
-    {
-      final ReflectiveFunctionBase.ParameterListBuilder params = ReflectiveFunctionBase.builder();
-
-      params.add(String.class, "T1");
-      params.add(String.class, "T2");
-      return params.build();
-
-    }
-
-    @Override
-    public TranslatableTable apply(List<? extends @Nullable Object> arguments)
-    {
-      if (true) {
-        throw new RuntimeException("FIXME: Unimplemented!");
-      }
-      return null;
-    }
-
   }
 
   @Override

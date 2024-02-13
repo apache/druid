@@ -19,36 +19,35 @@
 
 package org.apache.druid.sql.calcite.external;
 
-import org.apache.calcite.adapter.enumerable.EnumUtils;
-import org.apache.calcite.linq4j.tree.BlockBuilder;
-import org.apache.calcite.linq4j.tree.Expression;
-import org.apache.calcite.linq4j.tree.Expressions;
-import org.apache.calcite.linq4j.tree.FunctionExpression;
+import org.apache.calcite.config.CalciteConnectionConfig;
+import org.apache.calcite.plan.RelOptTable;
+import org.apache.calcite.plan.RelOptTable.ToRelContext;
+import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rel.type.RelDataTypeFactoryImpl;
-import org.apache.calcite.schema.Function;
 import org.apache.calcite.schema.FunctionParameter;
+import org.apache.calcite.schema.Schema.TableType;
+import org.apache.calcite.schema.Statistic;
 import org.apache.calcite.schema.TableMacro;
 import org.apache.calcite.schema.TranslatableTable;
+import org.apache.calcite.schema.impl.ReflectiveFunctionBase;
+import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlCallBinding;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperatorBinding;
 import org.apache.calcite.sql.parser.SqlParserPos;
-import org.apache.calcite.sql.type.ArraySqlType;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlOperandMetadata;
-import org.apache.calcite.sql.type.SqlOperandTypeInference;
-import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.validate.SqlUserDefinedTableMacro;
 import org.apache.calcite.sql.validate.SqlValidator;
-import org.apache.calcite.util.NlsString;
+import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
+import org.apache.calcite.sql.validate.SqlValidatorTable;
 import org.apache.curator.shaded.com.google.common.collect.ImmutableList;
-import org.apache.druid.java.util.common.IAE;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -56,164 +55,163 @@ import java.util.List;
  */
 public class ConcatTableMacro extends SqlUserDefinedTableMacro
 {
-  protected final TableMacro macro;
-
-  @Deprecated
-  public ConcatTableMacro(
-      final SqlIdentifier opName,
-      final SqlReturnTypeInference returnTypeInference,
-      final SqlOperandTypeInference operandTypeInference,
-      final SqlOperandMetadata operandMetadata,
-      final TableMacro tableMacro)
+  public ConcatTableMacro(SqlOperandMetadata t)
   {
-    super(opName, SqlKind.OTHER_FUNCTION, returnTypeInference, operandTypeInference, operandMetadata, tableMacro);
-
-    // Because Calcite's copy of the macro is private
-    this.macro = tableMacro;
-  }
-
-  public ConcatTableMacro(TableMacro a, SqlOperandMetadata t)
-  {
-    this(
+    super(
         new SqlIdentifier(TableConcatOperatorConversion.FUNCTION_NAME, SqlParserPos.ZERO),
+        SqlKind.OTHER_FUNCTION,
         ReturnTypes.CURSOR,
         null,
         t,
-        a
+        null
     );
+
+    // this.macro = new MyTableMacro();
   }
 
-  /**
-   * Copy of Calcite method {@link SqlUserDefinedTableMacro#getTable} to add array and named parameter handling.
-   */
+  @Override
+  public List<String> getParamNames()
+  {
+    return ImmutableList.<String>builder().add("t1", "t2").build();
+  }
+
+  static class MyTableMacro implements TableMacro
+  {
+
+    @Override
+    public List<FunctionParameter> getParameters()
+    {
+      final ReflectiveFunctionBase.ParameterListBuilder params = ReflectiveFunctionBase.builder();
+
+      params.add(String.class, "T1");
+      params.add(String.class, "T2");
+      return params.build();
+
+    }
+
+    @Override
+    public TranslatableTable apply(List<? extends @Nullable Object> arguments)
+    {
+      if (true) {
+        throw new RuntimeException("FIXME: Unimplemented!");
+      }
+      return null;
+    }
+
+  }
+
   @Override
   public TranslatableTable getTable(SqlOperatorBinding callBinding)
   {
-    RelDataTypeFactory tf = callBinding.getTypeFactory();
-
-    int operandCount = callBinding.getOperandCount();
     SqlCallBinding ss = (SqlCallBinding) callBinding;
     SqlValidator validator = ss.getValidator();
-    Object t = validator.getCatalogReader().getTable(ImmutableList.<String>builder().add("foo").build());
+    SqlValidatorCatalogReader catalogReader = validator.getCatalogReader();
+    Object t = catalogReader.getTable(ImmutableList.<String>builder().add("foo").build());
 
-    List<Object> arguments = convertArguments(callBinding, macro, getNameAsId(), true);
-    return macro.apply(arguments);
+    List<String> tableNames = getTableNames(callBinding);
+    List<RelOptTable> tables = getTables(catalogReader, tableNames);
+
+    return new AppendTable(tables);
   }
 
-  /**
-   * Similar to Calcite method {@link SqlUserDefinedTableMacro#convertArguments}, but with array and named parameter
-   * handling.
-   */
-  public static List<Object> convertArguments(
-      SqlOperatorBinding callBinding,
-      Function function,
-      SqlIdentifier opName,
-      boolean failOnNonLiteral)
+  private List<String> getTableNames(SqlOperatorBinding callBinding)
   {
-    final RelDataTypeFactory typeFactory = callBinding.getTypeFactory();
-    final List<FunctionParameter> parameters = function.getParameters();
-    final List<Object> arguments = new ArrayList<>(callBinding.getOperandCount());
-
-    for (int i = 0; i < parameters.size(); i++) {
-      final FunctionParameter parameter = parameters.get(i);
-      final RelDataType type = parameter.getType(typeFactory);
-      try {
-        final Object o;
-
-        if (callBinding.isOperandLiteral(i, true)) {
-          o = callBinding.getOperandLiteralValue(i, Object.class);
-        } else {
-          throw new NonLiteralException();
-        }
-
-        final Object o2 = coerce(o, type);
-        arguments.add(o2);
+    List<String> ret = new ArrayList<>();
+    for (int i = 0; i < callBinding.getOperandCount(); i++) {
+      if (!callBinding.isOperandLiteral(i, false)) {
+        throw new IllegalArgumentException(
+            "All arguments of call to macro "
+                + "APPEND should be literal. Actual argument #"
+                + i + " is not literal"
+        );
       }
-      catch (NonLiteralException e) {
-        if (failOnNonLiteral) {
-          throw new IAE(
-              "All arguments of call to macro %s should be literal. Actual argument #%d (%s) is not literal",
-              opName,
-              parameter.getOrdinal(),
-              parameter.getName()
-          );
-        }
-
-        final Object value;
-        if (type.isNullable()) {
-          value = null;
-        } else {
-          // Odd default, given that we don't know the type is numeric. But this is what Calcite does upstream
-          // in SqlUserDefinedTableMacro.
-          value = 0L;
-        }
-        arguments.add(value);
-      }
+      ret.add(callBinding.getOperandLiteralValue(i, String.class));
     }
-
-    return arguments;
+    return ret;
   }
 
-  // Copy of Calcite method with Druid-specific code added
-  private static Object coerce(Object o, RelDataType type) throws NonLiteralException
+  private List<RelOptTable> getTables(SqlValidatorCatalogReader catalogReader, List<String> tableNames)
   {
-    if (o == null) {
+    List<RelOptTable> ret = new ArrayList<>();
+    for (String tableName : tableNames) {
+      SqlValidatorTable t = catalogReader.getTable(ImmutableList.<String>builder().add(tableName).build());
+      ret.add(t.unwrapOrThrow(RelOptTable.class));
+    }
+    return ret;
+  }
+
+  private TranslatableTable apply(List<RelOptTable> tables)
+  {
+    if (true) {
+      throw new RuntimeException("FIXME: Unimplemented!");
+    }
+    return null;
+
+  }
+
+  static class AppendTable implements TranslatableTable
+  {
+
+    @Override
+    public RelDataType getRowType(RelDataTypeFactory typeFactory)
+    {
+      if (true) {
+        throw new RuntimeException("FIXME: Unimplemented!");
+      }
       return null;
-    }
-    // Druid-specific code to handle arrays. Although the type
-    // is called an ARRAY in SQL, the actual argument is a generic
-    // list, which we then convert to another list with the elements
-    // coerced to the declared element type.
-    if (type instanceof ArraySqlType) {
-      RelDataType elementType = ((ArraySqlType) type).getComponentType();
-      if (!(elementType instanceof RelDataTypeFactoryImpl.JavaType)) {
-        throw new NonLiteralException();
-      }
 
-      // If a list (ARRAY), then coerce each member.
-      if (!(o instanceof List)) {
-        throw new NonLiteralException();
-      }
-      List<?> arg = (List<?>) o;
-      List<Object> revised = new ArrayList<>(arg.size());
-      for (Object value : arg) {
-        Object element = coerce(value, elementType);
-        if (element == null) {
-          throw new NonLiteralException();
-        }
-        revised.add(element);
-      }
-      return revised;
     }
-    if (!(type instanceof RelDataTypeFactoryImpl.JavaType)) {
-      // If the type can't be converted, raise an error. Calcite returns null
-      // which causes odd downstream failures that are hard to diagnose.
-      throw new NonLiteralException();
-    }
-    final RelDataTypeFactoryImpl.JavaType javaType = (RelDataTypeFactoryImpl.JavaType) type;
-    final Class<?> clazz = javaType.getJavaClass();
-    // noinspection unchecked
-    if (clazz.isAssignableFrom(o.getClass())) {
-      return o;
-    }
-    if (clazz == String.class && o instanceof NlsString) {
-      return ((NlsString) o).getValue();
-    }
-    // We need optimization here for constant folding.
-    // Not all the expressions can be interpreted (e.g. ternary), so
-    // we rely on optimization capabilities to fold non-interpretable
-    // expressions.
-    BlockBuilder bb = new BlockBuilder();
-    final Expression expr = EnumUtils.convert(Expressions.constant(o), clazz);
-    bb.add(Expressions.return_(null, expr));
-    final FunctionExpression<?> convert = Expressions.lambda(bb.toBlock(), Collections.emptyList());
-    return convert.compile().dynamicInvoke();
-  }
 
-  /**
-   * Thrown when a non-literal occurs in an argument to a user-defined table macro.
-   */
-  private static class NonLiteralException extends Exception
-  {
+    @Override
+    public Statistic getStatistic()
+    {
+      if (true) {
+        throw new RuntimeException("FIXME: Unimplemented!");
+      }
+      return null;
+
+    }
+
+    @Override
+    public TableType getJdbcTableType()
+    {
+      if (true) {
+        throw new RuntimeException("FIXME: Unimplemented!");
+      }
+      return null;
+
+    }
+
+    @Override
+    public boolean isRolledUp(String column)
+    {
+      if (true) {
+        throw new RuntimeException("FIXME: Unimplemented!");
+      }
+      return false;
+
+    }
+
+    @Override
+    public boolean rolledUpColumnValidInsideAgg(String column, SqlCall call, @Nullable SqlNode parent,
+        @Nullable CalciteConnectionConfig config)
+    {
+      if (true) {
+        throw new RuntimeException("FIXME: Unimplemented!");
+      }
+      return false;
+
+    }
+
+    @Override
+    public RelNode toRel(ToRelContext context, RelOptTable relOptTable)
+    {
+      if (true) {
+        throw new RuntimeException("FIXME: Unimplemented!");
+      }
+      return null;
+
+    }
+
   }
 }
