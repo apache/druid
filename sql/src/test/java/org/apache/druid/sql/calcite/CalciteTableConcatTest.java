@@ -30,6 +30,18 @@ public class CalciteTableConcatTest extends BaseCalciteQueryTest
   public NotYetSupportedProcessor negativeTestProcessor = new NotYetSupportedProcessor();
 
   @Test
+  public void testTasksSum1()
+  {
+    testBuilder()
+      .sql("select * from foo")
+//    .sql("select datasource, sum(duration) from sys.tasks group by datasource")
+        .expectedResults(ImmutableList.of(
+            new Object[]{"foo", 11L},
+            new Object[]{"foo2", 22L}
+        ))
+        .run();
+  }
+  @Test
   public void testTasksSum()
   {
     testBuilder()

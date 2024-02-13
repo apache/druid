@@ -25,7 +25,6 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.druid.catalog.model.facade.DatasourceFacade;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.metadata.DataSourceInformation;
@@ -51,24 +50,24 @@ public class DatasourceTable extends DruidTable
    */
   public static class PhysicalDatasourceMetadata extends DataSourceInformation
   {
-    private final TableDataSource tableDataSource;
+    private final DataSource tableDataSource;
     private final boolean joinable;
     private final boolean broadcast;
 
     public PhysicalDatasourceMetadata(
-        final TableDataSource tableDataSource,
+        final DataSource tableDataSource,
         final RowSignature rowSignature,
         final boolean isJoinable,
         final boolean isBroadcast
     )
     {
-      super(tableDataSource.getName(), rowSignature);
+      super(tableDataSource, rowSignature);
       this.tableDataSource = Preconditions.checkNotNull(tableDataSource, "dataSource");
       this.joinable = isJoinable;
       this.broadcast = isBroadcast;
     }
 
-    public TableDataSource dataSource()
+    public DataSource dataSource()
     {
       return tableDataSource;
     }

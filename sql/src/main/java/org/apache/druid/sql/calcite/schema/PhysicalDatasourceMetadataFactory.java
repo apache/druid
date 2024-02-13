@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.schema;
 
 import com.google.inject.Inject;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.column.RowSignature;
@@ -51,8 +52,15 @@ public class PhysicalDatasourceMetadataFactory
    *
    * @return PhysicalDatasourceMetadata which includes information about schema, joinability and broadcast status
    */
-  PhysicalDatasourceMetadata build(final String dataSource, final RowSignature rowSignature)
+  PhysicalDatasourceMetadata build(final DataSource dataSource1, final RowSignature rowSignature)
   {
+    String dataSource;
+    if (dataSource1 instanceof TableDataSource) {
+      TableDataSource tableDataSource = (TableDataSource) dataSource1;
+      dataSource = tableDataSource.getName();
+    } else {
+      throw new RuntimeException();
+    }
     final TableDataSource tableDataSource;
 
     // to be a GlobalTableDataSource instead of a TableDataSource, it must appear on all servers (inferred by existing

@@ -104,13 +104,13 @@ public class PhysicalDataSourceMetadataFactoryTest
     DatasourceTable.PhysicalDatasourceMetadata fooDs = datasourceMetadataFactory.build("foo", fooSignature);
     Assert.assertTrue(fooDs.isJoinable());
     Assert.assertTrue(fooDs.isBroadcast());
-    Assert.assertEquals(fooDs.dataSource().getName(), "foo");
+    Assert.assertEquals(fooDs.dataSource(), "XXXfoo");
     Assert.assertEquals(fooDs.getRowSignature(), fooSignature);
 
     DatasourceTable.PhysicalDatasourceMetadata barDs = datasourceMetadataFactory.build("bar", barSignature);
     Assert.assertFalse(barDs.isJoinable());
     Assert.assertFalse(barDs.isBroadcast());
-    Assert.assertEquals(barDs.dataSource().getName(), "bar");
+    Assert.assertEquals(barDs.dataSource(), "XXXbar");
     Assert.assertEquals(barDs.getRowSignature(), barSignature);
   }
 }

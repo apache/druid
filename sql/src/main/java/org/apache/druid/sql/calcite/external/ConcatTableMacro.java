@@ -19,23 +19,15 @@
 
 package org.apache.druid.sql.calcite.external;
 
-import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.plan.RelOptTable;
-import org.apache.calcite.plan.RelOptTable.ToRelContext;
-import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.schema.FunctionParameter;
-import org.apache.calcite.schema.Schema.TableType;
-import org.apache.calcite.schema.Statistic;
 import org.apache.calcite.schema.TableMacro;
 import org.apache.calcite.schema.TranslatableTable;
 import org.apache.calcite.schema.impl.ReflectiveFunctionBase;
-import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlCallBinding;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperatorBinding;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.ReturnTypes;
@@ -45,10 +37,20 @@ import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
 import org.apache.calcite.sql.validate.SqlValidatorTable;
 import org.apache.curator.shaded.com.google.common.collect.ImmutableList;
+import org.apache.druid.query.DataSource;
+import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnionDataSource;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.RowSignature.Builder;
+import org.apache.druid.sql.calcite.table.DatasourceTable;
+import org.apache.druid.sql.calcite.table.DatasourceTable.PhysicalDatasourceMetadata;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * FIXME
@@ -111,7 +113,77 @@ public class ConcatTableMacro extends SqlUserDefinedTableMacro
     List<String> tableNames = getTableNames(callBinding);
     List<RelOptTable> tables = getTables(catalogReader, tableNames);
 
-    return new AppendTable(tables);
+    AppendDesc union = buildUnionDataSource(tables);
+    return new AppendTable(union);
+  }
+
+  static class AppendDesc
+  {
+    private RowSignature values;
+    private List<DataSource> dataSources;
+
+    public AppendDesc(RowSignature values, List<DataSource> dataSources)
+    {
+      this.values = values;
+      this.dataSources = dataSources;
+    }
+
+    public PhysicalDatasourceMetadata buildPhysicalDatasourceMetadata()
+    {
+      return new PhysicalDatasourceMetadata(
+              buildDataSource(), values, false, false);
+
+    }
+
+    private UnionDataSource buildDataSource()
+    {
+      return new UnionDataSource(dataSources);
+    }
+  }
+
+  private AppendDesc buildUnionDataSource(List<RelOptTable> tables)
+  {
+    List<DataSource> dataSources = new ArrayList<>();
+    Map<String, RelDataTypeField> fields = new LinkedHashMap<>();
+    Map<String, ColumnType> fields2 = new LinkedHashMap<>();
+    Builder rowSignatureBuilder = RowSignature.builder();
+    for (RelOptTable relOptTable : tables) {
+
+      if(false) {
+        for (RelDataTypeField newField : relOptTable.getRowType().getFieldList()) {
+
+          String key = newField.getKey();
+          RelDataTypeField existingField = fields.get(key);
+          if (existingField != null && !existingField.equals(newField)) {
+            // FIXME this could be more sophisticated
+            throw new IllegalArgumentException("incompatible operands");
+          }
+          if (existingField == null) {
+            fields.put(key, newField);
+          }
+        }
+      }
+      DatasourceTable a = relOptTable.unwrapOrThrow(DatasourceTable.class);
+
+      RowSignature rowSignature = a.getRowSignature();
+      for (String currentColumn : rowSignature.getColumnNames()) {
+
+        String key = currentColumn;
+        ColumnType currentType = rowSignature.getColumnType(currentColumn).get();
+        ColumnType existingType = fields2.get(key);
+        if (existingType != null && !existingType.equals(currentType)) {
+          // FIXME this could be more sophisticated
+          throw new IllegalArgumentException("incompatible operands");
+        }
+        if (existingType == null) {
+          fields2.put(key, currentType);
+        }
+      }
+
+      rowSignatureBuilder.addAll(a.getRowSignature());
+      dataSources.add(a.getDataSource());
+    }
+    return new AppendDesc(rowSignatureBuilder.build(), dataSources);
   }
 
   private List<String> getTableNames(SqlOperatorBinding callBinding)
@@ -149,68 +221,12 @@ public class ConcatTableMacro extends SqlUserDefinedTableMacro
 
   }
 
-  static class AppendTable implements TranslatableTable
+  static class AppendTable extends DatasourceTable
   {
 
-    @Override
-    public RelDataType getRowType(RelDataTypeFactory typeFactory)
+    public AppendTable(AppendDesc union)
     {
-      if (true) {
-        throw new RuntimeException("FIXME: Unimplemented!");
-      }
-      return null;
-
-    }
-
-    @Override
-    public Statistic getStatistic()
-    {
-      if (true) {
-        throw new RuntimeException("FIXME: Unimplemented!");
-      }
-      return null;
-
-    }
-
-    @Override
-    public TableType getJdbcTableType()
-    {
-      if (true) {
-        throw new RuntimeException("FIXME: Unimplemented!");
-      }
-      return null;
-
-    }
-
-    @Override
-    public boolean isRolledUp(String column)
-    {
-      if (true) {
-        throw new RuntimeException("FIXME: Unimplemented!");
-      }
-      return false;
-
-    }
-
-    @Override
-    public boolean rolledUpColumnValidInsideAgg(String column, SqlCall call, @Nullable SqlNode parent,
-        @Nullable CalciteConnectionConfig config)
-    {
-      if (true) {
-        throw new RuntimeException("FIXME: Unimplemented!");
-      }
-      return false;
-
-    }
-
-    @Override
-    public RelNode toRel(ToRelContext context, RelOptTable relOptTable)
-    {
-      if (true) {
-        throw new RuntimeException("FIXME: Unimplemented!");
-      }
-      return null;
-
+      super(union.buildPhysicalDatasourceMetadata ());
     }
 
   }

@@ -22,6 +22,8 @@ package org.apache.druid.segment.metadata;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.query.DataSource;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.column.RowSignature;
 
 import java.util.Objects;
@@ -31,12 +33,21 @@ import java.util.Objects;
  */
 public class DataSourceInformation
 {
-  private final String dataSource;
+  private final DataSource dataSource;
   private final RowSignature rowSignature;
+
+
+  @Deprecated
+  public DataSourceInformation(
+      String dataSource,
+      RowSignature rowSignature)
+  {
+    this(new TableDataSource(dataSource),rowSignature);
+  }
 
   @JsonCreator
   public DataSourceInformation(
-      @JsonProperty("dataSource") String dataSource,
+      @JsonProperty("dataSource") DataSource dataSource,
       @JsonProperty("rowSignature") RowSignature rowSignature)
   {
     this.dataSource = Preconditions.checkNotNull(dataSource, "'dataSource' must be nonnull");
@@ -44,7 +55,7 @@ public class DataSourceInformation
   }
 
   @JsonProperty
-  public String getDataSource()
+  public DataSource getDataSource()
   {
     return dataSource;
   }
