@@ -56,7 +56,9 @@ CloudWatch
 ColumnDescriptor
 Corretto
 CLI
+CUME_DIST
 DDL
+DENSE_RANK
 DML
 DNS
 DRUIDVERSION
@@ -93,6 +95,7 @@ ETL
 Elasticsearch
 Enums
 FirehoseFactory
+FIRST_VALUE
 FlattenSpec
 Float.NEGATIVE_INFINITY
 Float.NEGATIVE_INFINITY.
@@ -415,6 +418,7 @@ nonfinalized
 non-null
 non-nullable
 noop
+NTILE
 numerics
 numShards
 parameterize
@@ -426,6 +430,7 @@ partitioner
 partitionFunction
 partitionsSpec
 pathParts
+PERCENT_RANK
 performant
 plaintext
 pluggable
@@ -488,6 +493,7 @@ repo
 requireSSL
 rollup
 rollups
+ROW_NUMBER
 rsync
 runtime
 schemas

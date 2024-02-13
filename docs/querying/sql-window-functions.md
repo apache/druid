@@ -168,28 +168,28 @@ The windows only define the PARTITION BY clause of the window, so Druid performs
 In this example, the dataset is filtered for a single day, therefore the window function results represent the total activity for the day, for the `user` and for the `channel` respectively.
 
 This type of result helps you analyze the impact of an individual user's hourly activity:
-- the impact to the channel by comparing hourly_user_changes to total_channel_changes
-- the impact of each user over the channel by total_user_changes to total_channel_changes
-- the progress of each user's inidividal activity by comparing hourly_user_changes to total_user_changes
+- the impact to the channel by comparing `hourly_user_changes` to `total_channel_changes`
+- the impact of each user over the channel by total_user_changes to `total_channel_changes`
+- the progress of each user's inidividal activity by comparing `hourly_user_changes` to `total_user_changes`
 
 ### Window frames
 
 You can use window frames to limit the set of rows used for the windowed aggregation. The general syntax is:
 
-window funtion
+window function
 OVER (
         [ PARTITION BY partition expression] ORDER BY order expression
         [ROWS, RANGE] BETWEEN range start AND range end
      )
 
 ROWS AND RANGE accept the following values  start and end :
-- UNBOUND PRECEDING - from the beggining of the partition as order by the order expression
-- N ROWS PRECEDING - N rows before the current row as ordered by the order expression
+- UNBOUND PRECEEDING - from the beggining of the partition as order by the order expression
+- N ROWS PRECEEDING - N rows before the current row as ordered by the order expression
 - CURRENT ROW - the current row
 - N ROWS FOLLOWING - N rows after the current row as ordered by the order expression
 UNBOUNDED FOLLOWING - to the end of the partition as ordered by the order expression
 
-The following query uses a few differnt window frames to calculate overall activity by channel:
+The following query uses a few different window frames to calculate overall activity by channel:
 
 ```sql
 SELECT
@@ -241,7 +241,7 @@ If you write a query that violates one of these conditions, Druid throws an erro
 
 |Function|Notes|
 |--------|-----|
-| `ROW_NUMBER()`| Returns the number of the row within the window |
+|`ROW_NUMBER()`| Returns the number of the row within the window |
 |`RANK()`| Returns the rank for a row within a window | 
 |`DENSE_RANK()`| Returns the rank for a row within a window without gaps. For example, if two rows tie for rank of 1, the subsequent row is ranked 2. |
 |`PERCENT_RANK()`| Returns the rank of the row calculated as a percentage according to the formula: `(rank - 1) / (total window rows - 1)` |
