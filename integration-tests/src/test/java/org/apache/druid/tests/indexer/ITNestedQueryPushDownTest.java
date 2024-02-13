@@ -25,8 +25,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.IntegrationTestingConfig;
-import org.apache.druid.testing.clients.ClientInfoResourceTestClient;
-import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.TestQueryHelper;
@@ -43,22 +41,17 @@ import java.nio.charset.StandardCharsets;
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITNestedQueryPushDownTest extends AbstractIndexerTest
 {
+  private static final Logger LOG = new Logger(ITNestedQueryPushDownTest.class);
+
   private static final String WIKITICKER_DATA_SOURCE = "wikiticker";
   private static final String WIKITICKER_INDEX_TASK = "/indexer/wikiticker_index_task.json";
   private static final String WIKITICKER_QUERIES_RESOURCE = "/queries/nestedquerypushdown_queries.json";
 
   @Inject
-  private CoordinatorResourceTestClient coordinatorClient;
-  @Inject
   private TestQueryHelper queryHelper;
-
-  private static final Logger LOG = new Logger(ITNestedQueryPushDownTest.class);
 
   @Inject
   private IntegrationTestingConfig config;
-
-  @Inject
-  ClientInfoResourceTestClient clientInfoResourceTestClient;
 
   private String fullDatasourceName;
 
