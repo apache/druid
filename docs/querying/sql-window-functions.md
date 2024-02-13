@@ -164,30 +164,32 @@ GROUP BY TIME_FLOOR(__time, 'PT1H'),2,3
 ORDER BY channel,TIME_FLOOR(__time, 'PT1H'), user
 ```
 
-The windows only define the PARTITION BY clause of the window, so Druid performs the calculation over the whole dataset for each value of the \<partition expression\>.
+The windows only define the PARTITION BY clause of the window, so Druid performs the calculation over the whole dataset for each value of the partition expression.
 In this example, the dataset is filtered for a single day, therefore the window function results represent the total activity for the day, for the `user` and for the `channel` respectively.
 
 This type of result helps you analyze the impact of an individual user's hourly activity:
 - the impact to the channel by comparing `hourly_user_changes` to `total_channel_changes`
-- the impact of each user over the channel by total_user_changes to `total_channel_changes`
-- the progress of each user's inidividal activity by comparing `hourly_user_changes` to `total_user_changes`
+- the impact of each user over the channel by `total_user_changes` to `total_channel_changes`
+- the progress of each user's individual activity by comparing `hourly_user_changes` to `total_user_changes`
 
 ### Window frames
 
 You can use window frames to limit the set of rows used for the windowed aggregation. The general syntax is:
 
+```sql
 window function
 OVER (
         [ PARTITION BY partition expression] ORDER BY order expression
         [ROWS, RANGE] BETWEEN range start AND range end
      )
+```
 
-ROWS AND RANGE accept the following values  start and end :
-- UNBOUND PRECEEDING - from the beggining of the partition as order by the order expression
-- N ROWS PRECEEDING - N rows before the current row as ordered by the order expression
+ROWS AND RANGE accept the following values start and end :
+- UNBOUND PRECEDING - from the beginning of the partition as order by the order expression
+- N ROWS PRECEDING - N rows before the current row as ordered by the order expression
 - CURRENT ROW - the current row
 - N ROWS FOLLOWING - N rows after the current row as ordered by the order expression
-UNBOUNDED FOLLOWING - to the end of the partition as ordered by the order expression
+- UNBOUNDED FOLLOWING - to the end of the partition as ordered by the order expression
 
 The following query uses a few different window frames to calculate overall activity by channel:
 
@@ -219,10 +221,10 @@ WINDOW cumulative AS (
 The example defines multiple window specifications in the WINDOW clause that you can use for various window function calculations.
 
 The query uses two windows:
-- cumulative is partitioned by channel and includes all rows from the beginning of partition up to the current row as ordered by `__time to enable cumulative aggregation
-- moving5 is also partitioned by channel but only includes up to the last 4 rows and the current row as ordered by time
+- cumulative is partitioned by channel and includes all rows from the beginning of partition up to the current row as ordered by `__time` to enable cumulative aggregation
+- `moving5` is also partitioned by channel but only includes up to the last 4 rows and the current row as ordered by time
 
-The number of rows considered for the moving5 window for the count  5 column:
+The number of rows considered for the `moving5` window for the count  5 column:
 - starts at 1 because there are no rows before the current one
 - grows up to 5 as defined by ROWS BETWEEN 4 PRECEDING AND CURRENT ROW
 
@@ -235,22 +237,22 @@ For example:
 - You cannot use two FOLLOWING expressions in the window frame. For example: "rows between 2 FOLLOWING and 3 FOLLOWING"
 - You can only use a RANGE frames when both endpoints are unbounded or current row.
 
-If you write a query that violates one of these conditions, Druid throws an error: "The query contains a window frame which may return incorrect results. To disregard this warning, set [windowingStrictValidation] to false in the query context."
+If you write a query that violates one of these conditions, Druid throws an error: "The query contains a window frame which may return incorrect results. To disregard this warning, set [`windowingStrictValidation`] to false in the query context."
 
 ## Window function reference
 
 |Function|Notes|
 |--------|-----|
-|`ROW_NUMBER()`| Returns the number of the row within the window |
-|`RANK()`| Returns the rank for a row within a window | 
-|`DENSE_RANK()`| Returns the rank for a row within a window without gaps. For example, if two rows tie for rank of 1, the subsequent row is ranked 2. |
-|`PERCENT_RANK()`| Returns the rank of the row calculated as a percentage according to the formula: `(rank - 1) / (total window rows - 1)` |
-|`CUME_DIST()`| Returns the cumulative distribution of the current row within the window calculated as `number of window rows at the same rank or higher than current row` / `total window rows` |
-|`NTILE(tiles)`| Divides the rows within a window as evenly as possible into the number of tiles, also called buckets, and returns the value of the tile that the row falls into | None |
-|`LAG(expr[, offset])`| Returns the value evaluated at the row that precedes the current row by the offset number within the window. `offset` defaults to 1 if not provided |
-|`LEAD(expr[, offset])`| Returns the value evaluated at the row that follows the current row by the offset number within the window; if there is no such row, returns the given default value. `offset` defaults to 1 if not provided |
-|`FIRST_VALUE(expr)`| Returns the value for the expression for the first row within the window |
-|`LAST_VALUE(expr)`| Returns the value for the expression for the last row within the window |
+| `ROW_NUMBER()` | Returns the number of the row within the window |
+| `RANK()` | Returns the rank for a row within a window | 
+| `DENSE_RANK()` | Returns the rank for a row within a window without gaps. For example, if two rows tie for rank of 1, the subsequent row is ranked 2. |
+| `PERCENT_RANK()` | Returns the rank of the row calculated as a percentage according to the formula: `(rank - 1) / (total window rows - 1)` |
+| `CUME_DIST()` | Returns the cumulative distribution of the current row within the window calculated as number of window rows at the same rank or higher than current row divided by total window rows |
+| `NTILE(tiles)` | Divides the rows within a window as evenly as possible into the number of tiles, also called buckets, and returns the value of the tile that the row falls into | None |
+| `LAG(expr[, offset])` | Returns the value evaluated at the row that precedes the current row by the offset number within the window. `offset` defaults to 1 if not provided |
+| `LEAD(expr[, offset])` | Returns the value evaluated at the row that follows the current row by the offset number within the window; if there is no such row, returns the given default value. `offset` defaults to 1 if not provided |
+| `FIRST_VALUE(expr)` | Returns the value for the expression for the first row within the window |
+| `LAST_VALUE(expr)` | Returns the value for the expression for the last row within the window |
 
 ## Examples
 
