@@ -42,8 +42,8 @@ import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.RowSignature.Builder;
+import org.apache.druid.sql.calcite.table.DatasourceMetadata;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
-import org.apache.druid.sql.calcite.table.DatasourceTable.PhysicalDatasourceMetadata;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayList;
@@ -127,17 +127,28 @@ public class ConcatTableMacro extends SqlUserDefinedTableMacro
       this.dataSources = dataSources;
     }
 
-    public PhysicalDatasourceMetadata buildPhysicalDatasourceMetadata()
+    public DatasourceMetadata buildPhysicalDatasourceMetadata()
     {
-      return null;
-//      return new PhysicalDatasourceMetadata(
-//              buildDataSource(), values, false, false);
+      return new DatasourceMetadata()
+      {
+        @Override
+        public boolean isJoinable()
+        {
+          return false;
+        }
 
-    }
+        @Override
+        public boolean isBroadcast()
+        {
+          return false;
+        }
 
-    private UnionDataSource buildDataSource()
-    {
-      return new UnionDataSource(dataSources);
+        @Override
+        public DataSource dataSource()
+        {
+          return new UnionDataSource(dataSources);
+        }
+      };
     }
   }
 
@@ -226,7 +237,11 @@ public class ConcatTableMacro extends SqlUserDefinedTableMacro
 
     public AppendTable(AppendDesc union)
     {
-      super(union.buildPhysicalDatasourceMetadata ());
+      super(
+          null,
+          union.buildPhysicalDatasourceMetadata (),
+          null
+          );
     }
 
   }

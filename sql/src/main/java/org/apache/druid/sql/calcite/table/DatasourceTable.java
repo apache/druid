@@ -83,23 +83,11 @@ public class DatasourceTable extends DruidTable
       return broadcast;
     }
 
-    public Map<String, EffectiveColumnMetadata> toEffectiveColumns()
-    {
-      Map<String, EffectiveColumnMetadata> columns = new HashMap<>();
-      for (int i = 0; i < getRowSignature().size(); i++) {
-        String colName = getRowSignature().getColumnName(i);
-        ColumnType colType = getRowSignature().getColumnType(i).get();
-
-        EffectiveColumnMetadata colMetadata = EffectiveColumnMetadata.fromPhysical(colName, colType);
-        columns.put(colName, colMetadata);
-      }
-      return columns;
-    }
-
     public EffectiveMetadata toEffectiveMetadata()
     {
-      return new EffectiveMetadata(null, toEffectiveColumns(), false);
+      return EffectiveMetadata.of(getRowSignature());
     }
+
 
     @Override
     public boolean equals(Object o)
@@ -188,6 +176,24 @@ public class DatasourceTable extends DruidTable
       this.catalogMetadata = catalogMetadata;
       this.isEmpty = isEmpty;
       this.columns = columns;
+    }
+
+    public static Map<String, EffectiveColumnMetadata> toEffectiveColumns(RowSignature rowSignature)
+    {
+      Map<String, EffectiveColumnMetadata> columns = new HashMap<>();
+      for (int i = 0; i < rowSignature.size(); i++) {
+        String colName = rowSignature.getColumnName(i);
+        ColumnType colType = rowSignature.getColumnType(i).get();
+
+        EffectiveColumnMetadata colMetadata = EffectiveColumnMetadata.fromPhysical(colName, colType);
+        columns.put(colName, colMetadata);
+      }
+      return columns;
+    }
+
+    private static EffectiveMetadata of(RowSignature rowSignature)
+    {
+      return new EffectiveMetadata(null, toEffectiveColumns(rowSignature), false);
     }
 
     public DatasourceFacade catalogMetadata()
