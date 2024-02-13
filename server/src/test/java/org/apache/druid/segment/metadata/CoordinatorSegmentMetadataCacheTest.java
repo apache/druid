@@ -31,9 +31,13 @@ import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.metadata.MetadataStorageTablesConfig;
+import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.TableDataSource;
@@ -47,9 +51,12 @@ import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.SchemaPayload;
+import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -66,13 +73,17 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.easymock.EasyMock;
+import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.skife.jdbi.v2.StatementContext;
 
 import java.io.File;
 import java.io.IOException;
+import java.sql.ResultSet;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -82,8 +93,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetadataCacheCommon
@@ -166,47 +180,14 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
   public void testGetTableMapFoo() throws InterruptedException
   {
     CoordinatorSegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
-    final DataSourceInformation fooDs = schema.getDatasource("foo");
-    final RowSignature fooRowSignature = fooDs.getRowSignature();
-    List<String> columnNames = fooRowSignature.getColumnNames();
-    Assert.assertEquals(6, columnNames.size());
-
-    Assert.assertEquals("__time", columnNames.get(0));
-    Assert.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(0)).get());
-
-    Assert.assertEquals("dim2", columnNames.get(1));
-    Assert.assertEquals(ColumnType.STRING, fooRowSignature.getColumnType(columnNames.get(1)).get());
-
-    Assert.assertEquals("m1", columnNames.get(2));
-    Assert.assertEquals(ColumnType.DOUBLE, fooRowSignature.getColumnType(columnNames.get(2)).get());
-
-    Assert.assertEquals("dim1", columnNames.get(3));
-    Assert.assertEquals(ColumnType.STRING, fooRowSignature.getColumnType(columnNames.get(3)).get());
-
-    Assert.assertEquals("cnt", columnNames.get(4));
-    Assert.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(4)).get());
-
-    Assert.assertEquals("unique_dim1", columnNames.get(5));
-    Assert.assertEquals(ColumnType.ofComplex("hyperUnique"), fooRowSignature.getColumnType(columnNames.get(5)).get());
+    verifyFooDSSchema(schema);
   }
 
   @Test
   public void testGetTableMapFoo2() throws InterruptedException
   {
     CoordinatorSegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
-    final DataSourceInformation fooDs = schema.getDatasource("foo2");
-    final RowSignature fooRowSignature = fooDs.getRowSignature();
-    List<String> columnNames = fooRowSignature.getColumnNames();
-    Assert.assertEquals(3, columnNames.size());
-
-    Assert.assertEquals("__time", columnNames.get(0));
-    Assert.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(0)).get());
-
-    Assert.assertEquals("dim2", columnNames.get(1));
-    Assert.assertEquals(ColumnType.STRING, fooRowSignature.getColumnType(columnNames.get(1)).get());
-
-    Assert.assertEquals("m1", columnNames.get(2));
-    Assert.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(2)).get());
+    verifyFoo2DSSchema(schema);
   }
 
   @Test
@@ -1532,5 +1513,209 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     rowSignatureBuilder.add("unique_dim1", ColumnType.ofComplex("hyperUnique"));
     rowSignatureBuilder.add("dim2", ColumnType.STRING);
     Assert.assertEquals(rowSignatureBuilder.build(), schema.getDatasource(DATASOURCE3).getRowSignature());
+  }
+
+  @Test
+  public void testSchemaBackfilling() throws InterruptedException
+  {
+    CentralizedDatasourceSchemaConfig config = CentralizedDatasourceSchemaConfig.create();
+    config.setEnabled(true);
+    config.setBackFillEnabled(true);
+    config.setBackFillPeriod(Period.millis(1));
+
+    backFillQueue =
+        new SegmentSchemaBackFillQueue(
+            schemaManager,
+            ScheduledExecutors::fixed,
+            segmentSchemaCache,
+            fingerprintGenerator,
+            config
+        );
+
+    QueryableIndexStorageAdapter index1StorageAdaptor = new QueryableIndexStorageAdapter(index1);
+    QueryableIndexStorageAdapter index2StorageAdaptor = new QueryableIndexStorageAdapter(index2);
+
+    MetadataStorageTablesConfig tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
+
+    TestDerbyConnector derbyConnector = derbyConnectorRule.getConnector();
+    derbyConnector.createSegmentSchemaTable();
+    derbyConnector.createSegmentTable();
+
+    Set<DataSegment> segmentsToPersist = new HashSet<>();
+    segmentsToPersist.add(segment1);
+    segmentsToPersist.add(segment2);
+    segmentsToPersist.add(segment3);
+
+    List<SchemaManager.SegmentSchemaMetadataPlus> pluses = new ArrayList<>();
+    pluses.add(new SchemaManager.SegmentSchemaMetadataPlus(
+        segment1.getId(),
+        new SegmentSchemaMetadata(
+            new SchemaPayload(
+                index1StorageAdaptor.getRowSignature()),
+            (long) index1StorageAdaptor.getNumRows()
+        ),
+        fingerprintGenerator.generateId(new SchemaPayload(index1StorageAdaptor.getRowSignature()))
+    ));
+    pluses.add(new SchemaManager.SegmentSchemaMetadataPlus(
+        segment2.getId(),
+        new SegmentSchemaMetadata(
+            new SchemaPayload(
+                index2StorageAdaptor.getRowSignature()),
+            (long) index2StorageAdaptor.getNumRows()
+        ),
+        fingerprintGenerator.generateId(new SchemaPayload(index2StorageAdaptor.getRowSignature()))
+    ));
+
+    SegmentSchemaTestUtils segmentSchemaTestUtils = new SegmentSchemaTestUtils(derbyConnectorRule, derbyConnector, mapper);
+    segmentSchemaTestUtils.insertUsedSegments(segmentsToPersist, Collections.emptyMap());
+    schemaManager.persistSchemaAndUpdateSegmentsTable(pluses);
+
+    ConcurrentMap<SegmentId, SegmentSchemaCache.SegmentStats> segmentStatsMap = new ConcurrentHashMap<>();
+
+    derbyConnector.retryWithHandle(handle -> {
+      handle.createQuery(StringUtils.format(
+                "select s1.id, s1.dataSource, s1.schema_id, s1.num_rows, s2.payload "
+                + "from %1$s as s1 inner join %2$s as s2 on s1.schema_id = s2.id",
+                tablesConfig.getSegmentsTable(),
+                tablesConfig.getSegmentSchemaTable()
+            ))
+            .map((int index, ResultSet r, StatementContext ctx) -> {
+              try {
+                String segmentId = r.getString(1);
+                String dataSource = r.getString(2);
+                long schemaId = r.getLong(3);
+                long numRows = r.getLong(4);
+                SchemaPayload schemaPayload = mapper.readValue(r.getBytes(5), SchemaPayload.class);
+                segmentSchemaCache.addFinalizedSegmentSchema(schemaId, schemaPayload);
+                segmentStatsMap.put(SegmentId.tryParse(dataSource, segmentId), new SegmentSchemaCache.SegmentStats(schemaId, numRows));
+              }
+              catch (IOException e) {
+                throw new RuntimeException(e);
+              }
+              return null;
+            }).list();
+      return null;
+    });
+
+    segmentSchemaCache.updateFinalizedSegmentStatsReference(segmentStatsMap);
+    segmentSchemaCache.setInitialized();
+
+    serverView = new TestCoordinatorServerView(Collections.emptyList(), Collections.emptyList());
+
+    AtomicInteger refreshCount = new AtomicInteger();
+
+    CountDownLatch latch = new CountDownLatch(2);
+    CoordinatorSegmentMetadataCache schema = new CoordinatorSegmentMetadataCache(
+        getQueryLifecycleFactory(walker),
+        serverView,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
+        new NoopEscalator(),
+        new InternalQueryConfig(),
+        new NoopServiceEmitter(),
+        segmentSchemaCache,
+        backFillQueue
+    ) {
+      @Override
+      public Set<SegmentId> refreshSegmentsForDataSource(String dataSource, Set<SegmentId> segments)
+          throws IOException
+      {
+        refreshCount.incrementAndGet();
+        return super.refreshSegmentsForDataSource(dataSource, segments);
+      }
+
+      @Override
+      public void refresh(Set<SegmentId> segmentsToRefresh, Set<String> dataSourcesToRebuild)
+          throws IOException
+      {
+        super.refresh(segmentsToRefresh, dataSourcesToRebuild);
+        latch.countDown();
+      }
+    };
+
+    serverView.addSegment(segment1, ServerType.HISTORICAL);
+    serverView.addSegment(segment2, ServerType.HISTORICAL);
+
+    schema.start();
+    schema.awaitInitialization();
+
+    // verify SMQ is not executed, since the schema is already cached
+    Assert.assertEquals(0, refreshCount.get());
+
+    // verify that datasource schema is built
+    verifyFooDSSchema(schema);
+
+    serverView.addSegment(segment3, ServerType.HISTORICAL);
+
+    latch.await();
+
+    verifyFoo2DSSchema(schema);
+
+    derbyConnector.retryWithHandle(handle -> {
+      handle.createQuery(StringUtils.format(
+          "select s2.payload "
+          + "from %1$s as s1 inner join %2$s as s2 on s1.schema_id = s2.id where s1.id = '%3$s'",
+          tablesConfig.getSegmentsTable(),
+          tablesConfig.getSegmentSchemaTable(),
+          segment3.getId().toString()
+            ))
+            .map((int index, ResultSet r, StatementContext ctx) -> {
+              try {
+                SchemaPayload schemaPayload = mapper.readValue(r.getBytes(1), SchemaPayload.class);
+                long numRows = r.getLong(1);
+                QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(index2);
+                Assert.assertEquals(adapter.getRowSignature(), schemaPayload.getRowSignature());
+                Assert.assertEquals(adapter.getNumRows(), numRows);
+              }
+              catch (IOException e) {
+                throw new RuntimeException(e);
+              }
+              return null;
+            })
+            .list();
+      return null;
+    });
+  }
+
+  private void verifyFooDSSchema(CoordinatorSegmentMetadataCache schema)
+  {
+    final DataSourceInformation fooDs = schema.getDatasource("foo");
+    final RowSignature fooRowSignature = fooDs.getRowSignature();
+    List<String> columnNames = fooRowSignature.getColumnNames();
+    Assert.assertEquals(6, columnNames.size());
+
+    Assert.assertEquals("__time", columnNames.get(0));
+    Assert.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(0)).get());
+
+    Assert.assertEquals("dim2", columnNames.get(1));
+    Assert.assertEquals(ColumnType.STRING, fooRowSignature.getColumnType(columnNames.get(1)).get());
+
+    Assert.assertEquals("m1", columnNames.get(2));
+    Assert.assertEquals(ColumnType.DOUBLE, fooRowSignature.getColumnType(columnNames.get(2)).get());
+
+    Assert.assertEquals("dim1", columnNames.get(3));
+    Assert.assertEquals(ColumnType.STRING, fooRowSignature.getColumnType(columnNames.get(3)).get());
+
+    Assert.assertEquals("cnt", columnNames.get(4));
+    Assert.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(4)).get());
+
+    Assert.assertEquals("unique_dim1", columnNames.get(5));
+    Assert.assertEquals(ColumnType.ofComplex("hyperUnique"), fooRowSignature.getColumnType(columnNames.get(5)).get());
+  }
+
+  private void verifyFoo2DSSchema(CoordinatorSegmentMetadataCache schema)
+  {
+    final DataSourceInformation fooDs = schema.getDatasource("foo2");
+    final RowSignature fooRowSignature = fooDs.getRowSignature();
+    List<String> columnNames = fooRowSignature.getColumnNames();
+    Assert.assertEquals(3, columnNames.size());
+
+    Assert.assertEquals("__time", columnNames.get(0));
+    Assert.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(0)).get());
+
+    Assert.assertEquals("dim2", columnNames.get(1));
+    Assert.assertEquals(ColumnType.STRING, fooRowSignature.getColumnType(columnNames.get(1)).get());
+
+    Assert.assertEquals("m1", columnNames.get(2));
+    Assert.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(2)).get());
   }
 }

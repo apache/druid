@@ -64,7 +64,7 @@ public class SchemaManagerTest
   SegmentSchemaTestUtils segmentSchemaTestUtils;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     derbyConnector = derbyConnectorRule.getConnector();
     tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();

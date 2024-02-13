@@ -160,7 +160,11 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   }
 
   @Override
-  protected boolean smqAction(String dataSource, SegmentId segmentId, RowSignature rowSignature, SegmentAnalysis analysis)
+  protected boolean smqAction(
+      String dataSource,
+      SegmentId segmentId,
+      RowSignature rowSignature,
+      SegmentAnalysis analysis)
   {
     AtomicBoolean added = new AtomicBoolean(false);
     segmentMetadataInfo.compute(
@@ -184,7 +188,9 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
                   } else {
                     long numRows = analysis.getNumRows();
                     Map<String, AggregatorFactory> aggregators = analysis.getAggregators();
+                    // cache the signature
                     segmentSchemaCache.addInTransitSMQResult(segmentId, rowSignature, numRows);
+                    // queue the schema for publishing to the DB
                     segmentSchemaBackfillQueue.add(segmentId, rowSignature, numRows, aggregators);
                     added.set(true);
                     return segmentMetadata;
@@ -392,14 +398,18 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
                       // By design, this case shouldn't arise since both segment and schema is announced in the same flow
                       // and messages shouldn't be lost in the poll
                       // also segment announcement should always precede schema announcement
-                      // and there shouldn't be any schema updated for removed segments
+                      // and there shouldn't be any schema updates for removed segments
                       log.makeAlert("Schema update [%s] for unknown segment [%s]", segmentSchema, segmentId).emit();
                     } else {
                       // We know this segment.
+                      Optional<SegmentSchemaMetadata> schemaMetadata = segmentSchemaCache.getSchemaForSegment(segmentId);
+
                       Optional<RowSignature> rowSignature =
                           mergeOrCreateRowSignature(
                               segmentId,
-                              segmentMetadata.getRowSignature(),
+                              schemaMetadata.map(
+                                  segmentSchemaMetadata -> segmentSchemaMetadata.getSchemaPayload().getRowSignature())
+                                            .orElse(null),
                               segmentSchema
                           );
                       if (rowSignature.isPresent()) {

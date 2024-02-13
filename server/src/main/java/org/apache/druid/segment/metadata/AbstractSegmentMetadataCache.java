@@ -568,6 +568,9 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     }
   }
 
+  /**
+   * This method should be overridden by child classes to execute any action on segment removal.
+   */
   protected abstract void removeSegmentAction(SegmentId segmentId);
 
   @VisibleForTesting
@@ -708,7 +711,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
    * Attempt to refresh "segmentSignatures" for a set of segments for a particular dataSource. Returns the set of
    * segments actually refreshed, which may be a subset of the asked-for set.
    */
-  private Set<SegmentId> refreshSegmentsForDataSource(final String dataSource, final Set<SegmentId> segments)
+  public Set<SegmentId> refreshSegmentsForDataSource(final String dataSource, final Set<SegmentId> segments)
       throws IOException
   {
     final Stopwatch stopwatch = Stopwatch.createStarted();
@@ -773,7 +776,16 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     return retVal;
   }
 
-  protected boolean smqAction(String dataSource, SegmentId segmentId, RowSignature rowSignature, SegmentAnalysis analysis)
+  /**
+   * Action to be executed on the result of Segment metadata query.
+   * Returns if the segment metadata was updated.
+   */
+  protected boolean smqAction(
+      String dataSource,
+      SegmentId segmentId,
+      RowSignature rowSignature,
+      SegmentAnalysis analysis
+  )
   {
     AtomicBoolean added = new AtomicBoolean(false);
     segmentMetadataInfo.compute(
