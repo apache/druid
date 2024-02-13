@@ -152,6 +152,7 @@ public class StreamAppenderatorTester implements AutoCloseable
         null,
         null,
         null,
+        null,
         null
     );
 
