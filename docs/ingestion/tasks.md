@@ -438,7 +438,7 @@ Task storage sizes are configured through a combination of three properties:
 
 While it seems like one task might use multiple directories, only one directory from the list of base directories will be used for any given task, as such, each task is only given a singular directory for scratch space.
 
-The actual amount of memory assigned to any given task is computed by determining the largest size that enables all task slots to be given an equivalent amount of disk storage.  For example, with 5 slots, 2 directories (A and B) and a size of 300 GB, 3 slots would be given to directory A, 2 slots to directory B and each slot would be allowed 100 GB 
+The actual amount of memory assigned to any given task is computed by determining the largest size that enables all task slots to be given an equivalent amount of disk storage. For example, with 5 slots, 2 directories (A and B) and a size of 300 GB, 3 slots would be given to directory A, 2 slots to directory B and each slot would be allowed 100 GB 
 
 ## All task types
 
@@ -453,12 +453,12 @@ See [Hadoop-based ingestion](hadoop.md).
 ### `index_kafka`
 
 Submitted automatically, on your behalf, by a
-[Kafka-based ingestion supervisor](../development/extensions-core/kafka-ingestion.md).
+[Kafka-based ingestion supervisor](../ingestion/kafka-ingestion.md).
 
 ### `index_kinesis`
 
 Submitted automatically, on your behalf, by a
-[Kinesis-based ingestion supervisor](../development/extensions-core/kinesis-ingestion.md).
+[Kinesis-based ingestion supervisor](../ingestion/kinesis-ingestion.md).
 
 ### `compact`
 
