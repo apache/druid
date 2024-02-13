@@ -558,7 +558,8 @@ public class KafkaEmitterTest
       final CountDownLatch eventLatch
   )
   {
-    final Map<String, List<String>> feedToActualEvents = new HashMap<>();
+    // A concurrent hashmap because the producer callback can trigger concurrently and can override the map initialization
+    final ConcurrentHashMap<String, List<String>> feedToActualEvents = new ConcurrentHashMap<>();
     when(producer.send(any(), any())).then((invocation) -> {
       final ProducerRecord<?, ?> producerRecord = invocation.getArgument(0);
       final String value = String.valueOf(producerRecord.value());
