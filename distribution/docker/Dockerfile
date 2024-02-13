@@ -35,6 +35,7 @@ RUN export DEBIAN_FRONTEND=noninteractive \
 
 COPY . /src
 WORKDIR /src
+
 RUN --mount=type=cache,target=/root/.m2 if [ "$BUILD_FROM_SOURCE" = "true" ]; then \
       mvn -B -ff -q dependency:go-offline \
       install \
