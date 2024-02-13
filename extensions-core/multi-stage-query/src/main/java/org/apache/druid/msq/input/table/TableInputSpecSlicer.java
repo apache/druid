@@ -277,6 +277,8 @@ public class TableInputSpecSlicer implements InputSpecSlicer
     @Override
     public long getWeight()
     {
+      // Estimate the size of a realtime segment as DATA_SERVER_WEIGHT_ESTIMATION, since we don't store accurate row count in
+      // the coordinator.
       return segments.size() * DATA_SERVER_WEIGHT_ESTIMATION;
     }
 
