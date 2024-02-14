@@ -131,7 +131,7 @@ public class KafkaEmitterTest
   );
 
   @Test(timeout = 10_000)
-  public void testServiceMetricEvents() throws JsonProcessingException, InterruptedException
+  public void testServiceMetricEvents() throws InterruptedException
   {
     final KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig(
         "",
@@ -170,7 +170,7 @@ public class KafkaEmitterTest
   }
 
   @Test(timeout = 10_000)
-  public void testAllEvents() throws JsonProcessingException, InterruptedException
+  public void testAllEvents() throws InterruptedException
   {
     final KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig(
         "",
@@ -215,7 +215,7 @@ public class KafkaEmitterTest
   }
 
   @Test(timeout = 10_000)
-  public void testDefaultEvents() throws JsonProcessingException, InterruptedException
+  public void testDefaultEvents() throws InterruptedException
   {
     final KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig(
         "",
@@ -257,7 +257,7 @@ public class KafkaEmitterTest
   }
 
   @Test(timeout = 10_000)
-  public void testAlertsPlusUnsubscribedEvents() throws JsonProcessingException, InterruptedException
+  public void testAlertsPlusUnsubscribedEvents() throws InterruptedException
   {
     final KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig(
         "",
@@ -305,7 +305,7 @@ public class KafkaEmitterTest
   }
 
   @Test(timeout = 10_000)
-  public void testAllEventsWithCommonTopic() throws JsonProcessingException, InterruptedException
+  public void testAllEventsWithCommonTopic() throws InterruptedException
   {
     final KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig(
         "",
@@ -350,7 +350,7 @@ public class KafkaEmitterTest
   }
 
   @Test(timeout = 10_000)
-  public void testUnknownEvents() throws JsonProcessingException, InterruptedException
+  public void testUnknownEvents() throws InterruptedException
   {
     final KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig(
         "",
@@ -534,7 +534,7 @@ public class KafkaEmitterTest
       final List<Event> events,
       final String clusterName,
       final Map<String, String> extraDimensions
-  ) throws JsonProcessingException
+  )
   {
     final Map<String, List<EventMap>> feedToExpectedEvents = new HashMap<>();
     for (final Event event : events) {
