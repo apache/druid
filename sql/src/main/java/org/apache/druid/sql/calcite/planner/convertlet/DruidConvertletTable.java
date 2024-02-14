@@ -85,6 +85,9 @@ public class DruidConvertletTable implements SqlRexConvertletTable
       return BYPASS_CONVERTLET;
     } else {
       final SqlRexConvertlet convertlet = table.get(call.getOperator());
+//      if(call.getKind()==SqlKind.NVL) {
+//        return null;
+//      }
       return convertlet != null ? convertlet : StandardConvertletTable.INSTANCE.get(call);
     }
   }
