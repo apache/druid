@@ -585,7 +585,6 @@ public class KafkaEmitterTest
   {
     final Map<String, List<EventMap>> feedToExpectedEvents = new HashMap<>();
     for (final Event event : events) {
-      // changing the toMap() to not have TriggeredOther tests
       final EventMap eventMap = MAPPER.readValue(MAPPER.writeValueAsString(event.toMap()), EventMap.class);
       eventMap.computeIfAbsent("clusterName", k -> clusterName);
       if (extraDimensions != null) {
