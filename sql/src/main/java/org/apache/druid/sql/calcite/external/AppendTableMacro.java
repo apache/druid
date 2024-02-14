@@ -123,7 +123,7 @@ public class AppendTableMacro extends SqlUserDefinedTableMacro implements Author
         if (!callBinding.isOperandLiteral(i, false)) {
           if (throwOnFailure) {
             throw DruidSqlValidator.buildCalciteContextException(
-                "All arguments to APPEND should be literal strings."
+                "All arguments to APPEND should be literal strings. "
                     + "Argument #" + i + " is not literal",
                 operand
             );
@@ -138,7 +138,7 @@ public class AppendTableMacro extends SqlUserDefinedTableMacro implements Author
         if (!SqlTypeFamily.CHARACTER.getTypeNames().contains(typeName)) {
           if (throwOnFailure) {
             throw DruidSqlValidator.buildCalciteContextException(
-                "All arguments to APPEND should be literal strings."
+                "All arguments to APPEND should be literal strings. "
                     + "Argument #" + i + " is not string",
                 operand
             );
