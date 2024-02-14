@@ -52,6 +52,8 @@ import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.expression.AuthorizableOperator;
 import org.apache.druid.sql.calcite.table.DatasourceMetadata;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
+import org.apache.druid.sql.calcite.table.DatasourceTable.EffectiveMetadata;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -125,47 +127,45 @@ public class AppendTableMacro extends SqlUserDefinedTableMacro implements Author
     List<String> tableNames = getTableNames(callBinding);
     List<RelOptTable> tables = getTables(catalogReader, tableNames);
 
-    AppendDesc union = buildUnionDataSource(tables);
-    return new AppendTable(union);
+    AppendDatasourceMetadata metadata = buildUnionDataSource(tables);
+    return new DatasourceTable(
+        metadata.values,
+        metadata,
+        EffectiveMetadata.of(metadata.values)
+    );
   }
 
-  static class AppendDesc
+  static class AppendDatasourceMetadata implements DatasourceMetadata
   {
-    private RowSignature values;
-    private List<DataSource> dataSources;
+    private final RowSignature values;
+    private final DataSource dataSource;
 
-    public AppendDesc(RowSignature values, List<DataSource> dataSources)
+    public AppendDatasourceMetadata(RowSignature values, List<DataSource> dataSources)
     {
       this.values = values;
-      this.dataSources = dataSources;
+      this.dataSource = new UnionDataSource(dataSources);
     }
 
-    public DatasourceMetadata buildPhysicalDatasourceMetadata()
+    @Override
+    public boolean isJoinable()
     {
-      return new DatasourceMetadata()
-      {
-        @Override
-        public boolean isJoinable()
-        {
-          return false;
-        }
+      return false;
+    }
 
-        @Override
-        public boolean isBroadcast()
-        {
-          return false;
-        }
+    @Override
+    public boolean isBroadcast()
+    {
+      return false;
+    }
 
-        @Override
-        public DataSource dataSource()
-        {
-          return new UnionDataSource(dataSources);
-        }
-      };
+    @Override
+    public DataSource dataSource()
+    {
+      return dataSource;
     }
   }
 
-  private AppendDesc buildUnionDataSource(List<RelOptTable> tables)
+  private AppendDatasourceMetadata buildUnionDataSource(List<RelOptTable> tables)
   {
     List<DataSource> dataSources = new ArrayList<>();
     Map<String, ColumnType> fields = new LinkedHashMap<>();
@@ -195,7 +195,7 @@ public class AppendTableMacro extends SqlUserDefinedTableMacro implements Author
     for (Entry<String, ColumnType> col : fields.entrySet()) {
       rowSignatureBuilder.add(col.getKey(), col.getValue());
     }
-    return new AppendDesc(rowSignatureBuilder.build(), dataSources);
+    return new AppendDatasourceMetadata(rowSignatureBuilder.build(), dataSources);
   }
 
   private List<String> getTableNames(SqlOperatorBinding callBinding)
@@ -222,18 +222,6 @@ public class AppendTableMacro extends SqlUserDefinedTableMacro implements Author
       ret.add(t.unwrapOrThrow(RelOptTable.class));
     }
     return ret;
-  }
-
-  static class AppendTable extends DatasourceTable
-  {
-    public AppendTable(AppendDesc union)
-    {
-      super(
-          union.values,
-          union.buildPhysicalDatasourceMetadata(),
-          EffectiveMetadata.of(union.values)
-      );
-    }
   }
 
   @Override
