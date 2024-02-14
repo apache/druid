@@ -25,6 +25,7 @@ import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.druid.sql.calcite.planner.DruidSqlIngestOperator;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -39,7 +40,7 @@ public class DruidSqlInsert extends DruidSqlIngest
   public static final String SQL_INSERT_SEGMENT_GRANULARITY = "sqlInsertSegmentGranularity";
 
   // This allows reusing super.unparse
-  public static final SqlOperator OPERATOR = SqlInsert.OPERATOR;
+  public static final SqlOperator OPERATOR = DruidSqlIngestOperator.INSERT_OPERATOR;
 
   public static DruidSqlInsert create(
       @Nonnull SqlInsert insertNode,

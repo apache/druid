@@ -32,6 +32,8 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOrderBy;
+import org.apache.calcite.sql.SqlSelect;
+import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
 import org.apache.druid.common.utils.IdUtils;
@@ -61,44 +63,20 @@ public abstract class IngestHandler extends QueryHandler
 {
   private static final Pattern UNNAMED_COLUMN_PATTERN = Pattern.compile("^EXPR\\$\\d+$", Pattern.CASE_INSENSITIVE);
 
-  protected final Granularity ingestionGranularity;
+  protected Granularity ingestionGranularity;
   protected IngestDestination targetDatasource;
+
+  private SqlNode validatedQueryNode;
+  private RelDataType targetType;
 
   IngestHandler(
       HandlerContext handlerContext,
-      DruidSqlIngest ingestNode,
-      SqlNode queryNode,
       SqlExplain explain
   )
   {
-    super(handlerContext, queryNode, explain);
-    ingestionGranularity = ingestNode.getPartitionedBy() != null ? ingestNode.getPartitionedBy().getGranularity() : null;
-    handlerContext.hook().captureInsert(ingestNode);
-  }
-
-  protected static SqlNode convertQuery(DruidSqlIngest sqlNode)
-  {
-    SqlNode query = sqlNode.getSource();
-
-    // Check if ORDER BY clause is not provided to the underlying query
-    if (query instanceof SqlOrderBy) {
-      SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
-      SqlNodeList orderByList = sqlOrderBy.orderList;
-      if (!(orderByList == null || orderByList.equals(SqlNodeList.EMPTY))) {
-        throw InvalidSqlInput.exception(
-            "Cannot use an ORDER BY clause on a Query of type [%s], use CLUSTERED BY instead",
-            sqlNode.getOperator().getName()
-        );
-      }
-    }
-    if (sqlNode.getClusteredBy() != null) {
-      query = DruidSqlParserUtils.convertClusterByToOrderBy(query, sqlNode.getClusteredBy());
-    }
-
-    if (!query.isA(SqlKind.QUERY)) {
-      throw InvalidSqlInput.exception("Unexpected SQL statement type [%s], expected it to be a QUERY", query.getKind());
-    }
-    return query;
+    super(handlerContext, explain);
+    //ingestionGranularity = ingestNode.getPartitionedBy() != null ? ingestNode.getPartitionedBy().getGranularity() : null;
+    //handlerContext.hook().captureInsert(ingestNode);
   }
 
   protected String operationName()
@@ -170,7 +148,6 @@ public abstract class IngestHandler extends QueryHandler
     catch (JsonProcessingException e) {
       throw InvalidSqlInput.exception(e, "Invalid partition granularity [%s]", ingestionGranularity);
     }
-    super.validate();
     // Check if CTX_SQL_OUTER_LIMIT is specified and fail the query if it is. CTX_SQL_OUTER_LIMIT being provided causes
     // the number of rows inserted to be limited which is likely to be confusing and unintended.
     if (handlerContext.queryContextMap().get(PlannerContext.CTX_SQL_OUTER_LIMIT) != null) {
@@ -180,7 +157,22 @@ public abstract class IngestHandler extends QueryHandler
           operationName()
       );
     }
+    DruidSqlIngest ingestNode = ingestNode();
+    DruidSqlIngest validatedNode = (DruidSqlIngest) validate(ingestNode);
+    validatedQueryNode = validatedNode.getSource();
+    CalcitePlanner planner = handlerContext.planner();
+    final SqlValidator validator = planner.getValidator();
+    targetType = validator.getValidatedNodeType(validatedNode);
+    ingestionGranularity = ingestNode().getPartitionedBy() != null
+        ? ingestNode().getPartitionedBy().getGranularity()
+        : null;
     targetDatasource = validateAndGetDataSourceForIngest();
+  }
+
+  @Override
+  protected SqlNode validatedQueryNode()
+  {
+    return validatedQueryNode;
   }
 
   @Override
@@ -299,13 +291,42 @@ public abstract class IngestHandler extends QueryHandler
         SqlExplain explain
     )
     {
-      super(
-          handlerContext,
-          sqlNode,
-          convertQuery(sqlNode),
-          explain
-      );
-      this.sqlNode = sqlNode;
+      super(handlerContext, explain);
+      this.sqlNode = convertQuery(sqlNode);
+      handlerContext.hook().captureInsert(sqlNode);
+    }
+
+    protected static DruidSqlInsert convertQuery(DruidSqlIngest sqlNode)
+    {
+      SqlNode query = sqlNode.getSource();
+
+      // Check if ORDER BY clause is not provided to the underlying query
+      if (query instanceof SqlOrderBy) {
+        SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
+        SqlNodeList orderByList = sqlOrderBy.orderList;
+        if (!(orderByList == null || orderByList.equals(SqlNodeList.EMPTY))) {
+          throw InvalidSqlInput.exception(
+              "Cannot use an ORDER BY clause on a Query of type [%s], use CLUSTERED BY instead",
+              sqlNode.getOperator().getName()
+          );
+        }
+      }
+      if (sqlNode.getClusteredBy() != null) {
+        query = DruidSqlParserUtils.convertClusterByToOrderBy(query, sqlNode.getClusteredBy());
+      }
+
+      if (!query.isA(SqlKind.QUERY)) {
+        throw InvalidSqlInput.exception("Unexpected SQL statement type [%s], expected it to be a QUERY", query.getKind());
+      }
+      return DruidSqlInsert.create(new SqlInsert(
+              sqlNode.getParserPosition(),
+              (SqlNodeList) sqlNode.getOperandList().get(0),
+              sqlNode.getOperandList().get(1),
+              query,
+              (SqlNodeList) sqlNode.getOperandList().get(3)),
+          sqlNode.getPartitionedBy(),
+          sqlNode.getClusteredBy(),
+          sqlNode.getExportFileFormat());
     }
 
     @Override
@@ -355,11 +376,48 @@ public abstract class IngestHandler extends QueryHandler
     {
       super(
           handlerContext,
-          sqlNode,
-          convertQuery(sqlNode),
           explain
       );
-      this.sqlNode = sqlNode;
+      this.sqlNode = convertQuery(sqlNode);
+      handlerContext.hook().captureInsert(sqlNode);
+    }
+
+    protected static DruidSqlReplace convertQuery(DruidSqlReplace sqlNode)
+    {
+      SqlNode query = sqlNode.getSource();
+
+      // Check if ORDER BY clause is not provided to the underlying query
+      if (query instanceof SqlOrderBy) {
+        SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
+        SqlNodeList orderByList = sqlOrderBy.orderList;
+        if (!(orderByList == null || orderByList.equals(SqlNodeList.EMPTY))) {
+          throw InvalidSqlInput.exception(
+              "Cannot use an ORDER BY clause on a Query of type [%s], use CLUSTERED BY instead",
+              sqlNode.getOperator().getName()
+          );
+        }
+      }
+      if (sqlNode.getClusteredBy() != null) {
+        query = DruidSqlParserUtils.convertClusterByToOrderBy(query, sqlNode.getClusteredBy());
+        sqlNode.setSource((SqlSelect) (((SqlOrderBy) query).query));
+      }
+
+      if (!query.isA(SqlKind.QUERY)) {
+        throw InvalidSqlInput.exception("Unexpected SQL statement type [%s], expected it to be a QUERY", query.getKind());
+      }
+      return DruidSqlReplace.create(
+          new SqlInsert(
+              sqlNode.getParserPosition(),
+              (SqlNodeList) sqlNode.getOperandList().get(0),
+              sqlNode.getOperandList().get(1),
+              query,
+              (SqlNodeList) sqlNode.getOperandList().get(3)
+          ),
+          sqlNode.getPartitionedBy(),
+          sqlNode.getClusteredBy(),
+          sqlNode.getReplaceTimeQuery(),
+          sqlNode.getExportFileFormat()
+      );
     }
 
     @Override
@@ -390,12 +448,12 @@ public abstract class IngestHandler extends QueryHandler
         );
       }
 
+      super.validate();
       List<String> replaceIntervalsList = DruidSqlParserUtils.validateQueryAndConvertToIntervals(
           replaceTimeQuery,
           ingestionGranularity,
           handlerContext.timeZone()
       );
-      super.validate();
       if (replaceIntervalsList != null) {
         replaceIntervals = String.join(",", replaceIntervalsList);
         handlerContext.queryContextMap().put(
