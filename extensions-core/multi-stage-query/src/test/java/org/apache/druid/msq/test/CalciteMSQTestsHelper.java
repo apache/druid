@@ -196,7 +196,7 @@ public class CalciteMSQTestsHelper
   private static DataServerQueryHandlerFactory getTestDataServerQueryHandlerFactory()
   {
     // Currently, there is no metadata in this test for loaded segments. Therefore, this should not be called.
-    // In the future, if this needs to be supported, mocks for LoadedSegmentDataProvider should be added like
+    // In the future, if this needs to be supported, mocks for DataServerQueryHandler should be added like
     // org.apache.druid.msq.exec.MSQLoadedSegmentTests.
     DataServerQueryHandlerFactory mockFactory = Mockito.mock(DataServerQueryHandlerFactory.class);
     DataServerQueryHandler dataServerQueryHandler = Mockito.mock(DataServerQueryHandler.class);

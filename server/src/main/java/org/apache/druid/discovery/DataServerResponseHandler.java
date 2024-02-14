@@ -52,10 +52,10 @@ import java.util.concurrent.atomic.AtomicReference;
  * Response handler for the {@link DataServerClient}. Handles the input stream from the data server and handles updating
  * the {@link ResponseContext} from the header. Does not apply backpressure or query timeout.
  */
-public class DataServerResponseHandler<T> implements HttpResponseHandler<InputStream, InputStream>
+public class DataServerResponseHandler implements HttpResponseHandler<InputStream, InputStream>
 {
   private static final Logger log = new Logger(DataServerResponseHandler.class);
-  private final Query<T> query;
+  private final Query<?> query;
   private final ResponseContext responseContext;
   private final AtomicLong totalByteCount = new AtomicLong(0);
   private final ObjectMapper objectMapper;
@@ -68,7 +68,7 @@ public class DataServerResponseHandler<T> implements HttpResponseHandler<InputSt
   private final AtomicReference<String> fail = new AtomicReference<>();
   private final long failTime;
 
-  public DataServerResponseHandler(Query<T> query, ResponseContext responseContext, ObjectMapper objectMapper)
+  public DataServerResponseHandler(Query<?> query, ResponseContext responseContext, ObjectMapper objectMapper)
   {
     this.query = query;
     this.responseContext = responseContext;
