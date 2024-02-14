@@ -15292,4 +15292,34 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
         .run();
   }
+
+  @Test
+  public void testCastCharToVarcharInFlattenConcat()
+  {
+    cannotVectorize();
+    testQuery(
+        "select 'A'||cast(col as char)||'B' from (values(1)) as t(col)",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(
+                      InlineDataSource.fromIterable(
+                          ImmutableList.of(
+                              new Object[]{"A1B"}
+                          ),
+                          RowSignature.builder().add("EXPR$0", ColumnType.STRING).build()
+                      )
+                  )
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .columns(ImmutableList.of(
+                      "EXPR$0"
+                  ))
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"A1B"}
+        )
+    );
+  }
 }
