@@ -85,9 +85,9 @@ UNPIVOT (values_column
 )
 ```
 
-### Range support in window functions
+### Range support in window functions (experimental)
 
-Window functions now support ranges where both endpoints are unbounded or are the current row. Ranges work in strict mode, which means that Druid will fail queries that aren't supported. You can turn off strict mode for ranges by setting the context parameter `windowingStrictValidation` to `false`.
+Window functions (experimental) now support ranges where both endpoints are unbounded or are the current row. Ranges work in strict mode, which means that Druid will fail queries that aren't supported. You can turn off strict mode for ranges by setting the context parameter `windowingStrictValidation` to `false`.
 
 The following example shows a window expression with RANGE frame specifications:
 
@@ -105,21 +105,33 @@ Druid now supports arbitrary join conditions for INNER join. Any sub-conditions 
 
 [#15302](https://github.com/apache/druid/pull/15302)
 
-### Improved concurrent append and replace
-
-You no longer have to manually determine the task lock type for concurrent append and replace with the `taskLockType` task context. Instead, Druid can now determine it automatically for you. You can use the context parameter `"useConcurrentLocks": true` for individual tasks and datasources or enable concurrent append and replace at a cluster level using `druid.indexer.task.default.context`.
+### Improved concurrent append and replace (experimental)
+ 
+You no longer have to manually determine the task lock type for concurrent append and replace (experimental) with the `taskLockType` task context. Instead, Druid can now determine it automatically for you. You can use the context parameter `"useConcurrentLocks": true` for individual tasks and datasources or enable concurrent append and replace at a cluster level using `druid.indexer.task.default.context`.
 
 [#15684](https://github.com/apache/druid/pull/15684)
 
 ### First and last aggregators for double, float, and long data types
 
-Druid now supports for first and last aggregators for the double, float, and long types in an ingestion spec and MSQ queries. Previously, they were only supported for native queries. For more information, see [First and last aggregators](https://druid.apache.org/docs/latest/querying/aggregations/).
+Druid now supports first and last aggregators for the double, float, and long types in native and MSQ ingestion spec and MSQ queries. Previously, they were only supported for native queries. For more information, see [First and last aggregators](https://druid.apache.org/docs/latest/querying/aggregations/#first-and-last-aggregators).
+
+<!-- If you start using this feature and then decide to roll back, you will not be able to access the values created using these aggregators. -->
+
+<!-- follow up about being experimental + language -->
 
 [#14462](https://github.com/apache/druid/pull/14462)
 
+Additionally, the following functions can now return numeric values and be used as aggregators at ingestion time:
+
+* EARLIEST and EARLIEST_BY
+* LATEST and LATEST_BY
+
+[#15607](https://github.com/apache/druid/pull/15607)
+
 ### Support for logging audit events
 
-Added support for logging audit events and improved coverage of audited REST API endpoints. To log audit events, set config `druid.audit.manager.type` to `log`. When you set `druid.audit.manager.type` to `sql`, audit events are persisted to metadata store.
+Added support for logging audit events and improved coverage of audited REST API endpoints.
+To enable logging audit events, set config `druid.audit.manager.type` to `log` in both the Coordinator and Overlord or in `common.runtime.properties`. When you set `druid.audit.manager.type` to `sql`, audit events are persisted to metadata store.
 
 In both cases, Druid audits the following events:
 
@@ -155,9 +167,13 @@ For more information, see [Empty ingest queries in the upgrade notes](#enabled-e
 
 [#15674](https://github.com/apache/druid/pull/15674) [#15495](https://github.com/apache/druid/pull/15495)
 
-### Support for Google Cloud Storage
+In the web console, you can use a toggle to control whether an ingestion fails if the ingestion query produces no data.
 
-Added support for Google Cloud Storage (GCS). You can now use durable storage with GCS. See [Durable storage configurations](https://druid.apache.org/docs/latest/multi-stage-query/reference#durable-storage-configurations) for more information.
+[#15627](https://github.com/apache/druid/pull/15627)
+
+### MSQ support for Google Cloud Storage
+
+The MSQ task engine now supports Google Cloud Storage (GCS). You can use durable storage with GCS. See [Durable storage configurations](https://druid.apache.org/docs/latest/multi-stage-query/reference#durable-storage-configurations) for more information.
 
 [#15398](https://github.com/apache/druid/pull/15398)
 
@@ -183,12 +199,6 @@ A new Delta Lake extension is available as a community contribution. The Delta L
 
 [#15755](https://github.com/apache/druid/pull/15755)
 
-### Removed the `auto` search strategy
-
-Removed the `auto` search strategy from the native search query. Setting `searchStrategy` to `auto` is now equivalent to `useIndexes`. Improvements to how and when indexes are computed have allowed the `useIndexes` strategy to be more adaptive, skipping computing expensive indexes when possible.
-
-[#15550](https://github.com/apache/druid/pull/15550)
-
 ## Functional area and related changes
 
 This section contains detailed release notes separated by areas.
@@ -213,7 +223,7 @@ The **Load query detail archive** now supports loading queries by selecting a JS
 
 #### Improved lookup dialog
 
-The lookup dialog in the web console now includes following optional fields:
+The lookup dialog in the web console now includes following optional fields. See [JDBC lookup](https://druid.apache.org/docs/latest/development/extensions-core/lookups-cached-global#jdbc-lookup) for more information.
 
 * Jitter seconds
 * Load timeout seconds
@@ -225,6 +235,8 @@ The lookup dialog in the web console now includes following optional fields:
 
 #### Improved time chart brush and added auto-granularity
 
+Improved the web console **Explore** view as follows:
+
 * Added the notion of timezone in the explore view.
 * Time chart is now able to automatically pick a granularity if "auto" is selected (which is the default) based on the current time filter extent.
 * Brush is now automatically enabled in the time chart.
@@ -232,12 +244,6 @@ The lookup dialog in the web console now includes following optional fields:
 * Added a highlight bubble to all visualizations (except table because it has its own).
 
 [#14990](https://github.com/apache/druid/pull/14990)
-
-#### Toggle to fail on empty inserts
-
-Added a new toggle that controls whether an ingestion fails if the ingestion query produces no data.
-
-[#15627](https://github.com/apache/druid/pull/15627)
 
 #### Other web console improvements
 
@@ -270,6 +276,8 @@ Unless explicitly specified, Druid skips week-granularity segments for data part
 
 Columns ingested with the auto column indexer that contain only empty or null containing arrays are now stored as `ARRAY<LONG\>` instead of `COMPLEX<json\>`.
 
+<!-- follow up on language -->
+
 [#15505](https://github.com/apache/druid/pull/15505)
 
 #### Enabled skipping compaction for datasources with partial-eternity segments
@@ -300,7 +308,6 @@ Improved segment allocation as follows:
 * Added a configurable delay to the Peon service that determines how long a Peon should wait before dropping a segment [#15373](https://github.com/apache/druid/pull/15373)
 * Improved metadata store updates by attempting to retry updates rather than failing [#15141](https://github.com/apache/druid/pull/15141)
 * Improved the error message you get when `taskQueue` reaches `maxSize` [#15409](https://github.com/apache/druid/pull/15409)
-* Fixed an issue where `systemField` values weren't properly decorated in the sampling response [#15536](https://github.com/apache/druid/pull/15536)
 * Fixed an issue with columnar frames always writing multi-valued columns where the input column had `hasMultipleValues = UNKNOWN` [#15300](https://github.com/apache/druid/pull/15300)
 * Fixed a race condition where there were multiple attempts to publish segments for the same sequence [#14995](https://github.com/apache/druid/pull/14995)
 * Fixed a race condition that can occur at high streaming concurrency [#15174](https://github.com/apache/druid/pull/15174)
@@ -322,15 +329,15 @@ Added optional `castToType` parameter to `auto` column schema.
 
 #### Improved the EXTEND operator
 
-You can now use types like `VARCHAR ARRAY` and `BIGINT ARRAY` with the EXTEND operator.
+<!-- what other types does EXTEND support -->
 
-For example:
+You can now use array types like `VARCHAR ARRAY` and `BIGINT ARRAY` with the EXTEND operator.
+
+The following example specifies an extern input with native druid input types `ARRAY<STRING>`, `ARRAY<LONG>` and `STRING`:
 
 ```sql
 EXTEND (a VARCHAR ARRAY, b BIGINT ARRAY, c VARCHAR)
 ```
-
-specifies an extern input with native druid input types `ARRAY<STRING>`, `ARRAY<LONG>` and `STRING`.
 
 [#15458](https://github.com/apache/druid/pull/15458)
 
@@ -376,49 +383,30 @@ Added JSON_QUERY_ARRAY which is similar to JSON_QUERY except the return type is 
 
 [#15521](https://github.com/apache/druid/pull/15521)
 
-#### Added numeric support for EARLIEST and LATEST functions
-
-In addition to string support, the following functions can now return numeric values:
-
-* EARLIEST and EARLIEST_BY
-* LATEST and LATEST_BY
-
-You can also use these functions as aggregations at ingestion time.
-
-[#15607](https://github.com/apache/druid/pull/15607)
-
 #### Added support for `aggregateMultipleValues`
 
 Improved the `ANY_VALUE(expr)` function to support the boolean option `aggregateMultipleValues`. The `aggregateMultipleValues` option is enabled by default. When you run ANY_VALUE on an MVD, the function returns the stringified array. If `aggregateMultipleValues` is set to `false`, ANY_VALUE returns the first value instead.
 
 [#15434](https://github.com/apache/druid/pull/15434)
 
-#### Added native `array contains element` filter
+#### Added native `arrayContainsElement` filter
 
-Added native `array contains element` filter to improve performance when using ARRAY_CONTAINS on array columns.
+Added native `arrayContainsElement` filter to improve performance when using ARRAY_CONTAINS on array columns.
 
 [#15366](https://github.com/apache/druid/pull/15366) [#15455](https://github.com/apache/druid/pull/15455)
 
-#### Added authorize method
+Also ARRAY_OVERLAP now uses the `arrayContainsElement` filter when filtering ARRAY typed columns, so that it can use indexes like ARRAY_CONTAINS.
 
-Added an `authorize` method to the `QueryLifecycle` class to authorize a query based on authentication result.
-
-[#15816](https://github.com/apache/druid/pull/15816)
+[#15451](https://github.com/apache/druid/pull/15451)
 
 #### Added index support
 
-Added `ValueIndexes` and `ArrayElementIndexes` for nested arrays.  
-Added `ValueIndexes` for nested long and double columns.
+Improved nested JSON columns as follows:
+
+* Added `ValueIndexes` and `ArrayElementIndexes` for nested arrays.  
+* Added `ValueIndexes` for nested long and double columns.
 
 [#15752](https://github.com/apache/druid/pull/15752)
-
-#### Changed `equals` filter for native queries
-
-The [equality filter](https://druid.apache.org/docs/latest/querying/filters#equality-filter) on mixed type `auto` columns that contain arrays must now be filtered as their presenting type. This means that if any rows are arrays (for example, the segment metadata and `information_schema` reports the type as some array type), then the native queries must also filter as if they are some array type.
- 
-This change impacts mixed type `auto` columns that contain both scalars and arrays. It doesn't impact SQL, which already has this limitation due to how the type presents itself.
-
-[#15503](https://github.com/apache/druid/pull/15503)
 
 #### Improved `timestamp_extract` function
 
@@ -428,21 +416,13 @@ The `timestamp_extract(expr, unit, [timezone])` Druid native query function now 
 
 #### Improved JSON_VALUE and JSON_QUERY
 
-Added support for using expressions to compute the JSON path argument for JSON_VALUE and JSON_QUERY functions.
+Added support for using expressions to compute the JSON path argument for JSON_VALUE and JSON_QUERY functions dynamically. The JSON path argument doesn't have to be a constant anymore.
 
 [#15320](https://github.com/apache/druid/pull/15320)
 
-#### Improved `ExpressionPostAggregator` array handling
+#### Improved filtering performance for lookups
 
-Improved the use of `ExpressionPostAggregator` to handle ARRAY types output by the grouping engine. The native expression system now recognizes `ComparableStringArray` and `ComparableList` array wrapper types and treats them as ARRAY types.
-
-Updated `FunctionalExpr` to streamline the handling of class cast exceptions as user errors, so that users are provided with clear exception messages.
-
-[#15543](https://github.com/apache/druid/pull/15543)
-
-#### Improved lookups
-
-Enhanced lookups as follows:
+Enhanced filtering performance for lookups as follows:
 
 * Added `sqlReverseLookupThreshold` SQL query context parameter. `sqlReverseLookupThreshold` represents the maximum size of an IN filter that will be created as part of lookup reversal [#15832](https://github.com/apache/druid/pull/15832)
 * Improved loading and dropping of containers for lookups to reduce inconsistencies during updates [#14806](https://github.com/apache/druid/pull/14806)
@@ -457,18 +437,6 @@ Now, excess requests will instead be queued with a timeout equal to `MIN(Integer
 
 [#15440](https://github.com/apache/druid/pull/15440)
 
-#### Updated ARRAY_OVERLAP
-
-Updated ARRAY_OVERLAP to use the `ArrayContainsElement` filter when filtering ARRAY typed columns, so that it can also use indexes like ARRAY_CONTAINS.
-
-[#15451](https://github.com/apache/druid/pull/15451)
-
-#### Updated subquery guardrails
-
-Increased memory available for subqueries when the query scheduler is configured to limit queries below the number of server threads.
-
-[#15295](https://github.com/apache/druid/pull/15295)
-
 #### Other querying improvements
 
 * Added a supplier that can return `NullValueIndex` to be used by `NullFilter`. This improvement should speed up `is null` and `is not null` filters on JSON columns [#15687](https://github.com/apache/druid/pull/15687)
@@ -476,16 +444,17 @@ Increased memory available for subqueries when the query scheduler is configured
 * Added capability for the Broker to access datasource schemas defined in the catalog when processing SQL queries [#15469](https://github.com/apache/druid/pull/15469)
 * Added CONCAT flattening and filter decomposition [#15634](https://github.com/apache/druid/pull/15634)
 * Enabled ARRAY_TO_MV to support expression inputs [#15528](https://github.com/apache/druid/pull/15528)
+* Improved `ExpressionPostAggregator` to handle ARRAY types output by the grouping engine [#15543](https://github.com/apache/druid/pull/15543)
 * Improved the error message you get when there's an error in the specified interval [#15454](https://github.com/apache/druid/pull/15454)
 * Improved how three-valued logic is handled [#15629](https://github.com/apache/druid/pull/15629)
 * Improved error reporting for math functions [#14987](https://github.com/apache/druid/pull/14987)
 * Improved handling of COALESCE, SEARCH, and filter optimization [#15609](https://github.com/apache/druid/pull/15609)
+* Increased memory available for subqueries when the query scheduler is configured to limit queries below the number of server threads [#15295](https://github.com/apache/druid/pull/15295)
 * Optimized SQL planner for filter expressions by introducing column indexes for expression virtual columns [#15585](https://github.com/apache/druid/pull/15585)
 * Optimized queries involving large NOT IN operations [#15625](https://github.com/apache/druid/pull/15625)
 * Fixed an issue with nested empty array fields [#15532](https://github.com/apache/druid/pull/15532)
 * Fixed NPE with virtual expression with unnest [#15513](https://github.com/apache/druid/pull/15513)
 * Fixed an issue with AND and OR operators and numeric `nvl` not clearing out stale null vectors for vector expression processing [#15587](https://github.com/apache/druid/pull/15587)
-* Fixed Druid behavior when using multi-value dimensions as arrays [#15644](https://github.com/apache/druid/pull/15644)
 * Fixed an issue with filtering columns when using partial paths such as in `JSON_QUERY` [#15643](https://github.com/apache/druid/pull/15643)
 * Fixed queries that raise an exception when sketches are stored in cache [#15654](https://github.com/apache/druid/pull/15654)
 * Fixed queries involving JSON functions that failed when using negative indexes [#15650](https://github.com/apache/druid/pull/15650)
@@ -507,12 +476,6 @@ Also added a new metric `segment/unneededEternityTombstone/count` to count the n
 
 [#15281](https://github.com/apache/druid/pull/15281)
 
-#### Allowed compaction to work with spatial dimensions
-
-Updated auto-compaction to preserve spatial dimensions rather than rewrite them into regular string dimensions.
-
-[#15321](https://github.com/apache/druid/pull/15321)
-
 #### Enabled skipping compaction for datasources with partial-eternity segments
 
 Druid now skips compaction for datasources with segments that have their interval start or end coinciding with Eternity interval end-points.
@@ -527,18 +490,16 @@ The JSON parser unexpected token error now includes the context of the expected 
 
 #### Other data management improvements
 
-*  Fixed an issue where the Broker would return an HTTP `400` status code instead of `503` when a Coordinator was temporarily unavailable, such as during a rolling upgrade [#15756](https://github.com/apache/druid/pull/15756)
+* Fixed an issue where the Broker would return an HTTP `400` status code instead of `503` when a Coordinator was temporarily unavailable, such as during a rolling upgrade [#15756](https://github.com/apache/druid/pull/15756)
 * Added user identity to Router query request logs [#15126](https://github.com/apache/druid/pull/15126)
 * Improved process to retrieve segments from metadata store by retrieving segments in batches [#15305](https://github.com/apache/druid/pull/15305)
 * Improved logging messages when skipping auto-compaction for a data source [#15460](https://github.com/apache/druid/pull/15460)
 * Improved compaction by modifying the segment iterator to skip intervals without data [#15676](https://github.com/apache/druid/pull/15676)
 * Increased `_acceptQueueSize` based on value of `net.core.somaxconn` [#15596](https://github.com/apache/druid/pull/15596)
 * Optimized the process to mark segments as unused [#15352](https://github.com/apache/druid/pull/15352)
-* Renamed the `virtualColumns.getColumnCapabilities` method to `getColumnCapabilitiesWithoutFallback` to emphasize that it doesn't return capabilities for regular columns [#15614](https://github.com/apache/druid/pull/15614)
+* Updated auto-compaction to preserve spatial dimensions rather than rewrite them into regular string dimensions [#15321](https://github.com/apache/druid/pull/15321)
 
 ### Metrics and monitoring
-
-<!-- #### Other metrics and monitoring improvements -->
 
 * Added worker status and duration metrics in live and task reports [#15180](https://github.com/apache/druid/pull/15180)
 * Updated `serviceName` for `segment/count` metric to match the configured metric name within the StatsD emitter [#15347](https://github.com/apache/druid/pull/15347)
@@ -594,9 +555,17 @@ Improved the Iceberg extension as follows:
 
 ### Upgrade notes
 
-#### Improved concurrent append and replace
+#### Changed `equals` filter for native queries
 
-You no longer have to manually determine the task lock type for concurrent append and replace with the `taskLockType` task context. Instead, Druid can now determine it automatically for you. You can use the context parameter `"useConcurrentLocks": true` for individual tasks and datasources or enable concurrent append and replace at a cluster level using `druid.indexer.task.default.context`.
+The [equality filter](https://druid.apache.org/docs/latest/querying/filters#equality-filter) on mixed type `auto` columns that contain arrays must now be filtered as their presenting type. This means that if any rows are arrays (for example, the segment metadata and `information_schema` reports the type as some array type), then the native queries must also filter as if they are some array type.
+ 
+This change impacts mixed type `auto` columns that contain both scalars and arrays. It doesn't impact SQL, which already has this limitation due to how the type presents itself.
+
+[#15503](https://github.com/apache/druid/pull/15503)
+
+#### Improved concurrent append and replace (experimental)
+
+You no longer have to manually determine the task lock type for concurrent append and replace (experimental) with the `taskLockType` task context. Instead, Druid can now determine it automatically for you. You can use the context parameter `"useConcurrentLocks": true` for individual tasks and datasources or enable concurrent append and replace at a cluster level using `druid.indexer.task.default.context`.
 
 [#15684](https://github.com/apache/druid/pull/15684)
 
@@ -617,12 +586,6 @@ Now, excess requests will instead be queued with a timeout equal to `MIN(Integer
 
 [#15440](https://github.com/apache/druid/pull/15440)
 
-#### Changed `equals` filter for native queries
-
-Native query equals filter on mixed type `auto` columns which contain arrays must now be filtered as their presenting type, so if any rows are arrays (for example, the segment metadata and `information_schema` reports the type as some array type), then the native queries must also filter as if they are some array type.
-
-[#15503](https://github.com/apache/druid/pull/15503)
-
 #### Changed how empty or null array columns are stored
 
 Columns ingested with the auto column indexer that contain only empty or null arrays are now stored as `ARRAY<LONG\>` instead of `COMPLEX<json\>`.
@@ -636,11 +599,9 @@ Unless explicitly specified, Druid skips week-granularity segments for data part
 
 [#15589](https://github.com/apache/druid/pull/15589)
 
-### Incompatible changes
-
 ### Removed the `auto` search strategy
 
-Removed the `auto` search strategy from the native search query. Setting `searchStrategy` to `auto` is now equivalent to `useIndexes`. Improvements to how and when indexes are computed have allowed the `useIndexes` strategy to be more adaptive, skipping computing expensive indexes when possible.
+Removed the `auto` search strategy from the native search query. Setting `searchStrategy` to `auto` is now equivalent to `useIndexes`.
 
 [#15550](https://github.com/apache/druid/pull/15550)
 

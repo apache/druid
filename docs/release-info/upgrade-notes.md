@@ -30,9 +30,17 @@ For the full release notes for a specific version, see the [releases page](https
 
 ### Upgrade notes
 
-#### Improved concurrent append and replace
+#### Changed `equals` filter for native queries
 
-You no longer have to manually determine the task lock type for concurrent append and replace with the `taskLockType` task context. Instead, Druid can now determine it automatically for you. You can use the context parameter `"useConcurrentLocks": true` for individual tasks and datasources or enable concurrent append and replace at a cluster level using `druid.indexer.task.default.context`.
+The [equality filter](https://druid.apache.org/docs/latest/querying/filters#equality-filter) on mixed type `auto` columns that contain arrays must now be filtered as their presenting type. This means that if any rows are arrays (for example, the segment metadata and `information_schema` reports the type as some array type), then the native queries must also filter as if they are some array type.
+ 
+This change impacts mixed type `auto` columns that contain both scalars and arrays. It doesn't impact SQL, which already has this limitation due to how the type presents itself.
+
+[#15503](https://github.com/apache/druid/pull/15503)
+
+#### Improved concurrent append and replace (experimental)
+
+You no longer have to manually determine the task lock type for concurrent append and replace (experimental) with the `taskLockType` task context. Instead, Druid can now determine it automatically for you. You can use the context parameter `"useConcurrentLocks": true` for individual tasks and datasources or enable concurrent append and replace at a cluster level using `druid.indexer.task.default.context`.
 
 [#15684](https://github.com/apache/druid/pull/15684)
 
@@ -53,12 +61,6 @@ Now, excess requests will instead be queued with a timeout equal to `MIN(Integer
 
 [#15440](https://github.com/apache/druid/pull/15440)
 
-#### Changed `equals` filter for native queries
-
-Native query equals filter on mixed type `auto` columns which contain arrays must now be filtered as their presenting type, so if any rows are arrays (for example, the segment metadata and `information_schema` reports the type as some array type), then the native queries must also filter as if they are some array type. 
-
-[#15503](https://github.com/apache/druid/pull/15503)
-
 #### Changed how empty or null array columns are stored
 
 Columns ingested with the auto column indexer that contain only empty or null arrays are now stored as `ARRAY<LONG\>` instead of `COMPLEX<json\>`.
@@ -72,11 +74,9 @@ Unless explicitly specified, Druid skips week-granularity segments for data part
 
 [#15589](https://github.com/apache/druid/pull/15589)
 
-### Incompatible changes
-
 ### Removed the `auto` search strategy
 
-Removed the `auto` search strategy from the native search query. Setting `searchStrategy` to `auto` is now equivalent to `useIndexes`. Improvements to how and when indexes are computed have allowed the `useIndexes` strategy to be more adaptive, skipping computing expensive indexes when possible.
+Removed the `auto` search strategy from the native search query. Setting `searchStrategy` to `auto` is now equivalent to `useIndexes`.
 
 [#15550](https://github.com/apache/druid/pull/15550)
 
