@@ -26,6 +26,7 @@ import org.apache.druid.segment.column.SchemaPayload;
 import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.timeline.SegmentId;
 
+import javax.annotation.Nullable;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -129,12 +130,13 @@ public class SegmentSchemaCache
     // segment schema has been polled from the DB
     if (finalizedSegmentStats.containsKey(segmentId)) {
       SegmentStats segmentStats = finalizedSegmentStats.get(segmentId);
-      long schemaId = segmentStats.getSchemaId();
-      if (finalizedSegmentSchema.containsKey(schemaId)) {
-        return Optional.of(new SegmentSchemaMetadata(
-            finalizedSegmentSchema.get(schemaId),
-            segmentStats.getNumRows()
-        ));
+      Long schemaId = segmentStats.getSchemaId();
+      if (schemaId != null && finalizedSegmentSchema.containsKey(schemaId)) {
+        return Optional.of(
+            new SegmentSchemaMetadata(
+                finalizedSegmentSchema.get(schemaId),
+                segmentStats.getNumRows() == null ? 0 : segmentStats.getNumRows()
+            ));
       }
     }
 
@@ -165,21 +167,26 @@ public class SegmentSchemaCache
 
   public static class SegmentStats
   {
-    private final long schemaId;
-    private final long numRows;
+    @Nullable
+    private final Long schemaId;
+    @Nullable
+    private final Long numRows;
 
-    public SegmentStats(long schemaId, long numRows)
+    public SegmentStats(
+        @Nullable Long schemaId,
+        @Nullable Long numRows
+    )
     {
       this.schemaId = schemaId;
       this.numRows = numRows;
     }
 
-    public long getSchemaId()
+    public Long getSchemaId()
     {
       return schemaId;
     }
 
-    public long getNumRows()
+    public Long getNumRows()
     {
       return numRows;
     }

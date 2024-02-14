@@ -1071,7 +1071,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                       {
                         try {
                           DataSegment segment = jsonMapper.readValue(r.getBytes("payload"), DataSegment.class);
-                          segmentStats.put(segment.getId(), new SegmentSchemaCache.SegmentStats(r.getLong("schema_id"), r.getLong("num_rows")));
+                          segmentStats.put(segment.getId(), new SegmentSchemaCache.SegmentStats((Long) r.getObject("schema_id"), (Long) r.getObject("num_rows")));
                           return replaceWithExistingSegmentIfPresent(segment);
                         }
                         catch (IOException e) {

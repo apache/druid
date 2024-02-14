@@ -2101,6 +2101,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     final List<DataSegmentPlus> segmentsToUpgrade
         = retrieveSegmentsById(handle, upgradeSegmentToLockVersion.keySet());
 
+    log.info("createNewIdsOfAppendSegmentsAfterReplace SegmentsToUpgrade are [%s]", segmentsToUpgrade);
     if (segmentsToUpgrade.isEmpty()) {
       return Collections.emptySet();
     }
@@ -2146,6 +2147,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                                            .version(lockVersion)
                                            .shardSpec(shardSpec)
                                            .build();
+
       upgradedSegments.add(new DataSegmentPlus(dataSegment, oldSegmentMetadata.getSchemaId(), oldSegmentMetadata.getNumRows()));
     }
 
@@ -2343,6 +2345,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     final String segmentIdCsv = segmentIds.stream()
                                           .map(id -> "'" + id + "'")
                                           .collect(Collectors.joining(","));
+
     ResultIterator<DataSegmentPlus> resultIterator = handle
         .createQuery(
             StringUtils.format(
@@ -2352,8 +2355,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         )
         .setFetchSize(connector.getStreamingFetchSize())
         .map(
-            (index, r, ctx) ->
-                new DataSegmentPlus(JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class), r.getLong(2), r.getLong(3))
+            (index, r, ctx) -> {
+              DataSegment segment = JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class);
+              Long schemaId = (Long) r.getObject(2);
+              Long numRows = (Long) r.getObject(3);
+              return new DataSegmentPlus(segment, schemaId, numRows);
+            }
         )
         .iterator();
 
@@ -2934,10 +2941,16 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   public static class DataSegmentPlus
   {
     private final DataSegment dataSegment;
+    @Nullable
     private final Long schemaId;
+    @Nullable
     private final Long numRows;
 
-    public DataSegmentPlus(DataSegment dataSegment, Long schemaId, Long numRows)
+    public DataSegmentPlus(
+        DataSegment dataSegment,
+        @Nullable Long schemaId,
+        @Nullable Long numRows
+    )
     {
       this.dataSegment = dataSegment;
       this.schemaId = schemaId;
@@ -2949,14 +2962,47 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       return dataSegment;
     }
 
+    @Nullable
     public Long getSchemaId()
     {
       return schemaId;
     }
 
+    @Nullable
     public Long getNumRows()
     {
       return numRows;
+    }
+
+    @Override
+    public String toString()
+    {
+      return "DataSegmentPlus{" +
+             "dataSegment=" + dataSegment +
+             ", schemaId=" + schemaId +
+             ", numRows=" + numRows +
+             '}';
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      DataSegmentPlus that = (DataSegmentPlus) o;
+      return Objects.equals(dataSegment, that.dataSegment)
+             && Objects.equals(schemaId, that.schemaId)
+             && Objects.equals(numRows, that.numRows);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(dataSegment, schemaId, numRows);
     }
   }
 }
