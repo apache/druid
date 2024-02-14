@@ -15308,7 +15308,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testNVLColumns()
+  public void testNVLColumnsWithConvertlet()
   {
     // Doesn't conform to the SQL standard, but it's how we do it.
     // This example is used in the sql.md doc.
@@ -15352,7 +15352,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testNVLColumnsRecursive()
+  public void testNVLColumnsRecursiveWithConvertlet()
   {
     // Doesn't conform to the SQL standard, but it's how we do it.
     // This example is used in the sql.md doc.
