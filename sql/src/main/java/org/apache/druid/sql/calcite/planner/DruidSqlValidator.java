@@ -43,7 +43,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * Druid extended SQL validator. (At present, it doesn't actually
  * have any extensions yet, but it will soon.)
  */
-class DruidSqlValidator extends BaseDruidSqlValidator
+public class DruidSqlValidator extends BaseDruidSqlValidator
 {
   private final PlannerContext plannerContext;
 
@@ -177,7 +177,7 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     super.validateCall(call, scope);
   }
 
-  private CalciteContextException buildCalciteContextException(String message, SqlNode call)
+  public static CalciteContextException buildCalciteContextException(String message, SqlNode call)
   {
     SqlParserPos pos = call.getParserPosition();
     return new CalciteContextException(message,

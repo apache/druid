@@ -36,6 +36,8 @@ import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlOperandCountRanges;
 import org.apache.calcite.sql.type.SqlOperandMetadata;
+import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlUserDefinedTableMacro;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
@@ -53,6 +55,7 @@ import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.expression.AuthorizableOperator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.druid.sql.calcite.planner.DruidSqlValidator;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.DatasourceMetadata;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
@@ -103,16 +106,45 @@ public class AppendTableMacro extends SqlUserDefinedTableMacro implements Author
         SqlKind.OTHER_FUNCTION,
         ReturnTypes.CURSOR,
         null,
-        new MyMeta(),
+        new OperandMetadata(),
         null
     );
   }
 
-  private static class MyMeta implements SqlOperandMetadata
+  private static class OperandMetadata implements SqlOperandMetadata
   {
     @Override
     public boolean checkOperandTypes(SqlCallBinding callBinding, boolean throwOnFailure)
     {
+      for (int i = 0; i < callBinding.getOperandCount(); i++) {
+        SqlNode operand = callBinding.operand(i);
+        if (!callBinding.isOperandLiteral(i, false)) {
+          if (throwOnFailure) {
+            throw DruidSqlValidator.buildCalciteContextException(
+                "All arguments to APPEND should be literal strings."
+                + "Argument #" + i + " is not literal",
+                operand
+            );
+          } else {
+            return false;
+          }
+        }
+        RelDataType type = callBinding.getOperandType(i);
+
+        SqlTypeName typeName = type.getSqlTypeName();
+
+        if (!SqlTypeFamily.CHARACTER.getTypeNames().contains(typeName)) {
+          if (throwOnFailure) {
+            throw DruidSqlValidator.buildCalciteContextException(
+                "All arguments to APPEND should be literal strings."
+                + "Argument #" + i + " is not string",
+                operand
+            );
+          } else {
+            return false;
+          }
+        }
+      }
       return true;
     }
 
@@ -131,20 +163,20 @@ public class AppendTableMacro extends SqlUserDefinedTableMacro implements Author
     @Override
     public List<RelDataType> paramTypes(RelDataTypeFactory typeFactory)
     {
-      throw new RuntimeException("FIXME: Unimplemented!");
+      throw new IllegalStateException();
     }
 
     @Override
     public List<String> paramNames()
     {
-      throw new RuntimeException("FIXME: Unimplemented!");
+      throw new IllegalStateException();
     }
   }
 
   @Override
   public List<String> getParamNames()
   {
-    return ImmutableList.<String>builder().add("t1", "t2").build();
+    throw new IllegalStateException();
   }
 
   @Override

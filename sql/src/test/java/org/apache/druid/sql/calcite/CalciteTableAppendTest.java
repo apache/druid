@@ -129,4 +129,21 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
       );
     }
   }
+
+  @Test
+  public void testAppendtSingleTableIsInvalidArg()
+  {
+    try {
+      testBuilder()
+          .sql("select dim1 from TABLE(APPEND('foo',111)) u")
+          .run();
+      Assert.fail("query execution should fail");
+    }
+    catch (DruidException e) {
+      MatcherAssert.assertThat(
+          e,
+          invalidSqlIs("All arguments to APPEND should be literal strings.Argument #1 is not string (line [1], column [37])")
+      );
+    }
+  }
 }
