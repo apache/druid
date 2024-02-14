@@ -38,29 +38,24 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlNumericLiteral;
 import org.apache.calcite.sql.SqlOperatorTable;
-import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.SqlWindow;
-import org.apache.calcite.sql.SqlWith;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.IdentifierNamespace;
 import org.apache.calcite.sql.validate.SqlValidatorException;
-import org.apache.calcite.sql.validate.SqlValidatorImpl;
 import org.apache.calcite.sql.validate.SqlValidatorNamespace;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.sql.validate.SqlValidatorTable;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
-import org.apache.commons.lang.reflect.FieldUtils;
 import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.facade.DatasourceFacade;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.InvalidSqlInput;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -74,7 +69,6 @@ import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -206,13 +200,8 @@ class DruidSqlValidator extends BaseDruidSqlValidator
 
     // The source must be a SELECT
     final SqlNode source = insert.getSource();
-    // why? ensureNoOrderBy(source, operationName);
 
-    // Convert CLUSTERED BY, or the catalog equivalent, to an ORDER BY clause
-    //final SqlNodeList catalogClustering = convertCatalogClustering(tableMetadata);
-    rewriteClusteringToOrderBy(source, ingestNode, null);
-
-    // Validate the source statement. Validates the ORDER BY pushed down in the above step.
+    // Validate the source statement.
     // Because of the non-standard Druid semantics, we can't define the target type: we don't know
     // the target columns yet, and we can't infer types when they must come from the SELECT.
     // Normally, the target type is known, and is pushed into the SELECT. In Druid, the SELECT
@@ -239,11 +228,7 @@ class DruidSqlValidator extends BaseDruidSqlValidator
       validateTimeColumn(sourceType, timeColumnIndex);
     }
 
-    // Validate clustering against the SELECT row type. Clustering has additional
-    // constraints beyond what was validated for the pushed-down ORDER BY.
-    // Though we pushed down clustering above, only now can we validate it after
-    // we've determined the SELECT row type.
-    //validateClustering(sourceType, ingestNode, catalogClustering);
+    validateClustering(sourceType, ingestNode);
 
     // Determine the output (target) schema.
     final RelDataType targetType = validateTargetType(scope, insertNs, insert, sourceType, tableMetadata);
@@ -408,118 +393,6 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     return ((PeriodGranularity) gran).getPeriod().toString();
   }
 
-  private void ensureNoOrderBy(
-      SqlNode source,
-      final String operationName
-  )
-  {
-    // The source SELECT cannot include an ORDER BY clause. Ordering is given
-    // by the CLUSTERED BY clause, if any.
-    // Check that an ORDER BY clause is not provided by the underlying query
-    SqlNodeList orderByList;
-    if (source instanceof SqlOrderBy) {
-      throw InvalidSqlInput.exception(
-          "Cannot use an ORDER BY clause on a Query of type [%s], use CLUSTERED BY instead",
-          operationName
-      );
-    }
-
-    // Pull the SELECT statement out of the WITH clause
-    if (source instanceof SqlWith) {
-      source = ((SqlWith) source).getOperandList().get(1);
-    }
-    // If the child of INSERT or WITH is not SELECT, then the statement is not valid.
-    if (!(source instanceof SqlSelect)) {
-      throw InvalidSqlInput.exception(
-          "%s is not supported within %s %s statement.",
-          source.getKind(),
-          statementArticle(operationName),
-          operationName
-      );
-    }
-
-    // Verify that the SELECT has no ORDER BY clause
-    SqlSelect select = (SqlSelect) source;
-    orderByList = select.getOrderList();
-    if (orderByList != null && orderByList.size() != 0) {
-      throw InvalidSqlInput.exception(
-          "Cannot use an ORDER BY clause on a Query of type [%s], use CLUSTERED BY instead",
-          operationName
-      );
-    }
-  }
-
-  private String statementArticle(final String operationName)
-  {
-    return "INSERT".equals(operationName) ? "an" : "a";
-  }
-
-
-
-  // This part is a bit sad. By the time we get here, the validator will have created
-  // the ORDER BY namespace if we had a real ORDER BY. We have to "catch up" and do the
-  // work that registerQuery() should have done. That's kind of OK. But, the orderScopes
-  // variable is private, so we have to play dirty tricks to get at it.
-  //
-  // Warning: this may no longer work if Java forbids access to private fields in a
-  // future release.
-  private static final Field ORDER_SCOPES_FIELD;
-
-  static {
-    try {
-      // TODO: this class has changed, and the orderScopes field no longer exists.
-      ORDER_SCOPES_FIELD = FieldUtils.getDeclaredField(
-          SqlValidatorImpl.class,
-          "scopes",
-          true
-      );
-    }
-    catch (RuntimeException e) {
-      throw new ISE(e, "SqlValidatorImpl.scopes is not accessible");
-    }
-  }
-
-
-
-  /**
-   * Clustering is a kind of ordering. We push the CLUSTERED BY clause into the source query as
-   * an ORDER BY clause. In an ideal world, clustering would be outside of SELECT: it is an operation
-   * applied after the data is selected. For now, we push it into the SELECT, then MSQ pulls it back
-   * out. This is unfortunate as errors will be attributed to ORDER BY, which the user did not
-   * actually specify (it is an error to do so.) However, with the current hybrid structure, it is
-   * not possible to add the ORDER by later: doing so requires access to the order by namespace
-   * which is not visible to subclasses.
-   */
-  private void rewriteClusteringToOrderBy(SqlNode source, DruidSqlIngest ingestNode, SqlNodeList catalogClustering)
-  {
-    /*
-    SqlNodeList clusteredBy = ingestNode.getClusteredBy();
-    if (clusteredBy == null || clusteredBy.getList().isEmpty()) {
-      if (catalogClustering == null || catalogClustering.getList().isEmpty()) {
-        return;
-      }
-      clusteredBy = catalogClustering;
-    }
-    while (source instanceof SqlWith) {
-      source = ((SqlWith) source).getOperandList().get(1);
-    }
-    final SqlSelect select = (SqlSelect) source;
-
-    select.setOrderBy(clusteredBy);
-    final OrderByScope orderScope = ValidatorShim.newOrderByScope(scopes.get(select), clusteredBy, select);
-    try {
-      @SuppressWarnings("unchecked")
-      final Map<SqlSelect, SqlValidatorScope> orderScopes =
-          (Map<SqlSelect, SqlValidatorScope>) ORDER_SCOPES_FIELD.get(this);
-      orderScopes.put(select, orderScope);
-    }
-    catch (Exception e) {
-      throw new ISE(e, "orderScopes is not accessible");
-    }
-
-     */
-  }
-
   private void validateTimeColumn(
       final RelRecordType sourceType,
       final int timeColumnIndex
@@ -548,8 +421,7 @@ class DruidSqlValidator extends BaseDruidSqlValidator
    */
   private void validateClustering(
       final RelRecordType sourceType,
-      final DruidSqlIngest ingestNode,
-      final SqlNodeList catalogClustering
+      final DruidSqlIngest ingestNode
   )
   {
     final SqlNodeList clusteredBy = ingestNode.getClusteredBy();
@@ -558,14 +430,6 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     // that things are sane if we later check that the two are identical.
     if (clusteredBy != null) {
       validateClusteredBy(sourceType, clusteredBy);
-    }
-    if (catalogClustering != null) {
-      // Catalog defines the key columns. Verify that they are present in the query.
-      validateClusteredBy(sourceType, catalogClustering);
-    }
-    if (clusteredBy != null && catalogClustering != null) {
-      // Both the query and catalog have keys.
-      verifyQueryClusterByMatchesCatalog(sourceType, catalogClustering, clusteredBy);
     }
   }
 
