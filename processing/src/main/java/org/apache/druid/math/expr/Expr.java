@@ -684,7 +684,7 @@ public interface Expr extends Cacheable
      * Add set of arguments as {@link BindingAnalysis#arrayVariables} that are *directly* {@link IdentifierExpr},
      * else they are ignored.
      */
-    BindingAnalysis withArrayArguments(Set<Expr> arrayArguments)
+    public BindingAnalysis withArrayArguments(Set<Expr> arrayArguments)
     {
       Set<IdentifierExpr> arrayIdentifiers = new HashSet<>();
       for (Expr expr : arrayArguments) {
@@ -705,7 +705,7 @@ public interface Expr extends Cacheable
     /**
      * Copy, setting if an expression has array inputs
      */
-    BindingAnalysis withArrayInputs(boolean hasArrays)
+    public BindingAnalysis withArrayInputs(boolean hasArrays)
     {
       return new BindingAnalysis(
           freeVariables,
@@ -719,7 +719,7 @@ public interface Expr extends Cacheable
     /**
      * Copy, setting if an expression produces an array output
      */
-    BindingAnalysis withArrayOutput(boolean isOutputArray)
+    public BindingAnalysis withArrayOutput(boolean isOutputArray)
     {
       return new BindingAnalysis(
           freeVariables,

@@ -84,7 +84,7 @@ For each row in the list of column data, there is only a single bitmap that has 
 
 By default Druid stores segments in a SQL compatible null handling mode. String columns always store the null value as id 0, the first position in the value dictionary and an associated entry in the bitmap value indexes used to filter null values. Numeric columns also store a null value bitmap index to indicate the null valued rows, which is used to null check aggregations and for filter matching null values. 
 
-Druid also has a legacy mode which uses default values instead of nulls, which was the default prior to Druid 28.0.0. This legacy mode can be enabled by setting `druid.generic.useDefaultValueForNull=true`.
+Druid also has a legacy mode which uses default values instead of nulls, which was the default prior to Druid 28.0.0. This legacy mode is deprecated and will be removed in a future release, but can be enabled by setting `druid.generic.useDefaultValueForNull=true`.
 
 In legacy mode, Druid segments created _at ingestion time_ have the following characteristics:
 
