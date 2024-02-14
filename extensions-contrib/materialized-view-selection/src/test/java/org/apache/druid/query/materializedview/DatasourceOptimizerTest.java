@@ -97,6 +97,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
   {
     TestDerbyConnector derbyConnector = derbyConnectorRule.getConnector();
     derbyConnector.createDataSourceTable();
+    derbyConnector.createSegmentSchemaTable();
     derbyConnector.createSegmentTable();
     MaterializedViewConfig viewConfig = new MaterializedViewConfig();
     jsonMapper = TestHelper.makeJsonMapper();
