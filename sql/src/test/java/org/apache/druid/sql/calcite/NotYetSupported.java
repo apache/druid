@@ -70,7 +70,7 @@ public @interface NotYetSupported
   {
     PLAN_MISMATCH(AssertionError.class, "AssertionError: query #"),
     NOT_ENOUGH_RULES(DruidException.class, "not enough rules"),
-    ERROR_HANDLING(AssertionError.class, "(is <ADMIN> was <OPERATOR>|is <INVALID_INPUT> was <UNCATEGORIZED>|with message a string containing)"),
+    ERROR_HANDLING(AssertionError.class, "(is <ADMIN> was <(OPERATOR|DEVELOPER)>|is <INVALID_INPUT> was <UNCATEGORIZED>|with message a string containing)"),
     EXPRESSION_NOT_GROUPED(DruidException.class, "Expression '[a-z]+' is not being grouped"),
     COLUMN_NOT_FOUND(DruidException.class, "CalciteContextException.*Column.*not found in any table"),
     NULLS_FIRST_LAST(DruidException.class, "NULLS (FIRST|LAST)"),
@@ -85,7 +85,8 @@ public @interface NotYetSupported
     T_ALLTYPES_ISSUES(AssertionError.class, "(t_alltype|allTypsUniq|fewRowsAllData).parquet.*Verifier.verify"),
     RESULT_MISMATCH(AssertionError.class, "(assertResultsEquals|AssertionError: column content mismatch)"),
     UNSUPPORTED_NULL_ORDERING(DruidException.class, "(A|DE)SCENDING ordering with NULLS (LAST|FIRST)"),
-    UNION_WITH_COMPLEX_OPERAND(DruidException.class, "Only Table and Values are supported as inputs for Union");
+    UNION_WITH_COMPLEX_OPERAND(DruidException.class, "Only Table and Values are supported as inputs for Union"),
+    UNION_MORE_STRICT_ROWTYPE_CHECK(DruidException.class, "Row signature mismatch in Union inputs");
 
     public Class<? extends Throwable> throwableClass;
     public String regex;
