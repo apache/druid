@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.external;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.TranslatableTable;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlCallBinding;
@@ -50,6 +51,9 @@ import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.expression.AuthorizableOperator;
+import org.apache.druid.sql.calcite.expression.DruidExpression;
+import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.DatasourceMetadata;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.DatasourceTable.EffectiveMetadata;
@@ -67,10 +71,35 @@ import java.util.Set;
  */
 public class AppendTableMacro extends SqlUserDefinedTableMacro implements AuthorizableOperator
 {
-  public AppendTableMacro()
+
+  public static final OperatorConversion OPERATOR_CONVERSION = new OperatorConversion();
+  public static final SqlOperator APPEND_TABLE_MACRO = new AppendTableMacro();
+
+  private static class OperatorConversion implements SqlOperatorConversion
+  {
+    public static final String FUNCTION_NAME = "APPEND";
+
+    public OperatorConversion()
+    {
+    }
+
+    @Override
+    public SqlOperator calciteOperator()
+    {
+      return APPEND_TABLE_MACRO;
+    }
+
+    @Override
+    public DruidExpression toDruidExpression(PlannerContext plannerContext, RowSignature rowSignature, RexNode rexNode)
+    {
+      throw new IllegalStateException();
+    }
+  }
+
+  private AppendTableMacro()
   {
     super(
-        new SqlIdentifier(TableAppendOperatorConversion.FUNCTION_NAME, SqlParserPos.ZERO),
+        new SqlIdentifier(OperatorConversion.FUNCTION_NAME, SqlParserPos.ZERO),
         SqlKind.OTHER_FUNCTION,
         ReturnTypes.CURSOR,
         null,
@@ -79,7 +108,7 @@ public class AppendTableMacro extends SqlUserDefinedTableMacro implements Author
     );
   }
 
-  static class MyMeta implements SqlOperandMetadata
+  private static class MyMeta implements SqlOperandMetadata
   {
     @Override
     public boolean checkOperandTypes(SqlCallBinding callBinding, boolean throwOnFailure)
@@ -96,7 +125,7 @@ public class AppendTableMacro extends SqlUserDefinedTableMacro implements Author
     @Override
     public String getAllowedSignatures(SqlOperator op, String opName)
     {
-      return "FIXME( TABLE ...)";
+      return "APPEND( <TABLE_NAME>, <TABLE_NAME>[, <TABLE_NAME> ...] )";
     }
 
     @Override

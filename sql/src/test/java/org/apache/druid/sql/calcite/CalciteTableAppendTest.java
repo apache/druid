@@ -58,7 +58,7 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testConcat2()
+  public void testAppend2()
   {
     testBuilder()
         .sql("select dim1,dim4,d1,f1 from TABLE(APPEND('foo','numfoo')) u")
@@ -82,7 +82,7 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testConcatSameTableMultipleTimes()
+  public void testAppendSameTableMultipleTimes()
   {
     testBuilder()
         .sql("select dim1,dim4,d1,f1 from TABLE(APPEND('foo','numfoo','foo')) u where dim1='2'")
@@ -97,7 +97,7 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testConcatSingleTableIsInvalid()
+  public void testAppendtSingleTableIsInvalid()
   {
     try {
       testBuilder()
@@ -114,7 +114,7 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testConcatNoTableIsInvalid()
+  public void testAppendNoTableIsInvalid()
   {
     try {
       testBuilder()
