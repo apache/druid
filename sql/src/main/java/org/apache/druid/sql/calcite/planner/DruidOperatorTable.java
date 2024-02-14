@@ -23,18 +23,13 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import org.apache.calcite.sql.SqlAggFunction;
-import org.apache.calcite.sql.SqlBasicFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlIdentifier;
-import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
-import org.apache.calcite.sql.type.OperandTypes;
-import org.apache.calcite.sql.type.ReturnTypes;
-import org.apache.calcite.sql.type.SqlTypeTransforms;
 import org.apache.calcite.sql.validate.SqlNameMatcher;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -146,12 +141,6 @@ import java.util.stream.Collectors;
 
 public class DruidOperatorTable implements SqlOperatorTable
 {
-  public static final SqlBasicFunction NVL =       SqlBasicFunction.create(SqlKind.NVL,
-      ReturnTypes.LEAST_RESTRICTIVE
-      .andThen(SqlTypeTransforms.TO_NULLABLE_ALL),
-  OperandTypes.SAME_SAME).withDeterministic(true);
-
-
   // COUNT and APPROX_COUNT_DISTINCT are not here because they are added by SqlAggregationModule.
   private static final List<SqlAggregator> STANDARD_AGGREGATORS =
       ImmutableList.<SqlAggregator>builder()
@@ -407,7 +396,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.IS_NOT_FALSE, "notfalse"))
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.IS_NOT_TRUE, "nottrue"))
                    .add(new CoalesceOperatorConversion(SqlStdOperatorTable.COALESCE))
-                   .add(new CoalesceOperatorConversion(NVL))
+                   .add(new CoalesceOperatorConversion(SqlLibraryOperators.NVL))
                    .add(new CoalesceOperatorConversion(SqlLibraryOperators.IFNULL))
                    .add(new BinaryOperatorConversion(SqlStdOperatorTable.MULTIPLY, "*"))
                    .add(new BinaryOperatorConversion(SqlStdOperatorTable.MOD, "%"))

@@ -3802,7 +3802,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
 
     testQuery(
-        "SELECT NVL(dim2, dim1), COUNT(*) FROM druid.foo GROUP BY NVL(dim2, dim1)\n",
+        "SELECT COALESCE(dim2, dim1), COUNT(*) FROM druid.foo GROUP BY COALESCE(dim2, dim1)\n",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
