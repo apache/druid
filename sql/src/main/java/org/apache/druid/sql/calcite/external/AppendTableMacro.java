@@ -63,12 +63,12 @@ import java.util.Set;
 /**
  * FIXME
  */
-public class ConcatTableMacro extends SqlUserDefinedTableMacro implements AuthorizableOperator
+public class AppendTableMacro extends SqlUserDefinedTableMacro implements AuthorizableOperator
 {
-  public ConcatTableMacro()
+  public AppendTableMacro()
   {
     super(
-        new SqlIdentifier(TableConcatOperatorConversion.FUNCTION_NAME, SqlParserPos.ZERO),
+        new SqlIdentifier(TableAppendOperatorConversion.FUNCTION_NAME, SqlParserPos.ZERO),
         SqlKind.OTHER_FUNCTION,
         ReturnTypes.CURSOR,
         null,

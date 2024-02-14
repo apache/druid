@@ -32,15 +32,15 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
  * alternate names: * TABLE_CONCAT select * from TABLE(TABLE_CONCAT('t1','t2')) * APPEND select * from
  * TABLE(APPEND('t1','t2')) * CONCAT select * from TABLE(CONCAT('t1','t2'))
  */
-public class TableConcatOperatorConversion implements SqlOperatorConversion
+public class TableAppendOperatorConversion implements SqlOperatorConversion
 {
   public static final String FUNCTION_NAME = "APPEND";
-  public static final TableConcatOperatorConversion INSTANCE = new TableConcatOperatorConversion();
-  private ConcatTableMacro macro;
+  public static final TableAppendOperatorConversion INSTANCE = new TableAppendOperatorConversion();
+  private AppendTableMacro macro;
 
-  public TableConcatOperatorConversion()
+  public TableAppendOperatorConversion()
   {
-    macro = new ConcatTableMacro();
+    macro = new AppendTableMacro();
   }
 
   @Override
@@ -52,6 +52,6 @@ public class TableConcatOperatorConversion implements SqlOperatorConversion
   @Override
   public DruidExpression toDruidExpression(PlannerContext plannerContext, RowSignature rowSignature, RexNode rexNode)
   {
-    throw new RuntimeException("FIXME: Unimplemented!");
+    throw new IllegalStateException();
   }
 }
