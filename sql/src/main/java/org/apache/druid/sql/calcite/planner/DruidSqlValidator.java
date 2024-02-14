@@ -29,21 +29,16 @@ import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rel.type.RelRecordType;
 import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.calcite.runtime.CalciteException;
-import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlInsert;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.SqlNodeList;
-import org.apache.calcite.sql.SqlNumericLiteral;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.SqlWindow;
-import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
-import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.IdentifierNamespace;
 import org.apache.calcite.sql.validate.SqlValidatorException;
@@ -52,7 +47,6 @@ import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.sql.validate.SqlValidatorTable;
 import org.apache.calcite.util.Pair;
 import org.apache.calcite.util.Util;
-import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.facade.DatasourceFacade;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.InvalidSqlInput;
@@ -72,7 +66,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.regex.Pattern;
 
 /**
@@ -221,14 +214,6 @@ class DruidSqlValidator extends BaseDruidSqlValidator
 
     final SqlValidatorNamespace sourceNamespace = namespaces.get(source);
     final RelRecordType sourceType = (RelRecordType) sourceNamespace.getRowType();
-
-    // Validate the __time column
-    int timeColumnIndex = sourceType.getFieldNames().indexOf(Columns.TIME_COLUMN);
-    if (timeColumnIndex != -1) {
-      validateTimeColumn(sourceType, timeColumnIndex);
-    }
-
-    validateClustering(sourceType, ingestNode);
 
     // Determine the output (target) schema.
     final RelDataType targetType = validateTargetType(scope, insertNs, insert, sourceType, tableMetadata);
@@ -393,174 +378,6 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     return ((PeriodGranularity) gran).getPeriod().toString();
   }
 
-  private void validateTimeColumn(
-      final RelRecordType sourceType,
-      final int timeColumnIndex
-  )
-  {
-    final RelDataTypeField timeCol = sourceType.getFieldList().get(timeColumnIndex);
-    final RelDataType timeColType = timeCol.getType();
-    if (timeColType instanceof BasicSqlType) {
-      final BasicSqlType timeColSqlType = (BasicSqlType) timeColType;
-      final SqlTypeName timeColSqlTypeName = timeColSqlType.getSqlTypeName();
-      if (timeColSqlTypeName == SqlTypeName.BIGINT || timeColSqlTypeName == SqlTypeName.TIMESTAMP) {
-        return;
-      }
-    }
-    throw InvalidSqlInput.exception(
-        "Column [%s] is being used as the time column. It must be of type BIGINT or TIMESTAMP, got [%s]",
-        timeCol.getName(),
-        timeColType
-    );
-  }
-
-  /**
-   * Verify clustering which can come from the query, the catalog or both. If both,
-   * the two must match. In either case, the cluster keys must be present in the SELECT
-   * clause. The {@code __time} column cannot be included.
-   */
-  private void validateClustering(
-      final RelRecordType sourceType,
-      final DruidSqlIngest ingestNode
-  )
-  {
-    final SqlNodeList clusteredBy = ingestNode.getClusteredBy();
-
-    // Validate both the catalog and query definitions if present. This ensures
-    // that things are sane if we later check that the two are identical.
-    if (clusteredBy != null) {
-      validateClusteredBy(sourceType, clusteredBy);
-    }
-  }
-
-  /**
-   * Validate the CLUSTERED BY list. Members can be any of the following:
-   * <p>
-   * {@code CLUSTERED BY [<ordinal> | <id> | <expr>] DESC?}
-   * <p>
-   * Ensure that each id exists. Ensure each column is included only once.
-   * For an expression, just ensure it is valid; we don't check for duplicates.
-   */
-  private void validateClusteredBy(
-      final RelRecordType sourceType,
-      final SqlNodeList clusteredBy
-  )
-  {
-    // Keep track of fields which have been referenced.
-    final List<String> fieldNames = sourceType.getFieldNames();
-    final int fieldCount = fieldNames.size();
-    final boolean[] refs = new boolean[fieldCount];
-
-    // Process cluster keys
-    for (SqlNode clusterKey : clusteredBy) {
-      final Pair<Integer, Boolean> key = resolveClusterKey(clusterKey, fieldNames);
-      // If an expression, index is null. Validation was done in the ORDER BY check.
-      // Else, do additional MSQ-specific checks.
-      if (key != null) {
-        int index = key.left;
-        // No duplicate references
-        if (refs[index]) {
-          throw InvalidSqlInput.exception("Duplicate CLUSTERED BY key: [%s]", clusterKey);
-        }
-        refs[index] = true;
-      }
-    }
-  }
-
-  private Pair<Integer, Boolean> resolveClusterKey(SqlNode clusterKey, final List<String> fieldNames)
-  {
-    boolean desc = false;
-
-    // Check if the key is compound: only occurs for DESC. The ASC
-    // case is abstracted away by the parser.
-    if (clusterKey instanceof SqlBasicCall) {
-      SqlBasicCall basicCall = (SqlBasicCall) clusterKey;
-      if (basicCall.getOperator() == SqlStdOperatorTable.DESC) {
-        // Cluster key is compound: CLUSTERED BY foo DESC
-        // We check only the first element
-        clusterKey = ((SqlBasicCall) clusterKey).getOperandList().get(0);
-        desc = true;
-      }
-    }
-
-    // We now have the actual key. Handle the three cases.
-    if (clusterKey instanceof SqlNumericLiteral) {
-      // Key is an ordinal: CLUSTERED BY 2
-      // Ordinals are 1-based.
-      final int ord = ((SqlNumericLiteral) clusterKey).intValue(true);
-      final int index = ord - 1;
-
-      // The ordinal has to be in range.
-      if (index < 0 || fieldNames.size() <= index) {
-        throw InvalidSqlInput.exception(
-            "CLUSTERED BY ordinal [%d] should be non-negative and <= the number of fields [%d]",
-            ord,
-            fieldNames.size()
-        );
-      }
-      return new Pair<>(index, desc);
-    } else if (clusterKey instanceof SqlIdentifier) {
-      // Key is an identifier: CLUSTERED BY foo
-      final SqlIdentifier key = (SqlIdentifier) clusterKey;
-
-      // Only key of the form foo are allowed, not foo.bar
-      if (!key.isSimple()) {
-        throw InvalidSqlInput.exception("CLUSTERED BY keys must be a simple name with no dots: [%s]", key.toString());
-      }
-
-      // The name must match an item in the select list
-      final String keyName = key.names.get(0);
-      // Slow linear search. We assume that there are not many cluster keys.
-      final int index = fieldNames.indexOf(keyName);
-      if (index == -1) {
-        throw InvalidSqlInput.exception("Unknown column [%s] in CLUSTERED BY", keyName);
-      }
-      return new Pair<>(index, desc);
-    } else {
-      // Key is an expression: CLUSTERED BY CEIL(m2)
-      return null;
-    }
-  }
-
-  /**
-   * Both the catalog and query define clustering. This is allowed as long as they
-   * are identical.
-   */
-  private void verifyQueryClusterByMatchesCatalog(
-      final RelRecordType sourceType,
-      final SqlNodeList catalogClustering,
-      final SqlNodeList clusteredBy
-  )
-  {
-    if (clusteredBy.size() != catalogClustering.size()) {
-      throw clusterKeyMismatchException(catalogClustering, clusteredBy);
-    }
-    final List<String> fieldNames = sourceType.getFieldNames();
-    for (int i = 0; i < clusteredBy.size(); i++) {
-      final SqlNode catalogKey = catalogClustering.get(i);
-      final SqlNode clusterKey = clusteredBy.get(i);
-      final Pair<Integer, Boolean> catalogPair = resolveClusterKey(catalogKey, fieldNames);
-      final Pair<Integer, Boolean> queryPair = resolveClusterKey(clusterKey, fieldNames);
-
-      // Cluster keys in the catalog must be field references. If unresolved,
-      // we would have gotten an error above. Here we make sure that both
-      // indexes are the same. Since the catalog index can't be null, we're
-      // essentially checking that the indexes are the same: they name the same
-      // column.
-      if (!Objects.equals(catalogPair, queryPair)) {
-        throw clusterKeyMismatchException(catalogClustering, clusteredBy);
-      }
-    }
-  }
-
-  private RuntimeException clusterKeyMismatchException(SqlNodeList catalogClustering, SqlNodeList clusterKeys)
-  {
-    throw InvalidSqlInput.exception(
-        "CLUSTER BY mismatch. Catalog: [%s], query: [%s]",
-        catalogClustering,
-        clusterKeys
-    );
-  }
 
   /**
    * Compute and validate the target type. In normal SQL, the engine would insert
@@ -584,8 +401,7 @@ class DruidSqlValidator extends BaseDruidSqlValidator
   )
   {
     final List<RelDataTypeField> sourceFields = sourceType.getFieldList();
-    for (int i = 0; i < sourceFields.size(); i++) {
-      final RelDataTypeField sourceField = sourceFields.get(i);
+    for (final RelDataTypeField sourceField : sourceFields) {
       // Check that there are no unnamed columns in the insert.
       if (UNNAMED_COLUMN_PATTERN.matcher(sourceField.getName()).matches()) {
         throw InvalidSqlInput.exception(
