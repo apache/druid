@@ -163,20 +163,21 @@ public class AppendTableMacro extends SqlUserDefinedTableMacro implements Author
     @Override
     public List<RelDataType> paramTypes(RelDataTypeFactory typeFactory)
     {
-      throw new IllegalStateException();
+      RelDataType t = typeFactory.createSqlType(SqlTypeName.VARCHAR);
+      return ImmutableList.<RelDataType>builder().add(t, t).build();
     }
 
     @Override
     public List<String> paramNames()
     {
-      throw new IllegalStateException();
+      return ImmutableList.<String>builder().add("tableName", "tableName").build();
     }
   }
 
   @Override
   public List<String> getParamNames()
   {
-    throw new IllegalStateException();
+    return ImmutableList.<String>builder().add("tableName", "tableName").build();
   }
 
   @Override
