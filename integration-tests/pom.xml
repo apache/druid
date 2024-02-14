@@ -656,7 +656,7 @@
                             </properties>
                             <argLine>
                                 ${jdk.strong.encapsulation.argLine}
-                                -Xmx512m
+                                -Xmx1024m
                                 -Duser.timezone=UTC
                                 -Dfile.encoding=UTF-8
                                 -Ddruid.test.config.dockerIp=${env.DOCKER_IP}
