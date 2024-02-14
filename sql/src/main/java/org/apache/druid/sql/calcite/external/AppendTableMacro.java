@@ -70,7 +70,9 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 /**
- * FIXME
+ * Dynamic table append.
+ *
+ * Enables to use: TABLE(APPEND('t1','t2')); which will provide a union view of the operand tables.
  */
 public class AppendTableMacro extends SqlUserDefinedTableMacro implements AuthorizableOperator
 {
