@@ -245,7 +245,6 @@ public class AppendTableMacro extends SqlUserDefinedTableMacro implements Author
         ColumnType currentType = rowSignature.getColumnType(currentColumn).get();
         ColumnType existingType = fields.get(key);
         if (existingType != null && !existingType.equals(currentType)) {
-          // FIXME this could be more sophisticated
           throw new IllegalArgumentException("incompatible operands");
         }
         if (existingType == null) {
