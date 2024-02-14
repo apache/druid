@@ -579,6 +579,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
     final TestDerbyConnector derbyConnector = derby.getConnector();
     derbyConnector.createDataSourceTable();
     derbyConnector.createPendingSegmentsTable();
+    derbyConnector.createSegmentSchemaTable();
     derbyConnector.createSegmentTable();
     derbyConnector.createRulesTable();
     derbyConnector.createConfigTable();
