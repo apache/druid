@@ -56,7 +56,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.SchemaPayload;
-import org.apache.druid.segment.column.SegmentSchemaMetadataTest;
+import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -1549,7 +1549,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     List<SchemaManager.SegmentSchemaMetadataPlus> pluses = new ArrayList<>();
     pluses.add(new SchemaManager.SegmentSchemaMetadataPlus(
         segment1.getId(),
-        new SegmentSchemaMetadataTest(
+        new SegmentSchemaMetadata(
             new SchemaPayload(
                 index1StorageAdaptor.getRowSignature()),
             (long) index1StorageAdaptor.getNumRows()
@@ -1558,7 +1558,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     ));
     pluses.add(new SchemaManager.SegmentSchemaMetadataPlus(
         segment2.getId(),
-        new SegmentSchemaMetadataTest(
+        new SegmentSchemaMetadata(
             new SchemaPayload(
                 index2StorageAdaptor.getRowSignature()),
             (long) index2StorageAdaptor.getNumRows()
