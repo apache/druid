@@ -28,6 +28,7 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.hamcrest.MatcherAssert;
@@ -186,6 +187,7 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.ERROR_HANDLING)
   @Test
   public void testUnionAllTablesColumnTypeMismatchStringLong()
   {
@@ -203,6 +205,7 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.ERROR_HANDLING)
   @Test
   public void testUnionAllTablesWhenMappingIsRequired()
   {
@@ -219,6 +222,7 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.ERROR_HANDLING)
   @Test
   public void testUnionIsUnplannable()
   {
@@ -229,6 +233,7 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.ERROR_HANDLING)
   @Test
   public void testUnionAllTablesWhenCastAndMappingIsRequired()
   {
@@ -328,6 +333,7 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.ERROR_HANDLING)
   @Test
   public void testUnionAllSameTableTwiceWithDifferentMapping()
   {
