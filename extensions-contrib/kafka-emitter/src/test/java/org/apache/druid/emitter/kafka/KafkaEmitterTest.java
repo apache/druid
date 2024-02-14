@@ -53,6 +53,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -149,12 +151,12 @@ public class KafkaEmitterTest
     final List<Event> inputEvents = flattenEvents(SERVICE_METRIC_EVENTS);
     final CountDownLatch eventLatch = new CountDownLatch(inputEvents.size());
 
-    final Map<String, List<String>> feedToExpectedEvents = trackExpectedEventsPerFeed(
+    final Map<String, List<EventMap>> feedToExpectedEvents = trackExpectedEventsPerFeed(
         inputEvents,
         kafkaEmitterConfig.getClusterName(),
         kafkaEmitterConfig.getExtraDimensions()
     );
-    final Map<String, List<String>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
+    final Map<String, List<EventMap>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
 
     emitEvents(kafkaEmitter, inputEvents, eventLatch);
 
@@ -193,12 +195,12 @@ public class KafkaEmitterTest
     );
     final CountDownLatch eventLatch = new CountDownLatch(inputEvents.size());
 
-    final Map<String, List<String>> feedToExpectedEvents = trackExpectedEventsPerFeed(
+    final Map<String, List<EventMap>> feedToExpectedEvents = trackExpectedEventsPerFeed(
         inputEvents,
         kafkaEmitterConfig.getClusterName(),
         kafkaEmitterConfig.getExtraDimensions()
     );
-    final Map<String, List<String>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
+    final Map<String, List<EventMap>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
 
     emitEvents(kafkaEmitter, inputEvents, eventLatch);
 
@@ -236,12 +238,12 @@ public class KafkaEmitterTest
     );
     final CountDownLatch eventLatch = new CountDownLatch(inputEvents.size());
 
-    final Map<String, List<String>> feedToExpectedEvents = trackExpectedEventsPerFeed(
+    final Map<String, List<EventMap>> feedToExpectedEvents = trackExpectedEventsPerFeed(
         inputEvents,
         kafkaEmitterConfig.getClusterName(),
         kafkaEmitterConfig.getExtraDimensions()
     );
-    final Map<String, List<String>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
+    final Map<String, List<EventMap>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
 
     emitEvents(kafkaEmitter, inputEvents, eventLatch);
 
@@ -282,12 +284,12 @@ public class KafkaEmitterTest
 
     final CountDownLatch eventLatch = new CountDownLatch(ALERT_EVENTS.size());
 
-    final Map<String, List<String>> feedToExpectedEvents = trackExpectedEventsPerFeed(
+    final Map<String, List<EventMap>> feedToExpectedEvents = trackExpectedEventsPerFeed(
         ALERT_EVENTS,
         kafkaEmitterConfig.getClusterName(),
         kafkaEmitterConfig.getExtraDimensions()
     );
-    final Map<String, List<String>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
+    final Map<String, List<EventMap>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
 
     emitEvents(kafkaEmitter, inputEvents, eventLatch);
 
@@ -329,12 +331,12 @@ public class KafkaEmitterTest
 
     final CountDownLatch eventLatch = new CountDownLatch(inputEvents.size());
 
-    final Map<String, List<String>> feedToExpectedEvents = trackExpectedEventsPerFeed(
+    final Map<String, List<EventMap>> feedToExpectedEvents = trackExpectedEventsPerFeed(
         inputEvents,
         kafkaEmitterConfig.getClusterName(),
         kafkaEmitterConfig.getExtraDimensions()
     );
-    final Map<String, List<String>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
+    final Map<String, List<EventMap>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
 
     emitEvents(kafkaEmitter, inputEvents, eventLatch);
 
@@ -372,12 +374,12 @@ public class KafkaEmitterTest
 
     final CountDownLatch eventLatch = new CountDownLatch(SERVICE_METRIC_EVENTS.size());
 
-    final Map<String, List<String>> feedToExpectedEvents = trackExpectedEventsPerFeed(
+    final Map<String, List<EventMap>> feedToExpectedEvents = trackExpectedEventsPerFeed(
         SERVICE_METRIC_EVENTS,
         kafkaEmitterConfig.getClusterName(),
         kafkaEmitterConfig.getExtraDimensions()
     );
-    final Map<String, List<String>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
+    final Map<String, List<EventMap>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
 
     emitEvents(kafkaEmitter, inputEvents, eventLatch);
 
@@ -398,7 +400,7 @@ public class KafkaEmitterTest
     );
 
     final ImmutableMap<String, String> extraDimensions = ImmutableMap.of("clusterId", "cluster-101");
-    final Map<String, List<String>> feedToAllEventsBeforeDrop = trackExpectedEventsPerFeed(
+    final Map<String, List<EventMap>> feedToAllEventsBeforeDrop = trackExpectedEventsPerFeed(
         inputEvents,
         null,
         extraDimensions
@@ -424,15 +426,15 @@ public class KafkaEmitterTest
     // we should track the minimum buffer size per feed, compute the global maximum across all the feeds and prune the
     // expected set of events accordingly. For the sake of testing simplicity, we skip that for now.
     int totalBufferSize = 0;
-    for (final List<String> feedEvents : feedToAllEventsBeforeDrop.values()) {
+    for (final List<EventMap> feedEvents : feedToAllEventsBeforeDrop.values()) {
       for (int idx = 0; idx < feedEvents.size() - bufferEventsDrop; idx++) {
-        totalBufferSize += feedEvents.get(idx).getBytes(StandardCharsets.UTF_8).length;
+        totalBufferSize += MAPPER.writeValueAsString(feedEvents.get(idx)).getBytes(StandardCharsets.UTF_8).length;
       }
     }
 
-    final Map<String, List<String>> feedToExpectedEvents = new HashMap<>();
-    for (final Map.Entry<String, List<String>> expectedEvent : feedToAllEventsBeforeDrop.entrySet()) {
-      List<String> expectedEvents = expectedEvent.getValue();
+    final Map<String, List<EventMap>> feedToExpectedEvents = new HashMap<>();
+    for (final Map.Entry<String, List<EventMap>> expectedEvent : feedToAllEventsBeforeDrop.entrySet()) {
+      List<EventMap> expectedEvents = expectedEvent.getValue();
       feedToExpectedEvents.put(expectedEvent.getKey(), expectedEvents.subList(0, expectedEvents.size() - bufferEventsDrop));
     }
 
@@ -452,7 +454,7 @@ public class KafkaEmitterTest
     final KafkaEmitter kafkaEmitter = initKafkaEmitter(kafkaEmitterConfig);
 
     final CountDownLatch eventLatch = new CountDownLatch(inputEvents.size() - bufferEventsDrop);
-    final Map<String, List<String>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
+    final Map<String, List<EventMap>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
 
     emitEvents(kafkaEmitter, inputEvents, eventLatch);
 
@@ -509,18 +511,18 @@ public class KafkaEmitterTest
     return flattenedList;
   }
 
-  private Map<String, List<String>> trackActualEventsPerFeed(
+  private Map<String, List<EventMap>> trackActualEventsPerFeed(
       final CountDownLatch eventLatch
   )
   {
-    final Map<String, List<String>> feedToActualEvents = new HashMap<>();
+    final Map<String, List<EventMap>> feedToActualEvents = new HashMap<>();
     when(producer.send(any(), any())).then((invocation) -> {
       final ProducerRecord<?, ?> producerRecord = invocation.getArgument(0);
       final String value = String.valueOf(producerRecord.value());
       final EventMap eventMap = MAPPER.readValue(value, EventMap.class);
       feedToActualEvents.computeIfAbsent(
           (String) eventMap.get("feed"), k -> new ArrayList<>()
-      ).add(value);
+      ).add(eventMap);
 
       eventLatch.countDown();
       return null;
@@ -528,13 +530,13 @@ public class KafkaEmitterTest
     return feedToActualEvents;
   }
 
-  private Map<String, List<String>> trackExpectedEventsPerFeed(
+  private Map<String, List<EventMap>> trackExpectedEventsPerFeed(
       final List<Event> events,
       final String clusterName,
       final Map<String, String> extraDimensions
   ) throws JsonProcessingException
   {
-    final Map<String, List<String>> feedToExpectedEvents = new HashMap<>();
+    final Map<String, List<EventMap>> feedToExpectedEvents = new HashMap<>();
     for (final Event event : events) {
       final EventMap eventMap = event.toMap();
       eventMap.computeIfAbsent("clusterName", k -> clusterName);
@@ -542,24 +544,23 @@ public class KafkaEmitterTest
         eventMap.putAll(extraDimensions);
       }
       feedToExpectedEvents.computeIfAbsent(
-          event.getFeed(), k -> new ArrayList<>()).add(MAPPER.writeValueAsString(eventMap)
-      );
+          event.getFeed(), k -> new ArrayList<>()).add(eventMap);
     }
     return feedToExpectedEvents;
   }
 
   private void validateEvents(
-      final Map<String, List<String>> feedToExpectedEvents,
-      final Map<String, List<String>> feedToActualEvents
+      final Map<String, List<EventMap>> feedToExpectedEvents,
+      final Map<String, List<EventMap>> feedToActualEvents
   )
   {
     Assert.assertEquals(feedToExpectedEvents.size(), feedToActualEvents.size());
 
-    for (final Map.Entry<String, List<String>> actualEntry : feedToActualEvents.entrySet()) {
+    for (final Map.Entry<String, List<EventMap>> actualEntry : feedToActualEvents.entrySet()) {
       final String feed = actualEntry.getKey();
-      final List<String> actualEvents = actualEntry.getValue();
-      final List<String> expectedEvents = feedToExpectedEvents.get(feed);
-      Assert.assertEquals(expectedEvents, actualEvents);
+      final List<EventMap> actualEvents = actualEntry.getValue();
+      final List<EventMap> expectedEvents = feedToExpectedEvents.get(feed);
+      assertThat(actualEvents, containsInAnyOrder(expectedEvents.toArray(new Map[0])));
     }
   }
 
