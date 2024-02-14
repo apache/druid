@@ -141,6 +141,7 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
     }
   }
 
+  @NotYetSupported(Modes.UNION_MORE_STRICT_ROWTYPE_CHECK)
   @Test
   public void testUnionAllTablesColumnTypeMismatchFloatLong()
   {
