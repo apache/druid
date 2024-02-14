@@ -105,9 +105,9 @@ public class SegmentMetadataEvent implements Event
     return EventMap.builder()
         .put(FEED, getFeed())
         .put(DATASOURCE, dataSource)
-        .put(CREATED_TIME, createdTime)
-        .put(START_TIME, startTime)
-        .put(END_TIME, endTime)
+        .put(CREATED_TIME, createdTime.toString())
+        .put(START_TIME, startTime.toString())
+        .put(END_TIME, endTime.toString())
         .put(VERSION, version)
         .put(IS_COMPACTED, isCompacted)
         .build();

@@ -60,7 +60,7 @@ public final class DefaultRequestLogEvent implements RequestLogEvent
     final EventMap.Builder builder = EventMap
         .builder()
         .put("feed", getFeed())
-        .put("timestamp", getCreatedTime())
+        .put("timestamp", getCreatedTime().toString())
         .put("service", getService())
         .put("host", getHost())
         .putNonNull("query", getQuery());
@@ -71,7 +71,7 @@ public final class DefaultRequestLogEvent implements RequestLogEvent
     }
 
     builder.put("remoteAddr", getRemoteAddr())
-           .put("queryStats", getQueryStats());
+           .put("queryStats", getQueryStats().getStats());
 
     return builder.build();
   }
