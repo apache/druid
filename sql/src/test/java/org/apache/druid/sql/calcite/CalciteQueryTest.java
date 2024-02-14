@@ -14749,8 +14749,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .context(QUERY_CONTEXT_DEFAULT)
                 .intervals(querySegmentSpec(Intervals.of(
                     "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z")))
+                .virtualColumns(
+                    expressionVirtualColumn(
+                        "v0",
+                        "nvl(\"dim1\",'')",
+                        ColumnType.STRING
+                    )
+                )
                 .columns(ImmutableList.of("__time", "dim1"))
-                .filters(not(in("dim1", Arrays.asList("", "a"), null)))
+                .filters(and(not(equality("v0", "a", ColumnType.STRING)), not(equality("v0", "", ColumnType.STRING))))
                 .build()
         ),
         ImmutableList.of(
@@ -14776,7 +14783,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Intervals.of(
                     "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z")))
                 .columns(ImmutableList.of("__time", "dim1"))
-                .filters(not(in("dim1", Arrays.asList("", "a"), null)))
+                .virtualColumns(
+                    expressionVirtualColumn(
+                        "v0",
+                        "nvl(\"dim1\",'')",
+                        ColumnType.STRING
+                    )
+                )
+                .filters(and(not(equality("v0", "a", ColumnType.STRING)), not(equality("v0", "", ColumnType.STRING))))
                 .build()
         ),
         ImmutableList.of(
@@ -15291,5 +15305,89 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             )
         )
         .run();
+  }
+
+  @Test
+  public void testNVLColumns()
+  {
+    // Doesn't conform to the SQL standard, but it's how we do it.
+    // This example is used in the sql.md doc.
+
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT NVL(dim2, dim1), COUNT(*) FROM druid.foo GROUP BY NVL(dim2, dim1)\n",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "nvl(\"dim2\",\"dim1\")",
+                                ColumnType.STRING
+                            )
+                        )
+                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)))
+                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
+            new Object[]{"10.1", 1L},
+            new Object[]{"2", 1L},
+            new Object[]{"a", 2L},
+            new Object[]{"abc", 2L}
+        ) :
+        ImmutableList.of(
+            new Object[]{"", 1L},
+            new Object[]{"10.1", 1L},
+            new Object[]{"a", 2L},
+            new Object[]{"abc", 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testNVLColumnsRecursive()
+  {
+    // Doesn't conform to the SQL standard, but it's how we do it.
+    // This example is used in the sql.md doc.
+
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
+    testQuery(
+        "select ((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL((NVL(m1, 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0)), 0) + NVL(m1, 0))) AS \"result\"\n"
+        + " from foo",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(
+                      expressionVirtualColumn(
+                          "v0",
+                          "(nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl((nvl(\"m1\",0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0)),0) + nvl(\"m1\",0))",
+                          ColumnType.FLOAT
+                      )
+                  )
+                  .columns("v0")
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{86.0F},
+            new Object[]{172.0F},
+            new Object[]{258.0F},
+            new Object[]{344.0F},
+            new Object[]{430.0F},
+            new Object[]{516.0F}
+        )
+    );
   }
 }
