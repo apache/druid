@@ -51,6 +51,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -130,6 +131,11 @@ public class KafkaEmitterTest
       new TestEvent()
   );
 
+  /**
+   * Unit test to validate the handling of {@link ServiceMetricEvent}s.
+   * Only {@link KafkaEmitterConfig.EventType}s is subscribed in the config, so the expectation is that the
+   * events are emitted without any drops.
+   */
   @Test(timeout = 10_000)
   public void testServiceMetricEvents() throws InterruptedException
   {
@@ -169,6 +175,12 @@ public class KafkaEmitterTest
     Assert.assertEquals(0, kafkaEmitter.getInvalidLostCount());
   }
 
+  /**
+   * Unit test to validate the handling of all event types, including {@link ServiceMetricEvent},
+   * {@link AlertEvent}, {@link org.apache.druid.server.log.RequestLogEvent}, and {@link SegmentMetadataEvent}.
+   * All {@link KafkaEmitterConfig.EventType}s are subscribed in the config, so the expectation is that all the
+   * events are emitted without any drops.
+   */
   @Test(timeout = 10_000)
   public void testAllEvents() throws InterruptedException
   {
@@ -214,6 +226,11 @@ public class KafkaEmitterTest
 
   }
 
+  /**
+   * Unit test to validate the handling of the default event types - {@link ServiceMetricEvent} and {@link AlertEvent}.
+   * The default event types (alerts and metrics) are subscribed in the config, so the expectation is that both input
+   * event types should be emitted without any drops.
+   */
   @Test(timeout = 10_000)
   public void testDefaultEvents() throws InterruptedException
   {
@@ -256,6 +273,12 @@ public class KafkaEmitterTest
     Assert.assertEquals(0, kafkaEmitter.getInvalidLostCount());
   }
 
+  /**
+   * Unit test to validate the handling of all valid event types, including {@link ServiceMetricEvent},
+   * {@link AlertEvent}, {@link org.apache.druid.server.log.RequestLogEvent}, and {@link SegmentMetadataEvent}.
+   * Only alerts are subscribed in the config, so the expectation is that only alert events
+   * should be emitted, and everything else should be dropped.
+   */
   @Test(timeout = 10_000)
   public void testAlertsPlusUnsubscribedEvents() throws InterruptedException
   {
@@ -304,6 +327,15 @@ public class KafkaEmitterTest
     Assert.assertEquals(REQUEST_LOG_EVENTS.size(), kafkaEmitter.getRequestLostCount());
   }
 
+  /**
+   * Similar to {@link #testAllEvents()}, this test configures all event feeds to emit to the same topic.
+   * <p>
+   * Unit test to validate the handling of all valid event types, including {@link ServiceMetricEvent},
+   * {@link AlertEvent}, {@link org.apache.druid.server.log.RequestLogEvent}, and {@link SegmentMetadataEvent}.
+   * All {@link KafkaEmitterConfig.EventType}s are subscribed to the same topic in the config, so the expectation
+   * is that all input events are emitted without any drops.
+   * </p>
+   */
   @Test(timeout = 10_000)
   public void testAllEventsWithCommonTopic() throws InterruptedException
   {
@@ -349,6 +381,12 @@ public class KafkaEmitterTest
     Assert.assertEquals(0, kafkaEmitter.getInvalidLostCount());
   }
 
+  /**
+   * Unit test to validate the handling of {@link ServiceMetricEvent}s and {@link TestEvent}s.
+   * The default event types (alerts and metrics) are subscribed in the config, so the expectation is that only
+   * {@link ServiceMetricEvent} is expected to be emitted, while dropping all unknown {@link TestEvent}s.
+   * </p>
+   */
   @Test(timeout = 10_000)
   public void testUnknownEvents() throws InterruptedException
   {
@@ -392,6 +430,13 @@ public class KafkaEmitterTest
     Assert.assertEquals(UNKNOWN_EVENTS.size(), kafkaEmitter.getInvalidLostCount());
   }
 
+  /**
+   * Unit test to validate the handling of {@link ServiceMetricEvent}s when the Kafka emitter queue, which buffers up events
+   * becomes full. The queue size in the config is set via {@code buffer.memory} and is computed from
+   * the input events using {@code bufferEventsDrop}. The default event types (alerts and metrics) are subscribed in
+   * the config, so the expectation is that all {@link ServiceMetricEvent}s up to {@code n - bufferEventsDrop} will be
+   * emitted, {@code n} being the total number of input events, while dropping the last {@code bufferEventsDrop} events.
+   */
   @Test(timeout = 10_000)
   public void testDropEventsWhenQueueFull() throws JsonProcessingException, InterruptedException
   {
@@ -515,7 +560,9 @@ public class KafkaEmitterTest
       final CountDownLatch eventLatch
   )
   {
-    final Map<String, List<EventMap>> feedToActualEvents = new HashMap<>();
+
+    // A concurrent hashmap because the producer callback can trigger concurrently and can override the map initialization
+    final ConcurrentHashMap<String, List<EventMap>> feedToActualEvents = new ConcurrentHashMap<>();
     when(producer.send(any(), any())).then((invocation) -> {
       final ProducerRecord<?, ?> producerRecord = invocation.getArgument(0);
       final String value = String.valueOf(producerRecord.value());
