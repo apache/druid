@@ -218,7 +218,8 @@ public class AppendTableMacro extends SqlUserDefinedTableMacro implements Author
   {
     List<RelOptTable> ret = new ArrayList<>();
     for (String tableName : tableNames) {
-      SqlValidatorTable t = catalogReader.getTable(ImmutableList.<String>builder().add(tableName).build());
+      ImmutableList<String> names = ImmutableList.<String>builder().add(tableName).build();
+      SqlValidatorTable t = catalogReader.getTable(names);
       ret.add(t.unwrapOrThrow(RelOptTable.class));
     }
     return ret;

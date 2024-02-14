@@ -20,11 +20,14 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
+import org.hamcrest.MatcherAssert;
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 
-public class CalciteTableConcatTest extends BaseCalciteQueryTest
+public class CalciteTableAppendTest extends BaseCalciteQueryTest
 {
   @Rule(order = 0)
   public NotYetSupportedProcessor negativeTestProcessor = new NotYetSupportedProcessor();
@@ -37,29 +40,28 @@ public class CalciteTableConcatTest extends BaseCalciteQueryTest
         // .sql("select datasource, sum(duration) from sys.tasks group by datasource")
         .expectedResults(
             ImmutableList.of(
-                new Object[]{"", null},
-                new Object[]{"10.1", null},
-                new Object[]{"2", null},
-                new Object[]{"1", null},
-                new Object[]{"def", null},
-                new Object[]{"abc", null},
-                new Object[]{"", "a"},
-                new Object[]{"10.1", "a"},
-                new Object[]{"2", "a"},
-                new Object[]{"1", "b"},
-                new Object[]{"def", "b"},
-                new Object[]{"abc", "b"}
+                new Object[] {"", null},
+                new Object[] {"10.1", null},
+                new Object[] {"2", null},
+                new Object[] {"1", null},
+                new Object[] {"def", null},
+                new Object[] {"abc", null},
+                new Object[] {"", "a"},
+                new Object[] {"10.1", "a"},
+                new Object[] {"2", "a"},
+                new Object[] {"1", "b"},
+                new Object[] {"def", "b"},
+                new Object[] {"abc", "b"}
             )
         )
         .run();
   }
 
   @Test
-  public void testConcat1()
+  public void testConcat2()
   {
     testBuilder()
         .sql("select dim1,dim4,d1,f1 from TABLE(APPEND('foo','numfoo')) u")
-        // .sql("select datasource, sum(duration) from sys.tasks group by datasource")
         .expectedResults(
             ImmutableList.of(
                 new Object[] {"", null, null, null},
@@ -77,5 +79,54 @@ public class CalciteTableConcatTest extends BaseCalciteQueryTest
             )
         )
         .run();
+  }
+
+  @Test
+  public void testConcatSameTableMultipleTimes()
+  {
+    testBuilder()
+        .sql("select dim1,dim4,d1,f1 from TABLE(APPEND('foo','numfoo','foo')) u where dim1='2'")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {"2", null, null, null},
+                new Object[] {"2", null, null, null},
+                new Object[] {"2", "a", 0.0D, 0.0F}
+            )
+        )
+        .run();
+  }
+
+  @Test
+  public void testConcatSingleTableIsInvalid()
+  {
+    try {
+      testBuilder()
+          .sql("select dim1 from TABLE(APPEND('foo')) u")
+          .run();
+      Assert.fail("query execution should fail");
+    }
+    catch (DruidException e) {
+      MatcherAssert.assertThat(
+          e,
+          invalidSqlIs("No match found for function signature APPEND(<CHARACTER>) (line [1], column [24])")
+      );
+    }
+  }
+
+  @Test
+  public void testConcatNoTableIsInvalid()
+  {
+    try {
+      testBuilder()
+          .sql("select dim1 from TABLE(APPEND()) u")
+          .run();
+      Assert.fail("query execution should fail");
+    }
+    catch (DruidException e) {
+      MatcherAssert.assertThat(
+          e,
+          invalidSqlIs("No match found for function signature APPEND() (line [1], column [24])")
+      );
+    }
   }
 }
