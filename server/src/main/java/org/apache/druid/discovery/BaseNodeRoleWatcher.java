@@ -87,10 +87,10 @@ public class BaseNodeRoleWatcher
       nodeViewInitialized = false;
     }
     if (!nodeViewInitialized) {
-      LOGGER.warn(
-          "Cache for node role [%s] could not be initialized.", nodeRole.getJsonName()
+      LOGGER.info(
+          "Cache for node role [%s] not initialized yet; getAllNodes() might not return full information.",
+          nodeRole.getJsonName()
       );
-      return null;
     }
     return unmodifiableNodes;
   }

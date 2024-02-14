@@ -166,14 +166,12 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
 
     private final NodeRole nodeRole;
     private final ObjectMapper jsonMapper;
-    private final ExecutorService cacheExecutor;
-    private final String basePath;
-
-    private final Object lock = new Object();
-
     private final BaseNodeRoleWatcher baseNodeRoleWatcher;
 
-    private PathChildrenCache cache;
+    private final PathChildrenCache cache;
+    private final ExecutorService cacheExecutor;
+
+    private final Object lock = new Object();
 
     NodeRoleWatcher(
         ExecutorService listenerExecutor,
@@ -186,18 +184,12 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
       this.curatorFramework = curatorFramework;
       this.nodeRole = nodeRole;
       this.jsonMapper = jsonMapper;
-      this.basePath = basePath;
+      this.baseNodeRoleWatcher = new BaseNodeRoleWatcher(listenerExecutor, nodeRole);
 
       // This is required to be single threaded from docs in PathChildrenCache.
       this.cacheExecutor = Execs.singleThreaded(
           StringUtils.format("NodeRoleWatcher[%s]", StringUtils.encodeForFormat(nodeRole.toString()))
       );
-      baseNodeRoleWatcher = new BaseNodeRoleWatcher(listenerExecutor, nodeRole);
-      refreshCache();
-    }
-
-    public synchronized void refreshCache()
-    {
       cache = new PathChildrenCacheFactory.Builder()
           //NOTE: cacheData is temporarily set to false and we get data directly from ZK on each event.
           //this is a workaround to solve curator's out-of-order events problem
@@ -227,17 +219,6 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
     @Override
     public Collection<DiscoveryDruidNode> getAllNodes()
     {
-      while (baseNodeRoleWatcher.getAllNodes() == null) {
-        log.warn("BaseNodeRoleWatcher could not return all nodes for role[%s]. Retrying with new cache.", nodeRole);
-        try {
-          cache.close();
-        }
-        catch (IOException e) {
-          log.error("Could not close previous cache");
-          throw new RuntimeException(e);
-        }
-        refreshCache();
-      }
       return baseNodeRoleWatcher.getAllNodes();
     }
 
