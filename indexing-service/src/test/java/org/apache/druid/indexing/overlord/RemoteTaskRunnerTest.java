@@ -37,9 +37,13 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IndexingServiceCondition;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TestIndexTask;
 import org.apache.druid.indexing.common.TestTasks;
 import org.apache.druid.indexing.common.TestUtils;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalAppendAction;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalReplaceAction;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
@@ -72,6 +76,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Future;
@@ -1143,6 +1148,48 @@ public class RemoteTaskRunnerTest
     Assert.assertEquals(
         "http://dummy:9000/druid/worker/v1/chat/task%20id%20with%20spaces/liveReports",
         capturedRequest.getValue().getUrl().toString()
+    );
+  }
+
+  @Test
+  public void testBuildPublishAction()
+  {
+    TestIndexTask task = new TestIndexTask(
+        "test_index1",
+        new TaskResource("test_index1", 1),
+        "foo",
+        TaskStatus.success("test_index1"),
+        jsonMapper
+    );
+
+    Assert.assertEquals(
+        SegmentTransactionalAppendAction.class,
+        task.testBuildPublishAction(
+            Collections.emptySet(),
+            Collections.emptySet(),
+            null,
+            TaskLockType.APPEND
+        ).getClass()
+    );
+
+    Assert.assertEquals(
+        SegmentTransactionalReplaceAction.class,
+        task.testBuildPublishAction(
+            Collections.emptySet(),
+            Collections.emptySet(),
+            null,
+            TaskLockType.REPLACE
+        ).getClass()
+    );
+
+    Assert.assertEquals(
+        SegmentTransactionalInsertAction.class,
+        task.testBuildPublishAction(
+            Collections.emptySet(),
+            Collections.emptySet(),
+            null,
+            TaskLockType.EXCLUSIVE
+        ).getClass()
     );
   }
 }

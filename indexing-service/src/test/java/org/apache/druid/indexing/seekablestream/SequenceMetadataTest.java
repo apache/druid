@@ -94,6 +94,7 @@ public class SequenceMetadataTest
   {
     Mockito.when(mockSeekableStreamIndexTaskRunner.deserializePartitionsFromMetadata(ArgumentMatchers.any(), ArgumentMatchers.any())).thenReturn(mockSeekableStreamEndSequenceNumbers);
     Mockito.when(mockSeekableStreamEndSequenceNumbers.getPartitionSequenceNumberMap()).thenReturn(ImmutableMap.of());
+    Mockito.when(mockSeekableStreamEndSequenceNumbers.getStream()).thenReturn("stream");
     Mockito.when(mockTaskToolbox.getTaskActionClient()).thenReturn(mockTaskActionClient);
     DataSegment dataSegment = DataSegment.builder()
                                          .dataSource("foo")
@@ -110,10 +111,14 @@ public class SequenceMetadataTest
         ImmutableMap.of(),
         ImmutableMap.of(),
         true,
-        ImmutableSet.of(),
+        ImmutableSet.of(0),
         null
     );
     TransactionalSegmentPublisher transactionalSegmentPublisher = sequenceMetadata.createPublisher(mockSeekableStreamIndexTaskRunner, mockTaskToolbox, false);
+
+    transactionalSegmentPublisher.publishAnnotatedSegments(null, notNullNotEmptySegment, ImmutableMap.of(), null);
+
+    transactionalSegmentPublisher = sequenceMetadata.createPublisher(mockSeekableStreamIndexTaskRunner, mockTaskToolbox, true);
 
     transactionalSegmentPublisher.publishAnnotatedSegments(null, notNullNotEmptySegment, ImmutableMap.of(), null);
   }

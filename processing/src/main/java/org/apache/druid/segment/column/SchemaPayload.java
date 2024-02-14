@@ -36,7 +36,8 @@ public class SchemaPayload
   @JsonCreator
   public SchemaPayload(
       @JsonProperty("rowSignature") RowSignature rowSignature,
-      @JsonProperty("aggreagatorFactories") @Nullable Map<String, AggregatorFactory> aggregatorFactories)
+      @JsonProperty("aggregatorFactories") @Nullable Map<String, AggregatorFactory> aggregatorFactories
+  )
   {
     this.rowSignature = rowSignature;
     this.aggregatorFactories = aggregatorFactories;

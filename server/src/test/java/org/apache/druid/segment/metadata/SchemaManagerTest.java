@@ -31,7 +31,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.SchemaPayload;
-import org.apache.druid.segment.column.SegmentSchemaMetadata;
+import org.apache.druid.segment.column.SegmentSchemaMetadataTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.Assert;
@@ -105,7 +105,7 @@ public class SchemaManagerTest
       RowSignature rowSignature = RowSignature.builder().add("c" + randomNum, ColumnType.FLOAT).build();
 
       SchemaPayload schemaPayload = new SchemaPayload(rowSignature);
-      SegmentSchemaMetadata schemaMetadata = new SegmentSchemaMetadata(schemaPayload, (long) randomNum);
+      SegmentSchemaMetadataTest schemaMetadata = new SegmentSchemaMetadataTest(schemaPayload, (long) randomNum);
       SchemaManager.SegmentSchemaMetadataPlus plus =
           new SchemaManager.SegmentSchemaMetadataPlus(
               segment.getId(),
@@ -150,7 +150,7 @@ public class SchemaManagerTest
       RowSignature rowSignature = RowSignature.builder().add("c" + randomNum, ColumnType.FLOAT).build();
 
       SchemaPayload schemaPayload = new SchemaPayload(rowSignature);
-      SegmentSchemaMetadata schemaMetadata = new SegmentSchemaMetadata(schemaPayload, (long) randomNum);
+      SegmentSchemaMetadataTest schemaMetadata = new SegmentSchemaMetadataTest(schemaPayload, (long) randomNum);
       SchemaManager.SegmentSchemaMetadataPlus plus =
           new SchemaManager.SegmentSchemaMetadataPlus(
               segment.getId(),
