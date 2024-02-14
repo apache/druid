@@ -137,7 +137,7 @@ public class KafkaEmitterTest
    * events are emitted without any drops.
    */
   @Test(timeout = 10_000)
-  public void testServiceMetricEvents() throws InterruptedException
+  public void testServiceMetricEvents() throws InterruptedException, JsonProcessingException
   {
     final KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig(
         "",
@@ -182,7 +182,7 @@ public class KafkaEmitterTest
    * events are emitted without any drops.
    */
   @Test(timeout = 10_000)
-  public void testAllEvents() throws InterruptedException
+  public void testAllEvents() throws InterruptedException, JsonProcessingException
   {
     final KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig(
         "",
@@ -232,7 +232,7 @@ public class KafkaEmitterTest
    * event types should be emitted without any drops.
    */
   @Test(timeout = 10_000)
-  public void testDefaultEvents() throws InterruptedException
+  public void testDefaultEvents() throws InterruptedException, JsonProcessingException
   {
     final KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig(
         "",
@@ -280,7 +280,7 @@ public class KafkaEmitterTest
    * should be emitted, and everything else should be dropped.
    */
   @Test(timeout = 10_000)
-  public void testAlertsPlusUnsubscribedEvents() throws InterruptedException
+  public void testAlertsPlusUnsubscribedEvents() throws InterruptedException, JsonProcessingException
   {
     final KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig(
         "",
@@ -337,7 +337,7 @@ public class KafkaEmitterTest
    * </p>
    */
   @Test(timeout = 10_000)
-  public void testAllEventsWithCommonTopic() throws InterruptedException
+  public void testAllEventsWithCommonTopic() throws InterruptedException, JsonProcessingException
   {
     final KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig(
         "",
@@ -388,7 +388,7 @@ public class KafkaEmitterTest
    * </p>
    */
   @Test(timeout = 10_000)
-  public void testUnknownEvents() throws InterruptedException
+  public void testUnknownEvents() throws InterruptedException, JsonProcessingException
   {
     final KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig(
         "",
@@ -581,11 +581,12 @@ public class KafkaEmitterTest
       final List<Event> events,
       final String clusterName,
       final Map<String, String> extraDimensions
-  )
+  ) throws JsonProcessingException
   {
     final Map<String, List<EventMap>> feedToExpectedEvents = new HashMap<>();
     for (final Event event : events) {
-      final EventMap eventMap = event.toMap();
+      // changing the toMap() to not have TriggeredOther tests
+      final EventMap eventMap = MAPPER.readValue(MAPPER.writeValueAsString(event.toMap()), EventMap.class);
       eventMap.computeIfAbsent("clusterName", k -> clusterName);
       if (extraDimensions != null) {
         eventMap.putAll(extraDimensions);
