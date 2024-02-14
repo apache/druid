@@ -15292,4 +15292,29 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
         .run();
   }
+
+  @Test
+  public void testFilterParseLongNullable()
+  {
+    testQuery(
+        "select count(*) from druid.foo where parse_long(dim1, 10) is null",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(
+                      expressionVirtualColumn(
+                          "v0",
+                          "parse_long(\"dim1\",10)",
+                          ColumnType.LONG)
+                  )
+                  .filters(isNull("v0"))
+                  .granularity(Granularities.ALL)
+                  .aggregators(new CountAggregatorFactory("a0"))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(new Object[]{NullHandling.sqlCompatible() ? 4L : 0L})
+    );
+  }
 }
