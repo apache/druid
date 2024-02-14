@@ -144,7 +144,7 @@ In both cases, Druid audits the following events:
 
 [#15480](https://github.com/apache/druid/pull/15480) [#15653](https://github.com/apache/druid/pull/15653)
 
-Also fixed an issue with the basic auth intergration test by not persisting logs to the database.
+Also fixed an issue with the basic auth integration test by not persisting logs to the database.
 
 [#15561](https://github.com/apache/druid/pull/15561)
 
@@ -296,7 +296,7 @@ Improved segment allocation as follows:
 
 #### Other ingestion improvements
 
-* Added a default implementation for the `evalDimension` method in the RowFunction interface [#15452](https://github.com/apache/druid/pull/15452)
+* Added a default implementation for the `evalDimension` method in the `RowFunction` interface [#15452](https://github.com/apache/druid/pull/15452)
 * Added a configurable delay to the Peon service that determines how long a Peon should wait before dropping a segment [#15373](https://github.com/apache/druid/pull/15373)
 * Improved metadata store updates by attempting to retry updates rather than failing [#15141](https://github.com/apache/druid/pull/15141)
 * Improved the error message you get when `taskQueue` reaches `maxSize` [#15409](https://github.com/apache/druid/pull/15409)
@@ -305,7 +305,7 @@ Improved segment allocation as follows:
 * Fixed a race condition where there were multiple attempts to publish segments for the same sequence [#14995](https://github.com/apache/druid/pull/14995)
 * Fixed a race condition that can occur at high streaming concurrency [#15174](https://github.com/apache/druid/pull/15174)
 * Fixed an issue where complex types that are also numbers were assumed to also be double [#15272](https://github.com/apache/druid/pull/15272)
-* Fixed an issue with unnecessary retries triggered when exceptions like IOException obfuscated S3 exceptions [#15238](https://github.com/apache/druid/pull/15238)
+* Fixed an issue with unnecessary retries triggered when exceptions like `IOException` obfuscated S3 exceptions [#15238](https://github.com/apache/druid/pull/15238)
 * Fixed segment retrieval when the input interval does not lie within the years `[1000, 9999]` [#15608](https://github.com/apache/druid/pull/15608)
 * Fixed empty strings being incorrectly converted to null values [#15525](https://github.com/apache/druid/pull/15525)
 * Simplified `IncrementalIndex` and `OnHeapIncrementalIndex` by removing some parameters [#15448](https://github.com/apache/druid/pull/15448)
@@ -401,7 +401,7 @@ Added native `array contains element` filter to improve performance when using A
 
 #### Added authorize method
 
-Added an `authorize` method to the `QueryLifecycle` class to authorise a query based on authentication result.
+Added an `authorize` method to the `QueryLifecycle` class to authorize a query based on authentication result.
 
 [#15816](https://github.com/apache/druid/pull/15816)
 
@@ -521,7 +521,7 @@ Druid now skips compaction for datasources with segments that have their interva
 
 #### Enhanced the JSON parser unexpected token logging
 
-The JSON parser unexpected token error now includes the context of the expected VALUE_STRING token. This makes it easier to track mesh/proxy network error messages and to avoid unnecessary research into Druid server rest endpoint responses.
+The JSON parser unexpected token error now includes the context of the expected `VALUE_STRING` token. This makes it easier to track mesh/proxy network error messages and to avoid unnecessary research into Druid server rest endpoint responses.
 
 [#15176](https://github.com/apache/druid/pull/15176)
 
@@ -646,7 +646,7 @@ Removed the `auto` search strategy from the native search query. Setting `search
 
 ### Developer notes
 
-#### Improved InDimFilter reverse-lookup optimization
+#### Improved `InDimFilter` reverse-lookup optimization
 
 This improvement includes the following changes:
 
@@ -654,7 +654,7 @@ This improvement includes the following changes:
 * Enabled `InDimFilter#optimizeLookup` to handle `mayIncludeUnknown` and perform reverse lookups in a wider range of cases.
 * Made `unapply` method in `LookupExtractor` protected and relocated callers to `unapplyAll`.
 
-If your extensions provide a DimFilter, you may need to rebuild them to ensure compatibility with this release.
+If your extensions provide a `DimFilter`, you may need to rebuild them to ensure compatibility with this release.
 
 [#15611](https://github.com/apache/druid/pull/15611)
 

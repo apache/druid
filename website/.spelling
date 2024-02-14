@@ -56,6 +56,8 @@ CloudWatch
 ColumnDescriptor
 Corretto
 CLI
+CVE
+CVEs
 DDL
 DML
 DNS
@@ -102,6 +104,7 @@ GPG
 GSSAPI
 GUIs
 GroupBy
+Gauva
 Guice
 HDFS
 HDFSFirehose
@@ -139,6 +142,7 @@ JDBC
 JDK
 JDK7
 JDK8
+Jedis
 JKS
 jks
 JMX
@@ -182,6 +186,7 @@ Murmur3
 MVCC
 MV_TO_ARRAY
 NFS
+NPE
 OCF
 OIDC
 OLAP
@@ -575,6 +580,7 @@ versioning
 virtualColumns
 w.r.t.
 walkthrough
+webpack
 whitelist
 whitelisted
 whitespace
@@ -2165,6 +2171,21 @@ UserGroupInformation
 CVE-2019-17571
 CVE-2019-12399
 CVE-2018-17196
+GHSA-mm8h-8587-p46h 
+GHSA-q5 
+GHSA-f62v-xpxf-3v68
+GHS 
+GHSA-4p6w-m9wc-c9c9 
+GHSA-q5r4-cfpx-h6fh
+GHSA-5v34-g2px-j4fw 
+GHSA-cgwf-w82q-5jrr 
+GHSA-7g24-qg88-p43q 
+GHSA-jgvc-jfgh-rjvv  
+GHSA-cqj8-47ch-rvvq  
+CVE-2022-24329
+CVE-2022-42003
+CVE-2022-42004
+CVE-2022-25647
 bin.tar.gz
 0s
 1T
