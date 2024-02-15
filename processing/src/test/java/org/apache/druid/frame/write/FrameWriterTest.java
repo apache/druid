@@ -246,7 +246,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
   {
     // ARRAY<LONG> can't be read or written for columnar frames, therefore skip the check if it encounters those
     // parameters
-    Assume.assumeFalse(inputFrameType == FrameType.COLUMNAR || outputFrameType == FrameType.COLUMNAR);
+    // Assume.assumeFalse(inputFrameType == FrameType.COLUMNAR || outputFrameType == FrameType.COLUMNAR);
     testWithDataset(FrameWriterTestData.TEST_ARRAYS_LONG);
   }
 

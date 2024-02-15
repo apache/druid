@@ -19,8 +19,8 @@
 
 package org.apache.druid.frame.read.columnar;
 
+import org.apache.druid.frame.write.columnar.FrameColumnWriters;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.ValueType;
 
 /**
  * Creates {@link FrameColumnReader}  corresponding to a given column type and number.
@@ -58,12 +58,19 @@ public class FrameColumnReaders
         return new ComplexFrameColumnReader(columnNumber);
 
       case ARRAY:
-        if (columnType.getElementType().getType() == ValueType.STRING) {
-          return new StringFrameColumnReader(columnNumber, true);
-        } else {
-          return new UnsupportedColumnTypeFrameColumnReader(columnName, columnType);
+        switch (columnType.getElementType().getType())
+        {
+          case STRING:
+            return new StringFrameColumnReader(columnNumber, true);
+          case LONG:
+            return new LongArrayFrameColumnReader(
+                FrameColumnWriters.TYPE_LONG_ARRAY,
+                ColumnType.LONG_ARRAY,
+                columnNumber
+            );
+          default:
+            return new UnsupportedColumnTypeFrameColumnReader(columnName, columnType);
         }
-
       default:
         return new UnsupportedColumnTypeFrameColumnReader(columnName, columnType);
     }
