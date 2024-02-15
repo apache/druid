@@ -27,10 +27,12 @@ import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlSpecialOperator;
 import org.apache.calcite.sql.SqlWriter;
-import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.calcite.util.ImmutableNullableList;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.List;
 
 /**
  * Extends the 'replace' call to hold custom parameters specific to Druid i.e. PARTITIONED BY and the PARTITION SPECS
@@ -45,29 +47,52 @@ public class DruidSqlReplace extends DruidSqlIngest
 
   private final SqlNode replaceTimeQuery;
 
-  /**
-   * While partitionedBy and partitionedByStringForUnparse can be null as arguments to the constructor, this is
-   * disallowed (semantically) and the constructor performs checks to ensure that. This helps in producing friendly
-   * errors when the PARTITIONED BY custom clause is not present, and keeps its error separate from JavaCC/Calcite's
-   * custom errors which can be cryptic when someone accidentally forgets to explicitly specify the PARTITIONED BY clause
-   */
-  public DruidSqlReplace(
+  public static DruidSqlReplace create(
       @Nonnull SqlInsert insertNode,
-      @Nullable Granularity partitionedBy,
-      @Nullable String partitionedByStringForUnparse,
+      @Nullable SqlGranularityLiteral partitionedBy,
       @Nullable SqlNodeList clusteredBy,
       @Nullable SqlNode replaceTimeQuery,
       @Nullable String exportFileFormat
   )
   {
-    super(
+    return new DruidSqlReplace(
         insertNode.getParserPosition(),
         (SqlNodeList) insertNode.getOperandList().get(0), // No better getter to extract this
         insertNode.getTargetTable(),
         insertNode.getSource(),
         insertNode.getTargetColumnList(),
         partitionedBy,
-        partitionedByStringForUnparse,
+        clusteredBy,
+        replaceTimeQuery,
+        exportFileFormat
+    );
+  }
+
+  /**
+   * While partitionedBy can be null as arguments to the constructor, this is
+   * disallowed (semantically) and the constructor performs checks to ensure that. This helps in producing friendly
+   * errors when the PARTITIONED BY custom clause is not present, and keeps its error separate from JavaCC/Calcite's
+   * custom errors which can be cryptic when someone accidentally forgets to explicitly specify the PARTITIONED BY clause
+   */
+  public DruidSqlReplace(
+      SqlParserPos pos,
+      SqlNodeList keywords,
+      SqlNode targetTable,
+      SqlNode source,
+      SqlNodeList columnList,
+      @Nullable SqlGranularityLiteral partitionedBy,
+      @Nullable SqlNodeList clusteredBy,
+      @Nullable SqlNode replaceTimeQuery,
+      @Nullable String exportFileFormat
+  )
+  {
+    super(
+        pos,
+        keywords,
+        targetTable,
+        source,
+        columnList,
+        partitionedBy,
         clusteredBy,
         exportFileFormat
     );
@@ -85,6 +110,15 @@ public class DruidSqlReplace extends DruidSqlIngest
   public SqlOperator getOperator()
   {
     return OPERATOR;
+  }
+
+  @Override
+  public List<SqlNode> getOperandList()
+  {
+    return ImmutableNullableList.<SqlNode>builder()
+        .addAll(super.getOperandList())
+        .add(replaceTimeQuery)
+        .build();
   }
 
   @Override
@@ -118,9 +152,9 @@ public class DruidSqlReplace extends DruidSqlIngest
     getSource().unparse(writer, 0, 0);
     writer.newlineAndIndent();
 
-    if (partitionedByStringForUnparse != null) {
+    if (getPartitionedBy() != null) {
       writer.keyword("PARTITIONED BY");
-      writer.keyword(partitionedByStringForUnparse);
+      getPartitionedBy().unparse(writer, 0, 0);
     }
 
     if (getClusteredBy() != null) {
