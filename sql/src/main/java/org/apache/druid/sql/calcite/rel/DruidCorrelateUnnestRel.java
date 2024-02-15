@@ -53,7 +53,6 @@ import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -321,16 +320,6 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
             );
             break;
           }
-        }
-      } else if (leftQuery.getQuery() instanceof TopNQuery) {
-        DimensionSpec dimSpec = ((TopNQuery) leftQuery.getQuery()).getDimensionSpec();
-        if (dimSpec.getDimension().equals(column)) {
-          unnestCol = new ExpressionVirtualColumn(
-              correlateRowSignature.getColumnName(correlateRowSignature.size() - 1),
-              dimSpec.getOutputName(),
-              Calcites.getColumnTypeForRelDataType(rexNodeToUnnest.getType()),
-              ExprMacroTable.nil()
-          );
         }
       }
     }

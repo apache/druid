@@ -40,6 +40,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.NestedDataTestUtils;
+import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnnestDataSource;
@@ -6844,6 +6845,59 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         RowSignature.builder()
                     .add("EXPR$0", ColumnType.STRING)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testGroupByDistinctWithVirtualExpInInnerQuery()
+  {
+    cannotVectorize();
+    skipVectorize();
+    testQuery(
+        "with tmp AS (SELECT "
+        + " DISTINCT JSON_KEYS(nester, '$') keyarr "
+        + " FROM druid.nested) "
+        + " select key from tmp CROSS JOIN UNNEST(keyarr) as foo(key)",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(UnnestDataSource.create(
+                      new QueryDataSource(
+                          GroupByQuery.builder().setDataSource(DATA_SOURCE)
+                                      .setInterval(querySegmentSpec(Filtration.eternity()))
+                                      .setGranularity(Granularities.ALL)
+                                      .setVirtualColumns(
+                                          new ExpressionVirtualColumn(
+                                              "v0",
+                                              "json_keys(\"nester\",'$')",
+                                              ColumnType.STRING_ARRAY,
+                                              queryFramework().macroTable()
+                                          )
+                                      )
+                                      .setDimensions(
+                                          dimensions(
+                                              new DefaultDimensionSpec("v0", "d0", ColumnType.STRING_ARRAY)
+                                          )
+                                      )
+                                      .setContext(QUERY_CONTEXT_DEFAULT)
+                                      .build()
+                      ),
+                      expressionVirtualColumn("j0.unnest", "d0", ColumnType.STRING_ARRAY),
+                      null
+                  ))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .columns(ImmutableList.of("j0.unnest"))
+                  .build()
+
+        ),
+        ImmutableList.of(
+            new Object[]{"[\"array\",\"n\"]"}
+        ),
+        RowSignature.builder()
+                    .add("key", ColumnType.STRING)
                     .build()
     );
   }
