@@ -285,7 +285,7 @@ public class CalcitePlanner implements Planner, ViewExpander
   public RelRoot rel(SqlNode sql)
   {
     ensure(CalcitePlanner.State.STATE_4_VALIDATED);
-    SqlNode validatedSqlNode = Objects.requireNonNull(
+    Objects.requireNonNull(
         this.validatedSqlNode,
         "validatedSqlNode is null. Need to call #validate() first"
     );
