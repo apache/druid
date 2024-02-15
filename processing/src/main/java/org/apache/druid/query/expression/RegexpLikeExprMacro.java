@@ -59,11 +59,11 @@ public class RegexpLikeExprMacro implements ExprMacroTable.ExprMacro
         StringUtils.nullToEmptyNonDruidDataString((String) patternExpr.getLiteralValue())
     );
 
-    class RegexpLikeExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
+    class RegexpLikeExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
     {
-      private RegexpLikeExpr(Expr arg)
+      private RegexpLikeExpr(List<Expr> args)
       {
-        super(FN_NAME, arg);
+        super(RegexpLikeExprMacro.this, args);
       }
 
       @Nonnull
@@ -81,25 +81,14 @@ public class RegexpLikeExprMacro implements ExprMacroTable.ExprMacro
         }
       }
 
-      @Override
-      public Expr visit(Shuttle shuttle)
-      {
-        return shuttle.visit(apply(shuttle.visitAll(args)));
-      }
-
       @Nullable
       @Override
       public ExpressionType getOutputType(InputBindingInspector inspector)
       {
         return ExpressionType.LONG;
       }
-
-      @Override
-      public String stringify()
-      {
-        return StringUtils.format("%s(%s, %s)", FN_NAME, arg.stringify(), patternExpr.stringify());
-      }
     }
-    return new RegexpLikeExpr(arg);
+
+    return new RegexpLikeExpr(args);
   }
 }
