@@ -78,6 +78,10 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
                 new Object[] {"abc", "b", null, null}
             )
         )
+        .expectedLogicalPlan(""
+            + "LogicalProject(exprs=[[$1, $8, $11, $13]])\n"
+            + "  LogicalTableScan(table=[[APPEND]])\n"
+        )
         .run();
   }
 
