@@ -392,4 +392,16 @@ public class RowSignature implements ColumnInspector
      */
     UNKNOWN
   }
+
+  /**
+   * Returns the column types in the order they are in.
+   */
+  public List<ColumnType> getTypes()
+  {
+    List<ColumnType> ret = new ArrayList<ColumnType>();
+    for (String colName : columnNames) {
+      ret.add(columnTypes.get(colName));
+    }
+    return ret;
+  }
 }

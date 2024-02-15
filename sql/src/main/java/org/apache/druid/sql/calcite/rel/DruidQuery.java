@@ -1670,8 +1670,8 @@ public class DruidQuery
             virtualColumns,
             scanColumnsList,
             plannerContext.queryContextMap()
-        )
-
+        ),
+        buildRowSignature(virtualColumns, scanColumnsList).getTypes()
     );
   }
 
@@ -1688,22 +1688,7 @@ public class DruidQuery
     if (!plannerContext.featureAvailable(EngineFeature.SCAN_NEEDS_SIGNATURE)) {
       return queryContext;
     }
-    // Compute the signature of the columns that we are selecting.
-    final RowSignature.Builder scanSignatureBuilder = RowSignature.builder();
-
-    for (final String columnName : scanColumns) {
-      final ColumnCapabilities capabilities =
-          virtualColumns.getColumnCapabilitiesWithFallback(sourceRowSignature, columnName);
-
-      if (capabilities == null) {
-        // No type for this column. This is a planner bug.
-        throw new ISE("No type for column [%s]", columnName);
-      }
-
-      scanSignatureBuilder.add(columnName, capabilities.toColumnType());
-    }
-
-    final RowSignature signature = scanSignatureBuilder.build();
+    final RowSignature signature = buildRowSignature(virtualColumns, scanColumns);
 
     try {
       Map<String, Object> revised = new HashMap<>(queryContext);
@@ -1716,5 +1701,26 @@ public class DruidQuery
     catch (JsonProcessingException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  private RowSignature buildRowSignature(final VirtualColumns virtualColumns, final List<String> columns)
+  {
+    // Compute the signature of the columns that we are selecting.
+    final RowSignature.Builder scanSignatureBuilder = RowSignature.builder();
+
+    for (final String columnName : columns) {
+      final ColumnCapabilities capabilities =
+          virtualColumns.getColumnCapabilitiesWithFallback(sourceRowSignature, columnName);
+
+      if (capabilities == null) {
+        // No type for this column. This is a planner bug.
+        throw new ISE("No type for column [%s]", columnName);
+      }
+
+      scanSignatureBuilder.add(columnName, capabilities.toColumnType());
+    }
+
+    final RowSignature signature = scanSignatureBuilder.build();
+    return signature;
   }
 }

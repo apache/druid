@@ -15112,14 +15112,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     skipVectorize();
     cannotVectorize();
     msqIncompatible();
-    String sql = "select __time,added,user from (select __time,added,user from \"wikipedia\" limit 1000) order by \"user\"";
+//    String sql = "select __time,added,user from (select __time,added,user from \"wikipedia\" limit 1000) order by \"user\"";
+    String sql = "select * from (select * from \"wikipedia\" limit 3) order by \"user\"";
     ImmutableList<Object[]> expectedResults = ImmutableList.of(
-        new Object[] {1L, 1L},
-        new Object[] {1L, 1L},
-        new Object[] {1L, 1L},
-        new Object[] {1L, 1L},
-        new Object[] {1L, 1L},
-        new Object[] {1L, 1L}
+        new Object[]{1442018825474L, "#en.wikipedia", "Auburn", "/* Status of peremptory norms under international law */ fixed spelling of 'Wimbledon'", "AU", "Australia", "true", "false", "false", "false", "false", null, "Main", "Peremptory norm", "NSW", "New South Wales", "60.225.66.142", 0L, 0L, 0L},
+        new Object[]{1442018818771L, "#en.wikipedia", null, "added project", null, null, "false", "false", "false", "false", "false", null, "Talk", "Talk:Oswald Tilghman", null, null, "GELongstreet", 36L, 36L, 0L},
+        new Object[]{1442018820496L, "#ca.wikipedia", null, "Robot inserta {{Commonscat}} que enlla\u00E7a amb [[commons:category:Rallicula]]", null, null, "false", "true", "false", "true", "false", null, "Main", "Rallicula", null, null, "PereBot", 17L, 17L, 0L}
     );
 
     testBuilder()

@@ -42,6 +42,8 @@ import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.RowSignature.Builder;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -203,8 +205,8 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
       @JsonProperty("filter") DimFilter dimFilter,
       @JsonProperty("columns") List<String> columns,
       @JsonProperty("legacy") Boolean legacy,
-      @JsonProperty("context") Map<String, Object> context
-//      @JsonProperty("columnTypes") List<ColumnType> columnTypes
+      @JsonProperty("context") Map<String, Object> context,
+      @JsonProperty("columnTypes") List<ColumnType> columnTypes
   )
   {
     super(dataSource, querySegmentSpec, false, context);
@@ -228,7 +230,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     this.dimFilter = dimFilter;
     this.columns = columns;
     this.legacy = legacy;
-    this.columnTypes = null;
+    this.columnTypes = columnTypes;
 
     final Pair<List<OrderBy>, Order> ordering = verifyAndReconcileOrdering(orderBysFromUser, orderFromUser);
     this.orderBys = Preconditions.checkNotNull(ordering.lhs);
@@ -686,4 +688,20 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     }
   }
 
+  /**
+   * Returns the RowSignature (if available)
+   */
+  @Nullable
+  public RowSignature getRowSignature()
+  {
+    if (columnTypes != null) {
+      Builder builder = RowSignature.builder();
+      for (int i = 0; i < columnTypes.size(); i++) {
+        ColumnType columnType = columnTypes.get(i);
+        builder.add(columns.get(i), columnType);
+      }
+      return builder.build();
+    }
+    return null;
+  }
 }
