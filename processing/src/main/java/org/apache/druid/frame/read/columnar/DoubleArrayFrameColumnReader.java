@@ -24,22 +24,22 @@ import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.write.columnar.FrameColumnWriters;
 import org.apache.druid.segment.column.ColumnType;
 
-public class LongArrayFrameColumnReader extends NumericArrayFrameColumnReader
+public class DoubleArrayFrameColumnReader extends NumericArrayFrameColumnReader
 {
-  public LongArrayFrameColumnReader(int columnNumber)
+  public DoubleArrayFrameColumnReader(int columnNumber)
   {
-    super(FrameColumnWriters.TYPE_LONG_ARRAY, ColumnType.LONG_ARRAY, columnNumber);
+    super(FrameColumnWriters.TYPE_DOUBLE_ARRAY, ColumnType.DOUBLE_ARRAY, columnNumber);
   }
 
   @Override
   NumericArrayFrameColumn column(Frame frame, Memory memory, ColumnType columnType)
   {
-    return new LongArrayFrameColumn(frame, memory, columnType);
+    return new DoubleArrayFrameColumn(frame, memory, columnType);
   }
 
-  private static class LongArrayFrameColumn extends NumericArrayFrameColumn
+  private static class DoubleArrayFrameColumn extends NumericArrayFrameColumn
   {
-    public LongArrayFrameColumn(
+    public DoubleArrayFrameColumn(
         Frame frame,
         Memory memory,
         ColumnType columnType
@@ -51,7 +51,7 @@ public class LongArrayFrameColumnReader extends NumericArrayFrameColumnReader
     @Override
     Number getElement(Memory memory, long rowDataOffset, int cumulativeIndex)
     {
-      return memory.getLong(rowDataOffset + (long) cumulativeIndex * Long.BYTES);
+      return memory.getDouble(rowDataOffset + (long) cumulativeIndex * Double.BYTES);
     }
   }
 }

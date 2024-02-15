@@ -42,6 +42,8 @@ public class FrameColumnWriters
   public static final byte TYPE_COMPLEX = 5;
   public static final byte TYPE_STRING_ARRAY = 6;
   public static final byte TYPE_LONG_ARRAY = 7;
+  public static final byte TYPE_FLOAT_ARRAY = 8;
+  public static final byte TYPE_DOUBLE_ARRAY = 9;
 
   private FrameColumnWriters()
   {
@@ -78,6 +80,10 @@ public class FrameColumnWriters
           case STRING:
             return makeStringArrayWriter(columnSelectorFactory, allocator, column);
           case LONG:
+            return makeLongArrayWriter(columnSelectorFactory, allocator, column);
+          case FLOAT:
+            return makeLongArrayWriter(columnSelectorFactory, allocator, column);
+          case DOUBLE:
             return makeLongArrayWriter(columnSelectorFactory, allocator, column);
           default:
             throw new UnsupportedColumnTypeException(column, type);
