@@ -58,8 +58,7 @@ public class FrameColumnReaders
         return new ComplexFrameColumnReader(columnNumber);
 
       case ARRAY:
-        switch (columnType.getElementType().getType())
-        {
+        switch (columnType.getElementType().getType()) {
           case STRING:
             return new StringFrameColumnReader(columnNumber, true);
           case LONG:

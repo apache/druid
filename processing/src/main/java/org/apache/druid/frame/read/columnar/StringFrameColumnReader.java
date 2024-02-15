@@ -92,17 +92,18 @@ public class StringFrameColumnReader implements FrameColumnReader
     final Memory memory = frame.region(columnNumber);
     validate(memory);
 
-    if (isMultiValue(memory)) {
-      // When we implement handling of multi-value, we should actually make this look like an Array of String instead
-      // of perpetuating the multi-value idea.  Thus, when we add support for Arrays to the RAC stuff, that's when
-      // we can start supporting multi-value.
-      throw new ISE("Multivalue not yet handled by RAC");
-    }
     final long positionOfLengths = getStartOfStringLengthSection(frame.numRows(), false);
     final long positionOfPayloads = getStartOfStringDataSection(memory, frame.numRows(), false);
 
     StringFrameColumn frameCol =
-        new StringFrameColumn(frame, false, memory, positionOfLengths, positionOfPayloads, false);
+        new StringFrameColumn(
+            frame,
+            false,
+            memory,
+            positionOfLengths,
+            positionOfPayloads,
+            asArray || isMultiValue(memory) // Read MVDs as String arrays
+        );
 
     return new ColumnAccessorBasedColumn(frameCol);
   }
