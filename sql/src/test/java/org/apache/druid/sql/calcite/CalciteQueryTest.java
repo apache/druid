@@ -15104,6 +15104,32 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .run();
   }
 
+
+  @DecoupledTestConfig(nativeQueryIgnore = NativeQueryIgnore.SLIGHTLY_WORSE_PLAN)
+  @Test
+  public void testWindowingWithScanAndSort1()
+  {
+    skipVectorize();
+    cannotVectorize();
+    msqIncompatible();
+    String sql = "select __time,added,user from (select __time,added,user from \"wikipedia\" limit 1000) order by \"user\"";
+    ImmutableList<Object[]> expectedResults = ImmutableList.of(
+        new Object[] {1L, 1L},
+        new Object[] {1L, 1L},
+        new Object[] {1L, 1L},
+        new Object[] {1L, 1L},
+        new Object[] {1L, 1L},
+        new Object[] {1L, 1L}
+    );
+
+    testBuilder()
+        .sql(sql)
+        .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
+        .expectedResults(expectedResults)
+        .run();
+  }
+
+
   @DecoupledTestConfig(nativeQueryIgnore = NativeQueryIgnore.SLIGHTLY_WORSE_PLAN)
   @Test
   public void testWindowingWithScanAndSort()
