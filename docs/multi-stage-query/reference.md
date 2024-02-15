@@ -287,6 +287,33 @@ The following ISO 8601 periods are supported for `TIME_FLOOR` and the string con
 - P3M
 - P1Y
 
+The string constant can also include any of the keywords mentioned above:
+
+- `HOUR` - Same as `'PT1H'`
+- `DAY` - Same as `'P1D'`
+- `MONTH` - Same as `'P1M'`
+- `YEAR` - Same as `'P1Y'`
+- `ALL TIME`
+- `ALL` - Alias for `ALL TIME`
+
+The `WEEK` granularity is deprecated and not supported in MSQ.
+
+Examples:
+
+```SQL
+-- Keyword
+PARTITIONED BY HOUR
+
+-- String literal
+PARTITIONED BY 'HOUR'
+
+-- ISO 8601 period
+PARTITIONED BY 'PT1H'
+
+-- TIME_FLOOR function
+PARTITIONED BY TIME_FLOOR(__time, 'PT1H')
+```
+
 For more information about partitioning, see [Partitioning](concepts.md#partitioning-by-time). <br /><br />
 *Avoid  partitioning by week, `P1W`, because weeks don't align neatly with months and years, making it difficult to partition by coarser granularities later.
 

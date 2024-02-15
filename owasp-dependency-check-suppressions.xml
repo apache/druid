@@ -21,7 +21,7 @@
   <!-- False positives -->
   <suppress>
     <notes><![CDATA[
-     file name: json-path-2.3.0.jar jackson-core-2.12.7.jar
+     file name: json-path-2.9.0.jar jackson-core-2.12.7.jar
      ]]></notes>
     <cve>CVE-2022-45688</cve>
     <cve>CVE-2023-35116</cve>
