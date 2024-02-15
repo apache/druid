@@ -74,11 +74,11 @@ import java.util.Set;
  *
  * Enables to use: TABLE(APPEND('t1','t2')); which will provide a union view of the operand tables.
  */
-public class AppendTableMacro extends SqlUserDefinedTableMacro implements AuthorizableOperator
+public class TableAppendMacro extends SqlUserDefinedTableMacro implements AuthorizableOperator
 {
 
   public static final OperatorConversion OPERATOR_CONVERSION = new OperatorConversion();
-  public static final SqlOperator APPEND_TABLE_MACRO = new AppendTableMacro();
+  public static final SqlOperator APPEND_TABLE_MACRO = new TableAppendMacro();
 
   private static class OperatorConversion implements SqlOperatorConversion
   {
@@ -101,7 +101,7 @@ public class AppendTableMacro extends SqlUserDefinedTableMacro implements Author
     }
   }
 
-  private AppendTableMacro()
+  private TableAppendMacro()
   {
     super(
         new SqlIdentifier(OperatorConversion.FUNCTION_NAME, SqlParserPos.ZERO),
