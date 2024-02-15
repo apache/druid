@@ -81,6 +81,7 @@ import org.apache.druid.sql.calcite.expression.builtin.ConcatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ContainsOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.DateTruncOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.DecodeBase64UTFOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.DruidNVLOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ExtractOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.FloorOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.GreatestOperatorConversion;
@@ -396,7 +397,8 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.IS_NOT_FALSE, "notfalse"))
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.IS_NOT_TRUE, "nottrue"))
                    .add(new CoalesceOperatorConversion(SqlStdOperatorTable.COALESCE))
-                   .add(new CoalesceOperatorConversion(SqlLibraryOperators.NVL))
+                   //.add(new CoalesceOperatorConversion(SqlLibraryOperators.NVL))
+                   .add(new DruidNVLOperatorConversion())
                    .add(new CoalesceOperatorConversion(SqlLibraryOperators.IFNULL))
                    .add(new BinaryOperatorConversion(SqlStdOperatorTable.MULTIPLY, "*"))
                    .add(new BinaryOperatorConversion(SqlStdOperatorTable.MOD, "%"))

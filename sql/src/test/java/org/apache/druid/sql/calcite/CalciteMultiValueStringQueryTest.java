@@ -2115,8 +2115,10 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         queryFramework().macroTable()
                     )
                 )
-                .filters(expressionFilter(
-                    "array_overlap(nvl(mv_to_array(\"dim3\"),array('other')),array('a','b','other'))"))
+                .filters(or(
+                    expressionFilter("array_overlap(nvl(mv_to_array(\"dim3\"),array('other')),array('a','b','other'))"),
+                    expressionFilter("array_overlap(nvl(mv_to_array(\"dim3\"),array('other')),array('a','b','other'))")
+                ))
                 .columns("v0")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(5)
