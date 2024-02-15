@@ -32,7 +32,7 @@ Replace {{MILESTONE}} with the correct milestone number. For example: https://gi
 
 See the [complete set of changes](https://github.com/apache/druid/issues?q=is%3Aclosed+milestone%3A29.0.0+sort%3Aupdated-desc+) for additional details, including bug fixes.
 
-Review the [upgrade notes](#upgrade-notes) and [incompatible changes](#incompatible-changes) before you upgrade to Druid 29.0.0.
+Review the [upgrade notes](#upgrade-notes) before you upgrade to Druid 29.0.0.
 If you are upgrading across multiple versions, see the [Upgrade notes](upgrade-notes.md) page, which lists upgrade notes for the most recent Druid versions.
 
 <!-- 
@@ -114,10 +114,6 @@ You no longer have to manually determine the task lock type for concurrent appen
 ### First and last aggregators for double, float, and long data types
 
 Druid now supports first and last aggregators for the double, float, and long types in native and MSQ ingestion spec and MSQ queries. Previously, they were only supported for native queries. For more information, see [First and last aggregators](https://druid.apache.org/docs/latest/querying/aggregations/#first-and-last-aggregators).
-
-<!-- If you start using this feature and then decide to roll back, you will not be able to access the values created using these aggregators. -->
-
-<!-- follow up about being experimental + language -->
 
 [#14462](https://github.com/apache/druid/pull/14462)
 
@@ -276,8 +272,6 @@ Unless explicitly specified, Druid skips week-granularity segments for data part
 
 Columns ingested with the auto column indexer that contain only empty or null containing arrays are now stored as `ARRAY<LONG\>` instead of `COMPLEX<json\>`.
 
-<!-- follow up on language -->
-
 [#15505](https://github.com/apache/druid/pull/15505)
 
 #### Enabled skipping compaction for datasources with partial-eternity segments
@@ -329,11 +323,9 @@ Added optional `castToType` parameter to `auto` column schema.
 
 #### Improved the EXTEND operator
 
-<!-- what other types does EXTEND support -->
+The EXTEND operator now supports the following array types: `VARCHAR ARRAY`, `BIGINT ARRAY`, `FLOAT ARRAY`, and `DOUBLE ARRAY`.
 
-You can now use array types like `VARCHAR ARRAY` and `BIGINT ARRAY` with the EXTEND operator.
-
-The following example specifies an extern input with native druid input types `ARRAY<STRING>`, `ARRAY<LONG>` and `STRING`:
+The following example shows an extern input with Druid native input types `ARRAY<STRING>`, `ARRAY<LONG>` and `STRING`:
 
 ```sql
 EXTEND (a VARCHAR ARRAY, b BIGINT ARRAY, c VARCHAR)
