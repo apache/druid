@@ -14516,6 +14516,34 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @Test
+  public void testScanVa()
+  {
+    // TODO(gianm): this test does not actually test the below thing, b/c the timestamp_floor got baked in
+    msqIncompatible();
+    //msqCompatible();
+
+    // the SQL query contains an always FALSE filter ('bar' = 'baz'), which optimizes the query to also remove time
+    // filter. the converted query hence contains ETERNITY interval but still a MONTH granularity due to the grouping.
+    // Such a query should plan into a GroupBy query with a timestamp_floor function, instead of a timeseries
+    // with granularity MONTH, to avoid excessive materialization of time grains.
+    //
+    // See DruidQuery#canUseQueryGranularity for the relevant check.
+
+    cannotVectorize();
+
+    testBuilder()
+    .sql("SELECT * from "
+            + "(VALUES ('United States', 'San Francisco'),\n"
+            + "        ('Canada', 'Calgary')"
+            + ") t (country, city)\n"
+            + "")
+    .expectedResults(ImmutableList.of(
+                new Object[]{timestamp("2000-01-01"), 2.0}
+            ))
+    .run();
+  }
+
 
   @Test
   public void testComplexDecode()

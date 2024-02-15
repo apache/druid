@@ -174,9 +174,16 @@ table unions.
 Refer to the [Query execution](query-execution.md#union) page for more details on how queries are executed when you
 use union datasources.
 
-### `inline`
+### Inline table `(VALUES ...)`
 
 <Tabs>
+<TabItem label="SQL">
+```sql
+SELECT * from (VALUES ('United States', 'San Francisco'),
+                      ('Canada', 'Calgary')
+              ) t (country, city)
+```
+</TabItem>
 <TabItem value="7" label="Native">
 
 ```json
@@ -211,7 +218,51 @@ Inline datasources are not available in Druid SQL.
 Refer to the [Query execution](query-execution.md#inline) page for more details on how queries are executed when you
 use inline datasources.
 
-### `query`
+### Dynamic table appaned `TABLE(APPEND(...))`
+
+This is essentially an SQL level syntactic sugar which matches columns by name from multiple tables.
+Suppose you have 3 tables:
+* `table1` has `column1`
+* `table2` has `column2`
+* `table3` has `column1`, `column2`, `column3`
+
+It is possible to create an union view of the above tables is possible by using `union all`:
+```sql
+select column1,null as column2,null as column3 from table1
+union all
+select null as column1,null as column2,null as column3 from table2
+union all
+select column1,column2,column3 from table3
+```
+
+However depending on the size of the table's schema it might be quite complicated to do that; `TABLE(APPEND('table1','table2','table3'))` represents the same in a more compact form.
+
+<Tabs>
+<TabItem value="5" label="SQL">
+
+```sql
+SELECT column1, column2, column3
+FROM TABLE(APPEND('table1','table2','table3'))
+```
+</TabItem>
+<TabItem value="6" label="Native">
+
+```json
+{
+  "queryType": "scan",
+  "dataSource": {
+    "type": "union",
+    "dataSources": ["table1", "table2", "table3"]
+  },
+  "columns": ["column1", "column2"],
+  "intervals": ["0000/3000"]
+}
+```
+</TabItem>
+</Tabs>
+
+
+### Subquery
 
 <Tabs>
 <TabItem value="8" label="SQL">
@@ -270,7 +321,7 @@ Query datasources allow you to issue subqueries. In native queries, they can app
  page for more details on how subqueries are executed and what limits will apply.
 :::
 
-### `join`
+### Join
 
 <Tabs>
 <TabItem value="10" label="SQL">
