@@ -43,6 +43,7 @@ import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
 import org.apache.calcite.sql.validate.SqlValidatorTable;
 import org.apache.curator.shaded.com.google.common.collect.ImmutableList;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.segment.column.ColumnType;
@@ -60,6 +61,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.DatasourceMetadata;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.DatasourceTable.EffectiveMetadata;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -185,11 +187,8 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
   @Override
   public TranslatableTable getTable(SqlOperatorBinding callBinding)
   {
-    SqlCallBinding ss = (SqlCallBinding) callBinding;
-    SqlValidator validator = ss.getValidator();
-    SqlValidatorCatalogReader catalogReader = validator.getCatalogReader();
-    List<String> tableNames = getTableNames(callBinding);
-    List<RelOptTable> tables = getTables(catalogReader, tableNames);
+    SqlValidator validator = ((SqlCallBinding) callBinding).getValidator();
+    List<RelOptTable> tables = getTables(callBinding, validator.getCatalogReader());
 
     AppendDatasourceMetadata metadata = buildUnionDataSource(tables);
     return new DatasourceTable(
@@ -197,6 +196,32 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
         metadata,
         EffectiveMetadata.of(metadata.values)
     );
+  }
+
+  private List<RelOptTable> getTables(SqlOperatorBinding callBinding, SqlValidatorCatalogReader catalogReader)
+  {
+    List<RelOptTable> tables = new ArrayList<>();
+    for (int i = 0; i < callBinding.getOperandCount(); i++) {
+      if (!callBinding.isOperandLiteral(i, false)) {
+        throw new IllegalArgumentException(
+            "All arguments of call to macro "
+                + "APPEND should be literal. Actual argument #"
+                + i + " is not literal"
+        );
+      }
+      @Nullable
+      String tableName = callBinding.getOperandLiteralValue(i, String.class);
+      ImmutableList<String> tableNameList = ImmutableList.<String>builder().add(tableName).build();
+      SqlValidatorTable table = catalogReader.getTable(tableNameList);
+      if (table == null) {
+        throw DruidSqlValidator.buildCalciteContextException(
+            StringUtils.format("Table [%s] not found", tableName),
+            ((SqlCallBinding) callBinding).operand(i)
+        );
+      }
+      tables.add(table.unwrapOrThrow(RelOptTable.class));
+    }
+    return tables;
   }
 
   static class AppendDatasourceMetadata implements DatasourceMetadata
@@ -259,33 +284,6 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
       rowSignatureBuilder.add(col.getKey(), col.getValue());
     }
     return new AppendDatasourceMetadata(rowSignatureBuilder.build(), dataSources);
-  }
-
-  private List<String> getTableNames(SqlOperatorBinding callBinding)
-  {
-    List<String> ret = new ArrayList<>();
-    for (int i = 0; i < callBinding.getOperandCount(); i++) {
-      if (!callBinding.isOperandLiteral(i, false)) {
-        throw new IllegalArgumentException(
-            "All arguments of call to macro "
-                + "APPEND should be literal. Actual argument #"
-                + i + " is not literal"
-        );
-      }
-      ret.add(callBinding.getOperandLiteralValue(i, String.class));
-    }
-    return ret;
-  }
-
-  private List<RelOptTable> getTables(SqlValidatorCatalogReader catalogReader, List<String> tableNames)
-  {
-    List<RelOptTable> ret = new ArrayList<>();
-    for (String tableName : tableNames) {
-      ImmutableList<String> names = ImmutableList.<String>builder().add(tableName).build();
-      SqlValidatorTable t = catalogReader.getTable(names);
-      ret.add(t.unwrapOrThrow(RelOptTable.class));
-    }
-    return ret;
   }
 
   @Override

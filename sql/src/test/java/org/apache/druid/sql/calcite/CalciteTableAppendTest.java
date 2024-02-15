@@ -146,7 +146,24 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
     catch (DruidException e) {
       MatcherAssert.assertThat(
           e,
-          invalidSqlIs("All arguments to APPEND should be literal strings.Argument #1 is not string (line [1], column [37])")
+          invalidSqlIs("All arguments to APPEND should be literal strings. Argument #1 is not string (line [1], column [37])")
+      );
+    }
+  }
+
+  @Test
+  public void testAppendtNonExistentTable()
+  {
+    try {
+      testBuilder()
+          .sql("select dim1 from TABLE(APPEND('foo','nonexistent')) u")
+          .run();
+      Assert.fail("query execution should fail");
+    }
+    catch (DruidException e) {
+      MatcherAssert.assertThat(
+          e,
+          invalidSqlIs("Table [nonexistent] not found (line [1], column [37])")
       );
     }
   }
