@@ -16,7 +16,7 @@
 
 set -e
 
-export DRUID_OPERATOR_VERSION=v1.0.0
+export DRUID_OPERATOR_VERSION=v0.0.9
 export KUBECTL="/usr/local/bin/kubectl"
 
 # Prepare For Druid-Operator
