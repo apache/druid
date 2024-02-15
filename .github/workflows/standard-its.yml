@@ -183,7 +183,7 @@ jobs:
         run: |
           for v in broker middlemanager router coordinator historical ; do
           echo "------------------------druid-tiny-cluster-"$v"s-0-------------------------";
-          sudo /usr/local/bin/kubectl logs --tail 1000 druid-tiny-cluster-"$v"s-0 ||:;
+          /usr/local/bin/kubectl logs --tail 1000 druid-tiny-cluster-"$v"s-0 ||:;
           done
 
   integration-other-tests:
