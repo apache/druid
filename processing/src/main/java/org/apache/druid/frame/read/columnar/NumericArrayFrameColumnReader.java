@@ -111,7 +111,7 @@ public abstract class NumericArrayFrameColumnReader implements FrameColumnReader
                   .getAdjustedCumulativeRowLength(memory, getStartOfCumulativeLengthSection(), numRows - 1));
   }
 
-  public static abstract class NumericArrayFrameColumn extends ObjectColumnAccessorBase implements BaseColumn
+  public abstract static class NumericArrayFrameColumn extends ObjectColumnAccessorBase implements BaseColumn
   {
 
     private final Frame frame;
@@ -308,6 +308,6 @@ public abstract class NumericArrayFrameColumnReader implements FrameColumnReader
       return false;
     }
 
-    abstract Number getElement(final Memory memory, final long rowDataOffset, final int cumulativeIndex);
+    abstract Number getElement(Memory memory, long rowDataOffset, int cumulativeIndex);
   }
 }

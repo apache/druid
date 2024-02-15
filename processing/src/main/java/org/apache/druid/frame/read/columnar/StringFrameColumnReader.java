@@ -202,7 +202,7 @@ public class StringFrameColumnReader implements FrameColumnReader
 
     if (multiValue) {
       totalNumValues = FrameColumnReaderUtils.adjustCumulativeRowLength(
-          FrameColumnReaderUtils.getCumulativeRowLength(memory, getStartOfCumulativeLengthSection(), -1)
+          FrameColumnReaderUtils.getCumulativeRowLength(memory, getStartOfCumulativeLengthSection(), numRows - 1)
       );
     } else {
       totalNumValues = numRows;
