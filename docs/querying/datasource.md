@@ -177,14 +177,15 @@ use union datasources.
 ### `inline`
 
 <Tabs>
-<TabItem label="SQL">
+<TabItem value="sql" label="SQL">
+
 ```sql
 SELECT * from (VALUES ('United States', 'San Francisco'),
                       ('Canada', 'Calgary')
               ) t (country, city)
 ```
 </TabItem>
-<TabItem value="7" label="Native">
+<TabItem value="native" label="Native">
 
 ```json
 {
