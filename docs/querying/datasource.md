@@ -238,14 +238,14 @@ select column1,column2,column3 from table3
 However depending on the size of the table's schema it might be quite complicated to do that; `TABLE(APPEND('table1','table2','table3'))` represents the same in a more compact form.
 
 <Tabs>
-<TabItem value="5" label="SQL">
+<TabItem value="sql" label="SQL">
 
 ```sql
 SELECT column1, column2, column3
 FROM TABLE(APPEND('table1','table2','table3'))
 ```
 </TabItem>
-<TabItem value="6" label="Native">
+<TabItem value="native" label="Native">
 
 ```json
 {
