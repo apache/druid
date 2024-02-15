@@ -694,7 +694,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   @Nullable
   public RowSignature getRowSignature()
   {
-    if (columnTypes != null) {
+    if (columns != null && columnTypes != null && columns.size() == columnTypes.size()) {
       Builder builder = RowSignature.builder();
       for (int i = 0; i < columnTypes.size(); i++) {
         ColumnType columnType = columnTypes.get(i);

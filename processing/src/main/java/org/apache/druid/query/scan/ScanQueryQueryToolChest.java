@@ -178,11 +178,9 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   @Override
   public RowSignature resultArraySignature(final ScanQuery query)
   {
-    {
-      RowSignature rowSignature = query.getRowSignature();
-      if (rowSignature != null) {
-        return rowSignature;
-      }
+    RowSignature rowSignature = query.getRowSignature();
+    if (rowSignature != null) {
+      return rowSignature;
     }
     if (query.getColumns() == null || query.getColumns().isEmpty()) {
       // Note: if no specific list of columns is provided, then since we can't predict what columns will come back, we
