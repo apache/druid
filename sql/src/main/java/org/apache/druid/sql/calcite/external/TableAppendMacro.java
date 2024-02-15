@@ -23,7 +23,6 @@ import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.runtime.CalciteException;
 import org.apache.calcite.schema.TranslatableTable;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlCallBinding;
@@ -44,6 +43,7 @@ import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
 import org.apache.calcite.sql.validate.SqlValidatorTable;
 import org.apache.curator.shaded.com.google.common.collect.ImmutableList;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.UnionDataSource;
@@ -266,18 +266,15 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
         ColumnType currentType = rowSignature.getColumnType(columnName).get();
         ColumnType existingType = fields.get(columnName);
         if (existingType != null && !existingType.equals(currentType)) {
-          throw new CalciteException(
-              String.format(
-                  "Can't create TABLE(APPEND()). "
-                      + "Conflicting types for column [%s]:"
-                      + " - existing type [%s]"
-                      + " - new type [%s] from table [%s]",
-                  columnName,
-                  existingType,
-                  currentType,
-                  relOptTable.getQualifiedName()
-              ),
-              null
+          throw InvalidInput.exception(
+              "Can't create TABLE(APPEND()).\n"
+                  + "Conflicting types for column [%s]:\n"
+                  + " - existing type [%s]\n"
+                  + " - new type [%s] from table [%s]",
+              columnName,
+              existingType,
+              currentType,
+              relOptTable.getQualifiedName()
           );
         }
         if (existingType == null) {

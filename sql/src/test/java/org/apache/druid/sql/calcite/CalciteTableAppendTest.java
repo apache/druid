@@ -79,9 +79,10 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
                 new Object[] {"abc", "b", null, null}
             )
         )
-        .expectedLogicalPlan(""
-            + "LogicalProject(exprs=[[$1, $8, $11, $13]])\n"
-            + "  LogicalTableScan(table=[[APPEND]])\n"
+        .expectedLogicalPlan(
+            ""
+                + "LogicalProject(exprs=[[$1, $8, $11, $13]])\n"
+                + "  LogicalTableScan(table=[[APPEND]])\n"
         )
         .run();
   }
@@ -147,7 +148,9 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
     catch (DruidException e) {
       MatcherAssert.assertThat(
           e,
-          invalidSqlIs("All arguments to APPEND should be literal strings. Argument #1 is not string (line [1], column [37])")
+          invalidSqlIs(
+              "All arguments to APPEND should be literal strings. Argument #1 is not string (line [1], column [37])"
+          )
       );
     }
   }
@@ -179,12 +182,14 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
       Assert.fail("query execution should fail");
     }
     catch (DruidException e) {
-      if(true) {
-        throw e;
-      }
       MatcherAssert.assertThat(
           e,
-          DruidExceptionMatcher.defensive().expectMessageIs("Can't create TABLE(APPEND()). Conflicting types for column [dim3]: - existing type [STRING] - new type [LONG] from table [[druid, foo2]]]")
+          DruidExceptionMatcher.invalidInput().expectMessageIs(
+              "Can't create TABLE(APPEND()).\n"
+                  + "Conflicting types for column [dim3]:\n"
+                  + " - existing type [STRING]\n"
+                  + " - new type [LONG] from table [[druid, foo2]]"
+          )
       );
     }
   }
