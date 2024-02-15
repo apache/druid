@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
 import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
@@ -164,6 +165,26 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
       MatcherAssert.assertThat(
           e,
           invalidSqlIs("Table [nonexistent] not found (line [1], column [37])")
+      );
+    }
+  }
+
+  @Test
+  public void testAppendtIncompatibleColumns()
+  {
+    try {
+      testBuilder()
+          .sql("select dim1 from TABLE(APPEND('foo','foo2')) u")
+          .run();
+      Assert.fail("query execution should fail");
+    }
+    catch (DruidException e) {
+      if(true) {
+        throw e;
+      }
+      MatcherAssert.assertThat(
+          e,
+          DruidExceptionMatcher.defensive().expectMessageIs("Can't create TABLE(APPEND()). Conflicting types for column [dim3]: - existing type [STRING] - new type [LONG] from table [[druid, foo2]]]")
       );
     }
   }

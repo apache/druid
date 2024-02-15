@@ -23,6 +23,7 @@ import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.runtime.CalciteException;
 import org.apache.calcite.schema.TranslatableTable;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlCallBinding;
@@ -189,7 +190,6 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
   {
     SqlValidator validator = ((SqlCallBinding) callBinding).getValidator();
     List<RelOptTable> tables = getTables(callBinding, validator.getCatalogReader());
-
     AppendDatasourceMetadata metadata = buildUnionDataSource(tables);
     return new DatasourceTable(
         metadata.values,
@@ -260,24 +260,32 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
     Map<String, ColumnType> fields = new LinkedHashMap<>();
     Builder rowSignatureBuilder = RowSignature.builder();
     for (RelOptTable relOptTable : tables) {
-
-      DatasourceTable a = relOptTable.unwrapOrThrow(DatasourceTable.class);
-
-      RowSignature rowSignature = a.getRowSignature();
-      for (String currentColumn : rowSignature.getColumnNames()) {
-
-        String key = currentColumn;
-        ColumnType currentType = rowSignature.getColumnType(currentColumn).get();
-        ColumnType existingType = fields.get(key);
+      DatasourceTable table = relOptTable.unwrapOrThrow(DatasourceTable.class);
+      RowSignature rowSignature = table.getRowSignature();
+      for (String columnName : rowSignature.getColumnNames()) {
+        ColumnType currentType = rowSignature.getColumnType(columnName).get();
+        ColumnType existingType = fields.get(columnName);
         if (existingType != null && !existingType.equals(currentType)) {
-          throw new IllegalArgumentException("incompatible operands");
+          throw new CalciteException(
+              String.format(
+                  "Can't create TABLE(APPEND()). "
+                      + "Conflicting types for column [%s]:"
+                      + " - existing type [%s]"
+                      + " - new type [%s] from table [%s]",
+                  columnName,
+                  existingType,
+                  currentType,
+                  relOptTable.getQualifiedName()
+              ),
+              null
+          );
         }
         if (existingType == null) {
-          fields.put(key, currentType);
+          fields.put(columnName, currentType);
         }
       }
 
-      dataSources.add(a.getDataSource());
+      dataSources.add(table.getDataSource());
     }
 
     for (Entry<String, ColumnType> col : fields.entrySet()) {
