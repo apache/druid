@@ -22,6 +22,7 @@ package org.apache.druid.segment.filter;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.BitmapResultFactory;
@@ -271,6 +272,27 @@ public class OrFilter implements BooleanFilter
         return bitmapResultFactory.union(
             () -> bitmapColumnIndices.stream().map(x -> x.computeBitmapResult(bitmapResultFactory, includeUnknown)).iterator()
         );
+      }
+
+      @Nullable
+      @Override
+      public <T> T computeBitmapResult(
+          BitmapResultFactory<T> bitmapResultFactory,
+          int selectionRowCount,
+          int totalRowCount,
+          boolean includeUnknown
+      )
+      {
+        List<T> results = Lists.newArrayListWithCapacity(bitmapColumnIndices.size());
+        for (BitmapColumnIndex index : bitmapColumnIndices) {
+          final T r = index.computeBitmapResult(bitmapResultFactory, selectionRowCount, totalRowCount, includeUnknown);
+          if (r == null) {
+            // all or nothing
+            return null;
+          }
+          results.add(r);
+        }
+        return bitmapResultFactory.union(results);
       }
     };
   }

@@ -226,6 +226,36 @@ public class AndFilter implements BooleanFilter
         }
         return bitmapResultFactory.intersection(bitmapResults);
       }
+
+      @Nullable
+      @Override
+      public <T> T computeBitmapResult(
+          BitmapResultFactory<T> bitmapResultFactory,
+          int selectionRowCount,
+          int totalRowCount,
+          boolean includeUnknown
+      )
+      {
+        final List<T> bitmapResults = new ArrayList<>(bitmapColumnIndices.size());
+        for (final BitmapColumnIndex index : bitmapColumnIndices) {
+          final T bitmapResult = index.computeBitmapResult(
+              bitmapResultFactory,
+              selectionRowCount,
+              totalRowCount,
+              includeUnknown
+          );
+          if (bitmapResult == null) {
+            // all or nothing
+            return null;
+          }
+          if (bitmapResultFactory.isEmpty(bitmapResult)) {
+            // Short-circuit.
+            return bitmapResultFactory.wrapAllFalse(selector.getBitmapFactory().makeEmptyImmutableBitmap());
+          }
+          bitmapResults.add(bitmapResult);
+        }
+        return bitmapResultFactory.intersection(bitmapResults);
+      }
     };
   }
 
