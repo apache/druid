@@ -174,7 +174,7 @@ table unions.
 Refer to the [Query execution](query-execution.md#union) page for more details on how queries are executed when you
 use union datasources.
 
-### Inline table `(VALUES ...)`
+### `inline`
 
 <Tabs>
 <TabItem label="SQL">
@@ -262,7 +262,7 @@ FROM TABLE(APPEND('table1','table2','table3'))
 </Tabs>
 
 
-### Subquery
+### `query`
 
 <Tabs>
 <TabItem value="8" label="SQL">
@@ -321,7 +321,7 @@ Query datasources allow you to issue subqueries. In native queries, they can app
  page for more details on how subqueries are executed and what limits will apply.
 :::
 
-### Join
+### `join`
 
 <Tabs>
 <TabItem value="10" label="SQL">
