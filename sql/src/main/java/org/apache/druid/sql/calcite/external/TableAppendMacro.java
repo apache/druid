@@ -189,8 +189,8 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
   public TranslatableTable getTable(SqlOperatorBinding callBinding)
   {
     SqlValidator validator = ((SqlCallBinding) callBinding).getValidator();
-    List<RelOptTable> tables = getTables(callBinding, validator.getCatalogReader());
-    AppendDatasourceMetadata metadata = buildUnionDataSource(tables);
+    AppendDatasourceMetadataBuilder builder = new AppendDatasourceMetadataBuilder(callBinding);
+    AppendDatasourceMetadata metadata = builder.build();
     return new DatasourceTable(
         metadata.values,
         metadata,
@@ -198,30 +198,98 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
     );
   }
 
-  private List<RelOptTable> getTables(SqlOperatorBinding callBinding, SqlValidatorCatalogReader catalogReader)
+  static class AppendDatasourceMetadataBuilder
   {
-    List<RelOptTable> tables = new ArrayList<>();
-    for (int i = 0; i < callBinding.getOperandCount(); i++) {
-      if (!callBinding.isOperandLiteral(i, false)) {
+
+    private final SqlOperatorBinding callBinding;
+    private SqlValidator validator;
+    private SqlValidatorCatalogReader catalogReader;
+
+    public AppendDatasourceMetadataBuilder(SqlOperatorBinding callBinding)
+    {
+      this.callBinding = callBinding;
+      this.validator = ((SqlCallBinding) callBinding).getValidator();
+      catalogReader = validator.getCatalogReader();
+
+    }
+
+    private List<RelOptTable> getTables()
+    {
+      List<RelOptTable> tables = new ArrayList<>();
+      for (int i = 0; i < callBinding.getOperandCount(); i++) {
+        RelOptTable unwrapOrThrow = getTableForOperand(i);
+        tables.add(unwrapOrThrow);
+      }
+      return tables;
+    }
+
+    private RelOptTable getTableForOperand(int operandIndex)
+    {
+      if (!callBinding.isOperandLiteral(operandIndex, false)) {
         throw new IllegalArgumentException(
             "All arguments of call to macro "
                 + "APPEND should be literal. Actual argument #"
-                + i + " is not literal"
+                + operandIndex + " is not literal"
         );
       }
       @Nullable
-      String tableName = callBinding.getOperandLiteralValue(i, String.class);
+      String tableName = callBinding.getOperandLiteralValue(operandIndex, String.class);
       ImmutableList<String> tableNameList = ImmutableList.<String>builder().add(tableName).build();
       SqlValidatorTable table = catalogReader.getTable(tableNameList);
       if (table == null) {
         throw DruidSqlValidator.buildCalciteContextException(
             StringUtils.format("Table [%s] not found", tableName),
-            ((SqlCallBinding) callBinding).operand(i)
+            ((SqlCallBinding) callBinding).operand(operandIndex)
         );
       }
-      tables.add(table.unwrapOrThrow(RelOptTable.class));
+      return table.unwrapOrThrow(RelOptTable.class);
     }
-    return tables;
+
+    public AppendDatasourceMetadata build()
+    {
+      return buildUnionDataSource(getTables());
+    }
+
+    private AppendDatasourceMetadata buildUnionDataSource(List<RelOptTable> tables)
+    {
+      List<DataSource> dataSources = new ArrayList<>();
+      Map<String, ColumnType> fields = new LinkedHashMap<>();
+      Builder rowSignatureBuilder = RowSignature.builder();
+      for (RelOptTable relOptTable : tables) {
+        DatasourceTable table = relOptTable.unwrapOrThrow(DatasourceTable.class);
+        RowSignature rowSignature = table.getRowSignature();
+        for (String columnName : rowSignature.getColumnNames()) {
+          ColumnType currentType = rowSignature.getColumnType(columnName).get();
+          ColumnType existingType = fields.get(columnName);
+          if (existingType != null && !existingType.equals(currentType)) {
+            throw new CalciteException(
+                String.format(
+                    "Can't create TABLE(APPEND()). "
+                        + "Conflicting types for column [%s]:"
+                        + " - existing type [%s]"
+                        + " - new type [%s] from table [%s]",
+                    columnName,
+                    existingType,
+                    currentType,
+                    relOptTable.getQualifiedName()
+                ),
+                null
+            );
+          }
+          if (existingType == null) {
+            fields.put(columnName, currentType);
+          }
+        }
+
+        dataSources.add(table.getDataSource());
+      }
+
+      for (Entry<String, ColumnType> col : fields.entrySet()) {
+        rowSignatureBuilder.add(col.getKey(), col.getValue());
+      }
+      return new AppendDatasourceMetadata(rowSignatureBuilder.build(), dataSources);
+    }
+
   }
 
   static class AppendDatasourceMetadata implements DatasourceMetadata
@@ -252,46 +320,6 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
     {
       return dataSource;
     }
-  }
-
-  private AppendDatasourceMetadata buildUnionDataSource(List<RelOptTable> tables)
-  {
-    List<DataSource> dataSources = new ArrayList<>();
-    Map<String, ColumnType> fields = new LinkedHashMap<>();
-    Builder rowSignatureBuilder = RowSignature.builder();
-    for (RelOptTable relOptTable : tables) {
-      DatasourceTable table = relOptTable.unwrapOrThrow(DatasourceTable.class);
-      RowSignature rowSignature = table.getRowSignature();
-      for (String columnName : rowSignature.getColumnNames()) {
-        ColumnType currentType = rowSignature.getColumnType(columnName).get();
-        ColumnType existingType = fields.get(columnName);
-        if (existingType != null && !existingType.equals(currentType)) {
-          throw new CalciteException(
-              String.format(
-                  "Can't create TABLE(APPEND()). "
-                      + "Conflicting types for column [%s]:"
-                      + " - existing type [%s]"
-                      + " - new type [%s] from table [%s]",
-                  columnName,
-                  existingType,
-                  currentType,
-                  relOptTable.getQualifiedName()
-              ),
-              null
-          );
-        }
-        if (existingType == null) {
-          fields.put(columnName, currentType);
-        }
-      }
-
-      dataSources.add(table.getDataSource());
-    }
-
-    for (Entry<String, ColumnType> col : fields.entrySet()) {
-      rowSignatureBuilder.add(col.getKey(), col.getValue());
-    }
-    return new AppendDatasourceMetadata(rowSignatureBuilder.build(), dataSources);
   }
 
   @Override
