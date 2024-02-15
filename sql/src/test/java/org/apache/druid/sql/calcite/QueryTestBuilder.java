@@ -141,7 +141,6 @@ public class QueryTestBuilder
 
   public QueryTestBuilder sql(String sql)
   {
-    System.out.println(sql);
     this.sql = sql;
     return this;
   }
