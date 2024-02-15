@@ -118,7 +118,7 @@
              however it is required in some cases when running against mockito 4.x (mockito 4.x is required for Java <11.
              We use the following property to pick the proper artifact based on Java version (see pre-java-11 profile) -->
         <mockito.inline.artifact>core</mockito.inline.artifact>
-        <aws.sdk.version>1.12.497</aws.sdk.version>
+        <aws.sdk.version>1.12.638</aws.sdk.version>
         <caffeine.version>2.8.0</caffeine.version>
         <jacoco.version>0.8.7</jacoco.version>
         <hibernate-validator.version>6.2.5.Final</hibernate-validator.version>
@@ -230,7 +230,9 @@
         <module>extensions-contrib/opentelemetry-emitter</module>
         <module>extensions-contrib/kubernetes-overlord-extensions</module>
         <module>extensions-contrib/druid-iceberg-extensions</module>
+        <module>extensions-contrib/druid-deltalake-extensions</module>
         <module>extensions-contrib/spectator-histogram</module>
+
         <!-- distribution packaging -->
         <module>distribution</module>
         <!-- Revised integration tests -->
@@ -1934,7 +1936,7 @@
                             <showWarnings>false</showWarnings>
                             <compilerArgs>
                                 <arg>-XDcompilePolicy=simple</arg>
-                                <arg>-Xplugin:ErrorProne -XepExcludedPaths:.*/target/generated-(test-)?sources/.* -XepDisableWarningsInGeneratedCode -Xep:ClassCanBeStatic:ERROR -Xep:PreconditionsInvalidPlaceholder:ERROR -Xep:MissingOverride:ERROR -Xep:DefaultCharset:ERROR -Xep:QualifierOrScopeOnInjectMethod:ERROR -Xep:AssistedInjectAndInjectOnSameConstructor -Xep:AutoFactoryAtInject -Xep:ClassName -Xep:ComparisonContractViolated -Xep:DepAnn -Xep:EmptyIf -Xep:InjectInvalidTargetingOnScopingAnnotation  -Xep:InjectMoreThanOneQualifier -Xep:InjectScopeAnnotationOnInterfaceOrAbstractClass -Xep:InjectScopeOrQualifierAnnotationRetention -Xep:InjectedConstructorAnnotations -Xep:InsecureCryptoUsage -Xep:JavaxInjectOnFinalField -Xep:LongLiteralLowerCaseSuffix -Xep:NoAllocation -Xep:NonRuntimeAnnotation -Xep:NumericEquality -Xep:ProtoStringFieldReferenceEquality</arg>
+                                <arg>-Xplugin:ErrorProne -XepExcludedPaths:.*/target/generated-(test-)?sources/.* -XepDisableWarningsInGeneratedCode -Xep:ClassCanBeStatic:ERROR -Xep:PreconditionsInvalidPlaceholder:ERROR -Xep:MissingOverride:ERROR -Xep:DefaultCharset:ERROR -Xep:QualifierOrScopeOnInjectMethod:ERROR -Xep:AssistedInjectAndInjectOnSameConstructor -Xep:AutoFactoryAtInject -Xep:ClassName -Xep:ComparisonContractViolated -Xep:DepAnn -Xep:EmptyIf -Xep:InjectInvalidTargetingOnScopingAnnotation  -Xep:InjectMoreThanOneQualifier -Xep:InjectScopeAnnotationOnInterfaceOrAbstractClass -Xep:InjectScopeOrQualifierAnnotationRetention -Xep:InjectedConstructorAnnotations -Xep:InsecureCryptoUsage -Xep:JavaxInjectOnFinalField -Xep:LongLiteralLowerCaseSuffix -Xep:NoAllocation -Xep:NonRuntimeAnnotation -Xep:NumericEquality -Xep:ProtoStringFieldReferenceEquality -Xep:CheckedExceptionNotThrown:ERROR</arg>
                                 <!-- Error Prone requires exemptions for Java >= 16, see https://errorprone.info/docs/installation#maven -->
                                 <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED</arg>
                                 <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED</arg>

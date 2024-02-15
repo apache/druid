@@ -63,6 +63,7 @@ import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -115,6 +116,7 @@ public class CalciteTests
   public static final String DATASOURCE5 = "lotsocolumns";
   public static final String BROADCAST_DATASOURCE = "broadcast";
   public static final String FORBIDDEN_DATASOURCE = "forbiddenDatasource";
+  public static final String FORBIDDEN_DESTINATION = "forbiddenDestination";
   public static final String SOME_DATASOURCE = "some_datasource";
   public static final String SOME_DATSOURCE_ESCAPED = "some\\_datasource";
   public static final String SOMEXDATASOURCE = "somexdatasource";
@@ -149,6 +151,15 @@ public class CalciteTests
             }
           case ResourceType.QUERY_CONTEXT:
             return Access.OK;
+          case ResourceType.EXTERNAL:
+            if (Action.WRITE.equals(action)) {
+              if (FORBIDDEN_DESTINATION.equals(resource.getName())) {
+                return new Access(false);
+              } else {
+                return Access.OK;
+              }
+            }
+            return new Access(false);
           default:
             return new Access(false);
         }
@@ -235,7 +246,7 @@ public class CalciteTests
       null
   );
 
-  public static final Injector INJECTOR = QueryStackTests.injectorBuilder()
+  public static final Injector INJECTOR = QueryStackTests.defaultInjectorBuilder()
       .addModule(new LookylooModule())
       .addModule(new SqlAggregationModule())
       .addModule(new CalciteTestOperatorModule())

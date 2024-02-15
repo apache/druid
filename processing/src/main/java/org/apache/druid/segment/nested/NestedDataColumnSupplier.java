@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
@@ -35,6 +36,8 @@ import org.apache.druid.segment.data.FrontCodedIntArrayIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.VByte;
+import org.apache.druid.segment.index.SimpleImmutableBitmapIndex;
+import org.apache.druid.segment.index.semantic.NullValueIndex;
 import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
 
 import javax.annotation.Nullable;
@@ -42,7 +45,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColumn>
+public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColumn>, ColumnIndexSupplier
 {
   public static NestedDataColumnSupplier read(
       ColumnType logicalType,
@@ -241,5 +244,15 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
   public ColumnType getLogicalType()
   {
     return simpleType == null ? ColumnType.NESTED_DATA : simpleType;
+  }
+
+  @Nullable
+  @Override
+  public <T> T as(Class<T> clazz)
+  {
+    if (clazz.equals(NullValueIndex.class)) {
+      return (T) (NullValueIndex) () -> new SimpleImmutableBitmapIndex(nullValues);
+    }
+    return null;
   }
 }
