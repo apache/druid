@@ -979,7 +979,7 @@ public class Druids
 
     private ScanQueryBuilder columnTypes(List<ColumnType> columnTypes)
     {
-      this.columnTypes  = columnTypes;
+      this.columnTypes = columnTypes;
       return this;
     }
   }

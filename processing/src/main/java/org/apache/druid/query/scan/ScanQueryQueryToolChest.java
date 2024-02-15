@@ -51,7 +51,6 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.VirtualColumn;
@@ -223,13 +222,6 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
     if (dataSource instanceof InlineDataSource) {
       InlineDataSource inlineDataSource = (InlineDataSource) dataSource;
       ColumnCapabilities caps = inlineDataSource.getRowSignature().getColumnCapabilities(columnName);
-      if (caps != null) {
-        return caps.toColumnType();
-      }
-    }
-    if (dataSource instanceof TableDataSource) {
-      TableDataSource inlineDataSource = (TableDataSource) dataSource;
-      ColumnCapabilities caps = null;//inlineDataSource.getRowSignature().getColumnCapabilities(columnName);
       if (caps != null) {
         return caps.toColumnType();
       }
