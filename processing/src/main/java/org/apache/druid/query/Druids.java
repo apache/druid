@@ -977,7 +977,7 @@ public class Druids
       return this;
     }
 
-    private ScanQueryBuilder columnTypes(List<ColumnType> columnTypes)
+    public ScanQueryBuilder columnTypes(List<ColumnType> columnTypes)
     {
       this.columnTypes = columnTypes;
       return this;

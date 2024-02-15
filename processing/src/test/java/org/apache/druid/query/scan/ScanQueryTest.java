@@ -29,6 +29,8 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -379,5 +381,23 @@ public class ScanQueryTest
               .build();
 
     Assert.assertEquals(ImmutableSet.of("__time", "foo", "bar"), query.getRequiredColumns());
+  }
+
+  @Test
+  public void testGetRowSignature()
+  {
+    final ScanQuery query = Druids.newScanQueryBuilder()
+        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+        .dataSource("some src")
+        .intervals(intervalSpec)
+        .columns("foo", "bar")
+        .columnTypes(ImmutableList.<ColumnType>builder().add(ColumnType.LONG, ColumnType.FLOAT).build())
+        .build();
+    RowSignature sig = RowSignature.builder()
+        .add("foo", ColumnType.LONG)
+        .add("bar", ColumnType.FLOAT)
+        .build();
+
+    Assert.assertEquals(sig, query.getRowSignature());
   }
 }
