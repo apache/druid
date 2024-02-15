@@ -52,6 +52,14 @@ configVars:
   druid_emitter_logging_logLevel: debug
   druid_emitter_http_recipientBaseUrl: http://druid_exporter_url:druid_exporter_port/druid
 
+# Array of container env objects to append to all containers
+env: []
+#  - name: druid_metadata_storage_connector_password
+#    valueFrom:
+#      secretKeyRef:
+#        name: myDatabaseSecret
+#        key: myDatabasePasswordKey
+
 gCloudStorage:
   enabled: false
   secretName: google-cloud-key
@@ -73,6 +81,14 @@ broker:
     druid_processing_numMergeBuffers: 2
     druid_processing_numThreads: 1
     # druid_monitoring_monitors: '["org.apache.druid.client.cache.CacheMonitor", "org.apache.druid.server.metrics.QueryCountStatsMonitor"]'
+
+  # Array of container env objects to append to broker container
+  env: []
+  #  - name: druid_metadata_storage_connector_password
+  #    valueFrom:
+  #      secretKeyRef:
+  #        name: myDatabaseSecret
+  #        key: myDatabasePasswordKey
 
   ingress:
     enabled: false
@@ -129,6 +145,14 @@ coordinator:
     DRUID_XMS: 256m
     # druid_monitoring_monitors: '["org.apache.druid.server.metrics.TaskCountStatsMonitor"]'
 
+  # Array of container env objects to append to coordinator container
+  env: []
+  #  - name: druid_metadata_storage_connector_password
+  #    valueFrom:
+  #      secretKeyRef:
+  #        name: myDatabaseSecret
+  #        key: myDatabasePasswordKey
+
   ingress:
     enabled: false
     annotations: {}
@@ -178,6 +202,16 @@ overlord:
   replicaCount: 1
   port: 8081
   serviceType: ClusterIP
+
+  config: {}
+
+  # Array of container env objects to append to overlord container
+  env: []
+  #  - name: druid_metadata_storage_connector_password
+  #    valueFrom:
+  #      secretKeyRef:
+  #        name: myDatabaseSecret
+  #        key: myDatabasePasswordKey
 
   javaOpts: "-Xms1G -Xmx1G"
 
@@ -234,6 +268,14 @@ historical:
     druid_processing_numThreads: 1
     # druid_monitoring_monitors: '["org.apache.druid.client.cache.CacheMonitor", "org.apache.druid.server.metrics.HistoricalMetricsMonitor", "org.apache.druid.server.metrics.QueryCountStatsMonitor"]'
     # druid_segmentCache_locations: '[{"path":"/opt/druid/var/druid/segment-cache","maxSize":300000000000}]'
+
+  # Array of container env objects to append to historical container
+  env: []
+  #  - name: druid_metadata_storage_connector_password
+  #    valueFrom:
+  #      secretKeyRef:
+  #        name: myDatabaseSecret
+  #        key: myDatabasePasswordKey
 
   ingress:
     enabled: false
@@ -313,6 +355,14 @@ middleManager:
     DRUID_XMS: 64m
     druid_indexer_runner_javaOptsArray: '["-server", "-Xms256m", "-Xmx256m", "-XX:MaxDirectMemorySize=300m", "-Duser.timezone=UTC", "-Dfile.encoding=UTF-8", "-XX:+ExitOnOutOfMemoryError", "-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager"]'
     druid_indexer_fork_property_druid_processing_buffer_sizeBytes: '25000000'
+
+  # Array of container env objects to append to middleManager container
+  env: []
+  #  - name: druid_metadata_storage_connector_password
+  #    valueFrom:
+  #      secretKeyRef:
+  #        name: myDatabaseSecret
+  #        key: myDatabasePasswordKey
 
   autoscaling:
     enabled: false
@@ -406,6 +456,14 @@ router:
     DRUID_XMX: 128m
     DRUID_XMS: 128m
     DRUID_MAXDIRECTMEMORYSIZE: 128m
+
+  # Array of container env objects to append to router container
+  env: []
+  #  - name: druid_metadata_storage_connector_password
+  #    valueFrom:
+  #      secretKeyRef:
+  #        name: myDatabaseSecret
+  #        key: myDatabasePasswordKey
 
   ingress:
     enabled: false

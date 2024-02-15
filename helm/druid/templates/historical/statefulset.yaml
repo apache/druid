@@ -62,7 +62,7 @@ spec:
             - topologyKey: "kubernetes.io/hostname"
               labelSelector:
                 matchLabels:
-                  app: "{{ template "druid.name" . }}"
+                  app: {{ template "druid.name" . | quote }}
                   release: "{{ .Release.Name }}"
                   component: "{{ .Values.historical.name }}"
       {{- else if eq .Values.historical.antiAffinity "soft" }}
@@ -73,7 +73,7 @@ spec:
               topologyKey: kubernetes.io/hostname
               labelSelector:
                 matchLabels:
-                  app: "{{ template "druid.name" . }}"
+                  app: {{ template "druid.name" . | quote }}
                   release: "{{ .Release.Name }}"
                   component: "{{ .Values.historical.name }}"
       {{- end }}
@@ -108,10 +108,16 @@ spec:
           valueFrom:  {fieldRef: {fieldPath: metadata.name}}
         - name: POD_NAMESPACE
           valueFrom: {fieldRef: {fieldPath: metadata.namespace}}
+        {{- with .Values.env }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
         {{- range $key, $val := .Values.historical.config }}
         - name: {{ $key }}
           value: {{ $val | quote }}
-        {{- end}}
+        {{- end }}
+        {{- with .Values.historical.env }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
         envFrom:
           - configMapRef:
               name: {{ template "druid.name" . }}
