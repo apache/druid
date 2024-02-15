@@ -23,6 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import io.fabric8.kubernetes.api.model.PodTemplate;
+import io.fabric8.kubernetes.api.model.PodTemplateBuilder;
+import io.fabric8.kubernetes.api.model.VolumeBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import org.apache.commons.lang.RandomStringUtils;
@@ -520,7 +522,51 @@ public class PodTemplateTaskAdapterTest
         .collect(Collectors.toList()).get(0).getValue());
   }
 
+  @Test
+  public void test_fromTask_withIndexKafkaPodTemplateInRuntimeProperites() throws IOException
+  {
+    Path baseTemplatePath = Files.createFile(tempDir.resolve("base.yaml"));
+    mapper.writeValue(baseTemplatePath.toFile(), podTemplateSpec);
 
+    Path kafkaTemplatePath = Files.createFile(tempDir.resolve("kafka.yaml"));
+    PodTemplate kafkaPodTemplate = new PodTemplateBuilder(podTemplateSpec)
+          .editTemplate()
+          .editSpec()
+          .setNewVolumeLike(0, new VolumeBuilder().withName("volume").build())
+          .endVolume()
+          .endSpec()
+          .endTemplate()
+          .build();
+    mapper.writeValue(kafkaTemplatePath.toFile(), kafkaPodTemplate);
+
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.runner.k8s.podTemplate.base", baseTemplatePath.toString());
+    props.setProperty("druid.indexer.runner.k8s.podTemplate.index_kafka", kafkaTemplatePath.toString());
+
+    PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
+          taskRunnerConfig,
+          taskConfig,
+          node,
+          mapper,
+          props,
+          taskLogs
+    );
+
+    Task kafkaTask = new NoopTask("id", "id", "datasource", 0, 0, null) {
+      @Override
+      public String getType()
+      {
+        return "index_kafka";
+      }
+    };
+
+    Task noopTask = new NoopTask("id", "id", "datasource", 0, 0, null);
+    Job actual = adapter.fromTask(kafkaTask);
+    Assert.assertEquals(1, actual.getSpec().getTemplate().getSpec().getVolumes().size(), 1);
+
+    actual = adapter.fromTask(noopTask);
+    Assert.assertEquals(0, actual.getSpec().getTemplate().getSpec().getVolumes().size(), 1);
+  }
 
   private void assertJobSpecsEqual(Job actual, Job expected) throws IOException
   {
