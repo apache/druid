@@ -41,6 +41,7 @@ import org.apache.druid.query.operator.OffsetLimit;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -186,6 +187,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   private final List<OrderBy> orderBys;
   private final Integer maxRowsQueuedForOrdering;
   private final Integer maxSegmentPartitionsOrderedInMemory;
+  private final List<ColumnType> columnTypes;
 
   @JsonCreator
   public ScanQuery(
@@ -202,6 +204,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
       @JsonProperty("columns") List<String> columns,
       @JsonProperty("legacy") Boolean legacy,
       @JsonProperty("context") Map<String, Object> context
+//      @JsonProperty("columnTypes") List<ColumnType> columnTypes
   )
   {
     super(dataSource, querySegmentSpec, false, context);
@@ -225,6 +228,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     this.dimFilter = dimFilter;
     this.columns = columns;
     this.legacy = legacy;
+    this.columnTypes = null;
 
     final Pair<List<OrderBy>, Order> ordering = verifyAndReconcileOrdering(orderBysFromUser, orderFromUser);
     this.orderBys = Preconditions.checkNotNull(ordering.lhs);
@@ -416,6 +420,14 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   public List<String> getColumns()
   {
     return columns;
+  }
+
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
+  public List<ColumnType> getColumnTypes()
+  {
+    return columnTypes;
   }
 
   /**

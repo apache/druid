@@ -1671,6 +1671,7 @@ public class DruidQuery
             scanColumnsList,
             plannerContext.queryContextMap()
         )
+
     );
   }
 
