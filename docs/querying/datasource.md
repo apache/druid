@@ -226,13 +226,13 @@ Suppose you have 3 tables:
 * `table2` has `column2`
 * `table3` has `column1`, `column2`, `column3`
 
-It is possible to create an union view of the above tables is possible by using `union all`:
+It is possible to create an union view of the above tables is possible by using UNION ALL:
 ```sql
-select column1,null as column2,null as column3 from table1
-union all
-select null as column1,null as column2,null as column3 from table2
-union all
-select column1,column2,column3 from table3
+SELECT column1,NULL AS column2,NULL AS column3 FROM table1
+UNION ALL
+SELECT NULL AS column1,column2,NULL AS column3 FROM table2
+UNION ALL
+SELECT column1,column2,column3 FROM table3
 ```
 
 However depending on the size of the table's schema it might be quite complicated to do that; `TABLE(APPEND('table1','table2','table3'))` represents the same in a more compact form.
