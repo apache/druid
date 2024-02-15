@@ -1,6 +1,7 @@
 package org.apache.druid.frame.write.columnar;
 
 import org.apache.datasketches.memory.WritableMemory;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.allocation.AppendableMemory;
 import org.apache.druid.frame.allocation.MemoryAllocator;
 import org.apache.druid.frame.allocation.MemoryRange;
@@ -13,7 +14,7 @@ public class LongArrayFrameColumnWriter implements FrameColumnWriter
 {
   // TODO(laksh): Copy pasted after following the logic from StringFrameColumnWriter, since numeric writers have 3
   //  regions as well. The type size is fixed, however there's no special nullable marker
-  private static final int INITIAL_ALLOCATION_SIZE = 180;
+  private static final int INITIAL_ALLOCATION_SIZE = 120;
 
   private static final int ELEMENT_SIZE = Long.BYTES;
 
@@ -28,8 +29,6 @@ public class LongArrayFrameColumnWriter implements FrameColumnWriter
   final ColumnValueSelector selector;
   final MemoryAllocator allocator;
   final byte typeCode;
-
-
 
   /**
    * Row lengths: one int per row with the number of values contained by that row and all previous rows.
@@ -49,7 +48,7 @@ public class LongArrayFrameColumnWriter implements FrameColumnWriter
   private final AppendableMemory rowData;
 
   private int lastCumulativeRowLength = 0;
-  private int lastRowLength = 0;
+  private int lastRowLength = -1;
 
 
   public LongArrayFrameColumnWriter(
@@ -92,6 +91,8 @@ public class LongArrayFrameColumnWriter implements FrameColumnWriter
 
     if (numericArray == null) {
       rowLengthsCursor.memory().putInt(rowLengthsCursor.start(), -(lastCumulativeRowLength + rowLength) - 1);
+    } else {
+      rowLengthsCursor.memory().putInt(rowLengthsCursor.start(), lastCumulativeRowLength + rowLength);
     }
     cumulativeRowLengths.advanceCursor(Integer.BYTES);
     lastRowLength = rowLength;
@@ -99,6 +100,7 @@ public class LongArrayFrameColumnWriter implements FrameColumnWriter
 
     final MemoryRange<WritableMemory> rowNullityDataCursor = rowLength > 0 ? rowData.cursor() : null;
     final MemoryRange<WritableMemory> rowDataCursor = rowLength > 0 ? rowData.cursor() : null;
+
     for (int i = 0; i < rowLength; ++i) {
       final Number element = numericArray.get(i);
       if (element == null) {
@@ -111,29 +113,56 @@ public class LongArrayFrameColumnWriter implements FrameColumnWriter
       }
     }
 
+    if (rowLength > 0) {
+      rowNullityData.advanceCursor(Byte.BYTES * rowLength);
+      rowData.advanceCursor(ELEMENT_SIZE * rowLength);
+    }
+
+    return true;
   }
 
   @Override
   public void undo()
   {
+    if (lastRowLength == -1) {
+      throw DruidException.defensive("Nothing written to undo()");
+    }
 
+    cumulativeRowLengths.rewindCursor(Integer.BYTES);
+    rowNullityData.rewindCursor(lastRowLength * Byte.BYTES);
+    rowData.rewindCursor(lastRowLength * ELEMENT_SIZE);
+
+    lastCumulativeRowLength -= lastRowLength;
+    // Multiple undo calls cannot be chained together
+    lastRowLength = -1;
   }
 
   @Override
   public long size()
   {
-    return 0;
+    return DATA_OFFSET + cumulativeRowLengths.size() + rowNullityData.size() + rowData.size();
   }
 
   @Override
-  public long writeTo(WritableMemory memory, long position)
+  public long writeTo(final WritableMemory memory, final long startPosition)
   {
-    return 0;
+    long currentPosition = startPosition;
+
+    memory.putByte(currentPosition, typeCode);
+    ++currentPosition;
+
+    currentPosition += cumulativeRowLengths.writeTo(memory, currentPosition);
+    currentPosition += rowNullityData.writeTo(memory, currentPosition);
+    currentPosition += rowData.writeTo(memory, currentPosition);
+
+    return currentPosition - startPosition;
   }
 
   @Override
   public void close()
   {
-
+    cumulativeRowLengths.close();
+    rowNullityData.close();
+    rowData.close();
   }
 }
