@@ -27,11 +27,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.calcite.avatica.AvaticaSqlException;
-import org.apache.commons.io.IOUtils;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.annotations.Client;
 import org.apache.druid.guice.annotations.ExtensionPoint;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -58,7 +56,6 @@ import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -989,67 +986,20 @@ public abstract class AbstractAuthConfigurationTest
     adminServers = getServersWithoutCurrentSizeAndStartTime(
         jsonMapper.readValue(
             fillServersTemplate(
-                    config,
-                    AbstractIndexerTest.getResourceAsString(SYSTEM_SCHEMA_SERVERS_RESULTS_RESOURCE)
+                config,
+                AbstractIndexerTest.getResourceAsString(SYSTEM_SCHEMA_SERVERS_RESULTS_RESOURCE)
             ),
             SYS_SCHEMA_RESULTS_TYPE_REFERENCE
         )
     );
 
     adminServerSegments = jsonMapper.readValue(
-            fillSegementServersTemplate(
-                    config,
-                    AbstractIndexerTest.getResourceAsString(SYSTEM_SCHEMA_SERVER_SEGMENTS_RESULTS_RESOURCE)
-            ),
-            SYS_SCHEMA_RESULTS_TYPE_REFERENCE
+        fillSegementServersTemplate(
+            config,
+            AbstractIndexerTest.getResourceAsString(SYSTEM_SCHEMA_SERVER_SEGMENTS_RESULTS_RESOURCE)
+        ),
+        SYS_SCHEMA_RESULTS_TYPE_REFERENCE
     );
-  }
-
-  public static InputStream getResourceAsStream(String resource)
-  {
-    return AbstractAuthConfigurationTest.class.getResourceAsStream(resource);
-  }
-
-  private static String getResourceAsString(String file) throws IOException
-  {
-    try (final InputStream inputStream = getResourceAsStream(file)) {
-      if (inputStream == null) {
-        throw new ISE("Failed to load resource: [%s]", file);
-      }
-      return IOUtils.toString(inputStream, StandardCharsets.UTF_8);
-    }
-  }
-
-  protected String loadData(String indexTask, Map<String, Object> specs) throws Exception
-  {
-    String taskSpec = getResourceAsString(indexTask);
-    taskSpec = StringUtils.replace(taskSpec, "%%DATASOURCE%%", DATA_SOURCE);
-    taskSpec = StringUtils.replace(
-            taskSpec,
-            "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
-            jsonMapper.writeValueAsString("0")
-    );
-    for (Map.Entry<String, Object> entry : specs.entrySet()) {
-      taskSpec = StringUtils.replace(
-              taskSpec,
-              entry.getKey(),
-              jsonMapper.writeValueAsString(entry.getValue())
-      );
-    }
-    final String taskID = indexer.submitTask(taskSpec);
-    LOG.info("TaskID for loading index task %s", taskID);
-    indexer.waitUntilTaskCompletes(taskID);
-    return taskID;
-  }
-
-  protected String loadSegmentId()
-  {
-    ITRetryUtil.retryUntilTrue(
-        () -> coordinatorClient.areSegmentsLoaded(DATA_SOURCE), "auth_test load"
-    );
-    final List<String> segments = coordinatorClient.getSegments(DATA_SOURCE);
-    Assert.assertEquals(segments.size(), 1);
-    return segments.get(0);
   }
 
   protected void setExpectedLookupObjects() throws Exception

@@ -181,16 +181,16 @@ public class QueryLifecycleTest
     long nanos = System.nanoTime();
     long millis = System.currentTimeMillis();
     return new QueryLifecycle(
-            toolChestWarehouse,
-            texasRanger,
-            metricsFactory,
-            emitter,
-            requestLogger,
-            authzMapper,
-            queryConfig,
-            authConfig,
-            millis,
-            nanos
+        toolChestWarehouse,
+        texasRanger,
+        metricsFactory,
+        emitter,
+        requestLogger,
+        authzMapper,
+        queryConfig,
+        authConfig,
+        millis,
+        nanos
     );
   }
 
@@ -198,17 +198,17 @@ public class QueryLifecycleTest
   public void teardown()
   {
     EasyMock.verify(
-            toolChestWarehouse,
-            texasRanger,
-            metricsFactory,
-            emitter,
-            requestLogger,
-            queryConfig,
-            toolChest,
-            runner,
-            metrics,
-            authenticationResult,
-            authorizer
+        toolChestWarehouse,
+        texasRanger,
+        metricsFactory,
+        emitter,
+        requestLogger,
+        queryConfig,
+        toolChest,
+        runner,
+        metrics,
+        authenticationResult,
+        authorizer
     );
   }
 
@@ -396,8 +396,8 @@ public class QueryLifecycleTest
                                         .build();
 
     AuthConfig authConfig = AuthConfig.newBuilder()
-                                      .setAuthorizeQueryContextParams(true)
-                                      .build();
+        .setAuthorizeQueryContextParams(true)
+        .build();
     QueryLifecycle lifecycle = createLifecycle(authConfig);
     lifecycle.initialize(query);
 
@@ -405,8 +405,8 @@ public class QueryLifecycleTest
     Assert.assertTrue(lifecycle.getQuery().getContext().containsKey("queryId"));
     revisedContext.remove("queryId");
     Assert.assertEquals(
-            userContext,
-            revisedContext
+        userContext,
+        revisedContext
     );
 
     Assert.assertTrue(lifecycle.authorize(mockRequest()).isAllowed());
@@ -443,8 +443,8 @@ public class QueryLifecycleTest
                                         .build();
 
     AuthConfig authConfig = AuthConfig.newBuilder()
-                                      .setAuthorizeQueryContextParams(true)
-                                      .build();
+        .setAuthorizeQueryContextParams(true)
+        .build();
     QueryLifecycle lifecycle = createLifecycle(authConfig);
     lifecycle.initialize(query);
     Assert.assertFalse(lifecycle.authorize(mockRequest()).isAllowed());
@@ -479,9 +479,9 @@ public class QueryLifecycleTest
                                         .build();
 
     AuthConfig authConfig = AuthConfig.newBuilder()
-                                      .setAuthorizeQueryContextParams(true)
-                                      .setUnsecuredContextKeys(ImmutableSet.of("foo", "baz"))
-                                      .build();
+        .setAuthorizeQueryContextParams(true)
+        .setUnsecuredContextKeys(ImmutableSet.of("foo", "baz"))
+        .build();
     QueryLifecycle lifecycle = createLifecycle(authConfig);
     lifecycle.initialize(query);
 
@@ -489,8 +489,8 @@ public class QueryLifecycleTest
     Assert.assertTrue(lifecycle.getQuery().getContext().containsKey("queryId"));
     revisedContext.remove("queryId");
     Assert.assertEquals(
-            userContext,
-            revisedContext
+        userContext,
+        revisedContext
     );
 
     Assert.assertTrue(lifecycle.authorize(mockRequest()).isAllowed());
@@ -525,10 +525,10 @@ public class QueryLifecycleTest
                                         .build();
 
     AuthConfig authConfig = AuthConfig.newBuilder()
-                                      .setAuthorizeQueryContextParams(true)
-                                      // We have secured keys, just not what the user gave.
-                                      .setSecuredContextKeys(ImmutableSet.of("foo2", "baz2"))
-                                      .build();
+        .setAuthorizeQueryContextParams(true)
+        // We have secured keys, just not what the user gave.
+        .setSecuredContextKeys(ImmutableSet.of("foo2", "baz2"))
+        .build();
     QueryLifecycle lifecycle = createLifecycle(authConfig);
     lifecycle.initialize(query);
 
@@ -536,8 +536,8 @@ public class QueryLifecycleTest
     Assert.assertTrue(lifecycle.getQuery().getContext().containsKey("queryId"));
     revisedContext.remove("queryId");
     Assert.assertEquals(
-            userContext,
-            revisedContext
+        userContext,
+        revisedContext
     );
 
     Assert.assertTrue(lifecycle.authorize(mockRequest()).isAllowed());
@@ -575,10 +575,10 @@ public class QueryLifecycleTest
                                         .build();
 
     AuthConfig authConfig = AuthConfig.newBuilder()
-                                      .setAuthorizeQueryContextParams(true)
-                                      // We have secured keys. User used one of them.
-                                      .setSecuredContextKeys(ImmutableSet.of("foo", "baz2"))
-                                      .build();
+        .setAuthorizeQueryContextParams(true)
+        // We have secured keys. User used one of them.
+        .setSecuredContextKeys(ImmutableSet.of("foo", "baz2"))
+        .build();
     QueryLifecycle lifecycle = createLifecycle(authConfig);
     lifecycle.initialize(query);
     Assert.assertFalse(lifecycle.authorize(mockRequest()).isAllowed());
@@ -647,17 +647,17 @@ public class QueryLifecycleTest
   private void replayAll()
   {
     EasyMock.replay(
-            toolChestWarehouse,
-            texasRanger,
-            metricsFactory,
-            emitter,
-            requestLogger,
-            queryConfig,
-            toolChest,
-            runner,
-            metrics,
-            authenticationResult,
-            authorizer
+        toolChestWarehouse,
+        texasRanger,
+        metricsFactory,
+        emitter,
+        requestLogger,
+        queryConfig,
+        toolChest,
+        runner,
+        metrics,
+        authenticationResult,
+        authorizer
     );
   }
 }
