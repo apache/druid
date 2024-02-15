@@ -112,7 +112,8 @@ public class SegmentSchemaBackFillQueueTest
     RowSignature rowSignature = RowSignature.builder().add("cx", ColumnType.FLOAT).build();
     Map<String, AggregatorFactory> aggregatorFactoryMap = new HashMap<>();
     aggregatorFactoryMap.put("longFirst", new LongFirstAggregatorFactory("longFirst", "long-col", null));
-    segmentIdSchemaMap.put(segment.getId().toString(), Pair.of(new SchemaPayload(rowSignature), 20));
+
+    segmentIdSchemaMap.put(segment.getId().toString(), Pair.of(new SchemaPayload(rowSignature, aggregatorFactoryMap), 20));
     segmentSchemaBackFillQueue.add(segment.getId(), rowSignature, 20, aggregatorFactoryMap);
     segmentSchemaBackFillQueue.start();
     latch.await();

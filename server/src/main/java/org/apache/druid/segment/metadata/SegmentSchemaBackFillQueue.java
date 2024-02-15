@@ -130,7 +130,6 @@ public class SegmentSchemaBackFillQueue
     catch (Exception e) {
       log.info("exception persisting schema");
       // implies that the transaction failed
-      //
       polled.forEach(this::add);
     }
     finally {
