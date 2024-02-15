@@ -82,9 +82,9 @@ public class FrameColumnWriters
           case LONG:
             return makeLongArrayWriter(columnSelectorFactory, allocator, column);
           case FLOAT:
-            return makeLongArrayWriter(columnSelectorFactory, allocator, column);
+            return makeFloatArrayWriter(columnSelectorFactory, allocator, column);
           case DOUBLE:
-            return makeLongArrayWriter(columnSelectorFactory, allocator, column);
+            return makeDoubleArrayWriter(columnSelectorFactory, allocator, column);
           default:
             throw new UnsupportedColumnTypeException(column, type);
         }
@@ -153,14 +153,34 @@ public class FrameColumnWriters
     return new StringArrayFrameColumnWriterImpl(selector, allocator);
   }
 
-  private static LongArrayFrameColumnWriter makeLongArrayWriter(
+  private static NumericArrayFrameColumnWriter makeLongArrayWriter(
       final ColumnSelectorFactory selectorFactory,
       final MemoryAllocator allocator,
       final String columnName
   )
   {
     final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
-    return new LongArrayFrameColumnWriter(selector, allocator, FrameColumnWriters.TYPE_LONG_ARRAY);
+    return new LongArrayFrameColumnWriter(selector, allocator);
+  }
+
+  private static NumericArrayFrameColumnWriter makeFloatArrayWriter(
+      final ColumnSelectorFactory selectorFactory,
+      final MemoryAllocator allocator,
+      final String columnName
+  )
+  {
+    final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
+    return new FloatArrayFrameColumnWriter(selector, allocator);
+  }
+
+  private static NumericArrayFrameColumnWriter makeDoubleArrayWriter(
+      final ColumnSelectorFactory selectorFactory,
+      final MemoryAllocator allocator,
+      final String columnName
+  )
+  {
+    final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
+    return new DoubleArrayFrameColumnWriter(selector, allocator);
   }
 
   private static ComplexFrameColumnWriter makeComplexWriter(

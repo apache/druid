@@ -23,32 +23,32 @@ import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.frame.allocation.MemoryAllocator;
 import org.apache.druid.segment.ColumnValueSelector;
 
-public class LongArrayFrameColumnWriter extends NumericArrayFrameColumnWriter
+public class DoubleArrayFrameColumnWriter extends NumericArrayFrameColumnWriter
 {
-  public LongArrayFrameColumnWriter(
+  public DoubleArrayFrameColumnWriter(
       ColumnValueSelector selector,
       MemoryAllocator allocator
   )
   {
-    super(selector, allocator, FrameColumnWriters.TYPE_LONG_ARRAY);
+    super(selector, allocator, FrameColumnWriters.TYPE_DOUBLE_ARRAY);
   }
 
   @Override
   int elementSizeBytes()
   {
-    return Long.BYTES;
+    return Double.BYTES;
   }
 
   @Override
   void putNull(WritableMemory memory, long offset)
   {
-    memory.putLong(offset, 0L);
+    memory.putDouble(offset, 0d);
   }
 
   @Override
   void putArrayElement(WritableMemory memory, long offset, Number element)
   {
-    // The element is of type Long, and non-null, therefore it can be casted safely
-    memory.putLong(offset, (long) element);
+    // The element is of type Double, and non-null, therefore it can be cast safely
+    memory.putDouble(offset, (double) element);
   }
 }

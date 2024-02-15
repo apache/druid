@@ -23,7 +23,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrays;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.write.columnar.LongArrayFrameColumnWriter;
+import org.apache.druid.frame.write.columnar.NumericArrayFrameColumnWriter;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessorBasedColumn;
@@ -79,7 +79,7 @@ public abstract class NumericArrayFrameColumnReader implements FrameColumnReader
 
   private void validate(final Memory region)
   {
-    if (region.getCapacity() < LongArrayFrameColumnWriter.DATA_OFFSET) {
+    if (region.getCapacity() < NumericArrayFrameColumnWriter.DATA_OFFSET) {
       throw DruidException.defensive("Column[%s] is not big enough for a header", columnNumber);
     }
     final byte typeCode = region.getByte(0);
@@ -95,7 +95,7 @@ public abstract class NumericArrayFrameColumnReader implements FrameColumnReader
 
   private static long getStartOfCumulativeLengthSection()
   {
-    return LongArrayFrameColumnWriter.DATA_OFFSET;
+    return NumericArrayFrameColumnWriter.DATA_OFFSET;
   }
 
   private static long getStartOfRowNullityData(final int numRows)
@@ -301,18 +301,13 @@ public abstract class NumericArrayFrameColumnReader implements FrameColumnReader
     private boolean getElementNullity(final int cumulativeIndex)
     {
       byte b = memory.getByte(rowNullityDataOffset + cumulativeIndex * Byte.BYTES);
-      if (b == LongArrayFrameColumnWriter.NULL_ELEMENT_MARKER) {
+      if (b == NumericArrayFrameColumnWriter.NULL_ELEMENT_MARKER) {
         return true;
       }
-      assert b == LongArrayFrameColumnWriter.NON_NULL_ELEMENT_MARKER;
+      assert b == NumericArrayFrameColumnWriter.NON_NULL_ELEMENT_MARKER;
       return false;
     }
 
     abstract Number getElement(final Memory memory, final long rowDataOffset, final int cumulativeIndex);
-
-//    private Number getElement(final int cumulativeIndex)
-//    {
-//      return memory.getLong(rowDataOffset + (long) cumulativeIndex * Long.BYTES);
-//    }
   }
 }
