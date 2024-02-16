@@ -982,6 +982,12 @@ public class Druids
       this.columnTypes = columnTypes;
       return this;
     }
+
+    public ScanQueryBuilder columnTypes(ColumnType... columnType)
+    {
+      this.columnTypes = Arrays.asList(columnType);
+      return this;
+    }
   }
 
   public static ScanQueryBuilder newScanQueryBuilder()

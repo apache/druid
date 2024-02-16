@@ -15108,9 +15108,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testScanAndSortCanGetSchemaFromScanQuery()
   {
-    skipVectorize();
-    cannotVectorize();
-    msqIncompatible();
     String sql = "select * from (select * from \"wikipedia\" limit 3) order by \"user\"";
     ImmutableList<Object[]> expectedResults = ImmutableList.of(
         new Object[]{1442018825474L, "#en.wikipedia", "Auburn", "/* Status of peremptory norms under international law */ fixed spelling of 'Wimbledon'", "AU", "Australia", "true", "false", "false", "false", "false", null, "Main", "Peremptory norm", "NSW", "New South Wales", "60.225.66.142", 0L, 0L, 0L},
