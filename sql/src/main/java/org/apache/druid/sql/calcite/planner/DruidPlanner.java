@@ -119,7 +119,7 @@ public class DruidPlanner implements Closeable
   )
   {
     this.frameworkConfig = frameworkConfig;
-    this.planner = new CalcitePlanner(frameworkConfig, new ValidatorContextImpl());
+    this.planner = new CalcitePlanner(frameworkConfig);
     this.plannerContext = plannerContext;
     this.engine = engine;
     this.hook = hook == null ? NoOpPlannerHook.INSTANCE : hook;
@@ -315,33 +315,6 @@ public class DruidPlanner implements Closeable
     public PlannerHook hook()
     {
       return hook;
-    }
-  }
-
-  public class ValidatorContextImpl implements DruidSqlValidator.ValidatorContext
-  {
-    @Override
-    public Map<String, Object> queryContextMap()
-    {
-      return plannerContext.queryContextMap();
-    }
-
-    @Override
-    public CatalogResolver catalog()
-    {
-      return plannerContext.getPlannerToolbox().catalogResolver();
-    }
-
-    @Override
-    public String druidSchemaName()
-    {
-      return plannerContext.getPlannerToolbox().druidSchemaName();
-    }
-
-    @Override
-    public ObjectMapper jsonMapper()
-    {
-      return plannerContext.getPlannerToolbox().jsonMapper();
     }
   }
 

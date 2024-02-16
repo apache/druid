@@ -88,20 +88,17 @@ class DruidSqlValidator extends BaseDruidSqlValidator
   }
 
   private final PlannerContext plannerContext;
-  private final ValidatorContext validatorContext;
 
   protected DruidSqlValidator(
       SqlOperatorTable opTab,
       CalciteCatalogReader catalogReader,
       JavaTypeFactory typeFactory,
       Config validatorConfig,
-      PlannerContext plannerContext,
-      final ValidatorContext validatorContext
+      PlannerContext plannerContext
   )
   {
     super(opTab, catalogReader, typeFactory, validatorConfig);
     this.plannerContext = plannerContext;
-    this.validatorContext = validatorContext;
   }
 
   @Override
@@ -222,10 +219,10 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     setValidatedNodeType(insert, targetType);
 
     // Segment size
-    if (tableMetadata != null && !validatorContext.queryContextMap().containsKey(CTX_ROWS_PER_SEGMENT)) {
+    if (tableMetadata != null && !plannerContext.queryContextMap().containsKey(CTX_ROWS_PER_SEGMENT)) {
       final Integer targetSegmentRows = tableMetadata.targetSegmentRows();
       if (targetSegmentRows != null) {
-        validatorContext.queryContextMap().put(CTX_ROWS_PER_SEGMENT, targetSegmentRows);
+        plannerContext.queryContextMap().put(CTX_ROWS_PER_SEGMENT, targetSegmentRows);
       }
     }
   }
@@ -256,7 +253,7 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     String tableName = destId.names.get(n - 1);
 
     // If this is a 2-part name, the first part must be the datasource schema.
-    if (n == 2 && !validatorContext.druidSchemaName().equals(destId.names.get(0))) {
+    if (n == 2 && !plannerContext.getPlannerToolbox().druidSchemaName().equals(destId.names.get(0))) {
       throw InvalidSqlInput.exception(
           "Table [%s] does not support operation [%s] because it is not a Druid datasource",
           destId,
@@ -287,7 +284,7 @@ class DruidSqlValidator extends BaseDruidSqlValidator
         // The catalog implementation may be "strict": and require that the target
         // table already exists, rather than the default "lenient" mode that can
         // create a new table.
-        if (validatorContext.catalog().ingestRequiresExistingTable()) {
+        if (plannerContext.getPlannerToolbox().catalogResolver().ingestRequiresExistingTable()) {
           throw InvalidSqlInput.exception("Cannot %s into [%s] because it does not exist", operationName, destId);
         }
         // New table. Validate the shape of the name.
@@ -354,9 +351,9 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     // during conversion, however, we've just worked out the granularity, so we
     // do it here instead.
     try {
-      validatorContext.queryContextMap().put(
+      plannerContext.queryContextMap().put(
           DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
-          validatorContext.jsonMapper().writeValueAsString(finalGranularity)
+          plannerContext.getPlannerToolbox().jsonMapper().writeValueAsString(finalGranularity)
       );
     }
     catch (JsonProcessingException e) {

@@ -86,7 +86,6 @@ public class CalcitePlanner implements Planner, ViewExpander
   private final @Nullable RelOptCostFactory costFactory;
   private final Context context;
   private final CalciteConnectionConfig connectionConfig;
-  private final DruidSqlValidator.ValidatorContext validatorContext;
   private final RelDataTypeSystem typeSystem;
 
   /**
@@ -119,10 +118,9 @@ public class CalcitePlanner implements Planner, ViewExpander
    * {@link org.apache.calcite.tools.Frameworks#getPlanner} instead.
    */
   @SuppressWarnings("method.invocation.invalid")
-  public CalcitePlanner(FrameworkConfig config, DruidSqlValidator.ValidatorContext validatorContext)
+  public CalcitePlanner(FrameworkConfig config)
   {
     this.costFactory = config.getCostFactory();
-    this.validatorContext = validatorContext;
     this.defaultSchema = config.getDefaultSchema();
     this.operatorTable = config.getOperatorTable();
     this.programs = config.getPrograms();
@@ -410,8 +408,7 @@ public class CalcitePlanner implements Planner, ViewExpander
         catalogReader,
         getTypeFactory(),
         validatorConfig,
-        context.unwrapOrThrow(PlannerContext.class),
-        validatorContext
+        context.unwrapOrThrow(PlannerContext.class)
     );
   }
 
