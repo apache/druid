@@ -1514,7 +1514,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
         mapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnectorRule.getConnector(),
-        schemaManager
+        schemaManager,
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override

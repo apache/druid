@@ -47,6 +47,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SchemaManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.transform.TransformSpec;
@@ -102,7 +103,8 @@ public class MaterializedViewSupervisorTest
         objectMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector,
-        schemaManager
+        schemaManager,
+        CentralizedDatasourceSchemaConfig.create()
     );
     metadataSupervisorManager = EasyMock.createMock(MetadataSupervisorManager.class);
     sqlSegmentsMetadataManager = EasyMock.createMock(SqlSegmentsMetadataManager.class);

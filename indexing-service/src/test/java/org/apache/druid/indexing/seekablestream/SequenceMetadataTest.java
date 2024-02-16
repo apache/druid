@@ -171,6 +171,21 @@ public class SequenceMetadataTest
       {
         return new BigInteger(this.get()).compareTo(new BigInteger(o.get()));
       }
+
+      @Override
+      public boolean equals(Object o)
+      {
+        if (o.getClass() != this.getClass()) {
+          return false;
+        }
+        return new BigInteger(this.get()).equals(new BigInteger(((OrderedSequenceNumber<String>) o).get()));
+      }
+
+      @Override
+      public int hashCode()
+      {
+        return super.hashCode();
+      }
     };
   }
 }

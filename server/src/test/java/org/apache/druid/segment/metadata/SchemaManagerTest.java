@@ -59,7 +59,7 @@ public class SchemaManagerTest
   }
 
   @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule(getEnabledConfig());
 
   private final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
@@ -192,5 +192,12 @@ public class SchemaManagerTest
                         .list());
 
     Assert.assertTrue(ids.isEmpty());
+  }
+
+  private CentralizedDatasourceSchemaConfig getEnabledConfig()
+  {
+    CentralizedDatasourceSchemaConfig config = new CentralizedDatasourceSchemaConfig();
+    config.setEnabled(true);
+    return config;
   }
 }

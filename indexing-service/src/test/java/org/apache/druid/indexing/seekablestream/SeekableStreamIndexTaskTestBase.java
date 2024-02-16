@@ -599,7 +599,8 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
         objectMapper,
         derby.metadataTablesConfigSupplier().get(),
         derbyConnector,
-        schemaManager
+        schemaManager,
+        CentralizedDatasourceSchemaConfig.create()
     );
     taskLockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
     final TaskActionToolbox taskActionToolbox = new TaskActionToolbox(

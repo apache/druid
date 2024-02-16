@@ -34,6 +34,7 @@ import org.apache.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SchemaManager;
 import org.joda.time.Interval;
 import org.junit.After;
@@ -79,7 +80,13 @@ public class TaskLockBoxConcurrencyTest
     schemaManager = new SchemaManager(derby.metadataTablesConfigSupplier().get(), objectMapper, derbyConnector);
     lockbox = new TaskLockbox(
         taskStorage,
-        new IndexerSQLMetadataStorageCoordinator(objectMapper, derby.metadataTablesConfigSupplier().get(), derbyConnector, schemaManager)
+        new IndexerSQLMetadataStorageCoordinator(
+            objectMapper,
+            derby.metadataTablesConfigSupplier().get(),
+            derbyConnector,
+            schemaManager,
+            CentralizedDatasourceSchemaConfig.create()
+        )
     );
     service = Execs.multiThreaded(2, "TaskLockBoxConcurrencyTest-%d");
   }

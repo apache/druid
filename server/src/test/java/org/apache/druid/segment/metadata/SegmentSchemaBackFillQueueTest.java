@@ -51,7 +51,7 @@ public class SegmentSchemaBackFillQueueTest
   }
 
   @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule(getEnabledConfig());
 
   private final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
@@ -118,5 +118,12 @@ public class SegmentSchemaBackFillQueueTest
     segmentSchemaBackFillQueue.start();
     latch.await();
     segmentSchemaTestUtils.verifySegmentSchema(segmentIdSchemaMap);
+  }
+
+  private CentralizedDatasourceSchemaConfig getEnabledConfig()
+  {
+    CentralizedDatasourceSchemaConfig config = new CentralizedDatasourceSchemaConfig();
+    config.setEnabled(true);
+    return config;
   }
 }

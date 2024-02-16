@@ -57,42 +57,79 @@ public class SegmentSchemaTestUtils
 
   public Boolean insertUsedSegments(Set<DataSegment> dataSegments, Map<String, Pair<Long, Long>> segmentStats)
   {
-    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
-    return derbyConnector.retryWithHandle(
-        handle -> {
-          PreparedBatch preparedBatch = handle.prepareBatch(
-              StringUtils.format(
-                  "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload, used_status_last_updated, schema_id, num_rows) "
-                  + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, :used_status_last_updated, :schema_id, :num_rows)",
-                  table,
-                  derbyConnector.getQuoteString()
-              )
-          );
-          for (DataSegment segment : dataSegments) {
-            String id = segment.getId().toString();
-            preparedBatch.add()
-                         .bind("id", id)
-                         .bind("dataSource", segment.getDataSource())
-                         .bind("created_date", DateTimes.nowUtc().toString())
-                         .bind("start", segment.getInterval().getStart().toString())
-                         .bind("end", segment.getInterval().getEnd().toString())
-                         .bind("partitioned", !(segment.getShardSpec() instanceof NoneShardSpec))
-                         .bind("version", segment.getVersion())
-                         .bind("used", true)
-                         .bind("payload", mapper.writeValueAsBytes(segment))
-                         .bind("used_status_last_updated", DateTimes.nowUtc().toString())
-                         .bind("schema_id", segmentStats.containsKey(id) ? segmentStats.get(id).lhs : null)
-                         .bind("num_rows", segmentStats.containsKey(id) ? segmentStats.get(id).rhs : null);
-          }
+    if (!segmentStats.isEmpty()) {
+      final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
+      return derbyConnector.retryWithHandle(
+          handle -> {
+            PreparedBatch preparedBatch = handle.prepareBatch(
+                StringUtils.format(
+                    "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload, used_status_last_updated, schema_id, num_rows) "
+                    + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, :used_status_last_updated, :schema_id, :num_rows)",
+                    table,
+                    derbyConnector.getQuoteString()
+                )
+            );
+            for (DataSegment segment : dataSegments) {
+              String id = segment.getId().toString();
+              preparedBatch.add()
+                           .bind("id", id)
+                           .bind("dataSource", segment.getDataSource())
+                           .bind("created_date", DateTimes.nowUtc().toString())
+                           .bind("start", segment.getInterval().getStart().toString())
+                           .bind("end", segment.getInterval().getEnd().toString())
+                           .bind("partitioned", !(segment.getShardSpec() instanceof NoneShardSpec))
+                           .bind("version", segment.getVersion())
+                           .bind("used", true)
+                           .bind("payload", mapper.writeValueAsBytes(segment))
+                           .bind("used_status_last_updated", DateTimes.nowUtc().toString())
+                           .bind("schema_id", segmentStats.containsKey(id) ? segmentStats.get(id).lhs : null)
+                           .bind("num_rows", segmentStats.containsKey(id) ? segmentStats.get(id).rhs : null);
+            }
 
-          final int[] affectedRows = preparedBatch.execute();
-          final boolean succeeded = Arrays.stream(affectedRows).allMatch(eachAffectedRows -> eachAffectedRows == 1);
-          if (!succeeded) {
-            throw new ISE("Failed to publish segments to DB");
+            final int[] affectedRows = preparedBatch.execute();
+            final boolean succeeded = Arrays.stream(affectedRows).allMatch(eachAffectedRows -> eachAffectedRows == 1);
+            if (!succeeded) {
+              throw new ISE("Failed to publish segments to DB");
+            }
+            return true;
           }
-          return true;
-        }
-    );
+      );
+    } else {
+      final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
+      return derbyConnector.retryWithHandle(
+          handle -> {
+            PreparedBatch preparedBatch = handle.prepareBatch(
+                StringUtils.format(
+                    "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload, used_status_last_updated) "
+                    + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload, :used_status_last_updated)",
+                    table,
+                    derbyConnector.getQuoteString()
+                )
+            );
+            for (DataSegment segment : dataSegments) {
+              String id = segment.getId().toString();
+              preparedBatch.add()
+                           .bind("id", id)
+                           .bind("dataSource", segment.getDataSource())
+                           .bind("created_date", DateTimes.nowUtc().toString())
+                           .bind("start", segment.getInterval().getStart().toString())
+                           .bind("end", segment.getInterval().getEnd().toString())
+                           .bind("partitioned", !(segment.getShardSpec() instanceof NoneShardSpec))
+                           .bind("version", segment.getVersion())
+                           .bind("used", true)
+                           .bind("payload", mapper.writeValueAsBytes(segment))
+                           .bind("used_status_last_updated", DateTimes.nowUtc().toString());
+            }
+
+            final int[] affectedRows = preparedBatch.execute();
+            final boolean succeeded = Arrays.stream(affectedRows).allMatch(eachAffectedRows -> eachAffectedRows == 1);
+            if (!succeeded) {
+              throw new ISE("Failed to publish segments to DB");
+            }
+            return true;
+          }
+      );
+    }
   }
 
   public Map<String, Long> insertSegmentSchema(Map<String, SchemaPayload> schemaPayloadMap)

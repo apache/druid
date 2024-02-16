@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -51,7 +52,8 @@ public class SqlSegmentsMetadataManagerProviderTest
         derbyConnectorRule.metadataTablesConfigSupplier(),
         connector,
         lifecycle,
-        segmentSchemaCache
+        segmentSchemaCache,
+        CentralizedDatasourceSchemaConfig.create()
     );
     SegmentsMetadataManager manager = provider.get();
     Assert.assertTrue(manager instanceof SqlSegmentsMetadataManager);

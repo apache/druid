@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.skife.jdbi.v2.Batch;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
@@ -71,15 +72,18 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   private final Supplier<MetadataStorageConnectorConfig> config;
   private final Supplier<MetadataStorageTablesConfig> tablesConfigSupplier;
   private final Predicate<Throwable> shouldRetry;
+  private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
   public SQLMetadataConnector(
       Supplier<MetadataStorageConnectorConfig> config,
-      Supplier<MetadataStorageTablesConfig> tablesConfigSupplier
+      Supplier<MetadataStorageTablesConfig> tablesConfigSupplier,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     this.config = config;
     this.tablesConfigSupplier = tablesConfigSupplier;
     this.shouldRetry = this::isTransientException;
+    this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
   }
 
   /**
@@ -328,6 +332,37 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  used BOOLEAN NOT NULL,\n"
                 + "  payload %2$s NOT NULL,\n"
                 + "  used_status_last_updated VARCHAR(255) NOT NULL,\n"
+                + "  PRIMARY KEY (id)\n"
+                + ")",
+                tableName, getPayloadType(), getQuoteString(), getCollation()
+            ),
+            StringUtils.format("CREATE INDEX idx_%1$s_used ON %1$s(used)", tableName),
+            StringUtils.format(
+                "CREATE INDEX idx_%1$s_datasource_used_end_start ON %1$s(dataSource, used, %2$send%2$s, start)",
+                tableName,
+                getQuoteString()
+            )
+        )
+    );
+  }
+
+  public void createSegmentsTableSchemaPersistenceEnabled(final String tableName)
+  {
+    createTable(
+        tableName,
+        ImmutableList.of(
+            StringUtils.format(
+                "CREATE TABLE %1$s (\n"
+                + "  id VARCHAR(255) NOT NULL,\n"
+                + "  dataSource VARCHAR(255) %4$s NOT NULL,\n"
+                + "  created_date VARCHAR(255) NOT NULL,\n"
+                + "  start VARCHAR(255) NOT NULL,\n"
+                + "  %3$send%3$s VARCHAR(255) NOT NULL,\n"
+                + "  partitioned BOOLEAN NOT NULL,\n"
+                + "  version VARCHAR(255) NOT NULL,\n"
+                + "  used BOOLEAN NOT NULL,\n"
+                + "  payload %2$s NOT NULL,\n"
+                + "  used_status_last_updated VARCHAR(255) NOT NULL,\n"
                 + "  schema_id BIGINT,\n"
                 + "  num_rows BIGINT,\n"
                 + "  PRIMARY KEY (id),\n"
@@ -524,9 +559,31 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   }
 
   /**
-   * Adds new columns (used_status_last_updated, schema_id, segment_stats) to the "segments" table.
+   * Adds the used_status_last_updated column to the "segments" table.
    */
   protected void alterSegmentTable()
+  {
+    final String tableName = tablesConfigSupplier.get().getSegmentsTable();
+    if (tableHasColumn(tableName, "used_status_last_updated")) {
+      log.info("Table[%s] already has column[used_status_last_updated].", tableName);
+    } else {
+      log.info("Adding column[used_status_last_updated] to table[%s].", tableName);
+      alterTable(
+          tableName,
+          ImmutableList.of(
+              StringUtils.format(
+                  "ALTER TABLE %1$s ADD used_status_last_updated varchar(255)",
+                  tableName
+              )
+          )
+      );
+    }
+  }
+
+  /**
+   * Adds new columns (used_status_last_updated, schema_id, segment_stats) to the "segments" table.
+   */
+  protected void alterSegmentTableSchemaPersistenceEnabled()
   {
     final String tableName = tablesConfigSupplier.get().getSegmentsTable();
     final String schemaTableName = tablesConfigSupplier.get().getSegmentSchemaTable();
@@ -713,8 +770,13 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   public void createSegmentTable()
   {
     if (config.get().isCreateTables()) {
-      createSegmentTable(tablesConfigSupplier.get().getSegmentsTable());
-      alterSegmentTable();
+      if (centralizedDatasourceSchemaConfig.isEnabled()) {
+        createSegmentsTableSchemaPersistenceEnabled(tablesConfigSupplier.get().getSegmentsTable());
+        alterSegmentTableSchemaPersistenceEnabled();
+      } else {
+        createSegmentTable(tablesConfigSupplier.get().getSegmentsTable());
+        alterSegmentTable();
+      }
     }
     // Called outside of the above conditional because we want to validate the table
     // regardless of cluster configuration for creating tables.
@@ -959,7 +1021,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   @Override
   public void createSegmentSchemaTable()
   {
-    if (config.get().isCreateTables()) {
+    if (config.get().isCreateTables() && centralizedDatasourceSchemaConfig.isEnabled()) {
       createSegmentSchemaTable(tablesConfigSupplier.get().getSegmentSchemaTable());
     }
   }
@@ -1093,7 +1155,14 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
    */
   private void validateSegmentsTable()
   {
-    if (tableHasColumn(tablesConfigSupplier.get().getSegmentsTable(), "used_status_last_updated")) {
+    String segmentsTables = tablesConfigSupplier.get().getSegmentsTable();
+
+    boolean schemaPersistenceRequirementMet =
+        !centralizedDatasourceSchemaConfig.isEnabled() ||
+        (tableHasColumn(segmentsTables, "schema_id")
+         && tableHasColumn(segmentsTables, "num_rows"));
+
+    if (tableHasColumn(segmentsTables, "used_status_last_updated") && schemaPersistenceRequirementMet) {
       // do nothing
     } else {
       throw new ISE(

@@ -298,6 +298,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
 
       DataSourceInformation druidTable = new DataSourceInformation(dataSource, rowSignature);
       final DataSourceInformation oldTable = tables.put(dataSource, druidTable);
+
       if (oldTable == null || !oldTable.getRowSignature().equals(druidTable.getRowSignature())) {
         log.info("[%s] has new signature: %s.", dataSource, druidTable.getRowSignature());
       } else {

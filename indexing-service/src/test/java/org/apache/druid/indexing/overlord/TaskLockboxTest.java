@@ -58,6 +58,7 @@ import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SchemaManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedPartialShardSpec;
@@ -134,7 +135,13 @@ public class TaskLockboxTest
     EmittingLogger.registerEmitter(emitter);
     EasyMock.replay(emitter);
 
-    metadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(objectMapper, tablesConfig, derbyConnector, schemaManager);
+    metadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
+        objectMapper,
+        tablesConfig,
+        derbyConnector,
+        schemaManager,
+        CentralizedDatasourceSchemaConfig.create()
+    );
 
     lockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
     validator = new TaskLockboxValidator(lockbox, taskStorage);
@@ -461,7 +468,8 @@ public class TaskLockboxTest
         loadedMapper,
         derby.metadataTablesConfigSupplier().get(),
         derbyConnector,
-        schemaManager
+        schemaManager,
+        CentralizedDatasourceSchemaConfig.create()
     );
 
     TaskLockbox theBox = new TaskLockbox(taskStorage, metadataStorageCoordinator);

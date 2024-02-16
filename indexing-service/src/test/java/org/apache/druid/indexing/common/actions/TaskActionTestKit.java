@@ -38,6 +38,7 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SchemaManager;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -92,7 +93,8 @@ public class TaskActionTestKit extends ExternalResource
         objectMapper,
         metadataStorageTablesConfig,
         testDerbyConnector,
-        schemaManager
+        schemaManager,
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -108,7 +110,8 @@ public class TaskActionTestKit extends ExternalResource
         Suppliers.ofInstance(new SegmentsMetadataManagerConfig()),
         Suppliers.ofInstance(metadataStorageTablesConfig),
         testDerbyConnector,
-        segmentSchemaCache
+        segmentSchemaCache,
+        CentralizedDatasourceSchemaConfig.create()
     );
     final ServiceEmitter noopEmitter = new NoopServiceEmitter();
     final TaskLockConfig taskLockConfig = new TaskLockConfig()

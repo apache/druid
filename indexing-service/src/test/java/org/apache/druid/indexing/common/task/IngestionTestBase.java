@@ -143,7 +143,8 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         objectMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnectorRule.getConnector(),
-        schemaManager
+        schemaManager,
+        CentralizedDatasourceSchemaConfig.create()
     );
     segmentSchemaCache = new SegmentSchemaCache();
     segmentsMetadataManager = new SqlSegmentsMetadataManager(
@@ -151,7 +152,8 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         SegmentsMetadataManagerConfig::new,
         derbyConnectorRule.metadataTablesConfigSupplier(),
         derbyConnectorRule.getConnector(),
-        segmentSchemaCache
+        segmentSchemaCache,
+        CentralizedDatasourceSchemaConfig.create()
     );
     lockbox = new TaskLockbox(taskStorage, storageCoordinator);
     segmentCacheManagerFactory = new SegmentCacheManagerFactory(getObjectMapper());

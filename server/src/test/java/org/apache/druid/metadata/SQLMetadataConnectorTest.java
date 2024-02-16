@@ -26,6 +26,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -74,7 +75,6 @@ public class SQLMetadataConnectorTest
     final List<String> tables = new ArrayList<>();
     final String entryType = tablesConfig.getTaskEntryType();
     tables.add(tablesConfig.getConfigTable());
-    tables.add(tablesConfig.getSegmentSchemaTable());
     tables.add(tablesConfig.getSegmentsTable());
     tables.add(tablesConfig.getRulesTable());
     tables.add(tablesConfig.getLockTable(entryType));
@@ -83,18 +83,6 @@ public class SQLMetadataConnectorTest
     tables.add(tablesConfig.getAuditTable());
     tables.add(tablesConfig.getSupervisorTable());
 
-    final List<String> dropSequence = new ArrayList<>();
-    dropSequence.add(tablesConfig.getConfigTable());
-    dropSequence.add(tablesConfig.getSegmentsTable());
-    dropSequence.add(tablesConfig.getSegmentSchemaTable());
-    dropSequence.add(tablesConfig.getRulesTable());
-    dropSequence.add(tablesConfig.getLockTable(entryType));
-    dropSequence.add(tablesConfig.getLogTable(entryType));
-    dropSequence.add(tablesConfig.getEntryTable(entryType));
-    dropSequence.add(tablesConfig.getAuditTable());
-    dropSequence.add(tablesConfig.getSupervisorTable());
-
-    connector.createSegmentSchemaTable();
     connector.createSegmentTable();
     connector.createConfigTable();
     connector.createRulesTable();
@@ -123,7 +111,7 @@ public class SQLMetadataConnectorTest
         }
     );
 
-    for (String table : dropSequence) {
+    for (String table : tables) {
       dropTable(table);
     }
   }
@@ -187,7 +175,6 @@ public class SQLMetadataConnectorTest
   @Test
   public void testAlterSegmentTableAddLastUsed()
   {
-    connector.createSegmentSchemaTable();
     connector.createSegmentTable();
 
     // Drop column used_status_last_updated to bring us in line with pre-upgrade state
@@ -264,14 +251,87 @@ public class SQLMetadataConnectorTest
     );
   }
 
+  @Test
+  public void testBasicDataSourceCreation()
+  {
+    Map<String, String> props = ImmutableMap.of(
+        "maxConnLifetimeMillis", "1200000",
+        "defaultQueryTimeout", "30000"
+    );
+    MetadataStorageConnectorConfig config =
+        MetadataStorageConnectorConfig.create("connectURI", "user", "password", props);
+
+    TestSQLMetadataConnector testSQLMetadataConnector = new TestSQLMetadataConnector(
+        Suppliers.ofInstance(config),
+        Suppliers.ofInstance(tablesConfig),
+        CentralizedDatasourceSchemaConfig.create()
+    );
+    BasicDataSource dataSource = testSQLMetadataConnector.getDatasource();
+    Assert.assertEquals(dataSource.getMaxConnLifetimeMillis(), 1200000);
+    Assert.assertEquals(dataSource.getDefaultQueryTimeout().intValue(), 30000);
+  }
+
+  @Test
+  public void testIsTransientException()
+  {
+    MetadataStorageConnectorConfig config =
+        MetadataStorageConnectorConfig.create("connectURI", "user", "password", Collections.emptyMap());
+    TestSQLMetadataConnector metadataConnector = new TestSQLMetadataConnector(
+        Suppliers.ofInstance(config),
+        Suppliers.ofInstance(tablesConfig),
+        CentralizedDatasourceSchemaConfig.create()
+    );
+
+    // Transient exceptions
+    Assert.assertTrue(metadataConnector.isTransientException(new RetryTransactionException("")));
+    Assert.assertTrue(metadataConnector.isTransientException(new SQLRecoverableException()));
+    Assert.assertTrue(metadataConnector.isTransientException(new SQLTransientException()));
+    Assert.assertTrue(metadataConnector.isTransientException(new SQLTransientConnectionException()));
+
+    // Non transient exceptions
+    Assert.assertFalse(metadataConnector.isTransientException(null));
+    Assert.assertFalse(metadataConnector.isTransientException(new SQLException()));
+    Assert.assertFalse(metadataConnector.isTransientException(new UnableToExecuteStatementException("")));
+
+    // Nested transient exceptions
+    Assert.assertTrue(
+        metadataConnector.isTransientException(
+            new CallbackFailedException(new SQLTransientException())
+        )
+    );
+    Assert.assertTrue(
+        metadataConnector.isTransientException(
+            new UnableToObtainConnectionException(new SQLException())
+        )
+    );
+    Assert.assertTrue(
+        metadataConnector.isTransientException(
+            new UnableToExecuteStatementException(new SQLTransientException())
+        )
+    );
+
+    // Nested non-transient exceptions
+    Assert.assertFalse(
+        metadataConnector.isTransientException(
+            new CallbackFailedException(new SQLException())
+        )
+    );
+    Assert.assertFalse(
+        metadataConnector.isTransientException(
+            new UnableToExecuteStatementException(new SQLException())
+        )
+    );
+  }
+
   static class TestSQLMetadataConnector extends SQLMetadataConnector
   {
     public TestSQLMetadataConnector(
         Supplier<MetadataStorageConnectorConfig> config,
-        Supplier<MetadataStorageTablesConfig> tablesConfigSupplier
+        Supplier<MetadataStorageTablesConfig> tablesConfigSupplier,
+        CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
     )
     {
-      super(config, tablesConfigSupplier);
+      super(config, tablesConfigSupplier, centralizedDatasourceSchemaConfig);
     }
 
     @Override
@@ -315,76 +375,5 @@ public class SQLMetadataConnectorTest
     {
       return super.getDatasource();
     }
-  }
-
-  @Test
-  public void testBasicDataSourceCreation()
-  {
-    Map<String, String> props = ImmutableMap.of(
-        "maxConnLifetimeMillis", "1200000",
-        "defaultQueryTimeout", "30000"
-    );
-    MetadataStorageConnectorConfig config =
-        MetadataStorageConnectorConfig.create("connectURI", "user", "password", props);
-
-    TestSQLMetadataConnector testSQLMetadataConnector = new TestSQLMetadataConnector(
-        Suppliers.ofInstance(config),
-        Suppliers.ofInstance(tablesConfig)
-    );
-    BasicDataSource dataSource = testSQLMetadataConnector.getDatasource();
-    Assert.assertEquals(dataSource.getMaxConnLifetimeMillis(), 1200000);
-    Assert.assertEquals(dataSource.getDefaultQueryTimeout().intValue(), 30000);
-  }
-
-  @Test
-  public void testIsTransientException()
-  {
-    MetadataStorageConnectorConfig config =
-        MetadataStorageConnectorConfig.create("connectURI", "user", "password", Collections.emptyMap());
-    TestSQLMetadataConnector metadataConnector = new TestSQLMetadataConnector(
-        Suppliers.ofInstance(config),
-        Suppliers.ofInstance(tablesConfig)
-    );
-
-    // Transient exceptions
-    Assert.assertTrue(metadataConnector.isTransientException(new RetryTransactionException("")));
-    Assert.assertTrue(metadataConnector.isTransientException(new SQLRecoverableException()));
-    Assert.assertTrue(metadataConnector.isTransientException(new SQLTransientException()));
-    Assert.assertTrue(metadataConnector.isTransientException(new SQLTransientConnectionException()));
-
-    // Non transient exceptions
-    Assert.assertFalse(metadataConnector.isTransientException(null));
-    Assert.assertFalse(metadataConnector.isTransientException(new SQLException()));
-    Assert.assertFalse(metadataConnector.isTransientException(new UnableToExecuteStatementException("")));
-
-    // Nested transient exceptions
-    Assert.assertTrue(
-        metadataConnector.isTransientException(
-            new CallbackFailedException(new SQLTransientException())
-        )
-    );
-    Assert.assertTrue(
-        metadataConnector.isTransientException(
-            new UnableToObtainConnectionException(new SQLException())
-        )
-    );
-    Assert.assertTrue(
-        metadataConnector.isTransientException(
-            new UnableToExecuteStatementException(new SQLTransientException())
-        )
-    );
-
-    // Nested non-transient exceptions
-    Assert.assertFalse(
-        metadataConnector.isTransientException(
-            new CallbackFailedException(new SQLException())
-        )
-    );
-    Assert.assertFalse(
-        metadataConnector.isTransientException(
-            new UnableToExecuteStatementException(new SQLException())
-        )
-    );
-
   }
 }

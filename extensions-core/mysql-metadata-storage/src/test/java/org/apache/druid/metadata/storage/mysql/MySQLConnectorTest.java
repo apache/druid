@@ -24,13 +24,20 @@ import com.mysql.jdbc.exceptions.MySQLTransactionRollbackException;
 import com.mysql.jdbc.exceptions.MySQLTransientException;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.sql.SQLException;
 import java.sql.SQLTransientConnectionException;
 import java.sql.SQLTransientException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
+@RunWith(Parameterized.class)
 public class MySQLConnectorTest
 {
   private static final MySQLConnectorDriverConfig MYSQL_DRIVER_CONFIG = new MySQLConnectorDriverConfig();
@@ -47,6 +54,23 @@ public class MySQLConnectorTest
   private static final Supplier<MetadataStorageTablesConfig> TABLES_CONFIG_SUPPLIER =
       () -> MetadataStorageTablesConfig.fromBase(null);
 
+  private CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
+
+  public MySQLConnectorTest(CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig)
+  {
+    this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
+  }
+
+  @Parameterized.Parameters(name = "{0}")
+  public static Collection<?> constructorFeeder()
+  {
+    final List<Object[]> constructors = new ArrayList<>();
+    constructors.add(new Object[]{CentralizedDatasourceSchemaConfig.create()});
+    CentralizedDatasourceSchemaConfig config = new CentralizedDatasourceSchemaConfig();
+    config.setEnabled(true);
+    constructors.add(new Object[]{config});
+    return constructors;
+  }
 
   @Test
   public void testIsExceptionTransientMySql()
@@ -55,7 +79,8 @@ public class MySQLConnectorTest
         CONNECTOR_CONFIG_SUPPLIER,
         TABLES_CONFIG_SUPPLIER,
         new MySQLConnectorSslConfig(),
-        MYSQL_DRIVER_CONFIG
+        MYSQL_DRIVER_CONFIG,
+        centralizedDatasourceSchemaConfig
     );
     Assert.assertTrue(connector.connectorIsTransientException(new MySQLTransientException()));
     Assert.assertTrue(connector.connectorIsTransientException(new MySQLTransactionRollbackException()));
@@ -78,7 +103,8 @@ public class MySQLConnectorTest
         CONNECTOR_CONFIG_SUPPLIER,
         TABLES_CONFIG_SUPPLIER,
         new MySQLConnectorSslConfig(),
-        MARIADB_DRIVER_CONFIG
+        MARIADB_DRIVER_CONFIG,
+        centralizedDatasourceSchemaConfig
     );
     // no vendor specific for MariaDb, so should always be false
     Assert.assertFalse(connector.connectorIsTransientException(new MySQLTransientException()));
@@ -100,7 +126,8 @@ public class MySQLConnectorTest
         CONNECTOR_CONFIG_SUPPLIER,
         TABLES_CONFIG_SUPPLIER,
         new MySQLConnectorSslConfig(),
-        MYSQL_DRIVER_CONFIG
+        MYSQL_DRIVER_CONFIG,
+        centralizedDatasourceSchemaConfig
     );
 
     // The test method should return true only for
@@ -127,7 +154,8 @@ public class MySQLConnectorTest
         CONNECTOR_CONFIG_SUPPLIER,
         TABLES_CONFIG_SUPPLIER,
         new MySQLConnectorSslConfig(),
-        MYSQL_DRIVER_CONFIG
+        MYSQL_DRIVER_CONFIG,
+        centralizedDatasourceSchemaConfig
     );
     Assert.assertEquals("LIMIT 100", connector.limitClause(100));
   }

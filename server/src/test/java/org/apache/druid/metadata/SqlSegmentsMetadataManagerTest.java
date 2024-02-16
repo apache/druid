@@ -33,6 +33,13 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.SchemaPayload;
+import org.apache.druid.segment.column.SegmentSchemaMetadata;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.SchemaFingerprintGenerator;
+import org.apache.druid.segment.metadata.SchemaManager;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
@@ -51,6 +58,7 @@ import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -90,6 +98,9 @@ public class SqlSegmentsMetadataManagerTest
   private SqlSegmentsMetadataManager sqlSegmentsMetadataManager;
   private SQLMetadataSegmentPublisher publisher;
   private SegmentSchemaCache segmentSchemaCache;
+  private SchemaManager schemaManager;
+  private TestDerbyConnector connector;
+  private SegmentsMetadataManagerConfig config;
   private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
   private final DataSegment segment1 = createSegment(
@@ -138,17 +149,24 @@ public class SqlSegmentsMetadataManagerTest
   @Before
   public void setUp() throws Exception
   {
-    TestDerbyConnector connector = derbyConnectorRule.getConnector();
+    connector = derbyConnectorRule.getConnector();
     SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig();
     config.setPollDuration(Period.seconds(3));
 
     segmentSchemaCache = new SegmentSchemaCache();
+    schemaManager = new SchemaManager(
+        derbyConnectorRule.metadataTablesConfigSupplier().get(),
+        jsonMapper,
+        connector
+    );
+
     sqlSegmentsMetadataManager = new SqlSegmentsMetadataManager(
         jsonMapper,
         Suppliers.ofInstance(config),
         derbyConnectorRule.metadataTablesConfigSupplier(),
         connector,
-        segmentSchemaCache
+        segmentSchemaCache,
+        CentralizedDatasourceSchemaConfig.create()
     );
     sqlSegmentsMetadataManager.start();
 
@@ -184,6 +202,74 @@ public class SqlSegmentsMetadataManagerTest
     // This call make sure that the first poll is completed
     sqlSegmentsMetadataManager.useLatestSnapshotIfWithinDelay();
     Assert.assertTrue(sqlSegmentsMetadataManager.getLatestDatabasePoll() instanceof SqlSegmentsMetadataManager.PeriodicDatabasePoll);
+    dataSourcesSnapshot = sqlSegmentsMetadataManager.getDataSourcesSnapshot();
+    Assert.assertEquals(
+        ImmutableSet.of("wikipedia"),
+        sqlSegmentsMetadataManager.retrieveAllDataSourceNames()
+    );
+    Assert.assertEquals(
+        ImmutableList.of("wikipedia"),
+        dataSourcesSnapshot.getDataSourcesWithAllUsedSegments()
+                           .stream()
+                           .map(ImmutableDruidDataSource::getName)
+                           .collect(Collectors.toList())
+    );
+    Assert.assertEquals(
+        ImmutableSet.of(segment1, segment2),
+        ImmutableSet.copyOf(dataSourcesSnapshot.getDataSource("wikipedia").getSegments())
+    );
+    Assert.assertEquals(
+        ImmutableSet.of(segment1, segment2),
+        ImmutableSet.copyOf(dataSourcesSnapshot.iterateAllUsedSegmentsInSnapshot())
+    );
+  }
+
+  @Test(timeout = 60_000)
+  public void testPollSegmentAndSchema()
+  {
+    List<SchemaManager.SegmentSchemaMetadataPlus> list = new ArrayList<>();
+    SchemaFingerprintGenerator fingerprintGenerator = new SchemaFingerprintGenerator(jsonMapper);
+    SchemaPayload payload1 = new SchemaPayload(
+        RowSignature.builder().add("c1", ColumnType.FLOAT).build());
+    SegmentSchemaMetadata schemaMetadata1 = new SegmentSchemaMetadata(payload1, 20L);
+    list.add(new SchemaManager.SegmentSchemaMetadataPlus(segment1.getId(), schemaMetadata1, fingerprintGenerator.generateId(payload1)));
+    SchemaPayload payload2 = new SchemaPayload(
+        RowSignature.builder().add("c2", ColumnType.FLOAT).build());
+    SegmentSchemaMetadata schemaMetadata2 = new SegmentSchemaMetadata(payload2, 40L);
+    list.add(new SchemaManager.SegmentSchemaMetadataPlus(segment2.getId(), schemaMetadata2, fingerprintGenerator.generateId(payload2)));
+
+    schemaManager.persistSchemaAndUpdateSegmentsTable(list);
+
+    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = new CentralizedDatasourceSchemaConfig();
+    centralizedDatasourceSchemaConfig.setEnabled(true);
+    config = new SegmentsMetadataManagerConfig();
+    config.setPollDuration(Period.seconds(3));
+    sqlSegmentsMetadataManager = new SqlSegmentsMetadataManager(
+        jsonMapper,
+        Suppliers.ofInstance(config),
+        derbyConnectorRule.metadataTablesConfigSupplier(),
+        connector,
+        segmentSchemaCache,
+        centralizedDatasourceSchemaConfig
+    );
+
+    sqlSegmentsMetadataManager.start();
+    DataSourcesSnapshot dataSourcesSnapshot = sqlSegmentsMetadataManager.getDataSourcesSnapshot();
+    Assert.assertNull(dataSourcesSnapshot);
+    Assert.assertFalse(segmentSchemaCache.getSchemaForSegment(segment1.getId()).isPresent());
+    Assert.assertFalse(segmentSchemaCache.getSchemaForSegment(segment2.getId()).isPresent());
+
+    sqlSegmentsMetadataManager.startPollingDatabasePeriodically();
+    Assert.assertTrue(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
+    // This call make sure that the first poll is completed
+    sqlSegmentsMetadataManager.useLatestSnapshotIfWithinDelay();
+    Assert.assertTrue(sqlSegmentsMetadataManager.getLatestDatabasePoll() instanceof SqlSegmentsMetadataManager.PeriodicDatabasePoll);
+    Assert.assertTrue(segmentSchemaCache.getSchemaForSegment(segment1.getId()).isPresent());
+    Assert.assertTrue(segmentSchemaCache.getSchemaForSegment(segment2.getId()).isPresent());
+
+    Assert.assertEquals(schemaMetadata1, segmentSchemaCache.getSchemaForSegment(segment1.getId()).get());
+    Assert.assertEquals(schemaMetadata2, segmentSchemaCache.getSchemaForSegment(segment2.getId()).get());
+
     dataSourcesSnapshot = sqlSegmentsMetadataManager.getDataSourcesSnapshot();
     Assert.assertEquals(
         ImmutableSet.of("wikipedia"),

@@ -52,6 +52,7 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SchemaManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -119,7 +120,8 @@ public class DatasourceOptimizerTest extends CuratorTestBase
         jsonMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector,
-        schemaManager
+        schemaManager,
+        CentralizedDatasourceSchemaConfig.create()
     );
 
     setupServerAndCurator();

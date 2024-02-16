@@ -50,6 +50,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.column.MinimalSegmentSchemas;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SchemaManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
@@ -70,6 +71,7 @@ import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.PreparedBatch;
+import org.skife.jdbi.v2.PreparedBatchPart;
 import org.skife.jdbi.v2.Query;
 import org.skife.jdbi.v2.ResultIterator;
 import org.skife.jdbi.v2.StatementContext;
@@ -114,19 +116,22 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   private final MetadataStorageTablesConfig dbTables;
   private final SQLMetadataConnector connector;
   private final SchemaManager schemaManager;
+  private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
   @Inject
   public IndexerSQLMetadataStorageCoordinator(
       ObjectMapper jsonMapper,
       MetadataStorageTablesConfig dbTables,
       SQLMetadataConnector connector,
-      SchemaManager schemaManager
+      SchemaManager schemaManager,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     this.jsonMapper = jsonMapper;
     this.dbTables = dbTables;
     this.connector = connector;
     this.schemaManager = schemaManager;
+    this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
   }
 
   @LifecycleStart
@@ -134,7 +139,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   {
     connector.createDataSourceTable();
     connector.createPendingSegmentsTable();
-    connector.createSegmentSchemaTable();
+    if (centralizedDatasourceSchemaConfig.isEnabled()) {
+      connector.createSegmentSchemaTable();
+    }
     connector.createSegmentTable();
     connector.createUpgradeSegmentsTable();
   }
@@ -1978,7 +1985,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     Map<String, Long> fingerprintSchemaIdMap = null;
     boolean schemaPresent = false;
     try {
-      if (minimalSegmentSchemas != null && minimalSegmentSchemas.isNonEmpty()) {
+      if (centralizedDatasourceSchemaConfig.isEnabled() && minimalSegmentSchemas != null && minimalSegmentSchemas.isNonEmpty()) {
         schemaPresent = true;
         log.info("Inserting schema in db table.");
         schemaManager.persistSchema(handle, minimalSegmentSchemas.getSchemaPayloadMap());
@@ -2026,7 +2033,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             }
           }
 
-          preparedBatch.add()
+          PreparedBatchPart preparedBatchPart = preparedBatch.add()
               .bind("id", segmentId)
               .bind("dataSource", segment.getDataSource())
               .bind("created_date", now)
@@ -2036,9 +2043,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               .bind("version", segment.getVersion())
               .bind("used", usedSegments.contains(segment))
               .bind("payload", jsonMapper.writeValueAsBytes(segment))
-              .bind("used_status_last_updated", now)
-              .bind("schema_id", schemaId)
-              .bind("num_rows", numRows);
+              .bind("used_status_last_updated", now);
+
+          if (centralizedDatasourceSchemaConfig.isEnabled()) {
+            preparedBatchPart
+                .bind("schema_id", schemaId)
+                .bind("num_rows", numRows);
+          }
         }
         final int[] affectedRows = preparedBatch.execute();
         final boolean succeeded = Arrays.stream(affectedRows).allMatch(eachAffectedRows -> eachAffectedRows == 1);
@@ -2249,19 +2260,24 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           numRows = metadata.rhs;
         }
 
-        batch.add()
-             .bind("id", segmentId)
-             .bind("dataSource", segment.getDataSource())
-             .bind("created_date", now)
-             .bind("start", segment.getInterval().getStart().toString())
-             .bind("end", segment.getInterval().getEnd().toString())
-             .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
-             .bind("version", segment.getVersion())
-             .bind("used", true)
-             .bind("payload", jsonMapper.writeValueAsBytes(segment))
-             .bind("used_status_last_updated", now)
-             .bind("schema_id", schemaId)
-             .bind("num_rows", numRows);
+        PreparedBatchPart preparedBatchPart =
+            batch.add()
+                 .bind("id", segmentId)
+                 .bind("dataSource", segment.getDataSource())
+                 .bind("created_date", now)
+                 .bind("start", segment.getInterval().getStart().toString())
+                 .bind("end", segment.getInterval().getEnd().toString())
+                 .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
+                 .bind("version", segment.getVersion())
+                 .bind("used", true)
+                 .bind("payload", jsonMapper.writeValueAsBytes(segment))
+                 .bind("used_status_last_updated", now);
+
+        if (centralizedDatasourceSchemaConfig.isEnabled()) {
+          preparedBatchPart
+              .bind("schema_id", schemaId)
+              .bind("num_rows", numRows);
+        }
       }
 
       final int[] affectedRows = batch.execute();
@@ -2346,37 +2362,67 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                                           .map(id -> "'" + id + "'")
                                           .collect(Collectors.joining(","));
 
-    ResultIterator<DataSegmentPlus> resultIterator = handle
-        .createQuery(
-            StringUtils.format(
-                "SELECT payload, schema_id, num_rows FROM %s WHERE id in (%s)",
-                dbTables.getSegmentsTable(), segmentIdCsv
-            )
-        )
-        .setFetchSize(connector.getStreamingFetchSize())
-        .map(
-            (index, r, ctx) -> {
-              DataSegment segment = JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class);
-              Long schemaId = (Long) r.getObject(2);
-              Long numRows = (Long) r.getObject(3);
-              return new DataSegmentPlus(segment, schemaId, numRows);
-            }
-        )
-        .iterator();
+    ResultIterator<DataSegmentPlus> resultIterator;
+    if (centralizedDatasourceSchemaConfig.isEnabled()) {
+      resultIterator = handle
+          .createQuery(
+              StringUtils.format(
+                  "SELECT payload, schema_id, num_rows FROM %s WHERE id in (%s)",
+                  dbTables.getSegmentsTable(), segmentIdCsv
+              )
+          )
+          .setFetchSize(connector.getStreamingFetchSize())
+          .map(
+              (index, r, ctx) -> {
+                DataSegment segment = JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class);
+                Long schemaId = (Long) r.getObject(2);
+                Long numRows = (Long) r.getObject(3);
+                return new DataSegmentPlus(segment, schemaId, numRows);
+              }
+          )
+          .iterator();
+    } else {
+      resultIterator = handle
+          .createQuery(
+              StringUtils.format(
+                  "SELECT payload FROM %s WHERE id in (%s)",
+                  dbTables.getSegmentsTable(), segmentIdCsv
+              )
+          )
+          .setFetchSize(connector.getStreamingFetchSize())
+          .map(
+              (index, r, ctx) -> {
+                DataSegment segment = JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class);
+                return new DataSegmentPlus(segment, null, null);
+              }
+          )
+          .iterator();
+    }
 
     return Lists.newArrayList(resultIterator);
   }
 
   private String buildSqlToInsertSegments()
   {
-    return StringUtils.format(
-        "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s,"
-        + " partitioned, version, used, payload, used_status_last_updated, schema_id, num_rows) "
-        + "VALUES (:id, :dataSource, :created_date, :start, :end,"
-        + " :partitioned, :version, :used, :payload, :used_status_last_updated, :schema_id, :num_rows)",
-        dbTables.getSegmentsTable(),
-        connector.getQuoteString()
-    );
+    if (centralizedDatasourceSchemaConfig.isEnabled()) {
+      return StringUtils.format(
+          "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s,"
+          + " partitioned, version, used, payload, used_status_last_updated, schema_id, num_rows) "
+          + "VALUES (:id, :dataSource, :created_date, :start, :end,"
+          + " :partitioned, :version, :used, :payload, :used_status_last_updated, :schema_id, :num_rows)",
+          dbTables.getSegmentsTable(),
+          connector.getQuoteString()
+      );
+    } else {
+      return StringUtils.format(
+          "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s,"
+          + " partitioned, version, used, payload, used_status_last_updated) "
+          + "VALUES (:id, :dataSource, :created_date, :start, :end,"
+          + " :partitioned, :version, :used, :payload, :used_status_last_updated)",
+          dbTables.getSegmentsTable(),
+          connector.getQuoteString()
+      );
+    }
   }
 
   /**

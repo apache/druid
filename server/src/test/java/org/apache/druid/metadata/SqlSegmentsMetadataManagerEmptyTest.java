@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.joda.time.Period;
 import org.junit.After;
@@ -61,7 +62,8 @@ public class SqlSegmentsMetadataManagerEmptyTest
         Suppliers.ofInstance(config),
         derbyConnectorRule.metadataTablesConfigSupplier(),
         connector,
-        segmentSchemaCache
+        segmentSchemaCache,
+        CentralizedDatasourceSchemaConfig.create()
     );
     sqlSegmentsMetadataManager.start();
 
