@@ -15317,4 +15317,45 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(new Object[]{NullHandling.sqlCompatible() ? 4L : 0L})
     );
   }
+
+  @Test
+  public void testIpv4ParseWithNullableType()
+  {
+    testQuery(
+        "select ipv4_parse('1.2.3') from (values(1)) as t(col)",
+        NullHandling.sqlCompatible() ?
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(InlineDataSource.fromIterable(
+                      ImmutableList.of(new Object[]{null}),
+                      RowSignature.builder()
+                                  .add("EXPR$0", ColumnType.LONG)
+                                  .build()
+                  ))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .columns("EXPR$0")
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .build()
+        ) :
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(InlineDataSource.fromIterable(
+                      ImmutableList.of(new Object[]{1L}),
+                      RowSignature.builder()
+                                  .add("col", ColumnType.LONG)
+                                  .build()
+                  ))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .columns("v0")
+                  .virtualColumns(expressionVirtualColumn("v0", "0", ColumnType.LONG))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .build()
+        ),
+        ImmutableList.of(NullHandling.sqlCompatible() ? new Object[]{null} : new Object[]{0})
+    );
+  }
 }
