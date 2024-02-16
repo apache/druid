@@ -35,7 +35,6 @@ import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.tools.ValidationException;
-import org.apache.calcite.util.Pair;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
@@ -57,17 +56,13 @@ import org.apache.druid.sql.destination.TableDestination;
 import org.apache.druid.storage.ExportStorageProvider;
 
 import java.util.List;
-import java.util.regex.Pattern;
 
 public abstract class IngestHandler extends QueryHandler
 {
-  private static final Pattern UNNAMED_COLUMN_PATTERN = Pattern.compile("^EXPR\\$\\d+$", Pattern.CASE_INSENSITIVE);
-
   protected Granularity ingestionGranularity;
   protected IngestDestination targetDatasource;
 
   private SqlNode validatedQueryNode;
-  private RelDataType targetType;
 
   IngestHandler(
       HandlerContext handlerContext,
@@ -75,8 +70,6 @@ public abstract class IngestHandler extends QueryHandler
   )
   {
     super(handlerContext, explain);
-    //ingestionGranularity = ingestNode.getPartitionedBy() != null ? ingestNode.getPartitionedBy().getGranularity() : null;
-    //handlerContext.hook().captureInsert(ingestNode);
   }
 
   protected String operationName()
@@ -160,9 +153,6 @@ public abstract class IngestHandler extends QueryHandler
     DruidSqlIngest ingestNode = ingestNode();
     DruidSqlIngest validatedNode = (DruidSqlIngest) validate(ingestNode);
     validatedQueryNode = validatedNode.getSource();
-    CalcitePlanner planner = handlerContext.planner();
-    final SqlValidator validator = planner.getValidator();
-    targetType = validator.getValidatedNodeType(validatedNode);
     ingestionGranularity = ingestNode().getPartitionedBy() != null
         ? ingestNode().getPartitionedBy().getGranularity()
         : null;
@@ -256,26 +246,11 @@ public abstract class IngestHandler extends QueryHandler
   @Override
   protected QueryMaker buildQueryMaker(final RelRoot rootQueryRel) throws ValidationException
   {
-    validateColumnsForIngestion(rootQueryRel);
     return handlerContext.engine().buildQueryMakerForInsert(
         targetDatasource,
         rootQueryRel,
         handlerContext.plannerContext()
     );
-  }
-
-  private void validateColumnsForIngestion(RelRoot rootQueryRel)
-  {
-    // Check that there are no unnamed columns in the insert.
-    for (Pair<Integer, String> field : rootQueryRel.fields) {
-      if (UNNAMED_COLUMN_PATTERN.matcher(field.right).matches()) {
-        throw InvalidSqlInput.exception(
-            "Insertion requires columns to be named, but at least one of the columns was unnamed.  This is usually "
-            + "the result of applying a function without having an AS clause, please ensure that all function calls"
-            + "are named with an AS clause as in \"func(X) as myColumn\"."
-        );
-      }
-    }
   }
 
   /**

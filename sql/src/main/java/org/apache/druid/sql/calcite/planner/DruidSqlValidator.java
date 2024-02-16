@@ -51,9 +51,7 @@ import org.apache.druid.catalog.model.facade.DatasourceFacade;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
@@ -185,7 +183,20 @@ class DruidSqlValidator extends BaseDruidSqlValidator
 
     // Validate segment granularity, which depends on nothing else.
     if (!(ingestNode.getTargetTable() instanceof ExternalDestinationSqlIdentifier)) {
-      validateSegmentGranularity(operationName, ingestNode, tableMetadata);
+      Granularity effectiveGranularity = getEffectiveGranularity(operationName, ingestNode, tableMetadata);
+      // Note: though this is the validator, we cheat a bit and write the target
+      // granularity into the query context. Perhaps this step should be done
+      // during conversion, however, we've just worked out the granularity, so we
+      // do it here instead.
+      try {
+        plannerContext.queryContextMap().put(
+            DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
+            plannerContext.getPlannerToolbox().jsonMapper().writeValueAsString(effectiveGranularity)
+        );
+      }
+      catch (JsonProcessingException e) {
+        throw InvalidSqlInput.exception(e, "Invalid partition granularity [%s]", effectiveGranularity);
+      }
     }
 
     // The source must be a SELECT
@@ -295,86 +306,53 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     }
   }
 
-  private void validateSegmentGranularity(
+  /**
+   * Gets the effective PARTITIONED BY granularity. Resolves the granularity from the granularity specified on the
+   * ingest node, and on the table metadata as stored in catalog, if any. Mismatches between the 2 granularities are
+   * allowed if both are specified. The granularity specified on the ingest node is taken to be the effective
+   * granulartiy if specified. If no granulartiy is specified on either the ingestNode or in the table catalog entry
+   * for the table, an error is thrown.
+   *
+   * @param operationName The operation name
+   * @param ingestNode    The ingest node.
+   * @param tableMetadata The table metadata as stored in the catalog, if any.
+   *
+   * @return The effective granularity
+   * @throws org.apache.druid.error.DruidException indicating invalud Sql if both the ingest node and table metadata
+   * for the respective target table have no PARTITIONED BY granularity defined.
+   */
+  private Granularity getEffectiveGranularity(
       final String operationName,
       final DruidSqlIngest ingestNode,
-      final DatasourceFacade tableMetadata
+      @Nullable final DatasourceFacade tableMetadata
   )
   {
-    final Granularity definedGranularity = tableMetadata == null ? null : tableMetadata.segmentGranularity();
-    if (definedGranularity != null) {
-      // Should already have been checked when creating the catalog entry
-      DruidSqlParserUtils.validateSupportedGranularityForPartitionedBy(null, definedGranularity);
-    }
-    final Granularity ingestionGranularity = ingestNode.getPartitionedBy().getGranularity();
+    Granularity effectiveGranularity = null;
+    final Granularity ingestionGranularity = ingestNode.getPartitionedBy() != null
+        ? ingestNode.getPartitionedBy().getGranularity()
+        : null;
     if (ingestionGranularity != null) {
       DruidSqlParserUtils.validateSupportedGranularityForPartitionedBy(ingestNode, ingestionGranularity);
-    }
-    final Granularity finalGranularity;
-    if (definedGranularity == null) {
-      // The catalog has no granularity: apply the query value
-      if (ingestionGranularity == null) {
-        // Neither have a value: error
-        throw InvalidSqlInput.exception(
-            "Operation [%s] requires a PARTITIONED BY to be explicitly defined, but none was found.",
-            operationName
-        );
-      } else {
-        finalGranularity = ingestionGranularity;
-      }
+      effectiveGranularity = ingestionGranularity;
     } else {
-      // The catalog has a granularity
-      if (ingestionGranularity == null) {
-        // The query has no granularity: just apply the catalog granularity.
-        finalGranularity = definedGranularity;
-      } else if (definedGranularity.equals(ingestionGranularity)) {
-        // Both have a setting and they are the same. We assume this would
-        // likely occur only when moving to the catalog, and old queries still
-        // contain the PARTITION BY clause.
-        finalGranularity = definedGranularity;
-      } else {
-        // Both have a setting but they are different. Since the user declared
-        // the grain, using a different one is an error. If the user wants to
-        // vary the grain across different (re)ingestions, then, at present, don't
-        // declare the grain in the catalog.
-        // TODO: allow mismatch
-        throw InvalidSqlInput.exception(
-            "PARTITIONED BY mismatch. Catalog: [%s], query: [%s]",
-            granularityToSqlString(definedGranularity),
-            granularityToSqlString(ingestionGranularity)
-        );
+      final Granularity definedGranularity = tableMetadata == null
+          ? null
+          : tableMetadata.segmentGranularity();
+      if (definedGranularity != null) {
+        // Should already have been checked when creating the catalog entry
+        DruidSqlParserUtils.validateSupportedGranularityForPartitionedBy(null, definedGranularity);
+        effectiveGranularity = definedGranularity;
       }
     }
 
-    // Note: though this is the validator, we cheat a bit and write the target
-    // granularity into the query context. Perhaps this step should be done
-    // during conversion, however, we've just worked out the granularity, so we
-    // do it here instead.
-    try {
-      plannerContext.queryContextMap().put(
-          DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
-          plannerContext.getPlannerToolbox().jsonMapper().writeValueAsString(finalGranularity)
-      );
+    if (effectiveGranularity == null) {
+      throw InvalidSqlInput.exception(
+          "Operation [%s] requires a PARTITIONED BY to be explicitly defined, but none was found.",
+          operationName);
     }
-    catch (JsonProcessingException e) {
-      throw InvalidSqlInput.exception(e, "Invalid partition granularity [%s]", finalGranularity);
-    }
-  }
 
-  private String granularityToSqlString(final Granularity gran)
-  {
-    if (gran == null) {
-      return "NULL";
-    }
-    // The validation path will only ever see the ALL granularity or
-    // a period granularity. Neither the parser nor catalog can
-    // create a Duration granularity.
-    if (Granularities.ALL == gran) {
-      return "ALL TIME";
-    }
-    return ((PeriodGranularity) gran).getPeriod().toString();
+    return effectiveGranularity;
   }
-
 
   /**
    * Compute and validate the target type. In normal SQL, the engine would insert
