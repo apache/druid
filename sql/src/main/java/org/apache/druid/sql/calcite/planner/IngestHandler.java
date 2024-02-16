@@ -33,7 +33,6 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.sql.SqlSelect;
-import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.DruidException;
@@ -114,13 +113,6 @@ public abstract class IngestHandler extends QueryHandler
     if (ingestNode().getTargetTable() instanceof ExternalDestinationSqlIdentifier) {
       validateExport();
     } else {
-      if (ingestNode().getPartitionedBy() == null) {
-        throw InvalidSqlInput.exception(
-            "Operation [%s] requires a PARTITIONED BY to be explicitly defined, but none was found.",
-            operationName()
-        );
-      }
-
       if (ingestNode().getExportFileFormat() != null) {
         throw InvalidSqlInput.exception(
             "The AS <format> clause should only be specified while exporting rows into an EXTERN destination.",
@@ -129,18 +121,6 @@ public abstract class IngestHandler extends QueryHandler
       }
     }
 
-    try {
-      PlannerContext plannerContext = handlerContext.plannerContext();
-      if (ingestionGranularity != null) {
-        plannerContext.queryContextMap().put(
-            DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
-            plannerContext.getJsonMapper().writeValueAsString(ingestionGranularity)
-        );
-      }
-    }
-    catch (JsonProcessingException e) {
-      throw InvalidSqlInput.exception(e, "Invalid partition granularity [%s]", ingestionGranularity);
-    }
     // Check if CTX_SQL_OUTER_LIMIT is specified and fail the query if it is. CTX_SQL_OUTER_LIMIT being provided causes
     // the number of rows inserted to be limited which is likely to be confusing and unintended.
     if (handlerContext.queryContextMap().get(PlannerContext.CTX_SQL_OUTER_LIMIT) != null) {
@@ -153,9 +133,19 @@ public abstract class IngestHandler extends QueryHandler
     DruidSqlIngest ingestNode = ingestNode();
     DruidSqlIngest validatedNode = (DruidSqlIngest) validate(ingestNode);
     validatedQueryNode = validatedNode.getSource();
-    ingestionGranularity = ingestNode().getPartitionedBy() != null
-        ? ingestNode().getPartitionedBy().getGranularity()
-        : null;
+    // This context key is set during validation in
+    // org.apache.druid.sql.calcite.planner.DruidSqlValidator.validateInsert.
+    String effectiveGranularity = (String) handlerContext.queryContextMap()
+        .get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY);
+    try {
+      ingestionGranularity = effectiveGranularity != null
+          ? handlerContext.jsonMapper().readValue(effectiveGranularity, Granularity.class)
+          : null;
+    }
+    catch (JsonProcessingException e) {
+      // this should never happen, since the granularity value is validated before being written to contextMap.
+      throw InvalidSqlInput.exception(e, "Invalid partition granularity [%s]", effectiveGranularity);
+    }
     targetDatasource = validateAndGetDataSourceForIngest();
   }
 
@@ -184,27 +174,11 @@ public abstract class IngestHandler extends QueryHandler
   private IngestDestination validateAndGetDataSourceForIngest()
   {
     final SqlInsert insert = ingestNode();
-    if (insert.isUpsert()) {
-      throw InvalidSqlInput.exception("UPSERT is not supported.");
-    }
-
-    if (insert.getTargetColumnList() != null) {
-      throw InvalidSqlInput.exception(
-          "Operation [%s] cannot be run with a target column list, given [%s (%s)]",
-          operationName(),
-          insert.getTargetTable(), insert.getTargetColumnList()
-      );
-    }
 
     final SqlIdentifier tableIdentifier = (SqlIdentifier) insert.getTargetTable();
     final IngestDestination dataSource;
 
-    if (tableIdentifier.names.isEmpty()) {
-      // I don't think this can happen, but include a branch for it just in case.
-      throw DruidException.forPersona(DruidException.Persona.USER)
-          .ofCategory(DruidException.Category.DEFENSIVE)
-          .build("Operation [%s] requires a target table", operationName());
-    } else if (tableIdentifier instanceof ExternalDestinationSqlIdentifier) {
+    if (tableIdentifier instanceof ExternalDestinationSqlIdentifier) {
       ExternalDestinationSqlIdentifier externalDestination = ((ExternalDestinationSqlIdentifier) tableIdentifier);
       ExportStorageProvider storageProvider = externalDestination.toExportStorageProvider(handlerContext.jsonMapper());
       dataSource = new ExportDestination(storageProvider);

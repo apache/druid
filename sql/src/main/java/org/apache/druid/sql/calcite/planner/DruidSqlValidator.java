@@ -253,7 +253,7 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     final SqlIdentifier destId = insertNs.getId();
     if (destId.names.isEmpty()) {
       // I don't think this can happen, but include a branch for it just in case.
-      throw InvalidSqlInput.exception("%s requires a target table.", operationName);
+      throw InvalidSqlInput.exception("Operation [%s] requires a target table", operationName);
     }
 
     // Druid does not support 3+ part names.
