@@ -117,10 +117,12 @@ Druid now supports first and last aggregators for the double, float, and long ty
 
 [#14462](https://github.com/apache/druid/pull/14462)
 
-Additionally, the following functions can now return numeric values and be used as aggregators at ingestion time:
+Additionally, the following functions can now return numeric values:
 
 * EARLIEST and EARLIEST_BY
 * LATEST and LATEST_BY
+
+You can use these functions as aggregators at ingestion time.
 
 [#15607](https://github.com/apache/druid/pull/15607)
 
@@ -270,7 +272,7 @@ Unless explicitly specified, Druid skips week-granularity segments for data part
 
 #### Changed how empty or null array columns are stored
 
-Columns ingested with the auto column indexer that contain only empty or null containing arrays are now stored as `ARRAY<LONG\>` instead of `COMPLEX<json\>`.
+Columns ingested with the `auto` column indexer that contain only empty or null containing arrays are now stored as `ARRAY<LONG>` instead of `COMPLEX<json>`.
 
 [#15505](https://github.com/apache/druid/pull/15505)
 
