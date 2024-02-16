@@ -403,7 +403,7 @@ public class VirtualColumns implements Cacheable
    * Package-private since production callers want {@link #getColumnCapabilitiesWithFallback(ColumnInspector, String)}.
    */
   @Nullable
-  ColumnCapabilities getColumnCapabilitiesWithoutFallback(ColumnInspector inspector, String columnName)
+  public ColumnCapabilities getColumnCapabilitiesWithoutFallback(ColumnInspector inspector, String columnName)
   {
     final VirtualColumn virtualColumn = getVirtualColumn(columnName);
     if (virtualColumn != null) {

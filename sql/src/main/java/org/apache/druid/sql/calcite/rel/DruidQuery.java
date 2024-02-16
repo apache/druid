@@ -1716,13 +1716,22 @@ public class DruidQuery
 
     for (final String columnName : columns) {
       final ColumnCapabilities capabilities =
-          virtualColumns.getColumnCapabilitiesWithFallback(sourceRowSignature, columnName);
-
+          virtualColumns.getColumnCapabilitiesWithoutFallback(sourceRowSignature, columnName);
       if (capabilities == null) {
-        // No type for this column. This is a planner bug.
-        throw new ISE("No type for column [%s]", columnName);
+        Optional<ColumnType> columnType = sourceRowSignature.getColumnType(columnName);
+        if (columnType.isPresent()) {
+          builder.add(columnName, columnType.get());
+        } else {
+          if (sourceRowSignature.contains(columnName)) {
+            builder.add(columnName, null);
+          } else {
+            // No type for this column. This is a planner bug.
+            throw new ISE("No type for column [%s]", columnName);
+          }
+        }
+      } else {
+        builder.add(columnName, capabilities.toColumnType());
       }
-      builder.add(columnName, capabilities.toColumnType());
     }
     return builder.build();
   }
