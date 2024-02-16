@@ -130,7 +130,10 @@ public class DruidQuery
 {
   /**
    * Native query context key that is set when {@link EngineFeature#SCAN_NEEDS_SIGNATURE}.
+   *
+   * {@link Deprecated} Instead of the context value {@link ScanQuery#getRowSignature()} can be used.
    */
+  @Deprecated
   public static final String CTX_SCAN_SIGNATURE = "scanSignature";
 
   /**
@@ -1671,14 +1674,17 @@ public class DruidQuery
             scanColumnsList,
             plannerContext.queryContextMap()
         ),
-        buildRowSignature(virtualColumns, scanColumnsList).getTypes()
+        buildRowSignature(virtualColumns, scanColumnsList).getColumnTypes()
     );
   }
 
   /**
    * Returns a copy of "queryContext" with {@link #CTX_SCAN_SIGNATURE} added if the execution context has the
    * {@link EngineFeature#SCAN_NEEDS_SIGNATURE} feature.
+   *
+   * {@link Deprecated} Instead of the context value {@link ScanQuery#getRowSignature()} can be used.
    */
+  @Deprecated
   private Map<String, Object> withScanSignatureIfNeeded(
       final VirtualColumns virtualColumns,
       final List<String> scanColumns,
@@ -1706,7 +1712,7 @@ public class DruidQuery
   private RowSignature buildRowSignature(final VirtualColumns virtualColumns, final List<String> columns)
   {
     // Compute the signature of the columns that we are selecting.
-    final RowSignature.Builder scanSignatureBuilder = RowSignature.builder();
+    final RowSignature.Builder builder = RowSignature.builder();
 
     for (final String columnName : columns) {
       final ColumnCapabilities capabilities =
@@ -1716,11 +1722,8 @@ public class DruidQuery
         // No type for this column. This is a planner bug.
         throw new ISE("No type for column [%s]", columnName);
       }
-
-      scanSignatureBuilder.add(columnName, capabilities.toColumnType());
+      builder.add(columnName, capabilities.toColumnType());
     }
-
-    final RowSignature signature = scanSignatureBuilder.build();
-    return signature;
+    return builder.build();
   }
 }

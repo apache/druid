@@ -15106,7 +15106,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testScanAndSortNPE()
+  public void testScanAndSortCanGetSchemaFromScanQuery()
   {
     skipVectorize();
     cannotVectorize();
@@ -15120,7 +15120,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
     testBuilder()
         .sql(sql)
-        .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
         .expectedResults(expectedResults)
         .run();
   }

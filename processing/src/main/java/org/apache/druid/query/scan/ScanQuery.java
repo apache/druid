@@ -35,11 +35,14 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.operator.OffsetLimit;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -688,20 +691,76 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     }
   }
 
+
   /**
-   * Returns the RowSignature (if available)
+   * Returns the RowSignature.
+   *
+   * If {@link ScanQuery#columnTypes} is not available it will do its best to fill in the types.
    */
   @Nullable
   public RowSignature getRowSignature()
   {
+    return getRowSignature(false);
+  }
+
+  @Nullable
+  public RowSignature getRowSignature(boolean defaultIsLegacy)
+  {
+    if (columns == null || columns.isEmpty()) {
+      // Note: if no specific list of columns is provided, then since we can't predict what columns will come back, we
+      // unfortunately can't do array-based results. In this case, there is a major difference between standard and
+      // array-based results: the standard results will detect and return _all_ columns, whereas the array-based results
+      // will include none of them.
+      return RowSignature.empty();
+    }
     if (columns != null && columnTypes != null && columns.size() == columnTypes.size()) {
       Builder builder = RowSignature.builder();
       for (int i = 0; i < columnTypes.size(); i++) {
-        ColumnType columnType = columnTypes.get(i);
-        builder.add(columns.get(i), columnType);
+        builder.add(columns.get(i), columnTypes.get(i));
       }
       return builder.build();
     }
+    return guessRowSignature(defaultIsLegacy);
+  }
+
+  private RowSignature guessRowSignature(boolean defaultIsLegacy)
+  {
+    final RowSignature.Builder builder = RowSignature.builder();
+    if (Boolean.TRUE.equals(legacy) || (legacy == null && defaultIsLegacy)) {
+      builder.add(ScanQueryEngine.LEGACY_TIMESTAMP_KEY, null);
+    }
+    DataSource dataSource = getDataSource();
+    for (String columnName : columns) {
+      final ColumnType columnType = guessColumnType(columnName, virtualColumns, dataSource);
+      builder.add(columnName, columnType);
+    }
+    return builder.build();
+  }
+
+  /**
+   * Tries to guess the {@link ColumnType} from the {@link VirtualColumns} and the {@link DataSource}.
+   *
+   * We know the columnType for virtual columns and in some cases the columntypes of the datasource as well.
+   */
+  @Nullable
+  private static ColumnType guessColumnType(String columnName, VirtualColumns virtualColumns, DataSource dataSource)
+  {
+    final VirtualColumn virtualColumn = virtualColumns.getVirtualColumn(columnName);
+    if (virtualColumn != null) {
+      final ColumnCapabilities capabilities = virtualColumn.capabilities(c -> null, columnName);
+      if (capabilities != null) {
+        return capabilities.toColumnType();
+      }
+    } else {
+      if (dataSource instanceof InlineDataSource) {
+        InlineDataSource inlineDataSource = (InlineDataSource) dataSource;
+        ColumnCapabilities caps = inlineDataSource.getRowSignature().getColumnCapabilities(columnName);
+        if (caps != null) {
+          return caps.toColumnType();
+        }
+      }
+    }
+    // Unknown type. In the future, it would be nice to have a way to fill these in.
     return null;
   }
 }

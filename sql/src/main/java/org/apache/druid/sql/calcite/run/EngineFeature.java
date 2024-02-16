@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.run;
 
+import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
@@ -71,7 +72,10 @@ public enum EngineFeature
   /**
    * Scan queries must have {@link org.apache.druid.sql.calcite.rel.DruidQuery#CTX_SCAN_SIGNATURE} set in their
    * query contexts.
+   *
+   * {@link Deprecated} Instead of the context value {@link ScanQuery#getRowSignature()} can be used.
    */
+  @Deprecated
   SCAN_NEEDS_SIGNATURE,
 
   /**
