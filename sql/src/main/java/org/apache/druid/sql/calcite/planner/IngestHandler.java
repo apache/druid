@@ -32,7 +32,6 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOrderBy;
-import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.DruidException;
@@ -69,6 +68,32 @@ public abstract class IngestHandler extends QueryHandler
   )
   {
     super(handlerContext, explain);
+  }
+
+  protected static SqlNode convertSourceQuery(DruidSqlIngest sqlNode)
+  {
+    SqlNode query = sqlNode.getSource();
+
+    // Check if ORDER BY clause is not provided to the underlying query
+    if (query instanceof SqlOrderBy) {
+      SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
+      SqlNodeList orderByList = sqlOrderBy.orderList;
+      if (!(orderByList == null || orderByList.equals(SqlNodeList.EMPTY))) {
+        throw InvalidSqlInput.exception(
+            "Cannot use an ORDER BY clause on a Query of type [%s], use CLUSTERED BY instead",
+            sqlNode.getOperator().getName()
+        );
+      }
+    }
+    if (sqlNode.getClusteredBy() != null) {
+      query = DruidSqlParserUtils.convertClusterByToOrderBy(query, sqlNode.getClusteredBy());
+    }
+
+    if (!query.isA(SqlKind.QUERY)) {
+      throw InvalidSqlInput.exception("Unexpected SQL statement type [%s], expected it to be a QUERY", query.getKind());
+    }
+
+    return query;
   }
 
   protected String operationName()
@@ -247,26 +272,8 @@ public abstract class IngestHandler extends QueryHandler
 
     protected static DruidSqlInsert convertQuery(DruidSqlIngest sqlNode)
     {
-      SqlNode query = sqlNode.getSource();
+      SqlNode query = convertSourceQuery(sqlNode);
 
-      // Check if ORDER BY clause is not provided to the underlying query
-      if (query instanceof SqlOrderBy) {
-        SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
-        SqlNodeList orderByList = sqlOrderBy.orderList;
-        if (!(orderByList == null || orderByList.equals(SqlNodeList.EMPTY))) {
-          throw InvalidSqlInput.exception(
-              "Cannot use an ORDER BY clause on a Query of type [%s], use CLUSTERED BY instead",
-              sqlNode.getOperator().getName()
-          );
-        }
-      }
-      if (sqlNode.getClusteredBy() != null) {
-        query = DruidSqlParserUtils.convertClusterByToOrderBy(query, sqlNode.getClusteredBy());
-      }
-
-      if (!query.isA(SqlKind.QUERY)) {
-        throw InvalidSqlInput.exception("Unexpected SQL statement type [%s], expected it to be a QUERY", query.getKind());
-      }
       return DruidSqlInsert.create(new SqlInsert(
               sqlNode.getParserPosition(),
               (SqlNodeList) sqlNode.getOperandList().get(0),
@@ -333,27 +340,8 @@ public abstract class IngestHandler extends QueryHandler
 
     protected static DruidSqlReplace convertQuery(DruidSqlReplace sqlNode)
     {
-      SqlNode query = sqlNode.getSource();
+      SqlNode query = convertSourceQuery(sqlNode);
 
-      // Check if ORDER BY clause is not provided to the underlying query
-      if (query instanceof SqlOrderBy) {
-        SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
-        SqlNodeList orderByList = sqlOrderBy.orderList;
-        if (!(orderByList == null || orderByList.equals(SqlNodeList.EMPTY))) {
-          throw InvalidSqlInput.exception(
-              "Cannot use an ORDER BY clause on a Query of type [%s], use CLUSTERED BY instead",
-              sqlNode.getOperator().getName()
-          );
-        }
-      }
-      if (sqlNode.getClusteredBy() != null) {
-        query = DruidSqlParserUtils.convertClusterByToOrderBy(query, sqlNode.getClusteredBy());
-        sqlNode.setSource((SqlSelect) (((SqlOrderBy) query).query));
-      }
-
-      if (!query.isA(SqlKind.QUERY)) {
-        throw InvalidSqlInput.exception("Unexpected SQL statement type [%s], expected it to be a QUERY", query.getKind());
-      }
       return DruidSqlReplace.create(
           new SqlInsert(
               sqlNode.getParserPosition(),
