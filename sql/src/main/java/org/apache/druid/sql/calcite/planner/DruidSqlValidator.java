@@ -395,9 +395,7 @@ class DruidSqlValidator extends BaseDruidSqlValidator
       final String colName = sourceField.getName();
       final DatasourceFacade.ColumnFacade definedCol = tableMetadata.column(colName);
       if (definedCol == null) {
-        // No catalog definition for this column.
         if (isStrict) {
-          // Table is strict: cannot add new columns at ingest time.
           throw InvalidSqlInput.exception(
               "Column [%s] is not defined in the target table [%s] strict schema",
               colName,
