@@ -235,6 +235,17 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     this.legacy = legacy;
     this.columnTypes = columnTypes;
 
+    if (columnTypes != null) {
+      Preconditions.checkNotNull(columns, "columns may not be null if columnTypes are specified");
+      if (columns.size() != columnTypes.size()) {
+        throw new IAE(
+            "Inconsistent number of columns[%d] and columnTypes[%d] specified!",
+            columns.size(),
+            columnTypes.size()
+        );
+      }
+    }
+
     final Pair<List<OrderBy>, Order> ordering = verifyAndReconcileOrdering(orderBysFromUser, orderFromUser);
     this.orderBys = Preconditions.checkNotNull(ordering.lhs);
     this.timeOrder = ordering.rhs;
@@ -713,7 +724,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
       // will include none of them.
       return RowSignature.empty();
     }
-    if (columns != null && columnTypes != null && columns.size() == columnTypes.size()) {
+    if (columnTypes != null) {
       Builder builder = RowSignature.builder();
       for (int i = 0; i < columnTypes.size(); i++) {
         builder.add(columns.get(i), columnTypes.get(i));
