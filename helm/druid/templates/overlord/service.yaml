@@ -35,6 +35,12 @@ spec:
       targetPort: http
       protocol: TCP
       name: http
+  {{- if and .Values.overlord.metrics.port (or .Values.overlord.config.druid_emitter_prometheus_port .Values.configVars.druid_emitter_prometheus_port) }}
+    - port: {{ .Values.overlord.metrics.port }}
+      targetPort: {{ default .Values.configVars.druid_emitter_prometheus_port .Values.overlord.config.druid_emitter_prometheus_port }}
+      protocol: TCP
+      name: druid-metrics
+  {{- end }}
   selector:
     app: {{ include "druid.name" . }}
     release: {{ .Release.Name }}

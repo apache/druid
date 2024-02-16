@@ -109,6 +109,8 @@ The following table lists the configurable parameters of the Druid chart and the
 | `broker.serviceType`                     | service type for service                                | `ClusterIP`                                |
 | `broker.resources`                       | broker node resources requests & limits                 | `{}`                                       |
 | `broker.podAnnotations`                  | broker deployment annotations                           | `{}`                                       |
+| `broker.metrics.port`                    | Service port to expose metrics on                       | `8080`                                     |
+| `broker.metrics.serviceMonitor.enabled`  | Create Prometheus serviceMonitor resource               | `false`                                    |
 | `broker.nodeSelector`                    | Node labels for broker pod assignment                   | `{}`                                       |
 | `broker.tolerations`                     | broker tolerations                                      | `[]`                                       |
 | `broker.config`                           | broker private config such as `JAVA_OPTS`                |                                            |
@@ -130,6 +132,8 @@ The following table lists the configurable parameters of the Druid chart and the
 | `coordinator.serviceAccount.automountServiceAccountToken` | Automount API credentials for the Service Account | `true`                          |
 | `coordinator.resources`                  | coordinator node resources requests & limits            | `{}`                                       |
 | `coordinator.podAnnotations`             | coordinator Deployment annotations                      | `{}`                                       |
+| `coordinator.metrics.port`               | Service port to expose metrics on                       | `8080`                                     |
+| `coordinator.metrics.serviceMonitor.enabled`  | Create Prometheus serviceMonitor resource          | `false`                                    |
 | `coordinator.nodeSelector`               | node labels for coordinator pod assignment              | `{}`                                       |
 | `coordinator.tolerations`                | coordinator tolerations                                 | `[]`                                       |
 | `coordinator.config`                      | coordinator private config such as `JAVA_OPTS`           |                                            |
@@ -151,6 +155,8 @@ The following table lists the configurable parameters of the Druid chart and the
 | `overlord.serviceAccount.automountServiceAccountToken` | Automount API credentials for the Service Account | `true`                             |
 | `overlord.resources`                     | overlord node resources requests & limits               | `{}`                                       |
 | `overlord.podAnnotations`                | overlord Deployment annotations                         | `{}`                                       |
+| `overlord.metrics.port`                  | Service port to expose metrics on                       | `8080`                                     |
+| `overlord.metrics.serviceMonitor.enabled`| Create Prometheus serviceMonitor resource               | `false`                                    |
 | `overlord.nodeSelector`                  | node labels for overlord pod assignment                 | `{}`                                       |
 | `overlord.tolerations`                   | overlord tolerations                                    | `[]`                                       |
 | `overlord.config`                         | overlord private config such as `JAVA_OPTS`              |                                            |
@@ -174,6 +180,8 @@ The following table lists the configurable parameters of the Druid chart and the
 | `historical.livenessProbeInitialDelaySeconds`  | historical node liveness probe initial delay in seconds  | `60`                                |
 | `historical.readinessProbeInitialDelaySeconds` | historical node readiness probe initial delay in seconds | `60`                                |
 | `historical.podAnnotations`              | historical Deployment annotations                       | `{}`                                       |
+| `historical.metrics.port`                | Service port to expose metrics on                       | `8080`                                     |
+| `historical.metrics.serviceMonitor.enabled`| Create Prometheus serviceMonitor resource             | `false`                                    |
 | `historical.nodeSelector`                | node labels for historical pod assignment               | `{}`                                       |
 | `historical.securityContext`             | custom security context for historical containers       | `{ fsGroup: 1000 }`                        |
 | `historical.tolerations`                 | historical tolerations                                  | `[]`                                       |
@@ -201,6 +209,8 @@ The following table lists the configurable parameters of the Druid chart and the
 | `middleManager.serviceAccount.automountServiceAccountToken` | Automount API credentials for the Service Account | `true`                        |
 | `middleManager.resources`                | middleManager node resources requests & limits          | `{}`                                       |
 | `middleManager.podAnnotations`           | middleManager Deployment annotations                    | `{}`                                       |
+| `middleManager.metrics.port`             | Service port to expose metrics on                       | `8080`                                     |
+| `middleManager.metrics.serviceMonitor.enabled`| Create Prometheus serviceMonitor resource          | `false`                                    |
 | `middleManager.nodeSelector`             | Node labels for middleManager pod assignment            | `{}`                                       |
 | `middleManager.securityContext`          | custom security context for middleManager containers    | `{ fsGroup: 1000 }`                        |
 | `middleManager.tolerations`              | middleManager tolerations                               | `[]`                                       |
@@ -232,6 +242,8 @@ The following table lists the configurable parameters of the Druid chart and the
 | `router.serviceAccount.automountServiceAccountToken` | Automount API credentials for the Service Account | `true`                               |
 | `router.resources`                       | router node resources requests & limits                 | `{}`                                       |
 | `router.podAnnotations`                  | router Deployment annotations                           | `{}`                                       |
+| `router.metrics.port`                    | Service port to expose metrics on                       | `8080`                                     |
+| `router.metrics.serviceMonitor.enabled`  | Create Prometheus serviceMonitor resource               | `false`                                    |
 | `router.nodeSelector`                    | node labels for router pod assignment                   | `{}`                                       |
 | `router.tolerations`                     | router tolerations                                      | `[]`                                       |
 | `router.config`                           | router private config such as `JAVA_OPTS`                |                                            |

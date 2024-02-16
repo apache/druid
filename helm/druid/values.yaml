@@ -107,6 +107,11 @@ broker:
     # -- Automount API credentials for the service account
     automountServiceAccountToken: true
 
+  metrics:
+    port: 8080
+    serviceMonitor:
+      enabled: false
+
   nodeSelector: {}
 
   tolerations: []
@@ -162,6 +167,11 @@ coordinator:
     # -- Automount API credentials for the service account
     automountServiceAccountToken: true
 
+  metrics:
+    port: 8080
+    serviceMonitor:
+      enabled: false
+
   nodeSelector: {}
 
   tolerations: []
@@ -207,6 +217,11 @@ overlord:
     labels: {}
     # -- Automount API credentials for the service account
     automountServiceAccountToken: true
+
+  metrics:
+    port: 8080
+    serviceMonitor:
+      enabled: false
 
   nodeSelector: {}
 
@@ -284,6 +299,11 @@ historical:
     labels: {}
     # -- Automount API credentials for the service account
     automountServiceAccountToken: true
+
+  metrics:
+    port: 8080
+    serviceMonitor:
+      enabled: false
 
   livenessProbeInitialDelaySeconds: 60
   readinessProbeInitialDelaySeconds: 60
@@ -382,6 +402,11 @@ middleManager:
     # -- Automount API credentials for the service account
     automountServiceAccountToken: true
 
+  metrics:
+    port: 8080
+    serviceMonitor:
+      enabled: false
+
   ## (dict) If specified, apply these annotations to each master Pod
   podAnnotations: {}
 
@@ -439,6 +464,11 @@ router:
     labels: {}
     # -- Automount API credentials for the service account
     automountServiceAccountToken: true
+
+  metrics:
+    port: 8080
+    serviceMonitor:
+      enabled: false
 
   nodeSelector: {}
 

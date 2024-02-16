@@ -35,6 +35,12 @@ spec:
       targetPort: http
       protocol: TCP
       name: http
+  {{- if and .Values.historical.metrics.port (or .Values.historical.config.druid_emitter_prometheus_port .Values.configVars.druid_emitter_prometheus_port) }}
+    - port: {{ .Values.historical.metrics.port }}
+      targetPort: {{ default .Values.configVars.druid_emitter_prometheus_port .Values.historical.config.druid_emitter_prometheus_port }}
+      protocol: TCP
+      name: druid-metrics
+  {{- end }}
   selector:
     app: {{ include "druid.name" . }}
     release: {{ .Release.Name }}
