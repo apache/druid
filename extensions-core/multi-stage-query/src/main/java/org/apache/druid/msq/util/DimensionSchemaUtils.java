@@ -57,9 +57,19 @@ public class DimensionSchemaUtils
     );
   }
 
+  /**
+   * Create a dimension schema for a dimension column, given the type that it was assigned in the query, and the
+   * current values of {@link MultiStageQueryContext#CTX_USE_AUTO_SCHEMAS} and
+   * {@link MultiStageQueryContext#CTX_ARRAY_INGEST_MODE}.
+   *
+   * @param column          column name
+   * @param queryType       type of the column from the query
+   * @param useAutoType     active value of {@link MultiStageQueryContext#CTX_USE_AUTO_SCHEMAS}
+   * @param arrayIngestMode active value of {@link MultiStageQueryContext#CTX_ARRAY_INGEST_MODE}
+   */
   public static DimensionSchema createDimensionSchema(
       final String column,
-      @Nullable final ColumnType type,
+      @Nullable final ColumnType queryType,
       boolean useAutoType,
       ArrayIngestMode arrayIngestMode
   )
@@ -67,21 +77,28 @@ public class DimensionSchemaUtils
     if (useAutoType) {
       // for complex types that are not COMPLEX<json>, we still want to use the handler since 'auto' typing
       // only works for the 'standard' built-in types
-      if (type != null && type.is(ValueType.COMPLEX) && !ColumnType.NESTED_DATA.equals(type)) {
-        final ColumnCapabilities capabilities = ColumnCapabilitiesImpl.createDefault().setType(type);
+      if (queryType != null && queryType.is(ValueType.COMPLEX) && !ColumnType.NESTED_DATA.equals(queryType)) {
+        final ColumnCapabilities capabilities = ColumnCapabilitiesImpl.createDefault().setType(queryType);
         return DimensionHandlerUtils.getHandlerFromCapabilities(column, capabilities, null)
                                     .getDimensionSchema(capabilities);
       }
 
-      if (type != null && (type.isPrimitive() || type.isPrimitiveArray())) {
-        return new AutoTypeColumnSchema(column, type);
+      if (queryType != null && (queryType.isPrimitive() || queryType.isPrimitiveArray())) {
+        return new AutoTypeColumnSchema(column, queryType);
       }
       return new AutoTypeColumnSchema(column, null);
     } else {
-      final ColumnType dimensionType = getDimensionType(type, arrayIngestMode);
+      // dimensionType may not be identical to queryType, depending on arrayIngestMode.
+      final ColumnType dimensionType = getDimensionType(queryType, arrayIngestMode);
 
       if (dimensionType.getType() == ValueType.STRING) {
-        return new StringDimensionSchema(column);
+        return new StringDimensionSchema(
+            column,
+            queryType != null && queryType.isArray()
+            ? DimensionSchema.MultiValueHandling.ARRAY
+            : DimensionSchema.MultiValueHandling.SORTED_ARRAY,
+            null
+        );
       } else if (dimensionType.getType() == ValueType.LONG) {
         return new LongDimensionSchema(column);
       } else if (dimensionType.getType() == ValueType.FLOAT) {
