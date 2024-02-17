@@ -100,7 +100,7 @@ public class NestedCommonFormatColumnHandler implements DimensionHandler<Structu
   {
     if (castTo != null) {
       return (s1, s2) ->
-          castTo.getStrategy().compare(
+          castTo.getNullableStrategy().compare(
               StructuredData.unwrap(s1.getObject()),
               StructuredData.unwrap(s2.getObject())
           );
