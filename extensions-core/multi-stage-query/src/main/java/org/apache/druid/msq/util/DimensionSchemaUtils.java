@@ -78,55 +78,74 @@ public class DimensionSchemaUtils
       }
       return new AutoTypeColumnSchema(column, null);
     } else {
-      // if schema information is not available, create a string dimension
-      if (type == null) {
+      final ColumnType dimensionType = getDimensionType(type, arrayIngestMode);
+
+      if (dimensionType.getType() == ValueType.STRING) {
         return new StringDimensionSchema(column);
-      } else if (type.getType() == ValueType.STRING) {
-        return new StringDimensionSchema(column);
-      } else if (type.getType() == ValueType.LONG) {
+      } else if (dimensionType.getType() == ValueType.LONG) {
         return new LongDimensionSchema(column);
-      } else if (type.getType() == ValueType.FLOAT) {
+      } else if (dimensionType.getType() == ValueType.FLOAT) {
         return new FloatDimensionSchema(column);
-      } else if (type.getType() == ValueType.DOUBLE) {
+      } else if (dimensionType.getType() == ValueType.DOUBLE) {
         return new DoubleDimensionSchema(column);
-      } else if (type.getType() == ValueType.ARRAY) {
-        ValueType elementType = type.getElementType().getType();
-        if (elementType == ValueType.STRING) {
-          if (arrayIngestMode == ArrayIngestMode.NONE) {
-            throw InvalidInput.exception(
-                "String arrays can not be ingested when '%s' is set to '%s'. Set '%s' in query context "
-                + "to 'array' to ingest the string array as an array, or ingest it as an MVD by explicitly casting the "
-                + "array to an MVD with ARRAY_TO_MV function.",
-                MultiStageQueryContext.CTX_ARRAY_INGEST_MODE,
-                StringUtils.toLowerCase(arrayIngestMode.name()),
-                MultiStageQueryContext.CTX_ARRAY_INGEST_MODE
-            );
-          } else if (arrayIngestMode == ArrayIngestMode.MVD) {
-            return new StringDimensionSchema(column, DimensionSchema.MultiValueHandling.ARRAY, null);
-          } else {
-            // arrayIngestMode == ArrayIngestMode.ARRAY would be true
-            return new AutoTypeColumnSchema(column, type);
-          }
-        } else if (elementType.isNumeric()) {
-          // ValueType == LONG || ValueType == FLOAT || ValueType == DOUBLE
-          if (arrayIngestMode == ArrayIngestMode.ARRAY) {
-            return new AutoTypeColumnSchema(column, type);
-          } else {
-            throw InvalidInput.exception(
-                "Numeric arrays can only be ingested when '%s' is set to 'array' in the MSQ query's context. "
-                + "Current value of the parameter [%s]",
-                MultiStageQueryContext.CTX_ARRAY_INGEST_MODE,
-                StringUtils.toLowerCase(arrayIngestMode.name())
-            );
-          }
-        } else {
-          throw new ISE("Cannot create dimension for type [%s]", type.toString());
-        }
+      } else if (dimensionType.getType() == ValueType.ARRAY) {
+        return new AutoTypeColumnSchema(column, dimensionType);
       } else {
-        final ColumnCapabilities capabilities = ColumnCapabilitiesImpl.createDefault().setType(type);
+        final ColumnCapabilities capabilities = ColumnCapabilitiesImpl.createDefault().setType(dimensionType);
         return DimensionHandlerUtils.getHandlerFromCapabilities(column, capabilities, null)
                                     .getDimensionSchema(capabilities);
       }
+    }
+  }
+
+  /**
+   * Based on a type from a query result, get the type of dimension we should write.
+   *
+   * @throws org.apache.druid.error.DruidException if there is some problem
+   */
+  public static ColumnType getDimensionType(
+      @Nullable final ColumnType queryType,
+      final ArrayIngestMode arrayIngestMode
+  )
+  {
+    if (queryType == null) {
+      // if schema information is not available, create a string dimension
+      return ColumnType.STRING;
+    } else if (queryType.getType() == ValueType.ARRAY) {
+      ValueType elementType = queryType.getElementType().getType();
+      if (elementType == ValueType.STRING) {
+        if (arrayIngestMode == ArrayIngestMode.NONE) {
+          throw InvalidInput.exception(
+              "String arrays can not be ingested when '%s' is set to '%s'. Set '%s' in query context "
+              + "to 'array' to ingest the string array as an array, or ingest it as an MVD by explicitly casting the "
+              + "array to an MVD with the ARRAY_TO_MV function.",
+              MultiStageQueryContext.CTX_ARRAY_INGEST_MODE,
+              StringUtils.toLowerCase(arrayIngestMode.name()),
+              MultiStageQueryContext.CTX_ARRAY_INGEST_MODE
+          );
+        } else if (arrayIngestMode == ArrayIngestMode.MVD) {
+          return ColumnType.STRING;
+        } else {
+          assert arrayIngestMode == ArrayIngestMode.ARRAY;
+          return queryType;
+        }
+      } else if (elementType.isNumeric()) {
+        // ValueType == LONG || ValueType == FLOAT || ValueType == DOUBLE
+        if (arrayIngestMode == ArrayIngestMode.ARRAY) {
+          return queryType;
+        } else {
+          throw InvalidInput.exception(
+              "Numeric arrays can only be ingested when '%s' is set to 'array'. "
+              + "Current value of the parameter is[%s]",
+              MultiStageQueryContext.CTX_ARRAY_INGEST_MODE,
+              StringUtils.toLowerCase(arrayIngestMode.name())
+          );
+        }
+      } else {
+        throw new ISE("Cannot create dimension for type[%s]", queryType.toString());
+      }
+    } else {
+      return queryType;
     }
   }
 }

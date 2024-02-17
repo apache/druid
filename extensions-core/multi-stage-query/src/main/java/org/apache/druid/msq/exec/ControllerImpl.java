@@ -2131,9 +2131,14 @@ public class ControllerImpl implements Controller
     // deprecation and removal in future
     if (MultiStageQueryContext.getArrayIngestMode(query.context()) == ArrayIngestMode.MVD) {
       log.warn(
-          "'%s' is set to 'mvd' in the query's context. This ingests the string arrays as multi-value "
-          + "strings instead of arrays, and is preserved for legacy reasons when MVDs were the only way to ingest string "
-          + "arrays in Druid. It is incorrect behaviour and will likely be removed in the future releases of Druid",
+          "%s[mvd] is active for this task. This causes string arrays (VARCHAR ARRAY in SQL) to be ingested as "
+          + "multi-value strings rather than true arrays. This behavior may change in a future version of Druid. To be "
+          + "compatible with future behavior changes, we recommend setting %s to[array], which creates a clearer "
+          + "separation between multi-value strings and true arrays. In either[mvd] or[array] mode, you can write "
+          + "out multi-value string dimensions using ARRAY_TO_MV. "
+          + "See https://druid.apache.org/docs/latest/querying/arrays"
+          + "#differences-between-arrays-and-multi-value-dimensions for more details.",
+          MultiStageQueryContext.CTX_ARRAY_INGEST_MODE,
           MultiStageQueryContext.CTX_ARRAY_INGEST_MODE
       );
     }
