@@ -296,7 +296,10 @@ export function getSchemaMode(spec: Partial<IngestionSpec>): SchemaMode {
   return Array.isArray(dimensions) && dimensions.length === 0 ? 'string-only-discovery' : 'fixed';
 }
 
-export function getArrayMode(spec: Partial<IngestionSpec>): ArrayMode {
+export function getArrayMode(
+  spec: Partial<IngestionSpec>,
+  whenUnclear: ArrayMode = 'arrays',
+): ArrayMode {
   const schemaMode = getSchemaMode(spec);
   switch (schemaMode) {
     case 'type-aware-discovery':
@@ -331,7 +334,7 @@ export function getArrayMode(spec: Partial<IngestionSpec>): ArrayMode {
         return 'multi-values';
       }
 
-      return 'arrays';
+      return whenUnclear;
     }
   }
 }
