@@ -45,6 +45,7 @@ public class ArrayLongGroupByColumnSelectorStrategy extends ArrayNumericGroupByC
     } else if (object instanceof List) {
       return addToIndexedDictionary(((List) object).toArray());
     } else if (object instanceof Long[]) {
+      // Defensive check, since we don't usually expect to encounter Long[] objects from selectors
       return addToIndexedDictionary(Arrays.stream((Long[]) object).toArray());
     } else if (object instanceof Object[]) {
       return addToIndexedDictionary((Object[]) object);

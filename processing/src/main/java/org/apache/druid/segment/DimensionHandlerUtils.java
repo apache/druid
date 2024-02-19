@@ -299,8 +299,8 @@ public final class DimensionHandlerUtils
     if (valObj == null) {
       return null;
     } else if (valObj instanceof Object[]) {
-      // TODO(laksh): Get this change vetted
-      return Arrays.toString((Object[]) valObj);
+      // return Arrays.toString((Object[]) valObj);
+      return valObj.toString();
     }
     return valObj.toString();
   }

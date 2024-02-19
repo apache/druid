@@ -45,6 +45,7 @@ public class ArrayDoubleGroupByColumnSelectorStrategy extends ArrayNumericGroupB
     } else if (object instanceof List) {
       return addToIndexedDictionary(((List) object).toArray());
     } else if (object instanceof Double[]) {
+      // Defensive check, since we don't usually expect to encounter Double[] objects from selectors
       return addToIndexedDictionary(Arrays.stream((Double[]) object).toArray());
     } else if (object instanceof Object[]) {
       return addToIndexedDictionary((Object[]) object);
