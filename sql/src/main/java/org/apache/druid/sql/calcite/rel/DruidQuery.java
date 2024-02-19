@@ -1715,7 +1715,7 @@ public class DruidQuery
     // Compute the signature of the columns that we are selecting.
     final RowSignature.Builder builder = RowSignature.builder();
 
-    RowSignatureMode mode = query.context().getRowSignatureMode();
+    RowSignatureMode mode = plannerContext.getRowSignatureMode();
 
     for (final String columnName : columns) {
       final ColumnCapabilities capabilities =

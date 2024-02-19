@@ -175,8 +175,7 @@ public class QueryContexts
     /**
      * Encountering invalid types results in an Exception.
      */
-    STRICT
-    {
+    STRICT {
       @Override
       public ColumnType getTypeForNullColumn(String columnName)
       {
@@ -186,8 +185,7 @@ public class QueryContexts
     /**
      * Null types are allowed in the signature.
      */
-    ALLOW_NULL
-    {
+    ALLOW_NULL {
       @Override
       public ColumnType getTypeForNullColumn(String columnName)
       {
@@ -197,8 +195,7 @@ public class QueryContexts
     /**
      * Unknown types will have {@link ColumnType#STRING}
      */
-    RESORT_TO_STRING
-    {
+    RESORT_TO_STRING {
       @Override
       public ColumnType getTypeForNullColumn(String columnName)
       {

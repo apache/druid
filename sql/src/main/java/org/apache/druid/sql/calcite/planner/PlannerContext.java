@@ -37,6 +37,7 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContexts.RowSignatureMode;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
@@ -635,5 +636,15 @@ public class PlannerContext
     }
 
     return lookupCache.getLookup(lookupName);
+  }
+
+  public RowSignatureMode getRowSignatureMode()
+  {
+    return QueryContexts.getAsEnum(
+        QueryContexts.ROW_SIGNATURE_MODE,
+        queryContext.get(QueryContexts.ROW_SIGNATURE_MODE),
+        RowSignatureMode.class,
+        QueryContexts.DEFAULT_ROW_SIGNATURE_MODE
+    );
   }
 }
