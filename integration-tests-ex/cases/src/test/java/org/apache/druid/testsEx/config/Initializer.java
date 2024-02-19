@@ -71,6 +71,7 @@ import org.apache.druid.metadata.storage.mysql.MySQLConnector;
 import org.apache.druid.metadata.storage.mysql.MySQLConnectorDriverConfig;
 import org.apache.druid.metadata.storage.mysql.MySQLConnectorSslConfig;
 import org.apache.druid.metadata.storage.mysql.MySQLMetadataStorageModule;
+import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.IntegrationTestingConfigProvider;
@@ -499,6 +500,7 @@ public class Initializer
             new LegacyBrokerParallelMergeConfigModule(),
             // Dependencies from other modules
             new StorageNodeModule(),
+            new MSQExternalDataSourceModule(),
 
             // Test-specific items, including bits copy/pasted
             // from modules that don't play well in a client setting.

@@ -3105,45 +3105,59 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     final List<ListenableFuture<Map<PartitionIdType, SequenceOffsetType>>> futures = new ArrayList<>();
     final List<Integer> futureGroupIds = new ArrayList<>();
 
-    boolean stopTasksEarly = false;
+    boolean stopTasksEarly;
     if (earlyStopTime != null && (earlyStopTime.isBeforeNow() || earlyStopTime.isEqualNow())) {
       log.info("Early stop requested - signalling tasks to complete");
 
       earlyStopTime = null;
       stopTasksEarly = true;
+    } else {
+      stopTasksEarly = false;
     }
 
-    int stoppedTasks = 0;
-    for (Entry<Integer, TaskGroup> entry : activelyReadingTaskGroups.entrySet()) {
-      Integer groupId = entry.getKey();
-      TaskGroup group = entry.getValue();
+    AtomicInteger stoppedTasks = new AtomicInteger();
+    // Sort task groups by start time to prioritize early termination of earlier groups, then iterate for processing
+    activelyReadingTaskGroups
+        .entrySet().stream().sorted(
+            Comparator.comparingLong(
+                (Entry<Integer, TaskGroup> entry) ->
+                    computeEarliestTaskStartTime(entry.getValue())
+                        .getMillis()))
+        .forEach(entry -> {
+          Integer groupId = entry.getKey();
+          TaskGroup group = entry.getValue();
 
-      if (stopTasksEarly) {
-        log.info("Stopping task group [%d] early. It has run for [%s]", groupId, ioConfig.getTaskDuration());
-        futureGroupIds.add(groupId);
-        futures.add(checkpointTaskGroup(group, true));
-      } else {
-        // find the longest running task from this group
-        DateTime earliestTaskStart = DateTimes.nowUtc();
-        for (TaskData taskData : group.tasks.values()) {
-          if (taskData.startTime != null && earliestTaskStart.isAfter(taskData.startTime)) {
-            earliestTaskStart = taskData.startTime;
-          }
-        }
-
-        if (earliestTaskStart.plus(ioConfig.getTaskDuration()).isBeforeNow()) {
-          // if this task has run longer than the configured duration
-          // as long as the pending task groups are less than the configured stop task count.
-          if (pendingCompletionTaskGroups.values().stream().mapToInt(CopyOnWriteArrayList::size).sum() + stoppedTasks
-                 < ioConfig.getStopTaskCount()) {
-            log.info("Task group [%d] has run for [%s]. Stopping.", groupId, ioConfig.getTaskDuration());
+          if (stopTasksEarly) {
+            log.info(
+                "Stopping task group [%d] early. It has run for [%s]",
+                groupId,
+                ioConfig.getTaskDuration()
+            );
             futureGroupIds.add(groupId);
             futures.add(checkpointTaskGroup(group, true));
-            stoppedTasks++;
+          } else {
+            DateTime earliestTaskStart = computeEarliestTaskStartTime(group);
+
+            if (earliestTaskStart.plus(ioConfig.getTaskDuration()).isBeforeNow()) {
+              // if this task has run longer than the configured duration
+              // as long as the pending task groups are less than the configured stop task count.
+              if (pendingCompletionTaskGroups.values()
+                                             .stream()
+                                             .mapToInt(CopyOnWriteArrayList::size)
+                                             .sum() + stoppedTasks.get()
+                  < ioConfig.getMaxAllowedStops()) {
+                log.info(
+                    "Task group [%d] has run for [%s]. Stopping.",
+                    groupId,
+                    ioConfig.getTaskDuration()
+                );
+                futureGroupIds.add(groupId);
+                futures.add(checkpointTaskGroup(group, true));
+                stoppedTasks.getAndIncrement();
+              }
+            }
           }
-        }
-      }
-    }
+        });
 
     List<Either<Throwable, Map<PartitionIdType, SequenceOffsetType>>> results = coalesceAndAwait(futures);
     for (int j = 0; j < results.size(); j++) {
@@ -3198,6 +3212,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       // remove this task group from the list of current task groups now that it has been handled
       activelyReadingTaskGroups.remove(groupId);
     }
+  }
+
+  private DateTime computeEarliestTaskStartTime(TaskGroup group)
+  {
+    return group.tasks.values().stream()
+                      .filter(taskData -> taskData.startTime != null)
+                      .map(taskData -> taskData.startTime)
+                      .min(DateTime::compareTo)
+                      .orElse(DateTimes.nowUtc());
   }
 
   private ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> checkpointTaskGroup(

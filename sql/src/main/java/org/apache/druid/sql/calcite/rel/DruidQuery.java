@@ -108,6 +108,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -1494,7 +1495,7 @@ public class DruidQuery
   {
     if (sorting == null
         || sorting.getOrderBys().isEmpty()
-        || sorting.getProjection() != null) {
+        || (sorting.getProjection() != null && !sorting.getProjection().getVirtualColumns().isEmpty())) {
       return null;
     }
 
@@ -1515,13 +1516,25 @@ public class DruidQuery
     List<OperatorFactory> operators = new ArrayList<>();
 
     operators.add(new NaiveSortOperatorFactory(sortColumns));
-    if (!sorting.getOffsetLimit().isNone()) {
+
+
+    final Projection projection = sorting.getProjection();
+
+    final org.apache.druid.query.operator.OffsetLimit offsetLimit = sorting.getOffsetLimit().isNone()
+        ? null
+        : sorting.getOffsetLimit().toOperatorOffsetLimit();
+
+    final List<String> projectedColumns = projection == null
+        ? null
+        : projection.getOutputRowSignature().getColumnNames();
+
+    if (offsetLimit != null || projectedColumns != null) {
       operators.add(
           new ScanOperatorFactory(
               null,
               null,
-              sorting.getOffsetLimit().toOperatorOffsetLimit(),
-              null,
+              offsetLimit,
+              projectedColumns,
               null,
               null
           )

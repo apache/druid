@@ -656,7 +656,7 @@ public abstract class ExprEval<T>
     if (valueToCompare.isArray() && !typeToCompareWith.isArray()) {
       final Object[] array = valueToCompare.asArray();
       // cannot cast array to scalar if array length is greater than 1
-      if (array != null && array.length > 1) {
+      if (array != null && array.length != 1) {
         return null;
       }
     }

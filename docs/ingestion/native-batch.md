@@ -95,6 +95,9 @@ The `maxNumConcurrentSubTasks` in the `tuningConfig` determines the number of co
 
 By default, JSON-based batch ingestion replaces all data in the intervals in your `granularitySpec` for any segment that it writes to. If you want to add to the segment instead, set the `appendToExisting` flag in the `ioConfig`. JSON-based batch ingestion only replaces data in segments where it actively adds data. If there are segments in the intervals for your `granularitySpec` that don't have data from a task, they remain unchanged. If any existing segments partially overlap with the intervals in the `granularitySpec`, the portion of those segments outside the interval for the new spec remain visible.
 
+You can also perform concurrent append and replace tasks. For more information, see [Concurrent append and replace](./concurrent-append-replace.md)
+
+
 #### Fully replacing existing segments using tombstones
 
 :::info
