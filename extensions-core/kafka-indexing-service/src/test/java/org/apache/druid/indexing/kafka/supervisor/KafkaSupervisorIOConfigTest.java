@@ -79,6 +79,8 @@ public class KafkaSupervisorIOConfigTest
     Assert.assertNull(config.getTopicPattern());
     Assert.assertEquals(1, (int) config.getReplicas());
     Assert.assertEquals(1, (int) config.getTaskCount());
+    Assert.assertNull(config.getStopTaskCount());
+    Assert.assertEquals((int) config.getTaskCount(), config.getMaxAllowedStops());
     Assert.assertEquals(Duration.standardMinutes(60), config.getTaskDuration());
     Assert.assertEquals(ImmutableMap.of("bootstrap.servers", "localhost:9092"), config.getConsumerProperties());
     Assert.assertEquals(100, config.getPollTimeout());
