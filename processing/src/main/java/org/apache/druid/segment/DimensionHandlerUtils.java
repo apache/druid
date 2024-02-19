@@ -299,8 +299,7 @@ public final class DimensionHandlerUtils
     if (valObj == null) {
       return null;
     } else if (valObj instanceof Object[]) {
-      // return Arrays.toString((Object[]) valObj);
-      return valObj.toString();
+      return Arrays.toString((Object[]) valObj);
     }
     return valObj.toString();
   }
@@ -475,14 +474,15 @@ public final class DimensionHandlerUtils
                .compare(convertObjectToType(lhs, type), convertObjectToType(rhs, type));
   }
 
-  // TODO(laksh): Explain why coercion is needed
   @Nullable
   public static Object convertObjectToType(@Nullable final Object obj, final TypeSignature<ValueType> type)
   {
     return convertObjectToType(obj, Preconditions.checkNotNull(type, "type"), false);
   }
 
-  // TODO(laksh): TopN specific method
+  /**
+   * Used by TopN engine for type coercion
+   */
   public static Function<Object, Object> converterFromTypeToType(
       final TypeSignature<ValueType> fromType,
       final TypeSignature<ValueType> toType

@@ -42,7 +42,7 @@ import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.ColumnSelectorPlus;
-import org.apache.druid.query.ComparisonUtils;
+import org.apache.druid.query.DimensionComparisonUtils;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.GroupingAggregatorFactory;
@@ -1127,7 +1127,7 @@ public class RowBasedGrouperHelper
               DimensionHandlerUtils.convertObjectToType(rhs, fieldType)
           );
         } else if (fieldType.equals(ColumnType.STRING_ARRAY)) {
-          cmp = new ComparisonUtils.ListComparator<String>(
+          cmp = new DimensionComparisonUtils.ArrayComparator<String>(
               comparator == null ? StringComparators.LEXICOGRAPHIC : comparator
           ).compare(
               DimensionHandlerUtils.coerceToStringArray(lhs),
@@ -1448,7 +1448,7 @@ public class RowBasedGrouperHelper
               return new ArrayNumericRowBasedKeySerdeHelper(
                   keyBufferPosition,
                   stringComparator,
-                  valueType.getElementType()
+                  valueType
               );
             default:
               throw new IAE("invalid type: %s", valueType);
@@ -1532,16 +1532,26 @@ public class RowBasedGrouperHelper
       public ArrayNumericRowBasedKeySerdeHelper(
           int keyBufferPosition,
           @Nullable StringComparator stringComparator,
-          TypeSignature<ValueType> elementType
+          ColumnType arrayType
       )
       {
         this.keyBufferPosition = keyBufferPosition;
-        this.bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) ->
-            new ComparisonUtils.NumericListComparatorForStringElementComparator(stringComparator).compare(
+        this.elementType = arrayType.getElementType();
+        this.bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
+          if (stringComparator == null
+              || StringComparators.NUMERIC.equals(stringComparator)
+              || StringComparators.NATURAL.equals(stringComparator)) {
+            return arrayType.getNullableStrategy().compare(
                 getDictionaryForType(elementType).get(lhsBuffer.getInt(lhsPosition + keyBufferPosition)),
                 getDictionaryForType(elementType).get(rhsBuffer.getInt(rhsPosition + keyBufferPosition))
             );
-        this.elementType = elementType;
+          } else {
+            return new DimensionComparisonUtils.ArrayComparatorForUnnaturalStringComparator(stringComparator).compare(
+                getDictionaryForType(elementType).get(lhsBuffer.getInt(lhsPosition + keyBufferPosition)),
+                getDictionaryForType(elementType).get(rhsBuffer.getInt(rhsPosition + keyBufferPosition))
+            );
+          }
+        };
       }
 
       private List<Object[]> getDictionaryForType(TypeSignature<ValueType> elementType)
@@ -1618,7 +1628,7 @@ public class RowBasedGrouperHelper
       {
         this.keyBufferPosition = keyBufferPosition;
         bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) ->
-            new ComparisonUtils.ListComparator<String>(stringComparator == null ? StringComparators.LEXICOGRAPHIC : stringComparator)
+            new DimensionComparisonUtils.ArrayComparator<String>(stringComparator == null ? StringComparators.LEXICOGRAPHIC : stringComparator)
                 .compare(
                     stringArrayDictionary.get(lhsBuffer.getInt(lhsPosition + keyBufferPosition)),
                     stringArrayDictionary.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition))

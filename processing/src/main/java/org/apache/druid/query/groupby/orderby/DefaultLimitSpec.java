@@ -37,7 +37,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.TopNSequence;
-import org.apache.druid.query.ComparisonUtils;
+import org.apache.druid.query.DimensionComparisonUtils;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
@@ -432,27 +432,44 @@ public class DefaultLimitSpec implements LimitSpec
   private Ordering<ResultRow> dimensionOrdering(
       final int column,
       final ColumnType columnType,
-      final StringComparator comparator
+      final StringComparator stringComparator
   )
   {
     Comparator arrayComparator = null;
     if (columnType.isArray()) {
       final TypeSignature<ValueType> elementType = columnType.getElementType();
       if (columnType.getElementType().isNumeric()) {
-        arrayComparator = (o1, o2) ->
-            new ComparisonUtils.NumericListComparatorForStringElementComparator(comparator)
-                .compare(
-                    DimensionHandlerUtils.convertToArray(o1, elementType),
-                    DimensionHandlerUtils.convertToArray(o2, elementType)
-                );
+        arrayComparator = (o1, o2) -> {
+          if (stringComparator == null
+              || StringComparators.NUMERIC.equals(stringComparator)
+              || StringComparators.NATURAL.equals(stringComparator)) {
+            return columnType.getNullableStrategy().compare(
+                DimensionHandlerUtils.convertToArray(o1, elementType),
+                DimensionHandlerUtils.convertToArray(o2, elementType)
+            );
+          }
+          return new DimensionComparisonUtils.ArrayComparatorForUnnaturalStringComparator(stringComparator)
+              .compare(
+                  DimensionHandlerUtils.convertToArray(o1, elementType),
+                  DimensionHandlerUtils.convertToArray(o2, elementType)
+              );
+        };
       } else if (columnType.getElementType().equals(ColumnType.STRING)) {
-        arrayComparator = (o1, o2) ->
-            new ComparisonUtils.ListComparator<String>(
-                comparator == null ? StringComparators.LEXICOGRAPHIC : comparator)
-                .compare(
-                    DimensionHandlerUtils.coerceToStringArray(o1),
-                    DimensionHandlerUtils.coerceToStringArray(o2)
-                );
+        arrayComparator = (o1, o2) -> {
+          if (stringComparator == null
+              || StringComparators.NATURAL.equals(stringComparator)
+              || StringComparators.LEXICOGRAPHIC.equals(stringComparator)) {
+            return columnType.getNullableStrategy().compare(
+                DimensionHandlerUtils.coerceToStringArray(o1),
+                DimensionHandlerUtils.coerceToStringArray(o2)
+            );
+          }
+          return new DimensionComparisonUtils.ArrayComparator<String>(stringComparator)
+              .compare(
+                  DimensionHandlerUtils.coerceToStringArray(o1),
+                  DimensionHandlerUtils.coerceToStringArray(o2)
+              );
+        };
       } else {
         throw new ISE("Cannot create comparator for array type %s.", columnType.toString());
       }
@@ -466,7 +483,7 @@ public class DefaultLimitSpec implements LimitSpec
                 return getDimensionValue(row, column);
               }
             },
-            Comparator.nullsFirst(arrayComparator == null ? comparator : arrayComparator)
+            Comparator.nullsFirst(arrayComparator == null ? stringComparator : arrayComparator)
         )
     );
   }
