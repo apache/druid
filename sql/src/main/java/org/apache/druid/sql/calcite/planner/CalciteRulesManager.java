@@ -248,7 +248,7 @@ public class CalciteRulesManager
         ),
         Programs.sequence(
             druidPreProgram,
-            buildBaseRuleSetProgram(plannerContext),
+            buildDecoupledLogicalOptimizationProgram(plannerContext),
             new LoggingProgram("After baseRuleSet program", isDebug),
             Programs.ofRules(logicalConventionRuleSet(plannerContext)),
             new LoggingProgram("After logical volcano planner program", isDebug)
@@ -256,7 +256,7 @@ public class CalciteRulesManager
     );
   }
 
-  private Program buildBaseRuleSetProgram(PlannerContext plannerContext)
+  private Program buildDecoupledLogicalOptimizationProgram(PlannerContext plannerContext)
   {
     final HepProgramBuilder builder = HepProgram.builder();
     builder.addMatchLimit(CalciteRulesManager.HEP_DEFAULT_MATCH_LIMIT);
