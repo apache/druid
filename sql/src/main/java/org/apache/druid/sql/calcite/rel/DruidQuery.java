@@ -52,6 +52,7 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts.RowSignatureMode;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnnestDataSource;
@@ -1714,24 +1715,19 @@ public class DruidQuery
     // Compute the signature of the columns that we are selecting.
     final RowSignature.Builder builder = RowSignature.builder();
 
+    RowSignatureMode mode = query.context().getRowSignatureMode();
+
     for (final String columnName : columns) {
       final ColumnCapabilities capabilities =
-          virtualColumns.getColumnCapabilitiesWithoutFallback(sourceRowSignature, columnName);
+          virtualColumns.getColumnCapabilitiesWithFallback(sourceRowSignature, columnName);
+
+      final ColumnType columnType;
       if (capabilities == null) {
-        Optional<ColumnType> columnType = sourceRowSignature.getColumnType(columnName);
-        if (columnType.isPresent()) {
-          builder.add(columnName, columnType.get());
-        } else {
-          if (sourceRowSignature.contains(columnName)) {
-            builder.add(columnName, null);
-          } else {
-            // No type for this column. This is a planner bug.
-            throw new ISE("No type for column [%s]", columnName);
-          }
-        }
+        columnType = mode.getTypeForNullColumn(columnName);
       } else {
-        builder.add(columnName, capabilities.toColumnType());
+        columnType = capabilities.toColumnType();
       }
+      builder.add(columnName, columnType);
     }
     return builder.build();
   }

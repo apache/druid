@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.query.QueryContexts.RowSignatureMode;
 import org.apache.druid.query.QueryContexts.Vectorize;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 
@@ -622,5 +623,14 @@ public class QueryContext
     return "QueryContext{" +
            "context=" + context +
            '}';
+  }
+
+  public RowSignatureMode getRowSignatureMode()
+  {
+    return getEnum(
+        QueryContexts.ROW_SIGNATURE_MODE,
+        RowSignatureMode.class,
+        QueryContexts.DEFAULT_ROW_SIGNATURE_MODE
+    );
   }
 }
