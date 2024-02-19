@@ -372,7 +372,9 @@ public class CliCoordinator extends ServerRunnable
     );
 
     if (beOverlord) {
-      modules.addAll(new CliOverlord().getModules(false));
+      CliOverlord cliOverlord = new CliOverlord();
+      cliOverlord.configure(properties);
+      modules.addAll(cliOverlord.getModules(false));
     } else {
       // Only add LookupSerdeModule if !beOverlord, since CliOverlord includes it, and having two copies causes
       // the injector to get confused due to having multiple bindings for the same classes.

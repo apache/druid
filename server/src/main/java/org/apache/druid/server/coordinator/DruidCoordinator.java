@@ -214,6 +214,8 @@ public class DruidCoordinator
     this.loadQueueManager = loadQueueManager;
     this.schemaManager = schemaManager;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
+
+    log.info("CentralizedDataSourceSchemaProp is [%s]", centralizedDatasourceSchemaConfig.isEnabled());
   }
 
   public boolean isLeader()
@@ -561,8 +563,7 @@ public class DruidCoordinator
         new KillAuditLog(config, metadataManager.audit()),
         new KillRules(config, metadataManager.rules()),
         new KillDatasourceMetadata(config, metadataManager.indexer(), metadataManager.supervisors()),
-        new KillCompactionConfig(config, metadataManager.segments(), metadataManager.configs()),
-        new KillUnreferencedSegmentSchemas(schemaManager)
+        new KillCompactionConfig(config, metadataManager.segments(), metadataManager.configs())
     );
 
     if (centralizedDatasourceSchemaConfig.isEnabled()) {
@@ -784,4 +785,3 @@ public class DruidCoordinator
 
   }
 }
-

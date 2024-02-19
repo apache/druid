@@ -1851,9 +1851,7 @@ public class ControllerImpl implements Controller
                              new SegmentGeneratorFrameProcessorFactory(
                                  dataSchema,
                                  columnMappings,
-                                 tuningConfig,
-                                 jsonMapper,
-                                 CentralizedDatasourceSchemaConfig.create()
+                                 tuningConfig
                              )
                          )
       );

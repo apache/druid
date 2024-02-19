@@ -38,7 +38,9 @@ import com.google.inject.name.Names;
 import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.util.Providers;
 import org.apache.druid.client.indexing.IndexingService;
+import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.IndexingServiceFirehoseModule;
 import org.apache.druid.guice.IndexingServiceInputSourceModule;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
@@ -52,6 +54,7 @@ import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ListProvider;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.PolyBind;
+import org.apache.druid.guice.ServerViewModule;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.TaskStorageDirTracker;
@@ -101,10 +104,12 @@ import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.indexing.worker.shuffle.DeepStorageIntermediaryDataManager;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.indexing.worker.shuffle.LocalIntermediaryDataManager;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.DummyForInjectionAppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
@@ -156,6 +161,8 @@ public class CliOverlord extends ServerRunnable
       "/status/health"
   );
 
+  private Properties properties;
+
   public CliOverlord()
   {
     super(log);
@@ -171,6 +178,12 @@ public class CliOverlord extends ServerRunnable
   protected List<? extends Module> getModules()
   {
     return getModules(true);
+  }
+
+  @Inject
+  public void configure(Properties properties)
+  {
+    this.properties = properties;
   }
 
   protected List<? extends Module> getModules(final boolean standalone)
@@ -189,6 +202,29 @@ public class CliOverlord extends ServerRunnable
               binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8290);
             }
 
+            String serverViewType = (String) properties.getOrDefault(
+                ServerViewModule.SERVERVIEW_TYPE_PROPERTY,
+                ServerViewModule.DEFAULT_SERVERVIEW_TYPE
+            );
+
+            if (Boolean.parseBoolean(properties.getProperty(CliCoordinator.CENTRALIZED_DATASOURCE_SCHEMA_ENABLED))
+                && !serverViewType.equals(ServerViewModule.SERVERVIEW_TYPE_HTTP)) {
+              throw DruidException
+                  .forPersona(DruidException.Persona.ADMIN)
+                  .ofCategory(DruidException.Category.UNSUPPORTED)
+                  .build(
+                      StringUtils.format(
+                          "CentralizedDatasourceSchema feature is incompatible with config %1$s=%2$s. "
+                          + "Please consider switching to http based segment discovery (set %1$s=%3$s) "
+                          + "or disable the feature (set %4$s=false).",
+                          ServerViewModule.SERVERVIEW_TYPE_PROPERTY,
+                          serverViewType,
+                          ServerViewModule.SERVERVIEW_TYPE_HTTP,
+                          CliCoordinator.CENTRALIZED_DATASOURCE_SCHEMA_ENABLED
+                      ));
+            }
+
+            JsonConfigProvider.bind(binder, "druid.centralizedDatasourceSchema", CentralizedDatasourceSchemaConfig.class);
             JsonConfigProvider.bind(binder, "druid.coordinator.asOverlord", CoordinatorOverlordServiceConfig.class);
             JsonConfigProvider.bind(binder, "druid.indexer.queue", TaskQueueConfig.class);
             JsonConfigProvider.bind(binder, "druid.indexer.tasklock", TaskLockConfig.class);

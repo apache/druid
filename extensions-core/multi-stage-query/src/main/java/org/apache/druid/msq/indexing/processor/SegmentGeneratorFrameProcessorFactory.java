@@ -83,23 +83,17 @@ public class SegmentGeneratorFrameProcessorFactory
   private final DataSchema dataSchema;
   private final ColumnMappings columnMappings;
   private final MSQTuningConfig tuningConfig;
-  private ObjectMapper mapper;
-  private CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
   @JsonCreator
   public SegmentGeneratorFrameProcessorFactory(
       @JsonProperty("dataSchema") final DataSchema dataSchema,
       @JsonProperty("columnMappings") final ColumnMappings columnMappings,
-      @JsonProperty("tuningConfig") final MSQTuningConfig tuningConfig,
-      @JsonProperty("mapper") final ObjectMapper mapper,
-      @JsonProperty("centralizedDatasourceSchemaConfig") final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+      @JsonProperty("tuningConfig") final MSQTuningConfig tuningConfig
   )
   {
     this.dataSchema = Preconditions.checkNotNull(dataSchema, "dataSchema");
     this.columnMappings = Preconditions.checkNotNull(columnMappings, "columnMappings");
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
-    this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
-    this.mapper = mapper;
   }
 
   @JsonProperty
@@ -201,7 +195,7 @@ public class SegmentGeneratorFrameProcessorFactory
                   meters,
                   parseExceptionHandler,
                   true,
-                  centralizedDatasourceSchemaConfig
+                  CentralizedDatasourceSchemaConfig.create()
               );
 
           return new SegmentGeneratorFrameProcessor(
