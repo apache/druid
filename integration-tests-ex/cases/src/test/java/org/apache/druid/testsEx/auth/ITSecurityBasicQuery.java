@@ -239,4 +239,41 @@ public class ITSecurityBasicQuery
 
     Assert.assertEquals(HttpResponseStatus.FORBIDDEN, statusResponseHolder.getStatus());
   }
+
+  @Test
+  public void testExportWithPermissions() throws IOException, ExecutionException, InterruptedException
+  {
+    // No external write permissions for s3
+    List<ResourceAction> permissions = ImmutableList.of(
+        new ResourceAction(new Resource(".*", "DATASOURCE"), Action.READ),
+        new ResourceAction(new Resource("EXTERNAL", "EXTERNAL"), Action.READ),
+        new ResourceAction(new Resource(LocalFileExportStorageProvider.TYPE_NAME, "EXTERNAL"), Action.WRITE),
+        new ResourceAction(new Resource("STATE", "STATE"), Action.READ),
+        new ResourceAction(new Resource(".*", "DATASOURCE"), Action.WRITE)
+    );
+    securityClient.setPermissionsToRole(ROLE_1, permissions);
+
+    String exportQuery =
+        StringUtils.format(
+            "INSERT INTO extern(%s(exportPath => '%s'))\n"
+            + "AS CSV\n"
+            + "SELECT page, added, delta\n"
+            + "FROM TABLE(\n"
+            + "  EXTERN(\n"
+            + "    '{\"type\":\"local\",\"files\":[\"/resources/data/batch_index/json/wikipedia_index_data1.json\"]}',\n"
+            + "    '{\"type\":\"json\"}',\n"
+            + "    '[{\"type\":\"string\",\"name\":\"timestamp\"},{\"type\":\"string\",\"name\":\"isRobot\"},{\"type\":\"string\",\"name\":\"diffUrl\"},{\"type\":\"long\",\"name\":\"added\"},{\"type\":\"string\",\"name\":\"countryIsoCode\"},{\"type\":\"string\",\"name\":\"regionName\"},{\"type\":\"string\",\"name\":\"channel\"},{\"type\":\"string\",\"name\":\"flags\"},{\"type\":\"long\",\"name\":\"delta\"},{\"type\":\"string\",\"name\":\"isUnpatrolled\"},{\"type\":\"string\",\"name\":\"isNew\"},{\"type\":\"double\",\"name\":\"deltaBucket\"},{\"type\":\"string\",\"name\":\"isMinor\"},{\"type\":\"string\",\"name\":\"isAnonymous\"},{\"type\":\"long\",\"name\":\"deleted\"},{\"type\":\"string\",\"name\":\"cityName\"},{\"type\":\"long\",\"name\":\"metroCode\"},{\"type\":\"string\",\"name\":\"namespace\"},{\"type\":\"string\",\"name\":\"comment\"},{\"type\":\"string\",\"name\":\"page\"},{\"type\":\"long\",\"name\":\"commentLength\"},{\"type\":\"string\",\"name\":\"countryName\"},{\"type\":\"string\",\"name\":\"user\"},{\"type\":\"string\",\"name\":\"regionIsoCode\"}]'\n"
+            + "  )\n"
+            + ")\n",
+            LocalFileExportStorageProvider.TYPE_NAME, "/shared/export/"
+        );
+
+    StatusResponseHolder statusResponseHolder = msqHelper.submitMsqTask(
+        new SqlQuery(exportQuery, null, false, false, false, ImmutableMap.of(), ImmutableList.of()),
+        USER_1,
+        USER_1_PASSWORD
+    );
+
+    Assert.assertEquals(HttpResponseStatus.ACCEPTED, statusResponseHolder.getStatus());
+  }
 }
