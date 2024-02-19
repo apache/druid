@@ -26,7 +26,7 @@ import org.apache.druid.frame.write.columnar.FrameColumnWriters;
 import org.apache.druid.segment.column.ColumnType;
 
 /**
- * Reaaers for columns written by {@link org.apache.druid.frame.write.columnar.DoubleArrayFrameColumnWriter}
+ * Reader for columns written by {@link org.apache.druid.frame.write.columnar.DoubleArrayFrameColumnWriter}
  *
  * @see NumericArrayFrameColumnReader
  * @see org.apache.druid.frame.write.columnar.NumericArrayFrameColumnWriter for column's layout in memory

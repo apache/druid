@@ -201,8 +201,10 @@ public class StringFrameColumnReader implements FrameColumnReader
     final int totalNumValues;
 
     if (multiValue) {
-      totalNumValues = FrameColumnReaderUtils.adjustCumulativeRowLength(
-          FrameColumnReaderUtils.getCumulativeRowLength(memory, getStartOfCumulativeLengthSection(), numRows - 1)
+      totalNumValues = FrameColumnReaderUtils.getAdjustedCumulativeRowLength(
+          memory,
+          getStartOfCumulativeLengthSection(),
+          numRows - 1
       );
     } else {
       totalNumValues = numRows;
@@ -473,12 +475,11 @@ public class StringFrameColumnReader implements FrameColumnReader
         } else if (physicalRow == 0) {
           rowLength = cumulativeRowLength;
         } else {
-          rowLength = cumulativeRowLength - FrameColumnReaderUtils.adjustCumulativeRowLength(
-              FrameColumnReaderUtils.getCumulativeRowLength(
-                  memory,
-                  getStartOfCumulativeLengthSection(),
-                  physicalRow - 1
-              ));
+          rowLength = cumulativeRowLength - FrameColumnReaderUtils.getAdjustedCumulativeRowLength(
+              memory,
+              getStartOfCumulativeLengthSection(),
+              physicalRow - 1
+          );
         }
 
         if (rowLength == 0) {
