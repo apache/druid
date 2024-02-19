@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator.duty;
 
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.metadata.SchemaManager;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 
@@ -29,6 +30,7 @@ import javax.annotation.Nullable;
  */
 public class KillUnreferencedSegmentSchemas implements CoordinatorDuty
 {
+  private static final Logger log = new Logger(KillUnreferencedSegmentSchemas.class);
   private final SchemaManager schemaManager;
 
   public KillUnreferencedSegmentSchemas(SchemaManager schemaManager)
@@ -40,7 +42,8 @@ public class KillUnreferencedSegmentSchemas implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    schemaManager.cleanUpUnreferencedSchema();
+    int deleted = schemaManager.cleanUpUnreferencedSchema();
+    log.info("Cleaned up [%d] unreferenced schemas from the DB.", deleted);
     // todo should retrigger schema poll from db?
     return params;
   }

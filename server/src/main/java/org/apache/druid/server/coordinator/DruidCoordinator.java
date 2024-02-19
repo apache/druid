@@ -51,6 +51,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SchemaManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
@@ -151,6 +152,7 @@ public class DruidCoordinator
   private final DruidLeaderSelector coordLeaderSelector;
   private final CompactSegments compactSegments;
   private final SchemaManager schemaManager;
+  private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
   private volatile boolean started = false;
 
@@ -189,7 +191,8 @@ public class DruidCoordinator
       LookupCoordinatorManager lookupCoordinatorManager,
       @Coordinator DruidLeaderSelector coordLeaderSelector,
       CompactionSegmentSearchPolicy compactionSegmentSearchPolicy,
-      SchemaManager schemaManager
+      SchemaManager schemaManager,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     this.config = config;
@@ -210,6 +213,7 @@ public class DruidCoordinator
     this.compactSegments = initializeCompactSegmentsDuty(compactionSegmentSearchPolicy);
     this.loadQueueManager = loadQueueManager;
     this.schemaManager = schemaManager;
+    this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
   }
 
   public boolean isLeader()
@@ -552,7 +556,7 @@ public class DruidCoordinator
 
   private List<CoordinatorDuty> makeMetadataStoreManagementDuties()
   {
-    return Arrays.asList(
+    List<CoordinatorDuty> duties = Arrays.asList(
         new KillSupervisors(config, metadataManager.supervisors()),
         new KillAuditLog(config, metadataManager.audit()),
         new KillRules(config, metadataManager.rules()),
@@ -560,6 +564,11 @@ public class DruidCoordinator
         new KillCompactionConfig(config, metadataManager.segments(), metadataManager.configs()),
         new KillUnreferencedSegmentSchemas(schemaManager)
     );
+
+    if (centralizedDatasourceSchemaConfig.isEnabled()) {
+      duties.add(new KillUnreferencedSegmentSchemas(schemaManager));
+    }
+    return duties;
   }
 
   @VisibleForTesting

@@ -69,9 +69,9 @@ public class SchemaManager
     this.connector = connector;
   }
 
-  public void cleanUpUnreferencedSchema()
+  public int cleanUpUnreferencedSchema()
   {
-    connector.retryTransaction(
+    return connector.retryTransaction(
         (handle, transactionStatus) -> {
           Update deleteStatement = handle.createStatement(
               StringUtils.format("DELETE FROM %1$s WHERE id NOT IN (SELECT schema_id FROM %2$s)",
