@@ -209,6 +209,7 @@ public class QueryContexts
       return Vectorize.valueOf(StringUtils.toUpperCase(str));
     }
 
+    @Override
     @JsonValue
     public String toString()
     {
