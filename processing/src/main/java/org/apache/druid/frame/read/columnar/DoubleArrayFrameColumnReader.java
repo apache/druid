@@ -25,6 +25,12 @@ import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.write.columnar.FrameColumnWriters;
 import org.apache.druid.segment.column.ColumnType;
 
+/**
+ * Reaaers for columns written by {@link org.apache.druid.frame.write.columnar.DoubleArrayFrameColumnWriter}
+ *
+ * @see NumericArrayFrameColumnReader
+ * @see org.apache.druid.frame.write.columnar.NumericArrayFrameColumnWriter for column's layout in memory
+ */
 public class DoubleArrayFrameColumnReader extends NumericArrayFrameColumnReader
 {
   public DoubleArrayFrameColumnReader(int columnNumber)

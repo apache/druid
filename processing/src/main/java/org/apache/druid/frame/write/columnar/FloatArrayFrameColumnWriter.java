@@ -23,6 +23,9 @@ import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.frame.allocation.MemoryAllocator;
 import org.apache.druid.segment.ColumnValueSelector;
 
+/**
+ * Columnar frame writer for {@link org.apache.druid.segment.column.ColumnType#FLOAT_ARRAY} columns
+ */
 public class FloatArrayFrameColumnWriter extends NumericArrayFrameColumnWriter
 {
   public FloatArrayFrameColumnWriter(

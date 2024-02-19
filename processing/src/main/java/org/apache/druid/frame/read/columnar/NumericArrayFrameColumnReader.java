@@ -42,6 +42,11 @@ import org.apache.druid.segment.vector.VectorObjectSelector;
 import javax.annotation.Nullable;
 import java.util.Comparator;
 
+/**
+ * Implementations of this class reads columns written by the corresponding implementations of {@link NumericArrayFrameColumnWriter}.
+ *
+ * @see NumericArrayFrameColumnWriter for the column format read
+ */
 public abstract class NumericArrayFrameColumnReader implements FrameColumnReader
 {
   private final byte typeCode;
@@ -77,6 +82,10 @@ public abstract class NumericArrayFrameColumnReader implements FrameColumnReader
 
   abstract NumericArrayFrameColumn column(Frame frame, Memory memory, ColumnType columnType);
 
+  /**
+   * Validates that the written type code is the same as the provided type code. It's a defensive check that prevents
+   * unexpected results by reading columns of different types
+   */
   private void validate(final Memory region)
   {
     if (region.getCapacity() < NumericArrayFrameColumnWriter.DATA_OFFSET) {
@@ -93,16 +102,25 @@ public abstract class NumericArrayFrameColumnReader implements FrameColumnReader
     }
   }
 
+  /**
+   * Gets the start of the section where cumulative lengths of the array elements are stored (section 1)
+   */
   private static long getStartOfCumulativeLengthSection()
   {
     return NumericArrayFrameColumnWriter.DATA_OFFSET;
   }
 
+  /**
+   * Gets the start of the section where information about element's nullity is stored (section 2)
+   */
   private static long getStartOfRowNullityData(final int numRows)
   {
     return getStartOfCumulativeLengthSection() + ((long) numRows * Integer.BYTES);
   }
 
+  /**
+   * Gets the start of the section where elements are stored (section 3)
+   */
   private static long getStartOfRowData(final Memory memory, final int numRows)
   {
     long nullityDataOffset =
@@ -116,12 +134,18 @@ public abstract class NumericArrayFrameColumnReader implements FrameColumnReader
 
   public abstract static class NumericArrayFrameColumn extends ObjectColumnAccessorBase implements BaseColumn
   {
-
     private final Frame frame;
     private final Memory memory;
     private final ColumnType columnType;
 
+    /**
+     * Cache start of rowNullityDataOffset, as it won't change
+     */
     private final long rowNullityDataOffset;
+
+    /**
+     * Cache start of rowDataOffset, as it won't change
+     */
     private final long rowDataOffset;
 
 
@@ -162,9 +186,14 @@ public abstract class NumericArrayFrameColumnReader implements FrameColumnReader
     @Override
     public ColumnValueSelector<?> makeColumnValueSelector(ReadableOffset offset)
     {
+      // Cache's the row's value before returning
       return new ObjectColumnSelector<Object>()
       {
+
+        // Cached row number
         private int cachedLogicalRow = -1;
+
+        // Cached value
         @Nullable
         private Object[] cachedValue = null;
 
@@ -187,6 +216,9 @@ public abstract class NumericArrayFrameColumnReader implements FrameColumnReader
           return Object[].class;
         }
 
+        /**
+         * Cache's the row value and the logical row number into the class variables
+         */
         private void compute()
         {
           int currentLogicalRow = offset.getOffset();
@@ -263,6 +295,9 @@ public abstract class NumericArrayFrameColumnReader implements FrameColumnReader
       return frame.physicalRow(logicalRow);
     }
 
+    /**
+     * Given the physical row, it fetches the value from the memory
+     */
     @Nullable
     private Object[] getNumericArray(final int physicalRow)
     {
@@ -285,6 +320,8 @@ public abstract class NumericArrayFrameColumnReader implements FrameColumnReader
                 physicalRow - 1
             )
         );
+        // cumulativeLength doesn't need to be adjusted, since its greater than 0 or else it would have been a null row,
+        // which we check for in the first if..else
         rowLength = cumulativeLength - previousCumulativeLength;
       }
 
@@ -301,6 +338,9 @@ public abstract class NumericArrayFrameColumnReader implements FrameColumnReader
       return row;
     }
 
+    /**
+     * Returns true if element is null, else false
+     */
     private boolean getElementNullity(final int cumulativeIndex)
     {
       byte b = memory.getByte(LongMath.checkedAdd(rowNullityDataOffset, (long) cumulativeIndex * Byte.BYTES));
@@ -311,6 +351,10 @@ public abstract class NumericArrayFrameColumnReader implements FrameColumnReader
       return false;
     }
 
+    /**
+     * Returns the value of the element of the array in the memory provided, given that the start of the array is
+     * {@code rowDataOffset} and the index of the element in the array is {@code cumulativeIndex}
+     */
     abstract Number getElement(Memory memory, long rowDataOffset, int cumulativeIndex);
   }
 }

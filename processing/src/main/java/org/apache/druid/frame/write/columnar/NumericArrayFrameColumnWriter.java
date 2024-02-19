@@ -29,6 +29,25 @@ import org.apache.druid.segment.ColumnValueSelector;
 
 import java.util.List;
 
+/**
+ * Parent class for the family of writers writing numeric arrays in columnar frames. Since the numeric primitives are
+ * fixed width, we don't need to store the width of each element. The memory layout of a column written by this writer
+ * is as follows:
+ *
+ * n : Total number of rows
+ * k : Total number of elements in all the rows, cumulative
+ *
+ * | Section | Length of the section | Denotion                                                                             |
+ * |---------|-----------------------|--------------------------------------------------------------------------------------|
+ * | 0       | 1                     | typeCode                                                                             |
+ * | 1       | n * Integer.BYTES     | n integers, where i-th integer represents the cumulative length of the array         |
+ * | 2       | k * Byte.BYTES        | k bytes, where i-th byte represent whether the i-th value from the start is null     |
+ * | 3       | k * ELEMENT_SIZE      | k values, each representing the element, or null equivalent value (e.g 0 for double) |
+ *
+ * Note on cumulative lengths stored in section 1: Cumulative lengths are stored so that its fast to offset into the
+ * elements of the array. We also use negative cumulative length to denote that the array itself is null (as opposed to
+ * individual elements being null, which we store in section 2)
+ */
 public abstract class NumericArrayFrameColumnWriter implements FrameColumnWriter
 {
   /**
@@ -82,10 +101,19 @@ public abstract class NumericArrayFrameColumnWriter implements FrameColumnWriter
     this.rowData = AppendableMemory.create(allocator, INITIAL_ALLOCATION_SIZE);
   }
 
+  /**
+   * Returns the size of the elements of the array
+   */
   abstract int elementSizeBytes();
 
+  /**
+   * Inserts default null value in the given memory location at the provided offset.
+   */
   abstract void putNull(WritableMemory memory, long offset);
 
+  /**
+   * Inserts the element value in the given memory location at the provided offset.
+   */
   abstract void putArrayElement(WritableMemory memory, long offset, Number element);
 
   @Override
@@ -94,6 +122,7 @@ public abstract class NumericArrayFrameColumnWriter implements FrameColumnWriter
     List<? extends Number> numericArray = FrameWriterUtils.getNumericArrayFromObject(selector.getObject());
     int rowLength = numericArray == null ? 0 : numericArray.size();
 
+    // Begin memory allocations before writing
     if ((long) lastCumulativeRowLength + rowLength > Integer.MAX_VALUE) {
       return false;
     }
@@ -109,6 +138,7 @@ public abstract class NumericArrayFrameColumnWriter implements FrameColumnWriter
     if (!rowData.reserveAdditional(rowLength * elementSizeBytes())) {
       return false;
     }
+    // Memory allocations completed
 
     final MemoryRange<WritableMemory> rowLengthsCursor = cumulativeRowLengths.cursor();
 
