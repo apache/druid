@@ -19,6 +19,7 @@
 
 package org.apache.druid.frame.read.columnar;
 
+import com.google.common.math.LongMath;
 import it.unimi.dsi.fastutil.objects.ObjectArrays;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.error.DruidException;
@@ -39,7 +40,6 @@ import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.Comparator;
 
 public abstract class NumericArrayFrameColumnReader implements FrameColumnReader
@@ -82,13 +82,13 @@ public abstract class NumericArrayFrameColumnReader implements FrameColumnReader
     if (region.getCapacity() < NumericArrayFrameColumnWriter.DATA_OFFSET) {
       throw DruidException.defensive("Column[%s] is not big enough for a header", columnNumber);
     }
-    final byte typeCode = region.getByte(0);
-    if (typeCode != this.typeCode) {
+    final byte actualTypeCode = region.getByte(0);
+    if (actualTypeCode != this.typeCode) {
       throw DruidException.defensive(
           "Column[%s] does not have the correct type code; expected[%s], got[%s]",
           columnNumber,
           this.typeCode,
-          typeCode
+          actualTypeCode
       );
     }
   }
@@ -105,10 +105,13 @@ public abstract class NumericArrayFrameColumnReader implements FrameColumnReader
 
   private static long getStartOfRowData(final Memory memory, final int numRows)
   {
-    return getStartOfRowNullityData(numRows)
-           + (Byte.BYTES
-              * FrameColumnReaderUtils
-                  .getAdjustedCumulativeRowLength(memory, getStartOfCumulativeLengthSection(), numRows - 1));
+    long nullityDataOffset =
+        (long) Byte.BYTES * FrameColumnReaderUtils.getAdjustedCumulativeRowLength(
+            memory,
+            getStartOfCumulativeLengthSection(),
+            numRows - 1
+        );
+    return LongMath.checkedAdd(getStartOfRowNullityData(numRows), nullityDataOffset);
   }
 
   public abstract static class NumericArrayFrameColumn extends ObjectColumnAccessorBase implements BaseColumn
@@ -250,9 +253,9 @@ public abstract class NumericArrayFrameColumnReader implements FrameColumnReader
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
-
+      // Do nothing
     }
 
     private int physicalRow(int logicalRow)
@@ -300,7 +303,7 @@ public abstract class NumericArrayFrameColumnReader implements FrameColumnReader
 
     private boolean getElementNullity(final int cumulativeIndex)
     {
-      byte b = memory.getByte(rowNullityDataOffset + cumulativeIndex * Byte.BYTES);
+      byte b = memory.getByte(LongMath.checkedAdd(rowNullityDataOffset, (long) cumulativeIndex * Byte.BYTES));
       if (b == NumericArrayFrameColumnWriter.NULL_ELEMENT_MARKER) {
         return true;
       }

@@ -19,6 +19,7 @@
 
 package org.apache.druid.frame.read.columnar;
 
+import com.google.common.math.LongMath;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.write.columnar.FrameColumnWriters;
@@ -51,7 +52,7 @@ public class LongArrayFrameColumnReader extends NumericArrayFrameColumnReader
     @Override
     Number getElement(Memory memory, long rowDataOffset, int cumulativeIndex)
     {
-      return memory.getLong(rowDataOffset + (long) cumulativeIndex * Long.BYTES);
+      return memory.getLong(LongMath.checkedAdd(rowDataOffset, (long) cumulativeIndex * Long.BYTES));
     }
   }
 }

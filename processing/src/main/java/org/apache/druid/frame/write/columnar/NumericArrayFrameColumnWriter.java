@@ -46,7 +46,6 @@ public abstract class NumericArrayFrameColumnWriter implements FrameColumnWriter
   public static final long DATA_OFFSET = 1;
 
   final ColumnValueSelector selector;
-  final MemoryAllocator allocator;
   final byte typeCode;
 
   /**
@@ -77,7 +76,6 @@ public abstract class NumericArrayFrameColumnWriter implements FrameColumnWriter
   )
   {
     this.selector = selector;
-    this.allocator = allocator;
     this.typeCode = typeCode;
     this.cumulativeRowLengths = AppendableMemory.create(allocator, INITIAL_ALLOCATION_SIZE);
     this.rowNullityData = AppendableMemory.create(allocator, INITIAL_ALLOCATION_SIZE);
@@ -130,10 +128,12 @@ public abstract class NumericArrayFrameColumnWriter implements FrameColumnWriter
       final Number element = numericArray.get(i);
       final long memoryOffset = rowDataCursor.start() + ((long) elementSizeBytes() * i);
       if (element == null) {
-        rowNullityDataCursor.memory().putByte(rowNullityDataCursor.start() + Byte.BYTES * i, NULL_ELEMENT_MARKER);
+        rowNullityDataCursor.memory()
+                            .putByte(rowNullityDataCursor.start() + (long) Byte.BYTES * i, NULL_ELEMENT_MARKER);
         putNull(rowDataCursor.memory(), memoryOffset);
       } else {
-        rowNullityDataCursor.memory().putByte(rowNullityDataCursor.start() + Byte.BYTES * i, NON_NULL_ELEMENT_MARKER);
+        rowNullityDataCursor.memory()
+                            .putByte(rowNullityDataCursor.start() + (long) Byte.BYTES * i, NON_NULL_ELEMENT_MARKER);
         putArrayElement(rowDataCursor.memory(), memoryOffset, element);
       }
     }
