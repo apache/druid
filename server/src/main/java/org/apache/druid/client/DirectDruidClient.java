@@ -74,6 +74,7 @@ import java.net.URL;
 import java.util.Enumeration;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
@@ -85,6 +86,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
+ *
  */
 public class DirectDruidClient<T> implements QueryRunner<T>
 {
@@ -102,6 +104,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   private final ServiceEmitter emitter;
 
   private final AtomicInteger openConnections;
+  private final AtomicInteger failedConnections;
+  private final BlockingQueue<Long> connFailedTimesQueue = new LinkedBlockingQueue<>();
   private final boolean isSmile;
   private final ScheduledExecutorService queryCancellationExecutor;
 
@@ -142,12 +146,33 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
     this.isSmile = this.objectMapper.getFactory() instanceof SmileFactory;
     this.openConnections = new AtomicInteger();
+    this.failedConnections = new AtomicInteger();
     this.queryCancellationExecutor = queryCancellationExecutor;
+
+    ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    scheduler.scheduleAtFixedRate(this::flushFailedConnections, 1, 1, TimeUnit.MINUTES);
   }
 
   public int getNumOpenConnections()
   {
     return openConnections.get();
+  }
+
+  public int getNumFailedConnections()
+  {
+    flushFailedConnections();
+    return failedConnections.get();
+  }
+
+  private synchronized void flushFailedConnections()
+  {
+    long curTime = System.currentTimeMillis();
+    while (!connFailedTimesQueue.isEmpty() && curTime > connFailedTimesQueue.peek() + TimeUnit.MINUTES.toMillis(5)) {
+      connFailedTimesQueue.poll();
+      if (failedConnections.get() > 0) {
+        failedConnections.getAndDecrement();
+      }
+    }
   }
 
   @Override
@@ -215,7 +240,11 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         {
           final InputStreamHolder holder = queue.poll(checkQueryTimeout(), TimeUnit.MILLISECONDS);
           if (holder == null) {
-            throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query[%s] url[%s] timed out.", query.getId(), url));
+            throw new QueryTimeoutException(StringUtils.nonStrictFormat(
+                "Query[%s] url[%s] timed out.",
+                query.getId(),
+                url
+            ));
           }
 
           final long currentQueuedByteCount = queuedByteCount.addAndGet(-holder.getLength());
@@ -452,7 +481,11 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       long timeLeft = timeoutAt - System.currentTimeMillis();
 
       if (timeLeft <= 0) {
-        throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query[%s] url[%s] timed out.", query.getId(), url));
+        throw new QueryTimeoutException(StringUtils.nonStrictFormat(
+            "Query[%s] url[%s] timed out.",
+            query.getId(),
+            url
+        ));
       }
 
       future = httpClient.go(
@@ -484,6 +517,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             @Override
             public void onFailure(Throwable t)
             {
+              failedConnections.getAndIncrement();
+              connFailedTimesQueue.add(System.currentTimeMillis());
               openConnections.getAndDecrement();
               if (future.isCancelled()) {
                 cancelQuery(query, cancelUrl);
@@ -543,10 +578,14 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       try {
         Future<StatusResponseHolder> responseFuture = httpClient.go(
             new Request(HttpMethod.DELETE, new URL(cancelUrl))
-            .setContent(objectMapper.writeValueAsBytes(query))
-            .setHeader(HttpHeaders.Names.CONTENT_TYPE, isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON),
+                .setContent(objectMapper.writeValueAsBytes(query))
+                .setHeader(
+                    HttpHeaders.Names.CONTENT_TYPE,
+                    isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
+                ),
             StatusResponseHandler.getInstance(),
-            Duration.standardSeconds(1));
+            Duration.standardSeconds(1)
+        );
 
         Runnable checkRunnable = () -> {
           try {
@@ -555,10 +594,12 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             }
             StatusResponseHolder response = responseFuture.get(30, TimeUnit.SECONDS);
             if (response.getStatus().getCode() >= 500) {
-              log.error("Error cancelling query[%s]: queriable node returned status[%d] [%s].",
+              log.error(
+                  "Error cancelling query[%s]: queriable node returned status[%d] [%s].",
                   query,
                   response.getStatus().getCode(),
-                  response.getStatus().getReasonPhrase());
+                  response.getStatus().getReasonPhrase()
+              );
             }
           }
           catch (ExecutionException | InterruptedException e) {

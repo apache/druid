@@ -32,7 +32,8 @@ import java.util.Set;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = RandomServerSelectorStrategy.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "random", value = RandomServerSelectorStrategy.class),
-    @JsonSubTypes.Type(name = "connectionCount", value = ConnectionCountServerSelectorStrategy.class)
+    @JsonSubTypes.Type(name = "connectionCount", value = ConnectionCountServerSelectorStrategy.class),
+    @JsonSubTypes.Type(name = "failureCount", value = FailureCountServerSelectorStrategy.class)
 })
 public interface ServerSelectorStrategy
 {
