@@ -27,8 +27,6 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.column.ColumnType;
-
 import javax.annotation.Nullable;
 
 import java.math.BigDecimal;
@@ -87,7 +85,6 @@ public class QueryContexts
   public static final String UNCOVERED_INTERVALS_LIMIT_KEY = "uncoveredIntervalsLimit";
   public static final String MIN_TOP_N_THRESHOLD = "minTopNThreshold";
   public static final String WINDOWING_STRICT_VALIDATION = "windowingStrictValidation";
-  public static final String ROW_SIGNATURE_MODE = "rowSignatureMode";
 
 
   // SQL query context keys
@@ -122,7 +119,6 @@ public class QueryContexts
   public static final int DEFAULT_IN_SUB_QUERY_THRESHOLD = Integer.MAX_VALUE;
   public static final boolean DEFAULT_ENABLE_TIME_BOUNDARY_PLANNING = false;
   public static final boolean DEFAULT_WINDOWING_STRICT_VALIDATION = true;
-  public static final RowSignatureMode DEFAULT_ROW_SIGNATURE_MODE = RowSignatureMode.ALLOW_NULL;
 
   @SuppressWarnings("unused") // Used by Jackson serialization
   public enum Vectorize
@@ -167,56 +163,6 @@ public class QueryContexts
     {
       return StringUtils.toLowerCase(name()).replace('_', '-');
     }
-  }
-
-  @SuppressWarnings("unused") // Used by Jackson serialization
-  public enum RowSignatureMode
-  {
-    /**
-     * Encountering invalid types results in an Exception.
-     */
-    STRICT {
-      @Override
-      public ColumnType getTypeForNullColumn(String columnName)
-      {
-        throw new ISE("No type for column [%s]", columnName);
-      }
-    },
-    /**
-     * Null types are allowed in the signature.
-     */
-    ALLOW_NULL {
-      @Override
-      public ColumnType getTypeForNullColumn(String columnName)
-      {
-        return null;
-      }
-    },
-    /**
-     * Unknown types will have {@link ColumnType#STRING}
-     */
-    RESORT_TO_STRING {
-      @Override
-      public ColumnType getTypeForNullColumn(String columnName)
-      {
-        return ColumnType.STRING;
-      }
-    };
-
-    @JsonCreator
-    public static Vectorize fromString(String str)
-    {
-      return Vectorize.valueOf(StringUtils.toUpperCase(str));
-    }
-
-    @Override
-    @JsonValue
-    public String toString()
-    {
-      return StringUtils.toLowerCase(name()).replace('_', '-');
-    }
-
-    public abstract ColumnType getTypeForNullColumn(String columnName);
   }
 
   private QueryContexts()

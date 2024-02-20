@@ -52,7 +52,6 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts.RowSignatureMode;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnnestDataSource;
@@ -1715,19 +1714,15 @@ public class DruidQuery
     // Compute the signature of the columns that we are selecting.
     final RowSignature.Builder builder = RowSignature.builder();
 
-    RowSignatureMode mode = plannerContext.getRowSignatureMode();
-
     for (final String columnName : columns) {
       final ColumnCapabilities capabilities =
           virtualColumns.getColumnCapabilitiesWithFallback(sourceRowSignature, columnName);
 
-      final ColumnType columnType;
       if (capabilities == null) {
-        columnType = mode.getTypeForNullColumn(columnName);
-      } else {
-        columnType = capabilities.toColumnType();
+        // No type for this column. This is a planner bug.
+        throw new ISE("No type for column [%s]", columnName);
       }
-      builder.add(columnName, columnType);
+      builder.add(columnName, capabilities.toColumnType());
     }
     return builder.build();
   }
