@@ -58,6 +58,7 @@ import java.util.Optional;
 public class GroupByQueryKit implements QueryKit<GroupByQuery>
 {
   private final ObjectMapper jsonMapper;
+  private final boolean useGlobalSort = false;
 
   public GroupByQueryKit(ObjectMapper jsonMapper)
   {
@@ -110,7 +111,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
 
     final ShuffleSpecFactory shuffleSpecFactoryPreAggregation;
     final ShuffleSpecFactory shuffleSpecFactoryPostAggregation;
-    boolean partitionBoost;
+    final boolean partitionBoost;
 
     if (intermediateClusterBy.isEmpty() && resultClusterByWithoutPartitionBoost.isEmpty()) {
       // Ignore shuffleSpecFactory, since we know only a single partition will come out, and we can save some effort.
@@ -120,29 +121,64 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
       shuffleSpecFactoryPreAggregation = ShuffleSpecFactories.singlePartition();
       shuffleSpecFactoryPostAggregation = ShuffleSpecFactories.singlePartition();
       partitionBoost = false;
-    } else if (doOrderBy) {
-      // There can be a situation where intermediateClusterBy is empty, while the resultClusterBy is non-empty
-      // if we have PARTITIONED BY on anything except ALL, however we don't have a grouping dimension
-      // (i.e. no GROUP BY clause)
-      // __time in such queries is generated using either an aggregator (e.g. sum(metric) as __time) or using a
-      // post-aggregator (e.g. TIMESTAMP '2000-01-01' as __time)
-      // For example: INSERT INTO foo SELECT COUNT(*), TIMESTAMP '2000-01-01' AS __time FROM bar PARTITIONED BY DAY
-      shuffleSpecFactoryPreAggregation = intermediateClusterBy.isEmpty()
-                                         ? ShuffleSpecFactories.singlePartition()
-                                         : ShuffleSpecFactories.globalSortWithMaxPartitionCount(maxWorkerCount);
-      shuffleSpecFactoryPostAggregation = doLimitOrOffset
-                                          ? ShuffleSpecFactories.singlePartition()
-                                          : resultShuffleSpecFactory;
-      partitionBoost = true;
     } else {
-      shuffleSpecFactoryPreAggregation = doLimitOrOffset
-                                         ? ShuffleSpecFactories.singlePartition()
-                                         : resultShuffleSpecFactory;
+      if (useGlobalSort) {
+        if (doOrderBy) {
+          // There can be a situation where intermediateClusterBy is empty, while the resultClusterBy is non-empty
+          // if we have PARTITIONED BY on anything except ALL, however we don't have a grouping dimension
+          // (i.e. no GROUP BY clause)
+          // __time in such queries is generated using either an aggregator (e.g. sum(metric) as __time) or using a
+          // post-aggregator (e.g. TIMESTAMP '2000-01-01' as __time)
+          // For example: INSERT INTO foo SELECT COUNT(*), TIMESTAMP '2000-01-01' AS __time FROM bar PARTITIONED BY DAY
+          shuffleSpecFactoryPreAggregation = intermediateClusterBy.isEmpty()
+                                             ? ShuffleSpecFactories.singlePartition()
+                                             : ShuffleSpecFactories.globalSortWithMaxPartitionCount(maxWorkerCount);
+          shuffleSpecFactoryPostAggregation = doLimitOrOffset
+                                              ? ShuffleSpecFactories.singlePartition()
+                                              : resultShuffleSpecFactory;
+          partitionBoost = true;
+        } else {
+          shuffleSpecFactoryPreAggregation = doLimitOrOffset
+                                             ? ShuffleSpecFactories.singlePartition()
+                                             : resultShuffleSpecFactory;
 
-      // null: retain partitions from input (i.e. from preAggregation).
-      shuffleSpecFactoryPostAggregation = null;
-      partitionBoost = false;
+          // null: retain partitions from input (i.e. from preAggregation).
+          shuffleSpecFactoryPostAggregation = null;
+          partitionBoost = false;
+        }
+      } else {
+        shuffleSpecFactoryPreAggregation = intermediateClusterBy.isEmpty()
+                                           ? ShuffleSpecFactories.singlePartition()
+                                           : ShuffleSpecFactories.hashLocalSortWithMaxPartitionCount(maxWorkerCount);
+        shuffleSpecFactoryPostAggregation = doLimitOrOffset
+                                            ? ShuffleSpecFactories.singlePartition()
+                                            : resultShuffleSpecFactory;
+        partitionBoost = true;
+      }
     }
+//    } else if (doOrderBy) {
+//      // There can be a situation where intermediateClusterBy is empty, while the resultClusterBy is non-empty
+//      // if we have PARTITIONED BY on anything except ALL, however we don't have a grouping dimension
+//      // (i.e. no GROUP BY clause)
+//      // __time in such queries is generated using either an aggregator (e.g. sum(metric) as __time) or using a
+//      // post-aggregator (e.g. TIMESTAMP '2000-01-01' as __time)
+//      // For example: INSERT INTO foo SELECT COUNT(*), TIMESTAMP '2000-01-01' AS __time FROM bar PARTITIONED BY DAY
+//      shuffleSpecFactoryPreAggregation = intermediateClusterBy.isEmpty()
+//                                         ? ShuffleSpecFactories.singlePartition()
+//                                         : ShuffleSpecFactories.globalSortWithMaxPartitionCount(maxWorkerCount);
+//      shuffleSpecFactoryPostAggregation = doLimitOrOffset
+//                                          ? ShuffleSpecFactories.singlePartition()
+//                                          : resultShuffleSpecFactory;
+//      partitionBoost = true;
+//    } else {
+//      shuffleSpecFactoryPreAggregation = doLimitOrOffset
+//                                         ? ShuffleSpecFactories.singlePartition()
+//                                         : resultShuffleSpecFactory;
+//
+//      // null: retain partitions from input (i.e. from preAggregation).
+//      shuffleSpecFactoryPostAggregation = null;
+//      partitionBoost = false;
+//    }
 
     queryDefBuilder.add(
         StageDefinition.builder(firstStageNumber)
