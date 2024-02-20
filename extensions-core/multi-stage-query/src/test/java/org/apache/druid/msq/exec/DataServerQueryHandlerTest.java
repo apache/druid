@@ -21,7 +21,9 @@ package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
+import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.discovery.DataServerClient;
 import org.apache.druid.discovery.DruidServiceTestUtils;
@@ -36,6 +38,7 @@ import org.apache.druid.msq.input.table.DataServerRequestDescriptor;
 import org.apache.druid.msq.input.table.RichSegmentDescriptor;
 import org.apache.druid.msq.querykit.InputNumberDataSource;
 import org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor;
+import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.MapQueryToolChestWarehouse;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
@@ -49,8 +52,11 @@ import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.rpc.RpcException;
 import org.apache.druid.rpc.ServiceClientFactory;
+import org.apache.druid.rpc.ServiceLocation;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -82,38 +88,45 @@ public class DataServerQueryHandlerTest
       "tier1",
       0
   );
+  private static final DruidServerMetadata DRUID_SERVER_2 = new DruidServerMetadata(
+      "name2",
+      "host2:5050",
+      null,
+      100L,
+      ServerType.REALTIME,
+      "tier1",
+      0
+  );
   private static final RichSegmentDescriptor SEGMENT_1 = new RichSegmentDescriptor(
       Intervals.of("2003/2004"),
       Intervals.of("2003/2004"),
       "v1",
-      1
+      0
   );
-  private DataServerClient dataServerClient;
+  private static final RichSegmentDescriptor SEGMENT_2 = new RichSegmentDescriptor(
+      Intervals.of("2004/2005"),
+      Intervals.of("2004/2005"),
+      "v1",
+      0
+  );
+  private DataServerClient dataServerClient1;
+  private DataServerClient dataServerClient2;
   private CoordinatorClient coordinatorClient;
-  private ScanResultValue scanResultValue;
   private ScanQuery query;
   private DataServerQueryHandler target;
 
   @Before
   public void setUp()
   {
-    dataServerClient = mock(DataServerClient.class);
+    dataServerClient1 = mock(DataServerClient.class);
+    dataServerClient2 = mock(DataServerClient.class);
     coordinatorClient = mock(CoordinatorClient.class);
-    scanResultValue = new ScanResultValue(
-        null,
-        ImmutableList.of(),
-        ImmutableList.of(
-            ImmutableList.of("abc", "123"),
-            ImmutableList.of("ghi", "456"),
-            ImmutableList.of("xyz", "789")
-        )
-    );
     query = newScanQueryBuilder()
         .dataSource(new InputNumberDataSource(1))
         .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2003/2004"))))
         .columns("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1")
         .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-        .context(ImmutableMap.of(QueryContexts.NUM_RETRIES_ON_MISSING_SEGMENTS_KEY, 1))
+        .context(ImmutableMap.of(QueryContexts.NUM_RETRIES_ON_MISSING_SEGMENTS_KEY, 1, MultiStageQueryContext.CTX_INCLUDE_SEGMENT_SOURCE, SegmentSource.REALTIME.toString()))
         .build();
     QueryToolChestWarehouse queryToolChestWarehouse = new MapQueryToolChestWarehouse(
         ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
@@ -129,16 +142,37 @@ public class DataServerQueryHandlerTest
             DruidServiceTestUtils.newJsonMapper(),
             queryToolChestWarehouse,
             Execs.scheduledSingleThreaded("query-cancellation-executor"),
-            new DataServerRequestDescriptor(DRUID_SERVER_1, ImmutableList.of(SEGMENT_1))
+            new DataServerRequestDescriptor(DRUID_SERVER_1, ImmutableList.of(SEGMENT_1, SEGMENT_2))
         )
     );
-    doReturn(dataServerClient).when(target).makeDataServerClient(any());
+    doAnswer(invocationOnMock -> {
+      ServiceLocation serviceLocation = invocationOnMock.getArgument(0);
+      if (ServiceLocation.fromDruidServerMetadata(DRUID_SERVER_1).equals(serviceLocation))
+      {
+        return dataServerClient1;
+      } else if (ServiceLocation.fromDruidServerMetadata(DRUID_SERVER_2).equals(serviceLocation))
+      {
+        return dataServerClient2;
+      } else {
+        throw new IllegalStateException();
+      }
+    }).when(target).makeDataServerClient(any());
   }
 
   @Test
   public void testFetchRowsFromServer()
   {
-    doReturn(Sequences.simple(ImmutableList.of(scanResultValue))).when(dataServerClient).run(any(), any(), any(), any());
+    ScanResultValue scanResultValue = new ScanResultValue(
+        null,
+        ImmutableList.of(),
+        ImmutableList.of(
+            ImmutableList.of("abc", "123"),
+            ImmutableList.of("ghi", "456"),
+            ImmutableList.of("xyz", "789")
+        )
+    );
+
+    doReturn(Sequences.simple(ImmutableList.of(scanResultValue))).when(dataServerClient1).run(any(), any(), any(), any());
 
     DataServerQueryResult<Object[]> dataServerQueryResult = target.fetchRowsFromDataServer(
         query,
@@ -158,14 +192,50 @@ public class DataServerQueryHandlerTest
   }
 
   @Test
-  public void testHandoff()
+  public void testOneSegmentRelocated()
   {
+    ScanResultValue scanResultValue1 = new ScanResultValue(
+        null,
+        ImmutableList.of(),
+        ImmutableList.of(
+            ImmutableList.of("abc", "123"),
+            ImmutableList.of("ghi", "456")
+        )
+    );
+
     doAnswer(invocation -> {
       ResponseContext responseContext = invocation.getArgument(1);
-      responseContext.addMissingSegments(ImmutableList.of(DataServerQueryHandler.toSegmentDescriptorWithFullInterval(SEGMENT_1)));
-      return Sequences.empty();
-    }).when(dataServerClient).run(any(), any(), any(), any());
-    doReturn(Futures.immediateFuture(Boolean.TRUE)).when(coordinatorClient).isHandoffComplete(DATASOURCE1, DataServerQueryHandler.toSegmentDescriptorWithFullInterval(SEGMENT_1));
+      responseContext.addMissingSegments(
+          ImmutableList.of(
+              DataServerQueryHandler.toSegmentDescriptorWithFullInterval(SEGMENT_2)
+          )
+      );
+      return Sequences.simple(ImmutableList.of(scanResultValue1));
+    }).when(dataServerClient1).run(any(), any(), any(), any());
+
+    ScanResultValue scanResultValue2 = new ScanResultValue(
+        null,
+        ImmutableList.of(),
+        ImmutableList.of(
+            ImmutableList.of("pit", "579"),
+            ImmutableList.of("xyz", "897")
+        )
+    );
+
+    doReturn(Sequences.simple(ImmutableList.of(scanResultValue2))).when(dataServerClient2).run(any(), any(), any(), any());
+
+    doReturn(Futures.immediateFuture(Boolean.FALSE)).when(coordinatorClient).isHandoffComplete(DATASOURCE1, DataServerQueryHandler.toSegmentDescriptorWithFullInterval(SEGMENT_2));
+    doReturn(ImmutableList.of(
+        new ImmutableSegmentLoadInfo(
+            DataSegment.builder()
+                       .interval(SEGMENT_2.getInterval())
+                       .version(SEGMENT_2.getVersion())
+                       .shardSpec(new NumberedShardSpec(SEGMENT_2.getPartitionNumber(), SEGMENT_2.getPartitionNumber()))
+                       .dataSource(DATASOURCE1)
+                       .size(1)
+                       .build(),
+        ImmutableSet.of(DRUID_SERVER_2)
+        ))).when(coordinatorClient).fetchServerViewSegments(DATASOURCE1, ImmutableList.of(SEGMENT_2.getFullInterval()));
 
     DataServerQueryResult<Object[]> dataServerQueryResult = target.fetchRowsFromDataServer(
         query,
@@ -173,7 +243,48 @@ public class DataServerQueryHandlerTest
         Closer.create()
     );
 
-    Assert.assertEquals(ImmutableList.of(SEGMENT_1), dataServerQueryResult.getHandedOffSegments().getDescriptors());
+    Assert.assertTrue(dataServerQueryResult.getHandedOffSegments().getDescriptors().isEmpty());
+
+    Yielder<Object[]> yielder1 = dataServerQueryResult.getResultsYielders().get(0);
+    ((List<List<Object>>) scanResultValue1.getEvents()).forEach(
+        event -> {
+          Assert.assertArrayEquals(event.toArray(), yielder1.get());
+          yielder1.next(null);
+        }
+    );
+
+    Yielder<Object[]> yielder2 = dataServerQueryResult.getResultsYielders().get(1);
+    ((List<List<Object>>) scanResultValue2.getEvents()).forEach(
+        event -> {
+          Assert.assertArrayEquals(event.toArray(), yielder2.get());
+          yielder2.next(null);
+        }
+    );
+  }
+
+  @Test
+  public void testHandoff()
+  {
+    doAnswer(invocation -> {
+      ResponseContext responseContext = invocation.getArgument(1);
+      responseContext.addMissingSegments(
+          ImmutableList.of(
+              DataServerQueryHandler.toSegmentDescriptorWithFullInterval(SEGMENT_1),
+              DataServerQueryHandler.toSegmentDescriptorWithFullInterval(SEGMENT_2)
+          )
+      );
+      return Sequences.empty();
+    }).when(dataServerClient1).run(any(), any(), any(), any());
+    doReturn(Futures.immediateFuture(Boolean.TRUE)).when(coordinatorClient).isHandoffComplete(DATASOURCE1, DataServerQueryHandler.toSegmentDescriptorWithFullInterval(SEGMENT_1));
+    doReturn(Futures.immediateFuture(Boolean.TRUE)).when(coordinatorClient).isHandoffComplete(DATASOURCE1, DataServerQueryHandler.toSegmentDescriptorWithFullInterval(SEGMENT_2));
+
+    DataServerQueryResult<Object[]> dataServerQueryResult = target.fetchRowsFromDataServer(
+        query,
+        ScanQueryFrameProcessor::mappingFunction,
+        Closer.create()
+    );
+
+    Assert.assertEquals(ImmutableList.of(SEGMENT_1, SEGMENT_2), dataServerQueryResult.getHandedOffSegments().getDescriptors());
     Assert.assertTrue(dataServerQueryResult.getResultsYielders().isEmpty());
   }
 
@@ -182,7 +293,7 @@ public class DataServerQueryHandlerTest
   {
     doThrow(
         new QueryInterruptedException(new RpcException("Could not connect to server"))
-    ).when(dataServerClient).run(any(), any(), any(), any());
+    ).when(dataServerClient1).run(any(), any(), any(), any());
 
     doReturn(Futures.immediateFuture(Boolean.FALSE)).when(coordinatorClient).isHandoffComplete(DATASOURCE1, DataServerQueryHandler.toSegmentDescriptorWithFullInterval(SEGMENT_1));
 
@@ -196,7 +307,7 @@ public class DataServerQueryHandlerTest
         )
     );
 
-    verify(dataServerClient, times(5)).run(any(), any(), any(), any());
+    verify(dataServerClient1, times(5)).run(any(), any(), any(), any());
   }
 
   @Test
@@ -204,9 +315,10 @@ public class DataServerQueryHandlerTest
   {
     doThrow(
         new QueryInterruptedException(new RpcException("Could not connect to server"))
-    ).when(dataServerClient).run(any(), any(), any(), any());
+    ).when(dataServerClient1).run(any(), any(), any(), any());
 
     doReturn(Futures.immediateFuture(Boolean.TRUE)).when(coordinatorClient).isHandoffComplete(DATASOURCE1, DataServerQueryHandler.toSegmentDescriptorWithFullInterval(SEGMENT_1));
+    doReturn(Futures.immediateFuture(Boolean.TRUE)).when(coordinatorClient).isHandoffComplete(DATASOURCE1, DataServerQueryHandler.toSegmentDescriptorWithFullInterval(SEGMENT_2));
 
     DataServerQueryResult<Object[]> dataServerQueryResult = target.fetchRowsFromDataServer(
         query,
@@ -214,7 +326,7 @@ public class DataServerQueryHandlerTest
         Closer.create()
     );
 
-    Assert.assertEquals(ImmutableList.of(SEGMENT_1), dataServerQueryResult.getHandedOffSegments().getDescriptors());
+    Assert.assertEquals(ImmutableList.of(SEGMENT_1, SEGMENT_2), dataServerQueryResult.getHandedOffSegments().getDescriptors());
     Assert.assertTrue(dataServerQueryResult.getResultsYielders().isEmpty());
   }
 
@@ -225,7 +337,7 @@ public class DataServerQueryHandlerTest
       ResponseContext responseContext = invocation.getArgument(1);
       responseContext.addMissingSegments(ImmutableList.of(SEGMENT_1));
       return Sequences.empty();
-    }).when(dataServerClient).run(any(), any(), any(), any());
+    }).when(dataServerClient1).run(any(), any(), any(), any());
     doReturn(Futures.immediateFuture(Boolean.FALSE)).when(coordinatorClient).isHandoffComplete(DATASOURCE1, SEGMENT_1);
 
     Assert.assertThrows(DruidException.class, () ->

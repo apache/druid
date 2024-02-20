@@ -1188,7 +1188,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public void assertResultsEquals(String sql, List<Object[]> expectedResults, List<Object[]> results)
   {
-    Assert.assertEquals(expectedResults.size(), results.size());
     int minSize = Math.min(results.size(), expectedResults.size());
     for (int i = 0; i < minSize; i++) {
       Assert.assertArrayEquals(
@@ -1197,6 +1196,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
           results.get(i)
       );
     }
+    Assert.assertEquals(expectedResults.size(), results.size());
   }
 
   public void testQueryThrows(final String sql, Consumer<ExpectedException> expectedExceptionInitializer)

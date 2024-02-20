@@ -149,8 +149,10 @@ public class DataServerQueryHandler
 
     while (!pendingRequests.isEmpty()) {
       final ResponseContext responseContext = new DefaultResponseContext();
+      final Set<RichSegmentDescriptor> processedSegments = new HashSet<>();
       for (DataServerRequestDescriptor descriptor : pendingRequests) {
         log.info("Querying server [%s] for segments[%s]", descriptor.getServerMetadata(), descriptor.getSegments());
+        processedSegments.addAll(descriptor.getSegments());
         Yielder<RowType> yielder = fetchRowsFromDataServerInternal(descriptor, responseContext, closer, preparedQuery, mappingFunction);
 
         // Add results
@@ -168,16 +170,23 @@ public class DataServerQueryHandler
 
       List<SegmentDescriptor> handedOffSegmentDescriptors = checkSegmentHandoff(missingSegments);
 
-      Set<RichSegmentDescriptor> missingRichSegmentDescriptor = new HashSet<>();
-      for (RichSegmentDescriptor richSegmentDescriptor : dataServerRequestDescriptor.getSegments()) {
-        if (handedOffSegmentDescriptors.contains(toSegmentDescriptorWithFullInterval(richSegmentDescriptor))) {
-          handedOffSegments.add(richSegmentDescriptor);
-        } else {
-          missingRichSegmentDescriptor.add(richSegmentDescriptor);
+      Set<RichSegmentDescriptor> missingRichSegmentDescriptors = new HashSet<>();
+      for (RichSegmentDescriptor richSegmentDescriptor : processedSegments) {
+        SegmentDescriptor segmentDescriptor = toSegmentDescriptorWithFullInterval(richSegmentDescriptor);
+        if (missingSegments.contains(segmentDescriptor)) {
+          if (handedOffSegmentDescriptors.contains(segmentDescriptor)) {
+            handedOffSegments.add(richSegmentDescriptor);
+          } else {
+            missingRichSegmentDescriptors.add(richSegmentDescriptor);
+          }
         }
       }
 
-      pendingRequests = createNextPendingRequests(missingRichSegmentDescriptor, MultiStageQueryContext.getSegmentSources(query.context()));
+      pendingRequests = createNextPendingRequests(
+          missingRichSegmentDescriptors,
+          MultiStageQueryContext.getSegmentSources(query.context()),
+          DataServerSelector.RANDOM
+      );
 
       if (!pendingRequests.isEmpty()) {
         retryCount++;
@@ -193,11 +202,11 @@ public class DataServerQueryHandler
   }
 
   private <QueryType, RowType> Yielder<RowType> fetchRowsFromDataServerInternal(
-      DataServerRequestDescriptor requestDescriptor,
-      ResponseContext responseContext,
-      Closer closer,
-      Query<QueryType> query,
-      Function<Sequence<QueryType>, Sequence<RowType>> mappingFunction
+      final DataServerRequestDescriptor requestDescriptor,
+      final ResponseContext responseContext,
+      final Closer closer,
+      final Query<QueryType> query,
+      final Function<Sequence<QueryType>, Sequence<RowType>> mappingFunction
   )
   {
     final ServiceLocation serviceLocation = ServiceLocation.fromDruidServerMetadata(requestDescriptor.getServerMetadata());
@@ -247,8 +256,8 @@ public class DataServerQueryHandler
   }
 
   private <RowType, QueryType> Yielder<RowType> createYielder(
-      Sequence<QueryType> sequence,
-      Function<Sequence<QueryType>, Sequence<RowType>> mappingFunction
+      final Sequence<QueryType> sequence,
+      final Function<Sequence<QueryType>, Sequence<RowType>> mappingFunction
   )
   {
     return Yielders.each(
@@ -261,8 +270,9 @@ public class DataServerQueryHandler
   }
 
   private List<DataServerRequestDescriptor> createNextPendingRequests(
-      Set<RichSegmentDescriptor> richSegmentDescriptors,
-      SegmentSource includeSegmentSource
+      final Set<RichSegmentDescriptor> richSegmentDescriptors,
+      final SegmentSource includeSegmentSource,
+      final DataServerSelector dataServerSelector
   )
   {
     final Map<DruidServerMetadata, Set<RichSegmentDescriptor>> serverVsSegmentsMap = new HashMap<>();
@@ -279,14 +289,15 @@ public class DataServerQueryHandler
     });
 
     for (RichSegmentDescriptor richSegmentDescriptor : richSegmentDescriptors) {
-      if (!segmentVsServerMap.containsKey(toSegmentDescriptorWithFullInterval(richSegmentDescriptor))) {
+      SegmentDescriptor segmentDescriptorWithFullInterval = toSegmentDescriptorWithFullInterval(richSegmentDescriptor);
+      if (!segmentVsServerMap.containsKey(segmentDescriptorWithFullInterval)) {
         throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                             .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                            .build("Could not find a server.");
+                            .build("Could not find a server for segment[%s]", richSegmentDescriptor);
       }
 
-      ImmutableSegmentLoadInfo segmentLoadInfo = segmentVsServerMap.get(toSegmentDescriptorWithFullInterval(richSegmentDescriptor));
-      if (segmentLoadInfo.getSegment().toDescriptor().equals(richSegmentDescriptor)) {
+      ImmutableSegmentLoadInfo segmentLoadInfo = segmentVsServerMap.get(segmentDescriptorWithFullInterval);
+      if (segmentLoadInfo.getSegment().toDescriptor().equals(segmentDescriptorWithFullInterval)) {
         Set<DruidServerMetadata> servers = segmentLoadInfo.getServers()
                                                           .stream()
                                                           .filter(druidServerMetadata -> includeSegmentSource.getUsedServerTypes()
@@ -295,10 +306,10 @@ public class DataServerQueryHandler
         if (servers.isEmpty()) {
           throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                               .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                              .build("Could not find a server.");
+                              .build("Could not find a server matching includeSegmentSource[%s] for segment[%s]. Only found servers [%s]", includeSegmentSource, richSegmentDescriptor, servers);
         }
 
-        DruidServerMetadata druidServerMetadata = DataServerSelector.RANDOM.getSelectServerFunction().apply(servers);
+        DruidServerMetadata druidServerMetadata = dataServerSelector.getSelectServerFunction().apply(servers);
         serverVsSegmentsMap.computeIfAbsent(druidServerMetadata, ignored -> new HashSet<>());
         SegmentDescriptor descriptor = segmentLoadInfo.getSegment().toDescriptor();
         serverVsSegmentsMap.get(druidServerMetadata)
