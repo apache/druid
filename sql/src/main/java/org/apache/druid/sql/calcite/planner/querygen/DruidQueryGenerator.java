@@ -201,7 +201,7 @@ public class DruidQueryGenerator
       public Optional<Vertex> extendWith(RelNode parentNode, boolean isRoot)
       {
         Optional<PartialDruidQuery> newPartialQuery = extendPartialDruidQuery(parentNode, isRoot);
-        if (newPartialQuery.isEmpty()) {
+        if (!newPartialQuery.isPresent()) {
           return Optional.empty();
         }
         return Optional.of(createVertex(newPartialQuery.get(), inputs));
