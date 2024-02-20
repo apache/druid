@@ -89,6 +89,7 @@ public class TestIndexTask extends IndexTask
                 null,
                 null,
                 null,
+                null,
                 null
             )
         ),

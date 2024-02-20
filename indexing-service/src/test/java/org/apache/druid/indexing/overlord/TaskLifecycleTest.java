@@ -616,7 +616,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         .setDefaultRowFlushBoundary(50000)
         .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
         .setTmpStorageBytesPerTask(-1L)
-        .enableConcurrentAppendAndReplace()
         .build();
 
     return new TaskToolboxFactory(
@@ -752,6 +751,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null,
                 null,
                 null,
+                null,
                 null
             )
         ),
@@ -836,6 +836,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null,
                 null,
                 null,
+                null,
                 null
             )
         ),
@@ -904,7 +905,13 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
 
     // manually create local segments files
     List<File> segmentFiles = new ArrayList<>();
-    for (DataSegment segment : mdc.retrieveUnusedSegmentsForInterval("test_kill_task", Intervals.of("2011-04-01/P4D"))) {
+    final List<DataSegment> unusedSegments = mdc.retrieveUnusedSegmentsForInterval(
+        "test_kill_task",
+        Intervals.of("2011-04-01/P4D"),
+        null,
+        null
+    );
+    for (DataSegment segment : unusedSegments) {
       File file = new File((String) segment.getLoadSpec().get("path"));
       FileUtils.mkdirp(file.getParentFile());
       Files.write(file.toPath(), ByteArrays.EMPTY_ARRAY);
@@ -918,6 +925,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             Intervals.of("2011-04-01/P4D"),
             null,
             false,
+            null,
             null,
             null
         );
@@ -994,7 +1002,13 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
 
     // manually create local segments files
     List<File> segmentFiles = new ArrayList<>();
-    for (DataSegment segment : mdc.retrieveUnusedSegmentsForInterval("test_kill_task", Intervals.of("2011-04-01/P4D"))) {
+    final List<DataSegment> unusedSegments = mdc.retrieveUnusedSegmentsForInterval(
+        "test_kill_task",
+        Intervals.of("2011-04-01/P4D"),
+        null,
+        null
+    );
+    for (DataSegment segment : unusedSegments) {
       File file = new File((String) segment.getLoadSpec().get("path"));
       FileUtils.mkdirp(file.getParentFile());
       Files.write(file.toPath(), ByteArrays.EMPTY_ARRAY);
@@ -1010,7 +1024,8 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             null,
             false,
             null,
-            maxSegmentsToKill
+            maxSegmentsToKill,
+            null
         );
 
     final TaskStatus status = runTask(killUnusedSegmentsTask);
@@ -1373,6 +1388,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null,
                 null,
                 null,
+                null,
                 null
             )
         ),
@@ -1476,6 +1492,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null,
                 3,
                 false,
+                null,
                 null,
                 null,
                 null,
@@ -1638,6 +1655,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         null,
         0,
         0,
+        null,
         null,
         null,
         null,

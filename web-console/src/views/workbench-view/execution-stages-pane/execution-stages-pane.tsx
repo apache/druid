@@ -20,6 +20,7 @@ import { Button, Icon, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Tooltip2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
+import * as JSONBig from 'json-bigint-native';
 import React from 'react';
 import type { Column } from 'react-table';
 import ReactTable from 'react-table';
@@ -34,11 +35,13 @@ import type {
   SegmentGenerationProgressFields,
   SimpleWideCounter,
   StageDefinition,
+  StageInput,
 } from '../../../druid-models';
 import { formatClusterBy, Stages, summarizeInputSource } from '../../../druid-models';
 import { DEFAULT_TABLE_CLASS_NAME } from '../../../react-table';
 import type { NumberLike } from '../../../utils';
 import {
+  assemble,
   capitalizeFirst,
   clamp,
   deepGet,
@@ -58,6 +61,15 @@ import './execution-stages-pane.scss';
 const MAX_STAGE_ROWS = 20;
 const MAX_DETAIL_ROWS = 20;
 const NOT_SIZE_ON_DISK = '(does not represent size on disk)';
+
+function summarizeTableInput(tableStageInput: StageInput): string {
+  if (tableStageInput.type !== 'table') return '';
+  return assemble(
+    `Datasource: ${tableStageInput.dataSource}`,
+    `Interval: ${tableStageInput.intervals.join('; ')}`,
+    tableStageInput.filter && `Filter: ${JSONBig.stringify(tableStageInput.filter)}`,
+  ).join('\n');
+}
 
 function formatBreakdown(breakdown: Record<string, number>): string {
   return Object.keys(breakdown)
@@ -85,7 +97,7 @@ function inputLabelContent(stage: StageDefinition, inputIndex: number) {
       Input{' '}
       {stageInput.type === 'stage' && <span className="stage">{`Stage${stageInput.stage}`}</span>}
       {stageInput.type === 'table' && (
-        <span className="datasource" title={stageInput.dataSource}>
+        <span className="datasource" title={summarizeTableInput(stageInput)}>
           {stageInput.dataSource}
         </span>
       )}

@@ -19,6 +19,7 @@
 
 package org.apache.druid.storage.azure.output;
 
+import com.azure.storage.blob.batch.BlobBatchStorageException;
 import com.azure.storage.blob.models.BlobStorageException;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;
@@ -158,7 +159,7 @@ public class AzureStorageConnector extends ChunkingStorageConnector<AzureInputRa
           config.getMaxRetry()
       );
     }
-    catch (BlobStorageException e) {
+    catch (BlobStorageException | BlobBatchStorageException e) {
       throw new IOException(e);
     }
   }
@@ -173,7 +174,7 @@ public class AzureStorageConnector extends ChunkingStorageConnector<AzureInputRa
           config.getMaxRetry()
       );
     }
-    catch (BlobStorageException e) {
+    catch (BlobStorageException | BlobBatchStorageException e) {
       throw new IOException(e);
     }
   }

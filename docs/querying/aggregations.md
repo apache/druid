@@ -177,10 +177,9 @@ Example:
 
 The first and last aggregators determine the metric values that respectively correspond to the earliest and latest values of a time column.
 
-Do not use first and last aggregators for the double, float, and long types in an ingestion spec. They are only supported for queries.
-The string-typed aggregators, `stringFirst` and `stringLast`, are supported for both ingestion and querying.
-
-Queries with first or last aggregators on a segment created with rollup return the rolled up value, not the first or last value from the raw ingested data.
+Queries with first or last aggregators on a segment created with rollup return the rolled up value, not the first or last value from the 
+raw ingested data. The `timeColumn` will get ignored in such cases, and the aggregation will use the original value of the time column
+stored at the time the segment was created.
 
 #### Numeric first and last aggregators
 
