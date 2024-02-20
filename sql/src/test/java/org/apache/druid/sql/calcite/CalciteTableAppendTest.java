@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
 import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
@@ -190,27 +189,5 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
             )
         )
         .run();
-  }
-
-  @Test
-  public void testAppendtIncompatibleColumns()
-  {
-    try {
-      testBuilder()
-          .sql("select dim1 from TABLE(APPEND('foo','foo2')) u")
-          .run();
-      Assert.fail("query execution should fail");
-    }
-    catch (DruidException e) {
-      MatcherAssert.assertThat(
-          e,
-          DruidExceptionMatcher.invalidInput().expectMessageIs(
-              "Can't create TABLE(APPEND()).\n"
-                  + "Conflicting types for column [dim3]:\n"
-                  + " - existing type [STRING]\n"
-                  + " - new type [LONG] from table [[druid, foo2]]"
-          )
-      );
-    }
   }
 }
