@@ -79,7 +79,7 @@ public class DruidQueryGenerator
     if (newInputs.size() == 1) {
       Vertex inputVertex = newInputs.get(0);
       Optional<Vertex> newVertex = inputVertex.extendWith(node, isRoot);
-      if (newVertex != null) {
+      if (newVertex.isPresent()) {
         return newVertex.get();
       }
       inputVertex = vertexFactory.createVertex(
@@ -87,7 +87,7 @@ public class DruidQueryGenerator
           ImmutableList.of(inputVertex)
       );
       newVertex = inputVertex.extendWith(node, false);
-      if (newVertex != null) {
+      if (newVertex.isPresent()) {
         return newVertex.get();
       }
     }
