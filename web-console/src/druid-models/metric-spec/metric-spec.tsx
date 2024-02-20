@@ -431,7 +431,7 @@ export function getMetricSpecOutputType(metricSpec: MetricSpec): string | undefi
 
 export function getMetricSpecs(
   sampleResponse: SampleResponse,
-  typeHints: Record<string, string>,
+  columnTypeHints: Record<string, string>,
   guessNumericStringsAsNumbers: boolean,
 ): MetricSpec[] {
   return [{ name: 'count', type: 'count' }].concat(
@@ -439,7 +439,7 @@ export function getMetricSpecs(
       const h = s.name;
       if (h === '__time') return;
       const type =
-        typeHints[h] ||
+        columnTypeHints[h] ||
         guessColumnTypeFromSampleResponse(sampleResponse, h, guessNumericStringsAsNumbers);
       switch (type) {
         case 'double':

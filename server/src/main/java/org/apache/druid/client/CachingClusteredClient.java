@@ -73,7 +73,6 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.DimFilterUtils;
-import org.apache.druid.query.groupby.GroupByUtils;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.server.QueryResource;
@@ -353,9 +352,9 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final Set<SegmentServerSelector> segmentServers = computeSegmentsToQuery(timeline, specificSegments);
       @Nullable
       final byte[] queryCacheKey = cacheKeyManager.computeSegmentLevelQueryCacheKey();
-      if (query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH) != null) {
-        @Nullable
-        final String prevEtag = (String) query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH);
+      @Nullable
+      final String prevEtag = (String) query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH);
+      if (prevEtag != null) {
         @Nullable
         final String currentEtag = cacheKeyManager.computeResultLevelCachingEtag(segmentServers, queryCacheKey);
         if (null != currentEtag) {

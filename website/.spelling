@@ -63,6 +63,7 @@ DRUIDVERSION
 DataSketches
 DateTime
 DateType
+DeltaLakeInputSource
 dimensionsSpec
 DimensionSpec
 DimensionSpecs
@@ -79,6 +80,7 @@ downsamples
 downsampling
 Dropwizard
 dropwizard
+druid-deltalake-extensions
 DruidInputSource
 DruidSQL
 DynamicConfigProvider
@@ -161,6 +163,7 @@ Kerberos
 KeyStores
 Kinesis
 Kubernetes
+Lakehouse
 LDAPS
 LRU
 LZ4
@@ -374,7 +377,6 @@ kubernetes
 kubexit
 k8s
 laning
-lastSegmentId
 lifecycle
 localhost
 log4j
@@ -504,7 +506,6 @@ Smoosh
 smoosh
 smooshed
 snapshotting
-sortOrder
 splittable
 ssl
 sslmode
@@ -527,6 +528,7 @@ SVG
 symlink
 syntaxes
 systemFields
+tablePath
 tiering
 timeseries
 Timeseries
@@ -573,6 +575,7 @@ varchar
 vectorizable
 vectorize
 vectorizeVirtualColumns
+versioned
 versioning
 virtualColumns
 w.r.t.
@@ -780,6 +783,10 @@ APPROX_COUNT_DISTINCT_DS_THETA
 APPROX_QUANTILE_DS
 DS_QUANTILES_SKETCH
 APPROX_QUANTILE_FIXED_BUCKETS
+# Operators
+pivoted
+UNPIVOT
+unpivoted
 # File specific overrides
 100x
 _common
@@ -793,9 +800,11 @@ multi-server
 BasicDataSource
 LeaderLatch
 2.x
-28.x 
+28.x
+3.0.x
 3.5.x
 3.4.x
+3.5.x.
 AllowAll
 AuthenticationResult
 AuthorizationLoadingLookupTest
@@ -1127,6 +1136,7 @@ LZ4LZFuncompressedLZ4LZ4LZFuncompressednoneLZ4autolongsautolongslongstypeconcise
 deaggregate
 druid-kinesis-indexing-service
 maxRecordsPerPoll
+maxBytesPerPoll
 maxRecordsPerPollrecordsPerFetchfetchDelayMillisreplicasfetchDelayMillisrecordsPerFetchfetchDelayMillismaxRecordsPerPollamazon-kinesis-client1
 numKinesisShards
 numProcessors
@@ -1297,9 +1307,11 @@ kafka.topic
 keyColumnName
 keyFormat
 listDelimiter
+lowerOpen
 timestamp
 timestampColumnName
 timestampSpec
+upperOpen
 urls
 valueFormat
 1GB
@@ -2375,6 +2387,14 @@ markUnused
 markUsed
 segmentId
 aggregateMultipleValues
+appRegistrationClientId
+appRegistrationClientSecret
+tenantId
+relativeError
+ddSketch
+DDSketch
+druid-ddsketch
+numBins
 
 - ../docs/development/extensions-contrib/spectator-histogram.md
 SpectatorHistogram
@@ -2384,3 +2404,8 @@ spectatorHistogramTimer
 spectatorHistogramDistribution
 percentileSpectatorHistogram
 percentilesSpectatorHistogram
+
+- ../docs/development/extensions-contrib/ddsketch-quantiles.md
+quantilesFromDDSketch
+quantileFromDDSketch
+collapsingLowestDense

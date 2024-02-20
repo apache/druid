@@ -578,29 +578,54 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
     };
 
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
+    GroupByResourcesReservationPool groupByResourcesReservationPoolBroker =
+        new GroupByResourcesReservationPool(mergePoolBroker, config);
+    GroupByResourcesReservationPool groupByResourcesReservationPoolHistorical =
+        new GroupByResourcesReservationPool(mergePoolHistorical, config);
+    GroupByResourcesReservationPool groupByResourcesReservationPoolHistorical2 =
+        new GroupByResourcesReservationPool(mergePoolHistorical2, config);
 
-    final GroupingEngine groupingEngine = new GroupingEngine(
+    final GroupingEngine groupingEngineBroker = new GroupingEngine(
         druidProcessingConfig,
         configSupplier,
         bufferPool,
+        groupByResourcesReservationPoolBroker,
+        TestHelper.makeJsonMapper(),
+        new ObjectMapper(new SmileFactory()),
+        NOOP_QUERYWATCHER
+    );
+    final GroupingEngine groupingEngineHistorical = new GroupingEngine(
+        druidProcessingConfig,
+        configSupplier,
+        bufferPool,
+        groupByResourcesReservationPoolHistorical,
+        TestHelper.makeJsonMapper(),
+        new ObjectMapper(new SmileFactory()),
+        NOOP_QUERYWATCHER
+    );
+    final GroupingEngine groupingEngineHistorical2 = new GroupingEngine(
+        druidProcessingConfig,
+        configSupplier,
+        bufferPool,
+        groupByResourcesReservationPoolHistorical2,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
         NOOP_QUERYWATCHER
     );
 
     groupByFactoryBroker = new GroupByQueryRunnerFactory(
-        groupingEngine,
-        new GroupByQueryQueryToolChest(groupingEngine, mergePoolBroker)
+        groupingEngineBroker,
+        new GroupByQueryQueryToolChest(groupingEngineBroker, groupByResourcesReservationPoolBroker)
     );
 
     groupByFactoryHistorical = new GroupByQueryRunnerFactory(
-        groupingEngine,
-        new GroupByQueryQueryToolChest(groupingEngine, mergePoolHistorical)
+        groupingEngineHistorical,
+        new GroupByQueryQueryToolChest(groupingEngineHistorical, groupByResourcesReservationPoolHistorical)
     );
 
     groupByFactoryHistorical2 = new GroupByQueryRunnerFactory(
-        groupingEngine,
-        new GroupByQueryQueryToolChest(groupingEngine, mergePoolHistorical2)
+        groupingEngineHistorical2,
+        new GroupByQueryQueryToolChest(groupingEngineHistorical2, groupByResourcesReservationPoolHistorical2)
     );
   }
 
@@ -628,7 +653,8 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
     QueryToolChest<ResultRow, GroupByQuery> toolChestHistorical = groupByFactoryHistorical.getToolchest();
     QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
         toolChestHistorical.mergeResults(
-            groupByFactoryHistorical.mergeRunners(executorService, getRunner1(2))
+            groupByFactoryHistorical.mergeRunners(executorService, getRunner1(2)),
+            true
         ),
         (QueryToolChest) toolChestHistorical
     );
@@ -636,7 +662,8 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
     QueryToolChest<ResultRow, GroupByQuery> toolChestHistorical2 = groupByFactoryHistorical2.getToolchest();
     QueryRunner<ResultRow> theRunner2 = new FinalizeResultsQueryRunner<>(
         toolChestHistorical2.mergeResults(
-            groupByFactoryHistorical2.mergeRunners(executorService, getRunner2(3))
+            groupByFactoryHistorical2.mergeRunners(executorService, getRunner2(3)),
+            true
         ),
         (QueryToolChest) toolChestHistorical2
     );
@@ -653,27 +680,14 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
                 return Sequences
                     .simple(
                         ImmutableList.of(
-                            theRunner.run(
-                                queryPlus.withQuery(
-                                    queryPlus.getQuery().withOverriddenContext(
-                                        ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true)
-                                    )
-                                ),
-                                ConcurrentResponseContext.createEmpty()
-                            ),
-                            theRunner2.run(
-                                queryPlus.withQuery(
-                                    queryPlus.getQuery().withOverriddenContext(
-                                        ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true)
-                                    )
-                                ),
-                                ConcurrentResponseContext.createEmpty()
-                            )
+                            theRunner.run(queryPlus, ConcurrentResponseContext.createEmpty()),
+                            theRunner2.run(queryPlus, ConcurrentResponseContext.createEmpty())
                         )
                     )
                     .flatMerge(Function.identity(), queryPlus.getQuery().getResultOrdering());
               }
-            }
+            },
+            false
         ),
         (QueryToolChest) toolChestBroker
     );
@@ -732,9 +746,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
         .build();
 
     Sequence<ResultRow> queryResult = finalRunner.run(
-        QueryPlus.wrap(query.withOverriddenContext(
-           ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, false)
-        )),
+        QueryPlus.wrap(query),
         ResponseContext.createEmpty()
     );
     List<ResultRow> results = queryResult.toList();
@@ -787,7 +799,8 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
     QueryToolChest<ResultRow, GroupByQuery> toolChestHistorical = groupByFactoryHistorical.getToolchest();
     QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
         toolChestHistorical.mergeResults(
-            groupByFactoryHistorical.mergeRunners(executorService, getRunner1(0))
+            groupByFactoryHistorical.mergeRunners(executorService, getRunner1(0)),
+            true
         ),
         (QueryToolChest) toolChestHistorical
     );
@@ -795,7 +808,8 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
     QueryToolChest<ResultRow, GroupByQuery> toolChestHistorical2 = groupByFactoryHistorical2.getToolchest();
     QueryRunner<ResultRow> theRunner2 = new FinalizeResultsQueryRunner<>(
         toolChestHistorical2.mergeResults(
-            groupByFactoryHistorical2.mergeRunners(executorService, getRunner2(1))
+            groupByFactoryHistorical2.mergeRunners(executorService, getRunner2(1)),
+            true
         ),
         (QueryToolChest) toolChestHistorical2
     );
@@ -812,27 +826,14 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
                 return Sequences
                     .simple(
                         ImmutableList.of(
-                            theRunner.run(
-                                queryPlus.withQuery(
-                                    queryPlus.getQuery().withOverriddenContext(
-                                        ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true)
-                                    )
-                                ),
-                                ConcurrentResponseContext.createEmpty()
-                            ),
-                            theRunner2.run(
-                                queryPlus.withQuery(
-                                    queryPlus.getQuery().withOverriddenContext(
-                                        ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true)
-                                    )
-                                ),
-                                ConcurrentResponseContext.createEmpty()
-                            )
+                            theRunner.run(queryPlus, responseContext),
+                            theRunner2.run(queryPlus, responseContext)
                         )
                     )
                     .flatMerge(Function.identity(), queryPlus.getQuery().getResultOrdering());
               }
-            }
+            },
+            false
         ),
         (QueryToolChest) toolchestBroker
     );
@@ -879,9 +880,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
         .build();
 
     Sequence<ResultRow> queryResult = finalRunner.run(
-        QueryPlus.wrap(query.withOverriddenContext(
-            ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, false)
-        )),
+        QueryPlus.wrap(query),
         ResponseContext.createEmpty()
     );
     List<ResultRow> results = queryResult.toList();
@@ -950,7 +949,8 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
     QueryToolChest<ResultRow, GroupByQuery> toolChestHistorical = groupByFactoryHistorical.getToolchest();
     QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
         toolChestHistorical.mergeResults(
-            groupByFactoryHistorical.mergeRunners(executorService, getRunner1(4))
+            groupByFactoryHistorical.mergeRunners(executorService, getRunner1(4)),
+            true
         ),
         (QueryToolChest) toolChestHistorical
     );
@@ -958,7 +958,8 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
     QueryToolChest<ResultRow, GroupByQuery> toolChestHistorical2 = groupByFactoryHistorical2.getToolchest();
     QueryRunner<ResultRow> theRunner2 = new FinalizeResultsQueryRunner<>(
         toolChestHistorical2.mergeResults(
-            groupByFactoryHistorical2.mergeRunners(executorService, getRunner2(5))
+            groupByFactoryHistorical2.mergeRunners(executorService, getRunner2(5)),
+            true
         ),
         (QueryToolChest) toolChestHistorical2
     );
@@ -974,27 +975,14 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
                 return Sequences
                     .simple(
                         ImmutableList.of(
-                            theRunner.run(
-                                queryPlus.withQuery(
-                                    queryPlus.getQuery().withOverriddenContext(
-                                        ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true)
-                                    )
-                                ),
-                                responseContext
-                            ),
-                            theRunner2.run(
-                                queryPlus.withQuery(
-                                    queryPlus.getQuery().withOverriddenContext(
-                                        ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true)
-                                    )
-                                ),
-                                responseContext
-                            )
+                            theRunner.run(queryPlus, responseContext),
+                            theRunner2.run(queryPlus, responseContext)
                         )
                     )
                     .flatMerge(Function.identity(), queryPlus.getQuery().getResultOrdering());
               }
-            }
+            },
+            false
         ),
         (QueryToolChest) toolchestBroker
     );
@@ -1024,9 +1012,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
         .build();
 
     Sequence<ResultRow> queryResult = finalRunner.run(
-        QueryPlus.wrap(query.withOverriddenContext(
-            ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, false)
-        )),
+        QueryPlus.wrap(query),
         ResponseContext.createEmpty()
     );
     return queryResult.toList();

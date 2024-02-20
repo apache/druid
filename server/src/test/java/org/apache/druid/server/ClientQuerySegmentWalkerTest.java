@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.inject.Injector;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Intervals;
@@ -57,7 +58,6 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByUtils;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -1481,7 +1481,9 @@ public class ClientQuerySegmentWalkerTest
       }
     }
 
+    Injector injector = QueryStackTests.injectorWithLookup();
     walker = QueryStackTests.createClientQuerySegmentWalker(
+        injector,
         new CapturingWalker(
             QueryStackTests.createClusterQuerySegmentWalker(
                 ImmutableMap.<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>>builder()
@@ -1494,7 +1496,8 @@ public class ClientQuerySegmentWalkerTest
                     .build(),
                 conglomerate,
                 schedulerForTest,
-                new GroupByQueryConfig()
+                new GroupByQueryConfig(),
+                injector
             ),
             ClusterOrLocal.CLUSTER
         ),

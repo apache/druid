@@ -35,8 +35,8 @@ public class GroupByResourcesReservationPool
 
   @Inject
   public GroupByResourcesReservationPool(
-     @Merging BlockingPool<ByteBuffer> mergeBufferPool,
-     GroupByQueryConfig groupByQueryConfig
+      @Merging BlockingPool<ByteBuffer> mergeBufferPool,
+      GroupByQueryConfig groupByQueryConfig
   )
   {
     this.mergeBufferPool = mergeBufferPool;

@@ -57,7 +57,6 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryResources;
-import org.apache.druid.query.groupby.GroupByUtils;
 import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBasedKey;
@@ -90,6 +89,7 @@ import java.util.concurrent.TimeoutException;
 public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
 {
   private static final Logger log = new Logger(GroupByMergingQueryRunner.class);
+  private static final String CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION = "mergeRunnersUsingChainedExecution";
 
   private final GroupByQueryConfig config;
   private final DruidProcessingConfig processingConfig;
@@ -139,12 +139,12 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
     // will involve materializing the results for each sink before starting to feed them into the outer merge buffer.
     // I'm not sure of a better way to do this without tweaking how realtime servers do queries.
     final boolean forceChainedExecution = query.context().getBoolean(
-        GroupByUtils.CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION,
+        CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION,
         false
     );
     final QueryPlus<ResultRow> queryPlusForRunners = queryPlus
         .withQuery(
-            query.withOverriddenContext(ImmutableMap.of(GroupByUtils.CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION, true))
+            query.withOverriddenContext(ImmutableMap.of(CTX_KEY_MERGE_RUNNERS_USING_CHAINED_EXECUTION, true))
         )
         .withoutThreadUnsafeState();
 

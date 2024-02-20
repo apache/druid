@@ -77,8 +77,10 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertEquals(IndexSpec.DEFAULT, config.getIndexSpec());
     Assert.assertFalse(config.isReportParseExceptions());
     Assert.assertEquals(Duration.ofMinutes(15).toMillis(), config.getHandoffConditionTimeout());
-    Assert.assertNull(config.getRecordBufferSizeConfigured());
-    Assert.assertEquals(10000, config.getRecordBufferSizeOrDefault(1_000_000_000, false));
+    Assert.assertNull(config.getRecordBufferSizeBytesConfigured());
+    Assert.assertEquals(100_000_000, config.getRecordBufferSizeBytesOrDefault(2_000_000_000));
+    Assert.assertEquals(100_000_000, config.getRecordBufferSizeBytesOrDefault(1_000_000_000));
+    Assert.assertEquals(10_000_000, config.getRecordBufferSizeBytesOrDefault(100_000_000));
     Assert.assertEquals(5000, config.getRecordBufferOfferTimeout());
     Assert.assertEquals(5000, config.getRecordBufferFullWait());
     Assert.assertNull(config.getFetchThreads());
@@ -98,7 +100,7 @@ public class KinesisIndexTaskTuningConfigTest
                      + "  \"maxPendingPersists\": 100,\n"
                      + "  \"reportParseExceptions\": true,\n"
                      + "  \"handoffConditionTimeout\": 100,\n"
-                     + "  \"recordBufferSize\": 1000,\n"
+                     + "  \"recordBufferSizeBytes\": 1000,\n"
                      + "  \"recordBufferOfferTimeout\": 500,\n"
                      + "  \"recordBufferFullWait\": 500,\n"
                      + "  \"resetOffsetAutomatically\": false,\n"
@@ -125,8 +127,8 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertEquals(100, config.getMaxPendingPersists());
     Assert.assertTrue(config.isReportParseExceptions());
     Assert.assertEquals(100, config.getHandoffConditionTimeout());
-    Assert.assertEquals(1000, (int) config.getRecordBufferSizeConfigured());
-    Assert.assertEquals(1000, config.getRecordBufferSizeOrDefault(1_000_000_000, false));
+    Assert.assertEquals(1000, (int) config.getRecordBufferSizeBytesConfigured());
+    Assert.assertEquals(1000, config.getRecordBufferSizeBytesOrDefault(1_000_000_000));
     Assert.assertEquals(500, config.getRecordBufferOfferTimeout());
     Assert.assertEquals(500, config.getRecordBufferFullWait());
     Assert.assertEquals(2, (int) config.getFetchThreads());
@@ -153,6 +155,7 @@ public class KinesisIndexTaskTuningConfigTest
         5L,
         true,
         false,
+        null,
         1000,
         1000,
         500,
@@ -162,6 +165,7 @@ public class KinesisIndexTaskTuningConfigTest
         500,
         500,
         6000,
+        1_000_000,
         new Period("P3D")
     );
 
@@ -190,7 +194,9 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertEquals(base.getRecordBufferFullWait(), deserialized.getRecordBufferFullWait());
     Assert.assertEquals(base.getRecordBufferOfferTimeout(), deserialized.getRecordBufferOfferTimeout());
     Assert.assertEquals(base.getRecordBufferSizeConfigured(), deserialized.getRecordBufferSizeConfigured());
+    Assert.assertEquals(base.getRecordBufferSizeBytesConfigured(), deserialized.getRecordBufferSizeBytesConfigured());
     Assert.assertEquals(base.getMaxRecordsPerPollConfigured(), deserialized.getMaxRecordsPerPollConfigured());
+    Assert.assertEquals(base.getMaxBytesPerPollConfigured(), deserialized.getMaxBytesPerPollConfigured());
   }
 
   @Test
@@ -212,6 +218,7 @@ public class KinesisIndexTaskTuningConfigTest
         5L,
         true,
         false,
+        null,
         1000,
         1000,
         500,
@@ -220,6 +227,7 @@ public class KinesisIndexTaskTuningConfigTest
         false,
         500,
         500,
+        1_000_000,
         6000,
         new Period("P3D")
     );
@@ -247,7 +255,7 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertEquals(base.getMaxSavedParseExceptions(), deserialized.getMaxSavedParseExceptions());
     Assert.assertEquals(base.getRecordBufferFullWait(), deserialized.getRecordBufferFullWait());
     Assert.assertEquals(base.getRecordBufferOfferTimeout(), deserialized.getRecordBufferOfferTimeout());
-    Assert.assertEquals(base.getRecordBufferSizeConfigured(), deserialized.getRecordBufferSizeConfigured());
+    Assert.assertEquals(base.getRecordBufferSizeBytesConfigured(), deserialized.getRecordBufferSizeBytesConfigured());
     Assert.assertEquals(base.getMaxRecordsPerPollConfigured(), deserialized.getMaxRecordsPerPollConfigured());
   }
 
@@ -301,6 +309,7 @@ public class KinesisIndexTaskTuningConfigTest
         null,
         null,
         null,
+        null,
         1000,
         500,
         500,
@@ -309,6 +318,7 @@ public class KinesisIndexTaskTuningConfigTest
         null,
         null,
         10,
+        1_000_000,
         null,
         null,
         null,
@@ -327,7 +337,7 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertEquals(IndexSpec.DEFAULT, copy.getIndexSpec());
     Assert.assertTrue(copy.isReportParseExceptions());
     Assert.assertEquals(5L, copy.getHandoffConditionTimeout());
-    Assert.assertEquals(1000, (int) copy.getRecordBufferSizeConfigured());
+    Assert.assertEquals(1000, (int) copy.getRecordBufferSizeBytesConfigured());
     Assert.assertEquals(500, copy.getRecordBufferOfferTimeout());
     Assert.assertEquals(500, copy.getRecordBufferFullWait());
     Assert.assertEquals(2, (int) copy.getFetchThreads());

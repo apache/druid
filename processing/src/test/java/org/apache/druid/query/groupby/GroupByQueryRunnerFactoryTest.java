@@ -20,7 +20,6 @@
 package org.apache.druid.query.groupby;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
@@ -97,6 +96,7 @@ public class GroupByQueryRunnerFactoryTest
           @Override
           public Sequence run(QueryPlus queryPlus, ResponseContext responseContext)
           {
+            //noinspection unchecked
             return factory.getToolchest().mergeResults(
                 new QueryRunner()
                 {
@@ -119,27 +119,15 @@ public class GroupByQueryRunnerFactoryTest
                       throw new RuntimeException(e);
                     }
                   }
-                }
-            ).run(
-                queryPlus.withQuery(
-                    queryPlus.getQuery().withOverriddenContext(
-                        ImmutableMap.of(
-                            GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2,
-                            false
-                        )
-                    )
-                ),
-                responseContext
-            );
+                },
+                false
+            ).run(queryPlus, responseContext);
           }
         }
     );
 
     Sequence<ResultRow> result = mergedRunner.run(
-        QueryPlus.wrap(query.withOverriddenContext(
-            ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, false
-            ))
-        ),
+        QueryPlus.wrap(query),
         ResponseContext.createEmpty()
     );
 

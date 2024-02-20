@@ -23,11 +23,13 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
+import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
+import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.indexing.report.MSQStagesReport;
 import org.apache.druid.msq.indexing.report.MSQStatusReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
@@ -38,6 +40,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,9 +49,6 @@ import java.util.TreeMap;
 
 public class SqlStatementResourceHelperTest
 {
-
-  private static final Logger log = new Logger(SqlStatementResourceHelperTest.class);
-
   @Test
   public void testDistinctPartitionsOnEachWorker()
   {
@@ -83,7 +83,7 @@ public class SqlStatementResourceHelperTest
         payload,
         DurableStorageMSQDestination.instance()
     );
-    validatePages(pages.get(), createValidationMap(worker0, worker1, worker2));
+    validatePages(pages.get(), getExpectedPageInformationList(worker0, worker1, worker2));
   }
 
   @Test
@@ -122,7 +122,7 @@ public class SqlStatementResourceHelperTest
         payload,
         DurableStorageMSQDestination.instance()
     );
-    validatePages(pages.get(), createValidationMap(worker0, worker1, worker2));
+    validatePages(pages.get(), getExpectedPageInformationList(worker0, worker1, worker2));
   }
 
 
@@ -160,7 +160,7 @@ public class SqlStatementResourceHelperTest
 
     Optional<List<PageInformation>> pages =
         SqlStatementResourceHelper.populatePageList(payload, DurableStorageMSQDestination.instance());
-    validatePages(pages.get(), createValidationMap(worker0, worker1, worker2, worker3));
+    validatePages(pages.get(), getExpectedPageInformationList(worker0, worker1, worker2, worker3));
   }
 
 
@@ -200,9 +200,8 @@ public class SqlStatementResourceHelperTest
         payload,
         DurableStorageMSQDestination.instance()
     );
-    validatePages(pages.get(), createValidationMap(worker0, worker1, worker2, worker3));
+    validatePages(pages.get(), getExpectedPageInformationList(worker0, worker1, worker2, worker3));
   }
-
 
   @Test
   public void testConsecutivePartitionsOnEachWorker()
@@ -240,41 +239,148 @@ public class SqlStatementResourceHelperTest
         payload,
         DurableStorageMSQDestination.instance()
     );
-    validatePages(pages.get(), createValidationMap(worker0, worker1, worker2, worker3));
+    validatePages(pages.get(), getExpectedPageInformationList(worker0, worker1, worker2, worker3));
   }
 
-
-  private void validatePages(
-      List<PageInformation> pageList,
-      Map<Integer, Map<Integer, Pair<Long, Long>>> partitionToWorkerToRowsBytes
-  )
+  /**
+   * Durable storage destination applies only to SELECT queries and unlike ingest queries, emtpy worker counters will not
+   * be reported in this case. See {@link #testEmptyCountersForTaskReportDestination()} and {@link #testEmptyCountersForDataSourceDestination()}
+   * to see the difference.
+   */
+  @Test
+  public void testEmptyCountersForDurableStorageDestination()
   {
-    int currentPage = 0;
-    for (Map.Entry<Integer, Map<Integer, Pair<Long, Long>>> partitionWorker : partitionToWorkerToRowsBytes.entrySet()) {
-      for (Map.Entry<Integer, Pair<Long, Long>> workerRowsBytes : partitionWorker.getValue().entrySet()) {
-        PageInformation pageInformation = pageList.get(currentPage);
-        Assert.assertEquals(currentPage, pageInformation.getId());
-        Assert.assertEquals(workerRowsBytes.getValue().lhs, pageInformation.getNumRows());
-        Assert.assertEquals(workerRowsBytes.getValue().rhs, pageInformation.getSizeInBytes());
-        Assert.assertEquals(partitionWorker.getKey(), pageInformation.getPartition());
-        Assert.assertEquals(workerRowsBytes.getKey(), pageInformation.getWorker());
-        log.debug(pageInformation.toString());
-        currentPage++;
-      }
-    }
-    Assert.assertEquals(currentPage, pageList.size());
+    CounterSnapshotsTree counterSnapshots = new CounterSnapshotsTree();
+    ChannelCounters worker0 = createChannelCounters(new int[0]);
+
+    counterSnapshots.put(0, 0, new CounterSnapshots(ImmutableMap.of()));
+
+    MSQTaskReportPayload payload = new MSQTaskReportPayload(
+        new MSQStatusReport(
+          TaskState.SUCCESS,
+          null,
+          new ArrayDeque<>(),
+          null,
+          0,
+          new HashMap<>(),
+          1,
+          2,
+          null
+        ),
+        MSQStagesReport.create(
+            MSQTaskReportTest.QUERY_DEFINITION,
+            ImmutableMap.of(),
+            ImmutableMap.of(),
+            ImmutableMap.of(0, 1),
+            ImmutableMap.of(0, 1)
+        ),
+        counterSnapshots,
+        null
+    );
+
+    Optional<List<PageInformation>> pages = SqlStatementResourceHelper.populatePageList(
+        payload,
+        DurableStorageMSQDestination.instance()
+    );
+    validatePages(pages.get(), getExpectedPageInformationList(worker0));
   }
 
-  private Map<Integer, Map<Integer, Pair<Long, Long>>> createValidationMap(
-      ChannelCounters... workers
-  )
+  @Test
+  public void testEmptyCountersForTaskReportDestination()
   {
-    if (workers == null || workers.length == 0) {
-      return new HashMap<>();
+    CounterSnapshotsTree counterSnapshots = new CounterSnapshotsTree();
+    counterSnapshots.put(0, 0, new CounterSnapshots(ImmutableMap.of()));
+
+    MSQTaskReportPayload payload = new MSQTaskReportPayload(
+        new MSQStatusReport(
+            TaskState.SUCCESS,
+            null,
+            new ArrayDeque<>(),
+            null,
+            0,
+            new HashMap<>(),
+            1,
+            2,
+            null
+        ),
+        MSQStagesReport.create(
+            MSQTaskReportTest.QUERY_DEFINITION,
+            ImmutableMap.of(),
+            ImmutableMap.of(),
+            ImmutableMap.of(0, 1),
+            ImmutableMap.of(0, 1)
+        ),
+        counterSnapshots,
+        null
+    );
+
+    Optional<List<PageInformation>> pages = SqlStatementResourceHelper.populatePageList(
+        payload,
+        TaskReportMSQDestination.instance()
+    );
+    Assert.assertTrue(pages.isPresent());
+    Assert.assertEquals(1, pages.get().size());
+    Assert.assertEquals(new PageInformation(0, 0L, 0L), pages.get().get(0));
+  }
+
+  @Test
+  public void testEmptyCountersForDataSourceDestination()
+  {
+    CounterSnapshotsTree counterSnapshots = new CounterSnapshotsTree();
+    counterSnapshots.put(0, 0, new CounterSnapshots(ImmutableMap.of()));
+
+    MSQTaskReportPayload payload = new MSQTaskReportPayload(
+        new MSQStatusReport(
+            TaskState.SUCCESS,
+            null,
+            new ArrayDeque<>(),
+            null,
+            0,
+            new HashMap<>(),
+            1,
+            2,
+            null
+        ),
+        MSQStagesReport.create(
+            MSQTaskReportTest.QUERY_DEFINITION,
+            ImmutableMap.of(),
+            ImmutableMap.of(),
+            ImmutableMap.of(0, 1),
+            ImmutableMap.of(0, 1)
+        ),
+        counterSnapshots,
+        null
+    );
+
+    Optional<List<PageInformation>> pages = SqlStatementResourceHelper.populatePageList(
+        payload,
+        new DataSourceMSQDestination(
+            "test",
+            Granularities.DAY,
+            null,
+            null
+        )
+    );
+    Assert.assertTrue(pages.isPresent());
+    Assert.assertEquals(1, pages.get().size());
+    Assert.assertEquals(new PageInformation(0, 0L, null), pages.get().get(0));
+  }
+
+  private void validatePages(List<PageInformation> actualPageList, List<PageInformation> expectedPageList)
+  {
+    Assert.assertEquals(expectedPageList.size(), actualPageList.size());
+    Assert.assertEquals(expectedPageList, actualPageList);
+  }
+
+  private List<PageInformation> getExpectedPageInformationList(ChannelCounters... workerCounters)
+  {
+    List<PageInformation> pageInformationList = new ArrayList<>();
+    if (workerCounters == null || workerCounters.length == 0) {
+      return pageInformationList;
     } else {
       Map<Integer, Map<Integer, Pair<Long, Long>>> partitionToWorkerToRowsBytes = new TreeMap<>();
-      for (int worker = 0; worker < workers.length; worker++) {
-        ChannelCounters.Snapshot workerCounter = workers[worker].snapshot();
+      for (int worker = 0; worker < workerCounters.length; worker++) {
+        ChannelCounters.Snapshot workerCounter = workerCounters[worker].snapshot();
         for (int partition = 0; workerCounter != null && partition < workerCounter.getRows().length; partition++) {
           Map<Integer, Pair<Long, Long>> workerMap = partitionToWorkerToRowsBytes.computeIfAbsent(
               partition,
@@ -290,13 +396,26 @@ public class SqlStatementResourceHelperTest
                 )
             );
           }
-
         }
       }
-      return partitionToWorkerToRowsBytes;
+
+      // Construct the pages based on the order of partitionToWorkerMap.
+      for (Map.Entry<Integer, Map<Integer, Pair<Long, Long>>> partitionToWorkerMap : partitionToWorkerToRowsBytes.entrySet()) {
+        for (Map.Entry<Integer, Pair<Long, Long>> workerToRowsBytesMap : partitionToWorkerMap.getValue().entrySet()) {
+          pageInformationList.add(
+              new PageInformation(
+                  pageInformationList.size(),
+                  workerToRowsBytesMap.getValue().lhs,
+                  workerToRowsBytesMap.getValue().rhs,
+                  workerToRowsBytesMap.getKey(),
+                  partitionToWorkerMap.getKey()
+              )
+          );
+        }
+      }
+      return pageInformationList;
     }
   }
-
 
   private ChannelCounters createChannelCounters(int[] partitions)
   {

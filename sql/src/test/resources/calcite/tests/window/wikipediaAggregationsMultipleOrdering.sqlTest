@@ -15,7 +15,15 @@ expectedOperators:
   - type: "window"
     processor:
       type: "framedAgg"
-      frame: { peerType: "ROWS", lowUnbounded: false, lowOffset: 3, uppUnbounded: false, uppOffset: 2 }
+      frame:
+        peerType: "RANGE"
+        lowUnbounded: false
+        lowOffset: 3
+        uppUnbounded: false
+        uppOffset: 2
+        orderBy:
+          - column: d1
+            direction: ASC
       aggregations:
         - { type: "longSum", name: "w0", fieldName: "a0" }
   - { type: "naiveSort", columns: [ { column: "d1", direction: "ASC" }, { column: "a0", direction: "ASC"} ]}

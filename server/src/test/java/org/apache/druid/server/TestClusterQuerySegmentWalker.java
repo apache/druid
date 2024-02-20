@@ -33,7 +33,6 @@ import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
-import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -42,12 +41,8 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.ReferenceCountingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.query.TestBufferPool;
-import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.context.ResponseContext.Keys;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByUtils;
-import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
@@ -82,19 +77,23 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
   @Nullable
   private final QueryScheduler scheduler;
   private final GroupByQueryConfig groupByQueryConfig;
+  private final EtagProvider etagProvider;
 
   TestClusterQuerySegmentWalker(
       Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
       QueryRunnerFactoryConglomerate conglomerate,
       @Nullable QueryScheduler scheduler,
-      GroupByQueryConfig groupByQueryConfig
+      GroupByQueryConfig groupByQueryConfig,
+      EtagProvider etagProvider
   )
   {
     this.timelines = timelines;
     this.conglomerate = conglomerate;
     this.scheduler = scheduler;
     this.groupByQueryConfig = groupByQueryConfig;
+    this.etagProvider = etagProvider;
   }
+
 
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
@@ -169,10 +168,14 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
     // to actually serve the queries
     return (theQuery, responseContext) -> {
       responseContext.initializeRemainingResponses();
+
+      String etag = etagProvider.getEtagFor(theQuery.getQuery());
+      if (etag != null) {
+        responseContext.put(Keys.ETAG, etag);
+      }
       responseContext.addRemainingResponse(
           theQuery.getQuery().getMostSpecificId(), 0);
 
-      Object originalMergingQueryRunnerBuffers = responseContext.remove(GroupByUtils.RESPONSE_KEY_GROUP_BY_MERGING_QUERY_RUNNER_BUFFERS);
       if (scheduler != null) {
         Set<SegmentServerSelector> segments = new HashSet<>();
         specs.forEach(spec -> segments.add(new SegmentServerSelector(spec)));
@@ -184,50 +187,18 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
                         theQuery.getQuery(),
                         ImmutableList.copyOf(specs)
                     )),
-                    enrichResponseContextWithMergeBuffers(theQuery, responseContext)
+                    responseContext
+                    // enrichResponseContextWithMergeBuffers(theQuery, responseContext)
                 )
             )
-        ).withBaggage(() -> {
-          responseContext.remove(GroupByUtils.RESPONSE_KEY_GROUP_BY_MERGING_QUERY_RUNNER_BUFFERS);
-          if (originalMergingQueryRunnerBuffers != null) {
-            responseContext.add(
-                GroupByUtils.RESPONSE_KEY_GROUP_BY_MERGING_QUERY_RUNNER_BUFFERS,
-                originalMergingQueryRunnerBuffers
-            );
-          }
-        });
+        );
       } else {
         return baseRunner.run(
             theQuery.withQuery(Queries.withSpecificSegments(theQuery.getQuery(), ImmutableList.copyOf(specs))),
             responseContext
-        ).withBaggage(() -> {
-          responseContext.remove(GroupByUtils.RESPONSE_KEY_GROUP_BY_MERGING_QUERY_RUNNER_BUFFERS);
-          if (originalMergingQueryRunnerBuffers != null) {
-            responseContext.add(
-                GroupByUtils.RESPONSE_KEY_GROUP_BY_MERGING_QUERY_RUNNER_BUFFERS,
-                originalMergingQueryRunnerBuffers
-            );
-          }
-        });
+        );
       }
     };
-  }
-
-  <T> ResponseContext enrichResponseContextWithMergeBuffers(QueryPlus<T> theQuery, ResponseContext context)
-  {
-    if (theQuery.getQuery() instanceof GroupByQuery) {
-      context.add(
-          GroupByUtils.RESPONSE_KEY_GROUP_BY_MERGING_QUERY_RUNNER_BUFFERS,
-          GroupingEngine.prepareResource(
-              (GroupByQuery) theQuery.getQuery(),
-              TestBufferPool.offHeap(10_000_000, Integer.MAX_VALUE),
-              true,
-              groupByQueryConfig
-          )
-      );
-
-    }
-    return context;
   }
 
   private <T> QueryRunner<T> makeTableRunner(
@@ -262,7 +233,8 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
                                 new SpecificSegmentSpec(segment.getDescriptor())
                             )
                     )
-            )
+            ),
+            true
         ),
         toolChest
     );
