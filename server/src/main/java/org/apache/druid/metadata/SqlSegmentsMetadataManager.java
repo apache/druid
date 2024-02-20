@@ -265,6 +265,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     this.connector = connector;
     this.segmentSchemaCache = segmentSchemaCache;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
+    log.info("CentralizedDatasourceSchema config is [%s]", centralizedDatasourceSchemaConfig.isEnabled());
   }
 
   /**
@@ -1236,6 +1237,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       segmentSchemaCache.setInitialized();
     }
     latestSegmentSchemaPoll = maxCreatedDate[0];
+
+    log.info("Found [%d] schema since [%s].", schemaMap.size(), latestSegmentSchemaPoll);
 
     Preconditions.checkNotNull(
         segments,

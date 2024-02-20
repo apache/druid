@@ -418,8 +418,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
         tuningConfig,
         rowIngestionMeters,
         parseExceptionHandler,
-        useMaxMemoryEstimates,
-        toolbox.getCentralizedTableSchemaConfig()
+        useMaxMemoryEstimates
     );
     boolean exceptionOccurred = false;
     try (

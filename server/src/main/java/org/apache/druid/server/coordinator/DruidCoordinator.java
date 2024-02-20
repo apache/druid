@@ -558,13 +558,13 @@ public class DruidCoordinator
 
   private List<CoordinatorDuty> makeMetadataStoreManagementDuties()
   {
-    List<CoordinatorDuty> duties = Arrays.asList(
-        new KillSupervisors(config, metadataManager.supervisors()),
-        new KillAuditLog(config, metadataManager.audit()),
-        new KillRules(config, metadataManager.rules()),
-        new KillDatasourceMetadata(config, metadataManager.indexer(), metadataManager.supervisors()),
-        new KillCompactionConfig(config, metadataManager.segments(), metadataManager.configs())
-    );
+    List<CoordinatorDuty> duties = new ArrayList<>();
+
+    duties.add(new KillSupervisors(config, metadataManager.supervisors()));
+    duties.add(new KillAuditLog(config, metadataManager.audit()));
+    duties.add(new KillRules(config, metadataManager.rules()));
+    duties.add(new KillDatasourceMetadata(config, metadataManager.indexer(), metadataManager.supervisors()));
+    duties.add(new KillCompactionConfig(config, metadataManager.segments(), metadataManager.configs()));
 
     if (centralizedDatasourceSchemaConfig.isEnabled()) {
       duties.add(new KillUnreferencedSegmentSchemas(schemaManager));

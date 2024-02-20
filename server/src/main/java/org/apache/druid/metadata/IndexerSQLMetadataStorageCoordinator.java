@@ -132,6 +132,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     this.connector = connector;
     this.schemaManager = schemaManager;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
+    log.info("centralizedDatasourceSchemaConfig is [%s]", centralizedDatasourceSchemaConfig.isEnabled());
   }
 
   @LifecycleStart

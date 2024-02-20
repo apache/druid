@@ -198,8 +198,7 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
         new ShuffleDataSegmentPusher(supervisorTaskId, getId(), toolbox.getIntermediaryDataManager()),
         buildSegmentsMeters,
         parseExceptionHandler,
-        useMaxMemoryEstimates,
-        toolbox.getCentralizedTableSchemaConfig()
+        useMaxMemoryEstimates
     );
     boolean exceptionOccurred = false;
     try (final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator)) {

@@ -721,8 +721,10 @@ public class BatchAppenderator implements Appenderator
                 sinkForIdentifier
             );
 
+            log.info("BatchAppenderator mergeAndPush is invoked.CentralizedDatasourceSchema config is [%s]", centralizedDatasourceSchemaConfig.isEnabled());
+
             // record it:
-            if (segmentAndSchema != null) {
+            if (segmentAndSchema.lhs != null) {
               DataSegment segment = segmentAndSchema.lhs;
               dataSegments.add(segment);
               SegmentSchemaMetadata segmentSchemaMetadata = segmentAndSchema.rhs;

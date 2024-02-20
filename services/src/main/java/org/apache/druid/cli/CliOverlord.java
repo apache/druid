@@ -38,7 +38,6 @@ import com.google.inject.name.Names;
 import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.util.Providers;
 import org.apache.druid.client.indexing.IndexingService;
-import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.IndexingServiceFirehoseModule;
@@ -200,31 +199,32 @@ public class CliOverlord extends ServerRunnable
                     .to(DEFAULT_SERVICE_NAME);
               binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8090);
               binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8290);
+
+              String serverViewType = (String) properties.getOrDefault(
+                  ServerViewModule.SERVERVIEW_TYPE_PROPERTY,
+                  ServerViewModule.DEFAULT_SERVERVIEW_TYPE
+              );
+
+              if (Boolean.parseBoolean(properties.getProperty(CliCoordinator.CENTRALIZED_DATASOURCE_SCHEMA_ENABLED))
+                  && !serverViewType.equals(ServerViewModule.SERVERVIEW_TYPE_HTTP)) {
+                throw DruidException
+                    .forPersona(DruidException.Persona.ADMIN)
+                    .ofCategory(DruidException.Category.UNSUPPORTED)
+                    .build(
+                        StringUtils.format(
+                            "CentralizedDatasourceSchema feature is incompatible with config %1$s=%2$s. "
+                            + "Please consider switching to http based segment discovery (set %1$s=%3$s) "
+                            + "or disable the feature (set %4$s=false).",
+                            ServerViewModule.SERVERVIEW_TYPE_PROPERTY,
+                            serverViewType,
+                            ServerViewModule.SERVERVIEW_TYPE_HTTP,
+                            CliCoordinator.CENTRALIZED_DATASOURCE_SCHEMA_ENABLED
+                        ));
+              }
+
+              JsonConfigProvider.bind(binder, "druid.centralizedDatasourceSchema", CentralizedDatasourceSchemaConfig.class);
             }
 
-            String serverViewType = (String) properties.getOrDefault(
-                ServerViewModule.SERVERVIEW_TYPE_PROPERTY,
-                ServerViewModule.DEFAULT_SERVERVIEW_TYPE
-            );
-
-            if (Boolean.parseBoolean(properties.getProperty(CliCoordinator.CENTRALIZED_DATASOURCE_SCHEMA_ENABLED))
-                && !serverViewType.equals(ServerViewModule.SERVERVIEW_TYPE_HTTP)) {
-              throw DruidException
-                  .forPersona(DruidException.Persona.ADMIN)
-                  .ofCategory(DruidException.Category.UNSUPPORTED)
-                  .build(
-                      StringUtils.format(
-                          "CentralizedDatasourceSchema feature is incompatible with config %1$s=%2$s. "
-                          + "Please consider switching to http based segment discovery (set %1$s=%3$s) "
-                          + "or disable the feature (set %4$s=false).",
-                          ServerViewModule.SERVERVIEW_TYPE_PROPERTY,
-                          serverViewType,
-                          ServerViewModule.SERVERVIEW_TYPE_HTTP,
-                          CliCoordinator.CENTRALIZED_DATASOURCE_SCHEMA_ENABLED
-                      ));
-            }
-
-            JsonConfigProvider.bind(binder, "druid.centralizedDatasourceSchema", CentralizedDatasourceSchemaConfig.class);
             JsonConfigProvider.bind(binder, "druid.coordinator.asOverlord", CoordinatorOverlordServiceConfig.class);
             JsonConfigProvider.bind(binder, "druid.indexer.queue", TaskQueueConfig.class);
             JsonConfigProvider.bind(binder, "druid.indexer.tasklock", TaskLockConfig.class);

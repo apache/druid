@@ -41,6 +41,7 @@ import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProvider;
 import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.query.QueryProcessingPool;
@@ -74,6 +75,7 @@ import java.util.function.Function;
  */
 public class TaskToolboxFactory
 {
+  private static final Logger log = new Logger(TaskToolboxFactory.class);
   private final SegmentLoaderConfig segmentLoaderConfig;
   private final TaskConfig config;
   private final DruidNode taskExecutorNode;
@@ -201,6 +203,7 @@ public class TaskToolboxFactory
     this.taskLogPusher = taskLogPusher;
     this.attemptId = attemptId;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
+    log.info("CentralizedDatasourceSchemaConfig is [%s]", centralizedDatasourceSchemaConfig.isEnabled());
   }
 
   public TaskToolbox build(Task task)

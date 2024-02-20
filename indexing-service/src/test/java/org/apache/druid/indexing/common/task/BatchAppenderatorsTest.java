@@ -259,8 +259,7 @@ public class BatchAppenderatorsTest
                   Integer.MAX_VALUE,
                   0
               ),
-              false,
-              CentralizedDatasourceSchemaConfig.create()
+              false
           );
           break;
         case "CLOSED_SEGMENTS":
@@ -283,8 +282,7 @@ public class BatchAppenderatorsTest
                   Integer.MAX_VALUE,
                   0
               ),
-              false,
-              CentralizedDatasourceSchemaConfig.create()
+              false
           );
 
           break;
@@ -308,8 +306,7 @@ public class BatchAppenderatorsTest
                   Integer.MAX_VALUE,
                   0
               ),
-              false,
-              CentralizedDatasourceSchemaConfig.create()
+              false
           );
           break;
         default:

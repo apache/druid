@@ -27,7 +27,6 @@ import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
-import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
@@ -46,8 +45,7 @@ public final class BatchAppenderators
       AppenderatorConfig appenderatorConfig,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+      boolean useMaxMemoryEstimates
   )
   {
     return newAppenderator(
@@ -60,8 +58,7 @@ public final class BatchAppenderators
         toolbox.getSegmentPusher(),
         rowIngestionMeters,
         parseExceptionHandler,
-        useMaxMemoryEstimates,
-        centralizedDatasourceSchemaConfig
+        useMaxMemoryEstimates
     );
   }
 
@@ -75,8 +72,7 @@ public final class BatchAppenderators
       DataSegmentPusher segmentPusher,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+      boolean useMaxMemoryEstimates
   )
   {
     if (toolbox.getConfig().getBatchProcessingMode() == TaskConfig.BatchProcessingMode.OPEN_SEGMENTS) {
@@ -92,7 +88,7 @@ public final class BatchAppenderators
           rowIngestionMeters,
           parseExceptionHandler,
           useMaxMemoryEstimates,
-          centralizedDatasourceSchemaConfig
+          toolbox.getCentralizedTableSchemaConfig()
       );
     } else if (toolbox.getConfig().getBatchProcessingMode() == TaskConfig.BatchProcessingMode.CLOSED_SEGMENTS) {
       return appenderatorsManager.createClosedSegmentsOfflineAppenderatorForTask(
@@ -107,7 +103,7 @@ public final class BatchAppenderators
           rowIngestionMeters,
           parseExceptionHandler,
           useMaxMemoryEstimates,
-          centralizedDatasourceSchemaConfig
+          toolbox.getCentralizedTableSchemaConfig()
       );
     } else if (toolbox.getConfig().getBatchProcessingMode() == TaskConfig.BatchProcessingMode.CLOSED_SEGMENTS_SINKS) {
       return appenderatorsManager.createOfflineAppenderatorForTask(
@@ -122,7 +118,7 @@ public final class BatchAppenderators
           rowIngestionMeters,
           parseExceptionHandler,
           useMaxMemoryEstimates,
-          centralizedDatasourceSchemaConfig
+          toolbox.getCentralizedTableSchemaConfig()
       );
     } else {
       throw new IAE("Invalid batchProcesingMode[%s]", toolbox.getConfig().getBatchProcessingMode());
