@@ -131,6 +131,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -242,6 +243,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
   private volatile CopyOnWriteArrayList<SequenceMetadata<PartitionIdType, SequenceOffsetType>> sequences;
   private volatile Throwable backgroundThreadException;
+
+  private final ConcurrentMap<PartitionIdType, LongAdder> partitionsThroughput = new ConcurrentHashMap<>();
 
   public SeekableStreamIndexTaskRunner(
       final SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType> task,
@@ -717,6 +720,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
               // here for kafka is to +1 while for kinesis we simply save the current sequence number
               lastReadOffsets.put(record.getPartitionId(), record.getSequenceNumber());
               currOffsets.put(record.getPartitionId(), getNextStartOffset(record.getSequenceNumber()));
+
+              partitionsThroughput.computeIfAbsent(record.getPartitionId(), igonre -> new LongAdder()).increment();
             }
 
             // Use record.getSequenceNumber() in the moreToRead check, since currOffsets might not have been
@@ -1126,7 +1131,13 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 getTaskCompletionRowStats(),
                 errorMsg,
                 errorMsg == null,
-                handoffWaitMs
+                handoffWaitMs,
+                partitionsThroughput.entrySet()
+                                    .stream()
+                                    .collect(Collectors.toMap(
+                                        entry -> entry.getKey().toString(),
+                                        entry -> entry.getValue().longValue()
+                                    ))
             )
         )
     );

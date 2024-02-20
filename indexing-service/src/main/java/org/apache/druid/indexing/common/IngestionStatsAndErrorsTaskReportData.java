@@ -47,13 +47,37 @@ public class IngestionStatsAndErrorsTaskReportData
   @JsonProperty
   private long segmentAvailabilityWaitTimeMs;
 
+  @JsonProperty
+  private Map<Object, Long> partitionStats;
+
+  public IngestionStatsAndErrorsTaskReportData(
+      IngestionState ingestionState,
+      Map<String, Object> unparseableEvents,
+      Map<String, Object> rowStats,
+      @Nullable String errorMsg,
+      boolean segmentAvailabilityConfirmed,
+      long segmentAvailabilityWaitTimeMs
+  )
+  {
+    this(
+        ingestionState,
+        unparseableEvents,
+        rowStats,
+        errorMsg,
+        segmentAvailabilityConfirmed,
+        segmentAvailabilityWaitTimeMs,
+        null
+    );
+  }
+
   public IngestionStatsAndErrorsTaskReportData(
       @JsonProperty("ingestionState") IngestionState ingestionState,
       @JsonProperty("unparseableEvents") Map<String, Object> unparseableEvents,
       @JsonProperty("rowStats") Map<String, Object> rowStats,
       @JsonProperty("errorMsg") @Nullable String errorMsg,
       @JsonProperty("segmentAvailabilityConfirmed") boolean segmentAvailabilityConfirmed,
-      @JsonProperty("segmentAvailabilityWaitTimeMs") long segmentAvailabilityWaitTimeMs
+      @JsonProperty("segmentAvailabilityWaitTimeMs") long segmentAvailabilityWaitTimeMs,
+      @JsonProperty("partitionStats") Map<Object, Long> partitionStats
   )
   {
     this.ingestionState = ingestionState;
@@ -62,6 +86,7 @@ public class IngestionStatsAndErrorsTaskReportData
     this.errorMsg = errorMsg;
     this.segmentAvailabilityConfirmed = segmentAvailabilityConfirmed;
     this.segmentAvailabilityWaitTimeMs = segmentAvailabilityWaitTimeMs;
+    this.partitionStats = partitionStats;
   }
 
   @JsonProperty
@@ -101,6 +126,13 @@ public class IngestionStatsAndErrorsTaskReportData
     return segmentAvailabilityWaitTimeMs;
   }
 
+  @JsonProperty
+  @Nullable
+  public Map<Object, Long> getPartitionStats()
+  {
+    return partitionStats;
+  }
+
   public static IngestionStatsAndErrorsTaskReportData getPayloadFromTaskReports(
       Map<String, TaskReport> taskReports
   )
@@ -124,7 +156,8 @@ public class IngestionStatsAndErrorsTaskReportData
            Objects.equals(getRowStats(), that.getRowStats()) &&
            Objects.equals(getErrorMsg(), that.getErrorMsg()) &&
            Objects.equals(isSegmentAvailabilityConfirmed(), that.isSegmentAvailabilityConfirmed()) &&
-           Objects.equals(getSegmentAvailabilityWaitTimeMs(), that.getSegmentAvailabilityWaitTimeMs());
+           Objects.equals(getSegmentAvailabilityWaitTimeMs(), that.getSegmentAvailabilityWaitTimeMs()) &&
+           Objects.equals(getPartitionStats(), that.getPartitionStats());
   }
 
   @Override
@@ -136,7 +169,8 @@ public class IngestionStatsAndErrorsTaskReportData
         getRowStats(),
         getErrorMsg(),
         isSegmentAvailabilityConfirmed(),
-        getSegmentAvailabilityWaitTimeMs()
+        getSegmentAvailabilityWaitTimeMs(),
+        getPartitionStats()
     );
   }
 
@@ -150,6 +184,7 @@ public class IngestionStatsAndErrorsTaskReportData
            ", errorMsg='" + errorMsg + '\'' +
            ", segmentAvailabilityConfoirmed=" + segmentAvailabilityConfirmed +
            ", segmentAvailabilityWaitTimeMs=" + segmentAvailabilityWaitTimeMs +
+           ", partitionStats=" + partitionStats +
            '}';
   }
 }
