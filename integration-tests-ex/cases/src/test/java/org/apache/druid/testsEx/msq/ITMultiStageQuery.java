@@ -109,7 +109,7 @@ public class ITMultiStageQuery
         );
 
     // Submit the task and wait for the datasource to get loaded
-    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTask(queryLocal);
+    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTaskSuccesfully(queryLocal);
 
     if (sqlTaskStatus.getState().isFailure()) {
       Assert.fail(StringUtils.format(
@@ -175,7 +175,7 @@ public class ITMultiStageQuery
         );
 
     // Submit the task and wait for the datasource to get loaded
-    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTask(queryLocal);
+    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTaskSuccesfully(queryLocal);
 
     if (sqlTaskStatus.getState().isFailure()) {
       Assert.fail(StringUtils.format(
@@ -208,7 +208,7 @@ public class ITMultiStageQuery
             LocalFileExportStorageProvider.TYPE_NAME, "/shared/export/"
         );
 
-    SqlTaskStatus exportTask = msqHelper.submitMsqTask(exportQuery);
+    SqlTaskStatus exportTask = msqHelper.submitMsqTaskSuccesfully(exportQuery);
 
     msqHelper.pollTaskIdForSuccess(exportTask.getTaskId());
 
@@ -230,7 +230,7 @@ public class ITMultiStageQuery
         + "   WHERE delta != 0\n"
         + "   ORDER BY page");
 
-    SqlTaskStatus resultTaskStatus = msqHelper.submitMsqTask(resultQuery);
+    SqlTaskStatus resultTaskStatus = msqHelper.submitMsqTaskSuccesfully(resultQuery);
 
     msqHelper.pollTaskIdForSuccess(resultTaskStatus.getTaskId());
 
