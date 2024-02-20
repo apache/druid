@@ -94,8 +94,8 @@ public class PodTemplateTaskAdapterTest
   @Test
   public void test_fromTask_withoutBasePodTemplateInRuntimeProperites_raisesIAE()
   {
-    Assert.assertThrows(
-        "Pod template task adapter requires a base pod template to be specified",
+    Exception exception = Assert.assertThrows(
+        "No base prop should throw an IAE",
         IAE.class,
         () -> new PodTemplateTaskAdapter(
         taskRunnerConfig,
@@ -105,6 +105,7 @@ public class PodTemplateTaskAdapterTest
         new Properties(),
         taskLogs
     ));
+    Assert.assertEquals(exception.getMessage(), "Pod template task adapter requires a base pod template to be specified under druid.indexer.runner.k8s.podTemplate.base");
   }
 
   @Test
@@ -115,8 +116,8 @@ public class PodTemplateTaskAdapterTest
     Properties props = new Properties();
     props.setProperty("druid.indexer.runner.k8s.podTemplate.base", templatePath.toString());
 
-    Assert.assertThrows(
-        "Pod template task adapter requires a base pod template to be specified",
+    Exception exception = Assert.assertThrows(
+        "Empty base pod template should throw a exception",
         IAE.class,
         () -> new PodTemplateTaskAdapter(
         taskRunnerConfig,
@@ -126,6 +127,9 @@ public class PodTemplateTaskAdapterTest
         props,
         taskLogs
     ));
+
+    Assert.assertTrue(exception.getMessage().contains("Failed to load pod template file for"));
+
   }
 
   @Test
