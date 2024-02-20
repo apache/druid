@@ -244,7 +244,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private volatile CopyOnWriteArrayList<SequenceMetadata<PartitionIdType, SequenceOffsetType>> sequences;
   private volatile Throwable backgroundThreadException;
 
-  private final ConcurrentMap<PartitionIdType, LongAdder> partitionsThroughput = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<PartitionIdType, LongAdder> partitionsThroughput = new ConcurrentHashMap<>();
 
   public SeekableStreamIndexTaskRunner(
       final SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType> task,
