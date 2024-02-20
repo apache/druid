@@ -1674,7 +1674,7 @@ public class DruidQuery
             scanColumnsList,
             plannerContext.queryContextMap()
         ),
-        buildRowSignature(virtualColumns, scanColumnsList).getColumnTypes()
+        outputRowSignature.buildSafeSignature(scanColumnsList).getColumnTypes()
     );
   }
 
