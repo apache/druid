@@ -263,20 +263,27 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
       for (String columnName : rowSignature.getColumnNames()) {
         ColumnType currentType = rowSignature.getColumnType(columnName).get();
         ColumnType existingType = fields.get(columnName);
-        if (existingType != null && !existingType.equals(currentType)) {
-          throw InvalidInput.exception(
-              "Can't create TABLE(APPEND()).\n"
-                  + "Conflicting types for column [%s]:\n"
-                  + " - existing type [%s]\n"
-                  + " - new type [%s] from table [%s]",
-              columnName,
-              existingType,
-              currentType,
-              relOptTable.getQualifiedName()
-          );
-        }
-        if (existingType == null) {
+
+        if (existingType == null || existingType.equals(currentType)) {
           fields.put(columnName, currentType);
+        } else {
+          try {
+            ColumnType commonType = ColumnType.leastRestrictiveType(currentType, existingType);
+            fields.put(columnName, commonType);
+          }
+          catch (Exception e) {
+            throw InvalidInput.exception(
+                e,
+                "Can't create TABLE(APPEND()).\n"
+                    + "Conflicting types for column [%s]:\n"
+                    + " - existing type [%s]\n"
+                    + " - new type [%s] from table [%s]",
+                columnName,
+                existingType,
+                currentType,
+                relOptTable.getQualifiedName()
+            );
+          }
         }
       }
 

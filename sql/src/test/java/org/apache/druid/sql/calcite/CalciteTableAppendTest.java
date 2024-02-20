@@ -38,7 +38,6 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
   {
     testBuilder()
         .sql("select dim1,null as dim4 from foo union all select dim1,dim4 from numfoo")
-        // .sql("select datasource, sum(duration) from sys.tasks group by datasource")
         .expectedResults(
             ImmutableList.of(
                 new Object[] {"", null},
@@ -170,6 +169,27 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
           invalidSqlIs("Table [nonexistent] not found (line [1], column [37])")
       );
     }
+  }
+
+  @Test
+  public void testAppendCompatibleColumns()
+  {
+    testBuilder()
+        .sql("select dim3 from TABLE(APPEND('foo','foo2')) u")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {"11"},
+                new Object[] {"12"},
+                new Object[] {"10"},
+                new Object[] {"[\"a\",\"b\"]"},
+                new Object[] {"[\"b\",\"c\"]"},
+                new Object[] {"d"},
+                new Object[] {""},
+                new Object[] {null},
+                new Object[] {null}
+            )
+        )
+        .run();
   }
 
   @Test
