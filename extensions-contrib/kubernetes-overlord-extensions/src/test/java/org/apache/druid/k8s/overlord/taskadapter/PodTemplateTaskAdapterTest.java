@@ -35,7 +35,6 @@ import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
 import org.apache.druid.k8s.overlord.common.Base64Compression;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
@@ -109,7 +108,7 @@ public class PodTemplateTaskAdapterTest
   }
 
   @Test
-  public void test_fromTask_withBasePodTemplateInRuntimeProperites_withEmptyFile_raisesISE() throws IOException
+  public void test_fromTask_withBasePodTemplateInRuntimeProperites_withEmptyFile_raisesIAE() throws IOException
   {
     Path templatePath = Files.createFile(tempDir.resolve("empty.yaml"));
 
@@ -118,7 +117,7 @@ public class PodTemplateTaskAdapterTest
 
     Assert.assertThrows(
         "Pod template task adapter requires a base pod template to be specified",
-        ISE.class,
+        IAE.class,
         () -> new PodTemplateTaskAdapter(
         taskRunnerConfig,
         taskConfig,
@@ -188,7 +187,7 @@ public class PodTemplateTaskAdapterTest
   }
 
   @Test
-  public void test_fromTask_withNoopPodTemplateInRuntimeProperties_withEmptyFile_raisesISE() throws IOException
+  public void test_fromTask_withNoopPodTemplateInRuntimeProperties_withEmptyFile_raisesIAE() throws IOException
   {
     Path baseTemplatePath = Files.createFile(tempDir.resolve("base.yaml"));
     Path noopTemplatePath = Files.createFile(tempDir.resolve("noop.yaml"));
@@ -198,7 +197,7 @@ public class PodTemplateTaskAdapterTest
     props.setProperty("druid.indexer.runner.k8s.podTemplate.base", baseTemplatePath.toString());
     props.setProperty("druid.indexer.runner.k8s.podTemplate.noop", noopTemplatePath.toString());
 
-    Assert.assertThrows(ISE.class, () -> new PodTemplateTaskAdapter(
+    Assert.assertThrows(IAE.class, () -> new PodTemplateTaskAdapter(
         taskRunnerConfig,
         taskConfig,
         node,

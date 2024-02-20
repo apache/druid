@@ -214,7 +214,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
   {
     Set<String> taskAdapterTemplateKeys = getTaskAdapterTemplates(properties);
     if (!taskAdapterTemplateKeys.contains("base")) {
-      throw new IAE("Pod template task adapter requires a base pod template to be specified");
+      throw new IAE("Pod template task adapter requires a base pod template to be specified under druid.indexer.runner.k8s.podTemplate.base");
     }
 
     HashMap<String, PodTemplate> podTemplateMap = new HashMap<>();
@@ -244,14 +244,14 @@ public class PodTemplateTaskAdapter implements TaskAdapter
     String property = TASK_PROPERTY + key;
     String podTemplateFile = properties.getProperty(property);
     if (podTemplateFile == null) {
-      log.debug("Pod template file not specified for [%s]", key);
-      return Optional.empty();
+      throw new IAE("Pod template file not specified for [%s]", property);
+
     }
     try {
       return Optional.of(Serialization.unmarshal(Files.newInputStream(new File(podTemplateFile).toPath()), PodTemplate.class));
     }
     catch (Exception e) {
-      throw new ISE(e, "Failed to load pod template file for [%s] at [%s]", property, podTemplateFile);
+      throw new IAE(e, "Failed to load pod template file for [%s] at [%s]", property, podTemplateFile);
     }
   }
 
