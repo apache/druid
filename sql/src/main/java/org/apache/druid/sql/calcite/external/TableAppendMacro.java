@@ -134,10 +134,8 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
             return false;
           }
         }
-        RelDataType type = callBinding.getOperandType(i);
 
-        SqlTypeName typeName = type.getSqlTypeName();
-
+        SqlTypeName typeName = callBinding.getOperandType(i).getSqlTypeName();
         if (!SqlTypeFamily.CHARACTER.getTypeNames().contains(typeName)) {
           if (throwOnFailure) {
             throw DruidSqlValidator.buildCalciteContextException(
