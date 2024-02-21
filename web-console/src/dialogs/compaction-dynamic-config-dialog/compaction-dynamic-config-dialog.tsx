@@ -46,7 +46,7 @@ const COMPACTION_DYNAMIC_CONFIG_FIELDS: Field<CompactionDynamicConfig>[] = [
     type: 'number',
     defaultValue: DEFAULT_MAX,
     info: <>The maximum number of task slots for compaction tasks</>,
-    min: 1,
+    min: 0,
   },
 ];
 

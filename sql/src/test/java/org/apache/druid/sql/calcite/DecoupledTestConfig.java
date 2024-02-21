@@ -44,11 +44,6 @@ public @interface DecoupledTestConfig
   {
     NONE,
     /**
-     * Decoupled has moved virtualcolumn to postagg (improved plan)
-     * caused by: {@link CoreRules#AGGREGATE_ANY_PULL_UP_CONSTANTS}
-     */
-    EXPR_POSTAGG,
-    /**
      * Aggregate column order changes.
      *
      * dim1/dim2 exchange
@@ -61,7 +56,8 @@ public @interface DecoupledTestConfig
     /**
      * Improved plan
      *
-     * Seen that it was induced by {@link CoreRules#AGGREGATE_ANY_PULL_UP_CONSTANTS}
+     * Seen that some are induced by {@link CoreRules#AGGREGATE_ANY_PULL_UP_CONSTANTS}
+     * And in some cases decoupled has moved virtualcolumn to postagg
      */
     IMPROVED_PLAN,
     /**
