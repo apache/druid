@@ -22,8 +22,7 @@ package org.apache.druid.sql.calcite;
 import org.junit.Test;
 import org.reflections.Reflections;
 import org.reflections.scanners.MethodAnnotationsScanner;
-import org.reflections.util.ClasspathHelper;
-import org.reflections.util.ConfigurationBuilder;
+
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collections;
@@ -37,45 +36,15 @@ public class NotYetSupportedUsageTest
   @Test
   public void ensureAllModesUsed()
   {
-    if (false) {
-      ConfigurationBuilder configBuilder = new ConfigurationBuilder();
-      configBuilder = configBuilder.setScanners(new MethodAnnotationsScanner());
-//      if (true) {
-//        configBuilder = configBuilder
-//            .filterInputsBy(new FilterBuilder().include(FilterBuilder.prefix("org.apache.druid.sql")));
-//      }
-//      if (true) {
-//        configBuilder = configBuilder.filterInputsBy(FilterBuilder.parse("+.*Test.*"));
-//      }
-      if (false) {
-        configBuilder = configBuilder.setUrls(ClasspathHelper.forPackage("org.apache.druid"));
-      } else {
-        configBuilder = configBuilder.setUrls(ClasspathHelper.forClass(NotYetSupported.class));
-      }
+    Set<Method> methodsAnnotatedWith = new Reflections("org.apache.druid.sql", new MethodAnnotationsScanner())
+        .getMethodsAnnotatedWith(NotYetSupported.class);
 
-      Set<Method> methodsAnnotatedWith = new Reflections(configBuilder)
-          .getMethodsAnnotatedWith(NotYetSupported.class);
-
-      System.out.println(methodsAnnotatedWith);
-      Set<NotYetSupported.Modes> modes = new HashSet<>(Arrays.asList(NotYetSupported.Modes.values()));
-      for (Method method : methodsAnnotatedWith) {
-        NotYetSupported annot = method.getAnnotation(NotYetSupported.class);
-        modes.remove(annot.value());
-      }
-
-      assertEquals("There are unused modes which should be removed", Collections.emptySet(), modes);
-    } else {
-
-      Set<Method> methodsAnnotatedWith = new Reflections("org.apache", new MethodAnnotationsScanner())
-          .getMethodsAnnotatedWith(NotYetSupported.class);
-
-      Set<NotYetSupported.Modes> modes = new HashSet<>(Arrays.asList(NotYetSupported.Modes.values()));
-      for (Method method : methodsAnnotatedWith) {
-        NotYetSupported annot = method.getAnnotation(NotYetSupported.class);
-        modes.remove(annot.value());
-      }
-
-      assertEquals("There are unused modes which should be removed", Collections.emptySet(), modes);
+    Set<NotYetSupported.Modes> modes = new HashSet<>(Arrays.asList(NotYetSupported.Modes.values()));
+    for (Method method : methodsAnnotatedWith) {
+      NotYetSupported annot = method.getAnnotation(NotYetSupported.class);
+      modes.remove(annot.value());
     }
+
+    assertEquals("There are unused modes which should be removed", Collections.emptySet(), modes);
   }
 }
