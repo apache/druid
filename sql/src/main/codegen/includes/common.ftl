@@ -107,14 +107,14 @@ SqlTypeNameSpec DruidType() :
 }
 
 // Parses the supported file formats for export.
-String FileFormat() :
+SqlIdentifier FileFormat() :
 {
   SqlNode format;
 }
 {
   format = SimpleIdentifier()
   {
-    return format.toString();
+    return (SqlIdentifier) format;
   }
 }
 

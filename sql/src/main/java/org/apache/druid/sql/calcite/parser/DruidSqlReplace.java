@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.parser;
 
+import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlInsert;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
@@ -50,8 +51,8 @@ public class DruidSqlReplace extends DruidSqlIngest
       @Nonnull SqlInsert insertNode,
       @Nullable SqlGranularityLiteral partitionedBy,
       @Nullable SqlNodeList clusteredBy,
-      @Nullable SqlNode replaceTimeQuery,
-      @Nullable String exportFileFormat
+      @Nullable SqlIdentifier exportFileFormat,
+      @Nullable SqlNode replaceTimeQuery
   )
   {
     return new DruidSqlReplace(
@@ -62,8 +63,8 @@ public class DruidSqlReplace extends DruidSqlIngest
         insertNode.getTargetColumnList(),
         partitionedBy,
         clusteredBy,
-        replaceTimeQuery,
-        exportFileFormat
+        exportFileFormat,
+        replaceTimeQuery
     );
   }
 
@@ -81,8 +82,8 @@ public class DruidSqlReplace extends DruidSqlIngest
       SqlNodeList columnList,
       @Nullable SqlGranularityLiteral partitionedBy,
       @Nullable SqlNodeList clusteredBy,
-      @Nullable SqlNode replaceTimeQuery,
-      @Nullable String exportFileFormat
+      @Nullable SqlIdentifier exportFileFormat,
+      @Nullable SqlNode replaceTimeQuery
   )
   {
     super(
@@ -136,7 +137,7 @@ public class DruidSqlReplace extends DruidSqlIngest
 
     if (getExportFileFormat() != null) {
       writer.keyword("AS");
-      writer.print(getExportFileFormat());
+      writer.print(getExportFileFormat().toString());
       writer.newlineAndIndent();
     }
 

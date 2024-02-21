@@ -118,7 +118,7 @@ public abstract class IngestHandler extends QueryHandler
                           .build("Export statements do not support a PARTITIONED BY or CLUSTERED BY clause.");
     }
 
-    final String exportFileFormat = ingestNode().getExportFileFormat();
+    final SqlIdentifier exportFileFormat = ingestNode().getExportFileFormat();
     if (exportFileFormat == null) {
       throw InvalidSqlInput.exception(
           "Exporting rows into an EXTERN destination requires an AS clause to specify the format, but none was found.",
@@ -127,7 +127,7 @@ public abstract class IngestHandler extends QueryHandler
     } else {
       handlerContext.plannerContext().queryContextMap().put(
           DruidSqlIngest.SQL_EXPORT_FILE_FORMAT,
-          exportFileFormat
+          exportFileFormat.toString()
       );
     }
   }
@@ -352,8 +352,8 @@ public abstract class IngestHandler extends QueryHandler
           ),
           sqlNode.getPartitionedBy(),
           sqlNode.getClusteredBy(),
-          sqlNode.getReplaceTimeQuery(),
-          sqlNode.getExportFileFormat()
+          sqlNode.getExportFileFormat(),
+          sqlNode.getReplaceTimeQuery()
       );
     }
 

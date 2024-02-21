@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.parser;
 
+import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlInsert;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
@@ -46,7 +47,7 @@ public class DruidSqlInsert extends DruidSqlIngest
       @Nonnull SqlInsert insertNode,
       @Nullable SqlGranularityLiteral partitionedBy,
       @Nullable SqlNodeList clusteredBy,
-      @Nullable String exportFileFormat
+      @Nullable SqlIdentifier exportFileFormat
   )
   {
     return new DruidSqlInsert(
@@ -75,7 +76,7 @@ public class DruidSqlInsert extends DruidSqlIngest
       SqlNodeList columnList,
       @Nullable SqlGranularityLiteral partitionedBy,
       @Nullable SqlNodeList clusteredBy,
-      @Nullable String exportFileFormat
+      @Nullable SqlIdentifier exportFileFormat
   )
   {
     super(
@@ -111,7 +112,7 @@ public class DruidSqlInsert extends DruidSqlIngest
     writer.newlineAndIndent();
     if (getExportFileFormat() != null) {
       writer.keyword("AS");
-      writer.print(getExportFileFormat());
+      writer.print(getExportFileFormat().toString());
       writer.newlineAndIndent();
     }
     getSource().unparse(writer, 0, 0);

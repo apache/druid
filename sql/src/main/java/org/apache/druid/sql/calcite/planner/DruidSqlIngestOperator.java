@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.planner;
 
 import org.apache.calcite.sql.SqlCall;
+import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
@@ -64,7 +65,7 @@ public class DruidSqlIngestOperator extends SqlSpecialOperator implements Author
           (SqlNodeList) operands[3],
           (SqlGranularityLiteral) operands[4],
           (SqlNodeList) operands[5],
-          null // fix this
+          (SqlIdentifier) operands[6]
       );
     }
   }
@@ -91,8 +92,8 @@ public class DruidSqlIngestOperator extends SqlSpecialOperator implements Author
           (SqlNodeList) operands[3],
           (SqlGranularityLiteral) operands[4],
           (SqlNodeList) operands[5],
-          operands[6],
-          null // fix this
+          (SqlIdentifier) operands[6],
+          operands[7]
       );
     }
   }
