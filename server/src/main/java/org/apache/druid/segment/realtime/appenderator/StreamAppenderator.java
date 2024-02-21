@@ -925,18 +925,7 @@ public class StreamAppenderator implements Appenderator
       );
 
       // Retry pushing segments because uploading to deep storage might fail especially for cloud storage types
-      final DataSegment segment = RetryUtils.retry(
-          // The appenderator is currently being used for the local indexing task and the Kafka indexing task. For the
-          // Kafka indexing task, pushers must use unique file paths in deep storage in order to maintain exactly-once
-          // semantics.
-          () -> dataSegmentPusher.push(
-              mergedFile,
-              segmentToPush,
-              useUniquePath
-          ),
-          exception -> exception instanceof Exception,
-          5
-      );
+      final DataSegment segment = dataSegmentPusher.push(mergedFile, segmentToPush, useUniquePath);
 
       final long pushFinishTime = System.nanoTime();
 
