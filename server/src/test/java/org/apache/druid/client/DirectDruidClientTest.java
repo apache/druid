@@ -24,9 +24,11 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.client.selector.ConnectionCountServerSelectorStrategy;
+import org.apache.druid.client.selector.FailureCountServerSelectorStrategy;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
 import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.ServerSelector;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -55,6 +57,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.timeout.ReadTimeoutException;
 import org.joda.time.Duration;
+import org.joda.time.Minutes;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -88,6 +91,7 @@ public class DirectDruidClientTest
       0L
   );
   private ServerSelector serverSelector;
+  private ServerSelector failCountServerSelector;
 
   private HttpClient httpClient;
   private DirectDruidClient client;
@@ -97,10 +101,15 @@ public class DirectDruidClientTest
   @Before
   public void setup()
   {
+    NullHandling.initializeForTests();
     httpClient = EasyMock.createMock(HttpClient.class);
     serverSelector = new ServerSelector(
         dataSegment,
         new HighestPriorityTierSelectorStrategy(new ConnectionCountServerSelectorStrategy())
+    );
+    failCountServerSelector = new ServerSelector(
+        dataSegment,
+        new HighestPriorityTierSelectorStrategy(new FailureCountServerSelectorStrategy())
     );
     queryCancellationExecutor = Execs.scheduledSingleThreaded("query-cancellation-executor");
     client = new DirectDruidClient(
@@ -113,6 +122,7 @@ public class DirectDruidClientTest
         new NoopServiceEmitter(),
         queryCancellationExecutor
     );
+    client.setCooldownTimeForConnFailure(1);
     queryableDruidServer = new QueryableDruidServer(
         new DruidServer(
             "test1",
@@ -126,6 +136,7 @@ public class DirectDruidClientTest
         client
     );
     serverSelector.addServerAndUpdateSegment(queryableDruidServer, serverSelector.getSegment());
+    failCountServerSelector.addServerAndUpdateSegment(queryableDruidServer, failCountServerSelector.getSegment());
   }
 
   @After
@@ -199,6 +210,7 @@ public class DirectDruidClientTest
         client2
     );
     serverSelector.addServerAndUpdateSegment(queryableDruidServer2, serverSelector.getSegment());
+    failCountServerSelector.addServerAndUpdateSegment(queryableDruidServer2, failCountServerSelector.getSegment());
 
     TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder().dataSource("test").build();
     query = query.withOverriddenContext(ImmutableMap.of(DirectDruidClient.QUERY_FAIL_TIME, Long.MAX_VALUE));
@@ -207,12 +219,15 @@ public class DirectDruidClientTest
     Assert.assertEquals(url, capturedRequest.getValue().getUrl());
     Assert.assertEquals(HttpMethod.POST, capturedRequest.getValue().getMethod());
     Assert.assertEquals(1, client.getNumOpenConnections());
+    Assert.assertEquals(0, client.getNumFailedConnections());
 
     // simulate read timeout
     client.run(QueryPlus.wrap(query));
     Assert.assertEquals(2, client.getNumOpenConnections());
+    Assert.assertEquals(0, client.getNumFailedConnections());
     futureException.setException(new ReadTimeoutException());
     Assert.assertEquals(1, client.getNumOpenConnections());
+    Assert.assertEquals(1, client.getNumFailedConnections());
 
     // subsequent connections should work
     client.run(QueryPlus.wrap(query));
@@ -231,6 +246,7 @@ public class DirectDruidClientTest
     Assert.assertEquals(1, results.size());
     Assert.assertEquals(DateTimes.of("2014-01-01T01:02:03Z"), results.get(0).getTimestamp());
     Assert.assertEquals(3, client.getNumOpenConnections());
+    Assert.assertEquals(1, client.getNumFailedConnections());
 
     client2.run(QueryPlus.wrap(query));
     client2.run(QueryPlus.wrap(query));
@@ -238,8 +254,11 @@ public class DirectDruidClientTest
     Assert.assertEquals(2, client2.getNumOpenConnections());
 
     Assert.assertEquals(serverSelector.pick(null), queryableDruidServer2);
+    Assert.assertEquals(failCountServerSelector.pick(null), queryableDruidServer2);
 
     EasyMock.verify(httpClient);
+    Thread.sleep(60 * 1000);
+    Assert.assertEquals(0, client.getNumFailedConnections());
   }
 
   @Test
