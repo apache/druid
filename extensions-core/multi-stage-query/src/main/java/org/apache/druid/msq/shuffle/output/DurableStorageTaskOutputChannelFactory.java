@@ -65,10 +65,11 @@ public class DurableStorageTaskOutputChannelFactory
       String taskId,
       int frameSize,
       StorageConnector storageConnector,
-      File tmpDir
+      File tmpDir,
+      File tempPath
   )
   {
-    super(controllerTaskId, workerNumber, stageNumber, taskId, frameSize, storageConnector, tmpDir);
+    super(controllerTaskId, workerNumber, stageNumber, taskId, frameSize, storageConnector, tmpDir, tempPath);
   }
 
   @Override

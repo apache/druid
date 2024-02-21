@@ -104,7 +104,10 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
     final ClusterBy resultClusterByWithoutPartitionBoost =
         QueryKitUtils.clusterByWithSegmentGranularity(resultClusterByWithoutGranularity, segmentGranularity);
     final ClusterBy intermediateClusterBy = computeIntermediateClusterBy(queryToRun);
-    final boolean doOrderBy = !resultClusterByWithoutPartitionBoost.equals(intermediateClusterBy);
+    // We don't need to reshuffle and resort if the final ordering is a prefix of the aggregating dimensions, as the
+    // preshuffle already sorts by the aggregating dimensions (for aggregations)
+    final boolean reorderPreShuffleResults =
+        !QueryKitUtils.isClusterByPrefix(resultClusterByWithoutPartitionBoost, intermediateClusterBy);
     final boolean doLimitOrOffset =
         queryToRun.getLimitSpec() instanceof DefaultLimitSpec
         && (((DefaultLimitSpec) queryToRun.getLimitSpec()).isLimited()
@@ -135,7 +138,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
       partitionBoost = false;
     } else {
       if (useGlobalSort) {
-        if (doOrderBy) {
+        if (reorderPreShuffleResults) {
           // There can be a situation where intermediateClusterBy is empty, while the resultClusterBy is non-empty
           // if we have PARTITIONED BY on anything except ALL, however we don't have a grouping dimension
           // (i.e. no GROUP BY clause)
@@ -168,29 +171,6 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
         partitionBoost = true;
       }
     }
-//    } else if (doOrderBy) {
-//      // There can be a situation where intermediateClusterBy is empty, while the resultClusterBy is non-empty
-//      // if we have PARTITIONED BY on anything except ALL, however we don't have a grouping dimension
-//      // (i.e. no GROUP BY clause)
-//      // __time in such queries is generated using either an aggregator (e.g. sum(metric) as __time) or using a
-//      // post-aggregator (e.g. TIMESTAMP '2000-01-01' as __time)
-//      // For example: INSERT INTO foo SELECT COUNT(*), TIMESTAMP '2000-01-01' AS __time FROM bar PARTITIONED BY DAY
-//      shuffleSpecFactoryPreAggregation = intermediateClusterBy.isEmpty()
-//                                         ? ShuffleSpecFactories.singlePartition()
-//                                         : ShuffleSpecFactories.globalSortWithMaxPartitionCount(maxWorkerCount);
-//      shuffleSpecFactoryPostAggregation = doLimitOrOffset
-//                                          ? ShuffleSpecFactories.singlePartition()
-//                                          : resultShuffleSpecFactory;
-//      partitionBoost = true;
-//    } else {
-//      shuffleSpecFactoryPreAggregation = doLimitOrOffset
-//                                         ? ShuffleSpecFactories.singlePartition()
-//                                         : resultShuffleSpecFactory;
-//
-//      // null: retain partitions from input (i.e. from preAggregation).
-//      shuffleSpecFactoryPostAggregation = null;
-//      partitionBoost = false;
-//    }
 
     queryDefBuilder.add(
         StageDefinition.builder(firstStageNumber)

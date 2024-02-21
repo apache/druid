@@ -184,6 +184,36 @@ public class QueryKitUtils
   }
 
   /**
+   * Returns true if the "prefixClusterBy" is the prefix of the given "clusterBy". A clusterBy is a prefix of another if
+   * following conditions hold true:
+   *  1. Length of the keyColumns of prefixClusterBy is less than or equal to the length of keyColumns of the given clusterBy.
+   *  2. Each keyColumn of prefixClusterBy matches (in columnName and the order) each keyColum of the clusterBy.
+   *  3. Bucketing count of both clusterBy's is same
+   */
+  public static boolean isClusterByPrefix(final ClusterBy prefixClusterBy, final ClusterBy clusterBy)
+  {
+    List<KeyColumn> prefixKeyColumns = prefixClusterBy.getColumns();
+    List<KeyColumn> clusterByKeyColumns = clusterBy.getColumns();
+
+    // Return false if bucketing count is not equal
+    if (prefixClusterBy.getBucketByCount() != clusterBy.getBucketByCount()) {
+      return false;
+    }
+
+    // Return false if prefix's size > clusterBy's size
+    if (clusterByKeyColumns.size() < prefixKeyColumns.size()) {
+      return false;
+    }
+    for (int i = 0; i < prefixKeyColumns.size(); ++i) {
+      // Return false if the prefix's keyColumns don't match the corresponding keyColumns of the given clusterBy
+      if (!prefixKeyColumns.get(i).equals(clusterByKeyColumns.get(i))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
    * Returns a virtual column named {@link QueryKitUtils#SEGMENT_GRANULARITY_COLUMN} that computes a segment
    * granularity based on a particular time column. Returns null if no virtual column is needed because the
    * granularity is {@link Granularities#ALL}. Throws an exception if the provided granularity is not supported.
