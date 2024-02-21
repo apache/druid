@@ -33,6 +33,7 @@ import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
 import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
+import org.apache.druid.msq.kernel.ShuffleKind;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.msq.sql.MSQMode;
 import org.apache.druid.query.QueryContext;
@@ -124,6 +125,9 @@ public class MultiStageQueryContext
 
   public static final String CTX_CLUSTER_STATISTICS_MERGE_MODE = "clusterStatisticsMergeMode";
   public static final String DEFAULT_CLUSTER_STATISTICS_MERGE_MODE = ClusterStatisticsMergeMode.SEQUENTIAL.toString();
+
+  public static final String CTX_GROUP_BY_PRESHUFFLE_SHUFFLE_KIND = "groupByPreshuffleShuffleSpec";
+  public static final String DEFAULT_GROUP_BY_PRESHUFFLE_SHUFFLE_KIND = ShuffleKind.GLOBAL_SORT.toString();
 
   public static final String CTX_ROWS_PER_SEGMENT = "rowsPerSegment";
   static final int DEFAULT_ROWS_PER_SEGMENT = 3000000;
@@ -217,6 +221,15 @@ public class MultiStageQueryContext
         CTX_CLUSTER_STATISTICS_MERGE_MODE,
         queryContext.getString(CTX_CLUSTER_STATISTICS_MERGE_MODE, DEFAULT_CLUSTER_STATISTICS_MERGE_MODE),
         ClusterStatisticsMergeMode.class
+    );
+  }
+
+  public static ShuffleKind getGroupByPreShuffleShuffleKind(QueryContext queryContext)
+  {
+    return QueryContexts.getAsEnum(
+        CTX_GROUP_BY_PRESHUFFLE_SHUFFLE_KIND,
+        queryContext.getString(CTX_GROUP_BY_PRESHUFFLE_SHUFFLE_KIND, DEFAULT_GROUP_BY_PRESHUFFLE_SHUFFLE_KIND),
+        ShuffleKind.class
     );
   }
 

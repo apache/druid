@@ -21,6 +21,7 @@ package org.apache.druid.msq.querykit.groupby;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
@@ -37,6 +38,7 @@ import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
+import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -58,7 +60,6 @@ import java.util.Optional;
 public class GroupByQueryKit implements QueryKit<GroupByQuery>
 {
   private final ObjectMapper jsonMapper;
-  private final boolean useGlobalSort = false;
 
   public GroupByQueryKit(ObjectMapper jsonMapper)
   {
@@ -112,6 +113,17 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
     final ShuffleSpecFactory shuffleSpecFactoryPreAggregation;
     final ShuffleSpecFactory shuffleSpecFactoryPostAggregation;
     final boolean partitionBoost;
+    final boolean useGlobalSort;
+    switch (MultiStageQueryContext.getGroupByPreShuffleShuffleKind(queryToRun.context())) {
+      case GLOBAL_SORT:
+        useGlobalSort = true;
+        break;
+      case HASH_LOCAL_SORT:
+        useGlobalSort = false;
+        break;
+      default:
+        throw DruidException.defensive("unsupported shuffle kind for group by");
+    }
 
     if (intermediateClusterBy.isEmpty() && resultClusterByWithoutPartitionBoost.isEmpty()) {
       // Ignore shuffleSpecFactory, since we know only a single partition will come out, and we can save some effort.
