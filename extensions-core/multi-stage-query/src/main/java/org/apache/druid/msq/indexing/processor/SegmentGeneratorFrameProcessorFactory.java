@@ -43,6 +43,7 @@ import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
 import org.apache.druid.msq.input.ReadableInput;
+import org.apache.druid.msq.input.table.SegmentAndSchemas;
 import org.apache.druid.msq.kernel.ExtraInfoHolder;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.FrameProcessorFactory;
@@ -64,35 +65,35 @@ import org.apache.druid.segment.realtime.appenderator.Appenderators;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
-import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.Consumer;
 
 @JsonTypeName("segmentGenerator")
 public class SegmentGeneratorFrameProcessorFactory
-    implements FrameProcessorFactory<DataSegment, Set<DataSegment>, List<SegmentIdWithShardSpec>>
+    implements FrameProcessorFactory<SegmentAndSchemas, SegmentAndSchemas, List<SegmentIdWithShardSpec>>
 {
   private final DataSchema dataSchema;
   private final ColumnMappings columnMappings;
   private final MSQTuningConfig tuningConfig;
+  private final Boolean publishSchema;
 
   @JsonCreator
   public SegmentGeneratorFrameProcessorFactory(
       @JsonProperty("dataSchema") final DataSchema dataSchema,
       @JsonProperty("columnMappings") final ColumnMappings columnMappings,
-      @JsonProperty("tuningConfig") final MSQTuningConfig tuningConfig
+      @JsonProperty("tuningConfig") final MSQTuningConfig tuningConfig,
+      @JsonProperty("publishSchema") final Boolean publishSchema
   )
   {
     this.dataSchema = Preconditions.checkNotNull(dataSchema, "dataSchema");
     this.columnMappings = Preconditions.checkNotNull(columnMappings, "columnMappings");
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
+    this.publishSchema = publishSchema;
   }
 
   @JsonProperty
@@ -113,8 +114,14 @@ public class SegmentGeneratorFrameProcessorFactory
     return tuningConfig;
   }
 
+  @JsonProperty
+  public Boolean getPublishSchema()
+  {
+    return publishSchema;
+  }
+
   @Override
-  public ProcessorsAndChannels<DataSegment, Set<DataSegment>> makeProcessors(
+  public ProcessorsAndChannels<SegmentAndSchemas, SegmentAndSchemas> makeProcessors(
       StageDefinition stageDefinition,
       int workerNumber,
       List<InputSlice> inputSlices,
@@ -130,7 +137,7 @@ public class SegmentGeneratorFrameProcessorFactory
     if (extra == null || extra.isEmpty()) {
       return new ProcessorsAndChannels<>(
           ProcessorManagers.of(Sequences.<SegmentGeneratorFrameProcessor>empty())
-                           .withAccumulation(new HashSet<>(), (acc, segment) -> acc),
+                           .withAccumulation(new SegmentAndSchemas(), (acc, segment) -> acc),
           OutputChannels.none()
       );
     }
@@ -194,7 +201,7 @@ public class SegmentGeneratorFrameProcessorFactory
                   meters,
                   parseExceptionHandler,
                   true,
-                  CentralizedDatasourceSchemaConfig.create()
+                  CentralizedDatasourceSchemaConfig.create(publishSchema)
               );
 
           return new SegmentGeneratorFrameProcessor(
@@ -211,10 +218,10 @@ public class SegmentGeneratorFrameProcessorFactory
     return new ProcessorsAndChannels<>(
         ProcessorManagers.of(workers)
                          .withAccumulation(
-                             new HashSet<>(),
+                             new SegmentAndSchemas(),
                              (acc, segment) -> {
                                if (segment != null) {
-                                 acc.add(segment);
+                                 acc.merge(segment);
                                }
 
                                return acc;
@@ -225,16 +232,16 @@ public class SegmentGeneratorFrameProcessorFactory
   }
 
   @Override
-  public TypeReference<Set<DataSegment>> getResultTypeReference()
+  public TypeReference<SegmentAndSchemas> getResultTypeReference()
   {
-    return new TypeReference<Set<DataSegment>>() {};
+    return new TypeReference<SegmentAndSchemas>() {};
   }
 
   @Nullable
   @Override
-  public Set<DataSegment> mergeAccumulatedResult(Set<DataSegment> accumulated, Set<DataSegment> otherAccumulated)
+  public SegmentAndSchemas mergeAccumulatedResult(SegmentAndSchemas accumulated, SegmentAndSchemas otherAccumulated)
   {
-    accumulated.addAll(otherAccumulated);
+    accumulated.merge(otherAccumulated);
     return accumulated;
   }
 

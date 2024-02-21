@@ -95,7 +95,6 @@ public class ForkingTaskRunner
     extends BaseRestorableTaskRunner<ForkingTaskRunner.ForkingTaskRunnerWorkItem>
     implements TaskLogStreamer, WorkerTaskCountStatsProvider
 {
-
   private static final EmittingLogger LOGGER = new EmittingLogger(ForkingTaskRunner.class);
   private static final String CHILD_PROPERTY_PREFIX = "druid.indexer.fork.property.";
 
@@ -289,7 +288,6 @@ public class ForkingTaskRunner
                         }
 
                         for (String propName : props.stringPropertyNames()) {
-
                           for (String allowedPrefix : config.getAllowedPrefixes()) {
                             // See https://github.com/apache/druid/issues/1841
                             if (propName.startsWith(allowedPrefix)
@@ -946,3 +944,4 @@ public class ForkingTaskRunner
 
   }
 }
+

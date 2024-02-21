@@ -151,6 +151,7 @@ import org.apache.druid.msq.input.stage.StageInputSlice;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.input.stage.StageInputSpecSlicer;
 import org.apache.druid.msq.input.table.DataSegmentWithLocation;
+import org.apache.druid.msq.input.table.SegmentAndSchemas;
 import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.msq.input.table.TableInputSpecSlicer;
 import org.apache.druid.msq.kernel.QueryDefinition;
@@ -190,11 +191,13 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.DruidNode;
@@ -310,6 +313,7 @@ public class ControllerImpl implements Controller
   private boolean isDurableStorageEnabled;
   private final boolean isFaultToleranceEnabled;
   private final boolean isFailOnEmptyInsertEnabled;
+  private final boolean publishSchema;
   private volatile SegmentLoadStatusFetcher segmentLoadWaiter;
 
   public ControllerImpl(
@@ -328,6 +332,14 @@ public class ControllerImpl implements Controller
     this.isFailOnEmptyInsertEnabled = MultiStageQueryContext.isFailOnEmptyInsertEnabled(
         task.getQuerySpec().getQuery().context()
     );
+
+    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig =
+        context.injector().getInstance(CentralizedDatasourceSchemaConfig.class);
+    if (centralizedDatasourceSchemaConfig != null) {
+      publishSchema = centralizedDatasourceSchemaConfig.isEnabled();
+    } else {
+      publishSchema = false;
+    }
   }
 
   @Override
@@ -654,7 +666,8 @@ public class ControllerImpl implements Controller
         id(),
         makeQueryControllerToolKit(),
         task.getQuerySpec(),
-        context.jsonMapper()
+        context.jsonMapper(),
+        publishSchema
     );
 
     QueryValidator.validateQueryDef(queryDef);
@@ -1459,11 +1472,11 @@ public class ControllerImpl implements Controller
    * Publish the list of segments. Additionally, if {@link DataSourceMSQDestination#isReplaceTimeChunks()},
    * also drop all other segments within the replacement intervals.
    */
-  private void publishAllSegments(final Set<DataSegment> segments) throws IOException
+  private void publishAllSegments(final SegmentAndSchemas segmentAndSchemas) throws IOException
   {
     final DataSourceMSQDestination destination =
         (DataSourceMSQDestination) task.getQuerySpec().getDestination();
-    final Set<DataSegment> segmentsWithTombstones = new HashSet<>(segments);
+    final Set<DataSegment> segmentsWithTombstones = new HashSet<>(segmentAndSchemas.getSegments());
     int numTombstones = 0;
     final TaskLockType taskLockType = MultiStageQueryContext.validateAndGetTaskLockType(
         QueryContext.of(task.getQuerySpec().getQuery().getContext()),
@@ -1471,7 +1484,7 @@ public class ControllerImpl implements Controller
     );
 
     if (destination.isReplaceTimeChunks()) {
-      final List<Interval> intervalsToDrop = findIntervalsToDrop(Preconditions.checkNotNull(segments, "segments"));
+      final List<Interval> intervalsToDrop = findIntervalsToDrop(Preconditions.checkNotNull(segmentAndSchemas.getSegments(), "segments"));
 
       if (!intervalsToDrop.isEmpty()) {
         TombstoneHelper tombstoneHelper = new TombstoneHelper(context.taskActionClient());
@@ -1515,24 +1528,24 @@ public class ControllerImpl implements Controller
         }
         performSegmentPublish(
             context.taskActionClient(),
-            createOverwriteAction(taskLockType, segmentsWithTombstones)
+            createOverwriteAction(taskLockType, segmentsWithTombstones, segmentAndSchemas.getMinimalSegmentSchemas())
         );
       }
-    } else if (!segments.isEmpty()) {
+    } else if (!segmentAndSchemas.getSegments().isEmpty()) {
       if (MultiStageQueryContext.shouldWaitForSegmentLoad(task.getQuerySpec().getQuery().context())) {
         segmentLoadWaiter = new SegmentLoadStatusFetcher(
             context.injector().getInstance(BrokerClient.class),
             context.jsonMapper(),
             task.getId(),
             task.getDataSource(),
-            segments,
+            segmentAndSchemas.getSegments(),
             true
         );
       }
       // Append mode.
       performSegmentPublish(
           context.taskActionClient(),
-          createAppendAction(segments, taskLockType)
+          createAppendAction(segmentAndSchemas.getSegments(), taskLockType, segmentAndSchemas.getMinimalSegmentSchemas())
       );
     }
 
@@ -1543,13 +1556,14 @@ public class ControllerImpl implements Controller
 
   private static TaskAction<SegmentPublishResult> createAppendAction(
       Set<DataSegment> segments,
-      TaskLockType taskLockType
+      TaskLockType taskLockType,
+      MinimalSegmentSchemas minimalSegmentSchemas
   )
   {
     if (taskLockType.equals(TaskLockType.APPEND)) {
-      return SegmentTransactionalAppendAction.forSegments(segments, null);
+      return SegmentTransactionalAppendAction.forSegments(segments, minimalSegmentSchemas);
     } else if (taskLockType.equals(TaskLockType.SHARED)) {
-      return SegmentTransactionalInsertAction.appendAction(segments, null, null, null);
+      return SegmentTransactionalInsertAction.appendAction(segments, null, null, minimalSegmentSchemas);
     } else {
       throw DruidException.defensive("Invalid lock type [%s] received for append action", taskLockType);
     }
@@ -1557,13 +1571,14 @@ public class ControllerImpl implements Controller
 
   private TaskAction<SegmentPublishResult> createOverwriteAction(
       TaskLockType taskLockType,
-      Set<DataSegment> segmentsWithTombstones
+      Set<DataSegment> segmentsWithTombstones,
+      MinimalSegmentSchemas minimalSegmentSchemas
   )
   {
     if (taskLockType.equals(TaskLockType.REPLACE)) {
-      return SegmentTransactionalReplaceAction.create(segmentsWithTombstones, null);
+      return SegmentTransactionalReplaceAction.create(segmentsWithTombstones, minimalSegmentSchemas);
     } else if (taskLockType.equals(TaskLockType.EXCLUSIVE)) {
-      return SegmentTransactionalInsertAction.overwriteAction(null, segmentsWithTombstones, null);
+      return SegmentTransactionalInsertAction.overwriteAction(null, segmentsWithTombstones, minimalSegmentSchemas);
     } else {
       throw DruidException.defensive("Invalid lock type [%s] received for overwrite action", taskLockType);
     }
@@ -1718,9 +1733,9 @@ public class ControllerImpl implements Controller
 
       //noinspection unchecked
       @SuppressWarnings("unchecked")
-      final Set<DataSegment> segments = (Set<DataSegment>) queryKernel.getResultObjectForStage(finalStageId);
-      log.info("Query [%s] publishing %d segments.", queryDef.getQueryId(), segments.size());
-      publishAllSegments(segments);
+      final SegmentAndSchemas segmentAndSchemas = (SegmentAndSchemas) queryKernel.getResultObjectForStage(finalStageId);
+      log.info("Query [%s] publishing %d segments.", queryDef.getQueryId(), segmentAndSchemas.getSegments().size());
+      publishAllSegments(segmentAndSchemas);
     }
   }
 
@@ -1751,7 +1766,8 @@ public class ControllerImpl implements Controller
       final String queryId,
       @SuppressWarnings("rawtypes") final QueryKit toolKit,
       final MSQSpec querySpec,
-      final ObjectMapper jsonMapper
+      final ObjectMapper jsonMapper,
+      final boolean publishSchema
   )
   {
     final MSQTuningConfig tuningConfig = querySpec.getTuningConfig();
@@ -1850,7 +1866,8 @@ public class ControllerImpl implements Controller
                              new SegmentGeneratorFrameProcessorFactory(
                                  dataSchema,
                                  columnMappings,
-                                 tuningConfig
+                                 tuningConfig,
+                                 publishSchema
                              )
                          )
       );

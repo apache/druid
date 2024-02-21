@@ -53,6 +53,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -1012,7 +1013,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     TestTaskToolboxFactory.Builder builder = new TestTaskToolboxFactory.Builder()
         .setConfig(taskConfig)
         .setIndexIO(new IndexIO(getObjectMapper(), ColumnConfig.DEFAULT))
-        .setTaskActionClientFactory(taskActionClientFactory);
+        .setTaskActionClientFactory(taskActionClientFactory)
+        .setCentralizedTableSchemaConfig(CentralizedDatasourceSchemaConfig.create());
     return new TestTaskToolboxFactory(builder)
     {
       @Override

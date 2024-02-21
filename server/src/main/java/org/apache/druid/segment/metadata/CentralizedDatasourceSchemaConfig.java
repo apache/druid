@@ -59,6 +59,13 @@ public class CentralizedDatasourceSchemaConfig
     return new CentralizedDatasourceSchemaConfig();
   }
 
+  public static CentralizedDatasourceSchemaConfig create(boolean enabled)
+  {
+    CentralizedDatasourceSchemaConfig config = new CentralizedDatasourceSchemaConfig();
+    config.setEnabled(enabled);
+    return config;
+  }
+
   @VisibleForTesting
   public void setEnabled(boolean enabled)
   {

@@ -590,7 +590,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
     Map<String, String> columnNameTypes = new HashMap<>();
     columnNameTypes.put("used_status_last_updated", "varchar(255)");
-    columnNameTypes.put("schema_id", "varchar(255)");
+    columnNameTypes.put("schema_id", "BIGINT");
     columnNameTypes.put("num_rows", "BIGINT");
 
     Set<String> columnsToAdd = new HashSet<>();

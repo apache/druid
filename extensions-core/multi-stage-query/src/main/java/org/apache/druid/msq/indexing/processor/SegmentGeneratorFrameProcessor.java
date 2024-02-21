@@ -38,19 +38,23 @@ import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.counters.SegmentGenerationProgressCounter;
 import org.apache.druid.msq.exec.MSQTasks;
 import org.apache.druid.msq.input.ReadableInput;
+import org.apache.druid.msq.input.table.SegmentAndSchemas;
 import org.apache.druid.msq.util.SequenceUtils;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
@@ -67,7 +71,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
-public class SegmentGeneratorFrameProcessor implements FrameProcessor<DataSegment>
+public class SegmentGeneratorFrameProcessor implements FrameProcessor<SegmentAndSchemas>
 {
   private static final Logger log = new Logger(SegmentGeneratorFrameProcessor.class);
 
@@ -121,7 +125,7 @@ public class SegmentGeneratorFrameProcessor implements FrameProcessor<DataSegmen
   }
 
   @Override
-  public ReturnOrAwait<DataSegment> runIncrementally(final IntSet readableInputs) throws InterruptedException
+  public ReturnOrAwait<SegmentAndSchemas> runIncrementally(final IntSet readableInputs) throws InterruptedException
   {
     if (firstRun) {
       log.debug("Starting job for segment [%s].", segmentIdWithShardSpec.asSegmentId());
@@ -157,7 +161,11 @@ public class SegmentGeneratorFrameProcessor implements FrameProcessor<DataSegmen
         appenderator.clear();
 
         log.debug("Finished work for segment [%s].", segmentIdWithShardSpec.asSegmentId());
-        return ReturnOrAwait.returnObject(Iterables.getOnlyElement(metadata.getSegments()));
+        SegmentAndSchemas segmentAndSchemas = new SegmentAndSchemas(
+            Collections.singleton(Iterables.getOnlyElement(metadata.getSegments())),
+            metadata.getMinimalSegmentSchemas()
+        );
+        return ReturnOrAwait.returnObject(segmentAndSchemas);
       }
     } else {
       if (appenderator.getSegments().isEmpty()) {
