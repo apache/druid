@@ -23,17 +23,15 @@ import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
-import org.apache.calcite.rel.logical.LogicalTableScan;
+import org.apache.calcite.rel.core.Union;
 import org.apache.druid.sql.calcite.rel.logical.DruidLogicalConvention;
-import org.apache.druid.sql.calcite.rel.logical.DruidTableScan;
+import org.apache.druid.sql.calcite.rel.logical.DruidUnion;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-/**
- * {@link ConverterRule} to convert {@link org.apache.calcite.rel.core.TableScan} to {@link DruidTableScan}
- */
-public class DruidTableScanRule extends ConverterRule
+public class DruidUnionRule extends ConverterRule
 {
-  public DruidTableScanRule(Class<? extends RelNode> clazz, RelTrait in, RelTrait out, String descriptionPrefix)
+
+  public DruidUnionRule(Class<? extends RelNode> clazz, RelTrait in, RelTrait out, String descriptionPrefix)
   {
     super(
         Config.INSTANCE
@@ -44,13 +42,19 @@ public class DruidTableScanRule extends ConverterRule
   @Override
   public @Nullable RelNode convert(RelNode rel)
   {
-    LogicalTableScan tableScan = (LogicalTableScan) rel;
-    RelTraitSet newTrait = tableScan.getTraitSet().replace(DruidLogicalConvention.instance());
-    DruidTableScan druidTableScan = new DruidTableScan(
-        tableScan.getCluster(),
+    Union w = (Union) rel;
+    RelTraitSet newTrait = w.getTraitSet().replace(DruidLogicalConvention.instance());
+
+    return new DruidUnion(
+        w.getCluster(),
         newTrait,
-        tableScan.getTable()
+        w.getHints(),
+        convertList(
+            w.getInputs(),
+            DruidLogicalConvention.instance()
+        ),
+        w.all
     );
-    return druidTableScan;
   }
+
 }

@@ -61,11 +61,11 @@ import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator;
 import org.apache.druid.sql.calcite.rel.DruidConvention;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.DruidRel;
@@ -242,7 +242,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       }
 
       // Exceptions during rule evaluations could be wrapped inside a RuntimeException by VolcanoRuleCall class.
-      // This block will extract a user-friendly message from the exception chain. 
+      // This block will extract a user-friendly message from the exception chain.
       if (e.getMessage() != null
           && e.getCause() != null
           && e.getCause().getMessage() != null
@@ -560,36 +560,14 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
                  .plus(DruidLogicalConvention.instance()),
           newRoot
       );
-      DruidQueryGenerator shuttle = new DruidQueryGenerator(plannerContext);
-      newRoot.accept(shuttle);
-      log.info("PartialDruidQuery : " + shuttle.getPartialDruidQuery());
-      shuttle.getQueryList().add(shuttle.getPartialDruidQuery()); // add topmost query to the list
-      shuttle.getQueryTables().add(shuttle.getCurrentTable());
-      assert !shuttle.getQueryList().isEmpty();
-      log.info("query list size " + shuttle.getQueryList().size());
-      log.info("query tables size " + shuttle.getQueryTables().size());
-      // build bottom-most query
-      DruidQuery baseQuery = shuttle.getQueryList().get(0).build(
-          shuttle.getQueryTables().get(0).getDataSource(),
-          shuttle.getQueryTables().get(0).getRowSignature(),
-          plannerContext,
-          rexBuilder,
-          shuttle.getQueryList().size() != 1,
-          null
-      );
-      // build outer queries
-      for (int i = 1; i < shuttle.getQueryList().size(); i++) {
-        baseQuery = shuttle.getQueryList().get(i).build(
-            new QueryDataSource(baseQuery.getQuery()),
-            baseQuery.getOutputRowSignature(),
-            plannerContext,
-            rexBuilder,
-            false
-        );
-      }
+
+      DruidQueryGenerator generator = new DruidQueryGenerator(plannerContext, newRoot, rexBuilder);
+      DruidQuery baseQuery = generator.buildQuery();
       try {
-        log.info("final query : " +
-                 new DefaultObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(baseQuery.getQuery()));
+        log.info(
+            "final query : " +
+                new DefaultObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(baseQuery.getQuery())
+        );
       }
       catch (JsonProcessingException e) {
         throw new RuntimeException(e);
