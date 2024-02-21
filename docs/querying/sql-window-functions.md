@@ -114,6 +114,8 @@ The OVER clause defines the query windows for window functions as follows:
 - PARTITION BY indicates the dimension that defines the rows within the window
 - ORDER BY specifies the order of the rows within the windows
 
+An empty OVER clause or the absence of a PARTITION BY clause indicates that all data belongs to a single window.
+
 For example, the following OVER clause example sets the window dimension to `channel` and orders the results by the absolute value of `delta` ascending:
 
 ```sql
