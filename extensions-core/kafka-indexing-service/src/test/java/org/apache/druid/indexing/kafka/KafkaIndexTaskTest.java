@@ -3235,7 +3235,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(TaskState.SUCCESS, status.getStatusCode());
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
     Assert.assertEquals(reportData.getPartitionStats().size(), 1);
-    Assert.assertEquals((Long) reportData.getPartitionStats().values().iterator().next(), (Long) 10L);
+    Assert.assertEquals((Long) reportData.getPartitionStats().values().iterator().next(), (Long) 6L);
   }
 
   @Test(timeout = 60_000L)
@@ -3283,7 +3283,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(TaskState.SUCCESS, status.getStatusCode());
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
     Assert.assertEquals(reportData.getPartitionStats().size(), 2);
-    Assert.assertTrue(reportData.getPartitionStats().values().containsAll(ImmutableSet.of(10L, 2L)));
+    Assert.assertTrue(reportData.getPartitionStats().values().containsAll(ImmutableSet.of(6L, 2L)));
   }
 
   public static class TestKafkaInputFormat implements InputFormat
