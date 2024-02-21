@@ -213,7 +213,7 @@ If you write a query that violates one of these conditions, Druid throws an erro
 | `PERCENT_RANK()` | Returns the relative rank of the row calculated as a percentage according to the formula: `RANK() OVER (window) / COUNT(1) OVER (window)` |
 | `CUME_DIST()` | Returns the cumulative distribution of the current row within the window calculated as number of window rows at the same rank or higher than current row divided by total window rows. The return value ranges between `1/number of rows` and 1 |
 | `NTILE(tiles)` | Divides the rows within a window as evenly as possible into the number of tiles, also called buckets, and returns the value of the tile that the row falls into | None |
-| `LAG(expr[, offset])` | If you do not supply an `offset`, returns the value evaluated at the row preeeding the current row. Specify an offset number, `n` to return the value evaluated at `n` rows preceding the current one |
+| `LAG(expr[, offset])` | If you do not supply an `offset`, returns the value evaluated at the row preding the current row. Specify an offset number, `n` to return the value evaluated at `n` rows preceding the current one |
 | `LEAD(expr[, offset])` | If you do not supply an `offset`, returns the value evaluated at the row following the current row. Specify an offset number `n` to return the value evaluated at `n` rows following the current one; if there is no such row, returns the given default value |
 | `FIRST_VALUE(expr)` | Returns the value evaluated for the expression for the first row within the window |
 | `LAST_VALUE(expr)` | Returns the value evaluated for the expression for the last row within the window |
