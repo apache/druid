@@ -36,10 +36,9 @@ import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery.Stage;
 
-import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Converts a DAG of {@link org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode} convention to a native
@@ -79,17 +78,17 @@ public class DruidQueryGenerator
     }
     if (newInputs.size() == 1) {
       Vertex inputVertex = newInputs.get(0);
-      Vertex newVertex = inputVertex.mergeNode(node, isRoot);
-      if (newVertex != null) {
-        return newVertex;
+      Optional<Vertex> newVertex = inputVertex.extendWith(node, isRoot);
+      if (newVertex.isPresent()) {
+        return newVertex.get();
       }
       inputVertex = vertexFactory.createVertex(
           PartialDruidQuery.createOuterQuery(((PDQVertex) inputVertex).partialDruidQuery),
           ImmutableList.of(inputVertex)
       );
-      newVertex = inputVertex.mergeNode(node, false);
-      if (newVertex != null) {
-        return newVertex;
+      newVertex = inputVertex.extendWith(node, false);
+      if (newVertex.isPresent()) {
+        return newVertex.get();
       }
     }
     throw DruidException.defensive().build("Unable to process relNode[%s]", node);
@@ -106,12 +105,9 @@ public class DruidQueryGenerator
     DruidQuery buildQuery(boolean isRoot);
 
     /**
-     * Merges the given node into the current {@link Vertex}
-     *
-     * @return the new {@link Vertex} or <code>null</code> if merging is not possible.
+     * Extends the current vertex to include the specified parent.
      */
-    @Nullable
-    Vertex mergeNode(RelNode node, boolean isRoot);
+    Optional<Vertex> extendWith(RelNode parentNode, boolean isRoot);
 
     /**
      * Decides wether this {@link Vertex} can be unwrapped into an {@link InputDesc}.
@@ -199,66 +195,60 @@ public class DruidQueryGenerator
       }
 
       /**
-       * Merges the given {@link RelNode} into the current partial query.
-       *
-       * @return the new merged vertex - or null if its not possible to merge
+       * Extends the the current partial query with the new parent if possible.
        */
       @Override
-      @Nullable
-      public Vertex mergeNode(RelNode node, boolean isRoot)
+      public Optional<Vertex> extendWith(RelNode parentNode, boolean isRoot)
       {
-        PartialDruidQuery newPartialQuery = mergeNode1(node, isRoot);
-        if (newPartialQuery == null) {
-          return null;
+        Optional<PartialDruidQuery> newPartialQuery = extendPartialDruidQuery(parentNode, isRoot);
+        if (!newPartialQuery.isPresent()) {
+          return Optional.empty();
         }
-        return createVertex(newPartialQuery, inputs);
+        return Optional.of(createVertex(newPartialQuery.get(), inputs));
       }
 
       /**
        * Merges the given {@link RelNode} into the current {@link PartialDruidQuery}.
-       *
-       * @return the new merged {@link PartialDruidQuery} - or null if its not possible to merge.
        */
-      @Nullable
-      public PartialDruidQuery mergeNode1(RelNode node, boolean isRoot)
+      private Optional<PartialDruidQuery> extendPartialDruidQuery(RelNode parentNode, boolean isRoot)
       {
-        if (accepts(node, Stage.WHERE_FILTER, Filter.class)) {
-          PartialDruidQuery newPartialQuery = partialDruidQuery.withWhereFilter((Filter) node);
-          return newPartialQuery;
+        if (accepts(parentNode, Stage.WHERE_FILTER, Filter.class)) {
+          PartialDruidQuery newPartialQuery = partialDruidQuery.withWhereFilter((Filter) parentNode);
+          return Optional.of(newPartialQuery);
         }
-        if (accepts(node, Stage.SELECT_PROJECT, Project.class)) {
-          PartialDruidQuery newPartialQuery = partialDruidQuery.withSelectProject((Project) node);
-          return newPartialQuery;
+        if (accepts(parentNode, Stage.SELECT_PROJECT, Project.class)) {
+          PartialDruidQuery newPartialQuery = partialDruidQuery.withSelectProject((Project) parentNode);
+          return Optional.of(newPartialQuery);
         }
-        if (accepts(node, Stage.AGGREGATE, Aggregate.class)) {
-          PartialDruidQuery newPartialQuery = partialDruidQuery.withAggregate((Aggregate) node);
-          return newPartialQuery;
+        if (accepts(parentNode, Stage.AGGREGATE, Aggregate.class)) {
+          PartialDruidQuery newPartialQuery = partialDruidQuery.withAggregate((Aggregate) parentNode);
+          return Optional.of(newPartialQuery);
         }
-        if (accepts(node, Stage.AGGREGATE_PROJECT, Project.class) && isRoot) {
-          PartialDruidQuery newPartialQuery = partialDruidQuery.withAggregateProject((Project) node);
-          return newPartialQuery;
+        if (accepts(parentNode, Stage.AGGREGATE_PROJECT, Project.class) && isRoot) {
+          PartialDruidQuery newPartialQuery = partialDruidQuery.withAggregateProject((Project) parentNode);
+          return Optional.of(newPartialQuery);
         }
-        if (accepts(node, Stage.HAVING_FILTER, Filter.class)) {
-          PartialDruidQuery newPartialQuery = partialDruidQuery.withHavingFilter((Filter) node);
-          return newPartialQuery;
+        if (accepts(parentNode, Stage.HAVING_FILTER, Filter.class)) {
+          PartialDruidQuery newPartialQuery = partialDruidQuery.withHavingFilter((Filter) parentNode);
+          return Optional.of(newPartialQuery);
         }
-        if (accepts(node, Stage.SORT, Sort.class)) {
-          PartialDruidQuery newPartialQuery = partialDruidQuery.withSort((Sort) node);
-          return newPartialQuery;
+        if (accepts(parentNode, Stage.SORT, Sort.class)) {
+          PartialDruidQuery newPartialQuery = partialDruidQuery.withSort((Sort) parentNode);
+          return Optional.of(newPartialQuery);
         }
-        if (accepts(node, Stage.SORT_PROJECT, Project.class)) {
-          PartialDruidQuery newPartialQuery = partialDruidQuery.withSortProject((Project) node);
-          return newPartialQuery;
+        if (accepts(parentNode, Stage.SORT_PROJECT, Project.class)) {
+          PartialDruidQuery newPartialQuery = partialDruidQuery.withSortProject((Project) parentNode);
+          return Optional.of(newPartialQuery);
         }
-        if (accepts(node, Stage.WINDOW, Window.class)) {
-          PartialDruidQuery newPartialQuery = partialDruidQuery.withWindow((Window) node);
-          return newPartialQuery;
+        if (accepts(parentNode, Stage.WINDOW, Window.class)) {
+          PartialDruidQuery newPartialQuery = partialDruidQuery.withWindow((Window) parentNode);
+          return Optional.of(newPartialQuery);
         }
-        if (accepts(node, Stage.WINDOW_PROJECT, Project.class)) {
-          PartialDruidQuery newPartialQuery = partialDruidQuery.withWindowProject((Project) node);
-          return newPartialQuery;
+        if (accepts(parentNode, Stage.WINDOW_PROJECT, Project.class)) {
+          PartialDruidQuery newPartialQuery = partialDruidQuery.withWindowProject((Project) parentNode);
+          return Optional.of(newPartialQuery);
         }
-        return null;
+        return Optional.empty();
       }
 
       private boolean accepts(RelNode node, Stage whereFilter, Class<? extends RelNode> class1)

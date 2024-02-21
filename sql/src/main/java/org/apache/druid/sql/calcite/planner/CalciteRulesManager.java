@@ -249,7 +249,7 @@ public class CalciteRulesManager
         Programs.sequence(
             druidPreProgram,
             buildDecoupledLogicalOptimizationProgram(plannerContext),
-            new LoggingProgram("After baseRuleSet program", isDebug),
+            new LoggingProgram("After DecoupledLogicalOptimizationProgram program", isDebug),
             Programs.ofRules(logicalConventionRuleSet(plannerContext)),
             new LoggingProgram("After logical volcano planner program", isDebug)
         )
