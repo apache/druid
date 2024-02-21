@@ -181,7 +181,7 @@ public class WorkerImpl implements Worker
   private final ConcurrentHashMap<StageId, ConcurrentHashMap<Integer, ReadableFrameChannel>> stageOutputs = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<StageId, CounterTracker> stageCounters = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<StageId, WorkerStageKernel> stageKernelMap = new ConcurrentHashMap<>();
-  private final ByteTracker intermediateLocalStorageTracker;
+  private final ByteTracker intermediateSuperSorterLocalStorageTracker;
   private final boolean durableStageStorageEnabled;
   private final WorkerStorageParameters workerStorageParameters;
   /**
@@ -234,7 +234,7 @@ public class WorkerImpl implements Worker
     long maxBytes = workerStorageParameters.isIntermediateStorageLimitConfigured()
                     ? workerStorageParameters.getIntermediateSuperSorterStorageMaxLocalBytes()
                     : Long.MAX_VALUE;
-    this.intermediateLocalStorageTracker = new ByteTracker(maxBytes);
+    this.intermediateSuperSorterLocalStorageTracker = new ByteTracker(maxBytes);
   }
 
   @Override
@@ -754,18 +754,17 @@ public class WorkerImpl implements Worker
     }
   }
 
-  private OutputChannelFactory makeIntermediateOutputChannelFactory(
+  private OutputChannelFactory makeSuperSorterIntermediateOutputChannelFactory(
       final FrameContext frameContext,
       final int stageNumber,
-      final File tmpDir,
-      final String process
+      final File tmpDir
   )
   {
     final int frameSize = frameContext.memoryParameters().getLargeFrameSize();
     final File fileChannelDirectory =
-        new File(tmpDir, StringUtils.format("%s_intermediate_output_stage_%06d", process, stageNumber));
+        new File(tmpDir, StringUtils.format("intermediate_output_stage_%06d", stageNumber));
     final FileOutputChannelFactory fileOutputChannelFactory =
-        new FileOutputChannelFactory(fileChannelDirectory, frameSize, intermediateLocalStorageTracker);
+        new FileOutputChannelFactory(fileChannelDirectory, frameSize, intermediateSuperSorterLocalStorageTracker);
 
     if (durableStageStorageEnabled && workerStorageParameters.isIntermediateStorageLimitConfigured()) {
       return new ComposingOutputChannelFactory(
@@ -1248,25 +1247,12 @@ public class WorkerImpl implements Worker
                 new BlockingQueueOutputChannelFactory(frameContext.memoryParameters().getStandardFrameSize());
           } else {
             // Multi-partition; write temporary files and then sort each one file-by-file.
-            if (durableStageStorageEnabled) {
-              hashOutputChannelFactory = DurableStorageOutputChannelFactory.createStandardImplementation(
-                  task.getControllerTaskId(),
-                  task().getWorkerNumber(),
-                  kernel.getWorkOrder().getStageNumber(),
-                  task().getId(),
-                  frameContext.memoryParameters().getStandardFrameSize(),
-                  MSQTasks.makeStorageConnector(context.injector()),
-                  context.tempDir(),
-                  false
-              );
-            } else {
-              hashOutputChannelFactory =
-                  new FileOutputChannelFactory(
-                      context.tempDir(kernel.getStageDefinition().getStageNumber(), "hash-parts"),
-                      frameContext.memoryParameters().getStandardFrameSize(),
-                      intermediateLocalStorageTracker
-                  );
-            }
+            hashOutputChannelFactory =
+                new FileOutputChannelFactory(
+                    context.tempDir(kernel.getStageDefinition().getStageNumber(), "hash-parts"),
+                    frameContext.memoryParameters().getStandardFrameSize(),
+                    null
+                );
           }
 
           shufflePipeline.hashPartition(hashOutputChannelFactory);
@@ -1527,7 +1513,7 @@ public class WorkerImpl implements Worker
                 partitionBoundariesFuture,
                 exec,
                 outputChannelFactory,
-                makeIntermediateOutputChannelFactory(
+                makeSuperSorterIntermediateOutputChannelFactory(
                     frameContext,
                     stageDefinition.getStageNumber(),
                     sorterTmpDir
@@ -1652,7 +1638,7 @@ public class WorkerImpl implements Worker
                         Futures.immediateFuture(ClusterByPartitions.oneUniversalPartition()),
                         exec,
                         partitionOverrideOutputChannelFactory,
-                        makeIntermediateOutputChannelFactory(
+                        makeSuperSorterIntermediateOutputChannelFactory(
                             frameContext,
                             stageDefinition.getStageNumber(),
                             sorterTmpDir

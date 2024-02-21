@@ -20,7 +20,6 @@
 package org.apache.druid.msq.shuffle.output;
 
 import com.google.common.base.Preconditions;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.frame.file.FrameFileWriter;
 import org.apache.druid.frame.processor.OutputChannel;
@@ -30,7 +29,6 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.StorageConnector;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -58,8 +56,7 @@ public abstract class DurableStorageOutputChannelFactory implements OutputChanne
       final String taskId,
       final int frameSize,
       final StorageConnector storageConnector,
-      final File tmpDir,
-      final File t
+      final File tmpDir
   )
   {
     this.controllerTaskId = Preconditions.checkNotNull(controllerTaskId, "controllerTaskId");
@@ -85,14 +82,10 @@ public abstract class DurableStorageOutputChannelFactory implements OutputChanne
       final int frameSize,
       final StorageConnector storageConnector,
       final File tmpDir,
-      final boolean isQueryResults,
-      @Nullable final String tempPath
+      final boolean isQueryResults
   )
   {
     if (isQueryResults) {
-      if (tempPath != null) {
-        throw DruidException.defensive("Query results cannot have 'tempPath' set");
-      }
       return new DurableStorageQueryResultsOutputChannelFactory(
           controllerTaskId,
           workerNumber,
