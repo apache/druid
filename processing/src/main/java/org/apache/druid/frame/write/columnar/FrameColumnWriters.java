@@ -41,6 +41,9 @@ public class FrameColumnWriters
   public static final byte TYPE_STRING = 4;
   public static final byte TYPE_COMPLEX = 5;
   public static final byte TYPE_STRING_ARRAY = 6;
+  public static final byte TYPE_LONG_ARRAY = 7;
+  public static final byte TYPE_FLOAT_ARRAY = 8;
+  public static final byte TYPE_DOUBLE_ARRAY = 9;
 
   private FrameColumnWriters()
   {
@@ -76,6 +79,12 @@ public class FrameColumnWriters
         switch (type.getElementType().getType()) {
           case STRING:
             return makeStringArrayWriter(columnSelectorFactory, allocator, column);
+          case LONG:
+            return makeLongArrayWriter(columnSelectorFactory, allocator, column);
+          case FLOAT:
+            return makeFloatArrayWriter(columnSelectorFactory, allocator, column);
+          case DOUBLE:
+            return makeDoubleArrayWriter(columnSelectorFactory, allocator, column);
           default:
             throw new UnsupportedColumnTypeException(column, type);
         }
@@ -142,6 +151,36 @@ public class FrameColumnWriters
   {
     final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
     return new StringArrayFrameColumnWriterImpl(selector, allocator);
+  }
+
+  private static NumericArrayFrameColumnWriter makeLongArrayWriter(
+      final ColumnSelectorFactory selectorFactory,
+      final MemoryAllocator allocator,
+      final String columnName
+  )
+  {
+    final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
+    return new LongArrayFrameColumnWriter(selector, allocator);
+  }
+
+  private static NumericArrayFrameColumnWriter makeFloatArrayWriter(
+      final ColumnSelectorFactory selectorFactory,
+      final MemoryAllocator allocator,
+      final String columnName
+  )
+  {
+    final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
+    return new FloatArrayFrameColumnWriter(selector, allocator);
+  }
+
+  private static NumericArrayFrameColumnWriter makeDoubleArrayWriter(
+      final ColumnSelectorFactory selectorFactory,
+      final MemoryAllocator allocator,
+      final String columnName
+  )
+  {
+    final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
+    return new DoubleArrayFrameColumnWriter(selector, allocator);
   }
 
   private static ComplexFrameColumnWriter makeComplexWriter(
