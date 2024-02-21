@@ -35,7 +35,6 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.SchemaPayload;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.joda.time.Period;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -75,7 +74,7 @@ public class SegmentSchemaBackFillQueueTest
     CentralizedDatasourceSchemaConfig config = CentralizedDatasourceSchemaConfig.create();
     config.setEnabled(true);
     config.setBackFillEnabled(true);
-    config.setBackFillPeriod(Period.millis(1));
+    config.setBackFillPeriod(1);
 
     CountDownLatch latch = new CountDownLatch(1);
 

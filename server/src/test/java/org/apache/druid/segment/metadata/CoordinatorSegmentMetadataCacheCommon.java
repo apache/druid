@@ -32,7 +32,6 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
-import org.joda.time.Period;
 import org.junit.Rule;
 
 import java.util.Collections;
@@ -106,7 +105,7 @@ public class CoordinatorSegmentMetadataCacheCommon extends SegmentMetadataCacheC
     CentralizedDatasourceSchemaConfig config = CentralizedDatasourceSchemaConfig.create();
     config.setEnabled(true);
     config.setBackFillEnabled(false);
-    config.setBackFillPeriod(Period.millis(1));
+    config.setBackFillPeriod(1);
 
     backFillQueue =
         new SegmentSchemaBackFillQueue(

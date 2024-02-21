@@ -166,6 +166,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       RowSignature rowSignature,
       SegmentAnalysis analysis)
   {
+    log.info("Executing smq action.");
     AtomicBoolean added = new AtomicBoolean(false);
     segmentMetadataInfo.compute(
         dataSource,
@@ -186,6 +187,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
                     log.warn("No segment [%s] found, skipping refresh", segmentId);
                     return null;
                   } else {
+                    log.info("Adding segment schema to cache and backfill queue.Id [%s]", segmentId);
                     long numRows = analysis.getNumRows();
                     Map<String, AggregatorFactory> aggregators = analysis.getAggregators();
                     // cache the signature

@@ -747,7 +747,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
           log.warn("Got analysis for segment [%s] we didn't ask for, ignoring.", analysis.getId());
         } else {
           final RowSignature rowSignature = analysisToRowSignature(analysis);
-          log.debug("Segment[%s] has signature[%s].", segmentId, rowSignature);
+          log.info("Segment[%s] has signature[%s].", segmentId, rowSignature);
 
           if (smqAction(dataSource, segmentId, rowSignature, analysis)) {
             retVal.add(segmentId);
@@ -787,6 +787,8 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
       SegmentAnalysis analysis
   )
   {
+    log.info("Executing smq action.");
+
     AtomicBoolean added = new AtomicBoolean(false);
     segmentMetadataInfo.compute(
         dataSource,

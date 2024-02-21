@@ -145,11 +145,16 @@ public class SegmentSchemaCache
 
   public boolean isSchemaCached(SegmentId segmentId)
   {
+    if (finalizedSegmentStats.containsKey(segmentId)) {
+      Long schemaId = finalizedSegmentStats.get(segmentId).getSchemaId();
+      if (schemaId != null && finalizedSegmentSchema.containsKey(schemaId)) {
+        return true;
+      }
+    }
+
     return realtimeSegmentSchemaMap.containsKey(segmentId) ||
            inTransitSMQResults.containsKey(segmentId) ||
-           inTransitSMQPublishedResults.containsKey(segmentId) ||
-           finalizedSegmentStats.containsKey(segmentId) &&
-           finalizedSegmentSchema.containsKey(finalizedSegmentStats.get(segmentId).getSchemaId());
+           inTransitSMQPublishedResults.containsKey(segmentId);
   }
 
   public boolean segmentRemoved(SegmentId segmentId)

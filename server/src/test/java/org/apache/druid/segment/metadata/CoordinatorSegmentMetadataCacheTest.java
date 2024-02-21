@@ -73,7 +73,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.easymock.EasyMock;
-import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -1521,7 +1520,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     CentralizedDatasourceSchemaConfig config = CentralizedDatasourceSchemaConfig.create();
     config.setEnabled(true);
     config.setBackFillEnabled(true);
-    config.setBackFillPeriod(Period.millis(1));
+    config.setBackFillPeriod(1);
 
     backFillQueue =
         new SegmentSchemaBackFillQueue(

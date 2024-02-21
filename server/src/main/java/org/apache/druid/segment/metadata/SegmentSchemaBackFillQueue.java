@@ -67,14 +67,15 @@ public class SegmentSchemaBackFillQueue
     }
     this.schemaManager = schemaManager;
     this.segmentSchemaCache = segmentSchemaCache;
-    log.info("Backfill period is %d", config.getBackFillPeriod().getMillis());
-    this.executionPeriod = config.getBackFillPeriod().getMillis();
+    log.info("Backfill period [%s] millis", config.getBackFillPeriod());
+    this.executionPeriod = config.getBackFillPeriod();
     this.schemaFingerprintGenerator = schemaFingerprintGenerator;
   }
 
   @LifecycleStart
   public void start()
   {
+    log.info("Starting SegmentSchemaBackFillQueue.");
     if (isEnabled()) {
       scheduleQueuePoll(executionPeriod);
     }
@@ -83,6 +84,7 @@ public class SegmentSchemaBackFillQueue
   @LifecycleStop
   public void stop()
   {
+    log.info("Stopping SegmentSchemaBackFillQueue.");
     if (isEnabled()) {
       executor.shutdownNow();
     }
@@ -112,13 +114,18 @@ public class SegmentSchemaBackFillQueue
 
   public void processBatchesDue()
   {
-    log.info("Publishing schemas.");
+    log.info("Publishing schemas. Queue size is [%s]", queue.size());
     int itemsToProcess = Math.min(MAX_BATCH_SIZE, queue.size());
+
+    if (queue.isEmpty()) {
+      return;
+    }
 
     List<SegmentSchemaMetadataPlus> polled = new ArrayList<>();
 
     for (int i = 0; i < itemsToProcess; i++) {
       SegmentSchemaMetadataPlus item = queue.poll();
+      log.info("Item to publish is [%s]", item);
       if (item != null) {
         polled.add(item);
       }
