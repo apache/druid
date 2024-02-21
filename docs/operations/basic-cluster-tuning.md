@@ -90,7 +90,8 @@ Tuning the cluster so that each Historical can accept 50 queries and 10 non-quer
 
 #### Segment Cache Size
 
-For better query performance, do not allocate segment data to a Historical in excess of the system free memory.  When `free system memory` is greater than or equal to `druid.segmentCache.locations`, the Historical's memory-mapped segment cache can be held in memory, rather than being paged to disk.
+For better query performance, do not allocate segment data to a Historical in excess of the system free memory. The Historical uses free system memory to cache segments.
+For more detail, see [Loading and serving segments from cache](../design/historical/#loading-and-serving-segments-from-cache)
 
 Druid uses the `druid.segmentCache.locations` to calculate the total segment data size assigned to a Historical. For rare use cases, you can override this behavior with `druid.server.maxSize` property.
 
