@@ -28,7 +28,7 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerComponentSupplier;
 import org.junit.Rule;
 
-public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
+public class DecoupledPlanningCalciteUnionQueryTest extends CalciteUnionQueryTest
 {
 
   @Rule(order = 0)
