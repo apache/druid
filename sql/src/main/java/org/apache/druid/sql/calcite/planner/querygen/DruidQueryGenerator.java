@@ -71,6 +71,7 @@ public class DruidQueryGenerator
     return vertex;
   }
 
+  // FIXME: RelNode => DruidLogicalNode
   private Vertex processNodeWithInputs(RelNode node, List<Vertex> newInputs, boolean isRoot)
   {
     if (node instanceof InputDescProducer) {
