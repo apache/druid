@@ -209,6 +209,8 @@ Added support for array types for all the ingestion wizards.
 
 ![Load data](./assets/image03.png)
 
+When loading multi-value dimensions or arrays using the Druid **Query** console, note the value of the `arrayIngestMode` parameter. Druid now configures the `arrayIngestMode` parameter in the data loading flow, and its value can persist across the SQL tab, even if you execute unrelated Data Manipulation Language (DML) operations within the same tab.
+
 [#15588](https://github.com/apache/druid/pull/15588)
 
 #### File inputs for query detail archive
@@ -263,13 +265,6 @@ Added the option to return system fields when defining an input source. This all
 
 [#15276](https://github.com/apache/druid/pull/15276)
 
-#### Changed how Druid allocates weekly segments
-
-When the requested granularity is a month or larger but a segment can't be allocated, Druid resorts to day partitioning.
-Unless explicitly specified, Druid skips week-granularity segments for data partitioning because these segments don't align with the end of the month or more coarse-grained intervals.
-
-[#15589](https://github.com/apache/druid/pull/15589)
-
 #### Changed how empty or null array columns are stored
 
 Columns ingested with the `auto` column indexer that contain only empty or null containing arrays are now stored as `ARRAY<LONG>` instead of `COMPLEX<json>`.
@@ -295,6 +290,7 @@ Improved kill tasks as follows:
 
 Improved segment allocation as follows:
 
+* Changed how Druid allocates weekly segments [#15589](https://github.com/apache/druid/pull/15589)
 * Enhanced polling in segment allocation queue [#15590](https://github.com/apache/druid/pull/15590)
 * Fixed an issue in segment allocation that could cause loss of appended data when running interleaved append and replace tasks [#15459](https://github.com/apache/druid/pull/15459)
 
@@ -557,6 +553,12 @@ This change impacts mixed type `auto` columns that contain both scalars and arra
 
 [#15503](https://github.com/apache/druid/pull/15503)
 
+#### Console automatically sets `arrayIngestMode` for MSQ queries
+
+Druid console now configures the `arrayIngestMode` parameter in the data loading flow, and its value can persist across the SQL tab unless manually updated. When loading multi-value dimensions or arrays in the Druid console, note the value of the `arrayIngestMode` parameter to prevent mixing multi-value dimensions and arrays in the same column of a data source.
+
+[#15588](https://github.com/apache/druid/pull/15588)
+
 #### Improved concurrent append and replace (experimental)
 
 You no longer have to manually determine the task lock type for concurrent append and replace (experimental) with the `taskLockType` task context. Instead, Druid can now determine it automatically for you. You can use the context parameter `"useConcurrentLocks": true` for individual tasks and datasources or enable concurrent append and replace at a cluster level using `druid.indexer.task.default.context`.
@@ -585,13 +587,6 @@ Now, excess requests will instead be queued with a timeout equal to `MIN(Integer
 Columns ingested with the auto column indexer that contain only empty or null arrays are now stored as `ARRAY<LONG\>` instead of `COMPLEX<json\>`.
 
 [#15505](https://github.com/apache/druid/pull/15505)
-
-#### Changed how Druid allocates weekly segments
-
-When the requested granularity is a month or larger but a segment can't be allocated, Druid resorts to day partitioning.
-Unless explicitly specified, Druid skips week-granularity segments for data partitioning because these segments don't align with the end of the month or more coarse-grained intervals.
-
-[#15589](https://github.com/apache/druid/pull/15589)
 
 ### Removed the `auto` search strategy
 

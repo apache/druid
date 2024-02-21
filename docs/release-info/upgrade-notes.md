@@ -38,6 +38,12 @@ This change impacts mixed type `auto` columns that contain both scalars and arra
 
 [#15503](https://github.com/apache/druid/pull/15503)
 
+#### Console automatically sets `arrayIngestMode` for MSQ queries
+
+Druid console now configures the `arrayIngestMode` parameter in the data loading flow, and its value can persist across the SQL tab unless manually updated. When loading multi-value dimensions or arrays in the Druid console, note the value of the `arrayIngestMode` parameter to prevent mixing multi-value dimensions and arrays in the same column of a data source.
+
+[#15588](https://github.com/apache/druid/pull/15588)
+
 #### Improved concurrent append and replace (experimental)
 
 You no longer have to manually determine the task lock type for concurrent append and replace (experimental) with the `taskLockType` task context. Instead, Druid can now determine it automatically for you. You can use the context parameter `"useConcurrentLocks": true` for individual tasks and datasources or enable concurrent append and replace at a cluster level using `druid.indexer.task.default.context`.
