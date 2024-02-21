@@ -58,12 +58,10 @@ public class DruidSqlIngestOperator extends SqlSpecialOperator implements Author
     {
       return new DruidSqlInsert(
           pos,
-          // Must match SqlInsert.getOperandList()
           (SqlNodeList) operands[0],
           operands[1],
           operands[2],
           (SqlNodeList) operands[3],
-          // Must match DruidSqlIngest.getOperandList()
           (SqlGranularityLiteral) operands[4],
           (SqlNodeList) operands[5],
           null // fix this
@@ -87,15 +85,12 @@ public class DruidSqlIngestOperator extends SqlSpecialOperator implements Author
     {
       return new DruidSqlReplace(
           pos,
-          // Must match SqlInsert.getOperandList()
           (SqlNodeList) operands[0],
           operands[1],
           operands[2],
           (SqlNodeList) operands[3],
-          // Must match DruidSqlIngest.getOperandList()
           (SqlGranularityLiteral) operands[4],
           (SqlNodeList) operands[5],
-          // Must match DruidSqlReplace.getOperandList()
           operands[6],
           null // fix this
       );
