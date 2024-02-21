@@ -201,10 +201,10 @@ public class SQLMetadataConnectorTest
     );
 
     connector.alterSegmentTable();
-    connector.tableHasColumn(
+    Assert.assertTrue(connector.tableHasColumn(
         derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
         "USED_STATUS_LAST_UPDATED"
-    );
+    ));
   }
 
   @Test

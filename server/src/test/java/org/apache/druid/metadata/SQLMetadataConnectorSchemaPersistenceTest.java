@@ -122,10 +122,9 @@ public class SQLMetadataConnectorSchemaPersistenceTest
    * in the segments table.
    */
   @Test
-  public void testAlterSegmentTableAddLastUsed()
+  public void testAlterSegmentTable()
   {
-    connector.createSegmentSchemaTable();
-    connector.createSegmentTable();
+    connector.createSegmentTable(tablesConfig.getSegmentsTable());
 
     // Drop column used_status_last_updated to bring us in line with pre-upgrade state
     derbyConnectorRule.getConnector().retryWithHandle(
@@ -137,25 +136,7 @@ public class SQLMetadataConnectorSchemaPersistenceTest
             final Batch batch = handle.createBatch();
             batch.add(
                 StringUtils.format(
-                    "ALTER TABLE %1$s DROP COLUMN USED_STATUS_LAST_UPDATED",
-                    derbyConnectorRule.metadataTablesConfigSupplier()
-                                      .get()
-                                      .getSegmentsTable()
-                                      .toUpperCase(Locale.ENGLISH)
-                )
-            );
-            batch.add(
-                StringUtils.format(
-                    "ALTER TABLE %1$s DROP COLUMN SCHEMA_ID",
-                    derbyConnectorRule.metadataTablesConfigSupplier()
-                                      .get()
-                                      .getSegmentsTable()
-                                      .toUpperCase(Locale.ENGLISH)
-                )
-            );
-            batch.add(
-                StringUtils.format(
-                    "ALTER TABLE %1$s DROP COLUMN NUM_ROWS",
+                    "ALTER TABLE %1$s DROP COLUMN used_status_last_updated",
                     derbyConnectorRule.metadataTablesConfigSupplier()
                                       .get()
                                       .getSegmentsTable()
@@ -168,19 +149,20 @@ public class SQLMetadataConnectorSchemaPersistenceTest
         }
     );
 
-    connector.alterSegmentTable();
-    connector.tableHasColumn(
+    connector.createSegmentSchemaTable();
+    connector.alterSegmentTableSchemaPersistenceEnabled();
+    Assert.assertTrue(connector.tableHasColumn(
         derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
         "USED_STATUS_LAST_UPDATED"
-    );
-    connector.tableHasColumn(
+    ));
+    Assert.assertTrue(connector.tableHasColumn(
         derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
         "SCHEMA_ID"
-    );
-    connector.tableHasColumn(
+    ));
+    Assert.assertTrue(connector.tableHasColumn(
         derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
         "NUM_ROWS"
-    );
+    ));
   }
 
   private CentralizedDatasourceSchemaConfig getEnabledConfig()

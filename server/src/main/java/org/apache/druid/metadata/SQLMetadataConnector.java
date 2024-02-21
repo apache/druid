@@ -604,24 +604,30 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     }
 
     if (!columnsToAdd.isEmpty()) {
-      StringBuilder alterCommand = new StringBuilder("ALTER TABLE %1$s ADD");
+      List<String> alterCommands = new ArrayList<>();
       for (String columnName : columnsToAdd) {
-        alterCommand.append(StringUtils.format(" %s %s,", columnName, columnNameTypes.get(columnName)));
+        alterCommands.add(
+            StringUtils.format(
+                "ALTER TABLE %1$s ADD %2$s %3$s",
+                tableName,
+                columnName,
+                columnNameTypes.get(columnName)
+            )
+        );
       }
-
-      alterCommand.deleteCharAt(alterCommand.length() - 1);
 
       log.info("Adding columns %s to table[%s].", columnsToAdd, tableName);
 
+      alterCommands.add(
+          StringUtils.format(
+              "ALTER TABLE %1$s ADD FOREIGN KEY(schema_id) REFERENCES %2$s(id)",
+              tableName,
+              schemaTableName
+          ));
+
       alterTable(
           tableName,
-          ImmutableList.of(
-              StringUtils.format(
-                  alterCommand.toString(),
-                  tableName
-              ),
-              StringUtils.format("ALTER TABLE %1$s ADD FOREIGN KEY(schema_id) REFERENCES %2$s(id)", tableName, schemaTableName)
-          )
+          alterCommands
       );
     }
   }
@@ -782,6 +788,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     // regardless of cluster configuration for creating tables.
     validateSegmentsTable();
   }
+
 
   @Override
   public void createUpgradeSegmentsTable()
