@@ -867,6 +867,11 @@ public class BatchAppenderator implements Appenderator
         fireHydrant.swapSegment(null);
       }
 
+      SegmentSchemaMetadata schemaMetadata =
+          centralizedDatasourceSchemaConfig.isEnabled()
+          ? TaskSegmentSchemaUtil.getSegmentSchema(mergedTarget, indexIO)
+          : null;
+
       // cleanup, sink no longer needed
       removeDirectory(computePersistDir(identifier));
 
@@ -886,11 +891,7 @@ public class BatchAppenderator implements Appenderator
           objectMapper.writeValueAsString(segment.getLoadSpec())
       );
 
-      return Pair.of(segment,
-                     centralizedDatasourceSchemaConfig.isEnabled()
-                     ? TaskSegmentSchemaUtil.getSegmentSchema(mergedTarget, indexIO)
-                     : null
-      );
+      return Pair.of(segment, schemaMetadata);
     }
     catch (Exception e) {
       metrics.incrementFailedHandoffs();
