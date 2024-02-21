@@ -62,14 +62,14 @@ public class BloomFilterExpressions
         throw validationFailed("argument must be a LONG constant");
       }
 
-      class BloomExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
+      class BloomExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
       {
         final int expectedSize;
 
-        public BloomExpr(Expr arg)
+        public BloomExpr(List<Expr> args)
         {
-          super(FN_NAME, arg);
-          this.expectedSize = arg.eval(InputBindings.nilBindings()).asInt();
+          super(CreateExprMacro.this, args);
+          this.expectedSize = args.get(0).eval(InputBindings.nilBindings()).asInt();
         }
 
         @Override
@@ -81,12 +81,6 @@ public class BloomFilterExpressions
           );
         }
 
-        @Override
-        public Expr visit(Shuttle shuttle)
-        {
-          return shuttle.visit(apply(shuttle.visitAll(args)));
-        }
-
         @Nullable
         @Override
         public ExpressionType getOutputType(InputBindingInspector inspector)
@@ -95,7 +89,7 @@ public class BloomFilterExpressions
         }
       }
 
-      return new BloomExpr(expectedSizeArg);
+      return new BloomExpr(args);
     }
   }
 
@@ -118,7 +112,7 @@ public class BloomFilterExpressions
       {
         private BloomExpr(List<Expr> args)
         {
-          super(FN_NAME, args);
+          super(AddExprMacro.this, args);
         }
 
         @Override
@@ -162,13 +156,6 @@ public class BloomFilterExpressions
           return ExprEval.ofComplex(BLOOM_FILTER_TYPE, filter);
         }
 
-
-        @Override
-        public Expr visit(Shuttle shuttle)
-        {
-          return shuttle.visit(apply(shuttle.visitAll(args)));
-        }
-
         @Nullable
         @Override
         public ExpressionType getOutputType(InputBindingInspector inspector)
@@ -196,13 +183,16 @@ public class BloomFilterExpressions
     {
       validationHelperCheckArgumentCount(args, 2);
 
-      class BloomExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
+      final Expr arg = args.get(0);
+      final Expr filterExpr = args.get(1);
+
+      class BloomExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
       {
         private final BloomKFilter filter;
 
-        private BloomExpr(BloomKFilter filter, Expr arg)
+        private BloomExpr(BloomKFilter filter, List<Expr> args)
         {
-          super(FN_NAME, arg);
+          super(TestExprMacro.this, args);
           this.filter = filter;
         }
 
@@ -248,12 +238,6 @@ public class BloomFilterExpressions
           return filter.testBytes(null, 0, 0);
         }
 
-        @Override
-        public Expr visit(Shuttle shuttle)
-        {
-          return shuttle.visit(apply(shuttle.visitAll(args)));
-        }
-
         @Nullable
         @Override
         public ExpressionType getOutputType(InputBindingInspector inspector)
@@ -266,7 +250,7 @@ public class BloomFilterExpressions
       {
         public DynamicBloomExpr(List<Expr> args)
         {
-          super(FN_NAME, args);
+          super(TestExprMacro.this, args);
         }
 
         @Override
@@ -319,12 +303,6 @@ public class BloomFilterExpressions
           return filter.testBytes(null, 0, 0);
         }
 
-        @Override
-        public Expr visit(Shuttle shuttle)
-        {
-          return shuttle.visit(apply(shuttle.visitAll(args)));
-        }
-
         @Nullable
         @Override
         public ExpressionType getOutputType(InputBindingInspector inspector)
@@ -332,9 +310,6 @@ public class BloomFilterExpressions
           return ExpressionType.LONG;
         }
       }
-
-      final Expr arg = args.get(0);
-      final Expr filterExpr = args.get(1);
 
       if (filterExpr.isLiteral() && filterExpr.getLiteralValue() instanceof String) {
         final String serializedFilter = (String) filterExpr.getLiteralValue();
@@ -346,7 +321,7 @@ public class BloomFilterExpressions
         catch (IOException ioe) {
           throw processingFailed(ioe, "failed to deserialize bloom filter");
         }
-        return new BloomExpr(filter, arg);
+        return new BloomExpr(filter, args);
       } else {
         return new DynamicBloomExpr(args);
       }

@@ -30,7 +30,7 @@ release. It may still work with the latest Druid servers, but not all features a
 due to limitations of older Druid APIs on the Tranquility side.
 
 For new projects that require streaming ingestion, we recommend using Druid's native support for
-[Apache Kafka](../development/extensions-core/kafka-ingestion.md) or
-[Amazon Kinesis](../development/extensions-core/kinesis-ingestion.md).
+[Apache Kafka](../ingestion/kafka-ingestion.md) or
+[Amazon Kinesis](../ingestion/kinesis-ingestion.md).
 
 For more details, check out the [Tranquility GitHub page](https://github.com/druid-io/tranquility/).

@@ -201,7 +201,7 @@ field in the `context` field of the ingestion spec. `tags` is expected to be a m
 
 ### Ingestion metrics for Kafka
 
-These metrics apply to the [Kafka indexing service](../development/extensions-core/kafka-ingestion.md).
+These metrics apply to the [Kafka indexing service](../ingestion/kafka-ingestion.md).
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
@@ -212,7 +212,7 @@ These metrics apply to the [Kafka indexing service](../development/extensions-co
 
 ### Ingestion metrics for Kinesis
 
-These metrics apply to the [Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md).
+These metrics apply to the [Kinesis indexing service](../ingestion/kinesis-ingestion.md).
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
