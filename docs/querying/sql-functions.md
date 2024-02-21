@@ -486,7 +486,7 @@ Counts the number of rows.
 
 **Function type:** [Window](sql-window-functions.md#window-function-reference)
 
-Returns the cumulative distribution of the current row within the window calculated as `number of window rows at the same rank or higher than current row` / `total window rows`.
+Returns the cumulative distribution of the current row within the window calculated as `number of window rows at the same rank or higher than current row` / `total window rows`. The return value ranges between `1/number of rows` and 1.
 
 ## CURRENT_DATE
 
@@ -706,7 +706,7 @@ Extracts the value of some unit of the timestamp, optionally from a certain time
 
 **Function type:** [Window](sql-window-functions.md#window-function-reference)
 
-Returns the value for the expression for the first row within the window.
+Returns the value evaluated for the expression for the first row within the window.
 
 ## FLOOR (date and time)
 
@@ -890,7 +890,7 @@ Extracts a literal value from `expr` at the specified `path`. If you specify `RE
 
 **Function type:** [Window](sql-window-functions.md#window-function-reference)
 
-Returns the value evaluated at the row that precedes the current row by the offset number within the window. `offset` defaults to 1 if not provided.
+If you do not supply an `offset`, returns the value evaluated at the row preeeding the current row. Specify an offset number `n` to return the value evaluated at `n` rows preceding the current one.
 
 ## LAST_VALUE
 
@@ -898,7 +898,7 @@ Returns the value evaluated at the row that precedes the current row by the offs
 
 **Function type:** [Window](sql-window-functions.md#window-function-reference)
 
-Returns the value for the expression for the last row within the window.
+Returns the value evaluated for the expression for the last row within the window.
 
 ## LATEST
 
@@ -922,7 +922,7 @@ Returns the value of a numeric or string expression corresponding to the latest 
 
 **Function type:** [Window](sql-window-functions.md#window-function-reference)
 
-Returns the value evaluated at the row that follows the current row by the offset number within the window; if there is no such row, returns the given default value. `offset` defaults to 1 if not provided.
+If you do not supply an `offset`, returns the value evaluated at the row following the current row. Specify an offset number `n` to return the value evaluated at `n` rows following the current one; if there is no such row, returns the given default value.
 
 ## LEAST
 
@@ -1186,7 +1186,7 @@ Converts a string into a BIGINT with the given base or into a DECIMAL data type 
 
 **Function type:** [Window](sql-window-functions.md#window-function-reference)
 
-Returns the rank of the row calculated as a percentage according to the formula: `(rank - 1) / (total window rows - 1)`.
+Returns the relative rank of the row calculated as a percentage according to the formula: `RANK() OVER (window) / COUNT(1) OVER (window)`.
 
 ## POSITION
 
@@ -1218,7 +1218,7 @@ Converts an angle from degrees to radians.
 
 **Function type:** [Window](sql-window-functions.md#window-function-reference)
 
-Returns the rank for a row within a window.
+Returns the rank with gaps for a row within a window. For example, if two rows tie for rank 1, the next rank is 3.
 
 ## REGEXP_EXTRACT
 
@@ -1291,7 +1291,7 @@ Calculates the rounded value for a numerical expression.
 
 **Function type:** [Window](sql-window-functions.md#window-function-reference)
 
-Returns the number of the row within the window.
+Returns the number of the row within the window starting from 1.
 
 ## RPAD
 
