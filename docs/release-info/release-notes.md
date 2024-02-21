@@ -265,6 +265,16 @@ Added the option to return system fields when defining an input source. This all
 
 [#15276](https://github.com/apache/druid/pull/15276)
 
+#### Changed how Druid allocates weekly segments
+
+When the requested granularity is a month or larger but a segment can't be allocated, Druid resorts to day partitioning.
+Unless explicitly specified, Druid skips week-granularity segments for data partitioning because these segments don't align with the end of the month or more coarse-grained intervals.
+
+Previously, if Druid couldn't allocate segments by month, it tried allocating them by week next.
+In the new behavior, Druid skips partitioning by week and goes directly to day. Week segments can only be allocated if the chosen partitioning in the append task is WEEK.
+
+[#15589](https://github.com/apache/druid/pull/15589)
+
 #### Changed how empty or null array columns are stored
 
 Columns ingested with the `auto` column indexer that contain only empty or null containing arrays are now stored as `ARRAY<LONG>` instead of `COMPLEX<json>`.
@@ -587,6 +597,16 @@ Now, excess requests will instead be queued with a timeout equal to `MIN(Integer
 Columns ingested with the auto column indexer that contain only empty or null arrays are now stored as `ARRAY<LONG\>` instead of `COMPLEX<json\>`.
 
 [#15505](https://github.com/apache/druid/pull/15505)
+
+#### Changed how Druid allocates weekly segments
+
+When the requested granularity is a month or larger but a segment can't be allocated, Druid resorts to day partitioning.
+Unless explicitly specified, Druid skips week-granularity segments for data partitioning because these segments don't align with the end of the month or more coarse-grained intervals.
+
+Previously, if Druid couldn't allocate segments by month, it tried allocating them by week next.
+In the new behavior, Druid skips partitioning by week and goes directly to day. Week segments can only be allocated if the chosen partitioning in the append task is WEEK.
+
+[#15589](https://github.com/apache/druid/pull/15589)
 
 ### Removed the `auto` search strategy
 
