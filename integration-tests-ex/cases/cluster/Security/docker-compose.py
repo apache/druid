@@ -13,25 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from setuptools import setup, find_packages
+from template import BaseTemplate, generate
 
-setup(
-    name='druidapi',
-    version='0.1.0',
-    description='Python API client for Apache Druid',
-    url='https://github.com/apache/druid/tree/master/examples/quickstart/jupyter-notebooks/druidapi',
-    author='Apache Druid project',
-    author_email='dev@druid.apache.org',
-    license='Apache License 2.0',
-    packages=find_packages(),
-    install_requires=['requests'],
+class Template(BaseTemplate):
 
-    classifiers=[
-        'Development Status :: 3 - Alpha',
-        'Intended Audience :: Developers',
-        'Intended Audience :: End Users/Desktop',
-        'License :: OSI Approved :: Apache Software License',
-        'Operating System :: OS Independent',
-        'Programming Language :: Python :: 3',
-    ],
-)
+    def define_indexer(self):
+        service = super().define_indexer()
+        self.add_property(service, 'druid.msq.intermediate.storage.enable', 'true')
+        self.add_property(service, 'druid.msq.intermediate.storage.type', 'local')
+        self.add_property(service, 'druid.msq.intermediate.storage.basePath', '/shared/durablestorage/')
+        self.add_property(service, 'druid.export.storage.baseDir', '/')
+
+    def extend_druid_service(self, service):
+        self.add_env_file(service, '../Common/environment-configs/auth.env')
+        self.add_env(service, 'druid_test_loadList', 'druid-basic-security')
+
+
+generate(__file__, Template())

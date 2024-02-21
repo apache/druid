@@ -33,7 +33,7 @@ SqlNode DruidSqlInsertEof() :
   final SqlNodeList columnList;
   final Span s;
   final Pair<SqlNodeList, SqlNodeList> p;
-  org.apache.druid.java.util.common.Pair<Granularity, String> partitionedBy = new org.apache.druid.java.util.common.Pair(null, null);
+  SqlGranularityLiteral partitionedBy = null;
   SqlNodeList clusteredBy = null;
   String exportFileFormat = null;
 }
@@ -93,7 +93,7 @@ SqlNode DruidSqlInsertEof() :
     clusteredBy = ClusteredBy()
   ]
   {
-      if (clusteredBy != null && partitionedBy.lhs == null) {
+      if (clusteredBy != null && partitionedBy == null) {
         throw org.apache.druid.sql.calcite.parser.DruidSqlParserUtils.problemParsing(
           "CLUSTERED BY found before PARTITIONED BY, CLUSTERED BY must come after the PARTITIONED BY clause"
         );
@@ -112,6 +112,6 @@ SqlNode DruidSqlInsertEof() :
       return insertNode;
     }
     SqlInsert sqlInsert = (SqlInsert) insertNode;
-    return new DruidSqlInsert(sqlInsert, partitionedBy.lhs, partitionedBy.rhs, clusteredBy, exportFileFormat);
+    return DruidSqlInsert.create(sqlInsert, partitionedBy, clusteredBy, exportFileFormat);
   }
 }

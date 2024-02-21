@@ -90,7 +90,7 @@ documentation.
 ## PIVOT
 
 :::info
-The PIVOT operator is an [experimental feature](../development/experimental-features.md).
+The PIVOT operator is an [experimental feature](../development/experimental.md).
 :::
 
 The PIVOT operator carries out an aggregation and transforms rows into columns in the output.
@@ -147,7 +147,7 @@ LIMIT 15
 ## UNPIVOT
 
 :::info
-The UNPIVOT operator is an [experimental feature](../development/experimental-features.md).
+The UNPIVOT operator is an [experimental feature](../development/experimental.md).
 :::
 
 The UNPIVOT operator transforms existing column values into rows.

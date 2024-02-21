@@ -12,20 +12,29 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#-------------------------------------------------------------------------
 
-class ClientError(Exception):
-    '''
-    Indicates an error with usage of the Python API.
-    '''
-    
-    def __init__(self, msg):
-        self.message = msg
+# Definition of the multi stage query test cluster.
+# See https://yaml.org/spec/1.2.2 for more about YAML
+include:
+  - /cluster/Common/zk-metastore.yaml
 
-class DruidError(Exception):
-    '''
-    Indicates that something went wrong on Druid, typically as the result of a
-    request that this client sent.
-    '''
-
-    def __init__(self, msg):
-        self.message = msg
+druid:
+  coordinator:
+    instances:
+      - port: 8081
+  overlord:
+    instances:
+      - port: 8090
+  broker:
+    instances:
+      - port: 8082
+  router:
+    instances:
+      - port: 8888
+  historical:
+    instances:
+      - port: 8083
+  indexer:
+    instances:
+      - port: 8091
