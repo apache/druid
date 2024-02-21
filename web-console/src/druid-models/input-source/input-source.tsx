@@ -44,6 +44,7 @@ export interface InputSource {
   prefixes?: string[];
   objects?: { bucket: string; path: string }[];
   fetchTimeout?: number;
+  systemFields?: string[];
 
   // druid
   dataSource?: string;
@@ -54,6 +55,9 @@ export interface InputSource {
 
   // inline
   data?: string;
+
+  // delta
+  tablePath?: string;
 
   // hdfs
   paths?: string | string[];
@@ -112,6 +116,10 @@ export type InputSourceDesc =
       paths?: string | string[];
     }
   | {
+      type: 'delta';
+      tablePath?: string;
+    }
+  | {
       type: 'sql';
       database: any;
       foldCase?: boolean;
@@ -158,6 +166,12 @@ export function issueWithInputSource(inputSource: InputSource | undefined): stri
       }
       return;
 
+    case 'delta':
+      if (!inputSource.tablePath) {
+        return 'must have tablePath';
+      }
+      return;
+
     case 'hdfs':
       if (!inputSource.paths) {
         return 'must have paths';
@@ -169,7 +183,18 @@ export function issueWithInputSource(inputSource: InputSource | undefined): stri
   }
 }
 
-const KNOWN_TYPES = ['inline', 'druid', 'http', 'local', 's3', 'azure', 'google', 'hdfs', 'sql'];
+const KNOWN_TYPES = [
+  'inline',
+  'druid',
+  'http',
+  'local',
+  's3',
+  'azure',
+  'delta',
+  'google',
+  'hdfs',
+  'sql',
+];
 export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
   // inline
 
@@ -571,6 +596,16 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     type: 'string',
     placeholder: '/path/to/file.ext',
     defined: typeIsKnown(KNOWN_TYPES, 'hdfs'),
+    required: true,
+  },
+
+  // delta lake
+  {
+    name: 'tablePath',
+    label: 'Delta table path',
+    type: 'string',
+    placeholder: '/path/to/deltaTable',
+    defined: typeIsKnown(KNOWN_TYPES, 'delta'),
     required: true,
   },
 

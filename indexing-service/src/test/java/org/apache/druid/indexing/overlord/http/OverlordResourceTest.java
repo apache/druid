@@ -926,7 +926,7 @@ public class OverlordResourceTest
         auditManager
     );
 
-    Task task = new KillUnusedSegmentsTask("kill_all", "allow", Intervals.ETERNITY, null, false, 10, null);
+    Task task = new KillUnusedSegmentsTask("kill_all", "allow", Intervals.ETERNITY, null, false, 10, null, null);
     overlordResource.taskPost(task, req);
 
     Assert.assertTrue(auditEntryCapture.hasCaptured());
@@ -1699,6 +1699,7 @@ public class OverlordResourceTest
 
     EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true);
     EasyMock.expect(task.getDataSource()).andReturn(dataSource);
+    EasyMock.expect(task.getDestinationResource()).andReturn(java.util.Optional.of(new Resource(dataSource, ResourceType.DATASOURCE)));
     EasyMock.expect(task.getInputSourceResources())
             .andReturn(ImmutableSet.of(new ResourceAction(
                 new Resource(inputSourceType, ResourceType.EXTERNAL),
@@ -1735,6 +1736,7 @@ public class OverlordResourceTest
     EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true);
     EasyMock.expect(task.getId()).andReturn("taskId");
     EasyMock.expect(task.getDataSource()).andReturn(dataSource);
+    EasyMock.expect(task.getDestinationResource()).andReturn(java.util.Optional.of(new Resource(dataSource, ResourceType.DATASOURCE)));
     EasyMock.expect(task.getInputSourceResources()).andThrow(expectedException);
 
     EasyMock.replay(
@@ -1767,6 +1769,7 @@ public class OverlordResourceTest
 
     EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(false);
     EasyMock.expect(task.getDataSource()).andReturn(dataSource);
+    EasyMock.expect(task.getDestinationResource()).andReturn(java.util.Optional.of(new Resource(dataSource, ResourceType.DATASOURCE)));
     EasyMock.expect(task.getInputSourceResources())
             .andReturn(ImmutableSet.of(new ResourceAction(
                 new Resource(inputSourceType, ResourceType.EXTERNAL),

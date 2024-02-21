@@ -65,6 +65,7 @@ DRUIDVERSION
 DataSketches
 DateTime
 DateType
+DeltaLakeInputSource
 dimensionsSpec
 DimensionSpec
 DimensionSpecs
@@ -81,6 +82,7 @@ downsamples
 downsampling
 Dropwizard
 dropwizard
+druid-deltalake-extensions
 DruidInputSource
 DruidSQL
 DynamicConfigProvider
@@ -165,6 +167,7 @@ Kerberos
 KeyStores
 Kinesis
 Kubernetes
+Lakehouse
 LDAPS
 LRU
 LZ4
@@ -530,6 +533,7 @@ SVG
 symlink
 syntaxes
 systemFields
+tablePath
 tiering
 timeseries
 Timeseries
@@ -576,6 +580,7 @@ varchar
 vectorizable
 vectorize
 vectorizeVirtualColumns
+versioned
 versioning
 virtualColumns
 w.r.t.
@@ -801,9 +806,11 @@ multi-server
 BasicDataSource
 LeaderLatch
 2.x
-28.x 
+28.x
+3.0.x
 3.5.x
 3.4.x
+3.5.x.
 AllowAll
 AuthenticationResult
 AuthorizationLoadingLookupTest
@@ -1305,9 +1312,11 @@ kafka.topic
 keyColumnName
 keyFormat
 listDelimiter
+lowerOpen
 timestamp
 timestampColumnName
 timestampSpec
+upperOpen
 urls
 valueFormat
 1GB

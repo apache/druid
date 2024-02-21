@@ -380,7 +380,7 @@ export class Stages {
     if (!counters) return {};
     return sumByKey(
       filterMap(this.getCountersForStage(stage), c => {
-        const warningCounter = c.warnings;
+        const warningCounter = c.warnings as Record<string, number> | undefined;
         if (!warningCounter) return;
         return deleteKeys(warningCounter, ['type']);
       }),

@@ -106,3 +106,83 @@ SqlTypeNameSpec DruidType() :
     return new SqlUserDefinedTypeNameSpec(typeName, span().pos());
   }
 }
+
+// Parses the supported file formats for export.
+String FileFormat() :
+{
+  SqlNode format;
+}
+{
+  format = SimpleIdentifier()
+  {
+    return format.toString();
+  }
+}
+
+SqlIdentifier ExternalDestination() :
+{
+  final Span s;
+  SqlIdentifier destinationType = null;
+  String destinationTypeString = null;
+  Map<String, String> properties = new HashMap();
+}
+{
+ (
+  destinationType = SimpleIdentifier()
+  {
+    destinationTypeString = destinationType.toString();
+  }
+  |
+  <LOCAL>
+  {
+    // local is a reserved keyword in calcite. However, local is also a supported input source / destination and
+    // keeping the name is preferred for consistency in other places, and so that permission checks are applied
+    // correctly, so this is handled as a special case.
+    destinationTypeString = "local";
+  }
+ )
+ [ <LPAREN> [ properties = ExternProperties() ] <RPAREN>]
+ {
+   s = span();
+   return new ExternalDestinationSqlIdentifier(
+     destinationTypeString,
+     s.pos(),
+     properties
+   );
+ }
+}
+
+Map<String, String> ExternProperties() :
+{
+  final Span s;
+  final Map<String, String> properties = new HashMap();
+  SqlIdentifier identifier;
+  String value;
+  SqlNodeList commaList = SqlNodeList.EMPTY;
+}
+{
+  (
+    identifier = SimpleIdentifier() <NAMED_ARGUMENT_ASSIGNMENT> value = SimpleStringLiteral()
+    {
+      properties.put(identifier.toString(), value);
+    }
+  )
+  (
+    <COMMA>
+    identifier = SimpleIdentifier() <NAMED_ARGUMENT_ASSIGNMENT> value = SimpleStringLiteral()
+    {
+      properties.put(identifier.toString(), value);
+    }
+  )*
+  {
+    return properties;
+  }
+}
+
+SqlNode testRule():
+{
+  final SqlNode e;
+}
+{
+  e = SimpleIdentifier() { return e; }
+}

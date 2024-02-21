@@ -118,6 +118,7 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
+import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.hamcrest.CoreMatchers;
@@ -644,8 +645,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testEarliestAggregators()
   {
-    msqIncompatible();
-
     testQuery(
         "SELECT "
         + "EARLIEST(cnt), EARLIEST(m1), EARLIEST(dim1, 10), EARLIEST(dim1, CAST(10 AS INTEGER)), "
@@ -1207,8 +1206,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testPrimitiveEarliestInSubquery()
   {
-    msqIncompatible();
-
     testQuery(
         "SELECT SUM(val1), SUM(val2), SUM(val3) FROM (SELECT dim2, EARLIEST(m1) AS val1, EARLIEST(cnt) AS val2, EARLIEST(m2) AS val3 FROM foo GROUP BY dim2)",
         ImmutableList.of(
@@ -1415,7 +1412,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testStringEarliestSingleStringDim()
   {
-    msqIncompatible();
     testQuery(
         "SELECT dim2, EARLIEST(dim1,10) AS val FROM foo GROUP BY dim2",
         ImmutableList.of(
@@ -1531,8 +1527,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testEarliestAggregatorsNumericNulls()
   {
-    msqIncompatible();
-
     testQuery(
         "SELECT EARLIEST(l1), EARLIEST(d1), EARLIEST(f1) FROM druid.numfoo",
         ImmutableList.of(
@@ -1590,8 +1584,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFirstLatestAggregatorsSkipNulls()
   {
-    msqIncompatible();
-
     final DimFilter filter;
     if (useDefault) {
       filter = notNull("dim1");
@@ -1704,8 +1696,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testOrderByEarliestFloat()
   {
-    msqIncompatible();
-
     List<Object[]> expected;
     if (NullHandling.replaceWithDefault()) {
       expected = ImmutableList.of(
@@ -1751,8 +1741,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testOrderByEarliestDouble()
   {
-    msqIncompatible();
-
     List<Object[]> expected;
     if (NullHandling.replaceWithDefault()) {
       expected = ImmutableList.of(
@@ -1798,8 +1786,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testOrderByEarliestLong()
   {
-    msqIncompatible();
-
     List<Object[]> expected;
     if (NullHandling.replaceWithDefault()) {
       expected = ImmutableList.of(
@@ -9670,7 +9656,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTimeseriesEmptyResultsAggregatorDefaultValuesNonVectorized()
   {
+    // Empty-dataset aggregation queries in MSQ return an empty row, rather than a single row as SQL requires.
     msqIncompatible();
+
     cannotVectorize();
     skipVectorize();
     // timeseries with all granularity have a single group, so should return default results for given aggregators
@@ -9986,7 +9974,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByAggregatorDefaultValuesNonVectorized()
   {
-    msqIncompatible();
     cannotVectorize();
     skipVectorize();
     testQuery(
@@ -14824,6 +14811,30 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+  @Test
+  public void testGroupByDateTrunc()
+  {
+    testQuery(
+        "select DATE_TRUNC('HOUR', __time), COUNT(*) from druid.foo group by DATE_TRUNC('HOUR', __time)",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                           .dataSource(CalciteTests.DATASOURCE1)
+                           .intervals(querySegmentSpec(Filtration.eternity()))
+                           .granularity(Granularities.HOUR)
+                           .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                           .context(QUERY_CONTEXT_DEFAULT)
+                           .build()
+        ),
+        ImmutableList.of(
+            new Object[]{946684800000L, 1L},
+            new Object[]{946771200000L, 1L},
+            new Object[]{946857600000L, 1L},
+            new Object[]{978307200000L, 1L},
+            new Object[]{978393600000L, 1L},
+            new Object[]{978480000000L, 1L}
+        )
+    );
+  }
 
   @Test
   public void testLatestByOnStringColumnWithoutMaxBytesSpecified()
@@ -14877,6 +14888,51 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .run());
     assertThat(e, invalidSqlIs("ASCENDING ordering with NULLS LAST is not supported! (line [1], column [41])"));
   }
+
+  @Test
+  public void testUnSupportedRangeBounds()
+  {
+    assumeFeatureAvailable(EngineFeature.WINDOW_FUNCTIONS);
+
+    DruidException e = assertThrows(DruidException.class, () -> testBuilder()
+        .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
+        .sql("SELECT dim1,ROW_NUMBER() OVER (ORDER BY dim1 RANGE BETWEEN 3 PRECEDING AND 2 FOLLOWING) from druid.foo")
+        .run());
+    assertThat(e, invalidSqlIs("The query contains a window frame which may return incorrect results. To disregard this warning, set [windowingStrictValidation] to false in the query context. (line [1], column [31])"));
+  }
+
+  @Test
+  public void testUnSupportedWindowBoundExpressions()
+  {
+    assumeFeatureAvailable(EngineFeature.WINDOW_FUNCTIONS);
+
+    DruidException e = assertThrows(DruidException.class, () -> testBuilder()
+        .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
+        .sql("SELECT dim1,ROW_NUMBER() OVER (ORDER BY dim1 ROWS BETWEEN dim1 PRECEDING AND dim1 FOLLOWING) from druid.foo")
+        .run());
+    assertThat(e, invalidSqlIs("Window frames with expression based lower/upper bounds are not supported. (line [1], column [31])"));
+  }
+
+
+  @Test
+  public void testUnSupportedWindowBoundTypes()
+  {
+    assumeFeatureAvailable(EngineFeature.WINDOW_FUNCTIONS);
+
+    DruidException e;
+    e = assertThrows(DruidException.class, () -> testBuilder()
+        .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
+        .sql("SELECT dim1,ROW_NUMBER() OVER (ORDER BY dim1 ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING) from druid.foo")
+        .run());
+    assertThat(e, invalidSqlIs("Query bounds with both lower and upper bounds as PRECEDING or FOLLOWING is not supported. (line [1], column [31])"));
+
+    e = assertThrows(DruidException.class, () -> testBuilder()
+        .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
+        .sql("SELECT dim1,ROW_NUMBER() OVER (ORDER BY dim1 ROWS BETWEEN 1 FOLLOWING AND 1 FOLLOWING) from druid.foo")
+        .run());
+    assertThat(e, invalidSqlIs("Query bounds with both lower and upper bounds as PRECEDING or FOLLOWING is not supported. (line [1], column [31])"));
+  }
+
 
   @Test
   public void testWindowingErrorWithoutFeatureFlag()

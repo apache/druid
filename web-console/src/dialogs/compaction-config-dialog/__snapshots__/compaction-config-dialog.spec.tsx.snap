@@ -350,11 +350,32 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
         }
         onChange={[Function]}
       />
-      <Blueprint4.Switch
-        checked={false}
-        label="Allow concurrent compactions (experimental)"
-        onChange={[Function]}
-      />
+      <Memo(FormGroupWithInfo)
+        info={
+          <Memo(PopoverText)>
+            <p>
+              If you want to append data to a datasource while compaction is running, you need to enable concurrent append and replace for the datasource by updating the compaction settings.
+            </p>
+            <p>
+              For more information refer to the
+               
+              <Memo(ExternalLink)
+                href="https://druid.apache.org/docs/29.0.0/ingestion/concurrent-append-replace.html"
+              >
+                documentation
+              </Memo(ExternalLink)>
+              .
+            </p>
+          </Memo(PopoverText)>
+        }
+        inlineInfo={true}
+      >
+        <Blueprint4.Switch
+          checked={false}
+          label="Use concurrent locks (experimental)"
+          onChange={[Function]}
+        />
+      </Memo(FormGroupWithInfo)>
     </React.Fragment>
   </div>
   <div
@@ -739,11 +760,32 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
         }
         onChange={[Function]}
       />
-      <Blueprint4.Switch
-        checked={false}
-        label="Allow concurrent compactions (experimental)"
-        onChange={[Function]}
-      />
+      <Memo(FormGroupWithInfo)
+        info={
+          <Memo(PopoverText)>
+            <p>
+              If you want to append data to a datasource while compaction is running, you need to enable concurrent append and replace for the datasource by updating the compaction settings.
+            </p>
+            <p>
+              For more information refer to the
+               
+              <Memo(ExternalLink)
+                href="https://druid.apache.org/docs/29.0.0/ingestion/concurrent-append-replace.html"
+              >
+                documentation
+              </Memo(ExternalLink)>
+              .
+            </p>
+          </Memo(PopoverText)>
+        }
+        inlineInfo={true}
+      >
+        <Blueprint4.Switch
+          checked={false}
+          label="Use concurrent locks (experimental)"
+          onChange={[Function]}
+        />
+      </Memo(FormGroupWithInfo)>
     </React.Fragment>
   </div>
   <div
@@ -1128,11 +1170,32 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
         }
         onChange={[Function]}
       />
-      <Blueprint4.Switch
-        checked={false}
-        label="Allow concurrent compactions (experimental)"
-        onChange={[Function]}
-      />
+      <Memo(FormGroupWithInfo)
+        info={
+          <Memo(PopoverText)>
+            <p>
+              If you want to append data to a datasource while compaction is running, you need to enable concurrent append and replace for the datasource by updating the compaction settings.
+            </p>
+            <p>
+              For more information refer to the
+               
+              <Memo(ExternalLink)
+                href="https://druid.apache.org/docs/29.0.0/ingestion/concurrent-append-replace.html"
+              >
+                documentation
+              </Memo(ExternalLink)>
+              .
+            </p>
+          </Memo(PopoverText)>
+        }
+        inlineInfo={true}
+      >
+        <Blueprint4.Switch
+          checked={false}
+          label="Use concurrent locks (experimental)"
+          onChange={[Function]}
+        />
+      </Memo(FormGroupWithInfo)>
     </React.Fragment>
   </div>
   <div
@@ -1517,11 +1580,32 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
         }
         onChange={[Function]}
       />
-      <Blueprint4.Switch
-        checked={false}
-        label="Allow concurrent compactions (experimental)"
-        onChange={[Function]}
-      />
+      <Memo(FormGroupWithInfo)
+        info={
+          <Memo(PopoverText)>
+            <p>
+              If you want to append data to a datasource while compaction is running, you need to enable concurrent append and replace for the datasource by updating the compaction settings.
+            </p>
+            <p>
+              For more information refer to the
+               
+              <Memo(ExternalLink)
+                href="https://druid.apache.org/docs/29.0.0/ingestion/concurrent-append-replace.html"
+              >
+                documentation
+              </Memo(ExternalLink)>
+              .
+            </p>
+          </Memo(PopoverText)>
+        }
+        inlineInfo={true}
+      >
+        <Blueprint4.Switch
+          checked={false}
+          label="Use concurrent locks (experimental)"
+          onChange={[Function]}
+        />
+      </Memo(FormGroupWithInfo)>
     </React.Fragment>
   </div>
   <div
