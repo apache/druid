@@ -51,26 +51,6 @@ public class IngestionStatsAndErrorsTaskReportData
   private Map<Object, Long> partitionStats;
 
   public IngestionStatsAndErrorsTaskReportData(
-      IngestionState ingestionState,
-      Map<String, Object> unparseableEvents,
-      Map<String, Object> rowStats,
-      @Nullable String errorMsg,
-      boolean segmentAvailabilityConfirmed,
-      long segmentAvailabilityWaitTimeMs
-  )
-  {
-    this(
-        ingestionState,
-        unparseableEvents,
-        rowStats,
-        errorMsg,
-        segmentAvailabilityConfirmed,
-        segmentAvailabilityWaitTimeMs,
-        null
-    );
-  }
-
-  public IngestionStatsAndErrorsTaskReportData(
       @JsonProperty("ingestionState") IngestionState ingestionState,
       @JsonProperty("unparseableEvents") Map<String, Object> unparseableEvents,
       @JsonProperty("rowStats") Map<String, Object> rowStats,

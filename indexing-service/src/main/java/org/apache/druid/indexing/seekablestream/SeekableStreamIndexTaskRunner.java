@@ -131,6 +131,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -244,7 +245,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private volatile CopyOnWriteArrayList<SequenceMetadata<PartitionIdType, SequenceOffsetType>> sequences;
   private volatile Throwable backgroundThreadException;
 
-  private final ConcurrentHashMap<PartitionIdType, LongAdder> partitionsThroughput = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<PartitionIdType, AtomicLong> partitionsThroughput = new ConcurrentHashMap<>();
 
   public SeekableStreamIndexTaskRunner(
       final SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType> task,
@@ -686,6 +687,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                     sequenceToCheckpoint = sequenceToUse;
                   }
                   isPersistRequired |= addResult.isPersistRequired();
+                  partitionsThroughput.computeIfAbsent(record.getPartitionId(), igonre -> new AtomicLong())
+                                      .incrementAndGet();
                 } else {
                   // Failure to allocate segment puts determinism at risk, bail out to be safe.
                   // May want configurable behavior here at some point.
@@ -720,8 +723,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
               // here for kafka is to +1 while for kinesis we simply save the current sequence number
               lastReadOffsets.put(record.getPartitionId(), record.getSequenceNumber());
               currOffsets.put(record.getPartitionId(), getNextStartOffset(record.getSequenceNumber()));
-
-              partitionsThroughput.computeIfAbsent(record.getPartitionId(), igonre -> new LongAdder()).increment();
             }
 
             // Use record.getSequenceNumber() in the moreToRead check, since currOffsets might not have been

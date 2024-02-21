@@ -1240,7 +1240,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
                 rowStatsAndUnparseableEvents.lhs,
                 taskStatus.getErrorMsg(),
                 segmentAvailabilityConfirmed,
-                segmentAvailabilityWaitTimeMs
+                segmentAvailabilityWaitTimeMs,
+                ImmutableMap.of()
             )
         )
     );

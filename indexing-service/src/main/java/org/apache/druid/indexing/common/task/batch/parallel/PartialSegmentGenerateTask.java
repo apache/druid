@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskStatus;
@@ -247,7 +248,8 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
                 getTaskCompletionRowStats(),
                 "",
                 false, // not applicable for parallel subtask
-                segmentAvailabilityWaitTimeMs
+                segmentAvailabilityWaitTimeMs,
+                ImmutableMap.of()
             )
         )
     );
