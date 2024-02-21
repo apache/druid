@@ -36,7 +36,7 @@ public class NotYetSupportedUsageTest
   @Test
   public void ensureAllModesUsed()
   {
-    Set<Method> methodsAnnotatedWith = new Reflections("org.apache", new MethodAnnotationsScanner())
+    Set<Method> methodsAnnotatedWith = new Reflections("org.apache.druid.sql", new MethodAnnotationsScanner())
         .getMethodsAnnotatedWith(NotYetSupported.class);
 
     Set<NotYetSupported.Modes> modes = new HashSet<>(Arrays.asList(NotYetSupported.Modes.values()));
