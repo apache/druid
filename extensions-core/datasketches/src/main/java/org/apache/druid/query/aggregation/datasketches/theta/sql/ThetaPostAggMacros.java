@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.theta.sql;
 
+import com.google.common.collect.Iterables;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -39,7 +40,7 @@ public class ThetaPostAggMacros
     public Expr apply(List<Expr> args)
     {
       validationHelperCheckArgumentCount(args, 1);
-      return new ThetaSketchEstimateExpr(args.get(0));
+      return new ThetaSketchEstimateExpr(this, args);
     }
 
     @Override
@@ -49,14 +50,14 @@ public class ThetaPostAggMacros
     }
   }
 
-  public static class ThetaSketchEstimateExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
+  public static class ThetaSketchEstimateExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
   {
     private Expr estimateExpr;
 
-    public ThetaSketchEstimateExpr(Expr arg)
+    public ThetaSketchEstimateExpr(ThetaSketchEstimateExprMacro macro, List<Expr> args)
     {
-      super(THETA_SKETCH_ESTIMATE, arg);
-      this.estimateExpr = arg;
+      super(macro, args);
+      this.estimateExpr = Iterables.getOnlyElement(args);
     }
 
     @Override
@@ -74,12 +75,6 @@ public class ThetaPostAggMacros
       } else {
         throw new IllegalArgumentException("requires a ThetaSketch as the argument");
       }
-    }
-
-    @Override
-    public Expr visit(Shuttle shuttle)
-    {
-      return shuttle.visit(new ThetaSketchEstimateExpr(arg));
     }
 
     @Nullable

@@ -107,6 +107,23 @@ Since the Hadoop AWS connector uses the `s3a` filesystem client, specify the war
 The local catalog type can be used for catalogs configured on the local filesystem. Set the `icebergCatalog` type to `local`. You can use this catalog for demos or localized tests. It is not recommended for production use cases.
 The `warehouseSource` is set to `local` because this catalog only supports reading from a local filesystem.
 
+## Downloading Iceberg extension
+
+To download `druid-iceberg-extensions`, run the following command after replacing `<VERSION>` with the desired
+Druid version:
+
+```shell
+java \
+  -cp "lib/*" \
+  -Ddruid.extensions.directory="extensions" \
+  -Ddruid.extensions.hadoopDependenciesDir="hadoop-dependencies" \
+  org.apache.druid.cli.Main tools pull-deps \
+  --no-default-hadoop \
+  -c "org.apache.druid.extensions.contrib:druid-iceberg-extensions:<VERSION>"
+```
+
+See [Loading community extensions](../../configuration/extensions.md#loading-community-extensions) for more information.
+
 ## Known limitations
 
 This section lists the known limitations that apply to the Iceberg extension.

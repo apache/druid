@@ -572,6 +572,31 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testSafeDivide()
+  {
+    skipVectorize();
+    cannotVectorize();
+    final Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+
+    testQuery(
+        "select count(*) c from foo where ((floor(safe_divide(cast(cast(m1 as char) as bigint), 2))) = 0)",
+        context,
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("v0", "floor(safe_divide(CAST(CAST(\"m1\", 'STRING'), 'LONG'),2))", ColumnType.LONG))
+                .filters(equality("v0", 0L, ColumnType.LONG))
+                .granularity(Granularities.ALL)
+                .aggregators(new CountAggregatorFactory("a0"))
+                .context(context)
+                .build()
+        ),
+        ImmutableList.of(new Object[]{1L})
+    );
+  }
+
+  @Test
   public void testGroupByLimitWrappingOrderByAgg()
   {
     testQuery(
@@ -15268,5 +15293,30 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             )
         )
         .run();
+  }
+
+  @Test
+  public void testFilterParseLongNullable()
+  {
+    testQuery(
+        "select count(*) from druid.foo where parse_long(dim1, 10) is null",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(
+                      expressionVirtualColumn(
+                          "v0",
+                          "parse_long(\"dim1\",10)",
+                          ColumnType.LONG)
+                  )
+                  .filters(isNull("v0"))
+                  .granularity(Granularities.ALL)
+                  .aggregators(new CountAggregatorFactory("a0"))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(new Object[]{NullHandling.sqlCompatible() ? 4L : 0L})
+    );
   }
 }
