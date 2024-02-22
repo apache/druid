@@ -28,7 +28,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputSource;
@@ -645,7 +644,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
                 errorMsg,
                 false, // not applicable for parallel subtask
                 segmentAvailabilityWaitTimeMs,
-                ImmutableMap.of()
+                Collections.emptyMap()
             )
         )
     );

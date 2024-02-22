@@ -48,7 +48,7 @@ public class IngestionStatsAndErrorsTaskReportData
   private long segmentAvailabilityWaitTimeMs;
 
   @JsonProperty
-  private Map<Object, Long> partitionStats;
+  private Map<String, Long> recordsProcessed;
 
   public IngestionStatsAndErrorsTaskReportData(
       @JsonProperty("ingestionState") IngestionState ingestionState,
@@ -57,7 +57,7 @@ public class IngestionStatsAndErrorsTaskReportData
       @JsonProperty("errorMsg") @Nullable String errorMsg,
       @JsonProperty("segmentAvailabilityConfirmed") boolean segmentAvailabilityConfirmed,
       @JsonProperty("segmentAvailabilityWaitTimeMs") long segmentAvailabilityWaitTimeMs,
-      @JsonProperty("partitionStats") Map<Object, Long> partitionStats
+      @JsonProperty("recordsProcessed") Map<String, Long> recordsProcessed
   )
   {
     this.ingestionState = ingestionState;
@@ -66,7 +66,7 @@ public class IngestionStatsAndErrorsTaskReportData
     this.errorMsg = errorMsg;
     this.segmentAvailabilityConfirmed = segmentAvailabilityConfirmed;
     this.segmentAvailabilityWaitTimeMs = segmentAvailabilityWaitTimeMs;
-    this.partitionStats = partitionStats;
+    this.recordsProcessed = recordsProcessed;
   }
 
   @JsonProperty
@@ -108,9 +108,9 @@ public class IngestionStatsAndErrorsTaskReportData
 
   @JsonProperty
   @Nullable
-  public Map<Object, Long> getPartitionStats()
+  public Map<String, Long> getRecordsProcessed()
   {
-    return partitionStats;
+    return recordsProcessed;
   }
 
   public static IngestionStatsAndErrorsTaskReportData getPayloadFromTaskReports(

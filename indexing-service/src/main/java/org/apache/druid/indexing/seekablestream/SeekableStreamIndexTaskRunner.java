@@ -131,7 +131,6 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -244,7 +243,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private volatile CopyOnWriteArrayList<SequenceMetadata<PartitionIdType, SequenceOffsetType>> sequences;
   private volatile Throwable backgroundThreadException;
 
-  private final ConcurrentHashMap<PartitionIdType, AtomicLong> partitionsThroughput = new ConcurrentHashMap<>();
+  private final Map<PartitionIdType, Long> partitionsThroughput = new HashMap<>();
 
   public SeekableStreamIndexTaskRunner(
       final SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType> task,
@@ -686,8 +685,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                     sequenceToCheckpoint = sequenceToUse;
                   }
                   isPersistRequired |= addResult.isPersistRequired();
-                  partitionsThroughput.computeIfAbsent(record.getPartitionId(), igonre -> new AtomicLong())
-                                      .incrementAndGet();
+                  partitionsThroughput.merge(record.getPartitionId(), 1L, Long::sum);
                 } else {
                   // Failure to allocate segment puts determinism at risk, bail out to be safe.
                   // May want configurable behavior here at some point.
@@ -1132,15 +1130,15 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 errorMsg,
                 errorMsg == null,
                 handoffWaitMs,
-                partitionsThroughput.entrySet()
-                                    .stream()
-                                    .collect(Collectors.toMap(
-                                        entry -> entry.getKey().toString(),
-                                        entry -> entry.getValue().longValue()
-                                    ))
+                getPartitionStats()
             )
         )
     );
+  }
+
+  private Map<String, Long> getPartitionStats()
+  {
+    return CollectionUtils.mapKeys(partitionsThroughput, key -> key.toString());
   }
 
   private Map<String, Object> getTaskCompletionUnparseableEvents()
