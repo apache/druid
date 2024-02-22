@@ -76,6 +76,7 @@ import {
   adjustForceGuaranteedRollup,
   adjustId,
   BATCH_INPUT_FORMAT_FIELDS,
+  changeFlattenSpec,
   chooseByBestTimestamp,
   cleanSpec,
   computeFlattenPathsForData,
@@ -89,6 +90,7 @@ import {
   FLATTEN_FIELD_FIELDS,
   getArrayMode,
   getDimensionSpecName,
+  getFlattenSpec,
   getIngestionComboType,
   getIngestionImage,
   getIngestionTitle,
@@ -1459,8 +1461,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const { columnFilter, specialColumnsOnly, parserQueryState, selectedFlattenField } = this.state;
     const spec = this.getEffectiveSpec();
     const inputFormat: InputFormat = deepGet(spec, 'spec.ioConfig.inputFormat') || EMPTY_OBJECT;
-    const flattenFields: FlattenField[] =
-      deepGet(spec, 'spec.ioConfig.inputFormat.flattenSpec.fields') || EMPTY_ARRAY;
+    const flattenFields: FlattenField[] = getFlattenSpec(spec)?.fields || EMPTY_ARRAY;
 
     const canHaveNestedData = inputFormatCanProduceNestedData(inputFormat);
 
@@ -1617,13 +1618,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 icon={IconNames.LIGHTBULB}
                 text={`Auto add ${pluralIfNeeded(suggestedFlattenFields.length, 'flatten spec')}`}
                 onClick={() => {
-                  this.updateSpec(
-                    deepSet(
-                      spec,
-                      'spec.ioConfig.inputFormat.flattenSpec.fields',
-                      suggestedFlattenFields,
-                    ),
-                  );
+                  this.updateSpec(changeFlattenSpec(spec, { fields: suggestedFlattenFields }));
                 }}
               />
             </FormGroup>
@@ -1676,24 +1671,25 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           initValue={selectedFlattenField.value}
           onClose={this.resetSelected}
           onDirty={this.handleDirty}
-          onApply={flattenField =>
+          onApply={flattenField => {
+            const flattenSpec = getFlattenSpec(spec) || {};
             this.updateSpec(
-              deepSet(
+              changeFlattenSpec(
                 spec,
-                `spec.ioConfig.inputFormat.flattenSpec.fields.${selectedFlattenField.index}`,
-                flattenField,
+                deepSet(flattenSpec, `fields.${selectedFlattenField.index}`, flattenField),
               ),
-            )
-          }
+            );
+          }}
           showDelete={selectedFlattenField.index !== -1}
-          onDelete={() =>
+          onDelete={() => {
+            const flattenSpec = getFlattenSpec(spec) || {};
             this.updateSpec(
-              deepDelete(
+              changeFlattenSpec(
                 spec,
-                `spec.ioConfig.inputFormat.flattenSpec.fields.${selectedFlattenField.index}`,
+                deepDelete(flattenSpec, `fields.${selectedFlattenField.index}`),
               ),
-            )
-          }
+            );
+          }}
         />
       );
     } else {
