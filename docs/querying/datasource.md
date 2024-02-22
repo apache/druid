@@ -219,7 +219,7 @@ Inline datasources are not available in Druid SQL.
 Refer to the [Query execution](query-execution.md#inline) page for more details on how queries are executed when you
 use inline datasources.
 
-### Dynamic table appaned `TABLE(APPEND(...))`
+### Dynamic table append `TABLE(APPEND(...))`
 
 This is essentially an SQL level syntactic sugar which matches columns by name from multiple tables.
 Suppose you have 3 tables:
