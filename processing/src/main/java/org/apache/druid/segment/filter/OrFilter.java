@@ -134,52 +134,7 @@ public class OrFilter implements BooleanFilter
             // index and matcher bundles must be handled separately, they will need to be a single value matcher built
             // by doing an AND operation between the index and the value matcher
             // (a bundle is basically an AND operation between the index and matcher if the matcher is present)
-            partialIndexBundles.add(
-                new FilterBundle.MatcherBundle()
-                {
-                  @Override
-                  public FilterBundle.MatcherBundleInfo getMatcherInfo()
-                  {
-                    return new FilterBundle.MatcherBundleInfo(
-                        () -> "AND",
-                        bundle.getIndex().getIndexInfo(),
-                        Collections.singletonList(bundle.getMatcherBundle().getMatcherInfo())
-                    );
-                  }
-
-                  @Override
-                  public ValueMatcher valueMatcher(
-                      ColumnSelectorFactory selectorFactory,
-                      Offset baseOffset,
-                      boolean descending
-                  )
-                  {
-                    return AndFilter.makeMatcher(
-                        new ValueMatcher[]{
-                            makePartialIndexValueMatcher(baseOffset.getBaseReadableOffset(), bundleIndex, descending),
-                            bundle.getMatcherBundle().valueMatcher(selectorFactory, baseOffset, descending)
-                        }
-                    );
-                  }
-
-                  @Override
-                  public VectorValueMatcher vectorMatcher(
-                      VectorColumnSelectorFactory selectorFactory,
-                      ReadableVectorOffset baseOffset
-                  )
-                  {
-                    return AndFilter.makeVectorMatcher(
-                        new VectorValueMatcher[]{
-                            makePartialIndexVectorValueMatcher(
-                                baseOffset,
-                                bundleIndex
-                            ),
-                            bundle.getMatcherBundle().vectorMatcher(selectorFactory, baseOffset)
-                        }
-                    );
-                  }
-                }
-            );
+            partialIndexBundles.add(convertBundleToMatcherOnlyBundle(bundle, bundleIndex));
           }
         }
       } else {
@@ -199,10 +154,7 @@ public class OrFilter implements BooleanFilter
       }
       if (indexOnlyBundles.size() == 1) {
         return new FilterBundle(
-            new FilterBundle.SimpleIndexBundle(
-                indexOnlyBundles.get(0).getIndexInfo(),
-                index
-            ),
+            new FilterBundle.SimpleIndexBundle(indexOnlyBundles.get(0).getIndexInfo(), index),
             null
         );
       }
@@ -226,51 +178,8 @@ public class OrFilter implements BooleanFilter
     );
     if (!indexOnlyBundles.isEmpty()) {
       // translate the indexOnly bundles into a single matcher
-      final ImmutableBitmap partialIndex = index;
       allMatcherBundles.add(
-          new FilterBundle.MatcherBundle()
-          {
-            @Override
-            public FilterBundle.MatcherBundleInfo getMatcherInfo()
-            {
-              if (indexOnlyBundles.size() == 1) {
-                return new FilterBundle.MatcherBundleInfo(
-                    indexOnlyBundles.get(0).getIndexInfo()::getFilter,
-                    indexOnlyBundles.get(0).getIndexInfo(),
-                    null
-                );
-              }
-              return new FilterBundle.MatcherBundleInfo(
-                  () -> "OR",
-                  new FilterBundle.IndexBundleInfo(
-                      () -> "OR",
-                      selectionRowCount,
-                      totalBitmapConstructTimeNs,
-                      indexOnlyBundles.stream().map(FilterBundle.IndexBundle::getIndexInfo).collect(Collectors.toList())
-                  ),
-                  null
-              );
-            }
-
-            @Override
-            public ValueMatcher valueMatcher(
-                ColumnSelectorFactory selectorFactory,
-                Offset baseOffset,
-                boolean descending
-            )
-            {
-              return makePartialIndexValueMatcher(baseOffset.getBaseReadableOffset(), partialIndex, descending);
-            }
-
-            @Override
-            public VectorValueMatcher vectorMatcher(
-                VectorColumnSelectorFactory selectorFactory,
-                ReadableVectorOffset baseOffset
-            )
-            {
-              return makePartialIndexVectorValueMatcher(baseOffset, partialIndex);
-            }
-          }
+          convertIndexToMatcherBundle(selectionRowCount, indexOnlyBundles, totalBitmapConstructTimeNs, index)
       );
     }
     allMatcherBundles.addAll(partialIndexBundles);
@@ -301,7 +210,10 @@ public class OrFilter implements BooleanFilter
           }
 
           @Override
-          public VectorValueMatcher vectorMatcher(VectorColumnSelectorFactory selectorFactory, ReadableVectorOffset baseOffset)
+          public VectorValueMatcher vectorMatcher(
+              VectorColumnSelectorFactory selectorFactory,
+              ReadableVectorOffset baseOffset
+          )
           {
             return makeVectorMatcher(
                 allMatcherBundles.stream()
@@ -437,6 +349,26 @@ public class OrFilter implements BooleanFilter
     return StringUtils.format("(%s)", OR_JOINER.join(filters));
   }
 
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    OrFilter orFilter = (OrFilter) o;
+    return Objects.equals(getFilters(), orFilter.getFilters());
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(getFilters());
+  }
+
+
   private static ValueMatcher makeMatcher(final ValueMatcher[] baseMatchers)
   {
     Preconditions.checkState(baseMatchers.length > 0);
@@ -518,25 +450,120 @@ public class OrFilter implements BooleanFilter
     };
   }
 
-  @Override
-  public boolean equals(Object o)
+  /**
+   * Convert a {@link FilterBundle} that has both {@link FilterBundle#getIndex()} and
+   * {@link FilterBundle#getMatcherBundle()} into a 'matcher only' bundle by converting the index into a matcher
+   * with {@link #makePartialIndexValueMatcher(ReadableOffset, ImmutableBitmap, boolean)} and
+   * {@link #makePartialIndexVectorValueMatcher(ReadableVectorOffset, ImmutableBitmap)} and then doing a logical AND
+   * with the bundles matchers.
+   */
+  private static FilterBundle.MatcherBundle convertBundleToMatcherOnlyBundle(
+      FilterBundle bundle,
+      ImmutableBitmap bundleIndex
+  )
   {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    OrFilter orFilter = (OrFilter) o;
-    return Objects.equals(getFilters(), orFilter.getFilters());
+    return new FilterBundle.MatcherBundle()
+    {
+      @Override
+      public FilterBundle.MatcherBundleInfo getMatcherInfo()
+      {
+        return new FilterBundle.MatcherBundleInfo(
+            () -> "AND",
+            bundle.getIndex().getIndexInfo(),
+            Collections.singletonList(bundle.getMatcherBundle().getMatcherInfo())
+        );
+      }
+
+      @Override
+      public ValueMatcher valueMatcher(
+          ColumnSelectorFactory selectorFactory,
+          Offset baseOffset,
+          boolean descending
+      )
+      {
+        return AndFilter.makeMatcher(
+            new ValueMatcher[]{
+                makePartialIndexValueMatcher(baseOffset.getBaseReadableOffset(), bundleIndex, descending),
+                bundle.getMatcherBundle().valueMatcher(selectorFactory, baseOffset, descending)
+            }
+        );
+      }
+
+      @Override
+      public VectorValueMatcher vectorMatcher(
+          VectorColumnSelectorFactory selectorFactory,
+          ReadableVectorOffset baseOffset
+      )
+      {
+        return AndFilter.makeVectorMatcher(
+            new VectorValueMatcher[]{
+                makePartialIndexVectorValueMatcher(
+                    baseOffset,
+                    bundleIndex
+                ),
+                bundle.getMatcherBundle().vectorMatcher(selectorFactory, baseOffset)
+            }
+        );
+      }
+    };
   }
 
-  @Override
-  public int hashCode()
+  /**
+   * Convert an index into a matcher bundle, using
+   * {@link #makePartialIndexValueMatcher(ReadableOffset, ImmutableBitmap, boolean)} and
+   * {@link #makePartialIndexVectorValueMatcher(ReadableVectorOffset, ImmutableBitmap)}
+   */
+  private static FilterBundle.MatcherBundle convertIndexToMatcherBundle(
+      int selectionRowCount,
+      List<FilterBundle.IndexBundle> indexOnlyBundles,
+      long totalBitmapConstructTimeNs,
+      ImmutableBitmap partialIndex
+  )
   {
-    return Objects.hash(getFilters());
-  }
+    return new FilterBundle.MatcherBundle()
+    {
+      @Override
+      public FilterBundle.MatcherBundleInfo getMatcherInfo()
+      {
+        if (indexOnlyBundles.size() == 1) {
+          return new FilterBundle.MatcherBundleInfo(
+              indexOnlyBundles.get(0).getIndexInfo()::getFilter,
+              indexOnlyBundles.get(0).getIndexInfo(),
+              null
+          );
+        }
+        return new FilterBundle.MatcherBundleInfo(
+            () -> "OR",
+            new FilterBundle.IndexBundleInfo(
+                () -> "OR",
+                selectionRowCount,
+                totalBitmapConstructTimeNs,
+                indexOnlyBundles.stream().map(FilterBundle.IndexBundle::getIndexInfo).collect(Collectors.toList())
+            ),
+            null
+        );
+      }
 
+      @Override
+      public ValueMatcher valueMatcher(
+          ColumnSelectorFactory selectorFactory,
+          Offset baseOffset,
+          boolean descending
+      )
+      {
+        return makePartialIndexValueMatcher(baseOffset.getBaseReadableOffset(), partialIndex, descending);
+      }
+
+      @Override
+      public VectorValueMatcher vectorMatcher(
+          VectorColumnSelectorFactory selectorFactory,
+          ReadableVectorOffset baseOffset
+      )
+      {
+        return makePartialIndexVectorValueMatcher(baseOffset, partialIndex);
+      }
+    };
+  }
 
   private static ValueMatcher makePartialIndexValueMatcher(
       final ReadableOffset offset,

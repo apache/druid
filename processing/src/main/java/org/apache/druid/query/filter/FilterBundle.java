@@ -218,14 +218,14 @@ public class FilterBundle
 
     @JsonProperty
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public IndexBundleInfo getIndexes()
+    public IndexBundleInfo getIndex()
     {
       return index;
     }
 
     @JsonProperty
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public MatcherBundleInfo getMatchers()
+    public MatcherBundleInfo getMatcher()
     {
       return matcher;
     }
@@ -240,7 +240,7 @@ public class FilterBundle
   public static class IndexBundleInfo
   {
     private final Supplier<String> filter;
-    private final List<IndexBundleInfo> children;
+    private final List<IndexBundleInfo> indexes;
     private final int selectionSize;
     private final long buildTimeNs;
 
@@ -248,13 +248,13 @@ public class FilterBundle
         Supplier<String> filterString,
         int selectionSize,
         long buildTimeNs,
-        @Nullable List<IndexBundleInfo> children
+        @Nullable List<IndexBundleInfo> indexes
     )
     {
       this.filter = filterString;
       this.selectionSize = selectionSize;
       this.buildTimeNs = buildTimeNs;
-      this.children = children;
+      this.indexes = indexes;
     }
 
     @JsonProperty
@@ -277,9 +277,9 @@ public class FilterBundle
 
     @JsonProperty
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public List<IndexBundleInfo> getChildren()
+    public List<IndexBundleInfo> getIndexes()
     {
-      return children;
+      return indexes;
     }
 
     @Override
@@ -289,7 +289,7 @@ public class FilterBundle
              "filter=\"" + filter.get() + '\"' +
              ", selectionSize=" + selectionSize +
              ", buildTime=" + TimeUnit.NANOSECONDS.toMicros(buildTimeNs) + "μs" +
-             (children != null ? ", children=" + children : "") +
+             (indexes != null ? ", indexes=" + indexes : "") +
              '}';
     }
   }
@@ -298,7 +298,7 @@ public class FilterBundle
   {
     private final Supplier<String> filter;
     @Nullable
-    final List<MatcherBundleInfo> children;
+    final List<MatcherBundleInfo> matchers;
 
     @Nullable
     private final IndexBundleInfo partialIndex;
@@ -306,11 +306,11 @@ public class FilterBundle
     public MatcherBundleInfo(
         Supplier<String> filter,
         @Nullable IndexBundleInfo partialIndex,
-        @Nullable List<MatcherBundleInfo> children
+        @Nullable List<MatcherBundleInfo> matchers
     )
     {
       this.filter = filter;
-      this.children = children;
+      this.matchers = matchers;
       this.partialIndex = partialIndex;
     }
 
@@ -330,9 +330,9 @@ public class FilterBundle
 
     @JsonProperty
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public List<MatcherBundleInfo> getChildren()
+    public List<MatcherBundleInfo> getMatchers()
     {
-      return children;
+      return matchers;
     }
 
     @Override
@@ -341,7 +341,7 @@ public class FilterBundle
       return "{" +
              "filter=\"" + filter.get() + '\"' +
              (partialIndex != null ? ", partialIndex=" + partialIndex : "") +
-             (children != null ? ", children=" + children : "") +
+             (matchers != null ? ", matchers=" + matchers : "") +
              '}';
     }
   }
