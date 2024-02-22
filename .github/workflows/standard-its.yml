@@ -49,7 +49,7 @@ jobs:
       matrix:
         testing_group: [batch-index, input-format, input-source, perfect-rollup-parallel-batch-index, kafka-index, kafka-index-slow, kafka-transactional-index, kafka-transactional-index-slow, kafka-data-format, ldap-security, realtime-index, append-ingestion, compaction]
     uses: ./.github/workflows/reusable-standard-its.yml
-    if: false #${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
+    if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     with:
       build_jdk: 8
       runtime_jdk: 8
@@ -64,7 +64,7 @@ jobs:
       matrix:
         testing_group: [input-source, perfect-rollup-parallel-batch-index, kafka-index, append-ingestion, compaction]
     uses: ./.github/workflows/reusable-standard-its.yml
-    if: false #${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
+    if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     with:
       build_jdk: 8
       runtime_jdk: 8
@@ -77,7 +77,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        testing_group: [centralized-datasource-schema]
+        testing_group: [query, query-retry, query-error, security, high-availability, centralized-datasource-schema]
     uses: ./.github/workflows/reusable-standard-its.yml
     if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     with:
@@ -95,7 +95,7 @@ jobs:
       matrix:
         jdk: [8, 17, 21]
     uses: ./.github/workflows/reusable-standard-its.yml
-    if: false #${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
+    if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     with:
       build_jdk: ${{ matrix.jdk }}
       runtime_jdk: ${{ matrix.jdk }}
@@ -112,7 +112,7 @@ jobs:
       matrix:
         indexer: [indexer, middleManager]
     uses: ./.github/workflows/reusable-standard-its.yml
-    if: false #${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
+    if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     with:
       build_jdk: 8
       runtime_jdk: 8
@@ -124,7 +124,7 @@ jobs:
   integration-custom-coordinator-duties-tests:
     needs: changes
     uses: ./.github/workflows/reusable-standard-its.yml
-    if: false #${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
+    if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     with:
       build_jdk: 8
       runtime_jdk: 8
@@ -136,7 +136,7 @@ jobs:
   integration-k8s-leadership-tests:
     needs: changes
     name: (Compile=openjdk8, Run=openjdk8, Cluster Build On K8s) ITNestedQueryPushDownTest integration test
-    if: false #${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
+    if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     runs-on: ubuntu-22.04
     env:
       MVN: mvn --no-snapshot-updates
@@ -192,7 +192,6 @@ jobs:
       matrix:
         indexer: [middleManager, indexer]
     uses: ./.github/workflows/reusable-standard-its.yml
-    if: false
     with:
       build_jdk: 8
       runtime_jdk: 8
