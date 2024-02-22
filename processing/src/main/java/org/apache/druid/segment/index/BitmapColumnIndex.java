@@ -59,8 +59,8 @@ public interface BitmapColumnIndex
    *                            form ready for consumption by callers
    * @param selectionRowCount   number of rows selected so far by any previous index computations
    * @param totalRowCount       total number of rows to be scanned if no indexes are used
-   * @param includeUnknown      mapping for Druid native two state logic system into SQL three-state logic system. If set
-   *                            to true, bitmaps returned by this method should include true bits for any rows where
+   * @param includeUnknown      mapping for Druid native two state logic system into SQL three-state logic system. If
+   *                            set to true, bitmaps returned by this method should include true bits for any rows where
    *                            the matching result is 'unknown', such as from the input being null valued.
    *                            See {@link NullHandling#useThreeValueLogic()}.
    *

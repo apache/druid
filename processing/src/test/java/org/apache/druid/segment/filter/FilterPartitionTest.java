@@ -37,7 +37,6 @@ import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.DruidPredicateMatch;
 import org.apache.druid.query.filter.Filter;
-import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.IndexBuilder;
@@ -67,15 +66,6 @@ public class FilterPartitionTest extends BaseFilterTest
     )
     {
       super(dimension, value);
-    }
-
-    public NoBitmapSelectorFilter(
-        String dimension,
-        String value,
-        FilterTuning filterTuning
-    )
-    {
-      super(dimension, value, filterTuning);
     }
 
     @Nullable

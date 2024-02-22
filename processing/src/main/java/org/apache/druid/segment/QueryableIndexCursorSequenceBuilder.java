@@ -110,8 +110,10 @@ public class QueryableIndexCursorSequenceBuilder
     );
 
     final int numRows = index.getNumRows();
-    final FilterBundle filterBundle = makeFilterBundle(bitmapIndexSelector, numRows, true);
+    final FilterBundle filterBundle = makeFilterBundle(bitmapIndexSelector, numRows);
 
+    // filterBundle will only be null if the filter itself is null, otherwise check to see if the filter
+    // can use an index
     if (filterBundle == null || filterBundle.getIndex() == null) {
       baseOffset = descending ? new SimpleDescendingOffset(numRows) : new SimpleAscendingOffset(numRows);
     } else {
@@ -176,6 +178,8 @@ public class QueryableIndexCursorSequenceBuilder
                     columnCache
                 );
                 final DateTime myBucket = gran.toDateTime(inputInterval.getStartMillis());
+                // filterBundle will only be null if the filter itself is null, otherwise check to see if the filter
+                // needs to use a value matcher
                 if (filterBundle != null && filterBundle.getMatcherBundle() != null) {
                   final ValueMatcher matcher = filterBundle.getMatcherBundle()
                                                            .valueMatcher(
@@ -210,7 +214,7 @@ public class QueryableIndexCursorSequenceBuilder
     );
 
     final int numRows = index.getNumRows();
-    final FilterBundle filterBundle = makeFilterBundle(bitmapIndexSelector, numRows, false);
+    final FilterBundle filterBundle = makeFilterBundle(bitmapIndexSelector, numRows);
 
     NumericColumn timestamps = null;
 
@@ -235,6 +239,8 @@ public class QueryableIndexCursorSequenceBuilder
       endOffset = index.getNumRows();
     }
 
+    // filterBundle will only be null if the filter itself is null, otherwise check to see if the filter can use
+    // an index
     final VectorOffset baseOffset =
         filterBundle == null || filterBundle.getIndex() == null
         ? new NoFilterVectorOffset(vectorSize, startOffset, endOffset)
@@ -246,9 +252,11 @@ public class QueryableIndexCursorSequenceBuilder
         baseOffset
     );
 
+    // filterBundle will only be null if the filter itself is null, otherwise check to see if the filter needs to use
+    // a value matcher
     if (filterBundle != null && filterBundle.getMatcherBundle() != null) {
       final VectorValueMatcher vectorValueMatcher = filterBundle.getMatcherBundle()
-                                                                .vectorMatcher(baseColumnSelectorFactory);
+                                                                .vectorMatcher(baseColumnSelectorFactory, baseOffset);
       final VectorOffset filteredOffset = FilteredVectorOffset.create(
           baseOffset,
           vectorValueMatcher
@@ -268,8 +276,7 @@ public class QueryableIndexCursorSequenceBuilder
   @Nullable
   private FilterBundle makeFilterBundle(
       ColumnSelectorColumnIndexSelector bitmapIndexSelector,
-      int numRows,
-      boolean allowPartialIndex
+      int numRows
   )
   {
     final BitmapFactory bitmapFactory = bitmapIndexSelector.getBitmapFactory();
@@ -289,8 +296,7 @@ public class QueryableIndexCursorSequenceBuilder
         bitmapResultFactory,
         numRows,
         numRows,
-        false,
-        allowPartialIndex
+        false
     );
     if (metrics != null) {
       final long buildTime = System.nanoTime() - bitmapConstructionStartNs;

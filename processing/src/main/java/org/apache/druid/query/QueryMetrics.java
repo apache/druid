@@ -246,7 +246,8 @@ public interface QueryMetrics<QueryType extends Query<?>>
   /**
    * @deprecated use {@link #filterBundle(FilterBundle.BundleInfo)} instead to collect details about filters which were
    * used to construct {@link org.apache.druid.segment.BitmapOffset} or
-   * {@link org.apache.druid.segment.vector.BitmapVectorOffset}
+   * {@link org.apache.druid.segment.vector.BitmapVectorOffset}.
+   * This method will be removed in a future Druid release
    */
   @Deprecated
   @SuppressWarnings({"unreachable", "unused"})
@@ -259,6 +260,7 @@ public interface QueryMetrics<QueryType extends Query<?>>
    * @deprecated use {@link #filterBundle(FilterBundle.BundleInfo)} instead to collect details about filters which were
    * used as value matchers for {@link org.apache.druid.segment.FilteredOffset} or
    * {@link org.apache.druid.segment.vector.FilteredVectorOffset}
+   * This method will be removed in a future Druid release
    */
   @Deprecated
   @SuppressWarnings({"unreachable", "unused"})

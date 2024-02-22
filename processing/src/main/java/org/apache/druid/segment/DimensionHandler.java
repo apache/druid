@@ -143,7 +143,7 @@ public interface DimensionHandler
    */
   Comparator<ColumnValueSelector> getEncodedValueSelectorComparator();
 
-  /**
+  /**q
    * Creates and returns a new object of some implementation of {@link SettableColumnValueSelector}, that corresponds
    * to the type of this DimensionHandler. E. g. {@link LongDimensionHandler} returns {@link
    * org.apache.druid.segment.selector.settable.SettableLongColumnValueSelector}, etc.

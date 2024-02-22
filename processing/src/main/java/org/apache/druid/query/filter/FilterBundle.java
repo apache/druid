@@ -27,30 +27,46 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.data.Offset;
+import org.apache.druid.segment.filter.FalseFilter;
+import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
- * Itsa me, your filter bundle. This is a container for all the goodies used for producing filtered cursors,
- * a {@link ImmutableBitmap} if the filter can use an index, and a {@link MatcherBundle} which contains functions to
- * build {@link ValueMatcher} and {@link VectorValueMatcher} for any filters which must be evaluated row by row during
- * the cursor scan. Cursors will use everything that is non-null, and at least one of index or matcher bundle MUST be
- * set.
+ * FilterBundle is a container for all the goodies used for producing filtered cursors, a {@link ImmutableBitmap} if
+ * the filter can use an index, and/or a {@link MatcherBundle} which contains functions to build {@link ValueMatcher}
+ * and {@link VectorValueMatcher} for any filters which must be evaluated row by row during the cursor scan. Cursors
+ * will use everything that is non-null, and at least one of index or matcher bundle MUST be set. If both index and
+ * matcher is present, the cursor will effectively perform a logical AND operation; i.e. if the index matches a row
+ * then the value matcher must also match the row for the cursor to provide it to the selectors built on top of it.
  * <p>
  * There are a few cases where the filter should set both indexes and matchers. For example, if the filter is a
  * composite filter which can be partitioned, such as {@link org.apache.druid.segment.filter.AndFilter}, then the filter
  * can be partitioned due to the intersection nature of AND, so the index can be set to reduce the number of rows and
- * the matcher bundle will build a matcher which will filter the remainder. This can also be set in the case the index
- * is an inexact match, and a matcher must be used to ensure that the remaining values actually match the filter.
+ * the matcher bundle will build a matcher which will filter the remainder. This strategy of having both an index and a
+ * matcher can also can model the case where the index is an inexact match and so a matcher must be used to ensure that
+ * the remaining values actually match the filter.
  */
 public class FilterBundle
 {
+  public static FilterBundle allFalse(long constructionTime, ImmutableBitmap emptyBitmap)
+  {
+    return new FilterBundle(
+        new FilterBundle.SimpleIndexBundle(
+            new FilterBundle.IndexBundleInfo(() -> FalseFilter.instance().toString(), 0, constructionTime, null),
+            emptyBitmap
+        ),
+        null
+    );
+  }
+
   @Nullable
-  private final IndexBundle index;
+  private final IndexBundle indexBundle;
   @Nullable
   private final MatcherBundle matcherBundle;
 
@@ -63,7 +79,7 @@ public class FilterBundle
         index != null || matcherBundle != null,
         "At least one of index or matcher must be not null"
     );
-    this.index = index;
+    this.indexBundle = index;
     this.matcherBundle = matcherBundle;
   }
 
@@ -71,7 +87,7 @@ public class FilterBundle
   @Nullable
   public IndexBundle getIndex()
   {
-    return index;
+    return indexBundle;
   }
 
   @Nullable
@@ -83,14 +99,24 @@ public class FilterBundle
   public BundleInfo getInfo()
   {
     return new BundleInfo(
-        index == null ? null : index.getIndexMetrics(),
-        matcherBundle == null ? null : matcherBundle.getMatcherMetrics()
+        indexBundle == null ? null : indexBundle.getIndexInfo(),
+        matcherBundle == null ? null : matcherBundle.getMatcherInfo()
     );
+  }
+
+  public boolean hasIndex()
+  {
+    return indexBundle != null;
+  }
+
+  public boolean hasMatcher()
+  {
+    return matcherBundle != null;
   }
 
   public interface IndexBundle
   {
-    List<IndexBundleInfo> getIndexMetrics();
+    IndexBundleInfo getIndexInfo();
     ImmutableBitmap getBitmap();
   }
 
@@ -100,31 +126,31 @@ public class FilterBundle
    * the offset is 'descending' or not, to allow filters more flexibility in value matcher creation.
    * {@link org.apache.druid.segment.filter.OrFilter} uses these extra parameters to allow partial use of indexes to
    * create a synthetic value matcher that checks if the row is set in the bitmap, instead of purely using value
-   * matchers, with {@link org.apache.druid.segment.filter.OrFilter.CursorOffsetHolderRowOffsetMatcherFactory}.
+   * matchers, with {@link org.apache.druid.segment.filter.OrFilter#makePartialIndexValueMatcher}.
    */
   public interface MatcherBundle
   {
-    List<MatcherBundleInfo> getMatcherMetrics();
+    MatcherBundleInfo getMatcherInfo();
     ValueMatcher valueMatcher(ColumnSelectorFactory selectorFactory, Offset baseOffset, boolean descending);
-    VectorValueMatcher vectorMatcher(VectorColumnSelectorFactory selectorFactory);
+    VectorValueMatcher vectorMatcher(VectorColumnSelectorFactory selectorFactory, ReadableVectorOffset baseOffset);
   }
 
   public static class SimpleIndexBundle implements IndexBundle
   {
-    private final List<IndexBundleInfo> indexBundles;
+    private final IndexBundleInfo info;
 
     private final ImmutableBitmap index;
 
-    public SimpleIndexBundle(List<IndexBundleInfo> indexBundles, ImmutableBitmap index)
+    public SimpleIndexBundle(IndexBundleInfo info, ImmutableBitmap index)
     {
-      this.indexBundles = Preconditions.checkNotNull(indexBundles);
+      this.info = Preconditions.checkNotNull(info);
       this.index = Preconditions.checkNotNull(index);
     }
 
     @Override
-    public List<IndexBundleInfo> getIndexMetrics()
+    public IndexBundleInfo getIndexInfo()
     {
-      return indexBundles;
+      return info;
     }
 
     @Override
@@ -137,25 +163,25 @@ public class FilterBundle
 
   public static class SimpleMatcherBundle implements MatcherBundle
   {
-    private final List<MatcherBundleInfo> matcherBundles;
+    private final MatcherBundleInfo matcherInfo;
     private final Function<ColumnSelectorFactory, ValueMatcher> matcherFn;
     private final Function<VectorColumnSelectorFactory, VectorValueMatcher> vectorMatcherFn;
 
     public SimpleMatcherBundle(
-        List<MatcherBundleInfo> matcherBundles,
+        MatcherBundleInfo matcherInfo,
         Function<ColumnSelectorFactory, ValueMatcher> matcherFn,
         Function<VectorColumnSelectorFactory, VectorValueMatcher> vectorMatcherFn
     )
     {
-      this.matcherBundles = Preconditions.checkNotNull(matcherBundles);
+      this.matcherInfo = Preconditions.checkNotNull(matcherInfo);
       this.matcherFn = Preconditions.checkNotNull(matcherFn);
       this.vectorMatcherFn = Preconditions.checkNotNull(vectorMatcherFn);
     }
 
     @Override
-    public List<MatcherBundleInfo> getMatcherMetrics()
+    public MatcherBundleInfo getMatcherInfo()
     {
-      return matcherBundles;
+      return matcherInfo;
     }
 
     @Override
@@ -169,7 +195,7 @@ public class FilterBundle
     }
 
     @Override
-    public VectorValueMatcher vectorMatcher(VectorColumnSelectorFactory selectorFactory)
+    public VectorValueMatcher vectorMatcher(VectorColumnSelectorFactory selectorFactory, ReadableVectorOffset baseOffset)
     {
       return vectorMatcherFn.apply(selectorFactory);
     }
@@ -177,62 +203,64 @@ public class FilterBundle
 
   public static class BundleInfo
   {
-    private final List<IndexBundleInfo> indexes;
-    private final List<MatcherBundleInfo> matchers;
+    private final IndexBundleInfo index;
+    private final MatcherBundleInfo matcher;
 
     @JsonCreator
     public BundleInfo(
-        @JsonProperty("indexes") List<IndexBundleInfo> indexes,
-        @JsonProperty("matchers") List<MatcherBundleInfo> matchers
+        @JsonProperty("index") @Nullable IndexBundleInfo index,
+        @JsonProperty("matcher") @Nullable MatcherBundleInfo matcher
     )
     {
-      this.indexes = indexes;
-      this.matchers = matchers;
+      this.index = index;
+      this.matcher = matcher;
     }
 
     @JsonProperty
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public List<IndexBundleInfo> getIndexes()
+    public IndexBundleInfo getIndexes()
     {
-      return indexes;
+      return index;
     }
 
     @JsonProperty
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public List<MatcherBundleInfo> getMatchers()
+    public MatcherBundleInfo getMatchers()
     {
-      return matchers;
+      return matcher;
     }
 
     @Override
     public String toString()
     {
-      return "{indexes=" + indexes + ", matcher=" + matchers + '}';
+      return "{index=" + index + ", matcher=" + matcher + '}';
     }
   }
 
   public static class IndexBundleInfo
   {
-    private final String filter;
+    private final Supplier<String> filter;
+    private final List<IndexBundleInfo> children;
     private final int selectionSize;
     private final long buildTimeNs;
 
-    @JsonCreator
     public IndexBundleInfo(
-        @JsonProperty("filter") String filter,
-        @JsonProperty("selectionSize") int selectionSize,
-        @JsonProperty("buildTimeNs") long buildTimeNs
+        Supplier<String> filterString,
+        int selectionSize,
+        long buildTimeNs,
+        @Nullable List<IndexBundleInfo> children
     )
     {
-      this.filter = filter;
+      this.filter = filterString;
       this.selectionSize = selectionSize;
       this.buildTimeNs = buildTimeNs;
+      this.children = children;
     }
 
     @JsonProperty
     public String getFilter()
     {
-      return filter;
+      return filter.get();
     }
 
     @JsonProperty
@@ -247,37 +275,49 @@ public class FilterBundle
       return buildTimeNs;
     }
 
+    @JsonProperty
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public List<IndexBundleInfo> getChildren()
+    {
+      return children;
+    }
+
     @Override
     public String toString()
     {
       return "{" +
-             "filter=\"" + filter + '\"' +
+             "filter=\"" + filter.get() + '\"' +
              ", selectionSize=" + selectionSize +
              ", buildTime=" + TimeUnit.NANOSECONDS.toMicros(buildTimeNs) + "μs" +
+             (children != null ? ", children=" + children : "") +
              '}';
     }
   }
 
   public static class MatcherBundleInfo
   {
-    private final String filter;
+    private final Supplier<String> filter;
+    @Nullable
+    final List<MatcherBundleInfo> children;
+
     @Nullable
     private final IndexBundleInfo partialIndex;
 
-    @JsonCreator
     public MatcherBundleInfo(
-        @JsonProperty("filter") String filter,
-        @JsonProperty("partialIndex") @Nullable IndexBundleInfo partialIndex
+        Supplier<String> filter,
+        @Nullable IndexBundleInfo partialIndex,
+        @Nullable List<MatcherBundleInfo> children
     )
     {
       this.filter = filter;
+      this.children = children;
       this.partialIndex = partialIndex;
     }
 
     @JsonProperty
     public String getFilter()
     {
-      return filter;
+      return filter.get();
     }
 
     @Nullable
@@ -288,12 +328,20 @@ public class FilterBundle
       return partialIndex;
     }
 
+    @JsonProperty
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public List<MatcherBundleInfo> getChildren()
+    {
+      return children;
+    }
+
     @Override
     public String toString()
     {
       return "{" +
-             "filter=\"" + filter + '\"' +
+             "filter=\"" + filter.get() + '\"' +
              (partialIndex != null ? ", partialIndex=" + partialIndex : "") +
+             (children != null ? ", children=" + children : "") +
              '}';
     }
   }

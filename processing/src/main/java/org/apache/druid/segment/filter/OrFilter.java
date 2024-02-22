@@ -30,9 +30,9 @@ import org.apache.druid.query.filter.BooleanFilter;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterBundle;
-import org.apache.druid.query.filter.RowOffsetMatcherFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.vector.BaseVectorValueMatcher;
+import org.apache.druid.query.filter.vector.BooleanVectorValueMatcher;
 import org.apache.druid.query.filter.vector.ReadableVectorMatch;
 import org.apache.druid.query.filter.vector.VectorMatch;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
@@ -45,6 +45,7 @@ import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
 import org.apache.druid.segment.data.Offset;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.roaringbitmap.IntIterator;
 
@@ -55,6 +56,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * Logical OR filter operation
@@ -82,158 +84,232 @@ public class OrFilter implements BooleanFilter
       BitmapResultFactory<T> bitmapResultFactory,
       int selectionRowCount,
       int totalRowCount,
-      boolean includeUnknown,
-      boolean allowPartialIndex
+      boolean includeUnknown
   )
   {
-    final List<T> indexes = new ArrayList<>();
-    final List<Filter> indexFilters = new ArrayList<>();
-    final List<Filter> matcherFilters = new ArrayList<>();
+    // for OR filters, we have a few possible outcomes:
+    // 1 - all clauses are index only bundles. in this case we union the bitmaps together and make an index only bundle
+    // 2 - some clauses support indexes. in this case, we union the bitmaps of any index only bundles together to form a
+    //     partial index which is constructed into a ValueMatcher with makePartialIndexValueMatcher. We translate any
+    //     index AND matcher bundles into an AND matcher only bundle with the index translated into a matcher with
+    //     makePartialIndexValueMatcher. Finally, we combine these with the remaining matcher only bundles to with
+    //     makeMatcher to make a matcher only bundle
+    // 3 - no clauses support indexes. in this case, we make a matcher only bundle using makeMatcher
+
+    final List<FilterBundle.IndexBundle> indexOnlyBundles = new ArrayList<>();
+    final List<FilterBundle.MatcherBundle> partialIndexBundles = new ArrayList<>();
+    final List<FilterBundle.MatcherBundle> matcherOnlyBundles = new ArrayList<>();
+    ImmutableBitmap index = null;
+    int emptyCount = 0;
 
     final long bitmapConstructionStartNs = System.nanoTime();
-    for (Filter subfilter : filters) {
-      boolean needMatcher = true;
-      final BitmapColumnIndex index = subfilter.getBitmapColumnIndex(columnIndexSelector);
-      if (index != null) {
-        final T bitmapResult = index.computeBitmapResult(
-            bitmapResultFactory,
-            selectionRowCount,
-            totalRowCount,
-            includeUnknown
-        );
-        if (bitmapResult != null) {
-          if (!bitmapResultFactory.isEmpty(bitmapResult)) {
-            indexes.add(bitmapResult);
-          }
-          indexFilters.add(subfilter);
-          needMatcher = !index.getIndexCapabilities().isExact();
-        } else if (!allowPartialIndex) {
-          break;
-        }
-      } else if (!allowPartialIndex) {
-        break;
-      }
 
-      if (needMatcher) {
-        matcherFilters.add(subfilter);
+    for (Filter subfilter : filters) {
+      final FilterBundle bundle = subfilter.makeFilterBundle(
+          columnIndexSelector,
+          bitmapResultFactory,
+          selectionRowCount,
+          totalRowCount,
+          includeUnknown
+      );
+      if (bundle.hasIndex()) {
+        final ImmutableBitmap bundleIndex = bundle.getIndex().getBitmap();
+        if (bundleIndex.isEmpty()) {
+          // we leave any indexes which are empty out of index, indexOnlyBundles, and partialIndexBundles
+          // even though we skip them, we still keep track of them to check for the case when we can build the OR into
+          // an index only bundle. We can count index and matcher bundles here too because the AND operation means that
+          // an empty index means the matcher can be skipped
+          emptyCount++;
+        } else {
+          if (!bundle.hasMatcher()) {
+            indexOnlyBundles.add(bundle.getIndex());
+            // union index only bitmaps together; if all sub-filters are 'index only' bundles we will make an index only
+            // bundle ourselves, else we will use this index as a single value matcher
+            if (index == null) {
+              index = bundle.getIndex().getBitmap();
+            } else {
+              index = index.union(bundle.getIndex().getBitmap());
+            }
+          } else {
+            // index and matcher bundles must be handled separately, they will need to be a single value matcher built
+            // by doing an AND operation between the index and the value matcher
+            // (a bundle is basically an AND operation between the index and matcher if the matcher is present)
+            partialIndexBundles.add(
+                new FilterBundle.MatcherBundle()
+                {
+                  @Override
+                  public FilterBundle.MatcherBundleInfo getMatcherInfo()
+                  {
+                    return new FilterBundle.MatcherBundleInfo(
+                        () -> "AND",
+                        bundle.getIndex().getIndexInfo(),
+                        Collections.singletonList(bundle.getMatcherBundle().getMatcherInfo())
+                    );
+                  }
+
+                  @Override
+                  public ValueMatcher valueMatcher(
+                      ColumnSelectorFactory selectorFactory,
+                      Offset baseOffset,
+                      boolean descending
+                  )
+                  {
+                    return AndFilter.makeMatcher(
+                        new ValueMatcher[]{
+                            makePartialIndexValueMatcher(baseOffset.getBaseReadableOffset(), bundleIndex, descending),
+                            bundle.getMatcherBundle().valueMatcher(selectorFactory, baseOffset, descending)
+                        }
+                    );
+                  }
+
+                  @Override
+                  public VectorValueMatcher vectorMatcher(
+                      VectorColumnSelectorFactory selectorFactory,
+                      ReadableVectorOffset baseOffset
+                  )
+                  {
+                    return AndFilter.makeVectorMatcher(
+                        new VectorValueMatcher[]{
+                            makePartialIndexVectorValueMatcher(
+                                baseOffset,
+                                bundleIndex
+                            ),
+                            bundle.getMatcherBundle().vectorMatcher(selectorFactory, baseOffset)
+                        }
+                    );
+                  }
+                }
+            );
+          }
+        }
+      } else {
+        matcherOnlyBundles.add(bundle.getMatcherBundle());
       }
     }
     final long totalBitmapConstructTimeNs = System.nanoTime() - bitmapConstructionStartNs;
 
-    final ImmutableBitmap index;
-    final ImmutableBitmap partialIndex;
-    if (indexFilters.size() == filters.size()) {
-      // all or nothing
-      index = bitmapResultFactory.toImmutableBitmap(bitmapResultFactory.union(indexes));
-      partialIndex = null;
-    } else {
-      index = null;
-      if (allowPartialIndex) {
-        if (indexes.isEmpty()) {
-          partialIndex = null;
-        } else if (indexes.size() == 1) {
-          partialIndex = bitmapResultFactory.toImmutableBitmap(indexes.get(0));
-        } else {
-          partialIndex = bitmapResultFactory.toImmutableBitmap(bitmapResultFactory.union(indexes));
-        }
-      } else {
-        partialIndex = null;
-        matcherFilters.clear();
-        // need to convert to all matchers
-        matcherFilters.addAll(filters);
+
+    // if all the filters are 'index only', we can make an index only bundle
+    if (indexOnlyBundles.size() + emptyCount == filters.size()) {
+      if (index == null || index.isEmpty()) {
+        return FilterBundle.allFalse(
+            totalBitmapConstructTimeNs,
+            columnIndexSelector.getBitmapFactory().makeEmptyImmutableBitmap()
+        );
       }
-    }
-
-    final FilterBundle.IndexBundle indexBundle;
-    if (index != null) {
-      indexBundle = new FilterBundle.SimpleIndexBundle(
-          Collections.singletonList(
-              new FilterBundle.IndexBundleInfo(OR_JOINER.join(indexFilters), index.size(), totalBitmapConstructTimeNs)
+      if (indexOnlyBundles.size() == 1) {
+        return new FilterBundle(
+            new FilterBundle.SimpleIndexBundle(
+                indexOnlyBundles.get(0).getIndexInfo(),
+                index
+            ),
+            null
+        );
+      }
+      return new FilterBundle(
+          new FilterBundle.SimpleIndexBundle(
+              new FilterBundle.IndexBundleInfo(
+                  () -> "OR",
+                  selectionRowCount,
+                  totalBitmapConstructTimeNs,
+                  indexOnlyBundles.stream().map(FilterBundle.IndexBundle::getIndexInfo).collect(Collectors.toList())
+              ),
+              index
           ),
-          index
+          null
       );
-    } else {
-      indexBundle = null;
     }
 
-    final FilterBundle.MatcherBundle matcherBundle;
-    if (!matcherFilters.isEmpty()) {
-      matcherBundle = new FilterBundle.MatcherBundle()
-      {
-        @Override
-        public List<FilterBundle.MatcherBundleInfo> getMatcherMetrics()
-        {
-          if (!indexFilters.isEmpty()) {
-            return Collections.singletonList(
-                new FilterBundle.MatcherBundleInfo(
-                    OR_JOINER.join(Iterables.concat(matcherFilters, indexFilters)),
-                    new FilterBundle.IndexBundleInfo(
-                        OR_JOINER.join(indexFilters),
-                        partialIndex == null ? 0 : partialIndex.size(),
-                        totalBitmapConstructTimeNs
-                    )
-                )
-            );
-          }
-          return Collections.singletonList(
-              new FilterBundle.MatcherBundleInfo(
-                  OR_JOINER.join(matcherFilters),
-                  null
-              )
-          );
-        }
-
-        @Override
-        public ValueMatcher valueMatcher(ColumnSelectorFactory selectorFactory, Offset baseOffset, boolean descending)
-        {
-          final ValueMatcher[] matchers = new ValueMatcher[matcherFilters.size()];
-          for (int i = 0; i < matcherFilters.size(); i++) {
-            matchers[i] = matcherFilters.get(i).makeMatcher(selectorFactory);
-          }
-          ValueMatcher orMatcher = makeMatcher(matchers);
-          if (partialIndex != null) {
-            RowOffsetMatcherFactory rowOffsetMatcherFactory = new CursorOffsetHolderRowOffsetMatcherFactory(
-                baseOffset.getBaseReadableOffset(),
-                descending
-            );
-            ValueMatcher offsetMatcher = rowOffsetMatcherFactory.makeRowOffsetMatcher(partialIndex);
-            return new ValueMatcher()
+    // if not the index only outcome, we build a matcher only bundle from all the matchers
+    final List<FilterBundle.MatcherBundle> allMatcherBundles = Lists.newArrayListWithCapacity(
+        (indexOnlyBundles.isEmpty() ? 0 : 1) + partialIndexBundles.size() + matcherOnlyBundles.size()
+    );
+    if (!indexOnlyBundles.isEmpty()) {
+      // translate the indexOnly bundles into a single matcher
+      final ImmutableBitmap partialIndex = index;
+      allMatcherBundles.add(
+          new FilterBundle.MatcherBundle()
+          {
+            @Override
+            public FilterBundle.MatcherBundleInfo getMatcherInfo()
             {
-              @Override
-              public boolean matches(boolean includeUnknown)
-              {
-                return offsetMatcher.matches(includeUnknown) || orMatcher.matches(includeUnknown);
+              if (indexOnlyBundles.size() == 1) {
+                return new FilterBundle.MatcherBundleInfo(
+                    indexOnlyBundles.get(0).getIndexInfo()::getFilter,
+                    indexOnlyBundles.get(0).getIndexInfo(),
+                    null
+                );
               }
+              return new FilterBundle.MatcherBundleInfo(
+                  () -> "OR",
+                  new FilterBundle.IndexBundleInfo(
+                      () -> "OR",
+                      selectionRowCount,
+                      totalBitmapConstructTimeNs,
+                      indexOnlyBundles.stream().map(FilterBundle.IndexBundle::getIndexInfo).collect(Collectors.toList())
+                  ),
+                  null
+              );
+            }
 
-              @Override
-              public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-              {
-                inspector.visit("offsetMatcher", offsetMatcher);
-                inspector.visit("filterMatcher", orMatcher);
-              }
-            };
-          } else {
-            return orMatcher;
-          }
-        }
+            @Override
+            public ValueMatcher valueMatcher(
+                ColumnSelectorFactory selectorFactory,
+                Offset baseOffset,
+                boolean descending
+            )
+            {
+              return makePartialIndexValueMatcher(baseOffset.getBaseReadableOffset(), partialIndex, descending);
+            }
 
-        @Override
-        public VectorValueMatcher vectorMatcher(VectorColumnSelectorFactory selectorFactory)
-        {
-          final VectorValueMatcher[] vectorMatchers = new VectorValueMatcher[matcherFilters.size()];
-          for (int i = 0; i < matcherFilters.size(); i++) {
-            vectorMatchers[i] = matcherFilters.get(i).makeVectorMatcher(selectorFactory);
+            @Override
+            public VectorValueMatcher vectorMatcher(
+                VectorColumnSelectorFactory selectorFactory,
+                ReadableVectorOffset baseOffset
+            )
+            {
+              return makePartialIndexVectorValueMatcher(baseOffset, partialIndex);
+            }
           }
-          return makeVectorMatcher(vectorMatchers);
-        }
-      };
-    } else {
-      matcherBundle = null;
+      );
     }
+    allMatcherBundles.addAll(partialIndexBundles);
+    allMatcherBundles.addAll(matcherOnlyBundles);
 
     return new FilterBundle(
-        indexBundle,
-        matcherBundle
+        null,
+        new FilterBundle.MatcherBundle()
+        {
+          @Override
+          public FilterBundle.MatcherBundleInfo getMatcherInfo()
+          {
+            return new FilterBundle.MatcherBundleInfo(
+                () -> "OR",
+                null,
+                allMatcherBundles.stream().map(FilterBundle.MatcherBundle::getMatcherInfo).collect(Collectors.toList())
+            );
+          }
+
+          @Override
+          public ValueMatcher valueMatcher(ColumnSelectorFactory selectorFactory, Offset baseOffset, boolean descending)
+          {
+            return makeMatcher(
+                allMatcherBundles.stream()
+                                 .map(x -> x.valueMatcher(selectorFactory, baseOffset, descending))
+                                 .toArray(ValueMatcher[]::new)
+            );
+          }
+
+          @Override
+          public VectorValueMatcher vectorMatcher(VectorColumnSelectorFactory selectorFactory, ReadableVectorOffset baseOffset)
+          {
+            return makeVectorMatcher(
+                allMatcherBundles.stream()
+                                 .map(x -> x.vectorMatcher(selectorFactory, baseOffset))
+                                 .toArray(VectorValueMatcher[]::new)
+            );
+          }
+        }
     );
   }
 
@@ -461,77 +537,131 @@ public class OrFilter implements BooleanFilter
     return Objects.hash(getFilters());
   }
 
-  private static class CursorOffsetHolderRowOffsetMatcherFactory implements RowOffsetMatcherFactory
+
+  private static ValueMatcher makePartialIndexValueMatcher(
+      final ReadableOffset offset,
+      final ImmutableBitmap rowBitmap,
+      boolean descending
+  )
   {
-    private final ReadableOffset offset;
-    private final boolean descending;
+    final IntIterator iter = descending ?
+                             BitmapOffset.getReverseBitmapOffsetIterator(rowBitmap) :
+                             rowBitmap.iterator();
 
-    CursorOffsetHolderRowOffsetMatcherFactory(ReadableOffset offset, boolean descending)
-    {
-      this.offset = offset;
-      this.descending = descending;
+    if (!iter.hasNext()) {
+      return ValueMatchers.allFalse();
     }
 
-    // Use an iterator-based implementation, ImmutableBitmap.get(index) works differently for Concise and Roaring.
-    // ImmutableConciseSet.get(index) is also inefficient, it performs a linear scan on each call
-    @Override
-    public ValueMatcher makeRowOffsetMatcher(final ImmutableBitmap rowBitmap)
-    {
-      final IntIterator iter = descending ?
-                               BitmapOffset.getReverseBitmapOffsetIterator(rowBitmap) :
-                               rowBitmap.iterator();
+    if (descending) {
+      return new ValueMatcher()
+      {
+        int iterOffset = Integer.MAX_VALUE;
 
-      if (!iter.hasNext()) {
-        return ValueMatchers.allFalse();
-      }
-
-      if (descending) {
-        return new ValueMatcher()
+        @Override
+        public boolean matches(boolean includeUnknown)
         {
-          int iterOffset = Integer.MAX_VALUE;
-
-          @Override
-          public boolean matches(boolean includeUnknown)
-          {
-            int currentOffset = offset.getOffset();
-            while (iterOffset > currentOffset && iter.hasNext()) {
-              iterOffset = iter.next();
-            }
-
-            return iterOffset == currentOffset;
+          int currentOffset = offset.getOffset();
+          while (iterOffset > currentOffset && iter.hasNext()) {
+            iterOffset = iter.next();
           }
 
-          @Override
-          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-          {
-            inspector.visit("offset", offset);
-            inspector.visit("iter", iter);
-          }
-        };
-      } else {
-        return new ValueMatcher()
+          return iterOffset == currentOffset;
+        }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
-          int iterOffset = -1;
+          inspector.visit("offset", offset);
+          inspector.visit("iter", iter);
+        }
+      };
+    } else {
+      return new ValueMatcher()
+      {
+        int iterOffset = -1;
 
-          @Override
-          public boolean matches(boolean includeUnknown)
-          {
-            int currentOffset = offset.getOffset();
-            while (iterOffset < currentOffset && iter.hasNext()) {
-              iterOffset = iter.next();
-            }
-
-            return iterOffset == currentOffset;
+        @Override
+        public boolean matches(boolean includeUnknown)
+        {
+          int currentOffset = offset.getOffset();
+          while (iterOffset < currentOffset && iter.hasNext()) {
+            iterOffset = iter.next();
           }
 
-          @Override
-          public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-          {
-            inspector.visit("offset", offset);
-            inspector.visit("iter", iter);
-          }
-        };
-      }
+          return iterOffset == currentOffset;
+        }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          inspector.visit("offset", offset);
+          inspector.visit("iter", iter);
+        }
+      };
     }
+  }
+
+  private static VectorValueMatcher makePartialIndexVectorValueMatcher(
+      final ReadableVectorOffset vectorOffset,
+      final ImmutableBitmap bitmap
+  )
+  {
+    final IntIterator bitmapIterator = bitmap.iterator();
+    if (!bitmapIterator.hasNext()) {
+      return BooleanVectorValueMatcher.of(vectorOffset, ConstantMatcherType.ALL_FALSE);
+    }
+
+    return new VectorValueMatcher()
+    {
+      final VectorMatch match = VectorMatch.wrap(new int[vectorOffset.getMaxVectorSize()]);
+      int iterOffset = -1;
+      @Override
+      public ReadableVectorMatch match(ReadableVectorMatch mask, boolean includeUnknown)
+      {
+        final int[] selection = match.getSelection();
+        if (vectorOffset.isContiguous()) {
+          int numRows = 0;
+          for (int i = 0; i < mask.getSelectionSize(); i++) {
+            final int maskNum = mask.getSelection()[i];
+            final int rowNum = vectorOffset.getStartOffset() + maskNum;
+            while (iterOffset < rowNum && bitmapIterator.hasNext()) {
+              iterOffset = bitmapIterator.next();
+            }
+            if (iterOffset == rowNum) {
+              selection[numRows++] = maskNum;
+            }
+          }
+          match.setSelectionSize(numRows);
+          return match;
+        } else {
+          final int[] currentOffsets = vectorOffset.getOffsets();
+          int numRows = 0;
+          for (int i = 0; i < mask.getSelectionSize(); i++) {
+            final int maskNum = mask.getSelection()[i];
+            final int rowNum = currentOffsets[mask.getSelection()[i]];
+            while (iterOffset < rowNum && bitmapIterator.hasNext()) {
+              iterOffset = bitmapIterator.next();
+            }
+            if (iterOffset == rowNum) {
+              selection[numRows++] = maskNum;
+            }
+          }
+          match.setSelectionSize(numRows);
+          return match;
+        }
+      }
+
+      @Override
+      public int getMaxVectorSize()
+      {
+        return vectorOffset.getMaxVectorSize();
+      }
+
+      @Override
+      public int getCurrentVectorSize()
+      {
+        return vectorOffset.getCurrentVectorSize();
+      }
+    };
   }
 }
