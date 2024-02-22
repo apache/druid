@@ -13,29 +13,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: v2
-appVersion: 24.0.0
-description: Apache Druid is a high performance real-time analytics database.
-name: druid
-dependencies:
-  - name: zookeeper
-    version: 2.1.4
-    repository: https://charts.helm.sh/incubator
-    condition: zookeeper.enabled
-  - name: mysql
-    version: 1.6.4
-    repository: https://charts.helm.sh/stable
-    condition: mysql.enabled
-  - name: postgresql
-    version: 8.6.4
-    repository: https://charts.helm.sh/stable
-    condition: postgresql.enabled
-version: 0.3.5
-home: https://druid.apache.org/
-icon: https://druid.apache.org/img/favicon.png
-sources:
-  - https://github.com/apache/druid
-keywords:
-  - olap
-  - database
-  - analytics
+name: "Distribution Checks"
+on:
+  push:
+    branches:
+      - master
+      - '[0-9]+.[0-9]+.[0-9]+' # release branches
+      - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
+    paths:
+      - 'distribution/**'
+      - '**/pom.xml'
+  pull_request:
+    branches:
+      - master
+      - '[0-9]+.[0-9]+.[0-9]+' # release branches
+      - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
+    paths:
+      - 'distribution/**'
+      - '**/pom.xml'
+
+jobs:
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build the Docker image
+        run: DOCKER_BUILDKIT=1 docker build -t apache/druid:tag -f distribution/docker/Dockerfile .
