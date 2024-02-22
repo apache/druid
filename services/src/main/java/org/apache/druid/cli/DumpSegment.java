@@ -93,6 +93,7 @@ import org.apache.druid.segment.nested.CompressedNestedDataComplexColumn;
 import org.apache.druid.segment.nested.NestedFieldDictionaryEncodedColumn;
 import org.apache.druid.segment.nested.NestedPathFinder;
 import org.apache.druid.segment.nested.NestedPathPart;
+import org.apache.druid.server.ClientQuerySegmentWalker;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -747,7 +748,7 @@ public class DumpSegment extends GuiceRunnable
     return factory
         .getToolchest()
         .mergeResults(factory.mergeRunners(DirectQueryProcessingPool.INSTANCE, ImmutableList.of(runner)), true)
-        .run(QueryPlus.wrap(query), ResponseContext.createEmpty());
+        .run(ClientQuerySegmentWalker.populateResourceId(QueryPlus.wrap(query)), ResponseContext.createEmpty());
   }
 
   private static <T> void evaluateSequenceForSideEffects(final Sequence<T> sequence)
