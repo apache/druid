@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.external;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -42,7 +43,6 @@ import org.apache.calcite.sql.validate.SqlUserDefinedTableMacro;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
 import org.apache.calcite.sql.validate.SqlValidatorTable;
-import org.apache.curator.shaded.com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.UnionDataSource;
