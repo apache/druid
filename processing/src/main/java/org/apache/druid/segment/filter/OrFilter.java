@@ -90,11 +90,11 @@ public class OrFilter implements BooleanFilter
     // for OR filters, we have a few possible outcomes:
     // 1 - all clauses are index only bundles. in this case we union the bitmaps together and make an index only bundle
     // 2 - some clauses support indexes. in this case, we union the bitmaps of any index only bundles together to form a
-    //     partial index which is constructed into a ValueMatcher with makePartialIndexValueMatcher. We translate any
-    //     index AND matcher bundles into an AND matcher only bundle with the index translated into a matcher with
-    //     makePartialIndexValueMatcher. Finally, we combine these with the remaining matcher only bundles to with
-    //     makeMatcher to make a matcher only bundle
-    // 3 - no clauses support indexes. in this case, we make a matcher only bundle using makeMatcher
+    //     partial index which is constructed into a matcher bundle with convertIndexToMatcherBundle. We translate any
+    //     index AND matcher bundles into a matcher only bundle with convertBundleToMatcherOnlyBundle. Finally, we
+    //     combine these with the remaining matcher only bundles to with makeMatcher/makeVectorMatcher to make a atcher
+    //     only bundle
+    // 3 - no clauses support indexes. in this case, we make a matcher only bundle using makeMatcher/makeVectorMatcher
 
     final List<FilterBundle.IndexBundle> indexOnlyBundles = new ArrayList<>();
     final List<FilterBundle.MatcherBundle> partialIndexBundles = new ArrayList<>();
@@ -453,8 +453,8 @@ public class OrFilter implements BooleanFilter
   /**
    * Convert a {@link FilterBundle} that has both {@link FilterBundle#getIndex()} and
    * {@link FilterBundle#getMatcherBundle()} into a 'matcher only' bundle by converting the index into a matcher
-   * with {@link #makePartialIndexValueMatcher(ReadableOffset, ImmutableBitmap, boolean)} and
-   * {@link #makePartialIndexVectorValueMatcher(ReadableVectorOffset, ImmutableBitmap)} and then doing a logical AND
+   * with {@link #convertIndexToValueMatcher(ReadableOffset, ImmutableBitmap, boolean)} and
+   * {@link #convertIndexToVectorValueMatcher(ReadableVectorOffset, ImmutableBitmap)} and then doing a logical AND
    * with the bundles matchers.
    */
   private static FilterBundle.MatcherBundle convertBundleToMatcherOnlyBundle(
@@ -483,7 +483,7 @@ public class OrFilter implements BooleanFilter
       {
         return AndFilter.makeMatcher(
             new ValueMatcher[]{
-                makePartialIndexValueMatcher(baseOffset.getBaseReadableOffset(), bundleIndex, descending),
+                convertIndexToValueMatcher(baseOffset.getBaseReadableOffset(), bundleIndex, descending),
                 bundle.getMatcherBundle().valueMatcher(selectorFactory, baseOffset, descending)
             }
         );
@@ -497,7 +497,7 @@ public class OrFilter implements BooleanFilter
       {
         return AndFilter.makeVectorMatcher(
             new VectorValueMatcher[]{
-                makePartialIndexVectorValueMatcher(
+                convertIndexToVectorValueMatcher(
                     baseOffset,
                     bundleIndex
                 ),
@@ -510,8 +510,8 @@ public class OrFilter implements BooleanFilter
 
   /**
    * Convert an index into a matcher bundle, using
-   * {@link #makePartialIndexValueMatcher(ReadableOffset, ImmutableBitmap, boolean)} and
-   * {@link #makePartialIndexVectorValueMatcher(ReadableVectorOffset, ImmutableBitmap)}
+   * {@link #convertIndexToValueMatcher(ReadableOffset, ImmutableBitmap, boolean)} and
+   * {@link #convertIndexToVectorValueMatcher(ReadableVectorOffset, ImmutableBitmap)}
    */
   private static FilterBundle.MatcherBundle convertIndexToMatcherBundle(
       int selectionRowCount,
@@ -551,7 +551,7 @@ public class OrFilter implements BooleanFilter
           boolean descending
       )
       {
-        return makePartialIndexValueMatcher(baseOffset.getBaseReadableOffset(), partialIndex, descending);
+        return convertIndexToValueMatcher(baseOffset.getBaseReadableOffset(), partialIndex, descending);
       }
 
       @Override
@@ -560,12 +560,12 @@ public class OrFilter implements BooleanFilter
           ReadableVectorOffset baseOffset
       )
       {
-        return makePartialIndexVectorValueMatcher(baseOffset, partialIndex);
+        return convertIndexToVectorValueMatcher(baseOffset, partialIndex);
       }
     };
   }
 
-  private static ValueMatcher makePartialIndexValueMatcher(
+  private static ValueMatcher convertIndexToValueMatcher(
       final ReadableOffset offset,
       final ImmutableBitmap rowBitmap,
       boolean descending
@@ -628,7 +628,7 @@ public class OrFilter implements BooleanFilter
     }
   }
 
-  private static VectorValueMatcher makePartialIndexVectorValueMatcher(
+  private static VectorValueMatcher convertIndexToVectorValueMatcher(
       final ReadableVectorOffset vectorOffset,
       final ImmutableBitmap bitmap
   )
