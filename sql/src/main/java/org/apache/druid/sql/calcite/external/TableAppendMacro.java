@@ -184,9 +184,10 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
   }
 
   @Override
-  public TranslatableTable getTable(SqlOperatorBinding callBinding)
+  public TranslatableTable getTable(SqlOperatorBinding operatorBinding)
   {
-    SqlValidator validator = ((SqlCallBinding) callBinding).getValidator();
+    SqlCallBinding callBinding = (SqlCallBinding) operatorBinding;
+    SqlValidator validator = callBinding.getValidator();
     List<RelOptTable> tables = getTables(callBinding, validator.getCatalogReader());
     AppendDatasourceMetadata metadata = buildUnionDataSource(tables);
     return new DatasourceTable(
@@ -196,15 +197,16 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
     );
   }
 
-  private List<RelOptTable> getTables(SqlOperatorBinding callBinding, SqlValidatorCatalogReader catalogReader)
+  private List<RelOptTable> getTables(SqlCallBinding callBinding, SqlValidatorCatalogReader catalogReader)
   {
     List<RelOptTable> tables = new ArrayList<>();
     for (int i = 0; i < callBinding.getOperandCount(); i++) {
       if (!callBinding.isOperandLiteral(i, false)) {
-        throw new IllegalArgumentException(
+        throw DruidSqlValidator.buildCalciteContextException(
             "All arguments of call to macro "
                 + "APPEND should be literal. Actual argument #"
-                + i + " is not literal"
+                + i + " is not literal",
+                callBinding.operand(i)
         );
       }
       @Nullable
@@ -214,7 +216,7 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
       if (table == null) {
         throw DruidSqlValidator.buildCalciteContextException(
             StringUtils.format("Table [%s] not found", tableName),
-            ((SqlCallBinding) callBinding).operand(i)
+            callBinding.operand(i)
         );
       }
       tables.add(table.unwrapOrThrow(RelOptTable.class));
