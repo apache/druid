@@ -579,7 +579,9 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
                 getTaskCompletionRowStats(),
                 errorMsg,
                 segmentAvailabilityConfirmationCompleted,
-                segmentAvailabilityWaitTimeMs
+                segmentAvailabilityWaitTimeMs,
+                0,
+                0
             )
         )
     );
@@ -1046,7 +1048,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
         log.debugSegments(published.getSegments(), "Published segments");
 
-        toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
+        toolbox.getTaskReportFileWriter()
+               .write(getId(), getTaskCompletionReports());
         return TaskStatus.success(getId());
       }
     }

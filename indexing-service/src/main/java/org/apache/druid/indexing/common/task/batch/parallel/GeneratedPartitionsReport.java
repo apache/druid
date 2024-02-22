@@ -37,11 +37,19 @@ public class GeneratedPartitionsReport implements SubTaskReport
   private final List<PartitionStat> partitionStats;
   private final Map<String, TaskReport> taskReport;
 
-  GeneratedPartitionsReport(String taskId, List<PartitionStat> partitionStats, Map<String, TaskReport> taskReport)
+  private final Integer segmentsRead;
+
+  GeneratedPartitionsReport(
+      String taskId,
+      List<PartitionStat> partitionStats,
+      Map<String, TaskReport> taskReport,
+      Integer segmentsRead
+  )
   {
     this.taskId = taskId;
     this.partitionStats = partitionStats;
     this.taskReport = taskReport;
+    this.segmentsRead = segmentsRead;
   }
 
   @Override
@@ -63,6 +71,12 @@ public class GeneratedPartitionsReport implements SubTaskReport
     return partitionStats;
   }
 
+  @JsonProperty
+  public Integer getSegmentsRead()
+  {
+    return segmentsRead;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -75,13 +89,14 @@ public class GeneratedPartitionsReport implements SubTaskReport
     GeneratedPartitionsReport that = (GeneratedPartitionsReport) o;
     return Objects.equals(taskId, that.taskId) &&
            Objects.equals(partitionStats, that.partitionStats) &&
-           Objects.equals(taskReport, that.taskReport);
+           Objects.equals(taskReport, that.taskReport) &&
+           Objects.equals(segmentsRead, that.segmentsRead);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(taskId, partitionStats, taskReport);
+    return Objects.hash(taskId, partitionStats, taskReport, segmentsRead);
   }
 
   @Override
@@ -91,6 +106,7 @@ public class GeneratedPartitionsReport implements SubTaskReport
         "taskId='" + taskId + '\'' +
         ", partitionStats=" + partitionStats +
         ", taskReport=" + taskReport +
+           ", segmentsRead=" + segmentsRead +
         '}';
   }
 }

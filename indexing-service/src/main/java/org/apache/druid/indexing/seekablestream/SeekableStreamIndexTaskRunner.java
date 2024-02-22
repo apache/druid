@@ -1126,7 +1126,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 getTaskCompletionRowStats(),
                 errorMsg,
                 errorMsg == null,
-                handoffWaitMs
+                handoffWaitMs,
+                0,
+                0
             )
         )
     );

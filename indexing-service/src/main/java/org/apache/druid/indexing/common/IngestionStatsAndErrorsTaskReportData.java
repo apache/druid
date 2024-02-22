@@ -47,13 +47,20 @@ public class IngestionStatsAndErrorsTaskReportData
   @JsonProperty
   private long segmentAvailabilityWaitTimeMs;
 
+  @JsonProperty
+  private int segmentsRead;
+  @JsonProperty
+  private int segmentsPublished;
+
   public IngestionStatsAndErrorsTaskReportData(
       @JsonProperty("ingestionState") IngestionState ingestionState,
       @JsonProperty("unparseableEvents") Map<String, Object> unparseableEvents,
       @JsonProperty("rowStats") Map<String, Object> rowStats,
       @JsonProperty("errorMsg") @Nullable String errorMsg,
       @JsonProperty("segmentAvailabilityConfirmed") boolean segmentAvailabilityConfirmed,
-      @JsonProperty("segmentAvailabilityWaitTimeMs") long segmentAvailabilityWaitTimeMs
+      @JsonProperty("segmentAvailabilityWaitTimeMs") long segmentAvailabilityWaitTimeMs,
+      @JsonProperty("segmentsRead") int segmentsRead,
+      @JsonProperty("segmentsRead") int segmentsPublished
   )
   {
     this.ingestionState = ingestionState;
@@ -62,6 +69,8 @@ public class IngestionStatsAndErrorsTaskReportData
     this.errorMsg = errorMsg;
     this.segmentAvailabilityConfirmed = segmentAvailabilityConfirmed;
     this.segmentAvailabilityWaitTimeMs = segmentAvailabilityWaitTimeMs;
+    this.segmentsRead = segmentsRead;
+    this.segmentsPublished = segmentsPublished;
   }
 
   @JsonProperty

@@ -202,6 +202,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   private volatile Pair<Map<String, Object>, Map<String, Object>> indexGenerateRowStats;
 
   private IngestionState ingestionState;
+  private int segmentsRead = 0;
+  private int segmentsPublished = 0;
 
 
   @JsonCreator
@@ -633,6 +635,14 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (state.isSuccess()) {
       //noinspection ConstantConditions
       publishSegments(toolbox, parallelSinglePhaseRunner.getReports());
+      segmentsRead = parallelSinglePhaseRunner.getReports()
+                                              .values()
+                                              .stream()
+                                              .mapToInt(report -> report.getOldSegments().size()).sum();
+      segmentsRead = parallelSinglePhaseRunner.getReports()
+                                              .values()
+                                              .stream()
+                                              .mapToInt(report -> report.getNewSegments().size()).sum();
       if (awaitSegmentAvailabilityTimeoutMillis > 0) {
         waitForSegmentAvailability(parallelSinglePhaseRunner.getReports());
       }
@@ -806,7 +816,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     TaskStatus taskStatus;
     if (state.isSuccess()) {
       //noinspection ConstantConditions
-      publishSegments(toolbox, mergeRunner.getReports());
+      segmentsPublished = publishSegments(toolbox, mergeRunner.getReports());
       if (awaitSegmentAvailabilityTimeoutMillis > 0) {
         waitForSegmentAvailability(mergeRunner.getReports());
       }
@@ -906,7 +916,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     TaskState mergeState = runNextPhase(mergeRunner);
     TaskStatus taskStatus;
     if (mergeState.isSuccess()) {
-      publishSegments(toolbox, mergeRunner.getReports());
+      segmentsPublished = publishSegments(toolbox, mergeRunner.getReports());
       if (awaitSegmentAvailabilityTimeoutMillis > 0) {
         waitForSegmentAvailability(mergeRunner.getReports());
       }
@@ -1120,7 +1130,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     return Pair.of(start, stop);
   }
 
-  private void publishSegments(
+  private int publishSegments(
       TaskToolbox toolbox,
       Map<String, PushedSegmentsReport> reportsMap
   )
@@ -1188,6 +1198,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     } else {
       throw new ISE("Failed to publish segments");
     }
+
+    return newSegments.size();
   }
 
   private TaskStatus runSequential(TaskToolbox toolbox) throws Exception
@@ -1240,7 +1252,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
                 rowStatsAndUnparseableEvents.lhs,
                 taskStatus.getErrorMsg(),
                 segmentAvailabilityConfirmed,
-                segmentAvailabilityWaitTimeMs
+                segmentAvailabilityWaitTimeMs,
+                segmentsRead,
+                segmentsPublished
             )
         )
     );
@@ -1621,6 +1635,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
             getBuildSegmentsStatsFromTaskReport(taskReport, true, unparseableEvents);
 
         buildSegmentsRowStats.addRowIngestionMetersTotals(rowStatsForCompletedTask);
+        segmentsRead += generatedPartitionsReport.getSegmentsRead();
       }
 
       RowIngestionMetersTotals rowStatsForRunningTasks = getRowStatsAndUnparseableEventsForRunningTasks(
