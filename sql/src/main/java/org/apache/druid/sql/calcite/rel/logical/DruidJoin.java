@@ -20,15 +20,12 @@
 package org.apache.druid.sql.calcite.rel.logical;
 
 import org.apache.calcite.plan.RelOptCluster;
-import org.apache.calcite.plan.RelOptCost;
-import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.CorrelationId;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.hint.RelHint;
-import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rex.RexNode;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.querygen.InputDescProducer;
@@ -61,12 +58,6 @@ public class DruidJoin extends Join implements DruidLogicalNode, InputDescProduc
       boolean semiJoinDone)
   {
     return new DruidJoin(getCluster(), traitSet, hints, left, right, conditionExpr, variablesSet, joinType);
-  }
-
-  @Override
-  public RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq)
-  {
-    return planner.getCostFactory().makeCost(mq.getRowCount(this), 0, 0);
   }
 
   @Override

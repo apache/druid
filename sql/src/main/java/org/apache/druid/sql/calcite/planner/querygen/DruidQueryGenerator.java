@@ -47,10 +47,10 @@ import java.util.Optional;
  */
 public class DruidQueryGenerator
 {
-  private final RelNode relRoot;
+  private final DruidLogicalNode relRoot;
   private final PDQVertexFactory vertexFactory;
 
-  public DruidQueryGenerator(PlannerContext plannerContext, RelNode relRoot, RexBuilder rexBuilder)
+  public DruidQueryGenerator(PlannerContext plannerContext, DruidLogicalNode relRoot, RexBuilder rexBuilder)
   {
     this.relRoot = relRoot;
     this.vertexFactory = new PDQVertexFactory(plannerContext, rexBuilder);
@@ -62,12 +62,11 @@ public class DruidQueryGenerator
     return vertex.buildQuery(true);
   }
 
-  private Vertex buildVertexFor(RelNode relNode, boolean isRoot)
+  private Vertex buildVertexFor(DruidLogicalNode node, boolean isRoot)
   {
     List<Vertex> newInputs = new ArrayList<>();
-    DruidLogicalNode node = (DruidLogicalNode) relNode;
     for (RelNode input : node.getInputs()) {
-      newInputs.add(buildVertexFor(input, false));
+      newInputs.add(buildVertexFor((DruidLogicalNode) input, false));
     }
     Vertex vertex = processNodeWithInputs(node, newInputs, isRoot);
     return vertex;
