@@ -20,7 +20,6 @@
 package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskStatusPlus;
@@ -30,6 +29,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
@@ -42,6 +42,7 @@ import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -158,13 +159,7 @@ public class KillUnusedSegments implements CoordinatorDuty
   {
     Collection<String> dataSourcesToKill =
         params.getCoordinatorDynamicConfig().getSpecificDataSourcesToKillUnusedSegmentsIn();
-    final double killTaskSlotRatio = params.getCoordinatorDynamicConfig().getKillTaskSlotRatio();
-    final int maxKillTaskSlots = params.getCoordinatorDynamicConfig().getMaxKillTaskSlots();
-    final int killTaskCapacity = getKillTaskCapacity(
-        CoordinatorDutyUtils.getTotalWorkerCapacity(overlordClient),
-        killTaskSlotRatio,
-        maxKillTaskSlots
-    );
+    final int killTaskCapacity = getKillTaskCapacity(params.getCoordinatorDynamicConfig());
     final int availableKillTaskSlots = getAvailableKillTaskSlots(
         killTaskCapacity,
         CoordinatorDutyUtils.getNumActiveTaskSlots(overlordClient, IS_AUTO_KILL_TASK).size()
@@ -191,9 +186,7 @@ public class KillUnusedSegments implements CoordinatorDuty
   }
 
   /**
-   * Spawn kill tasks for each datasource to be killed upto {@code availableKillTaskSlots}.
-   * @param dataSourcesToKill finalized set of datasources to kill
-   * @param availableKillTaskSlots number of available kill task slots
+   * Spawn kill tasks for each datasource in {@code dataSourcesToKill} upto {@code availableKillTaskSlots}.
    */
   private void killUnusedSegments(
       @Nullable final Collection<String> dataSourcesToKill,
@@ -205,6 +198,8 @@ public class KillUnusedSegments implements CoordinatorDuty
       stats.add(Stats.Kill.SUBMITTED_TASKS, 0);
       return;
     }
+
+    final Collection<String> remainingDatasourcesToKill = new ArrayList<>(dataSourcesToKill);
     int submittedTasks = 0;
     for (String dataSource : dataSourcesToKill) {
       if (submittedTasks >= availableKillTaskSlots) {
@@ -233,6 +228,7 @@ public class KillUnusedSegments implements CoordinatorDuty
         );
         ++submittedTasks;
         datasourceToLastKillIntervalEnd.put(dataSource, intervalToKill.getEnd());
+        remainingDatasourcesToKill.remove(dataSource);
       }
       catch (Exception ex) {
         log.error(ex, "Failed to submit kill task for dataSource[%s] in interval[%s]", dataSource, intervalToKill);
@@ -243,14 +239,11 @@ public class KillUnusedSegments implements CoordinatorDuty
       }
     }
 
-    log.info("Submitted [%d] kill tasks for [%d] datasources.%s",
-          submittedTasks,
-          dataSourcesToKill.size(),
-          availableKillTaskSlots < dataSourcesToKill.size()
-              ? StringUtils.format(
-              " Datasources skipped: %s",
-              ImmutableList.copyOf(dataSourcesToKill).subList(submittedTasks, dataSourcesToKill.size()))
-              : ""
+    log.info(
+        "Submitted [%d] kill tasks for [%d] datasources. Remaining datasources to kill: %s",
+        submittedTasks,
+        dataSourcesToKill.size(),
+        remainingDatasourcesToKill
     );
 
     stats.add(Stats.Kill.SUBMITTED_TASKS, submittedTasks);
@@ -298,18 +291,21 @@ public class KillUnusedSegments implements CoordinatorDuty
     }
   }
 
-  private int getAvailableKillTaskSlots(int killTaskCapacity, int numActiveKillTasks)
-  {
-    return Math.max(0, killTaskCapacity - numActiveKillTasks);
-  }
-
   private boolean canDutyRun()
   {
     return lastKillTime == null || !DateTimes.nowUtc().isBefore(lastKillTime.plus(period));
   }
 
-  private static int getKillTaskCapacity(int totalWorkerCapacity, double killTaskSlotRatio, int maxKillTaskSlots)
+  private int getAvailableKillTaskSlots(final int killTaskCapacity, final int numActiveKillTasks)
   {
-    return Math.min((int) (totalWorkerCapacity * Math.min(killTaskSlotRatio, 1.0)), maxKillTaskSlots);
+    return Math.max(0, killTaskCapacity - numActiveKillTasks);
+  }
+
+  private int getKillTaskCapacity(final CoordinatorDynamicConfig config)
+  {
+    return Math.min(
+        (int) (CoordinatorDutyUtils.getTotalWorkerCapacity(overlordClient) * Math.min(config.getKillTaskSlotRatio(), 1.0)),
+        config.getMaxKillTaskSlots()
+    );
   }
 }

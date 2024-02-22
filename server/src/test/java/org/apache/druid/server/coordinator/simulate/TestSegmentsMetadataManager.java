@@ -49,53 +49,30 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
 {
   private static final Logger log = new Logger(TestSegmentsMetadataManager.class);
 
-  /**
-   * segments = usedSegments + unusedSegments. Tracking unusedSegments separately for convenience and
-   * additional metadata.
-   */
-  private final ConcurrentMap<String, DataSegment> segments = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, DataSegment> allSegments = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, DataSegment> usedSegments = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, DataSegmentPlus> unusedSegments = new ConcurrentHashMap<>();
 
   private volatile DataSourcesSnapshot snapshot;
 
-  /**
-   * Adds the used segment.
-   */
-  public void addSegment(DataSegment segment, boolean isUsed)
+  public void addSegment(DataSegment segment)
   {
-    segments.put(segment.getId().toString(), segment);
+    allSegments.put(segment.getId().toString(), segment);
     usedSegments.put(segment.getId().toString(), segment);
     snapshot = null;
   }
 
-  /**
-   * Remove the used segment.
-   */
   public void removeSegment(DataSegment segment)
   {
-    segments.remove(segment.getId().toString());
+    allSegments.remove(segment.getId().toString());
     usedSegments.remove(segment.getId().toString());
     snapshot = null;
   }
 
-  /**
-   * Add the unused segment with metadata.
-   */
   public void addUnusedSegment(DataSegmentPlus segment)
   {
     unusedSegments.put(segment.getDataSegment().getId().toString(), segment);
-    segments.put(segment.getDataSegment().getId().toString(), segment.getDataSegment());
-    snapshot = null;
-  }
-
-  /**
-   * Remove the unused segment with metadat.
-   */
-  public void removeUnusedSegment(DataSegmentPlus segment)
-  {
-    unusedSegments.remove(segment.getDataSegment().getId().toString());
-    segments.remove(segment.getDataSegment().getId().toString(), segment.getDataSegment());
+    allSegments.put(segment.getDataSegment().getId().toString(), segment.getDataSegment());
     snapshot = null;
   }
 
@@ -138,11 +115,11 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   @Override
   public boolean markSegmentAsUsed(String segmentId)
   {
-    if (!segments.containsKey(segmentId)) {
+    if (!allSegments.containsKey(segmentId)) {
       return false;
     }
 
-    usedSegments.put(segmentId, segments.get(segmentId));
+    usedSegments.put(segmentId, allSegments.get(segmentId));
     return true;
   }
 
@@ -166,8 +143,8 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
     final DateTime lastUpdatedDate = now.plus(10);
 
     for (SegmentId segmentId : segmentIds) {
-      if (segments.containsKey(segmentId.toString())) {
-        DataSegment dataSegment = segments.get(segmentId.toString());
+      if (allSegments.containsKey(segmentId.toString())) {
+        DataSegment dataSegment = allSegments.get(segmentId.toString());
         unusedSegments.put(segmentId.toString(), new DataSegmentPlus(dataSegment, now, lastUpdatedDate));
         usedSegments.remove(segmentId.toString());
         ++numModifiedSegments;
@@ -253,7 +230,7 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   @Override
   public Set<String> retrieveAllDataSourceNames()
   {
-    return segments.values().stream().map(DataSegment::getDataSource).collect(Collectors.toSet());
+    return allSegments.values().stream().map(DataSegment::getDataSource).collect(Collectors.toSet());
   }
 
   @Override
@@ -265,15 +242,16 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
       final DateTime maxUsedStatusLastUpdatedTime
   )
   {
-    final List<DataSegmentPlus> sortedDataSegments = new ArrayList<>(unusedSegments.values());
-    sortedDataSegments.sort(
-        Comparator.comparingLong(dataSegmentPlus -> dataSegmentPlus.getDataSegment().getInterval().getStartMillis()
+    final List<DataSegmentPlus> sortedUnusedSegmentPluses = new ArrayList<>(unusedSegments.values());
+    sortedUnusedSegmentPluses.sort(
+        Comparator.comparingLong(
+            dataSegmentPlus -> dataSegmentPlus.getDataSegment().getInterval().getStartMillis()
         )
     );
 
     final List<Interval> unusedSegmentIntervals = new ArrayList<>();
 
-    for (DataSegmentPlus unusedSegmentPlus: sortedDataSegments) {
+    for (final DataSegmentPlus unusedSegmentPlus : sortedUnusedSegmentPluses) {
       final DataSegment unusedSegment = unusedSegmentPlus.getDataSegment();
       if (dataSource.equals(unusedSegment.getDataSource())) {
         final Interval interval = unusedSegment.getInterval();

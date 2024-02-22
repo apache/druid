@@ -20,7 +20,6 @@
 package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
@@ -34,7 +33,6 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
@@ -62,32 +60,14 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-
 
 /**
  * Unit tests to test the {@link KillUnusedSegments} duty.
  */
 public class KillUnusedSegmentsTest
 {
-  private static final Logger log = new Logger(KillUnusedSegmentsTest.class);
-  private static final Duration INDEXING_PERIOD = Duration.standardSeconds(0);
-  private static final Duration COORDINATOR_KILL_PERIOD = Duration.standardSeconds(0);
-  private static final Duration DURATION_TO_RETAIN = Duration.standardHours(36);
-  private static final Duration BUFFER_PERIOD = Duration.standardSeconds(1);
-  private static final int MAX_SEGMENTS_TO_KILL = 10;
   private static final String DS1 = "DS1";
   private static final String DS2 = "DS2";
-
-  private TestSegmentsMetadataManager segmentsMetadataManager;
-
-  private TestOverlordClient overlordClient;
-
-  private TestDruidCoordinatorConfig.Builder configBuilder;
-
-  private DruidCoordinatorRuntimeParams.Builder paramsBuilder;
-
-  private final CoordinatorDynamicConfig.Builder dynamicConfigBuilder = CoordinatorDynamicConfig.builder();
 
   private static final DateTime NOW = DateTimes.nowUtc();
   private static final Interval YEAR_OLD = new Interval(Period.days(1), NOW.minusDays(365));
@@ -97,27 +77,28 @@ public class KillUnusedSegmentsTest
   private static final Interval NEXT_DAY = new Interval(Period.days(1), NOW.plusDays(1));
   private static final Interval NEXT_MONTH = new Interval(Period.days(1), NOW.plusDays(30));
 
-  private DataSegment yearOldSegment;
-  private DataSegment monthOldSegment;
-  private DataSegment dayOldSegment;
-  private DataSegment hourOldSegment;
-  private DataSegment nextDaySegment;
-  private DataSegment nextMonthSegment;
+  private static final RowKey DS1_STAT_KEY = RowKey.of(Dimension.DATASOURCE, DS1);
+  private static final RowKey DS2_STAT_KEY = RowKey.of(Dimension.DATASOURCE, DS2);
 
+  private final CoordinatorDynamicConfig.Builder dynamicConfigBuilder = CoordinatorDynamicConfig.builder();
+  private TestSegmentsMetadataManager segmentsMetadataManager;
+  private TestOverlordClient overlordClient;
+  private TestDruidCoordinatorConfig.Builder configBuilder;
+  private DruidCoordinatorRuntimeParams.Builder paramsBuilder;
 
+  private KillUnusedSegments killDuty;
+  
   @Before
   public void setup()
   {
     segmentsMetadataManager = new TestSegmentsMetadataManager();
     overlordClient = new TestOverlordClient();
-
-    // These two can definitely be part of setup()
     configBuilder = new TestDruidCoordinatorConfig.Builder()
-        .withCoordinatorIndexingPeriod(INDEXING_PERIOD)
-        .withCoordinatorKillPeriod(COORDINATOR_KILL_PERIOD)
-        .withCoordinatorKillDurationToRetain(DURATION_TO_RETAIN)
-        .withCoordinatorKillMaxSegments(MAX_SEGMENTS_TO_KILL)
-        .withCoordinatorKillBufferPeriod(BUFFER_PERIOD);
+        .withCoordinatorIndexingPeriod(Duration.standardSeconds(0))
+        .withCoordinatorKillPeriod(Duration.standardSeconds(0))
+        .withCoordinatorKillDurationToRetain(Duration.standardHours(36))
+        .withCoordinatorKillMaxSegments(10)
+        .withCoordinatorKillBufferPeriod(Duration.standardSeconds(1));
     paramsBuilder = DruidCoordinatorRuntimeParams.newBuilder(DateTimes.nowUtc());
   }
 
@@ -127,6 +108,8 @@ public class KillUnusedSegmentsTest
   @Test
   public void testDefaults()
   {
+    configBuilder = new TestDruidCoordinatorConfig.Builder();
+
     final DateTime sixtyDaysAgo = NOW.minusDays(60);
 
     createAndAddUnusedSegment(DS1, YEAR_OLD, sixtyDaysAgo);
@@ -137,59 +120,45 @@ public class KillUnusedSegmentsTest
     createAndAddUnusedSegment(DS1, NEXT_MONTH, sixtyDaysAgo);
     createAndAddUnusedSegment(DS1, Intervals.ETERNITY, sixtyDaysAgo);
 
-    final KillUnusedSegments killDuty = new KillUnusedSegments(
-        segmentsMetadataManager,
-        overlordClient,
-        new TestDruidCoordinatorConfig.Builder().build()
-    );
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
 
-    final DruidCoordinatorRuntimeParams firstRun = killDuty.run(paramsBuilder.build());
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
 
-    validateStats(
-        new ExpectedStats(10, 1, 10, ImmutableMap.of(DS1, 1L)),
-        firstRun.getCoordinatorStats()
-    );
-
-    validateAndResetState(DS1, YEAR_OLD);
+    validateLastKillStateAndReset(DS1, YEAR_OLD);
   }
 
   @Test
   public void testRunWithNoIntervalShouldNotKillAnySegments()
   {
-    final KillUnusedSegments killDuty = new KillUnusedSegments(
-        segmentsMetadataManager,
-        overlordClient,
-        configBuilder.build()
-    );
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
 
-    final DruidCoordinatorRuntimeParams runParams = killDuty.run(paramsBuilder.build());
-    validateStats(
-        new ExpectedStats(10, 0, 10, ImmutableMap.of()),
-        runParams.getCoordinatorStats()
-    );
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
 
-    validateAndResetState(DS1, null);
-    validateAndResetState(DS2, null);
+    validateLastKillStateAndReset(DS1, null);
+    validateLastKillStateAndReset(DS2, null);
   }
 
   @Test
   public void testRunWithSpecificDatasourceAndNoIntervalShouldNotKillAnySegments()
   {
     configBuilder.withCoordinatorKillDurationToRetain(Duration.standardDays(400));
-    final KillUnusedSegments killDuty = new KillUnusedSegments(
-        segmentsMetadataManager,
-        overlordClient,
-        configBuilder.build()
-    );
 
-    final DruidCoordinatorRuntimeParams runParams = killDuty.run(paramsBuilder.build());
-    validateStats(
-        new ExpectedStats(10, 0, 10, ImmutableMap.of()),
-        runParams.getCoordinatorStats()
-    );
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
 
-    validateAndResetState(DS1, null);
-    validateAndResetState(DS2, null);
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+
+    validateLastKillStateAndReset(DS1, null);
+    validateLastKillStateAndReset(DS2, null);
   }
 
   /**
@@ -200,38 +169,36 @@ public class KillUnusedSegmentsTest
   {
     configBuilder.withCoordinatorKillPeriod(Duration.standardHours(1));
 
-    setupUnusedSegments();
-    final KillUnusedSegments killDuty = new KillUnusedSegments(
-        segmentsMetadataManager,
-        overlordClient,
-        configBuilder.build()
-    );
+    createAndAddUnusedSegment(DS1, YEAR_OLD, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, MONTH_OLD, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, DAY_OLD, NOW.minusDays(2));
+    createAndAddUnusedSegment(DS1, HOUR_OLD, NOW.minusDays(2));
+    createAndAddUnusedSegment(DS1, NEXT_DAY, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, NEXT_MONTH, NOW.minusDays(10));
 
-    final DruidCoordinatorRuntimeParams firstRun = killDuty.run(paramsBuilder.build());
-    validateStats(
-        new ExpectedStats(10, 1, 10, ImmutableMap.of(DS1, 2L)),
-        firstRun.getCoordinatorStats()
-    );
+    initDuty();
+    CoordinatorRunStats stats = runDutyAndGetStats();
 
-    validateAndResetState(
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
+
+    validateLastKillStateAndReset(
         DS1,
-        new Interval(
-            yearOldSegment.getInterval().getStart(),
-            monthOldSegment.getInterval().getEnd()
-        )
+        new Interval(YEAR_OLD.getStart(), MONTH_OLD.getEnd())
     );
 
-    final DruidCoordinatorRuntimeParams secondRun = killDuty.run(paramsBuilder.build());
-    validateStats(
-        new ExpectedStats(10, 1, 10,  ImmutableMap.of(DS1, 2L)),
-        secondRun.getCoordinatorStats()
-    );
-    validateAndResetState(DS1, null);
+    stats = runDutyAndGetStats();
+
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
+
+    validateLastKillStateAndReset(DS1, null);
   }
 
-  /**
-   * Similar to {@link #testMultipleRuns()}
-   */
   @Test
   public void testMultipleDatasources()
   {
@@ -248,41 +215,39 @@ public class KillUnusedSegmentsTest
     createAndAddUnusedSegment(DS2, DAY_OLD, NOW.minusDays(1));
     createAndAddUnusedSegment(DS2, NEXT_DAY, NOW.minusDays(1));
 
-    final KillUnusedSegments killDuty = new KillUnusedSegments(
-        segmentsMetadataManager,
-        overlordClient,
-        configBuilder.build()
-    );
+    initDuty();
+    CoordinatorRunStats stats = runDutyAndGetStats();
 
-    final DruidCoordinatorRuntimeParams firstKill = killDuty.run(paramsBuilder.build());
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
+    Assert.assertEquals(2, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS2_STAT_KEY));
 
-    validateStats(
-        new ExpectedStats(10, 2, 10, ImmutableMap.of(DS1, 2L, DS2, 2L)),
-        firstKill.getCoordinatorStats()
-    );
+    validateLastKillStateAndReset(DS1, new Interval(YEAR_OLD.getStart(), MONTH_OLD.getEnd()));
+    validateLastKillStateAndReset(DS2, new Interval(YEAR_OLD.getStart(), DAY_OLD.getEnd()));
 
-    validateAndResetState(DS1, new Interval(YEAR_OLD.getStart(), MONTH_OLD.getEnd()));
-    validateAndResetState(DS2, new Interval(YEAR_OLD.getStart(), DAY_OLD.getEnd()));
+    stats = runDutyAndGetStats();
 
-    final DruidCoordinatorRuntimeParams secondKill = killDuty.run(paramsBuilder.build());
+    Assert.assertEquals(20, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(4, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(20, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(4, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
+    Assert.assertEquals(3, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS2_STAT_KEY));
 
-    validateStats(
-        new ExpectedStats(20, 4, 20,  ImmutableMap.of(DS1, 4L, DS2, 3L)),
-        secondKill.getCoordinatorStats()
-    );
+    validateLastKillStateAndReset(DS1, new Interval(DAY_OLD.getStart(), NEXT_DAY.getEnd()));
+    validateLastKillStateAndReset(DS2, NEXT_DAY);
 
-    validateAndResetState(DS1, new Interval(DAY_OLD.getStart(), NEXT_DAY.getEnd()));
-    validateAndResetState(DS2, NEXT_DAY);
+    stats = runDutyAndGetStats();
 
-    final DruidCoordinatorRuntimeParams thirdKill = killDuty.run(paramsBuilder.build());
+    Assert.assertEquals(30, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(5, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(30, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(5, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
+    Assert.assertEquals(3, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS2_STAT_KEY));
 
-    validateStats(
-        new ExpectedStats(30, 5, 30, ImmutableMap.of(DS1, 5L, DS2, 3L)),
-        thirdKill.getCoordinatorStats()
-    );
-
-    validateAndResetState(DS1, NEXT_MONTH);
-    validateAndResetState(DS2, null);
+    validateLastKillStateAndReset(DS1, NEXT_MONTH);
+    validateLastKillStateAndReset(DS2, null);
   }
 
   /**
@@ -304,19 +269,15 @@ public class KillUnusedSegmentsTest
     createAndAddUnusedSegment(DS1, NEXT_DAY, NOW.minusDays(10));
     createAndAddUnusedSegment(DS1, NEXT_MONTH, NOW.minusDays(10));
 
-    final KillUnusedSegments killDuty = new KillUnusedSegments(
-        segmentsMetadataManager,
-        overlordClient,
-        configBuilder.build()
-    );
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
 
-    final DruidCoordinatorRuntimeParams firstKill = killDuty.run(paramsBuilder.build());
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(4, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
 
-    validateStats(
-        new ExpectedStats(10, 1, 10, ImmutableMap.of(DS1, 4L)),
-        firstKill.getCoordinatorStats()
-    );
-    validateAndResetState(DS1, new Interval(YEAR_OLD.getStart(), NEXT_MONTH.getEnd()));
+    validateLastKillStateAndReset(DS1, new Interval(YEAR_OLD.getStart(), NEXT_MONTH.getEnd()));
   }
 
   @Test
@@ -329,76 +290,61 @@ public class KillUnusedSegmentsTest
     createAndAddUnusedSegment(DS1, NEXT_DAY, NOW.minusDays(1));
     createAndAddUnusedSegment(DS1, NEXT_MONTH, NOW.minusDays(1));
 
-    final KillUnusedSegments killDuty = new KillUnusedSegments(
-        segmentsMetadataManager,
-        overlordClient,
-        configBuilder.build()
-    );
+    initDuty();
+    CoordinatorRunStats stats = runDutyAndGetStats();
 
-    final DruidCoordinatorRuntimeParams firstKill = killDuty.run(paramsBuilder.build());
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
 
-    validateStats(
-        new ExpectedStats(10, 1, 10, ImmutableMap.of(DS1, 2L)),
-        firstKill.getCoordinatorStats()
-    );
+    validateLastKillStateAndReset(DS1, new Interval(DAY_OLD.getStart(), NEXT_DAY.getEnd()));
 
-    validateAndResetState(DS1, new Interval(DAY_OLD.getStart(), NEXT_DAY.getEnd()));
-
-    log.info("Second run...");
     // Add two old unused segments now. These only get killed much later on when the kill
     // duty eventually round robins its way through until the latest time.
     createAndAddUnusedSegment(DS1, YEAR_OLD, NOW.minusDays(1));
     createAndAddUnusedSegment(DS1, MONTH_OLD, NOW.minusDays(1));
 
-    final DruidCoordinatorRuntimeParams secondKill = killDuty.run(paramsBuilder.build());
+    stats = runDutyAndGetStats();
 
-    validateStats(
-        new ExpectedStats(20, 2, 20, ImmutableMap.of(DS1, 3L)),
-        secondKill.getCoordinatorStats()
-    );
+    Assert.assertEquals(20, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(20, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(3, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
 
-    validateAndResetState(DS1, NEXT_MONTH);
+    validateLastKillStateAndReset(DS1, NEXT_MONTH);
 
-    log.info("Third run...");
-    final DruidCoordinatorRuntimeParams thirdKill = killDuty.run(paramsBuilder.build());
+    stats = runDutyAndGetStats();
 
-    validateStats(
-        new ExpectedStats(30, 2, 30, ImmutableMap.of(DS1, 3L)),
-        thirdKill.getCoordinatorStats()
-    );
+    Assert.assertEquals(30, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(30, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(3, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
 
-    validateAndResetState(DS1, null);
+    validateLastKillStateAndReset(DS1, null);
 
-    log.info("Fourth run...");
+    stats = runDutyAndGetStats();
 
-    final DruidCoordinatorRuntimeParams fourthKill = killDuty.run(paramsBuilder.build());
+    Assert.assertEquals(40, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(3, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(40, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(5, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
 
-    validateStats(
-        new ExpectedStats(40, 3, 40, ImmutableMap.of(DS1, 5L)),
-        fourthKill.getCoordinatorStats()
-    );
-
-    validateAndResetState(DS1, new Interval(YEAR_OLD.getStart(), MONTH_OLD.getEnd()));
+    validateLastKillStateAndReset(DS1, new Interval(YEAR_OLD.getStart(), MONTH_OLD.getEnd()));
   }
 
   @Test
   public void testNoDatasources()
   {
-    final KillUnusedSegments killDuty = new KillUnusedSegments(
-        segmentsMetadataManager,
-        overlordClient,
-        configBuilder.build()
-    );
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
 
-    final DruidCoordinatorRuntimeParams runParams = killDuty.run(paramsBuilder.build());
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
 
-    validateStats(
-        new ExpectedStats(10, 0, 10, ImmutableMap.of()),
-        runParams.getCoordinatorStats()
-    );
-
-    validateAndResetState(DS1, null);
-    validateAndResetState(DS2, null);
+    validateLastKillStateAndReset(DS1, null);
+    validateLastKillStateAndReset(DS2, null);
   }
 
   @Test
@@ -411,72 +357,68 @@ public class KillUnusedSegmentsTest
     createAndAddUnusedSegment(DS1, YEAR_OLD, NOW.minusDays(1));
     createAndAddUnusedSegment(DS2, YEAR_OLD, NOW.minusDays(1));
 
-    final KillUnusedSegments killDuty = new KillUnusedSegments(
-        segmentsMetadataManager,
-        overlordClient,
-        configBuilder.build()
-    );
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
 
-    final DruidCoordinatorRuntimeParams runParams = killDuty.run(paramsBuilder.build());
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(0, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
+    Assert.assertEquals(1, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS2_STAT_KEY));
 
-    validateStats(
-        new ExpectedStats(10, 1, 10, ImmutableMap.of(DS1, 0L, DS2, 1L)),
-        runParams.getCoordinatorStats()
-    );
-
-    validateAndResetState(DS2, YEAR_OLD);
-    validateAndResetState(DS1, null);
+    validateLastKillStateAndReset(DS2, YEAR_OLD);
+    validateLastKillStateAndReset(DS1, null);
   }
 
   @Test
   public void testDurationToRetain()
   {
     // Only segments more than a day old are killed
-    setupUnusedSegments();
+    createAndAddUnusedSegment(DS1, YEAR_OLD, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, MONTH_OLD, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, DAY_OLD, NOW.minusDays(2));
+    createAndAddUnusedSegment(DS1, HOUR_OLD, NOW.minusDays(2));
+    createAndAddUnusedSegment(DS1, NEXT_DAY, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, NEXT_MONTH, NOW.minusDays(10));
 
-    final KillUnusedSegments killDuty = new KillUnusedSegments(
-        segmentsMetadataManager,
-        overlordClient,
-        configBuilder.build()
-    );
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
 
-    final DruidCoordinatorRuntimeParams runParams = killDuty.run(paramsBuilder.build());
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
 
-    validateStats(
-        new ExpectedStats(10, 1, 10, ImmutableMap.of(DS1, 2L)),
-        runParams.getCoordinatorStats()
-    );
-
-    validateAndResetState(
+    validateLastKillStateAndReset(
         DS1,
-        new Interval(
-            yearOldSegment.getInterval().getStart(), monthOldSegment.getInterval().getEnd())
+        new Interval(YEAR_OLD.getStart(), MONTH_OLD.getEnd())
     );
   }
 
   @Test
   public void testNegativeDurationToRetain()
   {
-    configBuilder.withCoordinatorKillDurationToRetain(DURATION_TO_RETAIN.negated());
+    configBuilder.withCoordinatorKillDurationToRetain(Duration.standardHours(36).negated());
 
-    setupUnusedSegments();
+    createAndAddUnusedSegment(DS1, YEAR_OLD, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, MONTH_OLD, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, DAY_OLD, NOW.minusDays(2));
+    createAndAddUnusedSegment(DS1, HOUR_OLD, NOW.minusDays(2));
+    createAndAddUnusedSegment(DS1, NEXT_DAY, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, NEXT_MONTH, NOW.minusDays(10));
 
-    final KillUnusedSegments killDuty = new KillUnusedSegments(
-        segmentsMetadataManager,
-        overlordClient,
-        configBuilder.build()
-    );
+    initDuty();
 
-    final DruidCoordinatorRuntimeParams runParams = killDuty.run(paramsBuilder.build());
+    final CoordinatorRunStats stats = runDutyAndGetStats();
 
-    validateStats(
-        new ExpectedStats(10, 1, 10, ImmutableMap.of(DS1, 5L)),
-        runParams.getCoordinatorStats()
-    );
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(5, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
 
-    validateAndResetState(
+    validateLastKillStateAndReset(
         DS1,
-        new Interval(yearOldSegment.getInterval().getStart(), nextDaySegment.getInterval().getEnd())
+        new Interval(YEAR_OLD.getStart(), NEXT_DAY.getEnd())
     );
   }
 
@@ -485,25 +427,26 @@ public class KillUnusedSegmentsTest
   {
     configBuilder.withCoordinatorKillIgnoreDurationToRetain(true);
 
-    setupUnusedSegments();
+    createAndAddUnusedSegment(DS1, YEAR_OLD, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, MONTH_OLD, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, DAY_OLD, NOW.minusDays(2));
+    createAndAddUnusedSegment(DS1, HOUR_OLD, NOW.minusDays(2));
+    createAndAddUnusedSegment(DS1, NEXT_DAY, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, NEXT_MONTH, NOW.minusDays(10));
 
-    final KillUnusedSegments killDuty = new KillUnusedSegments(
-        segmentsMetadataManager,
-        overlordClient,
-        configBuilder.build()
-    );
+    initDuty();
 
-    final DruidCoordinatorRuntimeParams runParams = killDuty.run(paramsBuilder.build());
+    final CoordinatorRunStats stats = runDutyAndGetStats();
 
-    validateStats(
-        new ExpectedStats(10, 1, 10, ImmutableMap.of(DS1, 6L)),
-        runParams.getCoordinatorStats()
-    );
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(6, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
 
     // All past and future unused segments should be killed
-    validateAndResetState(
+    validateLastKillStateAndReset(
         DS1,
-        new Interval(yearOldSegment.getInterval().getStart(), nextMonthSegment.getInterval().getEnd())
+        new Interval(YEAR_OLD.getStart(), NEXT_MONTH.getEnd())
     );
   }
 
@@ -512,87 +455,25 @@ public class KillUnusedSegmentsTest
   {
     configBuilder.withCoordinatorKillMaxSegments(1);
 
-    setupUnusedSegments();
+    createAndAddUnusedSegment(DS1, YEAR_OLD, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, MONTH_OLD, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, DAY_OLD, NOW.minusDays(2));
+    createAndAddUnusedSegment(DS1, HOUR_OLD, NOW.minusDays(2));
+    createAndAddUnusedSegment(DS1, NEXT_DAY, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, NEXT_MONTH, NOW.minusDays(10));
 
-    final KillUnusedSegments killDuty = new KillUnusedSegments(
-        segmentsMetadataManager,
-        overlordClient,
-        configBuilder.build()
-    );
+    initDuty();
 
-    final DruidCoordinatorRuntimeParams runParams = killDuty.run(paramsBuilder.build());
+    final CoordinatorRunStats stats = runDutyAndGetStats();
 
-    validateStats(
-        new ExpectedStats(10, 1, 10, ImmutableMap.of(DS1, 1L)),
-        runParams.getCoordinatorStats()
-    );
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
 
-    validateAndResetState(
+    validateLastKillStateAndReset(
         DS1,
-        yearOldSegment.getInterval()
-    );
-  }
-
-  @Test
-  public void testMultipleRuns()
-  {
-    configBuilder.withCoordinatorKillIgnoreDurationToRetain(true);
-    configBuilder.withCoordinatorKillMaxSegments(2);
-
-    setupUnusedSegments();
-
-    final KillUnusedSegments killDuty = new KillUnusedSegments(
-        segmentsMetadataManager,
-        overlordClient,
-        configBuilder.build()
-    );
-
-    log.info("First run...");
-    final DruidCoordinatorRuntimeParams firstRun = killDuty.run(paramsBuilder.build());
-
-    validateStats(
-        new ExpectedStats(10, 1, 10, ImmutableMap.of(DS1, 2L)),
-        firstRun.getCoordinatorStats()
-    );
-
-    validateAndResetState(
-        DS1,
-        new Interval(
-            yearOldSegment.getInterval().getStart(),
-            monthOldSegment.getInterval().getEnd()
-        )
-    );
-
-    log.info("Second run...");
-    final DruidCoordinatorRuntimeParams secondRun = killDuty.run(paramsBuilder.build());
-
-    validateStats(
-        new ExpectedStats(20, 2, 20, ImmutableMap.of(DS1, 4L)),
-        secondRun.getCoordinatorStats()
-    );
-
-    validateAndResetState(
-        DS1,
-        new Interval(
-            dayOldSegment.getInterval().getStart(),
-            hourOldSegment.getInterval().getEnd()
-        )
-    );
-
-    log.info("Third run...");
-    final DruidCoordinatorRuntimeParams thirdRun = killDuty.run(paramsBuilder.build());
-
-    validateStats(
-        new ExpectedStats(30, 3, 30, ImmutableMap.of(DS1, 6L)),
-        thirdRun.getCoordinatorStats()
-    );
-
-    validateAndResetState(
-        DS1,
-        new Interval(
-            nextDaySegment.getInterval().getStart(),
-            nextMonthSegment.getInterval().getEnd()
-        )
+        YEAR_OLD
     );
   }
 
@@ -607,19 +488,15 @@ public class KillUnusedSegmentsTest
 
     overlordClient.addTask(DS1);
 
-    final KillUnusedSegments killDuty = new KillUnusedSegments(
-        segmentsMetadataManager,
-        overlordClient,
-        configBuilder.build()
-    );
+    initDuty();
 
-    final DruidCoordinatorRuntimeParams runParams = killDuty.run(paramsBuilder.build());
+    final CoordinatorRunStats stats = runDutyAndGetStats();
 
-    validateStats(
-        new ExpectedStats(0, 0, 0, ImmutableMap.of()),
-        runParams.getCoordinatorStats()
-    );
-    validateAndResetState(DS1, null);
+    Assert.assertEquals(0, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(0, stats.get(Stats.Kill.MAX_SLOTS));
+
+    validateLastKillStateAndReset(DS1, null);
   }
 
   @Test
@@ -634,113 +511,90 @@ public class KillUnusedSegmentsTest
     overlordClient.addTask(DS1);
     overlordClient.addTask(DS1);
 
-    final KillUnusedSegments killDuty = new KillUnusedSegments(
-        segmentsMetadataManager,
-        overlordClient,
-        configBuilder.build()
-    );
+    initDuty();
 
-    final DruidCoordinatorRuntimeParams runParams = killDuty.run(paramsBuilder.build());
+    final CoordinatorRunStats stats = runDutyAndGetStats();
 
-    validateStats(
-        new ExpectedStats(0, 0, 3, ImmutableMap.of()),
-        runParams.getCoordinatorStats()
-    );
-    validateAndResetState(DS1, null);
+    Assert.assertEquals(0, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(3, stats.get(Stats.Kill.MAX_SLOTS));
+
+    validateLastKillStateAndReset(DS1, null);
   }
 
   @Test
   public void testKillTaskSlotStats1()
   {
-    final KillUnusedSegments killDuty = new KillUnusedSegments(
-        segmentsMetadataManager,
-        overlordClient,
-        configBuilder.build()
-    );
+    initDuty();
     dynamicConfigBuilder.withKillTaskSlotRatio(1.0);
     dynamicConfigBuilder.withMaxKillTaskSlots(Integer.MAX_VALUE);
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
-    final DruidCoordinatorRuntimeParams runParams = killDuty.run(paramsBuilder.build());
-    validateStats(
-        new ExpectedStats(10, 0, 10, ImmutableMap.of()),
-        runParams.getCoordinatorStats());
+    final CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
   }
 
   @Test
   public void testKillTaskSlotStats2()
   {
-    final KillUnusedSegments killDuty = new KillUnusedSegments(
-        segmentsMetadataManager,
-        overlordClient,
-        configBuilder.build()
-    );
+    initDuty();
     dynamicConfigBuilder.withKillTaskSlotRatio(0.0);
     dynamicConfigBuilder.withMaxKillTaskSlots(Integer.MAX_VALUE);
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
-    final DruidCoordinatorRuntimeParams runParams = killDuty.run(paramsBuilder.build());
-    validateStats(
-        new ExpectedStats(0, 0, 0, ImmutableMap.of()),
-        runParams.getCoordinatorStats()
-    );
+    final CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(0, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(0, stats.get(Stats.Kill.MAX_SLOTS));
   }
 
   @Test
   public void testKillTaskSlotStats3()
   {
-    final KillUnusedSegments killDuty = new KillUnusedSegments(
-        segmentsMetadataManager,
-        overlordClient,
-        configBuilder.build()
-    );
+    initDuty();
     dynamicConfigBuilder.withKillTaskSlotRatio(1.0);
     dynamicConfigBuilder.withMaxKillTaskSlots(0);
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
-    final DruidCoordinatorRuntimeParams runParams = killDuty.run(paramsBuilder.build());
-    validateStats(
-        new ExpectedStats(0, 0, 0, ImmutableMap.of()),
-        runParams.getCoordinatorStats()
-    );
+    final CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(0, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(0, stats.get(Stats.Kill.MAX_SLOTS));
   }
 
   @Test
   public void testKillTaskSlotStats4()
   {
-    final KillUnusedSegments killDuty = new KillUnusedSegments(
-        segmentsMetadataManager,
-        overlordClient,
-        configBuilder.build()
-    );
+    initDuty();
     dynamicConfigBuilder.withKillTaskSlotRatio(0.1);
     dynamicConfigBuilder.withMaxKillTaskSlots(3);
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
-    final DruidCoordinatorRuntimeParams runParams = killDuty.run(paramsBuilder.build());
-    validateStats(
-        new ExpectedStats(1, 0, 1, ImmutableMap.of()),
-        runParams.getCoordinatorStats()
-    );
+    final CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(1, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.MAX_SLOTS));
   }
 
   @Test
   public void testKillTaskSlotStats5()
   {
-    final KillUnusedSegments killDuty = new KillUnusedSegments(
-        segmentsMetadataManager,
-        overlordClient,
-        configBuilder.build()
-    );
+    initDuty();
     dynamicConfigBuilder.withKillTaskSlotRatio(0.3);
     dynamicConfigBuilder.withMaxKillTaskSlots(2);
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
-    final DruidCoordinatorRuntimeParams runParams = killDuty.run(paramsBuilder.build());
-    validateStats(
-        new ExpectedStats(2, 0, 2, ImmutableMap.of()),
-        runParams.getCoordinatorStats()
-    );
+    final CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(2, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.MAX_SLOTS));
   }
 
   @Test
@@ -753,20 +607,15 @@ public class KillUnusedSegmentsTest
     final Interval firstHalfEternity = new Interval(DateTimes.MIN, DateTimes.of("2024"));
     createAndAddUnusedSegment(DS1, firstHalfEternity, sixtyDaysAgo);
 
-    final KillUnusedSegments killDuty = new KillUnusedSegments(
-        segmentsMetadataManager,
-        overlordClient,
-        configBuilder.build()
-    );
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
 
-    final DruidCoordinatorRuntimeParams firstRun = killDuty.run(paramsBuilder.build());
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
 
-    validateStats(
-        new ExpectedStats(10, 1, 10, ImmutableMap.of()),
-        firstRun.getCoordinatorStats()
-    );
-
-    validateAndResetState(DS1, firstHalfEternity);
+    validateLastKillStateAndReset(DS1, firstHalfEternity);
   }
 
   /**
@@ -785,20 +634,15 @@ public class KillUnusedSegmentsTest
 
     createAndAddUnusedSegment(DS1, Intervals.ETERNITY, sixtyDaysAgo);
 
-    final KillUnusedSegments killDuty = new KillUnusedSegments(
-        segmentsMetadataManager,
-        overlordClient,
-        configBuilder.build()
-    );
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
 
-    final DruidCoordinatorRuntimeParams firstRun = killDuty.run(paramsBuilder.build());
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
 
-    validateStats(
-        new ExpectedStats(10, 1, 10, ImmutableMap.of(DS1, 1L)),
-        firstRun.getCoordinatorStats()
-    );
-
-    validateAndResetState(DS1, Intervals.ETERNITY);
+    validateLastKillStateAndReset(DS1, Intervals.ETERNITY);
   }
 
   /**
@@ -821,20 +665,15 @@ public class KillUnusedSegmentsTest
 
     createAndAddUnusedSegment(DS1, secondHalfEternity, sixtyDaysAgo);
 
-    final KillUnusedSegments killDuty = new KillUnusedSegments(
-        segmentsMetadataManager,
-        overlordClient,
-        configBuilder.build()
-    );
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
 
-    final DruidCoordinatorRuntimeParams firstRun = killDuty.run(paramsBuilder.build());
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
 
-    validateStats(
-        new ExpectedStats(10, 1, 10, ImmutableMap.of(DS1, 1L)),
-        firstRun.getCoordinatorStats()
-    );
-
-    validateAndResetState(DS1, secondHalfEternity);
+    validateLastKillStateAndReset(DS1, secondHalfEternity);
   }
 
   private void validateStats(final ExpectedStats expectedStats, final CoordinatorRunStats actualRunStats)
@@ -855,15 +694,12 @@ public class KillUnusedSegmentsTest
     }
   }
 
-  private void validateAndResetState(final String dataSource, @Nullable final Interval expectedKillInterval)
+  private void validateLastKillStateAndReset(final String dataSource, @Nullable final Interval expectedKillInterval)
   {
     final Interval observedLastKillInterval = overlordClient.getLastKillInterval(dataSource);
     final String observedLastKillTaskId = overlordClient.getLastKillTaskId(dataSource);
 
-    Assert.assertEquals(
-        expectedKillInterval,
-        observedLastKillInterval
-    );
+    Assert.assertEquals(expectedKillInterval, observedLastKillInterval);
 
     String expectedKillTaskId = null;
     if (expectedKillInterval != null) {
@@ -874,10 +710,7 @@ public class KillUnusedSegmentsTest
       );
     }
 
-    Assert.assertEquals(
-        expectedKillTaskId,
-        observedLastKillTaskId
-    );
+    Assert.assertEquals(expectedKillTaskId, observedLastKillTaskId);
 
     // Clear the state after validation
     overlordClient.deleteLastKillTaskId(dataSource);
@@ -914,46 +747,7 @@ public class KillUnusedSegmentsTest
     );
   }
 
-  private void setupUnusedSegments()
-  {
-    final DateTime endTime = DateTimes.nowUtc();
-    final DateTime lastUpdatedTime = endTime.minus(Duration.standardDays(1));
-
-    setupUnusedSegments(DS1, endTime, lastUpdatedTime);
-  }
-
-  private void setupUnusedSegments(
-      final String dataSource,
-      final DateTime endTime,
-      final DateTime lastUpdatedTime
-  )
-  {
-    // TODO: maybe move this to setup and have the tests just pass segment and last updated time.
-    final DateTime now = DateTimes.nowUtc();
-
-    yearOldSegment = createSegmentWithEnd(dataSource, now.minusDays(365));
-    monthOldSegment = createSegmentWithEnd(dataSource, now.minusDays(30));
-    dayOldSegment = createSegmentWithEnd(dataSource, now.minusDays(1));
-    hourOldSegment = createSegmentWithEnd(dataSource, now.minusHours(1));
-    nextDaySegment = createSegmentWithEnd(dataSource, now.plusDays(1));
-    nextMonthSegment = createSegmentWithEnd(dataSource, now.plusDays(30));
-
-    DataSegmentPlus plus1 = new DataSegmentPlus(yearOldSegment, now, lastUpdatedTime);
-    DataSegmentPlus plus2 = new DataSegmentPlus(monthOldSegment, now, lastUpdatedTime);
-    DataSegmentPlus plus3 = new DataSegmentPlus(dayOldSegment, now, lastUpdatedTime);
-    DataSegmentPlus plus4 = new DataSegmentPlus(hourOldSegment, now, lastUpdatedTime);
-    DataSegmentPlus plus5 = new DataSegmentPlus(nextDaySegment, now, lastUpdatedTime);
-    DataSegmentPlus plus6 = new DataSegmentPlus(nextMonthSegment, now, lastUpdatedTime);
-
-    segmentsMetadataManager.addUnusedSegment(plus1);
-    segmentsMetadataManager.addUnusedSegment(plus2);
-    segmentsMetadataManager.addUnusedSegment(plus3);
-    segmentsMetadataManager.addUnusedSegment(plus4);
-    segmentsMetadataManager.addUnusedSegment(plus5);
-    segmentsMetadataManager.addUnusedSegment(plus6);
-  }
-
-  private DataSegmentPlus createAndAddUnusedSegment(
+  private void createAndAddUnusedSegment(
       final String dataSource,
       final Interval interval,
       final DateTime lastUpdatedTime
@@ -966,7 +760,17 @@ public class KillUnusedSegmentsTest
         lastUpdatedTime
     );
     segmentsMetadataManager.addUnusedSegment(unusedSegmentPlus);
-    return unusedSegmentPlus;
+  }
+
+  private void initDuty()
+  {
+    killDuty = new KillUnusedSegments(segmentsMetadataManager, overlordClient, configBuilder.build());
+  }
+
+  private CoordinatorRunStats runDutyAndGetStats()
+  {
+    final DruidCoordinatorRuntimeParams params = killDuty.run(paramsBuilder.build());
+    return params.getCoordinatorStats();
   }
 
   private static class ExpectedStats
@@ -994,10 +798,8 @@ public class KillUnusedSegmentsTest
 
     private final Map<String, Interval> observedDatasourceToLastKillInterval = new HashMap<>();
     private final Map<String, String> observedDatasourceToLastKillTaskId = new HashMap<>();
-
-    private int taskIdSuffix = 0;
-
     private final IndexingTotalWorkerCapacityInfo capcityInfo;
+    private int taskIdSuffix = 0;
 
     TestOverlordClient()
     {
@@ -1007,6 +809,11 @@ public class KillUnusedSegmentsTest
     TestOverlordClient(final int currentClusterCapacity, final int maxWorkerCapacity)
     {
       capcityInfo = new IndexingTotalWorkerCapacityInfo(currentClusterCapacity, maxWorkerCapacity);
+    }
+
+    static String getTaskId(final String idPrefix, final String dataSource, final Interval interval)
+    {
+      return idPrefix + "-" + dataSource + "-" + interval;
     }
 
     void addTask(final String datasource)
@@ -1049,15 +856,9 @@ public class KillUnusedSegmentsTest
         @Nullable DateTime maxUsedStatusLastUpdatedTime
     )
     {
-      observedDatasourceToLastKillInterval.put(dataSource, interval);
       final String taskId = getTaskId(idPrefix, dataSource, interval);
+      observedDatasourceToLastKillInterval.put(dataSource, interval);
       observedDatasourceToLastKillTaskId.put(dataSource, taskId);
-      log.info(
-          "Creating taskId[%s] -- Setting kill task interval for ds[%s] : interval[%s]",
-          taskId,
-          dataSource,
-          interval
-      );
       return Futures.immediateFuture(taskId);
     }
 
@@ -1104,11 +905,6 @@ public class KillUnusedSegmentsTest
     void deleteLastKillTaskId(final String dataSource)
     {
       observedDatasourceToLastKillTaskId.remove(dataSource);
-    }
-
-    static String getTaskId(final String idPrefix, final String dataSource, final Interval interval)
-    {
-      return idPrefix + "-" + dataSource + "-" + interval;
     }
   }
 }
