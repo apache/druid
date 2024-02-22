@@ -6985,6 +6985,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @DecoupledTestConfig(nativeQueryIgnore = NativeQueryIgnore.AGG_COL_EXCHANGE)
   @Test
   public void testMultipleExactCountDistinctWithGroupingAndOtherAggregatorsUsingJoin()
   {
@@ -12226,6 +12227,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  // __time >= x remains in the join condition
+  @NotYetSupported(Modes.JOIN_CONDITION_NOT_PUSHED_CONDITION)
   @Test
   public void testRequireTimeConditionPositive3()
   {
