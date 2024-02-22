@@ -19,16 +19,16 @@
 
 package org.apache.druid.sql.calcite.parser;
 
+import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlInsert;
-import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperator;
-import org.apache.calcite.sql.SqlSpecialOperator;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.util.ImmutableNullableList;
+import org.apache.druid.sql.calcite.planner.DruidSqlIngestOperator;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -43,7 +43,7 @@ public class DruidSqlReplace extends DruidSqlIngest
 {
   public static final String SQL_REPLACE_TIME_CHUNKS = "sqlReplaceTimeChunks";
 
-  public static final SqlOperator OPERATOR = new SqlSpecialOperator("REPLACE", SqlKind.OTHER);
+  public static final SqlOperator OPERATOR = DruidSqlIngestOperator.REPLACE_OPERATOR;
 
   private final SqlNode replaceTimeQuery;
 
@@ -51,8 +51,8 @@ public class DruidSqlReplace extends DruidSqlIngest
       @Nonnull SqlInsert insertNode,
       @Nullable SqlGranularityLiteral partitionedBy,
       @Nullable SqlNodeList clusteredBy,
-      @Nullable SqlNode replaceTimeQuery,
-      @Nullable String exportFileFormat
+      @Nullable SqlIdentifier exportFileFormat,
+      @Nullable SqlNode replaceTimeQuery
   )
   {
     return new DruidSqlReplace(
@@ -63,8 +63,8 @@ public class DruidSqlReplace extends DruidSqlIngest
         insertNode.getTargetColumnList(),
         partitionedBy,
         clusteredBy,
-        replaceTimeQuery,
-        exportFileFormat
+        exportFileFormat,
+        replaceTimeQuery
     );
   }
 
@@ -82,8 +82,8 @@ public class DruidSqlReplace extends DruidSqlIngest
       SqlNodeList columnList,
       @Nullable SqlGranularityLiteral partitionedBy,
       @Nullable SqlNodeList clusteredBy,
-      @Nullable SqlNode replaceTimeQuery,
-      @Nullable String exportFileFormat
+      @Nullable SqlIdentifier exportFileFormat,
+      @Nullable SqlNode replaceTimeQuery
   )
   {
     super(
@@ -137,7 +137,7 @@ public class DruidSqlReplace extends DruidSqlIngest
 
     if (getExportFileFormat() != null) {
       writer.keyword("AS");
-      writer.print(getExportFileFormat());
+      writer.print(getExportFileFormat().toString());
       writer.newlineAndIndent();
     }
 
