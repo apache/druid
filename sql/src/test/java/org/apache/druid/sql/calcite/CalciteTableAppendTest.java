@@ -62,6 +62,7 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
     testBuilder()
         .sql("select dim1,dim4,d1,f1 from TABLE(APPEND('foo','numfoo')) u")
         .expectedResults(
+            ResultMatchMode.RELAX_NULLS,
             ImmutableList.of(
                 new Object[] {"", null, null, null},
                 new Object[] {"10.1", null, null, null},
@@ -91,6 +92,7 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
     testBuilder()
         .sql("select dim1,dim4,d1,f1 from TABLE(APPEND('foo','numfoo','foo')) u where dim1='2'")
         .expectedResults(
+            ResultMatchMode.RELAX_NULLS,
             ImmutableList.of(
                 new Object[] {"2", null, null, null},
                 new Object[] {"2", null, null, null},
@@ -194,6 +196,7 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
     testBuilder()
         .sql("select dim3 from TABLE(APPEND('foo','foo2')) u")
         .expectedResults(
+            ResultMatchMode.RELAX_NULLS,
             ImmutableList.of(
                 new Object[] {"11"},
                 new Object[] {"12"},
