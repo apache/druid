@@ -149,6 +149,8 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("killMaxSlots", "killTask/maxSlot/count");
     public static final CoordinatorStat SUBMITTED_TASKS
         = CoordinatorStat.toDebugAndEmit("killTasks", "kill/task/count");
+    public static final CoordinatorStat CANDIDATE_SEGMENTS_KILLED
+        = CoordinatorStat.toDebugAndEmit("killCandidateSegs", "killTask/candidateSegments/count");
     public static final CoordinatorStat PENDING_SEGMENTS
         = CoordinatorStat.toDebugAndEmit("killPendingSegs", "kill/pendingSegments/count");
   }
