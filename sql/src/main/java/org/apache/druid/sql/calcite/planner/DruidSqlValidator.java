@@ -179,12 +179,19 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
 
   public static CalciteContextException buildCalciteContextException(String message, SqlNode call)
   {
+    return buildCalciteContextException(new CalciteException(message, null), message, call);
+  }
+
+  public static CalciteContextException buildCalciteContextException(Throwable t, String message, SqlNode call)
+  {
     SqlParserPos pos = call.getParserPosition();
-    return new CalciteContextException(message,
-        new CalciteException(message, null),
+    return new CalciteContextException(
+        message,
+        t,
         pos.getLineNum(),
         pos.getColumnNum(),
         pos.getEndLineNum(),
-        pos.getEndColumnNum());
+        pos.getEndColumnNum()
+    );
   }
 }

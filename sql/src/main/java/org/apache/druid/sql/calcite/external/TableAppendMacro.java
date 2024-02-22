@@ -43,7 +43,6 @@ import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
 import org.apache.calcite.sql.validate.SqlValidatorTable;
 import org.apache.curator.shaded.com.google.common.collect.ImmutableList;
-import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.UnionDataSource;
@@ -154,13 +153,13 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
     @Override
     public SqlOperandCountRange getOperandCountRange()
     {
-      return SqlOperandCountRanges.from(2);
+      return SqlOperandCountRanges.from(1);
     }
 
     @Override
     public String getAllowedSignatures(SqlOperator op, String opName)
     {
-      return "APPEND( <TABLE_NAME>, <TABLE_NAME>[, <TABLE_NAME> ...] )";
+      return "APPEND( <TABLE_NAME>[, <TABLE_NAME> ...] )";
     }
 
     @Override
@@ -188,7 +187,8 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
   {
     SqlCallBinding callBinding = (SqlCallBinding) operatorBinding;
     SqlValidator validator = callBinding.getValidator();
-    List<RelOptTable> tables = getTables(callBinding, validator.getCatalogReader());
+
+    List<TableOperand> tables = getTables(callBinding, validator.getCatalogReader());
     AppendDatasourceMetadata metadata = buildUnionDataSource(tables);
     return new DatasourceTable(
         metadata.values,
@@ -197,9 +197,41 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
     );
   }
 
-  private List<RelOptTable> getTables(SqlCallBinding callBinding, SqlValidatorCatalogReader catalogReader)
+  static class TableOperand
   {
-    List<RelOptTable> tables = new ArrayList<>();
+    private final SqlNode sqlOperand;
+    private final SqlValidatorTable table;
+
+    public TableOperand(SqlNode sqlOperand, SqlValidatorTable table)
+    {
+      this.sqlOperand = sqlOperand;
+      this.table = table;
+    }
+
+    public RelOptTable getRelOptTable()
+    {
+      return table.unwrapOrThrow(RelOptTable.class);
+    }
+
+    public DatasourceTable getDataSourceTable()
+    {
+      return table.unwrapOrThrow(DatasourceTable.class);
+    }
+
+    public RowSignature getRowSignature()
+    {
+      return getDataSourceTable().getRowSignature();
+    }
+
+    public DataSource getDataSource()
+    {
+      return getDataSourceTable().getDataSource();
+    }
+  }
+
+  private List<TableOperand> getTables(SqlCallBinding callBinding, SqlValidatorCatalogReader catalogReader)
+  {
+    List<TableOperand> tables = new ArrayList<>();
     for (int i = 0; i < callBinding.getOperandCount(); i++) {
       if (!callBinding.isOperandLiteral(i, false)) {
         throw DruidSqlValidator.buildCalciteContextException(
@@ -219,7 +251,7 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
             callBinding.operand(i)
         );
       }
-      tables.add(table.unwrapOrThrow(RelOptTable.class));
+      tables.add(new TableOperand(callBinding.operand(i), table));
     }
     return tables;
   }
@@ -254,13 +286,12 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
     }
   }
 
-  private AppendDatasourceMetadata buildUnionDataSource(List<RelOptTable> tables)
+  private AppendDatasourceMetadata buildUnionDataSource(List<TableOperand> tables)
   {
     List<DataSource> dataSources = new ArrayList<>();
     Map<String, ColumnType> fields = new LinkedHashMap<>();
     Builder rowSignatureBuilder = RowSignature.builder();
-    for (RelOptTable relOptTable : tables) {
-      DatasourceTable table = relOptTable.unwrapOrThrow(DatasourceTable.class);
+    for (TableOperand table : tables) {
       RowSignature rowSignature = table.getRowSignature();
       for (String columnName : rowSignature.getColumnNames()) {
         ColumnType currentType = rowSignature.getColumnType(columnName).get();
@@ -274,21 +305,23 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
             fields.put(columnName, commonType);
           }
           catch (Exception e) {
-            throw InvalidInput.exception(
+            throw DruidSqlValidator.buildCalciteContextException(
                 e,
-                "Can't create TABLE(APPEND()).\n"
-                    + "Conflicting types for column [%s]:\n"
-                    + " - existing type [%s]\n"
-                    + " - new type [%s] from table [%s]",
-                columnName,
-                existingType,
-                currentType,
-                relOptTable.getQualifiedName()
+                StringUtils.format(
+                    "Can't create TABLE(APPEND()).\n"
+                        + "Conflicting types for column [%s]:\n"
+                        + " - existing type [%s]\n"
+                        + " - new type [%s] from table [%s]",
+                    columnName,
+                    existingType,
+                    currentType,
+                    table.getRelOptTable().getQualifiedName()
+                ),
+                table.sqlOperand
             );
           }
         }
       }
-
       dataSources.add(table.getDataSource());
     }
 

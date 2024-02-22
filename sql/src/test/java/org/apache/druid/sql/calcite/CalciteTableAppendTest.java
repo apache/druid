@@ -101,18 +101,36 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testAppendtSingleTableIsInvalid()
+  public void testAppendtSingleTableIsValid()
+  {
+    testBuilder()
+        .sql("select dim1 from TABLE(APPEND('foo')) u")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {""},
+                new Object[] {"10.1"},
+                new Object[] {"2"},
+                new Object[] {"1"},
+                new Object[] {"def"},
+                new Object[] {"abc"}
+            )
+        )
+        .run();
+  }
+
+  @Test
+  public void testAppendtNoTableIsInvalid()
   {
     try {
       testBuilder()
-          .sql("select dim1 from TABLE(APPEND('foo')) u")
+          .sql("select dim1 from TABLE(APPEND()) u")
           .run();
       Assert.fail("query execution should fail");
     }
     catch (DruidException e) {
       MatcherAssert.assertThat(
           e,
-          invalidSqlIs("No match found for function signature APPEND(<CHARACTER>) (line [1], column [24])")
+          invalidSqlIs("No match found for function signature APPEND() (line [1], column [24])")
       );
     }
   }
