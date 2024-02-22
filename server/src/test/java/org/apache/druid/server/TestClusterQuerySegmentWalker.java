@@ -33,6 +33,7 @@ import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -43,6 +44,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.context.ResponseContext.Keys;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
@@ -153,8 +155,12 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
         toolChest.postMergeQueryDecoration(
             toolChest.mergeResults(
                 toolChest.preMergeQueryDecoration(
-                    makeTableRunner(toolChest, factory, getSegmentsForTable(dataSourceName, specs), segmentMapFn)
-                )
+                    (queryPlus, responseContext) -> {
+                      return makeTableRunner(toolChest, factory, getSegmentsForTable(dataSourceName, specs), segmentMapFn)
+                          .run(GroupByQueryRunnerTestHelper.populateResourceId(queryPlus), responseContext);
+                    }
+                ),
+                false
             )
         ),
         toolChest
@@ -167,34 +173,34 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
     // the LocalQuerySegmentWalker constructor instead since this walker does not mimic remote DruidServer objects
     // to actually serve the queries
     return (theQuery, responseContext) -> {
+      QueryPlus<T> newQuery = GroupByQueryRunnerTestHelper.populateResourceId(theQuery);
       responseContext.initializeRemainingResponses();
 
-      String etag = etagProvider.getEtagFor(theQuery.getQuery());
+      String etag = etagProvider.getEtagFor(newQuery.getQuery());
       if (etag != null) {
         responseContext.put(Keys.ETAG, etag);
       }
       responseContext.addRemainingResponse(
-          theQuery.getQuery().getMostSpecificId(), 0);
+          newQuery.getQuery().getMostSpecificId(), 0);
 
       if (scheduler != null) {
         Set<SegmentServerSelector> segments = new HashSet<>();
         specs.forEach(spec -> segments.add(new SegmentServerSelector(spec)));
         return scheduler.run(
-            scheduler.prioritizeAndLaneQuery(theQuery, segments),
+            scheduler.prioritizeAndLaneQuery(newQuery, segments),
             new LazySequence<>(
                 () -> baseRunner.run(
-                    theQuery.withQuery(Queries.withSpecificSegments(
-                        theQuery.getQuery(),
+                    newQuery.withQuery(Queries.withSpecificSegments(
+                        newQuery.getQuery(),
                         ImmutableList.copyOf(specs)
                     )),
                     responseContext
-                    // enrichResponseContextWithMergeBuffers(theQuery, responseContext)
                 )
             )
         );
       } else {
         return baseRunner.run(
-            theQuery.withQuery(Queries.withSpecificSegments(theQuery.getQuery(), ImmutableList.copyOf(specs))),
+            newQuery.withQuery(Queries.withSpecificSegments(newQuery.getQuery(), ImmutableList.copyOf(specs))),
             responseContext
         );
       }

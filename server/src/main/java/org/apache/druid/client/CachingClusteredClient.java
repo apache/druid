@@ -201,14 +201,9 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final boolean specificSegments
   )
   {
-    QueryPlus<T> queryPlus1 = queryPlus.withQuery(
-        queryPlus.getQuery().withOverriddenContext(
-            ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, true)
-        )
-    );
-    final ClusterQueryResult<T> result = new SpecificQueryRunnable<>(queryPlus1, responseContext)
+    final ClusterQueryResult<T> result = new SpecificQueryRunnable<>(queryPlus, responseContext)
         .run(timelineConverter, specificSegments);
-    initializeNumRemainingResponsesInResponseContext(queryPlus1.getQuery(), responseContext, result.numQueryServers);
+    initializeNumRemainingResponsesInResponseContext(queryPlus.getQuery(), responseContext, result.numQueryServers);
     return result.sequence;
   }
 

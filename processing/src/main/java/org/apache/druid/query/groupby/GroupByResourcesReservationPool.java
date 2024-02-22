@@ -23,14 +23,30 @@ import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.Merging;
 
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Reserves the {@link GroupByQueryResources} for a given group by query, mapped to the query's resource ID.
+ * {@link GroupByQueryResources} consists of the merge buffers required for merging results in Brokers and Data Servers
+ */
 public class GroupByResourcesReservationPool
 {
+  /**
+   * Map of query's resource id -> group by resources reserved for the query to execute
+   */
   final ConcurrentHashMap<String, GroupByQueryResources> pool = new ConcurrentHashMap<>();
+
+  /**
+   * Buffer pool from where the merge buffers are picked and reserved
+   */
   final BlockingPool<ByteBuffer> mergeBufferPool;
+
+  /**
+   * Group by query config of the server
+   */
   final GroupByQueryConfig groupByQueryConfig;
 
   @Inject
@@ -43,9 +59,15 @@ public class GroupByResourcesReservationPool
     this.groupByQueryConfig = groupByQueryConfig;
   }
 
-  public void reserve(String uniqueId, GroupByQuery groupByQuery, boolean willMergeRunner)
+  /**
+   * Reserves appropariate resources, and maps it to the queryResourceId (usually the query's resource id) in the internal map
+   */
+  public void reserve(String queryResourceId, GroupByQuery groupByQuery, boolean willMergeRunner)
   {
-    pool.compute(uniqueId, (id, existingResource) -> {
+    if (queryResourceId == null) {
+      throw DruidException.defensive("");
+    }
+    pool.compute(queryResourceId, (id, existingResource) -> {
       if (existingResource != null) {
         throw DruidException.defensive("Resource with the given identifier [%s] is already present", id);
       }
@@ -53,13 +75,21 @@ public class GroupByResourcesReservationPool
     });
   }
 
-  public GroupByQueryResources fetch(String uniqueId)
+  /**
+   * Fetch resources corresponding to the
+   */
+  @Nullable
+  public GroupByQueryResources fetch(String queryResourceId)
   {
-    return pool.get(uniqueId);
+    return pool.get(queryResourceId);
   }
 
-  public void clean(String uniqueId)
+  /**
+   * Removes the entry corresponding to the unique id from the map. It is expected
+   * // TODO(laksh): Close the resource itself to prevent leaking
+   */
+  public void clean(String queryResourceId)
   {
-    pool.remove(uniqueId);
+    pool.remove(queryResourceId);
   }
 }

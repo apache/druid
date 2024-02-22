@@ -21,7 +21,6 @@ package org.apache.druid.server;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import org.apache.commons.lang.StringUtils;
@@ -46,6 +45,7 @@ import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.PostProcessingOperator;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -76,6 +76,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Stack;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -171,7 +172,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   }
 
   @Override
-  public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
+  public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
   {
     final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
 
@@ -184,6 +185,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         query.getId(),
         query.getSqlQueryId()
     ));
+
+    newQuery = populateResourceId(newQuery);
 
     final DataSource freeTradeDataSource = globalizeIfPossible(newQuery.getDataSource());
     // do an inlining dry run to see if any inlining is necessary, without actually running the queries.
@@ -238,16 +241,13 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
           newQuery
       );
     } else if (canRunQueryUsingClusterWalker(newQuery)) {
-      Query<T> queryToRun = newQuery.withOverriddenContext(
-          ImmutableMap.of(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, false)
-      );
       // Note: clusterClient.getQueryRunnerForIntervals() can return an empty sequence if there is no segment
       // to query, but this is not correct when there's a right or full outer join going on.
       // See https://github.com/apache/druid/issues/9229 for details.
       return new QuerySwappingQueryRunner<>(
-          decorateClusterRunner(queryToRun, clusterClient.getQueryRunnerForIntervals(queryToRun, intervals)),
+          decorateClusterRunner(newQuery, clusterClient.getQueryRunnerForIntervals(newQuery, intervals)),
           query,
-          queryToRun
+          newQuery
       );
     } else {
       // We don't expect to ever get here, because the logic earlier in this method should have rejected any query
@@ -257,10 +257,13 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   }
 
   @Override
-  public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs)
+  public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, final Iterable<SegmentDescriptor> specs)
   {
+
     // Inlining isn't done for segments-based queries, but we still globalify the table datasources if possible
-    final Query<T> freeTradeQuery = query.withDataSource(globalizeIfPossible(query.getDataSource()));
+    Query<T> freeTradeQuery = query.withDataSource(globalizeIfPossible(query.getDataSource()));
+
+    freeTradeQuery = populateResourceId(freeTradeQuery);
 
     if (canRunQueryUsingClusterWalker(query)) {
       return new QuerySwappingQueryRunner<>(
@@ -833,6 +836,14 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         }
     );
     return InlineDataSource.fromIterable(resultList, signature);
+  }
+
+  public static <T> Query<T> populateResourceId(Query<T> query)
+  {
+    return query.withOverriddenContext(Collections.singletonMap(
+        QueryContexts.QUERY_RESOURCE_ID,
+        UUID.randomUUID().toString()
+    ));
   }
 
   /**

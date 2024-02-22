@@ -702,17 +702,20 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
   {
     ResponseContext context = ResponseContext.createEmpty();
     QueryToolChest<ResultRow, GroupByQuery> toolChest = groupByFactory.getToolchest();
+    QueryToolChest<ResultRow, GroupByQuery> toolChest2 = groupByFactory2.getToolchest();
     GroupByQuery pushDownQuery = nestedQuery;
     QueryRunner<ResultRow> segment1Runner = new FinalizeResultsQueryRunner<ResultRow>(
         toolChest.mergeResults(
-            groupByFactory.mergeRunners(executorService, getQueryRunnerForSegment1())
+            groupByFactory.mergeRunners(executorService, getQueryRunnerForSegment1()),
+            true
         ),
         (QueryToolChest) toolChest
     );
 
     QueryRunner<ResultRow> segment2Runner = new FinalizeResultsQueryRunner<ResultRow>(
-        toolChest.mergeResults(
-            groupByFactory2.mergeRunners(executorService, getQueryRunnerForSegment2())
+        toolChest2.mergeResults(
+            groupByFactory2.mergeRunners(executorService, getQueryRunnerForSegment2()),
+            true
         ),
         (QueryToolChest) toolChest
     );
@@ -723,14 +726,16 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
                 .simple(
                     ImmutableList.of(
                         Sequences.map(
-                            segment1Runner.run(queryPlus, ResponseContext.createEmpty()),
+                            segment1Runner
+                                .run(GroupByQueryRunnerTestHelper.populateResourceId(queryPlus), responseContext),
                             toolChest.makePreComputeManipulatorFn(
                                 (GroupByQuery) queryPlus.getQuery(),
                                 MetricManipulatorFns.deserializing()
                             )
                         ),
                         Sequences.map(
-                            segment2Runner.run(queryPlus, ResponseContext.createEmpty()),
+                            segment2Runner
+                                 .run(GroupByQueryRunnerTestHelper.populateResourceId(queryPlus), responseContext),
                             toolChest.makePreComputeManipulatorFn(
                                 (GroupByQuery) queryPlus.getQuery(),
                                 MetricManipulatorFns.deserializing()
@@ -738,7 +743,8 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
                         )
                     )
                 )
-                .flatMerge(Function.identity(), queryPlus.getQuery().getResultOrdering())
+                .flatMerge(Function.identity(), queryPlus.getQuery().getResultOrdering()),
+            true
         ),
         (QueryToolChest) toolChest
     );
@@ -750,12 +756,12 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
     ));
     Sequence<ResultRow> pushDownQueryResults = groupingEngine.mergeResults(
         queryRunnerForSegments,
-        queryWithPushDownDisabled,
+        (GroupByQuery) GroupByQueryRunnerTestHelper.populateResourceId(queryWithPushDownDisabled),
         context
     );
 
     return toolChest.mergeResults((queryPlus, responseContext) -> pushDownQueryResults)
-                    .run(QueryPlus.wrap(nestedQuery), context);
+                    .run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(nestedQuery)), context);
   }
 
   @Test

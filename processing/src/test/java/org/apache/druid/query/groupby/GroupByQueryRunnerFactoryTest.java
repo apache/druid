@@ -121,13 +121,13 @@ public class GroupByQueryRunnerFactoryTest
                   }
                 },
                 false
-            ).run(queryPlus, responseContext);
+            ).run(GroupByQueryRunnerTestHelper.populateResourceId(queryPlus), responseContext);
           }
         }
     );
 
     Sequence<ResultRow> result = mergedRunner.run(
-        QueryPlus.wrap(query),
+        QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(query)),
         ResponseContext.createEmpty()
     );
 

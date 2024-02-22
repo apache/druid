@@ -281,7 +281,8 @@ public class GroupByMultiSegmentTest extends InitializedNullHandlingTest
     QueryToolChest<ResultRow, GroupByQuery> toolChest = groupByFactory.getToolchest();
     QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
-            groupByFactory.mergeRunners(executorService, makeGroupByMultiRunners())
+            groupByFactory.mergeRunners(executorService, makeGroupByMultiRunners()),
+            true
         ),
         (QueryToolChest) toolChest
     );
@@ -307,7 +308,10 @@ public class GroupByMultiSegmentTest extends InitializedNullHandlingTest
         .setGranularity(Granularities.ALL)
         .build();
 
-    Sequence<ResultRow> queryResult = theRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
+    Sequence<ResultRow> queryResult = theRunner.run(
+        QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(query)),
+        ResponseContext.createEmpty()
+    );
     List<ResultRow> results = queryResult.toList();
 
     ResultRow expectedRow = GroupByQueryRunnerTestHelper.createExpectedRow(

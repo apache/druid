@@ -190,7 +190,7 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
               final int numMergeBuffers = querySpecificConfig.getNumParallelCombineThreads() > 1 ? 2 : 1;
 
               final List<ReferenceCountingResourceHolder<ByteBuffer>> mergeBufferHolders =
-                  getMergeBuffersHolder(numMergeBuffers);
+                  getMergeBuffersHolder(query, numMergeBuffers);
               resources.registerAll(mergeBufferHolders);
 
               final ReferenceCountingResourceHolder<ByteBuffer> mergeBufferHolder = mergeBufferHolders.get(0);
@@ -310,9 +310,10 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
     );
   }
 
-  private List<ReferenceCountingResourceHolder<ByteBuffer>> getMergeBuffersHolder(int numBuffers)
+  private List<ReferenceCountingResourceHolder<ByteBuffer>> getMergeBuffersHolder(GroupByQuery query, int numBuffers)
   {
-    GroupByQueryResources resource = groupByResourcesReservationPool.fetch("UID");
+    String queryResourceId = query.context().getQueryResourceId();
+    GroupByQueryResources resource = groupByResourcesReservationPool.fetch(queryResourceId);
     if (resource == null) {
       throw DruidException.defensive("Expected merge buffers to be reserved in the reservation pool, however while executing the "
                                      + "GroupByMergingQueryRunnerV2, however none were provided.");

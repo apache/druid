@@ -86,7 +86,7 @@ public class QueryContexts
   public static final String UNCOVERED_INTERVALS_LIMIT_KEY = "uncoveredIntervalsLimit";
   public static final String MIN_TOP_N_THRESHOLD = "minTopNThreshold";
   public static final String WINDOWING_STRICT_VALIDATION = "windowingStrictValidation";
-
+  public static final String QUERY_RESOURCE_ID = "queryResourceId";
 
   // SQL query context keys
   public static final String CTX_SQL_QUERY_ID = BaseQuery.SQL_QUERY_ID;

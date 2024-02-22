@@ -259,8 +259,9 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
     final TestBufferPool bufferPool = TestBufferPool.offHeap(10_000_000, Integer.MAX_VALUE);
     final TestBufferPool bufferPool2 = TestBufferPool.offHeap(10_000_000, Integer.MAX_VALUE);
 
-    final TestBufferPool mergePool = TestBufferPool.offHeap(10_000_000, 1);
-    final TestBufferPool tooSmallMergePool = TestBufferPool.onHeap(255, 1);
+    // Since the test has nested 'mergeResults' calls, we require 2 merge buffers for each mergeResults call.
+    final TestBufferPool mergePool = TestBufferPool.offHeap(10_000_000, 2);
+    final TestBufferPool tooSmallMergePool = TestBufferPool.onHeap(255, 2);
 
     resourceCloser.register(() -> {
       // Verify that all objects have been returned to the pools.
@@ -323,8 +324,14 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
     };
 
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    GroupByResourcesReservationPool groupByResourcesReservationPool = new GroupByResourcesReservationPool(mergePool, config);
-    GroupByResourcesReservationPool tooSmallGroupByResourcesReservationPool = new GroupByResourcesReservationPool(tooSmallMergePool, config);
+    GroupByResourcesReservationPool groupByResourcesReservationPool = new GroupByResourcesReservationPool(
+        mergePool,
+        config
+    );
+    GroupByResourcesReservationPool tooSmallGroupByResourcesReservationPool = new GroupByResourcesReservationPool(
+        tooSmallMergePool,
+        config
+    );
     final GroupingEngine groupingEngine = new GroupingEngine(
         druidProcessingConfig,
         configSupplier,
@@ -380,16 +387,19 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
     // one segment's results use limit push down, the other doesn't because of insufficient buffer capacity
 
     QueryToolChest<ResultRow, GroupByQuery> toolChest = groupByFactory.getToolchest();
+    QueryToolChest<ResultRow, GroupByQuery> tooSmallToolChest = tooSmallGroupByFactory.getToolchest();
     QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
-            groupByFactory.mergeRunners(executorService, getRunner1())
+            groupByFactory.mergeRunners(executorService, getRunner1()),
+            true
         ),
         (QueryToolChest) toolChest
     );
 
     QueryRunner<ResultRow> theRunner2 = new FinalizeResultsQueryRunner<>(
-        toolChest.mergeResults(
-            tooSmallGroupByFactory.mergeRunners(executorService, getRunner2())
+        tooSmallToolChest.mergeResults(
+            tooSmallGroupByFactory.mergeRunners(executorService, getRunner2()),
+            true
         ),
         (QueryToolChest) toolChest
     );
@@ -406,37 +416,22 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
                         ImmutableList.of(
                             Sequences.simple(
                                 theRunner.run(
-                                             queryPlus.withQuery(
-                                                 queryPlus.getQuery().withOverriddenContext(
-                                                     ImmutableMap.of(
-                                                         "NOOP",
-                                                         true
-                                                     )
-                                                 )
-                                             ),
-                                             responseContext
-                                         )
-                                         .toList()
+                                    GroupByQueryRunnerTestHelper.populateResourceId(queryPlus),
+                                    responseContext
+                                ).toList()
                             ),
                             Sequences.simple(
                                 theRunner2.run(
-                                             queryPlus.withQuery(
-                                                 queryPlus.getQuery().withOverriddenContext(
-                                                     ImmutableMap.of(
-                                                         "NOOP",
-                                                         true
-                                                     )
-                                                 )
-                                             ),
-                                             responseContext
-                                         )
-                                         .toList()
+                                    GroupByQueryRunnerTestHelper.populateResourceId(queryPlus),
+                                    responseContext
+                                ).toList()
                             )
                         )
                     )
                     .flatMerge(Function.identity(), queryPlus.getQuery().getResultOrdering());
               }
-            }
+            },
+            true
         ),
         (QueryToolChest) toolChest
     );
@@ -461,9 +456,7 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
         .build();
 
     Sequence<ResultRow> queryResult = theRunner3.run(
-        QueryPlus.wrap(query.withOverriddenContext(
-            ImmutableMap.of("NOOP", false)
-        )),
+        QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(query)),
         ResponseContext.createEmpty()
     );
     List<ResultRow> results = queryResult.toList();
@@ -500,35 +493,17 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
 
     QueryToolChest<ResultRow, GroupByQuery> toolChest = groupByFactory.getToolchest();
     QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<ResultRow>(
-        (queryPlus, responseContext) -> {
-          return toolChest.mergeResults(
-              groupByFactory.mergeRunners(executorService, getRunner1())
-          ).run(
-              queryPlus.withQuery(
-                  queryPlus.getQuery().withOverriddenContext(
-                      ImmutableMap.of("NOOP", true)
-                  )
-              ),
-              responseContext
-          );
-        },
+        (queryPlus, responseContext) -> toolChest.mergeResults(
+            groupByFactory.mergeRunners(executorService, getRunner1())
+        ).run(GroupByQueryRunnerTestHelper.populateResourceId(queryPlus), responseContext),
         (QueryToolChest) toolChest
     );
 
     QueryToolChest<ResultRow, GroupByQuery> tooSmalltoolChest = tooSmallGroupByFactory.getToolchest();
     QueryRunner<ResultRow> theRunner2 = new FinalizeResultsQueryRunner<ResultRow>(
-        (queryPlus, responseContext) -> {
-          return tooSmalltoolChest.mergeResults(
-              tooSmallGroupByFactory.mergeRunners(executorService, getRunner2())
-          ).run(
-              queryPlus.withQuery(
-                  queryPlus.getQuery().withOverriddenContext(
-                      ImmutableMap.of("NOOP", true)
-                  )
-              ),
-              responseContext
-          );
-        },
+        (queryPlus, responseContext) -> tooSmalltoolChest.mergeResults(
+            tooSmallGroupByFactory.mergeRunners(executorService, getRunner2())
+        ).run(GroupByQueryRunnerTestHelper.populateResourceId(queryPlus), responseContext),
         (QueryToolChest) tooSmalltoolChest
     );
 
@@ -548,7 +523,8 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
                     )
                     .flatMerge(Function.identity(), queryPlus.getQuery().getResultOrdering());
               }
-            }
+            },
+            true
         ),
         (QueryToolChest) toolChest
     );
@@ -581,9 +557,7 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
         .build();
 
     Sequence<ResultRow> queryResult = theRunner3.run(
-        QueryPlus.wrap(query.withOverriddenContext(
-            ImmutableMap.of("NOOP", false)
-        )),
+        QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(query)),
         ResponseContext.createEmpty()
     );
     List<ResultRow> results = queryResult.toList();

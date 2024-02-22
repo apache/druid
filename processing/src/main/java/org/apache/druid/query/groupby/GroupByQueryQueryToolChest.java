@@ -175,8 +175,10 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   {
     // .. 1. Historicals, Broker -> Which is using localWalker
     // MerginV2 ->
-    groupByResourcesReservationPool.reserve("UID", query, willMergeRunner);
-    final GroupByQueryResources resource = groupByResourcesReservationPool.fetch("UID");
+    final String queryResourceId = query.context().getQueryResourceId();
+    groupByResourcesReservationPool.reserve(queryResourceId, query, willMergeRunner);
+
+    final GroupByQueryResources resource = groupByResourcesReservationPool.fetch(queryResourceId);
     try {
       final Sequence<ResultRow> mergedSequence = mergeGroupByResults(
           query,
@@ -186,7 +188,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       );
       Closer closer = Closer.create();
       closer.register(resource);
-      closer.register(() -> groupByResourcesReservationPool.clean("UIDl"));
+      closer.register(() -> groupByResourcesReservationPool.clean(queryResourceId));
       return Sequences.withBaggage(mergedSequence, closer);
     }
     catch (Exception e) {

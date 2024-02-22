@@ -1566,11 +1566,8 @@ public class ClientQuerySegmentWalkerTest
                     .put(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, true)
                     .put(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, true)
                     .put(GroupingEngine.CTX_KEY_OUTERMOST, true)
-                    .put(GroupingEngine.CTX_KEY_FUDGE_TIMESTAMP, "1979");
-
-      if (how == ClusterOrLocal.CLUSTER) {
-        contextBuilder.put(GroupByUtils.CTX_KEY_RUNNER_MERGES_USING_GROUP_BY_MERGING_QUERY_RUNNER_V2, false);
-      }
+                    .put(GroupingEngine.CTX_KEY_FUDGE_TIMESTAMP, "1979")
+                    .put(QueryContexts.QUERY_RESOURCE_ID, "dummy");
 
       modifiedQuery = query.withOverriddenContext(contextBuilder.build());
 

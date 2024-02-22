@@ -55,7 +55,6 @@ import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.TestBufferPool;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.query.context.ConcurrentResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
@@ -680,8 +679,8 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
                 return Sequences
                     .simple(
                         ImmutableList.of(
-                            theRunner.run(queryPlus, ConcurrentResponseContext.createEmpty()),
-                            theRunner2.run(queryPlus, ConcurrentResponseContext.createEmpty())
+                            theRunner.run(GroupByQueryRunnerTestHelper.populateResourceId(queryPlus), responseContext),
+                            theRunner2.run(GroupByQueryRunnerTestHelper.populateResourceId(queryPlus), responseContext)
                         )
                     )
                     .flatMerge(Function.identity(), queryPlus.getQuery().getResultOrdering());
@@ -746,7 +745,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
         .build();
 
     Sequence<ResultRow> queryResult = finalRunner.run(
-        QueryPlus.wrap(query),
+        QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(query)),
         ResponseContext.createEmpty()
     );
     List<ResultRow> results = queryResult.toList();
@@ -826,8 +825,8 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
                 return Sequences
                     .simple(
                         ImmutableList.of(
-                            theRunner.run(queryPlus, responseContext),
-                            theRunner2.run(queryPlus, responseContext)
+                            theRunner.run(GroupByQueryRunnerTestHelper.populateResourceId(queryPlus), responseContext),
+                            theRunner2.run(GroupByQueryRunnerTestHelper.populateResourceId(queryPlus), responseContext)
                         )
                     )
                     .flatMerge(Function.identity(), queryPlus.getQuery().getResultOrdering());
@@ -880,7 +879,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
         .build();
 
     Sequence<ResultRow> queryResult = finalRunner.run(
-        QueryPlus.wrap(query),
+        QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(query)),
         ResponseContext.createEmpty()
     );
     List<ResultRow> results = queryResult.toList();
@@ -964,7 +963,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
         (QueryToolChest) toolChestHistorical2
     );
 
-    QueryToolChest<ResultRow, GroupByQuery> toolchestBroker = groupByFactoryHistorical2.getToolchest();
+    QueryToolChest<ResultRow, GroupByQuery> toolchestBroker = groupByFactoryBroker.getToolchest();
     QueryRunner<ResultRow> finalRunner = new FinalizeResultsQueryRunner<>(
         toolchestBroker.mergeResults(
             new QueryRunner<ResultRow>()
@@ -975,8 +974,8 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
                 return Sequences
                     .simple(
                         ImmutableList.of(
-                            theRunner.run(queryPlus, responseContext),
-                            theRunner2.run(queryPlus, responseContext)
+                            theRunner.run(GroupByQueryRunnerTestHelper.populateResourceId(queryPlus), responseContext),
+                            theRunner2.run(GroupByQueryRunnerTestHelper.populateResourceId(queryPlus), responseContext)
                         )
                     )
                     .flatMerge(Function.identity(), queryPlus.getQuery().getResultOrdering());
@@ -1012,7 +1011,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
         .build();
 
     Sequence<ResultRow> queryResult = finalRunner.run(
-        QueryPlus.wrap(query),
+        QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(query)),
         ResponseContext.createEmpty()
     );
     return queryResult.toList();

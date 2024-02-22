@@ -3757,7 +3757,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 )
             );
           }
-        }
+        },
+        true
     );
 
     List<ResultRow> expectedResults = Arrays.asList(
@@ -3772,7 +3773,10 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         makeRow(fullQuery, "2011-04-01", "alias", "travel", "rows", 2L, "idx", 243L)
     );
 
-    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(fullQuery)), "merged");
+    TestHelper.assertExpectedObjects(
+        expectedResults,
+        mergedRunner.run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(fullQuery))), "merged"
+    );
 
     List<ResultRow> allGranExpectedResults = Arrays.asList(
         makeRow(allGranQuery, "2011-04-02", "alias", "automotive", "rows", 2L, "idx", 269L),
@@ -3788,7 +3792,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     TestHelper.assertExpectedObjects(
         allGranExpectedResults,
-        mergedRunner.run(QueryPlus.wrap(allGranQuery)),
+        mergedRunner.run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(allGranQuery))),
         "merged"
     );
   }
@@ -3912,7 +3916,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     TestHelper.assertExpectedObjects(
         Iterables.limit(Iterables.skip(expectedResults, offset), limit),
-        mergeRunner.run(QueryPlus.wrap(fullQuery)),
+        mergeRunner.run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(fullQuery))),
         StringUtils.format("limit: %d", limit)
     );
   }
@@ -3950,11 +3954,11 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         makeRow(fullQuery, "2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L)
     );
 
-    QueryRunner<ResultRow> mergeRunner = factory.getToolchest().mergeResults(runner);
+    QueryRunner<ResultRow> mergeRunner = factory.getToolchest().mergeResults(runner, true);
 
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, limit),
-        mergeRunner.run(QueryPlus.wrap(fullQuery)),
+        mergeRunner.run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(fullQuery))),
         StringUtils.format("limit: %d", limit)
     );
   }
@@ -4004,7 +4008,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, limit),
-        mergeRunner.run(QueryPlus.wrap(fullQuery)),
+        mergeRunner.run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(fullQuery))),
         StringUtils.format("limit: %d", limit)
     );
   }
@@ -4105,11 +4109,16 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 )
             );
           }
-        }
+        },
+        true
     );
 
     final GroupByQuery query = baseQuery.withLimitSpec(limitSpec);
-    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(query)), "merged");
+    TestHelper.assertExpectedObjects(
+        expectedResults,
+        mergedRunner.run(GroupByQueryRunnerTestHelper.populateResourceId(QueryPlus.wrap(query))),
+        "merged"
+    );
   }
 
   @Test
@@ -4138,12 +4147,18 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         makeRow(query, "2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L)
     );
 
-    QueryRunner<ResultRow> mergeRunner = factory.getToolchest().mergeResults(runner);
-    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query)), "no-limit");
+    QueryRunner<ResultRow> mergeRunner = factory.getToolchest().mergeResults(runner, true);
+    TestHelper.assertExpectedObjects(
+        expectedResults,
+        mergeRunner.run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(query))),
+        "no-limit"
+    );
 
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, 5),
-        mergeRunner.run(QueryPlus.wrap(builder.setLimit(5).build())),
+        mergeRunner.run(QueryPlus.wrap(builder.setLimit(5)
+                                              .overrideContext(GroupByQueryRunnerTestHelper.defaultResourceIdMap())
+                                              .build())),
         "limited"
     );
 
@@ -4231,10 +4246,16 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     );
 
     QueryRunner<ResultRow> mergeRunner = factory.getToolchest().mergeResults(runner);
-    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query)), "no-limit");
+    TestHelper.assertExpectedObjects(
+        expectedResults,
+        mergeRunner.run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(query))),
+        "no-limit"
+    );
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, 5),
-        mergeRunner.run(QueryPlus.wrap(builder.setLimit(5).build())),
+        mergeRunner.run(QueryPlus.wrap(builder.setLimit(5)
+                                              .overrideContext(GroupByQueryRunnerTestHelper.defaultResourceIdMap())
+                                              .build())),
         "limited"
     );
   }
@@ -4268,10 +4289,16 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     );
 
     QueryRunner<ResultRow> mergeRunner = factory.getToolchest().mergeResults(runner);
-    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query)), "no-limit");
+    TestHelper.assertExpectedObjects(
+        expectedResults,
+        mergeRunner.run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(query))),
+        "no-limit"
+    );
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, 5),
-        mergeRunner.run(QueryPlus.wrap(builder.setLimit(5).build())),
+        mergeRunner.run(QueryPlus.wrap(builder.setLimit(5)
+                                              .overrideContext(GroupByQueryRunnerTestHelper.defaultResourceIdMap())
+                                              .build())),
         "limited"
     );
   }
@@ -4311,10 +4338,16 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     );
 
     QueryRunner<ResultRow> mergeRunner = factory.getToolchest().mergeResults(runner);
-    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query)), "no-limit");
+    TestHelper.assertExpectedObjects(
+        expectedResults,
+        mergeRunner.run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(query))),
+        "no-limit"
+    );
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, 5),
-        mergeRunner.run(QueryPlus.wrap(builder.setLimit(5).build())),
+        mergeRunner.run(QueryPlus.wrap(builder.setLimit(5)
+                                              .overrideContext(GroupByQueryRunnerTestHelper.defaultResourceIdMap())
+                                              .build())),
         "limited"
     );
   }
@@ -4869,10 +4902,15 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 )
             );
           }
-        }
+        },
+        true
     );
 
-    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(fullQuery)), "merged");
+    TestHelper.assertExpectedObjects(
+        expectedResults,
+        mergedRunner.run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(fullQuery))),
+        "merged"
+    );
   }
 
   @Test
@@ -5317,7 +5355,11 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         }
     );
 
-    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(fullQuery)), "merged");
+    TestHelper.assertExpectedObjects(
+        expectedResults,
+        mergedRunner.run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(fullQuery))),
+        "merged"
+    );
   }
 
   @Test
@@ -5409,20 +5451,9 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 (queryPlus, responseContext) ->
                     factory.getToolchest()
                            .preMergeQueryDecoration(mergedRunner)
-                           .run(
-                               queryPlus.withQuery(
-                                   queryPlus.getQuery().withOverriddenContext(
-                                       ImmutableMap.of("NOOP", true)
-                                   )
-                               ),
-                               responseContext
-                           )
+                           .run(GroupByQueryRunnerTestHelper.populateResourceId(queryPlus), responseContext)
             )
-        ).run(QueryPlus.wrap(
-            query.withOverriddenContext(
-                ImmutableMap.of("NOOP", false)
-            )
-        )),
+        ).run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(query))),
         "merged"
     );
 
@@ -5433,20 +5464,9 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 (queryPlus, responseContext) ->
                     factory.getToolchest()
                            .preMergeQueryDecoration(mergedRunner)
-                           .run(
-                               queryPlus.withQuery(
-                                   queryPlus.getQuery().withOverriddenContext(
-                                       ImmutableMap.of("NOOP", true)
-                                   )
-                               ),
-                               responseContext
-                           )
+                           .run(GroupByQueryRunnerTestHelper.populateResourceId(queryPlus), responseContext)
             )
-        ).run(QueryPlus.wrap(
-            expressionQuery.withOverriddenContext(
-                ImmutableMap.of("NOOP", false)
-            )
-        )),
+        ).run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(expressionQuery))),
         "merged"
     );
   }
@@ -5508,8 +5528,12 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         makeRow(query, "2011-04-01", "quality", "automotive", "rows", 2L)
     );
 
-    QueryRunner<ResultRow> mergeRunner = factory.getToolchest().mergeResults(runner);
-    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query)), "no-limit");
+    QueryRunner<ResultRow> mergeRunner = factory.getToolchest().mergeResults(runner, true);
+    TestHelper.assertExpectedObjects(
+        expectedResults,
+        mergeRunner.run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(query))),
+        "no-limit"
+    );
   }
 
   @Test
@@ -5563,8 +5587,12 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         makeRow(query, "2011-04-01", "billy", null, "quality", "travel", "rows", 2L)
     );
 
-    QueryRunner<ResultRow> mergeRunner = factory.getToolchest().mergeResults(runner);
-    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query)), "no-limit");
+    QueryRunner<ResultRow> mergeRunner = factory.getToolchest().mergeResults(runner, true);
+    TestHelper.assertExpectedObjects(
+        expectedResults,
+        mergeRunner.run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(query))),
+        "no-limit"
+    );
   }
 
   // A subquery identical to the query should yield identical results
@@ -11183,7 +11211,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                       )
                   )
               )
-          ).run(queryPlus, ResponseContext.createEmpty());
+          ).run(GroupByQueryRunnerTestHelper.populateResourceId(queryPlus), ResponseContext.createEmpty());
         }
     );
     List<ResultRow> allGranExpectedResults = Arrays.asList(
@@ -11198,7 +11226,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     TestHelper.assertExpectedObjects(
         allGranExpectedResults,
-        mergedRunner.run(QueryPlus.wrap(allGranQuery)),
+        mergedRunner.run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(allGranQuery))),
         "merged"
     );
   }
@@ -11250,18 +11278,10 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                         )
                     )
                 )
-            ).run(
-                queryPlus.withQuery(
-                    queryPlus.getQuery().withOverriddenContext(
-                        ImmutableMap.of("NOOP", true)
-                    )
-                ),
-                responseContext
-            );
+            ).run(GroupByQueryRunnerTestHelper.populateResourceId(queryPlus), responseContext);
           }
         }
     );
-    Map<String, Object> context = new HashMap<>();
     List<ResultRow> allGranExpectedResults = Arrays.asList(
         makeRow(allGranQuery, "2011-04-02", "alias", "travel", "rows", 2L, "idx", 243L),
         makeRow(allGranQuery, "2011-04-02", "alias", "technology", "rows", 2L, "idx", 177L),
@@ -11272,9 +11292,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     TestHelper.assertExpectedObjects(
         allGranExpectedResults,
-        mergedRunner.run(QueryPlus.wrap(allGranQuery.withOverriddenContext(
-            ImmutableMap.of("NOOP", false)
-        ))),
+        mergedRunner.run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(allGranQuery))),
         "merged"
     );
   }
@@ -11326,16 +11344,10 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                         )
                     )
                 )
-            ).run(
-                queryPlus.withQuery(
-                    queryPlus.getQuery().withOverriddenContext(
-                        ImmutableMap.of("NOOP", true)
-                    )
-                ),
-                responseContext
-            );
+            ).run(GroupByQueryRunnerTestHelper.populateResourceId(queryPlus), responseContext);
           }
-        }
+        },
+        true
     );
 
     List<ResultRow> allGranExpectedResults = Arrays.asList(
@@ -11347,11 +11359,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     );
 
     Iterable<ResultRow> results =
-        mergedRunner.run(
-            QueryPlus.wrap(allGranQuery.withOverriddenContext(
-                ImmutableMap.of("NOOP", false)
-            ))
-        ).toList();
+        mergedRunner.run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(allGranQuery))).toList();
     TestHelper.assertExpectedObjects(allGranExpectedResults, results, "merged");
   }
 
@@ -11393,7 +11401,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 )
             );
 
-            return factory.getToolchest().mergeResults(
+            return Sequences.simple(factory.getToolchest().mergeResults(
                 (queryPlus3, responseContext1) -> new MergeSequence<>(
                     queryPlus3.getQuery().getResultOrdering(),
                     Sequences.simple(
@@ -11405,12 +11413,10 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                 )
             ).run(
                 queryPlus.withQuery(
-                    queryPlus.getQuery().withOverriddenContext(
-                        ImmutableMap.of("NOOP", true)
-                    )
+                    GroupByQueryRunnerTestHelper.populateResourceId(queryPlus.getQuery())
                 ),
                 responseContext
-            );
+            ).toList());
           }
         }
     );
@@ -11421,7 +11427,9 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         makeRow(allGranQuery, "2011-04-02", "alias", "travel", "rows", 2L, "idx", 243L)
     );
 
-    Iterable<ResultRow> results = mergedRunner.run(QueryPlus.wrap(allGranQuery)).toList();
+    Iterable<ResultRow> results = mergedRunner.run(
+         QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(allGranQuery))
+    ).toList();
     TestHelper.assertExpectedObjects(allGranExpectedResults, results, "merged");
   }
 
@@ -11477,14 +11485,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                         )
                     )
                 )
-            ).run(
-                queryPlus.withQuery(
-                    queryPlus.getQuery().withOverriddenContext(
-                        ImmutableMap.of("NOOP", true)
-                    )
-                ),
-                responseContext
-            );
+            ).run(GroupByQueryRunnerTestHelper.populateResourceId(queryPlus), responseContext);
           }
         }
     );
@@ -11498,11 +11499,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     );
 
     Iterable<ResultRow> results =
-        mergedRunner.run(
-                        QueryPlus.wrap(allGranQuery.withOverriddenContext(
-                            ImmutableMap.of("NOOP", false)
-                        ))
-                    )
+        mergedRunner.run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(allGranQuery)))
                     .toList();
     TestHelper.assertExpectedObjects(allGranExpectedResults, results, "merged");
   }
@@ -11572,14 +11569,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
                         )
                     )
                 )
-            ).run(
-                queryPlus.withQuery(
-                    queryPlus.getQuery().withOverriddenContext(
-                        ImmutableMap.of("NOOP", true)
-                    )
-                ),
-                responseContext
-            );
+            ).run(GroupByQueryRunnerTestHelper.populateResourceId(queryPlus), responseContext);
           }
         }
     );
@@ -11593,11 +11583,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     );
 
     Iterable<ResultRow> results =
-        mergedRunner.run(
-            QueryPlus.wrap(allGranQuery.withOverriddenContext(
-                ImmutableMap.of("NOOP", false)
-            ))
-        ).toList();
+        mergedRunner.run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(allGranQuery))).toList();
     TestHelper.assertExpectedObjects(allGranExpectedResults, results, "merged");
   }
 
