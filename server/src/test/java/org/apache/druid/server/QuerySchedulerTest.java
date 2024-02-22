@@ -58,6 +58,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.having.HavingSpec;
 import org.apache.druid.query.topn.TopNQuery;
@@ -794,7 +795,9 @@ public class QuerySchedulerTest
             .mergeResults(true)
             .applyPostMergeDecoration();
 
-        final int actualNumRows = consumeAndCloseSequence(runner.run(QueryPlus.wrap(query)));
+        final int actualNumRows = consumeAndCloseSequence(
+            runner.run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(query)))
+        );
         Assert.assertEquals(actualNumRows, numRows);
       }
       catch (IOException ex) {
