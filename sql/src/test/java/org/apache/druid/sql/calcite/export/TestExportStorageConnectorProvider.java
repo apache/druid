@@ -43,4 +43,10 @@ public class TestExportStorageConnectorProvider implements ExportStorageProvider
   {
     return "testExport";
   }
+
+  @Override
+  public String getFilePathForManifest(String fileName)
+  {
+    return "testExport:" + fileName;
+  }
 }

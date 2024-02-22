@@ -31,7 +31,6 @@ import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.msq.counters.ChannelCounters;
@@ -51,7 +50,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class ExportResultsFrameProcessor implements FrameProcessor<Object>
+public class ExportResultsFrameProcessor implements FrameProcessor<String>
 {
   private final ReadableFrameChannel inputChannel;
   private final ResultFormat exportFormat;
@@ -93,14 +92,14 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
   }
 
   @Override
-  public ReturnOrAwait<Object> runIncrementally(IntSet readableInputs) throws IOException
+  public ReturnOrAwait<String> runIncrementally(IntSet readableInputs) throws IOException
   {
     if (readableInputs.isEmpty()) {
       return ReturnOrAwait.awaitAll(1);
     }
 
     if (inputChannel.isFinished()) {
-      return ReturnOrAwait.returnObject(Unit.instance());
+      return ReturnOrAwait.returnObject(exportFilePath);
     } else {
       exportFrame(inputChannel.read());
       return ReturnOrAwait.awaitAll(1);

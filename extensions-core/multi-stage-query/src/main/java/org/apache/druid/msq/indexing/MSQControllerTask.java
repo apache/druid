@@ -50,6 +50,7 @@ import org.apache.druid.msq.exec.ControllerImpl;
 import org.apache.druid.msq.exec.MSQTasks;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
+import org.apache.druid.msq.indexing.destination.ExportMSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
@@ -284,6 +285,11 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery
   public static boolean isIngestion(final MSQSpec querySpec)
   {
     return querySpec.getDestination() instanceof DataSourceMSQDestination;
+  }
+
+  public static boolean isExport(final MSQSpec querySpec)
+  {
+    return querySpec.getDestination() instanceof ExportMSQDestination;
   }
 
   /**
