@@ -42,6 +42,7 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryQueryToolChest;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
+import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -67,6 +68,9 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
   public void setup() throws IOException
   {
     final IncrementalIndex incrementalIndex = MapVirtualColumnTestBase.generateIndex();
+    final GroupByQueryConfig config = new GroupByQueryConfig();
+    final GroupByResourcesReservationPool groupByResourcesReservationPool =
+        new GroupByResourcesReservationPool(new DefaultBlockingPool<>(() -> ByteBuffer.allocate(1024), 1), config);
     final GroupingEngine groupingEngine = new GroupingEngine(
         new DruidProcessingConfig()
         {
@@ -94,8 +98,9 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
             return 1;
           }
         },
-        GroupByQueryConfig::new,
+        () -> config,
         new StupidPool<>("map-virtual-column-groupby-test", () -> ByteBuffer.allocate(1024)),
+        groupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         new DefaultObjectMapper(),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
@@ -103,7 +108,7 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
 
     final GroupByQueryRunnerFactory factory = new GroupByQueryRunnerFactory(
         groupingEngine,
-        new GroupByQueryQueryToolChest(groupingEngine, new DefaultBlockingPool<>(() -> ByteBuffer.allocate(1024), 1))
+        new GroupByQueryQueryToolChest(groupingEngine, groupByResourcesReservationPool)
     );
 
     runner = QueryRunnerTestHelper.makeQueryRunner(
