@@ -35,6 +35,7 @@ import org.apache.druid.sql.calcite.planner.querygen.InputDescProducer.InputDesc
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery.Stage;
+import org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -61,9 +62,10 @@ public class DruidQueryGenerator
     return vertex.buildQuery(true);
   }
 
-  private Vertex buildVertexFor(RelNode node, boolean isRoot)
+  private Vertex buildVertexFor(RelNode relNode, boolean isRoot)
   {
     List<Vertex> newInputs = new ArrayList<>();
+    DruidLogicalNode node = (DruidLogicalNode) relNode;
     for (RelNode input : node.getInputs()) {
       newInputs.add(buildVertexFor(input, false));
     }
@@ -71,8 +73,7 @@ public class DruidQueryGenerator
     return vertex;
   }
 
-  // FIXME: RelNode => DruidLogicalNode
-  private Vertex processNodeWithInputs(RelNode node, List<Vertex> newInputs, boolean isRoot)
+  private Vertex processNodeWithInputs(DruidLogicalNode node, List<Vertex> newInputs, boolean isRoot)
   {
     if (node instanceof InputDescProducer) {
       return vertexFactory.createVertex(PartialDruidQuery.create(node), newInputs);
