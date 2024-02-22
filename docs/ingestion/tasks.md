@@ -83,7 +83,7 @@ An example output is shown below:
       },
       "segmentAvailabilityConfirmed": false,
       "segmentAvailabilityWaitTimeMs": 0,
-      "partitionStats": {
+      "recordsProcessed": {
         "partition-a": 5789
       },
       "errorMsg": null

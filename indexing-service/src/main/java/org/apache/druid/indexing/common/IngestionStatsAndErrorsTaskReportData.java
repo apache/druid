@@ -137,7 +137,7 @@ public class IngestionStatsAndErrorsTaskReportData
            Objects.equals(getErrorMsg(), that.getErrorMsg()) &&
            Objects.equals(isSegmentAvailabilityConfirmed(), that.isSegmentAvailabilityConfirmed()) &&
            Objects.equals(getSegmentAvailabilityWaitTimeMs(), that.getSegmentAvailabilityWaitTimeMs()) &&
-           Objects.equals(getPartitionStats(), that.getPartitionStats());
+           Objects.equals(getRecordsProcessed(), that.getRecordsProcessed());
   }
 
   @Override
@@ -150,7 +150,7 @@ public class IngestionStatsAndErrorsTaskReportData
         getErrorMsg(),
         isSegmentAvailabilityConfirmed(),
         getSegmentAvailabilityWaitTimeMs(),
-        getPartitionStats()
+        getRecordsProcessed()
     );
   }
 
@@ -164,7 +164,7 @@ public class IngestionStatsAndErrorsTaskReportData
            ", errorMsg='" + errorMsg + '\'' +
            ", segmentAvailabilityConfoirmed=" + segmentAvailabilityConfirmed +
            ", segmentAvailabilityWaitTimeMs=" + segmentAvailabilityWaitTimeMs +
-           ", partitionStats=" + partitionStats +
+           ", recordsProcessed=" + recordsProcessed +
            '}';
   }
 }
