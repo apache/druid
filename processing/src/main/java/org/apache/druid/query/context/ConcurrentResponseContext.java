@@ -21,7 +21,6 @@ package org.apache.druid.query.context;
 
 import org.apache.druid.guice.annotations.PublicApi;
 
-import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -31,34 +30,16 @@ import java.util.concurrent.ConcurrentHashMap;
 @PublicApi
 public class ConcurrentResponseContext extends ResponseContext
 {
-
-  private final ConcurrentHashMap<Key, Object> delegate;
-
-  private ConcurrentResponseContext()
-  {
-    this(Collections.emptyMap());
-  }
-
-  private ConcurrentResponseContext(final Map<Key, Object> delegate)
-  {
-    this.delegate = new ConcurrentHashMap<>(delegate);
-  }
-
   public static ConcurrentResponseContext createEmpty()
   {
     return new ConcurrentResponseContext();
   }
 
+  private final ConcurrentHashMap<Key, Object> delegate = new ConcurrentHashMap<>();
 
   @Override
   protected Map<Key, Object> getDelegate()
   {
     return delegate;
-  }
-
-  @Override
-  public ResponseContext clone()
-  {
-    return new ConcurrentResponseContext(delegate);
   }
 }
