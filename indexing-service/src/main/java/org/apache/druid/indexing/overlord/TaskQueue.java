@@ -672,7 +672,9 @@ public class TaskQueue
     // Save status to metadata store first, so if we crash while doing the rest of the shutdown, our successor
     // remembers that this task has completed.
     try {
-      final Optional<TaskStatus> previousStatus = getTaskStatus(task.getId());
+      //The code block is only called when a task completes,
+      //and we need to check to make sure the metadata store has the correct status stored.
+      final Optional<TaskStatus> previousStatus = taskStorage.getStatus(task.getId());
       if (!previousStatus.isPresent() || !previousStatus.get().isRunnable()) {
         log.makeAlert("Ignoring notification for already-complete task").addData("task", task.getId()).emit();
       } else {
