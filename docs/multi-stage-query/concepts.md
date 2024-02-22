@@ -115,6 +115,14 @@ When deciding whether to use `REPLACE` or `INSERT`, keep in mind that segments g
 with dimension-based pruning but those generated with `INSERT` cannot. For more information about the requirements
 for dimension-based pruning, see [Clustering](#clustering).
 
+### Write to an external destination with `EXTERN`
+
+Query tasks can write data to an external destination through the `EXTERN` function, when it is used with the `INTO`
+clause, such as `INSERT INTO EXTERN(...)`. The EXTERN function takes arguments that specify where to write the files.
+The format can be specified using an `AS` clause.
+
+For more information about the syntax, see [`EXTERN`](./reference.md#extern-function).
+
 ### Primary timestamp
 
 Druid tables always include a primary timestamp named `__time`.

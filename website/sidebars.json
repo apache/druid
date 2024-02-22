@@ -25,7 +25,6 @@
       "tutorials/tutorial-sql-query-view",
       "tutorials/tutorial-unnest-arrays",
       "tutorials/tutorial-query-deep-storage",
-      "tutorials/tutorial-jupyter-index",
       "tutorials/tutorial-jdbc"
     ],
     "Design": [
@@ -80,10 +79,10 @@
         "type": "category",
         "label": "Streaming",
         "items": [
-          "development/extensions-core/kafka-ingestion",
-          "development/extensions-core/kafka-supervisor-reference",
-          "development/extensions-core/kafka-supervisor-operations",
-          "development/extensions-core/kinesis-ingestion"
+          "ingestion/streaming",
+          "ingestion/supervisor",
+          "ingestion/kafka-ingestion",
+          "ingestion/kinesis-ingestion"
         ]
       },
       {
