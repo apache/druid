@@ -498,7 +498,7 @@ export const KAFKA_METADATA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     label: 'Kafka header format type',
     type: 'string',
     defined: typeIsKnown(KNOWN_TYPES, 'kafka'),
-    placeholder: `(don't parse Kafka herders)`,
+    placeholder: `(don't parse Kafka headers)`,
     suggestions: [undefined, 'string'],
   },
   {
