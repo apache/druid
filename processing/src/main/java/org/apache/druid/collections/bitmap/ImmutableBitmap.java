@@ -81,7 +81,7 @@ public interface ImmutableBitmap
   ImmutableBitmap intersection(ImmutableBitmap otherBitmap);
 
   /**
-   * Compute the bitwise-and of this bitmap with another bitmap. A new bitmap is generated.
+   * Compute the bitwise-or of this bitmap with another bitmap. A new bitmap is generated.
    *
    * Note that the other bitmap should be of the same class instance.
    *
