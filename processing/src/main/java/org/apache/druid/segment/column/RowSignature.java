@@ -397,7 +397,6 @@ public class RowSignature implements ColumnInspector
    * Builds a safe {@link RowSignature}.
    *
    * The new rowsignature will not contain `null` types - they will be replaced by STRING.
-   * @param scanColumnsList
    */
   public RowSignature buildSafeSignature(ImmutableList<String> requestedColumnNames)
   {
