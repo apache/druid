@@ -35,6 +35,7 @@ import org.apache.druid.sql.calcite.planner.querygen.SourceDescProducer.SourceDe
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery.Stage;
+import org.apache.druid.sql.calcite.rel.logical.DruidAggregate;
 import org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode;
 
 import java.util.ArrayList;
@@ -232,7 +233,7 @@ public class DruidQueryGenerator
           PartialDruidQuery newPartialQuery = partialDruidQuery.withAggregate((Aggregate) parentNode);
           return Optional.of(newPartialQuery);
         }
-        if (accepts(stack, Stage.AGGREGATE_PROJECT, Project.class) && isRoot) {
+        if (accepts(stack, Stage.AGGREGATE_PROJECT, Project.class) ) {
           PartialDruidQuery newPartialQuery = partialDruidQuery.withAggregateProject((Project) parentNode);
           return Optional.of(newPartialQuery);
         }
@@ -259,9 +260,20 @@ public class DruidQueryGenerator
         return Optional.empty();
       }
 
-      private boolean accepts(Stack<DruidLogicalNode> stack, Stage whereFilter, Class<? extends RelNode> class1)
+      private boolean accepts(Stack<DruidLogicalNode> stack, Stage stage, Class<? extends RelNode> class1)
       {
-        return partialDruidQuery.canAccept(whereFilter) && class1.isInstance(stack.peek());
+        if (Project.class == class1 && stack.size() >= 2) {
+          // a projet is proposed
+          DruidLogicalNode parentOfFilter = stack.get(stack.size()-2);
+          if (parentOfFilter instanceof DruidAggregate && !partialDruidQuery.canAccept(Stage.AGGREGATE)) {
+                        return false;
+          }
+//          if(parentOfFilter instanceof Sort && !partialDruidQuery.canAccept(Stage.SORT)) {
+//            return false;
+//          }
+        }
+
+        return partialDruidQuery.canAccept(stage) && class1.isInstance(stack.peek());
       }
 
       @Override

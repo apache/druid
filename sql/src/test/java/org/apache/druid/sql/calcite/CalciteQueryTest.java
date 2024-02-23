@@ -2816,7 +2816,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.PLAN_MISMATCH)
   @Test
   public void testGroupByWithSelectAndOrderByProjections()
   {
@@ -2901,7 +2900,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.PLAN_MISMATCH)
   @Test
   public void testTopNWithSelectAndOrderByProjections()
   {
@@ -4867,7 +4865,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.PLAN_MISMATCH)
   @Test
   public void testGroupByWithSortOnPostAggregationDefault()
   {
@@ -4899,7 +4896,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.PLAN_MISMATCH)
   @Test
   public void testGroupByWithSortOnPostAggregationNoTopNConfig()
   {
@@ -4943,7 +4939,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.PLAN_MISMATCH)
   @Test
   public void testGroupByWithSortOnPostAggregationNoTopNContext()
   {
