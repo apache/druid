@@ -30,11 +30,13 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator.PDQVertexFactory.PDQVertex;
 import org.apache.druid.sql.calcite.planner.querygen.SourceDescProducer.SourceDesc;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery.Stage;
 import org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -72,7 +74,7 @@ public class DruidQueryGenerator
   private Vertex processNodeWithInputs(DruidLogicalNode node, List<Vertex> newInputs, boolean isRoot)
   {
     if (node instanceof SourceDescProducer) {
-      return vertexFactory.createVertex1(node, newInputs);
+      return vertexFactory.createVertex(PartialDruidQuery.create(node), newInputs);
     }
     if (newInputs.size() == 1) {
       Vertex inputVertex = newInputs.get(0);
@@ -80,8 +82,9 @@ public class DruidQueryGenerator
       if (newVertex.isPresent()) {
         return newVertex.get();
       }
-      inputVertex = vertexFactory.createVertex2(
-          inputVertex
+      inputVertex = vertexFactory.createVertex(
+          PartialDruidQuery.createOuterQuery(((PDQVertex) inputVertex).partialDruidQuery),
+          ImmutableList.of(inputVertex)
       );
       newVertex = inputVertex.extendWith(node, false);
       if (newVertex.isPresent()) {
@@ -119,8 +122,6 @@ public class DruidQueryGenerator
      * @throws DruidException if unwrap is not possible.
      */
     SourceDesc unwrapSourceDesc();
-
-    Optional<Vertex> removeTopProject();
   }
 
   /**
@@ -137,26 +138,9 @@ public class DruidQueryGenerator
       this.rexBuilder = rexBuilder;
     }
 
-    Vertex createVertex1(DruidLogicalNode node, List<Vertex> inputs)
+    Vertex createVertex(PartialDruidQuery partialDruidQuery, List<Vertex> inputs)
     {
-      return new PDQVertex(PartialDruidQuery.create(node), inputs);
-    }
-
-    Vertex createVertex2(Vertex inputVertex)
-    {
-      Optional<Vertex> inputWithoutLastProject = inputVertex.removeTopProject();
-
-      final PDQVertex input;
-      input=(PDQVertex) inputWithoutLastProject.orElse(inputVertex);
-      PDQVertex newVertex = new PDQVertex(
-          PartialDruidQuery.createOuterQuery(input.partialDruidQuery),
-          ImmutableList.of(input)
-      );
-
-      if(!inputWithoutLastProject.isEmpty()) {
-
-      }
-      return newVertex;
+      return new PDQVertex(partialDruidQuery, inputs);
     }
 
     public class PDQVertex implements Vertex
@@ -220,7 +204,7 @@ public class DruidQueryGenerator
         if (!newPartialQuery.isPresent()) {
           return Optional.empty();
         }
-        return Optional.of(new PDQVertex(newPartialQuery.get(), inputs));
+        return Optional.of(createVertex(newPartialQuery.get(), inputs));
       }
 
       /**
@@ -295,20 +279,6 @@ public class DruidQueryGenerator
           return true;
         }
         return false;
-      }
-
-      @Override
-      public Optional<Vertex> removeTopProject()
-      {
-        switch (partialDruidQuery.stage())
-        {
-          case AGGREGATE_PROJECT:
-          case SELECT_PROJECT:
-          case WINDOW_PROJECT:
-          case SORT_PROJECT:
-          default:
-          return Optional.empty();
-        }
       }
     }
 
