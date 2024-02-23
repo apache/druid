@@ -19,8 +19,8 @@
 
 package org.apache.druid.sql.calcite.rule;
 
-import com.google.api.client.util.Joiner;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.apache.calcite.plan.RelOptRule;
@@ -524,7 +524,6 @@ public class DruidJoinRule extends RelOptRule
         rightColumns.add((RexInputRef) firstOperand);
       } else {
         // Cannot handle this condition.
-        // FIXME: add subCondition to errors?
         errors.add(
             StringUtils.format(
                 "SQL is resulting in a join that has unsupported operand types."

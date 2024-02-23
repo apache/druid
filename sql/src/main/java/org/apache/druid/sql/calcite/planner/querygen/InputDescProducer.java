@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.planner.querygen;
 
-import com.google.errorprone.annotations.Immutable;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -39,7 +38,6 @@ public interface InputDescProducer
    *
    * Main reason to have this was that {@link DataSource} doesn't contain the {@link RowSignature}.
    */
-  @Immutable
   class InputDesc
   {
     public final DataSource dataSource;
