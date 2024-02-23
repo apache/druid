@@ -70,7 +70,7 @@ jobs:
       # we include github.sha in the cache key to make it specific to that build/jdk
       - name: Restore Maven repository
         id: maven-restore
-        uses: actions/cache/restore@v3
+        uses: actions/cache/restore@v4
         with:
           path: ~/.m2/repository
           key: maven-${{ runner.os }}-${{ inputs.jdk }}-${{ github.sha }}

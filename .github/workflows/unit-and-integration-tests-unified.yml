@@ -73,7 +73,7 @@ jobs:
       # we include github.sha in the cache key to make it specific to that build/jdk
       - name: Cache Maven m2 repository
         id: maven
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: maven-${{ runner.os }}-${{ matrix.jdk }}-${{ github.sha }}
@@ -81,7 +81,7 @@ jobs:
 
       - name: Cache targets
         id: target
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ./**/target
@@ -89,7 +89,7 @@ jobs:
 
       - name: Cache image
         id: docker_container
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           key: druid-container-jdk${{ matrix.jdk }}.tar.gz-${{ github.sha }}
           path: |

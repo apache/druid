@@ -42,7 +42,7 @@ jobs:
 
       - name: Cache Maven m2 repository
         id: maven
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: maven-${{ runner.os }}-8-${{ github.sha }}
