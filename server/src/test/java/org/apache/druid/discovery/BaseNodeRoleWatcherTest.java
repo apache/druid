@@ -157,5 +157,13 @@ public class BaseNodeRoleWatcherTest
         throw new RuntimeException("NodeViewInitialized called again!");
       }
     }
+
+    @Override
+    public void nodeViewInitializedTimedOut()
+    {
+      if (!nodeViewInitialized.compareAndSet(false, true)) {
+        throw new RuntimeException("NodeViewInitialized called again!");
+      }
+    }
   }
 }

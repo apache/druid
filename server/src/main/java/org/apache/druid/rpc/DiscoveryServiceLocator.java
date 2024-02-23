@@ -157,5 +157,18 @@ public class DiscoveryServiceLocator implements ServiceLocator
         }
       }
     }
+
+    @Override
+    public void nodeViewInitializedTimedOut()
+    {
+      synchronized (DiscoveryServiceLocator.this) {
+        initialized = true;
+
+        if (pendingFuture != null) {
+          pendingFuture.set(ServiceLocations.forLocations(ImmutableSet.copyOf(locations)));
+          pendingFuture = null;
+        }
+      }
+    }
   }
 }

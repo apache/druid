@@ -65,7 +65,10 @@ public class BaseNodeRoleWatcher
 
   private final Object lock = new Object();
 
+  // Always countdown under lock
   private final CountDownLatch cacheInitialized = new CountDownLatch(1);
+
+  private boolean cacheInitializationTimedOut = false;
 
   public BaseNodeRoleWatcher(
       ExecutorService listenerExecutor,
@@ -78,6 +81,9 @@ public class BaseNodeRoleWatcher
 
   public Collection<DiscoveryDruidNode> getAllNodes()
   {
+    if (cacheInitializationTimedOut) {
+      return unmodifiableNodes;
+    }
     boolean nodeViewInitialized;
     try {
       nodeViewInitialized = cacheInitialized.await((long) 30, TimeUnit.SECONDS);
@@ -87,10 +93,8 @@ public class BaseNodeRoleWatcher
       nodeViewInitialized = false;
     }
     if (!nodeViewInitialized) {
-      LOGGER.info(
-          "Cache for node role [%s] not initialized yet; getAllNodes() might not return full information.",
-          nodeRole.getJsonName()
-      );
+      LOGGER.warn("Cache for node role [%s] could not be initialized before timeout.", nodeRole.getJsonName());
+      cacheInitializedTimedOut();
     }
     return unmodifiableNodes;
   }
@@ -106,7 +110,11 @@ public class BaseNodeRoleWatcher
         safeSchedule(
             () -> {
               listener.nodesAdded(currNodes);
-              listener.nodeViewInitialized();
+              if (cacheInitializationTimedOut) {
+                listener.nodeViewInitializedTimedOut();
+              } else {
+                listener.nodeViewInitialized();
+              }
             },
             "Exception occurred in nodesAdded([%s]) in listener [%s].", currNodes, listener
         );
@@ -209,13 +217,52 @@ public class BaseNodeRoleWatcher
     }
   }
 
+  public void cacheInitializedTimedOut()
+  {
+    synchronized (lock) {
+      // No need to wait on CountDownLatch, because we are holding the lock under which it could only be
+      // counted down.
+      if (cacheInitialized.getCount() == 0) {
+        LOGGER.warn("cache is already initialized. ignoring timeout.");
+        return;
+      }
+
+      // It is important to take a snapshot here as list of nodes might change by the time listeners process
+      // the changes.
+      List<DiscoveryDruidNode> currNodes = Lists.newArrayList(nodes.values());
+      LOGGER.info(
+          "Node watcher of role [%s] is now initialized with %d nodes.",
+          nodeRole.getJsonName(),
+          currNodes.size());
+
+      for (DruidNodeDiscovery.Listener listener : nodeListeners) {
+        safeSchedule(
+            () -> {
+              listener.nodesAdded(currNodes);
+              listener.nodeViewInitializedTimedOut();
+            },
+            "Exception occurred in nodesAdded([%s]) in listener [%s].",
+            currNodes,
+            listener
+        );
+      }
+
+      cacheInitialized.countDown();
+      cacheInitializationTimedOut = true;
+    }
+  }
+
   public void cacheInitialized()
   {
     synchronized (lock) {
       // No need to wait on CountDownLatch, because we are holding the lock under which it could only be
       // counted down.
       if (cacheInitialized.getCount() == 0) {
-        LOGGER.error("cache is already initialized. ignoring cache initialization event.");
+        if (cacheInitializationTimedOut) {
+          LOGGER.warn("Cache initialization has already timed out. Ignoring cacheInitialized event.");
+        } else {
+          LOGGER.error("cache is already initialized. ignoring cache initialization event.");
+        }
         return;
       }
 
