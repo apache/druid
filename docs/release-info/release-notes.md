@@ -24,6 +24,19 @@ title: "Release notes"
 
 <!--Replace {{DRUIDVERSION}} with the correct Druid version.-->
 
+## Druid 29.0.1
+
+Apache Druid 29.0.1 is a patch release that fixes some issues in the Druid 29.0.0 release.
+
+### Bug fixes
+
+* Added type verification for INSERT and REPLACE to validate that strings and string arrays aren't mixed [#15920](https://github.com/apache/druid/pull/15920)
+* Fixed an issue where the Druid console generates a Kafka supervisor spec where `flattenSpec` is in the wrong place, causing it to be ignored [#15946](https://github.com/apache/druid/pull/15946)
+* Fixed an issue with expression virtual column indexes when handling missing columns for expressions that transform null values into non-null values [#15959](https://github.com/apache/druid/pull/15959)
+* Fixed an issue where the `arrayIngestMode` value can persist across the SQL tab in the **Query** console, even if you execute unrelated DML operations within the same tab [#15927](https://github.com/apache/druid/pull/15927)
+
+## Druid 29.0.0
+
 Apache Druid 29.0.0 contains over 350 new features, bug fixes, performance enhancements, documentation improvements, and additional test coverage from 67 contributors.
 
 <!--
