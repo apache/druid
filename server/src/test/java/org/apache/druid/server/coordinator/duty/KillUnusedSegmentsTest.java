@@ -144,7 +144,8 @@ public class KillUnusedSegmentsTest
   }
 
   /**
-   * TODO
+   * Set up multiple datasources {@link #DS1} and {@link #DS2} with unused segments.
+   * Then run the kill duty multiple times until all the segments are killed.
    */
   @Test
   public void testKillWithMultipleDatasources()
@@ -229,10 +230,12 @@ public class KillUnusedSegmentsTest
   }
 
   /**
-   * TODO
+   * Add two older unused segments with {@code YEAR_OLD} and {@code MONTH_OLD} intervals after removing the initial set
+   * of unused segments. The duty will clean up the older segments eventually, but only after it deletes rest of
+   * the initial set of segments.
    */
   @Test
-  public void testKillWithModifiedUpdatedTime()
+  public void testAddOlderSegmentsAfterInitialRun()
   {
     configBuilder.withCoordinatorKillIgnoreDurationToRetain(true);
     configBuilder.withCoordinatorKillMaxSegments(2);
