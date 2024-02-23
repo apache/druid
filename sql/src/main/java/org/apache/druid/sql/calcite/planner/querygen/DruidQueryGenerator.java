@@ -264,7 +264,7 @@ public class DruidQueryGenerator
           SourceDesc origInput = getSource();
           return new SourceDesc(origInput.dataSource, q.getOutputRowSignature());
         }
-        throw DruidException.defensive("Can't unwrap input of vertex[%s]", partialDruidQuery);
+        throw DruidException.defensive("Can't unwrap source of vertex[%s]", partialDruidQuery);
       }
 
       @Override
