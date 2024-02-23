@@ -40,6 +40,7 @@ import org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Stack;
 
 /**
  * Converts a DAG of {@link DruidLogicalNode} convention to a native {@link DruidQuery} for execution.
@@ -57,28 +58,34 @@ public class DruidQueryGenerator
 
   public DruidQuery buildQuery()
   {
-    Vertex vertex = buildVertexFor(relRoot, true);
+    Stack<DruidLogicalNode> stack = new Stack<>();
+    stack.push(relRoot);
+    Vertex vertex = buildVertexFor(stack, true);
     return vertex.buildQuery(true);
   }
 
-  private Vertex buildVertexFor(DruidLogicalNode node, boolean isRoot)
+  private Vertex buildVertexFor(Stack<DruidLogicalNode> stack, boolean isRoot)
   {
     List<Vertex> newInputs = new ArrayList<>();
-    for (RelNode input : node.getInputs()) {
-      newInputs.add(buildVertexFor((DruidLogicalNode) input, false));
+
+    for (RelNode input : stack.peek().getInputs()) {
+      stack.push((DruidLogicalNode) input);
+      newInputs.add(buildVertexFor(stack, false));
+      stack.pop();
     }
-    Vertex vertex = processNodeWithInputs(node, newInputs, isRoot);
+    Vertex vertex = processNodeWithInputs(stack, newInputs, isRoot);
     return vertex;
   }
 
-  private Vertex processNodeWithInputs(DruidLogicalNode node, List<Vertex> newInputs, boolean isRoot)
+  private Vertex processNodeWithInputs(Stack<DruidLogicalNode> stack, List<Vertex> newInputs, boolean isRoot)
   {
+    DruidLogicalNode node = stack.peek();
     if (node instanceof SourceDescProducer) {
       return vertexFactory.createVertex(PartialDruidQuery.create(node), newInputs);
     }
     if (newInputs.size() == 1) {
       Vertex inputVertex = newInputs.get(0);
-      Optional<Vertex> newVertex = inputVertex.extendWith(node, isRoot);
+      Optional<Vertex> newVertex = inputVertex.extendWith(stack, isRoot);
       if (newVertex.isPresent()) {
         return newVertex.get();
       }
@@ -86,7 +93,7 @@ public class DruidQueryGenerator
           PartialDruidQuery.createOuterQuery(((PDQVertex) inputVertex).partialDruidQuery),
           ImmutableList.of(inputVertex)
       );
-      newVertex = inputVertex.extendWith(node, false);
+      newVertex = inputVertex.extendWith(stack, false);
       if (newVertex.isPresent()) {
         return newVertex.get();
       }
@@ -107,7 +114,7 @@ public class DruidQueryGenerator
     /**
      * Extends the current vertex to include the specified parent.
      */
-    Optional<Vertex> extendWith(RelNode parentNode, boolean isRoot);
+    Optional<Vertex> extendWith(Stack<DruidLogicalNode> stack, boolean isRoot);
 
     /**
      * Decides wether this {@link Vertex} can be unwrapped into an {@link SourceDesc}.
@@ -198,9 +205,9 @@ public class DruidQueryGenerator
        * Extends the the current partial query with the new parent if possible.
        */
       @Override
-      public Optional<Vertex> extendWith(RelNode parentNode, boolean isRoot)
+      public Optional<Vertex> extendWith(Stack<DruidLogicalNode> stack, boolean isRoot)
       {
-        Optional<PartialDruidQuery> newPartialQuery = extendPartialDruidQuery(parentNode, isRoot);
+        Optional<PartialDruidQuery> newPartialQuery = extendPartialDruidQuery(stack, isRoot);
         if (!newPartialQuery.isPresent()) {
           return Optional.empty();
         }
@@ -210,50 +217,51 @@ public class DruidQueryGenerator
       /**
        * Merges the given {@link RelNode} into the current {@link PartialDruidQuery}.
        */
-      private Optional<PartialDruidQuery> extendPartialDruidQuery(RelNode parentNode, boolean isRoot)
+      private Optional<PartialDruidQuery> extendPartialDruidQuery(Stack<DruidLogicalNode> stack, boolean isRoot)
       {
-        if (accepts(parentNode, Stage.WHERE_FILTER, Filter.class)) {
+        DruidLogicalNode parentNode = stack.peek();
+        if (accepts(stack, Stage.WHERE_FILTER, Filter.class)) {
           PartialDruidQuery newPartialQuery = partialDruidQuery.withWhereFilter((Filter) parentNode);
           return Optional.of(newPartialQuery);
         }
-        if (accepts(parentNode, Stage.SELECT_PROJECT, Project.class)) {
+        if (accepts(stack, Stage.SELECT_PROJECT, Project.class)) {
           PartialDruidQuery newPartialQuery = partialDruidQuery.withSelectProject((Project) parentNode);
           return Optional.of(newPartialQuery);
         }
-        if (accepts(parentNode, Stage.AGGREGATE, Aggregate.class)) {
+        if (accepts(stack, Stage.AGGREGATE, Aggregate.class)) {
           PartialDruidQuery newPartialQuery = partialDruidQuery.withAggregate((Aggregate) parentNode);
           return Optional.of(newPartialQuery);
         }
-        if (accepts(parentNode, Stage.AGGREGATE_PROJECT, Project.class) && isRoot) {
+        if (accepts(stack, Stage.AGGREGATE_PROJECT, Project.class) && isRoot) {
           PartialDruidQuery newPartialQuery = partialDruidQuery.withAggregateProject((Project) parentNode);
           return Optional.of(newPartialQuery);
         }
-        if (accepts(parentNode, Stage.HAVING_FILTER, Filter.class)) {
+        if (accepts(stack, Stage.HAVING_FILTER, Filter.class)) {
           PartialDruidQuery newPartialQuery = partialDruidQuery.withHavingFilter((Filter) parentNode);
           return Optional.of(newPartialQuery);
         }
-        if (accepts(parentNode, Stage.SORT, Sort.class)) {
+        if (accepts(stack, Stage.SORT, Sort.class)) {
           PartialDruidQuery newPartialQuery = partialDruidQuery.withSort((Sort) parentNode);
           return Optional.of(newPartialQuery);
         }
-        if (accepts(parentNode, Stage.SORT_PROJECT, Project.class)) {
+        if (accepts(stack, Stage.SORT_PROJECT, Project.class)) {
           PartialDruidQuery newPartialQuery = partialDruidQuery.withSortProject((Project) parentNode);
           return Optional.of(newPartialQuery);
         }
-        if (accepts(parentNode, Stage.WINDOW, Window.class)) {
+        if (accepts(stack, Stage.WINDOW, Window.class)) {
           PartialDruidQuery newPartialQuery = partialDruidQuery.withWindow((Window) parentNode);
           return Optional.of(newPartialQuery);
         }
-        if (accepts(parentNode, Stage.WINDOW_PROJECT, Project.class)) {
+        if (accepts(stack, Stage.WINDOW_PROJECT, Project.class)) {
           PartialDruidQuery newPartialQuery = partialDruidQuery.withWindowProject((Project) parentNode);
           return Optional.of(newPartialQuery);
         }
         return Optional.empty();
       }
 
-      private boolean accepts(RelNode node, Stage whereFilter, Class<? extends RelNode> class1)
+      private boolean accepts(Stack<DruidLogicalNode> stack, Stage whereFilter, Class<? extends RelNode> class1)
       {
-        return partialDruidQuery.canAccept(whereFilter) && class1.isInstance(node);
+        return partialDruidQuery.canAccept(whereFilter) && class1.isInstance(stack.peek());
       }
 
       @Override
