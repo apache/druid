@@ -106,6 +106,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
         @Override
         public Sequence run(QueryPlus queryPlus, ResponseContext responseContext)
         {
+          queryPlus = GroupByQueryRunnerTestHelper.populateResourceId(queryPlus);
           final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
           TimeseriesQuery tsQuery = (TimeseriesQuery) queryPlus.getQuery();
 
