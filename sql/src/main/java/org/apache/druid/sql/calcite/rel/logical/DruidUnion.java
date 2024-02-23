@@ -68,17 +68,17 @@ public class DruidUnion extends Union implements DruidLogicalNode, SourceDescPro
   {
     List<DataSource> dataSources = new ArrayList<>();
     RowSignature signature = null;
-    for (SourceDesc inputDesc : inputs) {
-      checkDataSourceSupported(inputDesc.dataSource);
-      dataSources.add(inputDesc.dataSource);
+    for (SourceDesc sourceDesc : inputs) {
+      checkDataSourceSupported(sourceDesc.dataSource);
+      dataSources.add(sourceDesc.dataSource);
       if (signature == null) {
-        signature = inputDesc.rowSignature;
+        signature = sourceDesc.rowSignature;
       } else {
-        if (!signature.equals(inputDesc.rowSignature)) {
+        if (!signature.equals(sourceDesc.rowSignature)) {
           throw DruidException.defensive(
               "Row signature mismatch in Union inputs [%s] and [%s]",
               signature,
-              inputDesc.rowSignature
+              sourceDesc.rowSignature
           );
         }
       }

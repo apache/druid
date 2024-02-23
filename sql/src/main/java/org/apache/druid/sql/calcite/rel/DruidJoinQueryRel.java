@@ -221,8 +221,8 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
         plannerContext.getJoinableFactoryWrapper()
     );
 
-    SourceDesc inputDesc = new SourceDesc(joinDataSource, signature, virtualColumnRegistry);
-    return inputDesc;
+    SourceDesc sourceDesc = new SourceDesc(joinDataSource, signature, virtualColumnRegistry);
+    return sourceDesc;
   }
 
 
@@ -232,15 +232,15 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     final SourceDesc leftDesc = buildLeftDesc();
     final SourceDesc rightDesc = buildRightDesc();
 
-    SourceDesc inputDesc = buildJoinDataSource(leftDesc, rightDesc, getPlannerContext(), joinRel, leftFilter);
+    SourceDesc sourceDesc = buildJoinDataSource(leftDesc, rightDesc, getPlannerContext(), joinRel, leftFilter);
 
     return partialQuery.build(
-        inputDesc.dataSource,
-        inputDesc.rowSignature,
+        sourceDesc.dataSource,
+        sourceDesc.rowSignature,
         getPlannerContext(),
         getCluster().getRexBuilder(),
         finalizeAggregations,
-        inputDesc.virtualColumnRegistry
+        sourceDesc.virtualColumnRegistry
     );
   }
 
