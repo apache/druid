@@ -431,7 +431,8 @@ public class DruidJoinRule extends RelOptRule
    * {@code f(LeftRel) = RightColumn}, then return a {@link ConditionAnalysis}.
    */
   public static ConditionAnalysis analyzeCondition(
-      PlannerContext plannerContext, final RexNode condition,
+      final PlannerContext plannerContext,
+      final RexNode condition,
       final RelDataType leftRowType,
       final RexBuilder rexBuilder
   )
