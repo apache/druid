@@ -139,7 +139,7 @@ public class DistinctCountGroupByQueryTest extends InitializedNullHandlingTest
         .applyPreMergeDecoration()
         .mergeResults(true)
         .applyPostMergeDecoration()
-        .run(QueryPlus.wrap(query))
+        .run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(query)))
         .toList();
 
     List<ResultRow> expectedResults = Arrays.asList(
