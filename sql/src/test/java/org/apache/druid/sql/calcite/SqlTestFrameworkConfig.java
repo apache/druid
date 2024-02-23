@@ -124,11 +124,6 @@ public @interface SqlTestFrameworkConfig
       return description;
     }
 
-    public SqlTestFrameworkConfig getConfig()
-    {
-      return config;
-    }
-
     private ConfigurationInstance getConfigurationInstance()
     {
       return classRule.configMap.computeIfAbsent(config, this::buildConfiguration);

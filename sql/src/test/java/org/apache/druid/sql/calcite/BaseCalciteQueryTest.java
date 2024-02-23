@@ -30,6 +30,7 @@ import org.apache.commons.text.StringEscapeUtils;
 import org.apache.druid.annotations.UsedByJUnitParamsRunner;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidException.Category;
 import org.apache.druid.error.DruidException.Persona;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.guice.DruidInjectorBuilder;
@@ -124,6 +125,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -759,19 +761,23 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       testQuery(plannerConfig, sql, CalciteTests.REGULAR_USER_AUTH_RESULT, ImmutableList.of(), ImmutableList.of());
     }
     catch (DruidException e) {
-      ImmutableList<Persona> personas = ImmutableList.of(DruidException.Persona.ADMIN, DruidException.Persona.USER);
       MatcherAssert.assertThat(
           e,
-          new DruidExceptionMatcher(
-              personas,
-              DruidException.Category.INVALID_INPUT,
-              "general"
-          ).expectMessageContains(expectedError)
+          buildUnplannableExceptionMatcher().expectMessageContains(expectedError)
       );
     }
     catch (Exception e) {
       log.error(e, "Expected DruidException for query: %s", sql);
       throw e;
+    }
+  }
+
+  private DruidExceptionMatcher buildUnplannableExceptionMatcher()
+  {
+    if (testBuilder().isDecoupledMode()) {
+      return new DruidExceptionMatcher(Persona.USER, Category.INVALID_INPUT, "invalidInput");
+    } else {
+      return new DruidExceptionMatcher(Persona.ADMIN, Category.INVALID_INPUT, "general");
     }
   }
 
