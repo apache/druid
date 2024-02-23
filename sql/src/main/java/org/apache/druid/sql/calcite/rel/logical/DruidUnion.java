@@ -64,11 +64,11 @@ public class DruidUnion extends Union implements DruidLogicalNode, SourceDescPro
   }
 
   @Override
-  public SourceDesc getSourceDesc(PlannerContext plannerContext, List<SourceDesc> inputs)
+  public SourceDesc getSourceDesc(PlannerContext plannerContext, List<SourceDesc> sources)
   {
     List<DataSource> dataSources = new ArrayList<>();
     RowSignature signature = null;
-    for (SourceDesc sourceDesc : inputs) {
+    for (SourceDesc sourceDesc : sources) {
       checkDataSourceSupported(sourceDesc.dataSource);
       dataSources.add(sourceDesc.dataSource);
       if (signature == null) {

@@ -57,5 +57,5 @@ public interface SourceDescProducer
     }
   }
 
-  SourceDesc getSourceDesc(PlannerContext plannerContext, List<SourceDesc> inputs);
+  SourceDesc getSourceDesc(PlannerContext plannerContext, List<SourceDesc> sources);
 }

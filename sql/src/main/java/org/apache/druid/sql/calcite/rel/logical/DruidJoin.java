@@ -70,10 +70,10 @@ public class DruidJoin extends Join implements DruidLogicalNode, SourceDescProdu
   }
 
   @Override
-  public SourceDesc getSourceDesc(PlannerContext plannerContext, List<SourceDesc> inputs)
+  public SourceDesc getSourceDesc(PlannerContext plannerContext, List<SourceDesc> sources)
   {
-    SourceDesc leftDesc = inputs.get(0);
-    SourceDesc rightDesc = inputs.get(1);
+    SourceDesc leftDesc = sources.get(0);
+    SourceDesc rightDesc = sources.get(1);
     return DruidJoinQueryRel.buildJoinDataSource(leftDesc, rightDesc, plannerContext, this, null);
   }
 }

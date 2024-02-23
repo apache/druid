@@ -98,7 +98,7 @@ public class DruidTableScan extends TableScan implements DruidLogicalNode, Sourc
   }
 
   @Override
-  public SourceDesc getSourceDesc(PlannerContext plannerContext, List<SourceDesc> inputs)
+  public SourceDesc getSourceDesc(PlannerContext plannerContext, List<SourceDesc> sources)
   {
     final DruidTable druidTable = getDruidTable();
     return new SourceDesc(druidTable.getDataSource(), druidTable.getRowSignature());

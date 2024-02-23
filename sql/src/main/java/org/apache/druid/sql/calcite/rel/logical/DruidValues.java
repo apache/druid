@@ -72,7 +72,7 @@ public class DruidValues extends LogicalValues implements DruidLogicalNode, Sour
   }
 
   @Override
-  public SourceDesc getSourceDesc(PlannerContext plannerContext, List<SourceDesc> inputs)
+  public SourceDesc getSourceDesc(PlannerContext plannerContext, List<SourceDesc> sources)
   {
     if (inlineTable == null) {
       inlineTable = buildInlineTable(plannerContext);
