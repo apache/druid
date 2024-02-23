@@ -232,7 +232,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     final InputDesc leftDesc = buildLeftDesc();
     final InputDesc rightDesc = buildRightDesc();
 
-    InputDesc inputDesc = buildJoinDataSource(leftDesc, rightDesc, getPlannerContext(),joinRel,leftFilter);
+    InputDesc inputDesc = buildJoinDataSource(leftDesc, rightDesc, getPlannerContext(), joinRel, leftFilter);
 
     return partialQuery.build(
         inputDesc.dataSource,
