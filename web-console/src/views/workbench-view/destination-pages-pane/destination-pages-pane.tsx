@@ -35,6 +35,8 @@ import {
   wait,
 } from '../../../utils';
 
+import './destination-pages-pane.scss';
+
 type ResultFormat = 'object' | 'array' | 'objectLines' | 'arrayLines' | 'csv';
 
 const RESULT_FORMATS: ResultFormat[] = ['objectLines', 'object', 'arrayLines', 'array', 'csv'];
@@ -103,7 +105,7 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
 
   const numPages = pages.length;
   return (
-    <div className="execution-details-pane">
+    <div className="destination-pages-pane">
       <p>
         {`${
           typeof numTotalRows === 'number' ? pluralIfNeeded(numTotalRows, 'row') : 'Results'
@@ -150,7 +152,7 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
         showPagination={numPages > SMALL_TABLE_PAGE_SIZE}
         columns={[
           {
-            Header: 'Page number',
+            Header: 'Page ID',
             id: 'id',
             accessor: 'id',
             className: 'padded',
@@ -176,10 +178,10 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
             Header: '',
             id: 'download',
             accessor: 'id',
-            className: 'padded',
             width: 300,
             Cell: ({ value }) => (
               <AnchorButton
+                className="download-button"
                 icon={IconNames.DOWNLOAD}
                 text="Download"
                 minimal
