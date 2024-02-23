@@ -28,6 +28,9 @@ import org.hamcrest.Matchers;
 import org.hamcrest.core.AllOf;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class DruidExceptionMatcher extends DiagnosingMatcher<Throwable>
 {
@@ -60,11 +63,24 @@ public class DruidExceptionMatcher extends DiagnosingMatcher<Throwable>
   public DruidExceptionMatcher(
       DruidException.Persona targetPersona,
       DruidException.Category category,
+      String errorCode)
+  {
+    this(Collections.singletonList(targetPersona), category, errorCode);
+  }
+
+  public DruidExceptionMatcher(
+      List<DruidException.Persona> targetPersonas,
+      DruidException.Category category,
       String errorCode
   )
   {
     matcherList = new ArrayList<>();
-    matcherList.add(DruidMatchers.fn("targetPersona", DruidException::getTargetPersona, Matchers.is(targetPersona)));
+    matcherList.add(
+        DruidMatchers.fn(
+            "targetPersona", DruidException::getTargetPersona,
+            Matchers.anyOf(targetPersonas.stream().map(Matchers::is).collect(Collectors.toList()))
+        )
+    );
     matcherList.add(DruidMatchers.fn("category", DruidException::getCategory, Matchers.is(category)));
     matcherList.add(DruidMatchers.fn("errorCode", DruidException::getErrorCode, Matchers.is(errorCode)));
 

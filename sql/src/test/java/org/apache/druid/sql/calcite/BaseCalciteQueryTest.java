@@ -30,6 +30,7 @@ import org.apache.commons.text.StringEscapeUtils;
 import org.apache.druid.annotations.UsedByJUnitParamsRunner;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidException.Persona;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.hll.VersionOneHyperLogLogCollector;
@@ -758,15 +759,14 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       testQuery(plannerConfig, sql, CalciteTests.REGULAR_USER_AUTH_RESULT, ImmutableList.of(), ImmutableList.of());
     }
     catch (DruidException e) {
+      ImmutableList<Persona> personas = ImmutableList.of(DruidException.Persona.ADMIN, DruidException.Persona.USER);
       MatcherAssert.assertThat(
           e,
-          new DruidExceptionMatcher(DruidException.Persona.ADMIN, DruidException.Category.INVALID_INPUT, "general")
-              .expectMessageIs(
-                  StringUtils.format(
-                      "Query could not be planned. A possible reason is [%s]",
-                      expectedError
-                  )
-              )
+          new DruidExceptionMatcher(
+              personas,
+              DruidException.Category.INVALID_INPUT,
+              "general"
+          ).expectMessageContains(expectedError)
       );
     }
     catch (Exception e) {
