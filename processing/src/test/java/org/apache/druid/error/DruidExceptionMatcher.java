@@ -89,7 +89,7 @@ public class DruidExceptionMatcher extends DiagnosingMatcher<Throwable>
 
   public DruidExceptionMatcher expectMessage(Matcher<String> messageMatcher)
   {
-    matcherList.add(0, DruidMatchers.fn("message", DruidException::getMessage, messageMatcher));
+    matcherList.add(DruidMatchers.fn("message", DruidException::getMessage, messageMatcher));
     return this;
   }
 
