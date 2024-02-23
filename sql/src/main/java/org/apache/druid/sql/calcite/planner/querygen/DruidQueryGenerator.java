@@ -112,7 +112,7 @@ public class DruidQueryGenerator
     /**
      * Decides wether this {@link Vertex} can be unwrapped into an {@link SourceDesc}.
      */
-    boolean canUnwrapInput();
+    boolean canUnwrapSourceDesc();
 
     /**
      * Unwraps this {@link Vertex} into an {@link SourceDesc}.
@@ -157,10 +157,10 @@ public class DruidQueryGenerator
       @Override
       public DruidQuery buildQuery(boolean topLevel)
       {
-        SourceDesc input = getInput();
+        SourceDesc source = getSource();
         return partialDruidQuery.build(
-            input.dataSource,
-            input.rowSignature,
+            source.dataSource,
+            source.rowSignature,
             plannerContext,
             rexBuilder,
             !topLevel
@@ -170,12 +170,12 @@ public class DruidQueryGenerator
       /**
        * Creates the {@link SourceDesc} for the current {@link Vertex}.
        */
-      private SourceDesc getInput()
+      private SourceDesc getSource()
       {
         List<SourceDesc> sourceDescs = new ArrayList<>();
         for (Vertex inputVertex : inputs) {
           final SourceDesc desc;
-          if (inputVertex.canUnwrapInput()) {
+          if (inputVertex.canUnwrapSourceDesc()) {
             desc = inputVertex.unwrapSourceDesc();
           } else {
             DruidQuery inputQuery = inputVertex.buildQuery(false);
@@ -259,16 +259,16 @@ public class DruidQueryGenerator
       @Override
       public SourceDesc unwrapSourceDesc()
       {
-        if (canUnwrapInput()) {
+        if (canUnwrapSourceDesc()) {
           DruidQuery q = buildQuery(false);
-          SourceDesc origInput = getInput();
+          SourceDesc origInput = getSource();
           return new SourceDesc(origInput.dataSource, q.getOutputRowSignature());
         }
         throw DruidException.defensive("Can't unwrap input of vertex[%s]", partialDruidQuery);
       }
 
       @Override
-      public boolean canUnwrapInput()
+      public boolean canUnwrapSourceDesc()
       {
         if (partialDruidQuery.stage() == Stage.SCAN) {
           return true;
