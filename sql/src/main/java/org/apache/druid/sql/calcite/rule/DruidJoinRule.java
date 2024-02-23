@@ -240,7 +240,7 @@ public class DruidJoinRule extends RelOptRule
    * they are extracted into a post-join filter instead.
    */
   @VisibleForTesting
-  public static boolean canHandleCondition(
+  public boolean canHandleCondition(
       final RexNode condition,
       final RelDataType leftRowType,
       DruidRel<?> right,
@@ -308,7 +308,7 @@ public class DruidJoinRule extends RelOptRule
 
     private final Set<RexInputRef> rightColumns;
 
-    private final String errorStr;
+    public final String errorStr;
 
     ConditionAnalysis(
         int numLeftFields,
@@ -524,7 +524,7 @@ public class DruidJoinRule extends RelOptRule
         rightColumns.add((RexInputRef) firstOperand);
       } else {
         // Cannot handle this condition.
-        // FIXME: add subCondition to errors
+        // FIXME: add subCondition to errors?
         errors.add(
             StringUtils.format(
                 "SQL is resulting in a join that has unsupported operand types."
@@ -534,10 +534,10 @@ public class DruidJoinRule extends RelOptRule
       }
     }
     final String errorStr;
-    if(errors.size()>0) {
+    if (errors.size() > 0) {
       errorStr = Joiner.on('\n').join(errors);
     } else {
-      errorStr=null;
+      errorStr = null;
     }
     return new ConditionAnalysis(
         numLeftFields,

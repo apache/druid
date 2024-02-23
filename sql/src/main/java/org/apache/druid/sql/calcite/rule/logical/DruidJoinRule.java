@@ -24,8 +24,10 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
 import org.apache.calcite.rel.core.Join;
+import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.sql.calcite.rel.logical.DruidJoin;
 import org.apache.druid.sql.calcite.rel.logical.DruidLogicalConvention;
+import org.apache.druid.sql.calcite.rule.DruidJoinRule.ConditionAnalysis;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class DruidJoinRule extends ConverterRule
@@ -41,6 +43,17 @@ public class DruidJoinRule extends ConverterRule
   {
     Join join = (Join) rel;
     RelTraitSet newTrait = join.getTraitSet().replace(DruidLogicalConvention.instance());
+
+    ConditionAnalysis analysis = org.apache.druid.sql.calcite.rule.DruidJoinRule.analyzeCondition(
+        join.getCondition(),
+        join.getLeft().getRowType(),
+        join.getCluster().getRexBuilder()
+    );
+
+    if (analysis.errorStr != null) {
+      // reject the query in case the anaysis detected any issues
+      throw InvalidSqlInput.exception(analysis.errorStr);
+    }
 
     return new DruidJoin(
         join.getCluster(),
