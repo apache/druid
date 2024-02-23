@@ -74,7 +74,7 @@ public class DruidQueryGenerator
   private Vertex processNodeWithInputs(DruidLogicalNode node, List<Vertex> newInputs, boolean isRoot)
   {
     if (node instanceof SourceDescProducer) {
-      return vertexFactory.createVertex(PartialDruidQuery.create(node), newInputs);
+      return vertexFactory.createVertex1(node, newInputs);
     }
     if (newInputs.size() == 1) {
       Vertex inputVertex = newInputs.get(0);
@@ -82,9 +82,8 @@ public class DruidQueryGenerator
       if (newVertex.isPresent()) {
         return newVertex.get();
       }
-      inputVertex = vertexFactory.createVertex(
-          PartialDruidQuery.createOuterQuery(((PDQVertex) inputVertex).partialDruidQuery),
-          ImmutableList.of(inputVertex)
+      inputVertex = vertexFactory.createVertex2(
+          inputVertex
       );
       newVertex = inputVertex.extendWith(node, false);
       if (newVertex.isPresent()) {
@@ -138,9 +137,17 @@ public class DruidQueryGenerator
       this.rexBuilder = rexBuilder;
     }
 
-    Vertex createVertex(PartialDruidQuery partialDruidQuery, List<Vertex> inputs)
+    Vertex createVertex1(DruidLogicalNode node, List<Vertex> inputs)
     {
-      return new PDQVertex(partialDruidQuery, inputs);
+      return new PDQVertex(PartialDruidQuery.create(node), inputs);
+    }
+
+    Vertex createVertex2(Vertex inputVertex)
+    {
+      return new PDQVertex(
+          PartialDruidQuery.createOuterQuery(((PDQVertex) inputVertex).partialDruidQuery),
+          ImmutableList.of(inputVertex)
+      );
     }
 
     public class PDQVertex implements Vertex
