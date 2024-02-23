@@ -24,7 +24,7 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
 import org.apache.calcite.rel.core.Join;
-import org.apache.druid.error.InvalidSqlInput;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.sql.calcite.rel.logical.DruidJoin;
 import org.apache.druid.sql.calcite.rel.logical.DruidLogicalConvention;
 import org.apache.druid.sql.calcite.rule.DruidJoinRule.ConditionAnalysis;
@@ -52,7 +52,10 @@ public class DruidJoinRule extends ConverterRule
 
     if (analysis.errorStr != null) {
       // reject the query in case the anaysis detected any issues
-      throw InvalidSqlInput.exception(analysis.errorStr);
+      throw DruidException
+          .forPersona(DruidException.Persona.ADMIN)
+          .ofCategory(DruidException.Category.INVALID_INPUT)
+          .build(analysis.errorStr);
     }
 
     return new DruidJoin(
