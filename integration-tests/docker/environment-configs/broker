@@ -43,3 +43,4 @@ druid_query_scheduler_laning_lanes_one=1
 druid_segmentCache_locations=[{"path":"/shared/druid/brokerIndexCache","maxSize":1000000000}]
 druid_server_maxSize=1000000000
 druid_sql_planner_metadataRefreshPeriod=PT15S
+druid_sql_planner_disableSegmentMetadataQueries=true

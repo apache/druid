@@ -43,3 +43,8 @@ druid_coordinator_period_indexingPeriod=PT180000S
 # 2x indexing period so that kill period is valid
 druid_coordinator_kill_period=PT360000S
 druid_coordinator_period=PT1S
+
+druid_query_segmentMetadata_metadataRefreshPeriod=PT15S
+druid_centralizedDatasourceSchema_backFillEnabled=true
+druid_centralizedDatasourceSchema_backFillPeriod=15000
+druid_centralizedDatasourceSchema_enabled=true
