@@ -68,7 +68,7 @@ public class BaseNodeRoleWatcher
   // Always countdown under lock
   private final CountDownLatch cacheInitialized = new CountDownLatch(1);
 
-  private boolean cacheInitializationTimedOut = false;
+  private volatile boolean cacheInitializationTimedOut = false;
 
   public BaseNodeRoleWatcher(
       ExecutorService listenerExecutor,
