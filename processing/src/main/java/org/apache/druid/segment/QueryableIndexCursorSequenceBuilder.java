@@ -309,6 +309,10 @@ public class QueryableIndexCursorSequenceBuilder
       } else {
         metrics.reportPreFilteredRows(0);
       }
+    } else if (log.isDebugEnabled()) {
+      final FilterBundle.BundleInfo info = filterBundle.getInfo();
+      final long buildTime = System.nanoTime() - bitmapConstructionStartNs;
+      log.debug("Filter partitioning (%sms):%s", TimeUnit.NANOSECONDS.toMillis(buildTime), info);
     }
     return filterBundle;
   }

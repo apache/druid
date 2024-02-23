@@ -28,7 +28,7 @@ public interface ColumnConfig
    * of number of bitmaps compared to total number of rows appeared to be around the threshold where indexes stopped
    * performing consistently faster than a full scan + value matcher
    */
-  double DEFAULT_SKIP_VALUE_RANGE_INDEX_SCALE = 0.15;
+  double DEFAULT_SKIP_VALUE_RANGE_INDEX_SCALE = 0.1;
 
   ColumnConfig DEFAULT = new ColumnConfig() {};
 

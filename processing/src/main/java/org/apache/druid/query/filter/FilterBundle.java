@@ -126,7 +126,7 @@ public class FilterBundle
    * the offset is 'descending' or not, to allow filters more flexibility in value matcher creation.
    * {@link org.apache.druid.segment.filter.OrFilter} uses these extra parameters to allow partial use of indexes to
    * create a synthetic value matcher that checks if the row is set in the bitmap, instead of purely using value
-   * matchers, with {@link org.apache.druid.segment.filter.OrFilter#makePartialIndexValueMatcher}.
+   * matchers, with {@link org.apache.druid.segment.filter.OrFilter#convertIndexToValueMatcher}.
    */
   public interface MatcherBundle
   {
