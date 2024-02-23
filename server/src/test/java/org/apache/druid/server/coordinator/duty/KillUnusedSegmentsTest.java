@@ -66,9 +66,6 @@ import java.util.Map;
  */
 public class KillUnusedSegmentsTest
 {
-  private static final String DS1 = "DS1";
-  private static final String DS2 = "DS2";
-
   private static final DateTime NOW = DateTimes.nowUtc();
   private static final Interval YEAR_OLD = new Interval(Period.days(1), NOW.minusDays(365));
   private static final Interval MONTH_OLD = new Interval(Period.days(1), NOW.minusDays(30));
@@ -76,6 +73,9 @@ public class KillUnusedSegmentsTest
   private static final Interval HOUR_OLD = new Interval(Period.days(1), NOW.minusHours(1));
   private static final Interval NEXT_DAY = new Interval(Period.days(1), NOW.plusDays(1));
   private static final Interval NEXT_MONTH = new Interval(Period.days(1), NOW.plusDays(30));
+
+  private static final String DS1 = "DS1";
+  private static final String DS2 = "DS2";
 
   private static final RowKey DS1_STAT_KEY = RowKey.of(Dimension.DATASOURCE, DS1);
   private static final RowKey DS2_STAT_KEY = RowKey.of(Dimension.DATASOURCE, DS2);
@@ -87,7 +87,7 @@ public class KillUnusedSegmentsTest
   private DruidCoordinatorRuntimeParams.Builder paramsBuilder;
 
   private KillUnusedSegments killDuty;
-  
+
   @Before
   public void setup()
   {
@@ -676,24 +676,6 @@ public class KillUnusedSegmentsTest
     validateLastKillStateAndReset(DS1, secondHalfEternity);
   }
 
-  private void validateStats(final ExpectedStats expectedStats, final CoordinatorRunStats actualRunStats)
-  {
-    Assert.assertEquals(expectedStats.availableSlots, actualRunStats.get(Stats.Kill.AVAILABLE_SLOTS));
-    Assert.assertEquals(expectedStats.submittedTasks, actualRunStats.get(Stats.Kill.SUBMITTED_TASKS));
-    Assert.assertEquals(expectedStats.maxSlots, actualRunStats.get(Stats.Kill.MAX_SLOTS));
-
-    for (final Map.Entry<String, Long> expectedEntry : expectedStats.dataSourceToCandidateSegments.entrySet()) {
-      Assert.assertEquals(
-          expectedEntry.getKey(),
-          expectedEntry.getValue().longValue(),
-          actualRunStats.get(
-              Stats.Kill.CANDIDATE_SEGMENTS_KILLED,
-              RowKey.of(Dimension.DATASOURCE, expectedEntry.getKey())
-          )
-      );
-    }
-  }
-
   private void validateLastKillStateAndReset(final String dataSource, @Nullable final Interval expectedKillInterval)
   {
     final Interval observedLastKillInterval = overlordClient.getLastKillInterval(dataSource);
@@ -723,21 +705,6 @@ public class KillUnusedSegmentsTest
         dataSource,
         interval,
         NOW.toString(),
-        new HashMap<>(),
-        new ArrayList<>(),
-        new ArrayList<>(),
-        NoneShardSpec.instance(),
-        1,
-        0
-    );
-  }
-
-  private DataSegment createSegmentWithEnd(final String dataSource, final DateTime endTime)
-  {
-    return new DataSegment(
-        dataSource,
-        new Interval(Period.days(1), endTime),
-        DateTimes.nowUtc().toString(),
         new HashMap<>(),
         new ArrayList<>(),
         new ArrayList<>(),
