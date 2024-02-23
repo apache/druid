@@ -771,7 +771,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
     catch (Exception e) {
       log.error(e, "Expected DruidException for query: %s", sql);
-      Assert.fail(sql);
+      throw e;
     }
   }
 

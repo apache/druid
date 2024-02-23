@@ -84,7 +84,7 @@ public class DruidJoinRule extends RelOptRule
   {
     return new DruidJoinRule(plannerContext);
   }
-  
+
   @Override
   public boolean matches(RelOptRuleCall call)
   {
@@ -121,6 +121,7 @@ public class DruidJoinRule extends RelOptRule
 
     // Can't be final, because we're going to reassign it up to a couple of times.
     ConditionAnalysis conditionAnalysis = analyzeCondition(
+        plannerContext,
         join.getCondition(),
         join.getLeft().getRowType(),
         rexBuilder
@@ -246,7 +247,7 @@ public class DruidJoinRule extends RelOptRule
       final RexBuilder rexBuilder
   )
   {
-    ConditionAnalysis conditionAnalysis = analyzeCondition(condition, leftRowType, rexBuilder);
+    ConditionAnalysis conditionAnalysis = analyzeCondition(plannerContext, condition, leftRowType, rexBuilder);
     // if the right side requires a subquery, then even lookup will be transformed to a QueryDataSource
     // thereby allowing join conditions on both k and v columns of the lookup
     if (right != null
@@ -275,7 +276,7 @@ public class DruidJoinRule extends RelOptRule
       // for an example.
       return conditionAnalysis.getUnsupportedOnSubConditions().isEmpty();
     }
-    
+
     return true;
   }
 
@@ -429,8 +430,8 @@ public class DruidJoinRule extends RelOptRule
    * that can be extracted into post join filter.
    * {@code f(LeftRel) = RightColumn}, then return a {@link ConditionAnalysis}.
    */
-  public ConditionAnalysis analyzeCondition(
-      final RexNode condition,
+  public static ConditionAnalysis analyzeCondition(
+      PlannerContext plannerContext, final RexNode condition,
       final RelDataType leftRowType,
       final RexBuilder rexBuilder
   )
