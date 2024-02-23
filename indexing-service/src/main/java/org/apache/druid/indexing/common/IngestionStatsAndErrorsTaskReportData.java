@@ -48,7 +48,7 @@ public class IngestionStatsAndErrorsTaskReportData
   private long segmentAvailabilityWaitTimeMs;
 
   @JsonProperty
-  private Map<String, Long> recordsProcessed;
+  private Map<String, Long> recordsProcessedPerPartition;
 
   public IngestionStatsAndErrorsTaskReportData(
       @JsonProperty("ingestionState") IngestionState ingestionState,
@@ -57,7 +57,7 @@ public class IngestionStatsAndErrorsTaskReportData
       @JsonProperty("errorMsg") @Nullable String errorMsg,
       @JsonProperty("segmentAvailabilityConfirmed") boolean segmentAvailabilityConfirmed,
       @JsonProperty("segmentAvailabilityWaitTimeMs") long segmentAvailabilityWaitTimeMs,
-      @JsonProperty("recordsProcessed") Map<String, Long> recordsProcessed
+      @JsonProperty("recordsProcessedPerPartition") Map<String, Long> recordsProcessedPerPartition
   )
   {
     this.ingestionState = ingestionState;
@@ -66,7 +66,7 @@ public class IngestionStatsAndErrorsTaskReportData
     this.errorMsg = errorMsg;
     this.segmentAvailabilityConfirmed = segmentAvailabilityConfirmed;
     this.segmentAvailabilityWaitTimeMs = segmentAvailabilityWaitTimeMs;
-    this.recordsProcessed = recordsProcessed;
+    this.recordsProcessedPerPartition = recordsProcessedPerPartition;
   }
 
   @JsonProperty
@@ -108,9 +108,9 @@ public class IngestionStatsAndErrorsTaskReportData
 
   @JsonProperty
   @Nullable
-  public Map<String, Long> getRecordsProcessed()
+  public Map<String, Long> getRecordsProcessedPerPartition()
   {
-    return recordsProcessed;
+    return recordsProcessedPerPartition;
   }
 
   public static IngestionStatsAndErrorsTaskReportData getPayloadFromTaskReports(
@@ -137,7 +137,7 @@ public class IngestionStatsAndErrorsTaskReportData
            Objects.equals(getErrorMsg(), that.getErrorMsg()) &&
            Objects.equals(isSegmentAvailabilityConfirmed(), that.isSegmentAvailabilityConfirmed()) &&
            Objects.equals(getSegmentAvailabilityWaitTimeMs(), that.getSegmentAvailabilityWaitTimeMs()) &&
-           Objects.equals(getRecordsProcessed(), that.getRecordsProcessed());
+           Objects.equals(getRecordsProcessedPerPartition(), that.getRecordsProcessedPerPartition());
   }
 
   @Override
@@ -150,7 +150,7 @@ public class IngestionStatsAndErrorsTaskReportData
         getErrorMsg(),
         isSegmentAvailabilityConfirmed(),
         getSegmentAvailabilityWaitTimeMs(),
-        getRecordsProcessed()
+        getRecordsProcessedPerPartition()
     );
   }
 
@@ -164,7 +164,7 @@ public class IngestionStatsAndErrorsTaskReportData
            ", errorMsg='" + errorMsg + '\'' +
            ", segmentAvailabilityConfoirmed=" + segmentAvailabilityConfirmed +
            ", segmentAvailabilityWaitTimeMs=" + segmentAvailabilityWaitTimeMs +
-           ", recordsProcessed=" + recordsProcessed +
+           ", recordsProcessedPerPartition=" + recordsProcessedPerPartition +
            '}';
   }
 }
