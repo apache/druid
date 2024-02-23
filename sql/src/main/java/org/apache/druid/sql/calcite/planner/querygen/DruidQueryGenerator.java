@@ -42,8 +42,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Converts a DAG of {@link org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode} convention to a native
- * {@link DruidQuery} for execution.
+ * Converts a DAG of {@link DruidLogicalNode} convention to a native {@link DruidQuery} for execution.
  */
 public class DruidQueryGenerator
 {
