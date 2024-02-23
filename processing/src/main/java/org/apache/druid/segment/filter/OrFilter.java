@@ -92,7 +92,7 @@ public class OrFilter implements BooleanFilter
     // 2 - some clauses support indexes. in this case, we union the bitmaps of any index only bundles together to form a
     //     partial index which is constructed into a matcher bundle with convertIndexToMatcherBundle. We translate any
     //     index AND matcher bundles into a matcher only bundle with convertBundleToMatcherOnlyBundle. Finally, we
-    //     combine these with the remaining matcher only bundles to with makeMatcher/makeVectorMatcher to make a atcher
+    //     combine these with the remaining matcher only bundles to with makeMatcher/makeVectorMatcher to make a matcher
     //     only bundle
     // 3 - no clauses support indexes. in this case, we make a matcher only bundle using makeMatcher/makeVectorMatcher
 
