@@ -38,6 +38,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.simulate.TestSegmentsMetadataManager;
@@ -65,9 +66,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Unit tests to test the {@link KillUnusedSegments} duty.
- */
 public class KillUnusedSegmentsTest
 {
   private static final DateTime NOW = DateTimes.nowUtc();
@@ -108,11 +106,8 @@ public class KillUnusedSegmentsTest
     paramsBuilder = DruidCoordinatorRuntimeParams.newBuilder(DateTimes.nowUtc());
   }
 
-  /**
-   * The buffer periood and duration to retain influence kill behavior.
-   */
   @Test
-  public void testDefaults()
+  public void testKillWithDefaultCoordinatorConfig()
   {
     configBuilder = new TestDruidCoordinatorConfig.Builder();
 
@@ -138,7 +133,7 @@ public class KillUnusedSegmentsTest
   }
 
   @Test
-  public void testRunWithNoIntervalShouldNotKillAnySegments()
+  public void testKillWithNoDatasources()
   {
     initDuty();
     final CoordinatorRunStats stats = runDutyAndGetStats();
@@ -146,99 +141,13 @@ public class KillUnusedSegmentsTest
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
     Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
-
-    validateLastKillStateAndReset(DS1, null);
-    validateLastKillStateAndReset(DS2, null);
-  }
-
-  @Test
-  public void testRunWithSpecificDatasourceAndNoIntervalShouldNotKillAnySegments()
-  {
-    configBuilder.withCoordinatorKillDurationToRetain(Duration.standardDays(400));
-
-    initDuty();
-    final CoordinatorRunStats stats = runDutyAndGetStats();
-
-    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
-    Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
-    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
-
-    validateLastKillStateAndReset(DS1, null);
-    validateLastKillStateAndReset(DS2, null);
   }
 
   /**
-   * The kill period is honored after the first indexing run.
+   * TODO
    */
   @Test
-  public void testRunsWithKillPeriod()
-  {
-    configBuilder.withCoordinatorKillPeriod(Duration.standardHours(1));
-
-    createAndAddUnusedSegment(DS1, YEAR_OLD, NOW.minusDays(10));
-    createAndAddUnusedSegment(DS1, MONTH_OLD, NOW.minusDays(10));
-    createAndAddUnusedSegment(DS1, DAY_OLD, NOW.minusDays(2));
-    createAndAddUnusedSegment(DS1, HOUR_OLD, NOW.minusDays(2));
-    createAndAddUnusedSegment(DS1, NEXT_DAY, NOW.minusDays(10));
-    createAndAddUnusedSegment(DS1, NEXT_MONTH, NOW.minusDays(10));
-
-    initDuty();
-    CoordinatorRunStats stats = runDutyAndGetStats();
-
-    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
-    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
-    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
-    Assert.assertEquals(2, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
-
-    validateLastKillStateAndReset(
-        DS1,
-        new Interval(YEAR_OLD.getStart(), MONTH_OLD.getEnd())
-    );
-
-    stats = runDutyAndGetStats();
-
-    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
-    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
-    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
-    Assert.assertEquals(2, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
-
-    validateLastKillStateAndReset(DS1, null);
-  }
-
-  @Test
-  public void testKillAtCapacity()
-  {
-    dynamicConfigBuilder.withKillTaskSlotRatio(0.3);
-    dynamicConfigBuilder.withMaxKillTaskSlots(2);
-    paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
-
-    createAndAddUnusedSegment(DS1, YEAR_OLD, NOW.minusDays(1));
-    createAndAddUnusedSegment(DS1, MONTH_OLD, NOW.minusDays(1));
-    createAndAddUnusedSegment(DS1, DAY_OLD, NOW.minusDays(1));
-
-    createAndAddUnusedSegment(DS2, YEAR_OLD, NOW.minusDays(1));
-    createAndAddUnusedSegment(DS2, DAY_OLD, NOW.minusDays(1));
-    createAndAddUnusedSegment(DS2, NEXT_MONTH, NOW.minusDays(1));
-
-    createAndAddUnusedSegment(DS3, YEAR_OLD, NOW.minusDays(1));
-
-    initDuty();
-    final CoordinatorRunStats stats = runDutyAndGetStats();
-
-    Assert.assertEquals(2, stats.get(Stats.Kill.AVAILABLE_SLOTS));
-    Assert.assertEquals(2, stats.get(Stats.Kill.SUBMITTED_TASKS));
-    Assert.assertEquals(2, stats.get(Stats.Kill.MAX_SLOTS));
-    Assert.assertEquals(2, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
-    Assert.assertEquals(1, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS2_STAT_KEY));
-
-    validateLastKillStateAndReset(DS1, new Interval(YEAR_OLD.getStart(), MONTH_OLD.getEnd()));
-    validateLastKillStateAndReset(DS2, YEAR_OLD);
-    validateLastKillStateAndReset(DS3, null);
-  }
-
-
-  @Test
-  public void testMultipleDatasources()
+  public void testKillWithMultipleDatasources()
   {
     configBuilder.withCoordinatorKillIgnoreDurationToRetain(true);
     configBuilder.withCoordinatorKillMaxSegments(2);
@@ -289,13 +198,14 @@ public class KillUnusedSegmentsTest
   }
 
   /**
-   * Even though "more recent" segments are also considered as candidates in the wide kill interval here,
-   * the kill task will narrow down to clean up only the segments that strictly honor the max kill time.
+   * The {@code DAY_OLD} and {@code HOUR_OLD} segments are "more recent" in terms of last updated time.
+   * Even though they fall within the umbrella kill interval computed by the duty, the kill task will narrow down to
+   * exclude them and clean up only segments that strictly honor the max last updated time.
    * See {@code KillUnusedSegmentsTaskTest#testKillMultipleUnusedSegmentsWithNullMaxUsedStatusLastUpdatedTime}
    * for example.
    */
   @Test
-  public void testSpreadOutLastMaxSegments()
+  public void testKillWithDifferentLastUpdatedTimesInWideInterval()
   {
     configBuilder.withCoordinatorKillIgnoreDurationToRetain(true);
     configBuilder.withCoordinatorKillBufferPeriod(Duration.standardDays(3));
@@ -318,8 +228,11 @@ public class KillUnusedSegmentsTest
     validateLastKillStateAndReset(DS1, new Interval(YEAR_OLD.getStart(), NEXT_MONTH.getEnd()));
   }
 
+  /**
+   * TODO
+   */
   @Test
-  public void testAddOldVersionsLater()
+  public void testKillWithModifiedUpdatedTime()
   {
     configBuilder.withCoordinatorKillIgnoreDurationToRetain(true);
     configBuilder.withCoordinatorKillMaxSegments(2);
@@ -372,20 +285,8 @@ public class KillUnusedSegmentsTest
   }
 
   @Test
-  public void testNoDatasources()
+  public void testDatasoucesAllowList()
   {
-    initDuty();
-    final CoordinatorRunStats stats = runDutyAndGetStats();
-
-    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
-    Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
-    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
-  }
-
-  @Test
-  public void testWhiteList()
-  {
-    // Only segments more than a day old are killed
     dynamicConfigBuilder.withSpecificDataSourcesToKillUnusedSegmentsIn(ImmutableSet.of(DS2, DS3));
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
@@ -406,28 +307,6 @@ public class KillUnusedSegmentsTest
     validateLastKillStateAndReset(DS1, null);
     validateLastKillStateAndReset(DS2, YEAR_OLD);
     validateLastKillStateAndReset(DS3, MONTH_OLD);
-  }
-
-  @Test
-  public void testDurationToRetain()
-  {
-    // Only segments more than a day old are killed
-    createAndAddUnusedSegment(DS1, YEAR_OLD, NOW.minusDays(10));
-    createAndAddUnusedSegment(DS1, MONTH_OLD, NOW.minusDays(10));
-    createAndAddUnusedSegment(DS1, DAY_OLD, NOW.minusDays(2));
-    createAndAddUnusedSegment(DS1, HOUR_OLD, NOW.minusDays(2));
-    createAndAddUnusedSegment(DS1, NEXT_DAY, NOW.minusDays(10));
-    createAndAddUnusedSegment(DS1, NEXT_MONTH, NOW.minusDays(10));
-
-    initDuty();
-    final CoordinatorRunStats stats = runDutyAndGetStats();
-
-    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
-    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
-    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
-    Assert.assertEquals(2, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
-
-    validateLastKillStateAndReset(DS1, new Interval(YEAR_OLD.getStart(), MONTH_OLD.getEnd()));
   }
 
   @Test
@@ -479,16 +358,13 @@ public class KillUnusedSegmentsTest
   }
 
   @Test
-  public void testMaxSegmentsToKill()
+  public void testLowerMaxSegmentsToKill()
   {
     configBuilder.withCoordinatorKillMaxSegments(1);
 
     createAndAddUnusedSegment(DS1, YEAR_OLD, NOW.minusDays(10));
     createAndAddUnusedSegment(DS1, MONTH_OLD, NOW.minusDays(10));
     createAndAddUnusedSegment(DS1, DAY_OLD, NOW.minusDays(2));
-    createAndAddUnusedSegment(DS1, HOUR_OLD, NOW.minusDays(2));
-    createAndAddUnusedSegment(DS1, NEXT_DAY, NOW.minusDays(10));
-    createAndAddUnusedSegment(DS1, NEXT_MONTH, NOW.minusDays(10));
 
     initDuty();
     final CoordinatorRunStats stats = runDutyAndGetStats();
@@ -501,8 +377,78 @@ public class KillUnusedSegmentsTest
     validateLastKillStateAndReset(DS1, YEAR_OLD);
   }
 
+  /**
+   * The kill period is honored after the first indexing run.
+   */
   @Test
-  public void testKillTaskSlotRatioNoAvailableTaskCapacityForKill()
+  public void testLargeKillPeriod()
+  {
+    configBuilder.withCoordinatorKillPeriod(Duration.standardHours(1));
+
+    createAndAddUnusedSegment(DS1, YEAR_OLD, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, MONTH_OLD, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, DAY_OLD, NOW.minusDays(2));
+    createAndAddUnusedSegment(DS1, HOUR_OLD, NOW.minusDays(2));
+    createAndAddUnusedSegment(DS1, NEXT_DAY, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, NEXT_MONTH, NOW.minusDays(10));
+
+    initDuty();
+    CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
+
+    validateLastKillStateAndReset(DS1, new Interval(YEAR_OLD.getStart(), MONTH_OLD.getEnd()));
+
+    stats = runDutyAndGetStats();
+
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
+
+    validateLastKillStateAndReset(DS1, null);
+  }
+
+  /**
+   * There are multiple datasources to be killed, but the kill task slot is at capacity,
+   * so the duty has to wait until the slots free up in the next cycle or so.
+   */
+  @Test
+  public void testKillTaskSlotAtCapacity()
+  {
+    dynamicConfigBuilder.withKillTaskSlotRatio(0.3);
+    dynamicConfigBuilder.withMaxKillTaskSlots(2);
+    paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
+
+    createAndAddUnusedSegment(DS1, YEAR_OLD, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS1, MONTH_OLD, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS1, DAY_OLD, NOW.minusDays(1));
+
+    createAndAddUnusedSegment(DS2, YEAR_OLD, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS2, DAY_OLD, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS2, NEXT_MONTH, NOW.minusDays(1));
+
+    createAndAddUnusedSegment(DS3, YEAR_OLD, NOW.minusDays(1));
+
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(2, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
+    Assert.assertEquals(1, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS2_STAT_KEY));
+
+    validateLastKillStateAndReset(DS1, new Interval(YEAR_OLD.getStart(), MONTH_OLD.getEnd()));
+    validateLastKillStateAndReset(DS2, YEAR_OLD);
+    validateLastKillStateAndReset(DS3, null);
+  }
+
+  @Test
+  public void testKillWithOverlordTaskSlotsFull()
   {
     dynamicConfigBuilder.withKillTaskSlotRatio(0.10);
     dynamicConfigBuilder.withMaxKillTaskSlots(10);
@@ -518,12 +464,10 @@ public class KillUnusedSegmentsTest
     Assert.assertEquals(0, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
     Assert.assertEquals(0, stats.get(Stats.Kill.MAX_SLOTS));
-
-    validateLastKillStateAndReset(DS1, null);
   }
 
   @Test
-  public void testMaxKillTaskSlotsNoAvailableTaskCapacityForKill()
+  public void testKillWithOverlordTaskSlotAvailable()
   {
     dynamicConfigBuilder.withKillTaskSlotRatio(1.0);
     dynamicConfigBuilder.withMaxKillTaskSlots(3);
@@ -532,20 +476,17 @@ public class KillUnusedSegmentsTest
     overlordClient = new TestOverlordClient(3, 10);
     overlordClient.addTask(DS1);
     overlordClient.addTask(DS1);
-    overlordClient.addTask(DS1);
 
     initDuty();
     final CoordinatorRunStats stats = runDutyAndGetStats();
 
-    Assert.assertEquals(0, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
     Assert.assertEquals(3, stats.get(Stats.Kill.MAX_SLOTS));
-
-    validateLastKillStateAndReset(DS1, null);
   }
 
   @Test
-  public void testKillTaskSlotStats1()
+  public void testKillTaskSlotStat()
   {
     initDuty();
     dynamicConfigBuilder.withKillTaskSlotRatio(1.0);
@@ -641,10 +582,14 @@ public class KillUnusedSegmentsTest
   }
 
   /**
-   * Regardless of ignoreDurationToRetain configuration, auto-kill doesn't delete unused eternity segments because the
-   * unused segment retrieval code uses {@link DateTimes#COMPARE_DATE_AS_STRING_MAX} as the datetime string comparison
-   * for the end endpoint when retrieving unused segment intervals.
-   * TODO: link GitHub issue
+   * <p>
+   * Regardless of {@link DruidCoordinatorConfig#getCoordinatorKillIgnoreDurationToRetain()} configuration,
+   * auto-kill doesn't delete unused segments that end at {@link DateTimes#MAX}.
+   * This is because the kill duty uses {@link DateTimes#COMPARE_DATE_AS_STRING_MAX} as the
+   * datetime string comparison for the end endpoint when retrieving unused segment intervals.
+   * </p><p>
+   * For more information, see <a href="https://github.com/apache/druid/issues/15951"> Issue#15951</a>.
+   * </p>
    */
   @Ignore
   @Test
@@ -670,15 +615,17 @@ public class KillUnusedSegmentsTest
   /**
    * Similar to {@link #testKillEternitySegment()}
    * <p>
-   * Regardless of ignoreDurationToRetain configuration, auto-kill doesn't delete unused segments with an interval end with
-   * {@link DateTimes#MAX}. This is because the kill duty uses {@link DateTimes#COMPARE_DATE_AS_STRING_MAX} as the
+   * Regardless of {@link DruidCoordinatorConfig#getCoordinatorKillIgnoreDurationToRetain()} configuration,
+   * auto-kill doesn't delete unused segments that end at {@link DateTimes#MAX}.
+   * This is because the kill duty uses {@link DateTimes#COMPARE_DATE_AS_STRING_MAX} as the
    * datetime string comparison for the end endpoint when retrieving unused segment intervals.
-   * TODO: link GitHub issue
+   * </p><p>
+   * For more information, see <a href="https://github.com/apache/druid/issues/15951"> Issue#15951</a>.
    * </p>
    */
   @Ignore
   @Test
-  public void testKillSecondHalfEternitySegments()
+  public void testKillSecondHalfEternitySegment()
   {
     final DateTime sixtyDaysAgo = NOW.minusDays(60);
 
@@ -699,7 +646,7 @@ public class KillUnusedSegmentsTest
   }
 
   @Test
-  public void testInvalidKillPeriod()
+  public void testKillPeriodShorterThanIndexingPeriod()
   {
     MatcherAssert.assertThat(
         Assert.assertThrows(
@@ -725,7 +672,7 @@ public class KillUnusedSegmentsTest
   }
 
   @Test
-  public void testInvalidKillMaxSegments()
+  public void testNegativeMaxKillSegments()
   {
     MatcherAssert.assertThat(
         Assert.assertThrows(
