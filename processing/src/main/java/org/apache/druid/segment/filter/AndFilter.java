@@ -87,7 +87,7 @@ public class AndFilter implements BooleanFilter
 
     int selectionCount = selectionRowCount;
     ImmutableBitmap index = null;
-
+    ColumnIndexCapabilities merged = new SimpleColumnIndexCapabilities(true, true);
     // AND filter can be partitioned into a bundle that has both indexes and value matchers. The filters which support
     // indexes are computed into bitmaps and intersected together incrementally, feeding forward the selected row count
     // (number of set bits on the bitmap), allowing filters to skip index computation if it would be more expensive
@@ -113,6 +113,7 @@ public class AndFilter implements BooleanFilter
               columnIndexSelector.getBitmapFactory().makeEmptyImmutableBitmap()
           );
         }
+        merged = merged.merge(subBundle.getIndex().getIndexCapabilities());
         indexBundles.add(subBundle.getIndex().getIndexInfo());
         if (index == null) {
           index = subBundle.getIndex().getBitmap();
@@ -131,7 +132,8 @@ public class AndFilter implements BooleanFilter
       if (indexBundles.size() == 1) {
         indexBundle = new FilterBundle.SimpleIndexBundle(
             indexBundles.get(0),
-            index
+            index,
+            merged
         );
       } else {
         indexBundle = new FilterBundle.SimpleIndexBundle(
@@ -141,7 +143,8 @@ public class AndFilter implements BooleanFilter
                 System.nanoTime() - bitmapConstructionStartNs,
                 indexBundles
             ),
-            index
+            index,
+            merged
         );
       }
     } else {

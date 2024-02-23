@@ -26,6 +26,8 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.ColumnIndexCapabilities;
+import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
 import org.apache.druid.segment.data.Offset;
 import org.apache.druid.segment.filter.FalseFilter;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
@@ -59,7 +61,8 @@ public class FilterBundle
     return new FilterBundle(
         new FilterBundle.SimpleIndexBundle(
             new FilterBundle.IndexBundleInfo(() -> FalseFilter.instance().toString(), 0, constructionTime, null),
-            emptyBitmap
+            emptyBitmap,
+            SimpleColumnIndexCapabilities.getConstant()
         ),
         null
     );
@@ -118,6 +121,7 @@ public class FilterBundle
   {
     IndexBundleInfo getIndexInfo();
     ImmutableBitmap getBitmap();
+    ColumnIndexCapabilities getIndexCapabilities();
   }
 
   /**
@@ -138,13 +142,14 @@ public class FilterBundle
   public static class SimpleIndexBundle implements IndexBundle
   {
     private final IndexBundleInfo info;
-
     private final ImmutableBitmap index;
+    private final ColumnIndexCapabilities indexCapabilities;
 
-    public SimpleIndexBundle(IndexBundleInfo info, ImmutableBitmap index)
+    public SimpleIndexBundle(IndexBundleInfo info, ImmutableBitmap index, ColumnIndexCapabilities indexCapabilities)
     {
       this.info = Preconditions.checkNotNull(info);
       this.index = Preconditions.checkNotNull(index);
+      this.indexCapabilities = Preconditions.checkNotNull(indexCapabilities);
     }
 
     @Override
@@ -159,6 +164,11 @@ public class FilterBundle
       return index;
     }
 
+    @Override
+    public ColumnIndexCapabilities getIndexCapabilities()
+    {
+      return indexCapabilities;
+    }
   }
 
   public static class SimpleMatcherBundle implements MatcherBundle

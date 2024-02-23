@@ -88,7 +88,8 @@ public interface Filter
         final ImmutableBitmap bitmap = bitmapResultFactory.toImmutableBitmap(result);
         indexBundle = new FilterBundle.SimpleIndexBundle(
             new FilterBundle.IndexBundleInfo(this::toString, bitmap.size(), totalConstructionTimeNs, null),
-            bitmap
+            bitmap,
+            columnIndex.getIndexCapabilities()
         );
       }
       needMatcher = result == null || !columnIndex.getIndexCapabilities().isExact();

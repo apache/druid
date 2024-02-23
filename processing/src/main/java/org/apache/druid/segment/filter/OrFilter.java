@@ -100,6 +100,7 @@ public class OrFilter implements BooleanFilter
     final List<FilterBundle.MatcherBundle> partialIndexBundles = new ArrayList<>();
     final List<FilterBundle.MatcherBundle> matcherOnlyBundles = new ArrayList<>();
     ImmutableBitmap index = null;
+    ColumnIndexCapabilities merged = new SimpleColumnIndexCapabilities(true, true);
     int emptyCount = 0;
 
     final long bitmapConstructionStartNs = System.nanoTime();
@@ -123,6 +124,7 @@ public class OrFilter implements BooleanFilter
         } else {
           if (!bundle.hasMatcher()) {
             indexOnlyBundles.add(bundle.getIndex());
+            merged.merge(bundle.getIndex().getIndexCapabilities());
             // union index only bitmaps together; if all sub-filters are 'index only' bundles we will make an index only
             // bundle ourselves, else we will use this index as a single value matcher
             if (index == null) {
@@ -154,7 +156,11 @@ public class OrFilter implements BooleanFilter
       }
       if (indexOnlyBundles.size() == 1) {
         return new FilterBundle(
-            new FilterBundle.SimpleIndexBundle(indexOnlyBundles.get(0).getIndexInfo(), index),
+            new FilterBundle.SimpleIndexBundle(
+                indexOnlyBundles.get(0).getIndexInfo(),
+                index,
+                indexOnlyBundles.get(0).getIndexCapabilities()
+            ),
             null
         );
       }
@@ -166,7 +172,8 @@ public class OrFilter implements BooleanFilter
                   totalBitmapConstructTimeNs,
                   indexOnlyBundles.stream().map(FilterBundle.IndexBundle::getIndexInfo).collect(Collectors.toList())
               ),
-              index
+              index,
+              merged
           ),
           null
       );
