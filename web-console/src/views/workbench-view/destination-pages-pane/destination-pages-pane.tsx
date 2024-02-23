@@ -86,24 +86,28 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
     );
   }
 
-  function getPageFilename(pageIndex: number) {
-    return `${id}_page${pageIndex}.${desiredExtension}`;
+  function getPageFilename(pageIndex: number, numPages: number) {
+    const numPagesString = String(numPages);
+    const pageNumberString = String(pageIndex + 1).padStart(numPagesString.length, '0');
+    return `${id}_page_${pageNumberString}_of_${numPagesString}.${desiredExtension}`;
   }
 
   async function downloadAllPages() {
     if (!pages) return;
+    const numPages = pages.length;
     for (let i = 0; i < pages.length; i++) {
-      downloadUrl(getPageUrl(i), getPageFilename(i));
+      downloadUrl(getPageUrl(i), getPageFilename(i, numPages));
       await wait(100);
     }
   }
 
+  const numPages = pages.length;
   return (
     <div className="execution-details-pane">
       <p>
         {`${
           typeof numTotalRows === 'number' ? pluralIfNeeded(numTotalRows, 'row') : 'Results'
-        } have been written to ${pluralIfNeeded(pages.length, 'page')}. `}
+        } have been written to ${pluralIfNeeded(numPages, 'page')}. `}
       </p>
       <p>
         Format when downloading:{' '}
@@ -133,7 +137,7 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
           <Button
             intent={Intent.PRIMARY}
             icon={IconNames.DOWNLOAD}
-            text={`Download all data (${pluralIfNeeded(pages.length, 'file')})`}
+            text={`Download all data (${pluralIfNeeded(numPages, 'file')})`}
             onClick={() => void downloadAllPages()}
           />
         )}
@@ -142,8 +146,8 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
         data={pages}
         loading={false}
         sortable={false}
-        defaultPageSize={clamp(pages.length, 1, SMALL_TABLE_PAGE_SIZE)}
-        showPagination={pages.length > SMALL_TABLE_PAGE_SIZE}
+        defaultPageSize={clamp(numPages, 1, SMALL_TABLE_PAGE_SIZE)}
+        showPagination={numPages > SMALL_TABLE_PAGE_SIZE}
         columns={[
           {
             Header: 'Page number',
@@ -172,6 +176,7 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
             Header: '',
             id: 'download',
             accessor: 'id',
+            className: 'padded',
             width: 300,
             Cell: ({ value }) => (
               <AnchorButton
@@ -179,7 +184,7 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
                 text="Download"
                 minimal
                 href={getPageUrl(value)}
-                download={getPageFilename(value)}
+                download={getPageFilename(value, numPages)}
               />
             ),
           },
