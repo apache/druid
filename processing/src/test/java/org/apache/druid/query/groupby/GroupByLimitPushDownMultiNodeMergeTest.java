@@ -44,6 +44,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BySegmentQueryRunner;
+import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.Query;
@@ -652,7 +653,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
     QueryToolChest<ResultRow, GroupByQuery> toolChestHistorical = groupByFactoryHistorical.getToolchest();
     QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
         toolChestHistorical.mergeResults(
-            groupByFactoryHistorical.mergeRunners(executorService, getRunner1(2)),
+            groupByFactoryHistorical.mergeRunners(DirectQueryProcessingPool.INSTANCE, getRunner1(2)),
             true
         ),
         (QueryToolChest) toolChestHistorical
@@ -661,7 +662,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
     QueryToolChest<ResultRow, GroupByQuery> toolChestHistorical2 = groupByFactoryHistorical2.getToolchest();
     QueryRunner<ResultRow> theRunner2 = new FinalizeResultsQueryRunner<>(
         toolChestHistorical2.mergeResults(
-            groupByFactoryHistorical2.mergeRunners(executorService, getRunner2(3)),
+            groupByFactoryHistorical2.mergeRunners(DirectQueryProcessingPool.INSTANCE, getRunner2(3)),
             true
         ),
         (QueryToolChest) toolChestHistorical2
@@ -798,7 +799,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
     QueryToolChest<ResultRow, GroupByQuery> toolChestHistorical = groupByFactoryHistorical.getToolchest();
     QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
         toolChestHistorical.mergeResults(
-            groupByFactoryHistorical.mergeRunners(executorService, getRunner1(0)),
+            groupByFactoryHistorical.mergeRunners(DirectQueryProcessingPool.INSTANCE, getRunner1(0)),
             true
         ),
         (QueryToolChest) toolChestHistorical
@@ -807,7 +808,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
     QueryToolChest<ResultRow, GroupByQuery> toolChestHistorical2 = groupByFactoryHistorical2.getToolchest();
     QueryRunner<ResultRow> theRunner2 = new FinalizeResultsQueryRunner<>(
         toolChestHistorical2.mergeResults(
-            groupByFactoryHistorical2.mergeRunners(executorService, getRunner2(1)),
+            groupByFactoryHistorical2.mergeRunners(DirectQueryProcessingPool.INSTANCE, getRunner2(1)),
             true
         ),
         (QueryToolChest) toolChestHistorical2
@@ -948,7 +949,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
     QueryToolChest<ResultRow, GroupByQuery> toolChestHistorical = groupByFactoryHistorical.getToolchest();
     QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
         toolChestHistorical.mergeResults(
-            groupByFactoryHistorical.mergeRunners(executorService, getRunner1(4)),
+            groupByFactoryHistorical.mergeRunners(DirectQueryProcessingPool.INSTANCE, getRunner1(4)),
             true
         ),
         (QueryToolChest) toolChestHistorical
@@ -957,7 +958,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
     QueryToolChest<ResultRow, GroupByQuery> toolChestHistorical2 = groupByFactoryHistorical2.getToolchest();
     QueryRunner<ResultRow> theRunner2 = new FinalizeResultsQueryRunner<>(
         toolChestHistorical2.mergeResults(
-            groupByFactoryHistorical2.mergeRunners(executorService, getRunner2(5)),
+            groupByFactoryHistorical2.mergeRunners(DirectQueryProcessingPool.INSTANCE, getRunner2(5)),
             true
         ),
         (QueryToolChest) toolChestHistorical2

@@ -40,6 +40,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BySegmentQueryRunner;
+import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.Query;
@@ -281,7 +282,7 @@ public class GroupByMultiSegmentTest extends InitializedNullHandlingTest
     QueryToolChest<ResultRow, GroupByQuery> toolChest = groupByFactory.getToolchest();
     QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
-            groupByFactory.mergeRunners(executorService, makeGroupByMultiRunners()),
+            groupByFactory.mergeRunners(DirectQueryProcessingPool.INSTANCE, makeGroupByMultiRunners()),
             true
         ),
         (QueryToolChest) toolChest

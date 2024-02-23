@@ -43,6 +43,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BySegmentQueryRunner;
+import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.Query;
@@ -390,7 +391,7 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
     QueryToolChest<ResultRow, GroupByQuery> tooSmallToolChest = tooSmallGroupByFactory.getToolchest();
     QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
-            groupByFactory.mergeRunners(executorService, getRunner1()),
+            groupByFactory.mergeRunners(DirectQueryProcessingPool.INSTANCE, getRunner1()),
             true
         ),
         (QueryToolChest) toolChest
@@ -398,7 +399,7 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
 
     QueryRunner<ResultRow> theRunner2 = new FinalizeResultsQueryRunner<>(
         tooSmallToolChest.mergeResults(
-            tooSmallGroupByFactory.mergeRunners(executorService, getRunner2()),
+            tooSmallGroupByFactory.mergeRunners(DirectQueryProcessingPool.INSTANCE, getRunner2()),
             true
         ),
         (QueryToolChest) toolChest

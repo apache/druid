@@ -43,6 +43,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BySegmentQueryRunner;
+import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.Query;
@@ -706,7 +707,7 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
     GroupByQuery pushDownQuery = nestedQuery;
     QueryRunner<ResultRow> segment1Runner = new FinalizeResultsQueryRunner<ResultRow>(
         toolChest.mergeResults(
-            groupByFactory.mergeRunners(executorService, getQueryRunnerForSegment1()),
+            groupByFactory.mergeRunners(DirectQueryProcessingPool.INSTANCE, getQueryRunnerForSegment1()),
             true
         ),
         (QueryToolChest) toolChest
@@ -714,7 +715,7 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
 
     QueryRunner<ResultRow> segment2Runner = new FinalizeResultsQueryRunner<ResultRow>(
         toolChest2.mergeResults(
-            groupByFactory2.mergeRunners(executorService, getQueryRunnerForSegment2()),
+            groupByFactory2.mergeRunners(DirectQueryProcessingPool.INSTANCE, getQueryRunnerForSegment2()),
             true
         ),
         (QueryToolChest) toolChest
