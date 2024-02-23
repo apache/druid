@@ -277,7 +277,7 @@ public class KillUnusedSegments implements CoordinatorDuty
     // Each unused segment interval returned here has a 1:1 correspondence with an unused segment. So we can assume
     // these are candidate segments to be killed.
     final RowKey datasourceKey = RowKey.of(Dimension.DATASOURCE, dataSource);
-    stats.add(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, datasourceKey, unusedSegmentIntervals.size());
+    stats.add(Stats.Kill.CANDIDATE_UNUSED_SEGMENTS, datasourceKey, unusedSegmentIntervals.size());
 
     if (CollectionUtils.isNullOrEmpty(unusedSegmentIntervals)) {
       return null;

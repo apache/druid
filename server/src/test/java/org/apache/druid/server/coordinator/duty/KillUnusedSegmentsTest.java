@@ -127,7 +127,7 @@ public class KillUnusedSegmentsTest
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
     Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
-    Assert.assertEquals(1, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
+    Assert.assertEquals(1, stats.get(Stats.Kill.CANDIDATE_UNUSED_SEGMENTS, DS1_STAT_KEY));
 
     validateLastKillStateAndReset(DS1, YEAR_OLD);
   }
@@ -168,8 +168,8 @@ public class KillUnusedSegmentsTest
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(2, stats.get(Stats.Kill.SUBMITTED_TASKS));
     Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
-    Assert.assertEquals(2, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
-    Assert.assertEquals(2, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS2_STAT_KEY));
+    Assert.assertEquals(2, stats.get(Stats.Kill.CANDIDATE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+    Assert.assertEquals(2, stats.get(Stats.Kill.CANDIDATE_UNUSED_SEGMENTS, DS2_STAT_KEY));
 
     validateLastKillStateAndReset(DS1, new Interval(YEAR_OLD.getStart(), MONTH_OLD.getEnd()));
     validateLastKillStateAndReset(DS2, new Interval(YEAR_OLD.getStart(), DAY_OLD.getEnd()));
@@ -179,8 +179,8 @@ public class KillUnusedSegmentsTest
     Assert.assertEquals(20, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(4, stats.get(Stats.Kill.SUBMITTED_TASKS));
     Assert.assertEquals(20, stats.get(Stats.Kill.MAX_SLOTS));
-    Assert.assertEquals(4, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
-    Assert.assertEquals(3, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS2_STAT_KEY));
+    Assert.assertEquals(4, stats.get(Stats.Kill.CANDIDATE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+    Assert.assertEquals(3, stats.get(Stats.Kill.CANDIDATE_UNUSED_SEGMENTS, DS2_STAT_KEY));
 
     validateLastKillStateAndReset(DS1, new Interval(DAY_OLD.getStart(), NEXT_DAY.getEnd()));
     validateLastKillStateAndReset(DS2, NEXT_DAY);
@@ -190,8 +190,8 @@ public class KillUnusedSegmentsTest
     Assert.assertEquals(30, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(5, stats.get(Stats.Kill.SUBMITTED_TASKS));
     Assert.assertEquals(30, stats.get(Stats.Kill.MAX_SLOTS));
-    Assert.assertEquals(5, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
-    Assert.assertEquals(3, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS2_STAT_KEY));
+    Assert.assertEquals(5, stats.get(Stats.Kill.CANDIDATE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+    Assert.assertEquals(3, stats.get(Stats.Kill.CANDIDATE_UNUSED_SEGMENTS, DS2_STAT_KEY));
 
     validateLastKillStateAndReset(DS1, NEXT_MONTH);
     validateLastKillStateAndReset(DS2, null);
@@ -223,7 +223,7 @@ public class KillUnusedSegmentsTest
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
     Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
-    Assert.assertEquals(4, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
+    Assert.assertEquals(4, stats.get(Stats.Kill.CANDIDATE_UNUSED_SEGMENTS, DS1_STAT_KEY));
 
     validateLastKillStateAndReset(DS1, new Interval(YEAR_OLD.getStart(), NEXT_MONTH.getEnd()));
   }
@@ -247,7 +247,7 @@ public class KillUnusedSegmentsTest
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
     Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
-    Assert.assertEquals(2, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
+    Assert.assertEquals(2, stats.get(Stats.Kill.CANDIDATE_UNUSED_SEGMENTS, DS1_STAT_KEY));
 
     validateLastKillStateAndReset(DS1, new Interval(DAY_OLD.getStart(), NEXT_DAY.getEnd()));
 
@@ -261,7 +261,7 @@ public class KillUnusedSegmentsTest
     Assert.assertEquals(20, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(2, stats.get(Stats.Kill.SUBMITTED_TASKS));
     Assert.assertEquals(20, stats.get(Stats.Kill.MAX_SLOTS));
-    Assert.assertEquals(3, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
+    Assert.assertEquals(3, stats.get(Stats.Kill.CANDIDATE_UNUSED_SEGMENTS, DS1_STAT_KEY));
 
     validateLastKillStateAndReset(DS1, NEXT_MONTH);
 
@@ -270,7 +270,7 @@ public class KillUnusedSegmentsTest
     Assert.assertEquals(30, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(2, stats.get(Stats.Kill.SUBMITTED_TASKS));
     Assert.assertEquals(30, stats.get(Stats.Kill.MAX_SLOTS));
-    Assert.assertEquals(3, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
+    Assert.assertEquals(3, stats.get(Stats.Kill.CANDIDATE_UNUSED_SEGMENTS, DS1_STAT_KEY));
 
     validateLastKillStateAndReset(DS1, null);
 
@@ -279,7 +279,7 @@ public class KillUnusedSegmentsTest
     Assert.assertEquals(40, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(3, stats.get(Stats.Kill.SUBMITTED_TASKS));
     Assert.assertEquals(40, stats.get(Stats.Kill.MAX_SLOTS));
-    Assert.assertEquals(5, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
+    Assert.assertEquals(5, stats.get(Stats.Kill.CANDIDATE_UNUSED_SEGMENTS, DS1_STAT_KEY));
 
     validateLastKillStateAndReset(DS1, new Interval(YEAR_OLD.getStart(), MONTH_OLD.getEnd()));
   }
@@ -300,9 +300,9 @@ public class KillUnusedSegmentsTest
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(2, stats.get(Stats.Kill.SUBMITTED_TASKS));
     Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
-    Assert.assertEquals(0, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
-    Assert.assertEquals(1, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS2_STAT_KEY));
-    Assert.assertEquals(1, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS3_STAT_KEY));
+    Assert.assertEquals(0, stats.get(Stats.Kill.CANDIDATE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+    Assert.assertEquals(1, stats.get(Stats.Kill.CANDIDATE_UNUSED_SEGMENTS, DS2_STAT_KEY));
+    Assert.assertEquals(1, stats.get(Stats.Kill.CANDIDATE_UNUSED_SEGMENTS, DS3_STAT_KEY));
 
     validateLastKillStateAndReset(DS1, null);
     validateLastKillStateAndReset(DS2, YEAR_OLD);
@@ -327,7 +327,7 @@ public class KillUnusedSegmentsTest
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
     Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
-    Assert.assertEquals(5, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
+    Assert.assertEquals(5, stats.get(Stats.Kill.CANDIDATE_UNUSED_SEGMENTS, DS1_STAT_KEY));
 
     validateLastKillStateAndReset(DS1, new Interval(YEAR_OLD.getStart(), NEXT_DAY.getEnd())
     );
@@ -351,7 +351,7 @@ public class KillUnusedSegmentsTest
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
     Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
-    Assert.assertEquals(6, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
+    Assert.assertEquals(6, stats.get(Stats.Kill.CANDIDATE_UNUSED_SEGMENTS, DS1_STAT_KEY));
 
     // All past and future unused segments should be killed
     validateLastKillStateAndReset(DS1, new Interval(YEAR_OLD.getStart(), NEXT_MONTH.getEnd()));
@@ -372,7 +372,7 @@ public class KillUnusedSegmentsTest
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
     Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
-    Assert.assertEquals(1, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
+    Assert.assertEquals(1, stats.get(Stats.Kill.CANDIDATE_UNUSED_SEGMENTS, DS1_STAT_KEY));
 
     validateLastKillStateAndReset(DS1, YEAR_OLD);
   }
@@ -398,7 +398,7 @@ public class KillUnusedSegmentsTest
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
     Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
-    Assert.assertEquals(2, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
+    Assert.assertEquals(2, stats.get(Stats.Kill.CANDIDATE_UNUSED_SEGMENTS, DS1_STAT_KEY));
 
     validateLastKillStateAndReset(DS1, new Interval(YEAR_OLD.getStart(), MONTH_OLD.getEnd()));
 
@@ -407,7 +407,7 @@ public class KillUnusedSegmentsTest
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
     Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
-    Assert.assertEquals(2, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
+    Assert.assertEquals(2, stats.get(Stats.Kill.CANDIDATE_UNUSED_SEGMENTS, DS1_STAT_KEY));
 
     validateLastKillStateAndReset(DS1, null);
   }
@@ -439,8 +439,8 @@ public class KillUnusedSegmentsTest
     Assert.assertEquals(2, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(2, stats.get(Stats.Kill.SUBMITTED_TASKS));
     Assert.assertEquals(2, stats.get(Stats.Kill.MAX_SLOTS));
-    Assert.assertEquals(2, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
-    Assert.assertEquals(1, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS2_STAT_KEY));
+    Assert.assertEquals(2, stats.get(Stats.Kill.CANDIDATE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+    Assert.assertEquals(1, stats.get(Stats.Kill.CANDIDATE_UNUSED_SEGMENTS, DS2_STAT_KEY));
 
     validateLastKillStateAndReset(DS1, new Interval(YEAR_OLD.getStart(), MONTH_OLD.getEnd()));
     validateLastKillStateAndReset(DS2, YEAR_OLD);
@@ -576,7 +576,7 @@ public class KillUnusedSegmentsTest
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
     Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
-    Assert.assertEquals(1, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
+    Assert.assertEquals(1, stats.get(Stats.Kill.CANDIDATE_UNUSED_SEGMENTS, DS1_STAT_KEY));
 
     validateLastKillStateAndReset(DS1, firstHalfEternity);
   }
@@ -607,7 +607,7 @@ public class KillUnusedSegmentsTest
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
     Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
-    Assert.assertEquals(1, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
+    Assert.assertEquals(1, stats.get(Stats.Kill.CANDIDATE_UNUSED_SEGMENTS, DS1_STAT_KEY));
 
     validateLastKillStateAndReset(DS1, Intervals.ETERNITY);
   }
@@ -640,7 +640,7 @@ public class KillUnusedSegmentsTest
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
     Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
-    Assert.assertEquals(1, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
+    Assert.assertEquals(1, stats.get(Stats.Kill.CANDIDATE_UNUSED_SEGMENTS, DS1_STAT_KEY));
 
     validateLastKillStateAndReset(DS1, secondHalfEternity);
   }
