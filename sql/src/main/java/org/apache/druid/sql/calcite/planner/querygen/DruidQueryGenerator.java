@@ -30,13 +30,11 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator.PDQVertexFactory.PDQVertex;
 import org.apache.druid.sql.calcite.planner.querygen.SourceDescProducer.SourceDesc;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery.Stage;
 import org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -121,6 +119,8 @@ public class DruidQueryGenerator
      * @throws DruidException if unwrap is not possible.
      */
     SourceDesc unwrapSourceDesc();
+
+    Optional<Vertex> removeTopProject();
   }
 
   /**
@@ -144,10 +144,19 @@ public class DruidQueryGenerator
 
     Vertex createVertex2(Vertex inputVertex)
     {
-      return new PDQVertex(
-          PartialDruidQuery.createOuterQuery(((PDQVertex) inputVertex).partialDruidQuery),
-          ImmutableList.of(inputVertex)
+      Optional<Vertex> inputWithoutLastProject = inputVertex.removeTopProject();
+
+      final PDQVertex input;
+      input=(PDQVertex) inputWithoutLastProject.orElse(inputVertex);
+      PDQVertex newVertex = new PDQVertex(
+          PartialDruidQuery.createOuterQuery(input.partialDruidQuery),
+          ImmutableList.of(input)
       );
+
+      if(!inputWithoutLastProject.isEmpty()) {
+
+      }
+      return newVertex;
     }
 
     public class PDQVertex implements Vertex
@@ -211,7 +220,7 @@ public class DruidQueryGenerator
         if (!newPartialQuery.isPresent()) {
           return Optional.empty();
         }
-        return Optional.of(createVertex(newPartialQuery.get(), inputs));
+        return Optional.of(new PDQVertex(newPartialQuery.get(), inputs));
       }
 
       /**
@@ -286,6 +295,20 @@ public class DruidQueryGenerator
           return true;
         }
         return false;
+      }
+
+      @Override
+      public Optional<Vertex> removeTopProject()
+      {
+        switch (partialDruidQuery.stage())
+        {
+          case AGGREGATE_PROJECT:
+          case SELECT_PROJECT:
+          case WINDOW_PROJECT:
+          case SORT_PROJECT:
+          default:
+          return Optional.empty();
+        }
       }
     }
 
