@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.querykit;
 
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
@@ -30,10 +31,9 @@ import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.OutputChannel;
 import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.frame.processor.OutputChannels;
+import org.apache.druid.frame.processor.manager.ProcessorManager;
+import org.apache.druid.frame.processor.manager.ProcessorManagers;
 import org.apache.druid.frame.write.FrameWriterFactory;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
@@ -45,6 +45,8 @@ import org.apache.druid.msq.input.stage.StageInputSlice;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.ProcessorsAndChannels;
 import org.apache.druid.msq.kernel.StageDefinition;
+import org.apache.druid.query.Query;
+import org.apache.druid.segment.SegmentReference;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -52,15 +54,26 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
+/**
+ * Base class of frame processors that can read regular Druid segments, external data, *or* channels from
+ * other stages. The term "leaf" represents the fact that they are capable of being leaves in the query tree. However,
+ * they do not *need* to be leaves. They can read from prior stages as well.
+ */
 public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFactory
 {
-  private static final Logger log = new Logger(BaseLeafFrameProcessorFactory.class);
+  private final Query<?> query;
+
+  protected BaseLeafFrameProcessorFactory(Query<?> query)
+  {
+    this.query = query;
+  }
 
   @Override
-  public ProcessorsAndChannels<FrameProcessor<Long>, Long> makeProcessors(
+  public ProcessorsAndChannels<Object, Long> makeProcessors(
       StageDefinition stageDefinition,
       int workerNumber,
       List<InputSlice> inputSlices,
@@ -85,7 +98,7 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
     );
 
     if (totalProcessors == 0) {
-      return new ProcessorsAndChannels<>(Sequences.empty(), OutputChannels.none());
+      return new ProcessorsAndChannels<>(ProcessorManagers.none(), OutputChannels.none());
     }
 
     final int outstandingProcessors;
@@ -100,23 +113,20 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
       outstandingProcessors = Math.min(totalProcessors, maxOutstandingProcessors);
     }
 
-    final AtomicReference<Queue<FrameWriterFactory>> frameWriterFactoryQueueRef =
-        new AtomicReference<>(new ArrayDeque<>(outstandingProcessors));
-    final AtomicReference<Queue<WritableFrameChannel>> channelQueueRef =
-        new AtomicReference<>(new ArrayDeque<>(outstandingProcessors));
+    final Queue<FrameWriterFactory> frameWriterFactoryQueue = new ArrayDeque<>(outstandingProcessors);
+    final Queue<WritableFrameChannel> channelQueue = new ArrayDeque<>(outstandingProcessors);
     final List<OutputChannel> outputChannels = new ArrayList<>(outstandingProcessors);
 
     for (int i = 0; i < outstandingProcessors; i++) {
       final OutputChannel outputChannel = outputChannelFactory.openChannel(0 /* Partition number doesn't matter */);
       outputChannels.add(outputChannel);
-      channelQueueRef.get().add(outputChannel.getWritableChannel());
-      frameWriterFactoryQueueRef.get().add(
-          stageDefinition.createFrameWriterFactory(outputChannel.getFrameMemoryAllocator())
+      channelQueue.add(outputChannel.getWritableChannel());
+      frameWriterFactoryQueue.add(stageDefinition.createFrameWriterFactory(outputChannel.getFrameMemoryAllocator())
       );
     }
 
     // Read all base inputs in separate processors, one per processor.
-    final Sequence<ReadableInput> processorBaseInputs = readBaseInputs(
+    final Iterable<ReadableInput> processorBaseInputs = readBaseInputs(
         stageDefinition,
         inputSlices,
         inputSliceReader,
@@ -124,65 +134,57 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
         warningPublisher
     );
 
-    final Sequence<FrameProcessor<Long>> processors = processorBaseInputs.map(
-        processorBaseInput -> {
-          // Read broadcast data from earlier stages. Note that for each processor, we are rebuilding the broadcast
-          // table from scratch, which is wasteful. This could be pushed up a level.
-          final Int2ObjectMap<ReadableInput> sideChannels =
-              readBroadcastInputsFromEarlierStages(
-                  stageDefinition,
-                  inputSlices,
-                  inputSliceReader,
-                  counters,
-                  warningPublisher
-              );
+    // SegmentMapFn processor, if needed. May be null.
+    final FrameProcessor<Function<SegmentReference, SegmentReference>> segmentMapFnProcessor =
+        makeSegmentMapFnProcessor(
+            stageDefinition,
+            inputSlices,
+            inputSliceReader,
+            frameContext,
+            counters,
+            warningPublisher
+        );
 
-          return makeProcessor(
-              processorBaseInput,
-              sideChannels,
-              makeLazyResourceHolder(
-                  channelQueueRef,
-                  channel -> {
-                    try {
-                      channel.close();
-                    }
-                    catch (IOException e) {
-                      throw new RuntimeException(e);
-                    }
-                  }
-              ),
-              makeLazyResourceHolder(frameWriterFactoryQueueRef, ignored -> {}),
-              frameContext
-          );
-        }
-    ).withBaggage(
-        () -> {
-          final Queue<WritableFrameChannel> channelQueue;
-          synchronized (channelQueueRef) {
-            // Set to null so any channels returned by outstanding workers are immediately closed.
-            channelQueue = channelQueueRef.getAndSet(null);
-          }
+    // Function to generate a processor manger for the regular processors, which run after the segmentMapFnProcessor.
+    final Function<Function<SegmentReference, SegmentReference>, ProcessorManager<Object, Long>> processorManagerFn =
+        segmentMapFn ->
+            new BaseLeafFrameProcessorManager(
+                processorBaseInputs,
+                segmentMapFn,
+                frameWriterFactoryQueue,
+                channelQueue,
+                frameContext,
+                this
+            );
 
-          WritableFrameChannel c;
-          while ((c = channelQueue.poll()) != null) {
-            try {
-              c.close();
-            }
-            catch (Throwable e) {
-              log.warn(e, "Error encountered while closing channel for [%s]", this);
-            }
-          }
-        }
-    );
+    //noinspection rawtypes
+    final ProcessorManager processorManager;
 
-    return new ProcessorsAndChannels<>(processors, OutputChannels.wrapReadOnly(outputChannels));
+    if (segmentMapFnProcessor == null) {
+      final Function<SegmentReference, SegmentReference> segmentMapFn =
+          query.getDataSource().createSegmentMapFunction(query, new AtomicLong());
+      processorManager = processorManagerFn.apply(segmentMapFn);
+    } else {
+      processorManager = new ChainedProcessorManager<>(segmentMapFnProcessor, processorManagerFn);
+    }
+
+    //noinspection unchecked,rawtypes
+    return new ProcessorsAndChannels<>(processorManager, OutputChannels.wrapReadOnly(outputChannels));
   }
+
+  protected abstract FrameProcessor<Object> makeProcessor(
+      ReadableInput baseInput,
+      Function<SegmentReference, SegmentReference> segmentMapFn,
+      ResourceHolder<WritableFrameChannel> outputChannelHolder,
+      ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder,
+      FrameContext providerThingy
+  );
 
   /**
    * Read base inputs, where "base" is meant in the same sense as in
    * {@link org.apache.druid.query.planning.DataSourceAnalysis}: the primary datasource that drives query processing.
    */
-  private static Sequence<ReadableInput> readBaseInputs(
+  private static Iterable<ReadableInput> readBaseInputs(
       final StageDefinition stageDef,
       final List<InputSlice> inputSlices,
       final InputSliceReader inputSliceReader,
@@ -190,18 +192,22 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
       final Consumer<Throwable> warningPublisher
   )
   {
-    final List<Sequence<ReadableInput>> sequences = new ArrayList<>();
+    final List<ReadableInputs> inputss = new ArrayList<>();
 
     for (int inputNumber = 0; inputNumber < inputSlices.size(); inputNumber++) {
       if (!stageDef.getBroadcastInputNumbers().contains(inputNumber)) {
-        final int i = inputNumber;
-        final Sequence<ReadableInput> sequence =
-            Sequences.simple(inputSliceReader.attach(i, inputSlices.get(i), counters, warningPublisher));
-        sequences.add(sequence);
+        final ReadableInputs inputs =
+            inputSliceReader.attach(
+                inputNumber,
+                inputSlices.get(inputNumber),
+                counters,
+                warningPublisher
+            );
+        inputss.add(inputs);
       }
     }
 
-    return Sequences.concat(sequences);
+    return Iterables.concat(inputss);
   }
 
   /**
@@ -251,52 +257,47 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
     }
   }
 
-  protected abstract FrameProcessor<Long> makeProcessor(
-      ReadableInput baseInput,
-      Int2ObjectMap<ReadableInput> sideChannels,
-      ResourceHolder<WritableFrameChannel> outputChannel,
-      ResourceHolder<FrameWriterFactory> frameWriterFactory,
-      FrameContext providerThingy
-  );
-
-  private static <T> ResourceHolder<T> makeLazyResourceHolder(
-      final AtomicReference<Queue<T>> queueRef,
-      final Consumer<T> backupCloser
+  /**
+   * Creates a processor that builds the segmentMapFn for all other processors. Must be run prior to all other
+   * processors being run. Returns null if a dedicated segmentMapFn processor is unnecessary.
+   */
+  @Nullable
+  private FrameProcessor<Function<SegmentReference, SegmentReference>> makeSegmentMapFnProcessor(
+      StageDefinition stageDefinition,
+      List<InputSlice> inputSlices,
+      InputSliceReader inputSliceReader,
+      FrameContext frameContext,
+      CounterTracker counters,
+      Consumer<Throwable> warningPublisher
   )
   {
-    return new LazyResourceHolder<>(
-        () -> {
-          final T resource;
+    // Read broadcast data once, so it can be reused across all processors in the form of a segmentMapFn.
+    // No explicit cleanup: let the garbage collector handle it.
+    final Int2ObjectMap<ReadableInput> broadcastInputs =
+        readBroadcastInputsFromEarlierStages(
+            stageDefinition,
+            inputSlices,
+            inputSliceReader,
+            counters,
+            warningPublisher
+        );
 
-          synchronized (queueRef) {
-            resource = queueRef.get().poll();
-          }
-
-          return new ResourceHolder<T>()
-          {
-            @Override
-            public T get()
-            {
-              return resource;
-            }
-
-            @Override
-            public void close()
-            {
-              synchronized (queueRef) {
-                final Queue<T> queue = queueRef.get();
-                if (queue != null) {
-                  queue.add(resource);
-                  return;
-                }
-              }
-
-              // Queue was null
-              backupCloser.accept(resource);
-            }
-          };
-        }
-    );
+    if (broadcastInputs.isEmpty()) {
+      if (query.getDataSource().getAnalysis().isJoin()) {
+        // Joins may require significant computation to compute the segmentMapFn. Offload it to a processor.
+        return new SimpleSegmentMapFnProcessor(query);
+      } else {
+        // Non-joins are expected to have cheap-to-compute segmentMapFn. Do the computation in the factory thread,
+        // without offloading to a processor.
+        return null;
+      }
+    } else {
+      return BroadcastJoinSegmentMapFnProcessor.create(
+          query,
+          broadcastInputs,
+          frameContext.memoryParameters().getBroadcastJoinMemory()
+      );
+    }
   }
 
   private static boolean hasParquet(final List<InputSlice> slices)

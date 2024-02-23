@@ -20,6 +20,7 @@
 package org.apache.druid.java.util.metrics;
 
 import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
@@ -29,10 +30,20 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Test implementation of {@link ServiceEmitter} that collects emitted metrics
+ * and alerts in lists.
+ */
 public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifier
 {
   private final List<Event> events = new ArrayList<>();
+  private final List<AlertEvent> alertEvents = new ArrayList<>();
   private final Map<String, List<ServiceMetricEvent>> metricEvents = new HashMap<>();
+
+  public StubServiceEmitter()
+  {
+    super("testing", "localhost", null);
+  }
 
   public StubServiceEmitter(String service, String host)
   {
@@ -46,6 +57,8 @@ public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifie
       ServiceMetricEvent metricEvent = (ServiceMetricEvent) event;
       metricEvents.computeIfAbsent(metricEvent.getMetric(), name -> new ArrayList<>())
                   .add(metricEvent);
+    } else if (event instanceof AlertEvent) {
+      alertEvents.add((AlertEvent) event);
     }
     events.add(event);
   }
@@ -56,6 +69,24 @@ public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifie
   public List<Event> getEvents()
   {
     return events;
+  }
+
+  /**
+   * Gets all the metric events emitted since the previous {@link #flush()}.
+   *
+   * @return Map from metric name to list of events emitted for that metric.
+   */
+  public Map<String, List<ServiceMetricEvent>> getMetricEvents()
+  {
+    return metricEvents;
+  }
+
+  /**
+   * Gets all the alerts emitted since the previous {@link #flush()}.
+   */
+  public List<AlertEvent> getAlerts()
+  {
+    return alertEvents;
   }
 
   @Override
@@ -92,6 +123,7 @@ public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifie
   public void flush()
   {
     events.clear();
+    alertEvents.clear();
     metricEvents.clear();
   }
 

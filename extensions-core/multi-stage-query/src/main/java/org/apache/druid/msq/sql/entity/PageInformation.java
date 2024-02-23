@@ -21,6 +21,8 @@ package org.apache.druid.msq.sql.entity;
 
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.annotation.Nullable;
@@ -31,25 +33,59 @@ import java.util.Objects;
  */
 public class PageInformation
 {
+  private final long id;
   @Nullable
   private final Long numRows;
   @Nullable
   private final Long sizeInBytes;
-  private final long id;
+
+  // Worker field should not flow to the users of SqlStatementResource API since users should not care about worker
+  @Nullable
+  private final Integer worker;
+
+  // Partition field should not flow to the users of SqlStatementResource API since users should not care about partitions
+  @Nullable
+  private final Integer partition;
 
   @JsonCreator
   public PageInformation(
+      @JsonProperty("id") long id,
       @JsonProperty("numRows") @Nullable Long numRows,
-      @JsonProperty("sizeInBytes") @Nullable Long sizeInBytes,
-      @JsonProperty("id") long id
+      @JsonProperty("sizeInBytes") @Nullable Long sizeInBytes
   )
   {
+    this.id = id;
     this.numRows = numRows;
     this.sizeInBytes = sizeInBytes;
+    this.worker = null;
+    this.partition = null;
+  }
+
+
+  public PageInformation(
+      long id,
+      Long numRows,
+      Long sizeInBytes,
+      Integer worker,
+      Integer partition
+  )
+  {
     this.id = id;
+    this.numRows = numRows;
+    this.sizeInBytes = sizeInBytes;
+    this.worker = worker;
+    this.partition = partition;
+  }
+
+
+  @JsonProperty
+  public long getId()
+  {
+    return id;
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   @Nullable
   public Long getNumRows()
   {
@@ -57,16 +93,26 @@ public class PageInformation
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   @Nullable
   public Long getSizeInBytes()
   {
     return sizeInBytes;
   }
 
-  @JsonProperty
-  public long getId()
+
+  @Nullable
+  @JsonIgnore
+  public Integer getWorker()
   {
-    return id;
+    return worker;
+  }
+
+  @Nullable
+  @JsonIgnore
+  public Integer getPartition()
+  {
+    return partition;
   }
 
   @Override
@@ -82,22 +128,24 @@ public class PageInformation
     return id == that.id && Objects.equals(numRows, that.numRows) && Objects.equals(
         sizeInBytes,
         that.sizeInBytes
-    );
+    ) && Objects.equals(worker, that.worker) && Objects.equals(partition, that.partition);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(numRows, sizeInBytes, id);
+    return Objects.hash(id, numRows, sizeInBytes, worker, partition);
   }
 
   @Override
   public String toString()
   {
     return "PageInformation{" +
-           "numRows=" + numRows +
+           "id=" + id +
+           ", numRows=" + numRows +
            ", sizeInBytes=" + sizeInBytes +
-           ", id=" + id +
+           ", worker=" + worker +
+           ", partition=" + partition +
            '}';
   }
 }

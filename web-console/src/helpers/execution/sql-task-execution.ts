@@ -16,28 +16,30 @@
  * limitations under the License.
  */
 
+import { QueryResult } from '@druid-toolkit/query';
 import type { AxiosResponse, CancelToken } from 'axios';
-import { L, QueryResult } from 'druid-query-toolkit';
 
-import type { QueryContext } from '../../druid-models';
+import type { AsyncStatusResponse, MsqTaskPayloadResponse, QueryContext } from '../../druid-models';
 import { Execution } from '../../druid-models';
 import { Api } from '../../singletons';
-import {
-  deepGet,
-  DruidError,
-  IntermediateQueryState,
-  queryDruidSql,
-  QueryManager,
-} from '../../utils';
+import { deepGet, DruidError, IntermediateQueryState, QueryManager } from '../../utils';
 import { maybeGetClusterCapacity } from '../capacity';
 
-const WAIT_FOR_SEGMENT_METADATA_TIMEOUT = 180000; // 3 minutes to wait until segments appear in the metadata
-const WAIT_FOR_SEGMENT_LOAD_TIMEOUT = 540000; // 9 minutes to wait for segments to load at all
+const USE_TASK_PAYLOAD = true;
+const USE_TASK_REPORTS = true;
+
+// some executionMode has to be set on the /druid/v2/sql/statements API
+function ensureExecutionModeIsSet(context: QueryContext | undefined): QueryContext {
+  if (typeof context?.executionMode === 'string') return context;
+  return {
+    ...context,
+    executionMode: 'async',
+  };
+}
 
 export interface SubmitTaskQueryOptions {
   query: string | Record<string, any>;
   context?: QueryContext;
-  skipResults?: boolean;
   prefixLines?: number;
   cancelToken?: CancelToken;
   preserveOnTermination?: boolean;
@@ -47,15 +49,7 @@ export interface SubmitTaskQueryOptions {
 export async function submitTaskQuery(
   options: SubmitTaskQueryOptions,
 ): Promise<Execution | IntermediateQueryState<Execution>> {
-  const {
-    query,
-    context,
-    skipResults,
-    prefixLines,
-    cancelToken,
-    preserveOnTermination,
-    onSubmitted,
-  } = options;
+  const { query, context, prefixLines, cancelToken, preserveOnTermination, onSubmitted } = options;
 
   let sqlQuery: string;
   let jsonQuery: Record<string, any>;
@@ -63,61 +57,56 @@ export async function submitTaskQuery(
     sqlQuery = query;
     jsonQuery = {
       query: sqlQuery,
+      context: ensureExecutionModeIsSet(context),
       resultFormat: 'array',
       header: true,
       typesHeader: true,
       sqlTypesHeader: true,
-      context: context,
     };
   } else {
     sqlQuery = query.query;
 
-    if (context) {
-      jsonQuery = {
-        ...query,
-        context: {
-          ...(query.context || {}),
-          ...context,
-        },
-      };
-    } else {
-      jsonQuery = query;
-    }
+    jsonQuery = {
+      ...query,
+      context: ensureExecutionModeIsSet({
+        ...query.context,
+        ...context,
+      }),
+    };
   }
 
-  let sqlTaskResp: AxiosResponse;
-
+  let sqlAsyncResp: AxiosResponse<AsyncStatusResponse>;
   try {
-    sqlTaskResp = await Api.instance.post(`/druid/v2/sql/task`, jsonQuery, { cancelToken });
+    sqlAsyncResp = await Api.instance.post<AsyncStatusResponse>(
+      `/druid/v2/sql/statements`,
+      jsonQuery,
+      {
+        cancelToken,
+      },
+    );
   } catch (e) {
-    const druidError = deepGet(e, 'response.data.error');
+    const druidError = deepGet(e, 'response.data');
     if (!druidError) throw e;
     throw new DruidError(druidError, prefixLines);
   }
 
-  const sqlTaskPayload = sqlTaskResp.data;
+  const sqlAsyncStatus = sqlAsyncResp.data;
 
-  if (!sqlTaskPayload.taskId) {
-    if (!Array.isArray(sqlTaskPayload)) throw new Error('unexpected task payload');
+  if (!sqlAsyncStatus.queryId) {
+    if (!Array.isArray(sqlAsyncStatus)) throw new Error('unexpected task payload');
     return Execution.fromResult(
       'sql-msq-task',
-      QueryResult.fromRawResult(sqlTaskPayload, false, true, true, true),
+      QueryResult.fromRawResult(sqlAsyncStatus, false, true, true, true),
     );
   }
 
-  let execution = Execution.fromTaskSubmit(sqlTaskPayload, sqlQuery, context);
+  const execution = Execution.fromAsyncStatus(sqlAsyncStatus, sqlQuery, context);
 
   if (onSubmitted) {
     onSubmitted(execution.id);
   }
 
-  if (skipResults) {
-    execution = execution.changeDestination({ type: 'download' });
-  }
-
-  execution = await updateExecutionWithDatasourceLoadedIfNeeded(execution, cancelToken);
-
-  if (execution.isFullyComplete()) return execution;
+  if (!execution.isWaitingForQuery()) return execution;
 
   if (cancelToken) {
     cancelTaskExecutionOnCancel(execution.id, cancelToken, Boolean(preserveOnTermination));
@@ -140,12 +129,11 @@ export async function reattachTaskExecution(
 
   try {
     execution = await getTaskExecution(id, undefined, cancelToken);
-    execution = await updateExecutionWithDatasourceLoadedIfNeeded(execution, cancelToken);
   } catch (e) {
     throw new Error(`Reattaching to query failed due to: ${e.message}`);
   }
 
-  if (execution.isFullyComplete()) return execution;
+  if (!execution.isWaitingForQuery()) return execution;
 
   if (cancelToken) {
     cancelTaskExecutionOnCancel(execution.id, cancelToken, Boolean(preserveOnTermination));
@@ -161,123 +149,94 @@ export async function updateExecutionWithTaskIfNeeded(
   if (!execution.isWaitingForQuery()) return execution;
 
   // Inherit old payload so as not to re-query it
-  return execution.updateWith(
-    await getTaskExecution(execution.id, execution._payload, cancelToken),
-  );
+  return await getTaskExecution(execution.id, execution._payload, cancelToken);
 }
 
 export async function getTaskExecution(
   id: string,
-  taskPayloadOverride?: { payload: any; task: string },
+  taskPayloadOverride?: MsqTaskPayloadResponse,
   cancelToken?: CancelToken,
 ): Promise<Execution> {
   const encodedId = Api.encodePath(id);
 
-  let taskPayloadResp: AxiosResponse | undefined;
-  if (!taskPayloadOverride) {
+  let execution: Execution | undefined;
+
+  if (USE_TASK_REPORTS) {
+    let taskReport: any;
     try {
-      taskPayloadResp = await Api.instance.get(`/druid/indexer/v1/task/${encodedId}`, {
+      taskReport = (
+        await Api.instance.get(`/druid/indexer/v1/task/${encodedId}/reports`, {
+          cancelToken,
+        })
+      ).data;
+    } catch (e) {
+      if (Api.isNetworkError(e)) throw e;
+    }
+    if (taskReport) {
+      try {
+        execution = Execution.fromTaskReport(taskReport);
+      } catch {
+        // We got a bad payload, wait a bit and try to get the payload again (also log it)
+        // This whole catch block is a hack, and we should make the detail route more robust
+        console.error(
+          `Got unusable response from the reports endpoint (/druid/indexer/v1/task/${encodedId}/reports) going to retry`,
+        );
+        console.log('Report response:', taskReport);
+      }
+    }
+  }
+
+  if (!execution) {
+    const statusResp = await Api.instance.get<AsyncStatusResponse>(
+      `/druid/v2/sql/statements/${encodedId}`,
+      {
         cancelToken,
-      });
+      },
+    );
+
+    execution = Execution.fromAsyncStatus(statusResp.data);
+  }
+
+  let taskPayload = taskPayloadOverride;
+  if (USE_TASK_PAYLOAD && !taskPayload) {
+    try {
+      taskPayload = (
+        await Api.instance.get(`/druid/indexer/v1/task/${encodedId}`, {
+          cancelToken,
+        })
+      ).data;
+    } catch (e) {
+      if (Api.isNetworkError(e)) throw e;
+    }
+  }
+  if (taskPayload) {
+    execution = execution.updateWithTaskPayload(taskPayload);
+  }
+
+  // Still have to pull the destination page info from the async status, do this in a best effort way since the statements API may have permission errors
+  if (execution.status === 'SUCCESS' && !execution.destinationPages) {
+    try {
+      const statusResp = await Api.instance.get<AsyncStatusResponse>(
+        `/druid/v2/sql/statements/${encodedId}`,
+        {
+          cancelToken,
+        },
+      );
+
+      execution = execution.updateWithAsyncStatus(statusResp.data);
     } catch (e) {
       if (Api.isNetworkError(e)) throw e;
     }
   }
 
-  let taskReportResp: AxiosResponse | undefined;
-  try {
-    taskReportResp = await Api.instance.get(`/druid/indexer/v1/task/${encodedId}/reports`, {
-      cancelToken,
-    });
-  } catch (e) {
-    if (Api.isNetworkError(e)) throw e;
-  }
-
-  if ((taskPayloadResp || taskPayloadOverride) && taskReportResp) {
-    let execution: Execution | undefined;
-    try {
-      execution = Execution.fromTaskPayloadAndReport(
-        taskPayloadResp ? taskPayloadResp.data : taskPayloadOverride,
-        taskReportResp.data,
-      );
-    } catch {
-      // We got a bad payload, wait a bit and try to get the payload again (also log it)
-      // This whole catch block is a hack, and we should make the detail route more robust
-      console.error(
-        `Got unusable response from the reports endpoint (/druid/indexer/v1/task/${encodedId}/reports) going to retry`,
-      );
-      console.log('Report response:', taskReportResp.data);
-    }
-
-    if (execution) {
-      if (execution?.hasPotentiallyStuckStage()) {
-        const capacityInfo = await maybeGetClusterCapacity();
-        if (capacityInfo) {
-          execution = execution.changeCapacityInfo(capacityInfo);
-        }
-      }
-
-      return execution;
+  if (execution.hasPotentiallyStuckStage()) {
+    const capacityInfo = await maybeGetClusterCapacity();
+    if (capacityInfo) {
+      execution = execution.changeCapacityInfo(capacityInfo);
     }
   }
 
-  const statusResp = await Api.instance.get(`/druid/indexer/v1/task/${encodedId}/status`, {
-    cancelToken,
-  });
-
-  return Execution.fromTaskStatus(statusResp.data);
-}
-
-export async function updateExecutionWithDatasourceLoadedIfNeeded(
-  execution: Execution,
-  _cancelToken?: CancelToken,
-): Promise<Execution> {
-  if (
-    !(execution.destination?.type === 'dataSource' && !execution.destination.loaded) ||
-    execution.status !== 'SUCCESS'
-  ) {
-    return execution;
-  }
-
-  const endTime = execution.getEndTime();
-  if (
-    !endTime || // If endTime is not set (this is not expected to happen) then just bow out
-    execution.stages?.getLastStage()?.partitionCount === 0 || // No data was meant to be written anyway, nothing to do
-    endTime.valueOf() + WAIT_FOR_SEGMENT_LOAD_TIMEOUT < Date.now() // Enough time has passed since the query ran... don't bother waiting for segments to load.
-  ) {
-    return execution.markDestinationDatasourceLoaded();
-  }
-
-  // Ideally we would have a more accurate query here, instead of
-  //   COUNT(*) FILTER (WHERE is_published = 1 AND is_available = 0)
-  // we want to filter on something like
-  //   COUNT(*) FILTER (WHERE is_should_be_available = 1 AND is_available = 0)
-  // `is_published` does not quite capture what we want but this is the best we have for now.
-  const segmentCheck = await queryDruidSql({
-    query: `SELECT
-  COUNT(*) AS num_segments,
-  COUNT(*) FILTER (WHERE is_published = 1 AND is_available = 0) AS loading_segments
-FROM sys.segments
-WHERE datasource = ${L(execution.destination.dataSource)} AND is_overshadowed = 0`,
-  });
-
-  const numSegments: number = deepGet(segmentCheck, '0.num_segments') || 0;
-  const loadingSegments: number = deepGet(segmentCheck, '0.loading_segments') || 0;
-
-  // There appear to be no segments, since we checked above that something was written out we know that they have not shown up in the metadata yet
-  if (numSegments === 0) {
-    if (endTime.valueOf() + WAIT_FOR_SEGMENT_METADATA_TIMEOUT < Date.now()) {
-      // Enough time has passed since the query ran... give up waiting for segments to show up in metadata.
-      return execution.markDestinationDatasourceLoaded();
-    }
-
-    return execution;
-  }
-
-  // There are segments, and we are still waiting for some of them to load
-  if (loadingSegments > 0) return execution;
-
-  return execution.markDestinationDatasourceLoaded();
+  return execution;
 }
 
 function cancelTaskExecutionOnCancel(

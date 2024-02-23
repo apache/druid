@@ -372,7 +372,7 @@ public class DummyStringVirtualColumnTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedRows = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Collections.<Map<String, Object>>singletonList(
                     ImmutableMap.<String, Object>builder()
                         .put(COUNT, 1674L)

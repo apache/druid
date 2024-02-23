@@ -41,7 +41,7 @@ import java.util.regex.Pattern;
 
 public abstract class Granularity implements Cacheable
 {
-  public static Comparator<Granularity> IS_FINER_THAN = new Comparator<Granularity>()
+  public static final Comparator<Granularity> IS_FINER_THAN = new Comparator<Granularity>()
   {
     @Override
     /**
@@ -106,6 +106,8 @@ public abstract class Granularity implements Cacheable
    * ALL will not be returned unless the provided granularity is ALL. NONE will never be returned, even if the
    * provided granularity is NONE. This is because the main usage of this function in production is segment
    * allocation, and we do not wish to generate NONE-granular segments.
+   *
+   * The list of granularities returned contains WEEK only if the requested granularity is WEEK.
    */
   public static List<Granularity> granularitiesFinerThan(final Granularity gran0)
   {
@@ -115,6 +117,9 @@ public abstract class Granularity implements Cacheable
     for (GranularityType gran : GranularityType.values()) {
       // Exclude ALL, unless we're looking for granularities finer than ALL; always exclude NONE.
       if ((gran == GranularityType.ALL && !gran0.equals(Granularities.ALL)) || gran == GranularityType.NONE) {
+        continue;
+      }
+      if (gran == GranularityType.WEEK && !gran0.equals(Granularities.WEEK)) {
         continue;
       }
       final Granularity segmentGranularity = gran.create(origin, tz);
@@ -149,6 +154,11 @@ public abstract class Granularity implements Cacheable
    * interval must fit exactly into the scheme of the granularity for this to return true
    */
   public abstract boolean isAligned(Interval interval);
+
+  public DateTimeZone getTimeZone()
+  {
+    return DateTimeZone.UTC;
+  }
 
   public DateTime bucketEnd(DateTime time)
   {
@@ -211,6 +221,16 @@ public abstract class Granularity implements Cacheable
   }
 
   /**
+   * Decides whether this granularity is finer than the other granularity
+   *
+   * @return true if this {@link Granularity} is finer than the passed one
+   */
+  public boolean isFinerThan(Granularity g)
+  {
+    return IS_FINER_THAN.compare(this, g) < 0;
+  }
+
+  /**
    * Return an iterable of granular buckets that overlap a particular interval.
    *
    * In cases where the number of granular buckets is very large, the Iterable returned by this method will take
@@ -255,21 +275,21 @@ public abstract class Granularity implements Cacheable
   {
     private final Interval inputInterval;
 
-    private DateTime currStart;
-    private DateTime currEnd;
+    private long currStart;
+    private long currEnd;
 
     private IntervalIterator(Interval inputInterval)
     {
       this.inputInterval = inputInterval;
 
-      currStart = bucketStart(inputInterval.getStart());
+      currStart = bucketStart(inputInterval.getStartMillis());
       currEnd = increment(currStart);
     }
 
     @Override
     public boolean hasNext()
     {
-      return currStart.isBefore(inputInterval.getEnd());
+      return currStart < inputInterval.getEndMillis();
     }
 
     @Override
@@ -278,7 +298,7 @@ public abstract class Granularity implements Cacheable
       if (!hasNext()) {
         throw new NoSuchElementException("There are no more intervals");
       }
-      Interval retVal = new Interval(currStart, currEnd);
+      Interval retVal = new Interval(currStart, currEnd, getTimeZone());
 
       currStart = currEnd;
       currEnd = increment(currStart);

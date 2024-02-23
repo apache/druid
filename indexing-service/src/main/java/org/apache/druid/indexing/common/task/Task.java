@@ -41,10 +41,13 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 
 import javax.annotation.Nonnull;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -61,7 +64,7 @@ import java.util.Set;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @Type(name = "kill", value = KillUnusedSegmentsTask.class),
+    @Type(name = KillUnusedSegmentsTask.TYPE, value = KillUnusedSegmentsTask.class),
     @Type(name = "move", value = MoveTask.class),
     @Type(name = "archive", value = ArchiveTask.class),
     @Type(name = "restore", value = RestoreTask.class),
@@ -257,6 +260,32 @@ public interface Task
    */
   TaskStatus run(TaskToolbox toolbox) throws Exception;
 
+  /**
+   * Performs cleanup operations after the task execution.
+   * This method is intended to be overridden by tasks that need to perform
+   * specific cleanup actions upon task completion or termination.
+   *
+   * @param toolbox Toolbox for this task
+   * @param taskStatus Provides the final status of the task, indicating if the task
+   *                   was successful, failed, or was killed.
+   * @throws Exception If any error occurs during the cleanup process.
+   */
+  default void cleanUp(TaskToolbox toolbox, TaskStatus taskStatus) throws Exception
+  {
+  }
+
+  /**
+   * Waits for the cleanup operations to finish.
+   * This method can be overridden by tasks that need to ensure that certain cleanup
+   * operations have completed before proceeding further.
+   *
+   * @return true if the cleanup completed successfully, false otherwise.
+   */
+  default boolean waitForCleanupToFinish()
+  {
+    return true;
+  }
+
   default Map<String, Object> addToContext(String key, Object val)
   {
     getContext().put(key, val);
@@ -270,6 +299,11 @@ public interface Task
   }
 
   Map<String, Object> getContext();
+
+  default Optional<Resource> getDestinationResource()
+  {
+    return Optional.of(new Resource(getDataSource(), ResourceType.DATASOURCE));
+  }
 
   default <ContextValueType> ContextValueType getContextValue(String key)
   {

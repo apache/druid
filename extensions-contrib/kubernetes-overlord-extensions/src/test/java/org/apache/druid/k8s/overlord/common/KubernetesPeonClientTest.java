@@ -30,7 +30,9 @@ import io.fabric8.kubernetes.client.KubernetesClientTimeoutException;
 import io.fabric8.kubernetes.client.dsl.LogWatch;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
+import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,6 +48,7 @@ public class KubernetesPeonClientTest
 {
   private static final String ID = "id";
   private static final String JOB_NAME = ID;
+  private static final String KUBERNETES_JOB_NAME = KubernetesOverlordUtils.convertTaskIdToJobName(JOB_NAME);
   private static final String POD_NAME = "name";
   private static final String NAMESPACE = "namespace";
 
@@ -53,12 +56,14 @@ public class KubernetesPeonClientTest
   private KubernetesMockServer server;
   private KubernetesClientApi clientApi;
   private KubernetesPeonClient instance;
+  private StubServiceEmitter serviceEmitter;
 
   @BeforeEach
   public void setup()
   {
     clientApi = new TestKubernetesClient(this.client);
-    instance = new KubernetesPeonClient(clientApi, NAMESPACE, false);
+    serviceEmitter = new StubServiceEmitter("service", "host");
+    instance = new KubernetesPeonClient(clientApi, NAMESPACE, false, serviceEmitter);
   }
 
   @Test
@@ -66,14 +71,14 @@ public class KubernetesPeonClientTest
   {
     Job job = new JobBuilder()
         .withNewMetadata()
-        .withName(JOB_NAME)
+        .withName(KUBERNETES_JOB_NAME)
         .endMetadata()
         .build();
 
     Pod pod = new PodBuilder()
         .withNewMetadata()
         .withName(POD_NAME)
-        .addToLabels("job-name", JOB_NAME)
+        .addToLabels("job-name", KUBERNETES_JOB_NAME)
         .endMetadata()
         .withNewStatus()
         .withPodIP("ip")
@@ -82,9 +87,10 @@ public class KubernetesPeonClientTest
 
     client.pods().inNamespace(NAMESPACE).resource(pod).create();
 
-    Pod peonPod = instance.launchPeonJobAndWaitForStart(job, 1, TimeUnit.SECONDS);
+    Pod peonPod = instance.launchPeonJobAndWaitForStart(job, NoopTask.create(), 1, TimeUnit.SECONDS);
 
     Assertions.assertNotNull(peonPod);
+    Assertions.assertEquals(1, serviceEmitter.getEvents().size());
   }
 
   @Test
@@ -92,12 +98,12 @@ public class KubernetesPeonClientTest
   {
     Job job = new JobBuilder()
         .withNewMetadata()
-        .withName(JOB_NAME)
+        .withName(KUBERNETES_JOB_NAME)
         .endMetadata()
         .build();
 
     server.expect().get()
-        .withPath("/api/v1/namespaces/namespace/pods?labelSelector=job-name%3Did")
+        .withPath("/api/v1/namespaces/namespace/pods?labelSelector=job-name%3D" + KUBERNETES_JOB_NAME)
         .andReturn(HttpURLConnection.HTTP_OK, new PodListBuilder()
             .addNewItem()
             .withNewMetadata()
@@ -110,7 +116,7 @@ public class KubernetesPeonClientTest
 
     Assertions.assertThrows(
         KubernetesClientTimeoutException.class,
-        () -> instance.launchPeonJobAndWaitForStart(job, 1, TimeUnit.SECONDS)
+        () -> instance.launchPeonJobAndWaitForStart(job, NoopTask.create(), 1, TimeUnit.SECONDS)
     );
   }
 
@@ -119,7 +125,7 @@ public class KubernetesPeonClientTest
   {
     Job job = new JobBuilder()
         .withNewMetadata()
-        .withName(JOB_NAME)
+        .withName(KUBERNETES_JOB_NAME)
         .endMetadata()
         .withNewStatus()
         .withActive(null)
@@ -144,7 +150,7 @@ public class KubernetesPeonClientTest
   {
     Job job = new JobBuilder()
         .withNewMetadata()
-        .withName(JOB_NAME)
+        .withName(KUBERNETES_JOB_NAME)
         .endMetadata()
         .withNewStatus()
         .withActive(null)
@@ -182,7 +188,7 @@ public class KubernetesPeonClientTest
   {
     Job job = new JobBuilder()
         .withNewMetadata()
-        .withName(JOB_NAME)
+        .withName(KUBERNETES_JOB_NAME)
         .endMetadata()
         .build();
 
@@ -203,12 +209,13 @@ public class KubernetesPeonClientTest
     KubernetesPeonClient instance = new KubernetesPeonClient(
         new TestKubernetesClient(this.client),
         NAMESPACE,
-        true
+        true,
+        serviceEmitter
     );
 
     Job job = new JobBuilder()
         .withNewMetadata()
-        .withName(JOB_NAME)
+        .withName(KUBERNETES_JOB_NAME)
         .endMetadata()
         .build();
 
@@ -217,7 +224,7 @@ public class KubernetesPeonClientTest
     Assertions.assertTrue(instance.deletePeonJob(new K8sTaskId(ID)));
 
     Assertions.assertNotNull(
-        client.batch().v1().jobs().inNamespace(NAMESPACE).withName(ID).get()
+        client.batch().v1().jobs().inNamespace(NAMESPACE).withName(KUBERNETES_JOB_NAME).get()
     );
   }
 
@@ -227,7 +234,8 @@ public class KubernetesPeonClientTest
     KubernetesPeonClient instance = new KubernetesPeonClient(
         new TestKubernetesClient(this.client),
         NAMESPACE,
-        true
+        true,
+        serviceEmitter
     );
 
     Assertions.assertTrue(instance.deletePeonJob(new K8sTaskId(ID)));
@@ -237,10 +245,10 @@ public class KubernetesPeonClientTest
   void test_getPeonLogs_withJob_returnsInputStreamInOptional()
   {
     server.expect().get()
-        .withPath("/apis/batch/v1/namespaces/namespace/jobs/id")
+        .withPath("/apis/batch/v1/namespaces/namespace/jobs/" + KUBERNETES_JOB_NAME)
         .andReturn(HttpURLConnection.HTTP_OK, new JobBuilder()
             .withNewMetadata()
-            .withName(JOB_NAME)
+            .withName(KUBERNETES_JOB_NAME)
             .withUid("uid")
             .endMetadata()
             .withNewSpec()
@@ -289,7 +297,7 @@ public class KubernetesPeonClientTest
   {
     Job job = new JobBuilder()
         .withNewMetadata()
-        .withName(JOB_NAME)
+        .withName(KUBERNETES_JOB_NAME)
         .endMetadata()
         .build();
 
@@ -311,7 +319,7 @@ public class KubernetesPeonClientTest
   {
     Job job = new JobBuilder()
         .withNewMetadata()
-        .withName(JOB_NAME)
+        .withName(KUBERNETES_JOB_NAME)
         .addToLabels("druid.k8s.peons", "true")
         .endMetadata()
         .build();
@@ -342,7 +350,7 @@ public class KubernetesPeonClientTest
   {
     Job job = new JobBuilder()
         .withNewMetadata()
-        .withName(JOB_NAME)
+        .withName(KUBERNETES_JOB_NAME)
         .endMetadata()
         .withNewStatus()
         .withActive(1)
@@ -361,7 +369,7 @@ public class KubernetesPeonClientTest
   {
     Job job = new JobBuilder()
         .withNewMetadata()
-        .withName(JOB_NAME)
+        .withName(KUBERNETES_JOB_NAME)
         .addToLabels("druid.k8s.peons", "true")
         .endMetadata()
         .withNewStatus()
@@ -381,7 +389,7 @@ public class KubernetesPeonClientTest
   {
     Job job = new JobBuilder()
         .withNewMetadata()
-        .withName(JOB_NAME)
+        .withName(KUBERNETES_JOB_NAME)
         .addToLabels("druid.k8s.peons", "true")
         .endMetadata()
         .withNewStatus()
@@ -401,7 +409,7 @@ public class KubernetesPeonClientTest
   {
     Job activeJob = new JobBuilder()
         .withNewMetadata()
-        .withName(StringUtils.format("%s-active", JOB_NAME))
+        .withName(StringUtils.format("%s-active", KUBERNETES_JOB_NAME))
         .endMetadata()
         .withNewStatus()
         .withActive(1)
@@ -410,7 +418,7 @@ public class KubernetesPeonClientTest
 
     Job deletableJob = new JobBuilder()
         .withNewMetadata()
-        .withName(StringUtils.format("%s-deleteable", JOB_NAME))
+        .withName(StringUtils.format("%s-deleteable", KUBERNETES_JOB_NAME))
         .addToLabels("druid.k8s.peons", "true")
         .endMetadata()
         .withNewStatus()
@@ -420,7 +428,7 @@ public class KubernetesPeonClientTest
 
     Job undeletableJob = new JobBuilder()
         .withNewMetadata()
-        .withName(StringUtils.format("%s-undeletable", JOB_NAME))
+        .withName(StringUtils.format("%s-undeletable", KUBERNETES_JOB_NAME))
         .addToLabels("druid.k8s.peons", "true")
         .endMetadata()
         .withNewStatus()
@@ -443,13 +451,13 @@ public class KubernetesPeonClientTest
     Pod pod = new PodBuilder()
         .withNewMetadata()
         .withName(POD_NAME)
-        .addToLabels("job-name", JOB_NAME)
+        .addToLabels("job-name", KUBERNETES_JOB_NAME)
         .endMetadata()
         .build();
 
     client.pods().inNamespace(NAMESPACE).resource(pod).create();
 
-    Optional<Pod> maybePod = instance.getPeonPod(new K8sTaskId(ID));
+    Optional<Pod> maybePod = instance.getPeonPod(KUBERNETES_JOB_NAME);
 
     Assertions.assertTrue(maybePod.isPresent());
   }
@@ -457,7 +465,7 @@ public class KubernetesPeonClientTest
   @Test
   void test_getPeonPod_withoutPod_returnsEmptyOptional()
   {
-    Optional<Pod> maybePod = instance.getPeonPod(new K8sTaskId(ID));
+    Optional<Pod> maybePod = instance.getPeonPod(KUBERNETES_JOB_NAME);
     Assertions.assertFalse(maybePod.isPresent());
   }
 
@@ -465,23 +473,23 @@ public class KubernetesPeonClientTest
   void test_getPeonPodWithRetries_withPod_returnsPod()
   {
     server.expect().get()
-        .withPath("/api/v1/namespaces/namespace/pods?labelSelector=job-name%3Did")
+        .withPath("/api/v1/namespaces/namespace/pods?labelSelector=job-name%3D" + KUBERNETES_JOB_NAME)
         .andReturn(HttpURLConnection.HTTP_OK, new PodListBuilder().build())
         .once();
 
     server.expect().get()
-        .withPath("/api/v1/namespaces/namespace/pods?labelSelector=job-name%3Did")
+        .withPath("/api/v1/namespaces/namespace/pods?labelSelector=job-name%3D" + KUBERNETES_JOB_NAME)
         .andReturn(HttpURLConnection.HTTP_OK, new PodListBuilder()
             .addNewItem()
             .withNewMetadata()
             .withName(POD_NAME)
-            .addToLabels("job-name", JOB_NAME)
+            .addToLabels("job-name", KUBERNETES_JOB_NAME)
             .endMetadata()
             .endItem()
             .build()
         ).once();
 
-    Pod pod = instance.getPeonPodWithRetries(new K8sTaskId(ID));
+    Pod pod = instance.getPeonPodWithRetries(new K8sTaskId(ID).getK8sJobName());
 
     Assertions.assertNotNull(pod);
   }
@@ -491,7 +499,7 @@ public class KubernetesPeonClientTest
   {
     Assertions.assertThrows(
         KubernetesResourceNotFoundException.class,
-        () -> instance.getPeonPodWithRetries(clientApi.getClient(), new K8sTaskId(ID), 1, 1),
+        () -> instance.getPeonPodWithRetries(clientApi.getClient(), new K8sTaskId(ID).getK8sJobName(), 1, 1),
         StringUtils.format("K8s pod with label: job-name=%s not found", ID)
     );
   }
@@ -500,10 +508,10 @@ public class KubernetesPeonClientTest
   void test_getPeonLogsWatcher_withJob_returnsWatchLogInOptional()
   {
     server.expect().get()
-        .withPath("/apis/batch/v1/namespaces/namespace/jobs/id")
+        .withPath("/apis/batch/v1/namespaces/namespace/jobs/" + KUBERNETES_JOB_NAME)
         .andReturn(HttpURLConnection.HTTP_OK, new JobBuilder()
             .withNewMetadata()
-            .withName(JOB_NAME)
+            .withName(KUBERNETES_JOB_NAME)
             .withUid("uid")
             .endMetadata()
             .withNewSpec()

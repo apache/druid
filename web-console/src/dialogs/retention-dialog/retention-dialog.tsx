@@ -28,7 +28,6 @@ import { getLink } from '../../links';
 import { Api } from '../../singletons';
 import { filterMap, queryDruidSql, swapElements } from '../../utils';
 import type { Rule } from '../../utils/load-rule';
-import { RuleUtil } from '../../utils/load-rule';
 import { SnitchDialog } from '..';
 
 import './retention-dialog.scss';
@@ -115,28 +114,6 @@ ORDER BY 1`,
     setCurrentRules(swapElements(currentRules, index, index + direction));
   }
 
-  function renderRule(rule: Rule, index: number) {
-    return (
-      <RuleEditor
-        rule={rule}
-        tiers={tiers}
-        key={index}
-        onChange={r => changeRule(r, index)}
-        onDelete={() => deleteRule(index)}
-        moveUp={index > 0 ? () => moveRule(index, -1) : undefined}
-        moveDown={index < currentRules.length - 1 ? () => moveRule(index, 1) : undefined}
-      />
-    );
-  }
-
-  function renderDefaultRule(rule: Rule, index: number) {
-    return (
-      <div className="default-rule" key={index}>
-        <Button disabled>{RuleUtil.ruleToString(rule)}</Button>
-      </div>
-    );
-  }
-
   return (
     <SnitchDialog
       className="retention-dialog"
@@ -167,7 +144,17 @@ ORDER BY 1`,
       {currentTab === 'form' ? (
         <FormGroup>
           {currentRules.length ? (
-            currentRules.map(renderRule)
+            currentRules.map((rule, index) => (
+              <RuleEditor
+                key={index}
+                rule={rule}
+                tiers={tiers}
+                onChange={r => changeRule(r, index)}
+                onDelete={() => deleteRule(index)}
+                moveUp={index > 0 ? () => moveRule(index, -1) : undefined}
+                moveDown={index < currentRules.length - 1 ? () => moveRule(index, 1) : undefined}
+              />
+            ))
           ) : datasource !== CLUSTER_DEFAULT_FAKE_DATASOURCE ? (
             <p className="no-rules-message">
               This datasource currently has no rules, it will use the cluster defaults.
@@ -187,18 +174,28 @@ ORDER BY 1`,
         <JsonInput
           value={currentRules}
           onChange={setCurrentRules}
-          onError={setJsonError}
+          setError={setJsonError}
           height="100%"
         />
       )}
       {datasource !== CLUSTER_DEFAULT_FAKE_DATASOURCE && (
         <>
           <Divider />
-          <FormGroup>
-            <p>
-              Cluster defaults (<a onClick={onEditDefaults}>edit</a>):
-            </p>
-            {defaultRules.map(renderDefaultRule)}
+          <FormGroup
+            label={
+              <>
+                Cluster defaults (<a onClick={onEditDefaults}>edit</a>)
+              </>
+            }
+          >
+            <p>The cluster default rules are evaluated if none of the above rules match.</p>
+            {currentTab === 'form' ? (
+              defaultRules.map((rule, index) => (
+                <RuleEditor key={index} rule={rule} tiers={tiers} />
+              ))
+            ) : (
+              <JsonInput value={defaultRules} />
+            )}
           </FormGroup>
         </>
       )}

@@ -52,6 +52,12 @@ public class SerializablePairLongStringSimpleStagedSerdeTest
   }
 
   @Test
+  public void testEmptyString()
+  {
+    assertValueEquals(new SerializablePairLongString(Long.MAX_VALUE, ""), 12);
+  }
+
+  @Test
   public void testLargeString()
   {
     assertValueEquals(

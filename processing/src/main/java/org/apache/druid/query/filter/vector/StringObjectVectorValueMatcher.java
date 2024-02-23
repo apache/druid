@@ -19,8 +19,11 @@
 
 package org.apache.druid.query.filter.vector;
 
-import com.google.common.base.Predicate;
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 
 import javax.annotation.Nullable;
@@ -46,7 +49,7 @@ public class StringObjectVectorValueMatcher implements VectorValueMatcherFactory
       final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
 
       @Override
-      public ReadableVectorMatch match(final ReadableVectorMatch mask)
+      public ReadableVectorMatch match(final ReadableVectorMatch mask, boolean includeUnknown)
       {
         final Object[] vector = selector.getObjectVector();
         final int[] selection = match.getSelection();
@@ -55,29 +58,39 @@ public class StringObjectVectorValueMatcher implements VectorValueMatcherFactory
 
         for (int i = 0; i < mask.getSelectionSize(); i++) {
           final int rowNum = mask.getSelection()[i];
-          if (Objects.equals(value, vector[rowNum])) {
+          if ((value == null && includeUnknown) || Objects.equals(value, vector[rowNum])) {
             selection[numRows++] = rowNum;
           }
         }
 
         match.setSelectionSize(numRows);
-        assert match.isValid(mask);
         return match;
       }
     };
   }
 
   @Override
+  public VectorValueMatcher makeMatcher(Object matchValue, ColumnType matchValueType)
+  {
+    final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnType(matchValueType), matchValue);
+    final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(eval, ExpressionType.STRING);
+    if (castForComparison == null || castForComparison.asString() == null) {
+      return VectorValueMatcher.allFalseObjectMatcher(selector);
+    }
+    return makeMatcher(castForComparison.asString());
+  }
+
+  @Override
   public VectorValueMatcher makeMatcher(DruidPredicateFactory predicateFactory)
   {
-    final Predicate<String> predicate = predicateFactory.makeStringPredicate();
+    final DruidObjectPredicate<String> predicate = predicateFactory.makeStringPredicate();
 
     return new BaseVectorValueMatcher(selector)
     {
       final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
 
       @Override
-      public ReadableVectorMatch match(final ReadableVectorMatch mask)
+      public ReadableVectorMatch match(final ReadableVectorMatch mask, boolean includeUnknown)
       {
         final Object[] vector = selector.getObjectVector();
         final int[] selection = match.getSelection();
@@ -86,13 +99,13 @@ public class StringObjectVectorValueMatcher implements VectorValueMatcherFactory
 
         for (int i = 0; i < mask.getSelectionSize(); i++) {
           final int rowNum = mask.getSelection()[i];
-          if (predicate.apply((String) vector[rowNum])) {
+          final String val = (String) vector[rowNum];
+          if (predicate.apply(val).matches(includeUnknown)) {
             selection[numRows++] = rowNum;
           }
         }
 
         match.setSelectionSize(numRows);
-        assert match.isValid(mask);
         return match;
       }
     };

@@ -30,8 +30,6 @@ import {
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
-import classNames from 'classnames';
-import { select, selectAll } from 'd3-selection';
 import {
   C,
   Column,
@@ -41,7 +39,10 @@ import {
   SqlExpression,
   SqlQuery,
   SqlType,
-} from 'druid-query-toolkit';
+} from '@druid-toolkit/query';
+import classNames from 'classnames';
+import { select, selectAll } from 'd3-selection';
+import type { JSX } from 'react';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { ClearableInput, LearnMore, Loader } from '../../../components';
@@ -57,7 +58,7 @@ import {
   ingestQueryPatternToQuery,
   possibleDruidFormatForValues,
   TIME_COLUMN,
-  WorkbenchQueryPart,
+  WorkbenchQuery,
 } from '../../../druid-models';
 import {
   executionBackgroundResultStatusCheck,
@@ -429,11 +430,19 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                 dimensions: filterMap(sampleExternalConfig.signature, s => {
                   const columnName = s.getColumnName();
                   if (columnName === TIME_COLUMN) return;
-                  const t = s.columnType.getNativeType();
-                  return {
-                    name: columnName,
-                    type: t === 'COMPLEX<json>' ? 'json' : t,
-                  };
+                  if (s.columnType.isArray()) {
+                    return {
+                      type: 'auto',
+                      castToType: s.columnType.getNativeType().toUpperCase(),
+                      name: columnName,
+                    };
+                  } else {
+                    const t = s.columnType.getNativeType();
+                    return {
+                      name: columnName,
+                      type: t === 'COMPLEX<json>' ? 'json' : t,
+                    };
+                  }
                 }),
               },
               granularitySpec: {
@@ -482,8 +491,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
   const [previewResultState] = useQueryManager<string, QueryResult, Execution>({
     query: previewQueryString,
     processQuery: async (previewQueryString, cancelToken) => {
-      const taskEngine = WorkbenchQueryPart.isTaskEngineNeeded(previewQueryString);
-      if (taskEngine) {
+      if (WorkbenchQuery.isTaskEngineNeeded(previewQueryString)) {
         return extractResult(
           await submitTaskQuery({
             query: previewQueryString,
@@ -871,7 +879,6 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
             ))}
           {effectiveMode === 'sql' && (
             <FlexibleQueryInput
-              autoHeight={false}
               queryString={queryString}
               onQueryStringChange={onQueryStringChange}
               columnMetadata={undefined}
@@ -900,7 +907,8 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
             {editorColumn && ingestQueryPattern && (
               <>
                 <ColumnEditor
-                  expression={editorColumn.expression}
+                  key={editorColumn.index}
+                  initExpression={editorColumn.expression}
                   onApply={newColumn => {
                     if (!editorColumn) return;
                     updatePattern(
@@ -913,7 +921,10 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                     );
                   }}
                   onCancel={() => setEditorColumn(undefined)}
-                  dirty={() => setEditorColumn({ ...editorColumn, dirty: true })}
+                  dirty={() => {
+                    if (!editorColumn.dirty) return;
+                    setEditorColumn({ ...editorColumn, dirty: true });
+                  }}
                   queryResult={previewResultState.data}
                   headerIndex={editorColumn.index}
                 />

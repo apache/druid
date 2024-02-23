@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.UsedSegmentChecker;
@@ -44,7 +43,7 @@ public class ActionBasedUsedSegmentCheckerTest
     final TaskActionClient taskActionClient = EasyMock.createMock(TaskActionClient.class);
     EasyMock.expect(
         taskActionClient.submit(
-            new RetrieveUsedSegmentsAction("bar", Intervals.of("2002/P1D"), null, Segments.ONLY_VISIBLE)
+            new RetrieveUsedSegmentsAction("bar", ImmutableList.of(Intervals.of("2002/P1D")))
         )
     ).andReturn(
         ImmutableList.of(
@@ -68,9 +67,7 @@ public class ActionBasedUsedSegmentCheckerTest
         taskActionClient.submit(
             new RetrieveUsedSegmentsAction(
                 "foo",
-                null,
-                ImmutableList.of(Intervals.of("2000/P1D"), Intervals.of("2001/P1D")),
-                Segments.ONLY_VISIBLE
+                ImmutableList.of(Intervals.of("2000/P1D"), Intervals.of("2001/P1D"))
             )
         )
     ).andReturn(

@@ -24,6 +24,10 @@ export function dateToIsoDateString(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+export function prettyFormatIsoDate(isoDate: string): string {
+  return isoDate.replace('T', ' ').replace(/\.\d\d\dZ$/, '');
+}
+
 export function utcToLocalDate(utcDate: Date): Date {
   // Function removes the local timezone of the date and displays it in UTC
   return new Date(utcDate.getTime() + utcDate.getTimezoneOffset() * 60000);

@@ -26,7 +26,7 @@ import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DirectQueryProcessingPool;
-import org.apache.druid.query.FluentQueryRunnerBuilder;
+import org.apache.druid.query.FluentQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
@@ -112,8 +112,8 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
 
     // Note: Not calling 'postProcess'; it isn't official/documented functionality so we'll only support it where
     // it is already supported.
-    return new FluentQueryRunnerBuilder<>(queryRunnerFactory.getToolchest())
-        .create(scheduler.wrapQueryRunner(baseRunner))
+    return FluentQueryRunner
+        .create(scheduler.wrapQueryRunner(baseRunner), queryRunnerFactory.getToolchest())
         .applyPreMergeDecoration()
         .mergeResults()
         .applyPostMergeDecoration()

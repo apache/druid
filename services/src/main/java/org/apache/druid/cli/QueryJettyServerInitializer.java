@@ -27,9 +27,12 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.servlet.GuiceFilter;
+import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.QuerySchedulerProvider;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.initialization.jetty.JettyBindings;
 import org.apache.druid.server.initialization.jetty.JettyServerInitUtils;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.initialization.jetty.LimitRequestsFilter;
@@ -46,6 +49,7 @@ import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -67,12 +71,20 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
 
   private final AuthConfig authConfig;
 
+  private final QuerySchedulerProvider querySchedulerConfig;
+
   @Inject
-  public QueryJettyServerInitializer(Set<Handler> extensionHandlers, ServerConfig serverConfig, AuthConfig authConfig)
+  public QueryJettyServerInitializer(
+      Set<Handler> extensionHandlers,
+      ServerConfig serverConfig,
+      AuthConfig authConfig,
+      @Global QuerySchedulerProvider querySchedulerConfig
+  )
   {
     this.extensionHandlers = ImmutableList.copyOf(extensionHandlers);
     this.serverConfig = serverConfig;
     this.authConfig = authConfig;
+    this.querySchedulerConfig = querySchedulerConfig;
   }
 
   @Override
@@ -93,6 +105,21 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
       root.addFilter(new FilterHolder(new LimitRequestsFilter(serverConfig.getNumThreads() - 1)),
                      "/*", null
       );
+    }
+
+    if (querySchedulerConfig.getNumThreads() > 0
+        && querySchedulerConfig.getNumThreads() < serverConfig.getNumThreads()
+        && serverConfig.isEnableQueryRequestsQueuing()) {
+      // Add QoS filter for query requests, so they don't take up more than querySchedulerConfig#numThreads.
+      // While this will also pick up some extra endpoints other than Query, the primary objective is to protect
+      // health check endpoints from being starved by query requests.
+      log.info("Enabling QoS Filter on query requests with limit [%d].", querySchedulerConfig.getNumThreads());
+      JettyBindings.QosFilterHolder filterHolder = new JettyBindings.QosFilterHolder(
+          new String[]{"/druid/v2/*"},
+          querySchedulerConfig.getNumThreads(),
+          serverConfig.getMaxQueryTimeout()
+      );
+      JettyServerInitUtils.addFilters(root, Collections.singleton(filterHolder));
     }
 
     final ObjectMapper jsonMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));

@@ -43,12 +43,7 @@ public class SequenceOperatorTest
         .allColumnsRegistered();
 
     new OperatorTestHelper()
-        .withPushFn(
-            rac -> {
-              helper.validate(rac);
-              return Operator.Signal.GO;
-            }
-        )
+        .expectRowsAndColumns(helper, helper)
         .withFinalValidation(testReceiver -> Assert.assertEquals(2, testReceiver.getNumPushed()))
         .runToCompletion(op);
   }

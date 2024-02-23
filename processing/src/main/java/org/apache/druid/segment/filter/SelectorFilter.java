@@ -31,12 +31,13 @@ import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
-import org.apache.druid.segment.column.NullValueIndex;
-import org.apache.druid.segment.column.StringValueSetIndex;
+import org.apache.druid.segment.index.AllTrueBitmapColumnIndex;
+import org.apache.druid.segment.index.AllUnknownBitmapColumnIndex;
+import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.index.semantic.NullValueIndex;
+import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -87,28 +88,35 @@ public class SelectorFilter implements Filter
     final boolean isNull = NullHandling.isNullOrEquivalent(value);
     final ColumnIndexSupplier indexSupplier = selector.getIndexSupplier(dimension);
     if (indexSupplier == null) {
-      return Filters.makeNullIndex(isNull, selector);
+      if (isNull) {
+        return new AllTrueBitmapColumnIndex(selector);
+      }
+      return new AllUnknownBitmapColumnIndex(selector);
     }
     if (isNull) {
       final NullValueIndex nullValueIndex = indexSupplier.as(NullValueIndex.class);
       if (nullValueIndex == null) {
         return null;
       }
-      return nullValueIndex.forNull();
+      return nullValueIndex.get();
     } else {
-      final StringValueSetIndex valueSetIndex = indexSupplier.as(StringValueSetIndex.class);
-      if (valueSetIndex == null) {
+      final StringValueSetIndexes valueSetIndexes = indexSupplier.as(StringValueSetIndexes.class);
+      if (valueSetIndexes == null) {
         // column exists, but has no index
         return null;
       }
-      return valueSetIndex.forValue(value);
+      return valueSetIndexes.forValue(value);
     }
   }
 
   @Override
   public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
   {
-    return Filters.makeValueMatcher(factory, dimension, value);
+    return ColumnProcessors.makeProcessor(
+        dimension,
+        new StringConstantValueMatcherFactory(value),
+        factory
+    );
   }
 
   @Override
@@ -119,12 +127,6 @@ public class SelectorFilter implements Filter
         VectorValueMatcherColumnProcessorFactory.instance(),
         factory
     ).makeMatcher(value);
-  }
-
-  @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
-  {
-    return Filters.supportsSelectivityEstimation(this, dimension, columnSelector, indexSelector);
   }
 
   @Override

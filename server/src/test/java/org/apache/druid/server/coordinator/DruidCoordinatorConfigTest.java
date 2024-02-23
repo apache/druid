@@ -46,7 +46,6 @@ public class DruidCoordinatorConfigTest
     Assert.assertEquals(7776000000L, config.getCoordinatorKillDurationToRetain().getMillis());
     Assert.assertEquals(100, config.getCoordinatorKillMaxSegments());
     Assert.assertEquals(new Duration(15 * 60 * 1000), config.getLoadTimeoutDelay());
-    Assert.assertTrue(config.getCompactionSkipLockedIntervals());
     Assert.assertFalse(config.getCoordinatorKillIgnoreDurationToRetain());
     Assert.assertEquals("http", config.getLoadQueuePeonType());
 
@@ -62,7 +61,6 @@ public class DruidCoordinatorConfigTest
     props.setProperty("druid.coordinator.kill.pendingSegments.on", "true");
     props.setProperty("druid.coordinator.load.timeout", "PT1s");
     props.setProperty("druid.coordinator.loadqueuepeon.repeatDelay", "PT0.100s");
-    props.setProperty("druid.coordinator.compaction.skipLockedIntervals", "false");
     props.setProperty("druid.coordinator.kill.ignoreDurationToRetain", "true");
 
     factory = Config.createFactory(props);
@@ -75,7 +73,6 @@ public class DruidCoordinatorConfigTest
     Assert.assertEquals(new Duration("PT1s"), config.getCoordinatorKillDurationToRetain());
     Assert.assertEquals(10000, config.getCoordinatorKillMaxSegments());
     Assert.assertEquals(new Duration("PT1s"), config.getLoadTimeoutDelay());
-    Assert.assertFalse(config.getCompactionSkipLockedIntervals());
     Assert.assertTrue(config.getCoordinatorKillIgnoreDurationToRetain());
 
     // Test negative druid.coordinator.kill.durationToRetain now that it is valid.

@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.ISE;
@@ -39,6 +40,7 @@ import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import org.apache.druid.msq.statistics.CompleteKeyStatisticsInformation;
 
 import javax.annotation.Nullable;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
@@ -209,7 +211,7 @@ public class WorkerSketchFetcher implements AutoCloseable
         }
 
       }
-    });
+    }, MoreExecutors.directExecutor());
 
     FutureUtils.getUnchecked(kernelActionFuture, true);
   }
@@ -244,29 +246,13 @@ public class WorkerSketchFetcher implements AutoCloseable
       throw new ISE("All worker partial key information not received for stage[%d]", stageId.getStageNumber());
     }
 
-    if (completeKeyStatisticsInformation.getTimeSegmentVsWorkerMap().isEmpty()) {
-      // No time chunks at all: skip fetching.
-      kernelActions.accept(
-          kernel -> {
-            for (final String taskId : tasks) {
-              final int workerNumber = MSQTasks.workerFromTaskId(taskId);
-              kernel.mergeClusterByStatisticsCollectorForAllTimeChunks(
-                  stageId,
-                  workerNumber,
-                  ClusterByStatisticsSnapshot.empty()
-              );
-            }
-          }
-      );
-
-      return;
-    }
-
+    final Set<String> noBoundaries = new HashSet<>(tasks);
     completeKeyStatisticsInformation.getTimeSegmentVsWorkerMap().forEach((timeChunk, wks) -> {
 
       for (String taskId : tasks) {
         int workerNumber = MSQTasks.workerFromTaskId(taskId);
         if (wks.contains(workerNumber)) {
+          noBoundaries.remove(taskId);
           executorService.submit(() -> {
             fetchStatsFromWorker(
                 kernelActions,
@@ -285,10 +271,24 @@ public class WorkerSketchFetcher implements AutoCloseable
                 ),
                 retryOperation
             );
+
           });
         }
       }
     });
+
+    // if the worker did not get any records, update the state of the worker
+    for (String taskId : noBoundaries) {
+      kernelActions.accept(
+          kernel -> {
+            final int workerNumber = MSQTasks.workerFromTaskId(taskId);
+            kernel.mergeClusterByStatisticsCollectorForAllTimeChunks(
+                stageId,
+                workerNumber,
+                ClusterByStatisticsSnapshot.empty()
+            );
+          });
+    }
   }
 
 
@@ -304,6 +304,11 @@ public class WorkerSketchFetcher implements AutoCloseable
   @Override
   public void close()
   {
-    executorService.shutdownNow();
+    try {
+      executorService.shutdownNow();
+    }
+    catch (Throwable suppressed) {
+      log.warn(suppressed, "Error while shutting down WorkerSketchFetcher");
+    }
   }
 }

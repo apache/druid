@@ -19,8 +19,22 @@
 
 package org.apache.druid.segment.column;
 
+import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
+import org.apache.druid.segment.index.semantic.LexicographicalRangeIndexes;
+import org.apache.druid.segment.index.semantic.NumericRangeIndexes;
+
 public interface ColumnConfig
 {
+  /**
+   * this value was chosen testing bound filters on double columns with a variety of ranges at which this ratio
+   * of number of bitmaps compared to total number of rows appeared to be around the threshold where indexes stopped
+   * performing consistently faster than a full scan + value matcher
+   */
+  double DEFAULT_SKIP_VALUE_RANGE_INDEX_SCALE = 0.08;
+
+  double DEFAULT_SKIP_VALUE_PREDICATE_INDEX_SCALE = 0.08;
+
   ColumnConfig DEFAULT = new ColumnConfig() {};
 
   ColumnConfig ALWAYS_USE_INDEXES = new ColumnConfig()
@@ -41,7 +55,7 @@ public interface ColumnConfig
 
   /**
    * If the total number of rows in a column multiplied by this value is smaller than the total number of bitmap
-   * index operations required to perform to use a {@link LexicographicalRangeIndex} or {@link NumericRangeIndex},
+   * index operations required to perform to use {@link LexicographicalRangeIndexes} or {@link NumericRangeIndexes},
    * then for any {@link ColumnIndexSupplier} which chooses to participate in this config it will skip computing the
    * index, indicated by a return value of null from the 'forRange' methods, to force the filter to be processed
    * with a scan using a {@link org.apache.druid.query.filter.ValueMatcher} instead.
@@ -66,15 +80,12 @@ public interface ColumnConfig
    */
   default double skipValueRangeIndexScale()
   {
-    // this value was chosen testing bound filters on double columns with a variety of ranges at which this ratio
-    // of number of bitmaps compared to total number of rows appeared to be around the threshold where indexes stopped
-    // performing consistently faster than a full scan + value matcher
-    return 0.08;
+    return DEFAULT_SKIP_VALUE_RANGE_INDEX_SCALE;
   }
 
   /**
    * If the total number of rows in a column multiplied by this value is smaller than the total number of bitmap
-   * index operations required to perform to use a {@link DruidPredicateIndex} then for any {@link ColumnIndexSupplier}
+   * index operations required to perform to use {@link DruidPredicateIndexes} then for any {@link ColumnIndexSupplier}
    * which chooses to participate in this config it will skip computing the index, in favor of doing a full scan and
    * using a {@link org.apache.druid.query.filter.ValueMatcher} instead. This is indicated returning null from
    * {@link ColumnIndexSupplier#as(Class)} even though it would have otherwise been able to create a
@@ -102,6 +113,6 @@ public interface ColumnConfig
    */
   default double skipValuePredicateIndexScale()
   {
-    return 0.08;
+    return DEFAULT_SKIP_VALUE_PREDICATE_INDEX_SCALE;
   }
 }

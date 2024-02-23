@@ -25,6 +25,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.column.ValueType;
@@ -32,6 +33,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -40,11 +42,14 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 // Doesn't assert behavior right now, just generates rows and prints out some distribution numbers
 public class DataGeneratorTest extends InitializedNullHandlingTest
 {
+  private static final Logger log = new Logger(DataGeneratorTest.class);
+
   @Test
   public void testSequential()
   {
@@ -89,10 +94,12 @@ public class DataGeneratorTest extends InitializedNullHandlingTest
     DataGenerator dataGenerator = new DataGenerator(schemas, 9999, 0, 0, 1000.0);
     for (int i = 0; i < 100; i++) {
       InputRow row = dataGenerator.nextRow();
-      //System.out.println("S-ROW: " + row);
       tracker.addRow(row);
     }
     tracker.printStuff();
+    tracker.assertTotalRowSize("dimA", 100);
+    tracker.assertTotalRowSize("dimB", 100);
+    tracker.assertTotalRowSize("dimC", 100);
   }
 
   @Test
@@ -151,12 +158,16 @@ public class DataGeneratorTest extends InitializedNullHandlingTest
     DataGenerator dataGenerator = new DataGenerator(schemas, 9999, 0, 0, 1000.0);
     for (int i = 0; i < 100; i++) {
       InputRow row = dataGenerator.nextRow();
-      //System.out.println("U-ROW: " + row);
-
       tracker.addRow(row);
     }
 
     tracker.printStuff();
+    tracker.assertTotalRowSize("dimA", 100);
+    // The row size of dimB is 4, dataGenerator will generate 4 value for dimB at one time, so the total size is 400
+    tracker.assertTotalRowSize("dimB", 400);
+    tracker.assertTotalRowSize("dimC", 100);
+    tracker.assertNullable("dimC", true);
+    tracker.assertTotalRowSize("dimD", 100);
   }
 
 
@@ -195,12 +206,12 @@ public class DataGeneratorTest extends InitializedNullHandlingTest
     DataGenerator dataGenerator = new DataGenerator(schemas, 9999, 0, 0, 1000.0);
     for (int i = 0; i < 1000000; i++) {
       InputRow row = dataGenerator.nextRow();
-      //System.out.println("N-ROW: " + row);
-
       tracker.addRow(row);
     }
 
     tracker.printStuff();
+    tracker.assertTotalRowSize("dimA", 1000000);
+    tracker.assertTotalRowSize("dimB", 1000000);
   }
 
   @Test
@@ -250,12 +261,13 @@ public class DataGeneratorTest extends InitializedNullHandlingTest
     DataGenerator dataGenerator = new DataGenerator(schemas, 9999, 0, 0, 1000.0);
     for (int i = 0; i < 100; i++) {
       InputRow row = dataGenerator.nextRow();
-      //System.out.println("Z-ROW: " + row);
-
       tracker.addRow(row);
     }
 
     tracker.printStuff();
+    tracker.assertTotalRowSize("dimA", 100);
+    tracker.assertTotalRowSize("dimB", 100);
+    tracker.assertTotalRowSize("dimC", 100);
   }
 
   @Test
@@ -279,12 +291,11 @@ public class DataGeneratorTest extends InitializedNullHandlingTest
     DataGenerator dataGenerator = new DataGenerator(schemas, 9999, 0, 0, 1000.0);
     for (int i = 0; i < 10000; i++) {
       InputRow row = dataGenerator.nextRow();
-      //System.out.println("Z-ROW: " + row);
-
       tracker.addRow(row);
     }
 
     tracker.printStuff();
+    tracker.assertTotalRowSize("dimA", 10000);
   }
 
   @Test
@@ -322,12 +333,13 @@ public class DataGeneratorTest extends InitializedNullHandlingTest
     DataGenerator dataGenerator = new DataGenerator(schemas, 9999, 0, 0, 1000.0);
     for (int i = 0; i < 100; i++) {
       InputRow row = dataGenerator.nextRow();
-      //System.out.println("N-ROW: " + row);
-
       tracker.addRow(row);
     }
 
     tracker.printStuff();
+    tracker.assertTotalRowSize("dimA", 100);
+    tracker.assertTotalRowSize("dimB", 100);
+    tracker.assertNullable("dimB", true);
   }
 
   @Test
@@ -363,18 +375,19 @@ public class DataGeneratorTest extends InitializedNullHandlingTest
     DataGenerator dataGenerator = new DataGenerator(schemas, 9999, 0, 0, 1000.0);
     for (int i = 0; i < 100; i++) {
       InputRow row = dataGenerator.nextRow();
-      //System.out.println("U-ROW: " + row);
-
       tracker.addRow(row);
     }
 
     tracker.printStuff();
+    tracker.assertTotalRowSize("dimA", 100);
+    tracker.assertTotalRowSize("dimB", 100);
   }
 
   @Test
   public void testIntervalBasedTimeGeneration()
   {
     List<GeneratorColumnSchema> schemas = new ArrayList<>();
+    RowValueTracker tracker = new RowValueTracker();
 
     schemas.add(
         GeneratorColumnSchema.makeEnumeratedSequential(
@@ -389,13 +402,20 @@ public class DataGeneratorTest extends InitializedNullHandlingTest
 
     DataGenerator dataGenerator = new DataGenerator(schemas, 9999, Intervals.utc(50000, 600000), 100);
     for (int i = 0; i < 100; i++) {
-      dataGenerator.nextRow();
+      InputRow row = dataGenerator.nextRow();
+      tracker.addRow(row);
     }
+    tracker.printStuff();
+    tracker.assertTimeStamp("dimB", 50000, 600000);
 
+    RowValueTracker tracker2 = new RowValueTracker();
     DataGenerator dataGenerator2 = new DataGenerator(schemas, 9999, Intervals.utc(50000, 50001), 100);
     for (int i = 0; i < 100; i++) {
-      dataGenerator2.nextRow();
+      InputRow row = dataGenerator2.nextRow();
+      tracker2.addRow(row);
     }
+    tracker2.printStuff();
+    tracker2.assertTimeStamp("dimB", 50000, 50001);
   }
 
   @Test
@@ -480,17 +500,42 @@ public class DataGeneratorTest extends InitializedNullHandlingTest
     DataGenerator dataGenerator = new DataGenerator(schemas, 9999, 0, 0, 1000.0);
     for (int i = 0; i < 100000; i++) {
       InputRow row = dataGenerator.nextRow();
-      System.out.println("Z-ROW: " + row);
-
+      Assert.assertNotNull(row);
       tracker.addRow(row);
     }
 
     tracker.printStuff();
+    tracker.assertTotalRowSize("dimA", 100000);
+    tracker.assertTotalRowSize("dimB", 100000);
+    tracker.assertTotalRowSize("dimC", 100000);
+    tracker.assertTotalRowSize("dimD", 100000);
+  }
+
+  private static class RowValuePropertyTracker
+  {
+    private Integer count;
+    private DateTime timeStamp;
+
+    public RowValuePropertyTracker(Integer count, DateTime timeStamp)
+    {
+      this.count = count;
+      this.timeStamp = timeStamp;
+    }
+
+    public Integer getCount()
+    {
+      return count;
+    }
+
+    public DateTime getTimeStamp()
+    {
+      return timeStamp;
+    }
   }
 
   private static class RowValueTracker
   {
-    private Map<String, Map<Object, Integer>> dimensionMap;
+    private Map<String, Map<Object, RowValuePropertyTracker>> dimensionMap;
 
     public RowValueTracker()
     {
@@ -501,10 +546,10 @@ public class DataGeneratorTest extends InitializedNullHandlingTest
     {
       for (String dim : row.getDimensions()) {
         if (dimensionMap.get(dim) == null) {
-          dimensionMap.put(dim, new HashMap<Object, Integer>());
+          dimensionMap.put(dim, new HashMap<Object, RowValuePropertyTracker>());
         }
 
-        Map<Object, Integer> valueMap = dimensionMap.get(dim);
+        Map<Object, RowValuePropertyTracker> valueMap = dimensionMap.get(dim);
         Object dimVals = row.getRaw(dim);
         if (dimVals == null) {
           dimVals = Collections.singletonList(null);
@@ -518,20 +563,54 @@ public class DataGeneratorTest extends InitializedNullHandlingTest
             val = "";
           }
           if (valueMap.get(val) == null) {
-            valueMap.put(val, 0);
+            valueMap.put(val, new RowValuePropertyTracker(0, row.getTimestamp()));
           }
-          valueMap.put(val, valueMap.get(val) + 1);
+          RowValuePropertyTracker property = valueMap.get(val);
+          valueMap.put(val, new RowValuePropertyTracker(property.getCount() + 1, property.getTimeStamp()));
         }
       }
     }
 
+    private void assertNullable(String dim, boolean expected)
+    {
+      String format = expected ? "%s dimension is nullable" : "%s dimension is not nullable";
+      String message = String.format(Locale.US, format, dim);
+      Map<Object, RowValuePropertyTracker> valueMap = dimensionMap.get(dim);
+      Assert.assertEquals(message, expected, valueMap.containsKey(""));
+    }
+
+    private void assertTimeStamp(String dim, long startTime, long endTime)
+    {
+      Map<Object, RowValuePropertyTracker> valueMap = dimensionMap.get(dim);
+      String message = String.format(
+          Locale.US,
+          "%s timeStamp value should be in the range of [%s, %s]",
+          dim,
+          startTime,
+          endTime
+      );
+      for (Object val : valueMap.keySet()) {
+        long timeStamp = valueMap.get(val).getTimeStamp().getMillis();
+        Assert.assertTrue(message, timeStamp >= startTime && timeStamp <= endTime);
+      }
+    }
+
+    private void assertTotalRowSize(String dim, int expected)
+    {
+      Map<Object, RowValuePropertyTracker> valueMap = dimensionMap.get(dim);
+      int count = 0;
+      String message = String.format(Locale.US, "%s dimension row size is not equal", dim);
+      for (Object val : valueMap.keySet()) {
+        count += valueMap.get(val).getCount();
+      }
+      Assert.assertEquals(message, expected, count);
+    }
 
     public void printStuff()
     {
-      System.out.println();
       for (String dim : dimensionMap.keySet()) {
-        System.out.println("DIMENSION " + dim + "\n============");
-        Map<Object, Integer> valueMap = dimensionMap.get(dim);
+        log.info("DIMENSION " + dim + "\n============");
+        Map<Object, RowValuePropertyTracker> valueMap = dimensionMap.get(dim);
 
         List<Comparable> valList = new ArrayList<>();
         for (Object val : valueMap.keySet()) {
@@ -541,9 +620,10 @@ public class DataGeneratorTest extends InitializedNullHandlingTest
         Collections.sort(valList);
 
         for (Comparable val : valList) {
-          System.out.println(" VAL: " + val + " CNT: " + valueMap.get(val));
+          RowValuePropertyTracker property = valueMap.get(val);
+          log.info(" VAL: " + val + " CNT: " + property.getCount() + " TIMESTAMP: " + property.getTimeStamp()
+                                                                                              .getMillis());
         }
-        System.out.println();
       }
     }
   }
@@ -660,7 +740,6 @@ public class DataGeneratorTest extends InitializedNullHandlingTest
 
     IncrementalIndex index = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(schema)
-        .setSortFacts(false)
         .setMaxRowCount(1_000_000)
         .build();
 

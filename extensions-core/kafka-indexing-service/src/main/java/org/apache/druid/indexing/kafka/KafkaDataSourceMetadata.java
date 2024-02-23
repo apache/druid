@@ -21,17 +21,21 @@ package org.apache.druid.indexing.kafka;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.data.input.kafka.KafkaTopicPartition;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
+import org.apache.druid.java.util.common.IAE;
 
-public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<Integer, Long>
+import java.util.Comparator;
+
+public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<KafkaTopicPartition, Long> implements Comparable<KafkaDataSourceMetadata>
 {
 
   @JsonCreator
   public KafkaDataSourceMetadata(
-      @JsonProperty("partitions") SeekableStreamSequenceNumbers<Integer, Long> kafkaPartitions
+      @JsonProperty("partitions") SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> kafkaPartitions
   )
   {
     super(kafkaPartitions);
@@ -40,10 +44,10 @@ public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<In
   @Override
   public DataSourceMetadata asStartMetadata()
   {
-    final SeekableStreamSequenceNumbers<Integer, Long> sequenceNumbers = getSeekableStreamSequenceNumbers();
+    final SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> sequenceNumbers = getSeekableStreamSequenceNumbers();
     if (sequenceNumbers instanceof SeekableStreamEndSequenceNumbers) {
       return createConcreteDataSourceMetaData(
-          ((SeekableStreamEndSequenceNumbers<Integer, Long>) sequenceNumbers).asStartPartitions(true)
+          ((SeekableStreamEndSequenceNumbers<KafkaTopicPartition, Long>) sequenceNumbers).asStartPartitions(true)
       );
     } else {
       return this;
@@ -51,10 +55,25 @@ public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<In
   }
 
   @Override
-  protected SeekableStreamDataSourceMetadata<Integer, Long> createConcreteDataSourceMetaData(
-      SeekableStreamSequenceNumbers<Integer, Long> seekableStreamSequenceNumbers
+  protected SeekableStreamDataSourceMetadata<KafkaTopicPartition, Long> createConcreteDataSourceMetaData(
+      SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> seekableStreamSequenceNumbers
   )
   {
     return new KafkaDataSourceMetadata(seekableStreamSequenceNumbers);
+  }
+
+  @Override
+  // This method is to compare KafkaDataSourceMetadata.
+  // It compares this and other SeekableStreamSequenceNumbers using naturalOrder comparator.
+  public int compareTo(KafkaDataSourceMetadata other)
+  {
+    if (!getClass().equals(other.getClass())) {
+      throw new IAE(
+          "Expected instance of %s, got %s",
+          this.getClass().getName(),
+          other.getClass().getName()
+      );
+    }
+    return getSeekableStreamSequenceNumbers().compareTo(other.getSeekableStreamSequenceNumbers(), Comparator.naturalOrder());
   }
 }

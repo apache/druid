@@ -1,0 +1,1 @@
+SELECT LEAD_col1 FROM ( SELECT LEAD(col1) OVER( PARTITION BY col2 ORDER BY col1 nulls LAST ) LEAD_col1 FROM "fewRowsAllData.parquet") sub_query WHERE LEAD_col1 IS null

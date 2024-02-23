@@ -157,7 +157,7 @@ public class CliIndexer extends ServerRunnable
             CliPeon.bindChatHandler(binder);
             CliPeon.bindPeonDataSegmentHandlers(binder);
             CliPeon.bindRealtimeCache(binder);
-            CliPeon.bindCoordinatorHandoffNotiferAndClient(binder);
+            CliPeon.bindCoordinatorHandoffNotifer(binder);
             binder.install(CliMiddleManager.makeWorkerManagementModule(isZkEnabled));
 
             binder.bind(AppenderatorsManager.class)

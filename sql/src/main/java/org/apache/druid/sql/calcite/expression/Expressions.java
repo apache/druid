@@ -28,6 +28,7 @@ import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeFamily;
@@ -44,7 +45,10 @@ import org.apache.druid.query.extraction.TimeFormatExtractionFn;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.ExpressionDimFilter;
+import org.apache.druid.query.filter.IsFalseDimFilter;
+import org.apache.druid.query.filter.IsTrueDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
+import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.ordering.StringComparator;
@@ -52,9 +56,12 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.sql.calcite.filtration.BoundRefKey;
 import org.apache.druid.sql.calcite.filtration.Bounds;
 import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.calcite.filtration.RangeRefKey;
+import org.apache.druid.sql.calcite.filtration.Ranges;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.ExpressionParser;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -374,22 +381,47 @@ public class Expressions
   {
     final SqlKind kind = expression.getKind();
 
-    if (kind == SqlKind.IS_TRUE || kind == SqlKind.IS_NOT_FALSE) {
-      return toFilter(
-          plannerContext,
-          rowSignature,
-          virtualColumnRegistry,
-          Iterables.getOnlyElement(((RexCall) expression).getOperands())
-      );
-    } else if (kind == SqlKind.IS_FALSE || kind == SqlKind.IS_NOT_TRUE) {
-      return new NotDimFilter(
-          toFilter(
+    if (kind == SqlKind.IS_TRUE
+        || kind == SqlKind.IS_NOT_TRUE
+        || kind == SqlKind.IS_FALSE
+        || kind == SqlKind.IS_NOT_FALSE) {
+      if (NullHandling.useThreeValueLogic()) {
+        final DimFilter baseFilter = toFilter(
+            plannerContext,
+            rowSignature,
+            virtualColumnRegistry,
+            Iterables.getOnlyElement(((RexCall) expression).getOperands())
+        );
+
+        if (kind == SqlKind.IS_TRUE) {
+          return IsTrueDimFilter.of(baseFilter);
+        } else if (kind == SqlKind.IS_NOT_TRUE) {
+          return NotDimFilter.of(IsTrueDimFilter.of(baseFilter));
+        } else if (kind == SqlKind.IS_FALSE) {
+          return IsFalseDimFilter.of(baseFilter);
+        } else { // SqlKind.IS_NOT_FALSE
+          return NotDimFilter.of(IsFalseDimFilter.of(baseFilter));
+        }
+      } else {
+        // legacy behavior
+        if (kind == SqlKind.IS_TRUE || kind == SqlKind.IS_NOT_FALSE) {
+          return toFilter(
               plannerContext,
               rowSignature,
               virtualColumnRegistry,
               Iterables.getOnlyElement(((RexCall) expression).getOperands())
-          )
-      );
+          );
+        } else { // SqlKind.IS_FALSE || SqlKind.IS_NOT_TRUE
+          return new NotDimFilter(
+              toFilter(
+                  plannerContext,
+                  rowSignature,
+                  virtualColumnRegistry,
+                  Iterables.getOnlyElement(((RexCall) expression).getOperands())
+              )
+          );
+        }
+      }
     } else if (kind == SqlKind.CAST && expression.getType().getSqlTypeName() == SqlTypeName.BOOLEAN) {
       // Calcite sometimes leaves errant, useless cast-to-booleans inside filters. Strip them and continue.
       return toFilter(
@@ -398,9 +430,7 @@ public class Expressions
           virtualColumnRegistry,
           Iterables.getOnlyElement(((RexCall) expression).getOperands())
       );
-    } else if (kind == SqlKind.AND
-               || kind == SqlKind.OR
-               || kind == SqlKind.NOT) {
+    } else if (kind == SqlKind.AND || kind == SqlKind.OR || kind == SqlKind.NOT) {
       final List<DimFilter> filters = new ArrayList<>();
       for (final RexNode rexNode : ((RexCall) expression).getOperands()) {
         final DimFilter nextFilter = toFilter(
@@ -419,8 +449,7 @@ public class Expressions
         return new AndDimFilter(filters);
       } else if (kind == SqlKind.OR) {
         return new OrDimFilter(filters);
-      } else {
-        assert kind == SqlKind.NOT;
+      } else { // SqlKind.NOT
         return new NotDimFilter(Iterables.getOnlyElement(filters));
       }
     } else {
@@ -483,6 +512,11 @@ public class Expressions
     final SqlKind kind = rexNode.getKind();
 
     if (kind == SqlKind.IS_TRUE || kind == SqlKind.IS_NOT_FALSE) {
+      if (NullHandling.useThreeValueLogic()) {
+        // use expression filter to get istrue or notfalse expressions for correct 3vl behavior
+        return toExpressionLeafFilter(plannerContext, rowSignature, rexNode);
+      }
+      // legacy behavior
       return toSimpleLeafFilter(
           plannerContext,
           rowSignature,
@@ -490,6 +524,11 @@ public class Expressions
           Iterables.getOnlyElement(((RexCall) rexNode).getOperands())
       );
     } else if (kind == SqlKind.IS_FALSE || kind == SqlKind.IS_NOT_TRUE) {
+      if (NullHandling.useThreeValueLogic()) {
+        // use expression filter to get isfalse or nottrue expressions for correct 3vl behavior
+        return toExpressionLeafFilter(plannerContext, rowSignature, rexNode);
+      }
+      // legacy behavior
       return new NotDimFilter(
           toSimpleLeafFilter(
               plannerContext,
@@ -508,7 +547,7 @@ public class Expressions
 
       final DimFilter equalFilter;
       final ColumnType outputType = druidExpression.getDruidType();
-      final boolean isOutputNumeric = outputType != null && outputType.isNumeric();
+      final boolean isOutputNumeric = Types.isNumeric(outputType);
       // if a simple extraction, we can typically use the base column directly for filtering. however, some expressions
       // such as cast also appear as a simple extraction because some native layer things can handle the cast
       // themselves, so we check the output type of the expression and compare it to the type of the direct column. a
@@ -516,22 +555,39 @@ public class Expressions
       // column instead for filtering to ensure that results are correct
       if (druidExpression.isSimpleExtraction() &&
           !(isOutputNumeric && !rowSignature.isNumeric(druidExpression.getDirectColumn()))) {
-        equalFilter = new SelectorDimFilter(
-            druidExpression.getSimpleExtraction().getColumn(),
-            NullHandling.defaultStringValue(),
-            druidExpression.getSimpleExtraction().getExtractionFn()
-        );
+        if (plannerContext.isUseBoundsAndSelectors()) {
+          equalFilter = new SelectorDimFilter(
+              druidExpression.getSimpleExtraction().getColumn(),
+              NullHandling.defaultStringValue(),
+              druidExpression.getSimpleExtraction().getExtractionFn()
+          );
+        } else {
+          if (druidExpression.getSimpleExtraction().getExtractionFn() != null) {
+            if (virtualColumnRegistry != null) {
+              String column = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
+                  druidExpression,
+                  druidExpression.getDruidType()
+              );
+              equalFilter = NullFilter.forColumn(column);
+            } else {
+              // virtual column registry unavailable, fallback to expression filter
+              return null;
+            }
+          } else {
+            equalFilter = NullFilter.forColumn(druidExpression.getDirectColumn());
+          }
+        }
       } else if (virtualColumnRegistry != null) {
         final String virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
             druidExpression,
             operand.getType()
         );
 
-        equalFilter = new SelectorDimFilter(
-            virtualColumn,
-            NullHandling.defaultStringValue(),
-            null
-        );
+        if (plannerContext.isUseBoundsAndSelectors()) {
+          equalFilter = new SelectorDimFilter(virtualColumn, NullHandling.defaultStringValue(), null);
+        } else {
+          equalFilter = NullFilter.forColumn(virtualColumn);
+        }
       } else {
         return null;
       }
@@ -539,12 +595,14 @@ public class Expressions
       return kind == SqlKind.IS_NOT_NULL ? new NotDimFilter(equalFilter) : equalFilter;
     } else if (kind == SqlKind.EQUALS
                || kind == SqlKind.NOT_EQUALS
+               || kind == SqlKind.IS_NOT_DISTINCT_FROM
+               || kind == SqlKind.IS_DISTINCT_FROM
                || kind == SqlKind.GREATER_THAN
                || kind == SqlKind.GREATER_THAN_OR_EQUAL
                || kind == SqlKind.LESS_THAN
                || kind == SqlKind.LESS_THAN_OR_EQUAL) {
       final List<RexNode> operands = ((RexCall) rexNode).getOperands();
-      Preconditions.checkState(operands.size() == 2, "Expected 2 operands, got[%,d]", operands.size());
+      Preconditions.checkState(operands.size() == 2, "Expected 2 operands, got[%s]", operands.size());
       boolean flip = false;
       RexNode lhs = operands.get(0);
       RexNode rhs = operands.get(1);
@@ -564,6 +622,8 @@ public class Expressions
         switch (kind) {
           case EQUALS:
           case NOT_EQUALS:
+          case IS_NOT_DISTINCT_FROM:
+          case IS_DISTINCT_FROM:
             flippedKind = kind;
             break;
           case GREATER_THAN:
@@ -585,8 +645,12 @@ public class Expressions
         flippedKind = kind;
       }
 
+      final DruidExpression rhsExpression = toDruidExpression(plannerContext, rowSignature, rhs);
+      final Expr rhsParsed = rhsExpression != null
+                                       ? plannerContext.parseExpression(rhsExpression.getExpression())
+                                       : null;
       // rhs must be a literal
-      if (rhs.getKind() != SqlKind.LITERAL) {
+      if (rhsParsed == null || !rhsParsed.isLiteral()) {
         return null;
       }
 
@@ -602,10 +666,16 @@ public class Expressions
       if (queryGranularity != null) {
         // lhs is FLOOR(__time TO granularity); rhs must be a timestamp
         final long rhsMillis = Calcites.calciteDateTimeLiteralToJoda(rhs, plannerContext.getTimeZone()).getMillis();
-        return buildTimeFloorFilter(ColumnHolder.TIME_COLUMN_NAME, queryGranularity, flippedKind, rhsMillis);
+        return buildTimeFloorFilter(
+            ColumnHolder.TIME_COLUMN_NAME,
+            queryGranularity,
+            flippedKind,
+            rhsMillis,
+            plannerContext
+        );
       }
 
-      final String column;
+      String column;
       final ExtractionFn extractionFn;
       if (lhsExpression.isSimpleExtraction()) {
         column = lhsExpression.getSimpleExtraction().getColumn();
@@ -626,68 +696,123 @@ public class Expressions
 
         final Granularity granularity = ExtractionFns.toQueryGranularity(extractionFn);
         if (granularity != null) {
-          // lhs is FLOOR(__time TO granularity); rhs must be a timestamp
+          // lhs is FLOOR(__time TO granularity); rhs must be a timestamp.
           final long rhsMillis = Calcites.calciteDateTimeLiteralToJoda(rhs, plannerContext.getTimeZone()).getMillis();
-          final Interval rhsInterval = granularity.bucket(DateTimes.utc(rhsMillis));
-
-          // Is rhs aligned on granularity boundaries?
-          final boolean rhsAligned = rhsInterval.getStartMillis() == rhsMillis;
-
-          // Create a BoundRefKey that strips the extractionFn and compares __time as a number.
-          final BoundRefKey boundRefKey = new BoundRefKey(column, null, StringComparators.NUMERIC);
-
-          return getBoundTimeDimFilter(flippedKind, boundRefKey, rhsInterval, rhsAligned);
+          return buildTimeFloorFilter(column, granularity, flippedKind, rhsMillis, plannerContext);
         }
       }
 
-      final String val;
-      final RexLiteral rhsLiteral = (RexLiteral) rhs;
-      if (SqlTypeName.NUMERIC_TYPES.contains(rhsLiteral.getTypeName())) {
-        val = String.valueOf(RexLiteral.value(rhsLiteral));
-      } else if (SqlTypeName.CHAR_TYPES.contains(rhsLiteral.getTypeName())) {
-        val = String.valueOf(RexLiteral.stringValue(rhsLiteral));
-      } else if (SqlTypeName.TIMESTAMP == rhsLiteral.getTypeName() || SqlTypeName.DATE == rhsLiteral.getTypeName()) {
-        val = String.valueOf(
-            Calcites.calciteDateTimeLiteralToJoda(
-                rhsLiteral,
-                plannerContext.getTimeZone()
-            ).getMillis()
-        );
+      final ColumnType matchValueType = Calcites.getColumnTypeForRelDataType(rhs.getType());
+
+      if (plannerContext.isUseBoundsAndSelectors()) {
+        if (matchValueType == null || !matchValueType.isPrimitive()) {
+          // Fall back to expression filter.
+          return null;
+        }
+
+        final String stringVal;
+
+        if (rhsParsed.getLiteralValue() == null) {
+          stringVal = NullHandling.defaultStringValue();
+        } else if (RexUtil.isLiteral(rhs, true) && SqlTypeName.NUMERIC_TYPES.contains(rhs.getType().getSqlTypeName())) {
+          // Peek inside the original rhs for numerics, rather than using the parsed version, for highest fidelity
+          // to what the query originally contained. (It may be a BigDecimal.)
+          stringVal = String.valueOf(RexLiteral.value(rhs));
+        } else {
+          stringVal = String.valueOf(rhsParsed.getLiteralValue());
+        }
+
+        if (stringVal == null) {
+          // Fall back to expression filter.
+          return null;
+        }
+
+        // Numeric lhs needs a numeric comparison.
+        final StringComparator comparator = Calcites.getStringComparatorForRelDataType(lhs.getType());
+        final BoundRefKey boundRefKey = new BoundRefKey(column, extractionFn, comparator);
+        final DimFilter filter;
+
+        // Always use BoundDimFilters, to simplify filter optimization later (it helps to remember the comparator).
+        switch (flippedKind) {
+          case EQUALS:
+          case IS_NOT_DISTINCT_FROM:
+            // OK to treat EQUALS, IS_NOT_DISTINCT_FROM the same since we know stringVal is nonnull.
+            filter = Bounds.equalTo(boundRefKey, stringVal);
+            break;
+          case NOT_EQUALS:
+          case IS_DISTINCT_FROM:
+            // OK to treat NOT_EQUALS, IS_DISTINCT_FROM the same since we know stringVal is nonnull.
+            filter = new NotDimFilter(Bounds.equalTo(boundRefKey, stringVal));
+            break;
+          case GREATER_THAN:
+            filter = Bounds.greaterThan(boundRefKey, stringVal);
+            break;
+          case GREATER_THAN_OR_EQUAL:
+            filter = Bounds.greaterThanOrEqualTo(boundRefKey, stringVal);
+            break;
+          case LESS_THAN:
+            filter = Bounds.lessThan(boundRefKey, stringVal);
+            break;
+          case LESS_THAN_OR_EQUAL:
+            filter = Bounds.lessThanOrEqualTo(boundRefKey, stringVal);
+            break;
+          default:
+            throw new IllegalStateException("Shouldn't have got here");
+        }
+
+        return filter;
       } else {
-        // Don't know how to filter on this kind of literal.
-        return null;
+        final Object val = rhsParsed.getLiteralValue();
+
+        if (val == null) {
+          // fall back to expression filter
+          return null;
+        }
+
+        // extractionFn are not supported by equality/range filter
+        if (extractionFn != null) {
+          if (virtualColumnRegistry != null) {
+            column = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
+                lhsExpression,
+                lhs.getType()
+            );
+          } else {
+            // if this happens for some reason, bail and use an expression filter
+            return null;
+          }
+        }
+
+        final RangeRefKey rangeRefKey = new RangeRefKey(column, matchValueType);
+        final DimFilter filter;
+
+        // Always use RangeFilter, to simplify filter optimization later
+        switch (flippedKind) {
+          case EQUALS:
+          case IS_NOT_DISTINCT_FROM:
+            filter = Ranges.equalTo(rangeRefKey, val);
+            break;
+          case NOT_EQUALS:
+          case IS_DISTINCT_FROM:
+            filter = new NotDimFilter(Ranges.equalTo(rangeRefKey, val));
+            break;
+          case GREATER_THAN:
+            filter = Ranges.greaterThan(rangeRefKey, val);
+            break;
+          case GREATER_THAN_OR_EQUAL:
+            filter = Ranges.greaterThanOrEqualTo(rangeRefKey, val);
+            break;
+          case LESS_THAN:
+            filter = Ranges.lessThan(rangeRefKey, val);
+            break;
+          case LESS_THAN_OR_EQUAL:
+            filter = Ranges.lessThanOrEqualTo(rangeRefKey, val);
+            break;
+          default:
+            throw new IllegalStateException("Shouldn't have got here");
+        }
+
+        return filter;
       }
-
-      // Numeric lhs needs a numeric comparison.
-      final StringComparator comparator = Calcites.getStringComparatorForRelDataType(lhs.getType());
-      final BoundRefKey boundRefKey = new BoundRefKey(column, extractionFn, comparator);
-      final DimFilter filter;
-
-      // Always use BoundDimFilters, to simplify filter optimization later (it helps to remember the comparator).
-      switch (flippedKind) {
-        case EQUALS:
-          filter = Bounds.equalTo(boundRefKey, val);
-          break;
-        case NOT_EQUALS:
-          filter = new NotDimFilter(Bounds.equalTo(boundRefKey, val));
-          break;
-        case GREATER_THAN:
-          filter = Bounds.greaterThan(boundRefKey, val);
-          break;
-        case GREATER_THAN_OR_EQUAL:
-          filter = Bounds.greaterThanOrEqualTo(boundRefKey, val);
-          break;
-        case LESS_THAN:
-          filter = Bounds.lessThan(boundRefKey, val);
-          break;
-        case LESS_THAN_OR_EQUAL:
-          filter = Bounds.lessThanOrEqualTo(boundRefKey, val);
-          break;
-        default:
-          throw new IllegalStateException("Shouldn't have got here");
-      }
-
-      return filter;
     } else if (rexNode instanceof RexCall) {
       final SqlOperator operator = ((RexCall) rexNode).getOperator();
       final SqlOperatorConversion conversion = plannerContext.getPlannerToolbox().operatorTable().lookupOperatorConversion(operator);
@@ -772,18 +897,23 @@ public class Expressions
       final String column,
       final Granularity granularity,
       final SqlKind operatorKind,
-      final long rhsMillis
+      final long rhsMillis,
+      final PlannerContext plannerContext
   )
   {
-    final BoundRefKey boundRefKey = new BoundRefKey(column, null, StringComparators.NUMERIC);
     final Interval rhsInterval = granularity.bucket(DateTimes.utc(rhsMillis));
 
     // Is rhs aligned on granularity boundaries?
     final boolean rhsAligned = rhsInterval.getStartMillis() == rhsMillis;
 
-    return getBoundTimeDimFilter(operatorKind, boundRefKey, rhsInterval, rhsAligned);
+    if (plannerContext.isUseBoundsAndSelectors()) {
+      final BoundRefKey boundRefKey = new BoundRefKey(column, null, StringComparators.NUMERIC);
+      return getBoundTimeDimFilter(operatorKind, boundRefKey, rhsInterval, rhsAligned);
+    } else {
+      final RangeRefKey rangeRefKey = new RangeRefKey(column, ColumnType.LONG);
+      return getRangeTimeDimFilter(operatorKind, rangeRefKey, rhsInterval, rhsAligned);
+    }
   }
-
 
   private static DimFilter getBoundTimeDimFilter(
       SqlKind operatorKind,
@@ -813,6 +943,39 @@ public class Expressions
                : Bounds.lessThan(boundRefKey, String.valueOf(interval.getEndMillis()));
       case LESS_THAN_OR_EQUAL:
         return Bounds.lessThan(boundRefKey, String.valueOf(interval.getEndMillis()));
+      default:
+        throw new IllegalStateException("Shouldn't have got here");
+    }
+  }
+
+  private static DimFilter getRangeTimeDimFilter(
+      SqlKind operatorKind,
+      RangeRefKey rangeRefKey,
+      Interval interval,
+      boolean isAligned
+  )
+  {
+    switch (operatorKind) {
+      case EQUALS:
+        return isAligned
+               ? Ranges.interval(rangeRefKey, interval)
+               : Filtration.matchNothing();
+      case NOT_EQUALS:
+        return isAligned
+               ? new NotDimFilter(Ranges.interval(rangeRefKey, interval))
+               : Filtration.matchEverything();
+      case GREATER_THAN:
+        return Ranges.greaterThanOrEqualTo(rangeRefKey, interval.getEndMillis());
+      case GREATER_THAN_OR_EQUAL:
+        return isAligned
+               ? Ranges.greaterThanOrEqualTo(rangeRefKey, interval.getStartMillis())
+               : Ranges.greaterThanOrEqualTo(rangeRefKey, interval.getEndMillis());
+      case LESS_THAN:
+        return isAligned
+               ? Ranges.lessThan(rangeRefKey, interval.getStartMillis())
+               : Ranges.lessThan(rangeRefKey, interval.getEndMillis());
+      case LESS_THAN_OR_EQUAL:
+        return Ranges.lessThan(rangeRefKey, interval.getEndMillis());
       default:
         throw new IllegalStateException("Shouldn't have got here");
     }

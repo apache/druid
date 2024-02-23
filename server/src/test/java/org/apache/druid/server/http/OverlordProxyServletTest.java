@@ -19,21 +19,24 @@
 
 package org.apache.druid.server.http;
 
-import org.apache.druid.discovery.DruidLeaderClient;
+import com.google.common.util.concurrent.Futures;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
 import javax.servlet.http.HttpServletRequest;
 import java.net.URI;
+import java.net.URISyntaxException;
 
 public class OverlordProxyServletTest
 {
   @Test
-  public void testRewriteURI()
+  public void testRewriteURI() throws URISyntaxException
   {
-    DruidLeaderClient druidLeaderClient = EasyMock.createMock(DruidLeaderClient.class);
-    EasyMock.expect(druidLeaderClient.findCurrentLeader()).andReturn("https://overlord:port");
+    OverlordClient overlordClient = EasyMock.createMock(OverlordClient.class);
+    EasyMock.expect(overlordClient.findCurrentLeader())
+            .andReturn(Futures.immediateFuture(new URI("https://overlord:port")));
 
     HttpServletRequest request = EasyMock.createMock(HttpServletRequest.class);
     EasyMock.expect(request.getQueryString()).andReturn("param1=test&param2=test2").anyTimes();
@@ -41,10 +44,11 @@ public class OverlordProxyServletTest
     // %3A is a colon; test to make sure urlencoded paths work right.
     EasyMock.expect(request.getRequestURI()).andReturn("/druid/over%3Alord/worker").anyTimes();
 
-    EasyMock.replay(druidLeaderClient, request);
+    EasyMock.replay(overlordClient, request);
 
-    URI uri = URI.create(new OverlordProxyServlet(druidLeaderClient, null, null).rewriteTarget(request));
+    URI uri = URI.create(new OverlordProxyServlet(overlordClient, null, null).rewriteTarget(request));
     Assert.assertEquals("https://overlord:port/druid/over%3Alord/worker?param1=test&param2=test2", uri.toString());
-  }
 
+    EasyMock.verify(overlordClient, request);
+  }
 }

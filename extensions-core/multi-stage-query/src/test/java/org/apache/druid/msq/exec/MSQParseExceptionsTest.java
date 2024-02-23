@@ -22,11 +22,12 @@ package org.apache.druid.msq.exec;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
+import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.msq.indexing.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
+import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.indexing.error.InvalidNullByteFault;
 import org.apache.druid.msq.querykit.scan.ExternalColumnSelectorFactory;
@@ -104,6 +105,44 @@ public class MSQParseExceptionsTest extends MSQTestBase
   }
 
   @Test
+  public void testIngestWithNullByteInSqlExpression()
+  {
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("desc", ColumnType.STRING)
+                                            .add("text", ColumnType.STRING)
+                                            .build();
+
+    testIngestQuery()
+        .setSql(""
+                + "WITH \"ext\" AS (SELECT *\n"
+                + "FROM TABLE(\n"
+                + "  EXTERN(\n"
+                + "    '{\"type\":\"inline\",\"data\":\"{\\\"desc\\\":\\\"Row with NULL\\\",\\\"text\\\":\\\"There is a null in\\\\u0000 here somewhere\\\"}\\n\"}',\n"
+                + "    '{\"type\":\"json\"}'\n"
+                + "  )\n"
+                + ") EXTEND (\"desc\" VARCHAR, \"text\" VARCHAR))\n"
+                + "SELECT\n"
+                + "  \"desc\",\n"
+                + "  REPLACE(\"text\", 'a', 'A') AS \"text\"\n"
+                + "FROM \"ext\"\n"
+                + "")
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedDataSource("foo1")
+        .setExpectedMSQFault(
+            new InvalidNullByteFault(
+                "external input source: InlineInputSource{data='{\"desc\":\"Row with NULL\",\"text\":\"There is a null in\\u0000 here somewhere\"}\n'}",
+                1,
+                "text",
+                "There is A null in\u0000 here somewhere",
+                18
+            )
+        )
+        .setQueryContext(DEFAULT_MSQ_CONTEXT)
+        .verifyResults();
+  }
+
+  @Test
   public void testIngestWithSanitizedNullByte() throws IOException
   {
     final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(
@@ -125,7 +164,7 @@ public class MSQParseExceptionsTest extends MSQTestBase
         newScanQueryBuilder()
             .dataSource(
                 new ExternalDataSource(
-                    new LocalInputSource(null, null, ImmutableList.of(toRead)),
+                    new LocalInputSource(null, null, ImmutableList.of(toRead), SystemFields.none()),
                     new CsvInputFormat(null, null, null, true, 0),
                     RowSignature.builder()
                                 .add("timestamp", ColumnType.STRING)
@@ -264,7 +303,7 @@ public class MSQParseExceptionsTest extends MSQTestBase
                     .createException(
                         new Exception("dummy"),
                         "v1",
-                        new LocalInputSource(null, null, ImmutableList.of(toRead)),
+                        new LocalInputSource(null, null, ImmutableList.of(toRead), SystemFields.none()),
                         new SimpleAscendingOffset(Integer.MAX_VALUE)
                     )
                     .getMessage()

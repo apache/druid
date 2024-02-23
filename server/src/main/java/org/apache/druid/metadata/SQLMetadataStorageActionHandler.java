@@ -63,6 +63,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.stream.IntStream;
 
 public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
     implements MetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
@@ -1028,16 +1029,14 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
                             .orElse(null);
   }
 
-  private List<TaskIdentifier> fetchTaskMetadatas(String tableName, String id, int limit)
+  private List<TaskIdentifier> fetchTasksWithTypeColumnNullAndIdGreaterThan(String id, int limit)
   {
     List<TaskIdentifier> taskIdentifiers = new ArrayList<>();
     connector.retryWithHandle(
         handle -> {
           String sql = StringUtils.format(
               "SELECT * FROM %1$s WHERE id > '%2$s' AND type IS null ORDER BY id %3$s",
-              tableName,
-              id,
-              connector.limitClause(limit)
+              entryTable, id, connector.limitClause(limit)
           );
           Query<Map<String, Object>> query = handle.createQuery(sql);
           taskIdentifiers.addAll(query.map(taskIdentifierMapper).list());
@@ -1047,19 +1046,21 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     return taskIdentifiers;
   }
 
-  private void updateTaskMetadatas(String tasksTable, List<TaskIdentifier> taskIdentifiers)
+  private int updateColumnsTypeAndGroupIdForTasks(List<TaskIdentifier> taskIdentifiers)
   {
-    connector.retryWithHandle(
+    return connector.retryWithHandle(
         handle -> {
-          Batch batch = handle.createBatch();
-          String sql = "UPDATE %1$s SET type = '%2$s', group_id = '%3$s' WHERE id = '%4$s'";
-          for (TaskIdentifier metadata : taskIdentifiers) {
+          final Batch batch = handle.createBatch();
+          for (TaskIdentifier task : taskIdentifiers) {
             batch.add(
-                StringUtils.format(sql, tasksTable, metadata.getType(), metadata.getGroupId(), metadata.getId())
+                StringUtils.format(
+                    "UPDATE %1$s SET type = '%2$s', group_id = '%3$s' WHERE id = '%4$s'",
+                    entryTable, task.getType(), task.getGroupId(), task.getId()
+                )
             );
           }
-          batch.execute();
-          return null;
+          int[] result = batch.execute();
+          return IntStream.of(result).sum();
         }
     );
   }
@@ -1079,14 +1080,14 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   @VisibleForTesting
   boolean populateTaskTypeAndGroupId()
   {
-    log.info("Populate fields task and group_id of task entry table [%s] from payload", entryTable);
-    String id = "";
-    int limit = 100;
-    int count = 0;
+    log.debug("Populating columns [task] and [group_id] in task table[%s] from payload.", entryTable);
+    String lastUpdatedTaskId = "";
+    final int limit = 100;
+    int numUpdatedTasks = 0;
     while (true) {
       List<TaskIdentifier> taskIdentifiers;
       try {
-        taskIdentifiers = fetchTaskMetadatas(entryTable, id, limit);
+        taskIdentifiers = fetchTasksWithTypeColumnNullAndIdGreaterThan(lastUpdatedTaskId, limit);
       }
       catch (Exception e) {
         log.warn(e, "Task migration failed while reading entries from task table");
@@ -1096,15 +1097,17 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
         break;
       }
       try {
-        updateTaskMetadatas(entryTable, taskIdentifiers);
-        count += taskIdentifiers.size();
-        log.info("Successfully updated type and groupId for [%d] tasks", count);
+        final int updatedCount = updateColumnsTypeAndGroupIdForTasks(taskIdentifiers);
+        if (updatedCount > 0) {
+          numUpdatedTasks += updatedCount;
+          log.info("Successfully updated columns [type] and [group_id] for [%d] tasks.", numUpdatedTasks);
+        }
       }
       catch (Exception e) {
         log.warn(e, "Task migration failed while updating entries in task table");
         return false;
       }
-      id = taskIdentifiers.get(taskIdentifiers.size() - 1).getId();
+      lastUpdatedTaskId = taskIdentifiers.get(taskIdentifiers.size() - 1).getId();
 
       try {
         Thread.sleep(1000);
@@ -1114,7 +1117,9 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
         Thread.currentThread().interrupt();
       }
     }
-    log.info("Task migration for table [%s] successful", entryTable);
+    if (numUpdatedTasks > 0) {
+      log.info("Task migration for table[%s] successful.", entryTable);
+    }
     return true;
   }
 }

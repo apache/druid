@@ -53,6 +53,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.RowAdapter;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -60,6 +61,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.table.RowBasedIndexedTable;
 import org.junit.Assert;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -150,6 +152,15 @@ public class JoinTestHelper
         public Supplier<Object> makeLongProcessor(BaseLongColumnValueSelector selector)
         {
           return () -> NullHandling.sqlCompatible() && selector.isNull() ? null : selector.getLong();
+        }
+
+        @Override
+        public Supplier<Object> makeArrayProcessor(
+            BaseObjectColumnValueSelector<?> selector,
+            @Nullable ColumnCapabilities columnCapabilities
+        )
+        {
+          return selector::getObject;
         }
 
         @Override

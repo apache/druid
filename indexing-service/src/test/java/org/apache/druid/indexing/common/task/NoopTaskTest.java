@@ -27,7 +27,7 @@ public class NoopTaskTest
   @Test
   public void testNullInputSources()
   {
-    NoopTask task = new NoopTask("myID", null, null, 1, 0, null, null, null);
+    NoopTask task = NoopTask.create();
     Assert.assertTrue(task.getInputSourceResources().isEmpty());
   }
 }

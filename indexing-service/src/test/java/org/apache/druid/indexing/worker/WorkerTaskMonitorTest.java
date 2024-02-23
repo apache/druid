@@ -26,9 +26,9 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingCluster;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.curator.PotentiallyGzippedCompressionProvider;
-import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexing.common.IndexingServiceCondition;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
@@ -48,10 +48,12 @@ import org.apache.druid.indexing.overlord.TestRemoteTaskRunnerConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.join.NoopJoinableFactory;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.IndexerZkConfig;
@@ -169,6 +171,7 @@ public class WorkerTaskMonitorTest
         jsonMapper,
         new SingleTaskBackgroundRunner(
             new TaskToolboxFactory(
+                null,
                 taskConfig,
                 null,
                 taskActionClientFactory,
@@ -202,11 +205,12 @@ public class WorkerTaskMonitorTest
                 testUtils.getRowIngestionMetersFactory(),
                 new TestAppenderatorsManager(),
                 new NoopOverlordClient(),
+                new NoopCoordinatorClient(),
                 null,
                 null,
                 null,
-                null,
-                "1"
+                "1",
+                CentralizedDatasourceSchemaConfig.create()
             ),
             taskConfig,
             new NoopServiceEmitter(),
@@ -216,7 +220,7 @@ public class WorkerTaskMonitorTest
         taskConfig,
         cf,
         workerCuratorCoordinator,
-        EasyMock.createNiceMock(DruidLeaderClient.class)
+        EasyMock.createNiceMock(OverlordClient.class)
     );
   }
 

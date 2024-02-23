@@ -19,9 +19,11 @@
 
 package org.apache.druid.k8s.overlord.common;
 
+import com.google.common.hash.Hashing;
 import org.apache.commons.lang3.RegExUtils;
 import org.apache.commons.lang3.StringUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
@@ -42,5 +44,11 @@ public class KubernetesOverlordUtils
   {
     return taskId == null ? "" : StringUtils.left(RegExUtils.replaceAll(taskId, K8S_TASK_ID_PATTERN, "")
         .toLowerCase(Locale.ENGLISH), 63);
+  }
+
+  public static String convertTaskIdToJobName(String taskId)
+  {
+    return taskId == null ? "" : StringUtils.left(RegExUtils.replaceAll(taskId, K8S_TASK_ID_PATTERN, "")
+        .toLowerCase(Locale.ENGLISH), 30) + "-" + Hashing.murmur3_128().hashString(taskId, StandardCharsets.UTF_8);
   }
 }

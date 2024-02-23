@@ -21,11 +21,8 @@ package org.apache.druid.msq.guice;
 
 import com.fasterxml.jackson.databind.Module;
 import com.google.inject.Binder;
-import org.apache.druid.client.indexing.HttpIndexingServiceClient;
-import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.Jerseys;
-import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.initialization.DruidModule;
@@ -48,7 +45,6 @@ public class SqlTaskModule implements DruidModule
     LifecycleModule.register(binder, SqlTaskResource.class);
     Jerseys.addResource(binder, SqlTaskResource.class);
     LifecycleModule.register(binder, SqlStatementResource.class);
-    binder.bind(IndexingServiceClient.class).to(HttpIndexingServiceClient.class).in(LazySingleton.class);
     Jerseys.addResource(binder, SqlStatementResource.class);
   }
 

@@ -26,6 +26,7 @@ import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.indexing.MSQControllerTask;
+import org.apache.druid.msq.indexing.client.ControllerChatHandler;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 
@@ -83,7 +84,7 @@ public interface Controller
   /**
    * Accepts a {@link PartialKeyStatisticsInformation} and updates the controller key statistics information. If all key
    * statistics have been gathered, enqueues the task with the {@link WorkerSketchFetcher} to generate partiton boundaries.
-   * This is intended to be called by the {@link org.apache.druid.msq.indexing.ControllerChatHandler}.
+   * This is intended to be called by the {@link ControllerChatHandler}.
    */
   void updatePartialKeyStatisticsInformation(int stageNumber, int workerNumber, Object partialKeyStatisticsInformationObject);
 

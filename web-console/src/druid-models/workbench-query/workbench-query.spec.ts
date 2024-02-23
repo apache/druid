@@ -16,10 +16,9 @@
  * limitations under the License.
  */
 
-import { sane } from 'druid-query-toolkit';
+import { sane } from '@druid-toolkit/query';
 
 import { WorkbenchQuery } from './workbench-query';
-import { WorkbenchQueryPart } from './workbench-query-part';
 
 describe('WorkbenchQuery', () => {
   beforeAll(() => {
@@ -107,12 +106,6 @@ describe('WorkbenchQuery', () => {
 
   describe('.fromString', () => {
     const tabString = sane`
-      ===== Helper: q =====
-
-      SELECT *
-
-      FROM wikipedia
-
       ===== Query =====
 
       SELECT * FROM q
@@ -138,7 +131,6 @@ describe('WorkbenchQuery', () => {
           `End of input while parsing an object (missing '}') at line 40,2 >>>} ...`,
         ),
       ).toEqual({
-        match: '',
         row: 39,
         column: 1,
       });
@@ -208,6 +200,7 @@ describe('WorkbenchQuery', () => {
       expect(apiQuery).toEqual({
         cancelQueryId: 'deadbeef-9fb0-499c-8475-ea461e96a4fd',
         engine: 'native',
+        prefixLines: 0,
         query: {
           aggregations: [
             {
@@ -259,6 +252,7 @@ describe('WorkbenchQuery', () => {
       expect(apiQuery).toEqual({
         cancelQueryId: 'lol',
         engine: 'native',
+        prefixLines: 0,
         query: {
           aggregations: [
             {
@@ -295,6 +289,7 @@ describe('WorkbenchQuery', () => {
           context: {
             sqlOuterLimit: 1001,
             sqlQueryId: 'deadbeef-9fb0-499c-8475-ea461e96a4fd',
+            sqlStringifyArrays: false,
             useCache: false,
           },
           header: true,
@@ -303,7 +298,7 @@ describe('WorkbenchQuery', () => {
           sqlTypesHeader: true,
           typesHeader: true,
         },
-        sqlPrefixLines: 0,
+        prefixLines: 0,
       });
     });
 
@@ -322,6 +317,7 @@ describe('WorkbenchQuery', () => {
           context: {
             sqlOuterLimit: 1001,
             sqlQueryId: 'lol',
+            sqlStringifyArrays: false,
           },
           header: true,
           query: 'SELECT * FROM wikipedia',
@@ -329,7 +325,7 @@ describe('WorkbenchQuery', () => {
           sqlTypesHeader: true,
           typesHeader: true,
         },
-        sqlPrefixLines: 0,
+        prefixLines: 0,
       });
     });
 
@@ -360,6 +356,7 @@ describe('WorkbenchQuery', () => {
           context: {
             sqlOuterLimit: 1001,
             sqlQueryId: 'deadbeef-9fb0-499c-8475-ea461e96a4fd',
+            sqlStringifyArrays: false,
             useCache: false,
             x: 1,
           },
@@ -369,7 +366,7 @@ describe('WorkbenchQuery', () => {
           sqlTypesHeader: true,
           typesHeader: true,
         },
-        sqlPrefixLines: 0,
+        prefixLines: 0,
       });
     });
 
@@ -400,6 +397,7 @@ describe('WorkbenchQuery', () => {
           context: {
             sqlOuterLimit: 1001,
             sqlQueryId: 'lol',
+            sqlStringifyArrays: false,
             x: 1,
           },
           header: true,
@@ -408,7 +406,7 @@ describe('WorkbenchQuery', () => {
           sqlTypesHeader: true,
           typesHeader: true,
         },
-        sqlPrefixLines: 0,
+        prefixLines: 0,
       });
     });
 
@@ -421,12 +419,16 @@ describe('WorkbenchQuery', () => {
 
       const apiQuery = workbenchQuery.getApiQuery(makeQueryId);
       expect(apiQuery).toEqual({
+        cancelQueryId: undefined,
         engine: 'sql-msq-task',
         query: {
           context: {
+            executionMode: 'async',
             finalizeAggregations: false,
             groupByEnableMultiValueUnnesting: false,
+            sqlStringifyArrays: false,
             useCache: false,
+            waitUntilSegmentsLoad: true,
           },
           header: true,
           query: 'INSERT INTO wiki2 SELECT * FROM wikipedia',
@@ -434,7 +436,7 @@ describe('WorkbenchQuery', () => {
           sqlTypesHeader: true,
           typesHeader: true,
         },
-        sqlPrefixLines: 0,
+        prefixLines: 0,
       });
     });
 
@@ -490,6 +492,18 @@ describe('WorkbenchQuery', () => {
       expect(workbenchQuery.changeEngine('sql-native').getIngestDatasource()).toBeUndefined();
     });
 
+    it('works with INSERT (unparsable with paren)', () => {
+      const sql = sane`
+        -- Some comment
+        INSERT into trips2
+        (SELECT TIME_PARSE(pickup_datetime) AS __time,
+      `;
+
+      const workbenchQuery = WorkbenchQuery.blank().changeQueryString(sql);
+      expect(workbenchQuery.getIngestDatasource()).toEqual('trips2');
+      expect(workbenchQuery.changeEngine('sql-native').getIngestDatasource()).toBeUndefined();
+    });
+
     it('works with REPLACE', () => {
       const sql = sane`
         REPLACE INTO trips2 OVERWRITE ALL
@@ -532,130 +546,6 @@ describe('WorkbenchQuery', () => {
       const workbenchQuery = WorkbenchQuery.blank().changeQueryString(sql);
       expect(workbenchQuery.getIngestDatasource()).toEqual('trips2');
       expect(workbenchQuery.changeEngine('sql-native').getIngestDatasource()).toBeUndefined();
-    });
-  });
-
-  describe('#extractCteHelpers', () => {
-    it('works', () => {
-      const sql = sane`
-        REPLACE INTO task_statuses OVERWRITE ALL
-        WITH
-        task_statuses AS (
-        SELECT * FROM
-        TABLE(
-          EXTERN(
-            '{"type":"local","baseDir":"/Users/vadim/Desktop/","filter":"task_statuses.json"}',
-            '{"type":"json"}',
-            '[{"name":"id","type":"string"},{"name":"status","type":"string"},{"name":"duration","type":"long"},{"name":"errorMsg","type":"string"},{"name":"created_date","type":"string"}]'
-          )
-        )
-        )
-        (
-        --PLACE INTO task_statuses OVERWRITE ALL
-        SELECT
-          id,
-          status,
-          duration,
-          errorMsg,
-          created_date
-        FROM task_statuses
-        --RTITIONED BY ALL
-        )
-        PARTITIONED BY ALL
-      `;
-
-      expect(WorkbenchQuery.blank().changeQueryString(sql).extractCteHelpers().getQueryString())
-        .toEqual(sane`
-          REPLACE INTO task_statuses OVERWRITE ALL
-          SELECT
-            id,
-            status,
-            duration,
-            errorMsg,
-            created_date
-          FROM task_statuses
-          PARTITIONED BY ALL
-        `);
-    });
-  });
-
-  describe('#materializeHelpers', () => {
-    it('works', () => {
-      expect(
-        WorkbenchQuery.blank()
-          .changeQueryParts([
-            new WorkbenchQueryPart({
-              id: 'aaa',
-              queryName: 'kttm_data',
-              queryString: sane`
-                SELECT * FROM TABLE(
-                  EXTERN(
-                    '{"type":"http","uris":["https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz"]}',
-                    '{"type":"json"}'
-                  )
-                ) EXTEND ("timestamp" VARCHAR, "agent_type" VARCHAR)
-              `,
-            }),
-            new WorkbenchQueryPart({
-              id: 'bbb',
-              queryName: 'country_lookup',
-              queryString: sane`
-                SELECT * FROM TABLE(
-                  EXTERN(
-                    '{"type":"http","uris":["https://static.imply.io/example-data/lookup/countries.tsv"]}',
-                    '{"type":"tsv","findColumnsFromHeader":true}'
-                  )
-                ) EXTEND ("Country" VARCHAR, "Capital" VARCHAR, "ISO3" VARCHAR, "ISO2" VARCHAR))
-              `,
-            }),
-            new WorkbenchQueryPart({
-              id: 'ccc',
-              queryName: 'x',
-              queryString: sane`
-                SELECT
-                  os,
-                  CONCAT(country, ' (', country_lookup.ISO3, ')') AS "country",
-                  COUNT(DISTINCT session) AS "unique_sessions"
-                FROM kttm_data
-                LEFT JOIN country_lookup ON country_lookup.Country = kttm_data.country
-                GROUP BY 1, 2
-                ORDER BY 3 DESC
-                LIMIT 10
-              `,
-            }),
-          ])
-          .materializeHelpers()
-          .getQueryString(),
-      ).toEqual(sane`
-        WITH
-        "kttm_data" AS (
-        SELECT * FROM TABLE(
-          EXTERN(
-            '{"type":"http","uris":["https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz"]}',
-            '{"type":"json"}'
-          )
-        ) EXTEND ("timestamp" VARCHAR, "agent_type" VARCHAR)
-        ),
-        "country_lookup" AS (
-        SELECT * FROM TABLE(
-          EXTERN(
-            '{"type":"http","uris":["https://static.imply.io/example-data/lookup/countries.tsv"]}',
-            '{"type":"tsv","findColumnsFromHeader":true}'
-          )
-        ) EXTEND ("Country" VARCHAR, "Capital" VARCHAR, "ISO3" VARCHAR, "ISO2" VARCHAR))
-        )
-        (
-        SELECT
-          os,
-          CONCAT(country, ' (', country_lookup.ISO3, ')') AS "country",
-          COUNT(DISTINCT session) AS "unique_sessions"
-        FROM kttm_data
-        LEFT JOIN country_lookup ON country_lookup.Country = kttm_data.country
-        GROUP BY 1, 2
-        ORDER BY 3 DESC
-        LIMIT 10
-        )
-      `);
     });
   });
 

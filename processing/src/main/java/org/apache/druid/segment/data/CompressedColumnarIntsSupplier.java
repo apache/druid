@@ -125,7 +125,7 @@ public class CompressedColumnarIntsSupplier implements WritableSupplier<Columnar
       return new CompressedColumnarIntsSupplier(
           totalSize,
           sizePer,
-          GenericIndexed.read(buffer, new DecompressingByteBufferObjectStrategy(order, compression)),
+          GenericIndexed.read(buffer, DecompressingByteBufferObjectStrategy.of(order, compression)),
           compression
       );
     }
@@ -148,7 +148,7 @@ public class CompressedColumnarIntsSupplier implements WritableSupplier<Columnar
       return new CompressedColumnarIntsSupplier(
           totalSize,
           sizePer,
-          GenericIndexed.read(buffer, new DecompressingByteBufferObjectStrategy(order, compression), mapper),
+          GenericIndexed.read(buffer, DecompressingByteBufferObjectStrategy.of(order, compression), mapper),
           compression
       );
     }

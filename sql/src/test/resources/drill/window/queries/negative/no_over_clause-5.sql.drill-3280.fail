@@ -1,0 +1,8 @@
+-- Should throw an error
+select 
+	--row_number(),
+	rank() over (order by a1),
+	dense_rank() over(order by a1)
+from 
+	t1
+;

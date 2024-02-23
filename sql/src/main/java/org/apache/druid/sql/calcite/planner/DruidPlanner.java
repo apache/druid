@@ -148,12 +148,10 @@ public class DruidPlanner implements Closeable
     catch (SqlParseException e1) {
       throw translateException(e1);
     }
+    hook.captureSqlNode(root);
     handler = createHandler(root);
     handler.validate();
     plannerContext.setResourceActions(handler.resourceActions());
-    if (root.getKind() == SqlKind.EXPLAIN) {
-      plannerContext.setExplainAttributes(handler.explainAttributes());
-    }
     state = State.VALIDATED;
   }
 
@@ -340,35 +338,46 @@ public class DruidPlanner implements Closeable
       if (cause instanceof ParseException) {
         ParseException parseException = (ParseException) cause;
         final SqlParserPos failurePosition = inner.getPos();
-        final String theUnexpectedToken = getUnexpectedTokenString(parseException);
+        // When calcite catches a syntax error at the top level
+        // expected token sequences can be null.
+        // In such a case return the syntax error to the user
+        // wrapped in a DruidException with invalid input
+        if (parseException.expectedTokenSequences == null) {
+          return DruidException.forPersona(DruidException.Persona.USER)
+                               .ofCategory(DruidException.Category.INVALID_INPUT)
+                               .withErrorCode("invalidInput")
+                               .build(inner, "%s", inner.getMessage()).withContext("sourceType", "sql");
+        } else {
+          final String theUnexpectedToken = getUnexpectedTokenString(parseException);
 
-        final String[] tokenDictionary = inner.getTokenImages();
-        final int[][] expectedTokenSequences = inner.getExpectedTokenSequences();
-        final ArrayList<String> expectedTokens = new ArrayList<>(expectedTokenSequences.length);
-        for (int[] expectedTokenSequence : expectedTokenSequences) {
-          String[] strings = new String[expectedTokenSequence.length];
-          for (int i = 0; i < expectedTokenSequence.length; ++i) {
-            strings[i] = tokenDictionary[expectedTokenSequence[i]];
+          final String[] tokenDictionary = inner.getTokenImages();
+          final int[][] expectedTokenSequences = inner.getExpectedTokenSequences();
+          final ArrayList<String> expectedTokens = new ArrayList<>(expectedTokenSequences.length);
+          for (int[] expectedTokenSequence : expectedTokenSequences) {
+            String[] strings = new String[expectedTokenSequence.length];
+            for (int i = 0; i < expectedTokenSequence.length; ++i) {
+              strings[i] = tokenDictionary[expectedTokenSequence[i]];
+            }
+            expectedTokens.add(SPACE_JOINER.join(strings));
           }
-          expectedTokens.add(SPACE_JOINER.join(strings));
+
+          return InvalidSqlInput
+              .exception(
+                  inner,
+                  "Received an unexpected token [%s] (line [%s], column [%s]), acceptable options: [%s]",
+                  theUnexpectedToken,
+                  failurePosition.getLineNum(),
+                  failurePosition.getColumnNum(),
+                  COMMA_JOINER.join(expectedTokens)
+              )
+              .withContext("line", failurePosition.getLineNum())
+              .withContext("column", failurePosition.getColumnNum())
+              .withContext("endLine", failurePosition.getEndLineNum())
+              .withContext("endColumn", failurePosition.getEndColumnNum())
+              .withContext("token", theUnexpectedToken)
+              .withContext("expected", expectedTokens);
+
         }
-
-        return InvalidSqlInput
-            .exception(
-                inner,
-                "Received an unexpected token [%s] (line [%s], column [%s]), acceptable options: [%s]",
-                theUnexpectedToken,
-                failurePosition.getLineNum(),
-                failurePosition.getColumnNum(),
-                COMMA_JOINER.join(expectedTokens)
-            )
-            .withContext("line", failurePosition.getLineNum())
-            .withContext("column", failurePosition.getColumnNum())
-            .withContext("endLine", failurePosition.getEndLineNum())
-            .withContext("endColumn", failurePosition.getEndColumnNum())
-            .withContext("token", theUnexpectedToken)
-            .withContext("expected", expectedTokens);
-
       }
 
       return DruidException.forPersona(DruidException.Persona.DEVELOPER)
@@ -382,14 +391,14 @@ public class DruidPlanner implements Closeable
     catch (RelOptPlanner.CannotPlanException inner) {
       return DruidException.forPersona(DruidException.Persona.USER)
                            .ofCategory(DruidException.Category.INVALID_INPUT)
-                           .build(inner, inner.getMessage());
+                           .build(inner, "%s", inner.getMessage());
     }
     catch (Exception inner) {
       // Anything else. Should not get here. Anything else should already have
       // been translated to a DruidException unless it is an unexpected exception.
       return DruidException.forPersona(DruidException.Persona.ADMIN)
                            .ofCategory(DruidException.Category.UNCATEGORIZED)
-                           .build(inner, inner.getMessage());
+                           .build(inner, "%s", inner.getMessage());
     }
   }
 

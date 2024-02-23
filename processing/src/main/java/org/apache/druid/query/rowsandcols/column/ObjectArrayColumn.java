@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.rowsandcols.column;
 
+import org.apache.druid.query.rowsandcols.column.accessor.ObjectColumnAccessorBase;
 import org.apache.druid.query.rowsandcols.util.FindResult;
 import org.apache.druid.segment.column.ColumnType;
 

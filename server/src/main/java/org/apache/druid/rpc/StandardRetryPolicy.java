@@ -37,20 +37,39 @@ public class StandardRetryPolicy implements ServiceRetryPolicy
   private static final long DEFAULT_MIN_WAIT_MS = 100;
   private static final long DEFAULT_MAX_WAIT_MS = 30_000;
 
+  /**
+   * Number of attempts that leads to about an hour of total waiting, assuming wait time is determined
+   * by the function in {@link ServiceClientImpl#computeBackoffMs(ServiceRetryPolicy, long)}.
+   */
+  private static final int MAX_ATTEMPTS_ABOUT_AN_HOUR = 125;
+
   private static final StandardRetryPolicy DEFAULT_UNLIMITED_POLICY = new Builder().maxAttempts(UNLIMITED).build();
+  private static final StandardRetryPolicy DEFAULT_UNLIMITED_POLICY_NO_RETRY_LOG = new Builder().maxAttempts(UNLIMITED)
+                                                                                                .retryLoggable(false)
+                                                                                                .build();
+  private static final StandardRetryPolicy DEFAULT_ABOUT_AN_HOUR_POLICY =
+      new Builder().maxAttempts(MAX_ATTEMPTS_ABOUT_AN_HOUR).build();
   private static final StandardRetryPolicy DEFAULT_NO_RETRIES_POLICY = new Builder().maxAttempts(1).build();
 
   private final long maxAttempts;
   private final long minWaitMillis;
   private final long maxWaitMillis;
   private final boolean retryNotAvailable;
+  private final boolean retryLoggable;
 
-  private StandardRetryPolicy(long maxAttempts, long minWaitMillis, long maxWaitMillis, boolean retryNotAvailable)
+  private StandardRetryPolicy(
+      long maxAttempts,
+      long minWaitMillis,
+      long maxWaitMillis,
+      boolean retryNotAvailable,
+      boolean retryLoggable
+  )
   {
     this.maxAttempts = maxAttempts;
     this.minWaitMillis = minWaitMillis;
     this.maxWaitMillis = maxWaitMillis;
     this.retryNotAvailable = retryNotAvailable;
+    this.retryLoggable = retryLoggable;
 
     if (maxAttempts == 0) {
       throw new IAE("maxAttempts must be positive (limited) or negative (unlimited); cannot be zero.");
@@ -62,11 +81,35 @@ public class StandardRetryPolicy implements ServiceRetryPolicy
     return new Builder();
   }
 
+  /**
+   * Standard unlimited retry policy. Never stops retrying as long as errors remain retryable.
+   * See {@link ServiceClient} documentation for details on what errors are retryable.
+   */
   public static StandardRetryPolicy unlimited()
   {
     return DEFAULT_UNLIMITED_POLICY;
   }
 
+  /**
+   * Standard unlimited retry policy along with muted the logging for the retries.
+   */
+  public static StandardRetryPolicy unlimitedWithoutRetryLogging()
+  {
+    return DEFAULT_UNLIMITED_POLICY_NO_RETRY_LOG;
+  }
+
+  /**
+   * Retry policy that uses up to about an hour of total wait time. Note that this is just the total waiting time
+   * between attempts. It does not include the time that each attempt takes to execute.
+   */
+  public static StandardRetryPolicy aboutAnHour()
+  {
+    return DEFAULT_ABOUT_AN_HOUR_POLICY;
+  }
+
+  /**
+   * Retry policy that never retries.
+   */
   public static StandardRetryPolicy noRetries()
   {
     return DEFAULT_NO_RETRIES_POLICY;
@@ -112,6 +155,12 @@ public class StandardRetryPolicy implements ServiceRetryPolicy
   }
 
   @Override
+  public boolean retryLoggable()
+  {
+    return retryLoggable;
+  }
+
+  @Override
   public boolean retryNotAvailable()
   {
     return retryNotAvailable;
@@ -123,6 +172,7 @@ public class StandardRetryPolicy implements ServiceRetryPolicy
     private long minWaitMillis = DEFAULT_MIN_WAIT_MS;
     private long maxWaitMillis = DEFAULT_MAX_WAIT_MS;
     private boolean retryNotAvailable = true;
+    private boolean retryLoggable = true;
 
     public Builder maxAttempts(final long maxAttempts)
     {
@@ -148,9 +198,15 @@ public class StandardRetryPolicy implements ServiceRetryPolicy
       return this;
     }
 
+    public Builder retryLoggable(final boolean retryLoggable)
+    {
+      this.retryLoggable = retryLoggable;
+      return this;
+    }
+
     public StandardRetryPolicy build()
     {
-      return new StandardRetryPolicy(maxAttempts, minWaitMillis, maxWaitMillis, retryNotAvailable);
+      return new StandardRetryPolicy(maxAttempts, minWaitMillis, maxWaitMillis, retryNotAvailable, retryLoggable);
     }
   }
 }

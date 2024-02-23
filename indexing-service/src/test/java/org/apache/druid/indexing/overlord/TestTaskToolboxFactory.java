@@ -25,6 +25,8 @@ import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
@@ -53,6 +55,7 @@ import org.apache.druid.segment.loading.DataSegmentArchiver;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.DataSegmentMover;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory;
@@ -75,6 +78,7 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
   )
   {
     super(
+        null,
         bob.config,
         bob.taskExecutorNode,
         bob.taskActionClientFactory,
@@ -112,7 +116,8 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
         bob.supervisorTaskClientProvider,
         bob.shuffleClient,
         bob.taskLogPusher,
-        bob.attemptId
+        bob.attemptId,
+        bob.centralizedDatasourceSchemaConfig
     );
   }
 
@@ -150,12 +155,13 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     private ChatHandlerProvider chatHandlerProvider;
     private RowIngestionMetersFactory rowIngestionMetersFactory;
     private AppenderatorsManager appenderatorsManager;
-    private OverlordClient overlordClient;
-    private CoordinatorClient coordinatorClient;
+    private OverlordClient overlordClient = new NoopOverlordClient();
+    private CoordinatorClient coordinatorClient = new NoopCoordinatorClient();
     private ParallelIndexSupervisorTaskClientProvider supervisorTaskClientProvider;
     private ShuffleClient shuffleClient;
     private TaskLogPusher taskLogPusher;
     private String attemptId;
+    private CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
     public Builder setConfig(TaskConfig config)
     {
@@ -383,6 +389,11 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     {
       this.attemptId = attemptId;
       return this;
+    }
+
+    public void setCentralizedTableSchemaConfig(CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig)
+    {
+      this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
     }
   }
 }

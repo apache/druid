@@ -37,7 +37,7 @@ public class ExprMacroTest
   private static final String IPV4_STRING = "192.168.0.1";
   private static final long IPV4_LONG = 3232235521L;
   private static final Expr.ObjectBinding BINDINGS = InputBindings.forInputSuppliers(
-      ImmutableMap.<String, InputBindings.InputSupplier>builder()
+      ImmutableMap.<String, InputBindings.InputSupplier<?>>builder()
                   .put("t",
                        InputBindings.inputSupplier(
                            ExpressionType.LONG,

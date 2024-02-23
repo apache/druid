@@ -19,8 +19,10 @@
 
 package org.apache.druid.indexing;
 
+import org.apache.druid.indexing.overlord.ObjectMetadata;
 import org.apache.druid.indexing.overlord.supervisor.NoopSupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.junit.Assert;
@@ -70,5 +72,21 @@ public class NoopSupervisorSpecTest
   {
     NoopSupervisorSpec noopSupervisorSpec = new NoopSupervisorSpec(null, Collections.singletonList("datasource1"));
     Assert.assertTrue(noopSupervisorSpec.getInputSourceResources().isEmpty());
+  }
+
+  @Test
+  public void testNoppSupervisorResetOffsetsDoNothing()
+  {
+    NoopSupervisorSpec expectedSpec = new NoopSupervisorSpec(null, null);
+    Supervisor noOpSupervisor = expectedSpec.createSupervisor();
+    Assert.assertEquals(-1, noOpSupervisor.getActiveTaskGroupsCount());
+    noOpSupervisor.resetOffsets(null);
+    Assert.assertEquals(-1, noOpSupervisor.getActiveTaskGroupsCount());
+    Assert.assertEquals(SupervisorStateManager.BasicState.RUNNING, noOpSupervisor.getState());
+
+    Assert.assertEquals(-1, noOpSupervisor.getActiveTaskGroupsCount());
+    noOpSupervisor.resetOffsets(new ObjectMetadata("someObject"));
+    Assert.assertEquals(-1, noOpSupervisor.getActiveTaskGroupsCount());
+    Assert.assertEquals(SupervisorStateManager.BasicState.RUNNING, noOpSupervisor.getState());
   }
 }

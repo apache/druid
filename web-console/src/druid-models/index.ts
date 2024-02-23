@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+export * from './async-query/async-query';
 export * from './compaction-config/compaction-config';
 export * from './compaction-status/compaction-status';
 export * from './coordinator-dynamic-config/coordinator-dynamic-config';
@@ -35,8 +36,8 @@ export * from './metric-spec/metric-spec';
 export * from './overlord-dynamic-config/overlord-dynamic-config';
 export * from './query-context/query-context';
 export * from './stages/stages';
+export * from './task/task';
 export * from './time/time';
 export * from './timestamp-spec/timestamp-spec';
 export * from './transform-spec/transform-spec';
 export * from './workbench-query/workbench-query';
-export * from './workbench-query/workbench-query-part';

@@ -19,6 +19,7 @@
 import { Button, Classes, Dialog, Intent, Tab, Tabs } from '@blueprintjs/core';
 import { Popover2 } from '@blueprintjs/popover2';
 import * as JSONBig from 'json-bigint-native';
+import type { JSX } from 'react';
 import React, { useState } from 'react';
 import AceEditor from 'react-ace';
 

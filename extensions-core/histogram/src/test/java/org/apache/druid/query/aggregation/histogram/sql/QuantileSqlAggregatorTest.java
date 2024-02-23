@@ -39,10 +39,7 @@ import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.query.filter.NotDimFilter;
-import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
@@ -51,10 +48,10 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -105,7 +102,7 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
                                              .rows(TestDataBuilder.ROWS1)
                                              .buildMMappedIndex();
 
-    return new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
+    return SpecificSegmentsQuerySegmentWalker.createWalker(injector, conglomerate).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.DATASOURCE1)
                    .interval(index.getDataInterval())
@@ -124,6 +121,7 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
         "SELECT\n"
         + "APPROX_QUANTILE(m1, 0.01),\n"
         + "APPROX_QUANTILE(m1, 0.5, 50),\n"
+        + "APPROX_QUANTILE(m1, CAST(0.5 AS DOUBLE), CAST(50 AS INTEGER)),\n"
         + "APPROX_QUANTILE(m1, 0.98, 200),\n"
         + "APPROX_QUANTILE(m1, 0.99),\n"
         + "APPROX_QUANTILE(m1 * 2, 0.97),\n"
@@ -147,28 +145,29 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
                   )
                   .aggregators(ImmutableList.of(
                       new ApproximateHistogramAggregatorFactory("a0:agg", "m1", null, null, null, null, false),
-                      new ApproximateHistogramAggregatorFactory("a2:agg", "m1", 200, null, null, null, false),
-                      new ApproximateHistogramAggregatorFactory("a4:agg", "v0", null, null, null, null, false),
-                      new FilteredAggregatorFactory(
-                          new ApproximateHistogramAggregatorFactory("a5:agg", "m1", null, null, null, null, false),
-                          new SelectorDimFilter("dim1", "abc", null)
-                      ),
+                      new ApproximateHistogramAggregatorFactory("a3:agg", "m1", 200, null, null, null, false),
+                      new ApproximateHistogramAggregatorFactory("a5:agg", "v0", null, null, null, null, false),
                       new FilteredAggregatorFactory(
                           new ApproximateHistogramAggregatorFactory("a6:agg", "m1", null, null, null, null, false),
-                          new NotDimFilter(new SelectorDimFilter("dim1", "abc", null))
+                          equality("dim1", "abc", ColumnType.STRING)
                       ),
-                      new ApproximateHistogramAggregatorFactory("a8:agg", "cnt", null, null, null, null, false)
+                      new FilteredAggregatorFactory(
+                          new ApproximateHistogramAggregatorFactory("a7:agg", "m1", null, null, null, null, false),
+                          not(equality("dim1", "abc", ColumnType.STRING))
+                      ),
+                      new ApproximateHistogramAggregatorFactory("a9:agg", "cnt", null, null, null, null, false)
                   ))
                   .postAggregators(
                       new QuantilePostAggregator("a0", "a0:agg", 0.01f),
                       new QuantilePostAggregator("a1", "a0:agg", 0.50f),
-                      new QuantilePostAggregator("a2", "a2:agg", 0.98f),
-                      new QuantilePostAggregator("a3", "a0:agg", 0.99f),
-                      new QuantilePostAggregator("a4", "a4:agg", 0.97f),
-                      new QuantilePostAggregator("a5", "a5:agg", 0.99f),
-                      new QuantilePostAggregator("a6", "a6:agg", 0.999f),
-                      new QuantilePostAggregator("a7", "a5:agg", 0.999f),
-                      new QuantilePostAggregator("a8", "a8:agg", 0.50f)
+                      new QuantilePostAggregator("a2", "a0:agg", 0.50f),
+                      new QuantilePostAggregator("a3", "a3:agg", 0.98f),
+                      new QuantilePostAggregator("a4", "a0:agg", 0.99f),
+                      new QuantilePostAggregator("a5", "a5:agg", 0.97f),
+                      new QuantilePostAggregator("a6", "a6:agg", 0.99f),
+                      new QuantilePostAggregator("a7", "a7:agg", 0.999f),
+                      new QuantilePostAggregator("a8", "a6:agg", 0.999f),
+                      new QuantilePostAggregator("a9", "a9:agg", 0.50f)
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
@@ -176,6 +175,7 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{
                 1.0,
+                3.0,
                 3.0,
                 5.880000114440918,
                 5.940000057220459,
@@ -208,15 +208,47 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
                   .aggregators(ImmutableList.of(
-                      new ApproximateHistogramFoldingAggregatorFactory("a0:agg", "hist_m1", null, null, null, null, false),
-                      new ApproximateHistogramFoldingAggregatorFactory("a2:agg", "hist_m1", 200, null, null, null, false),
-                      new FilteredAggregatorFactory(
-                          new ApproximateHistogramFoldingAggregatorFactory("a4:agg", "hist_m1", null, null, null, null, false),
-                          new SelectorDimFilter("dim1", "abc", null)
+                      new ApproximateHistogramFoldingAggregatorFactory(
+                          "a0:agg",
+                          "hist_m1",
+                          null,
+                          null,
+                          null,
+                          null,
+                          false
+                      ),
+                      new ApproximateHistogramFoldingAggregatorFactory(
+                          "a2:agg",
+                          "hist_m1",
+                          200,
+                          null,
+                          null,
+                          null,
+                          false
                       ),
                       new FilteredAggregatorFactory(
-                          new ApproximateHistogramFoldingAggregatorFactory("a5:agg", "hist_m1", null, null, null, null, false),
-                          new NotDimFilter(new SelectorDimFilter("dim1", "abc", null))
+                          new ApproximateHistogramFoldingAggregatorFactory(
+                              "a4:agg",
+                              "hist_m1",
+                              null,
+                              null,
+                              null,
+                              null,
+                              false
+                          ),
+                          equality("dim1", "abc", ColumnType.STRING)
+                      ),
+                      new FilteredAggregatorFactory(
+                          new ApproximateHistogramFoldingAggregatorFactory(
+                              "a5:agg",
+                              "hist_m1",
+                              null,
+                              null,
+                              null,
+                              null,
+                              false
+                          ),
+                          not(equality("dim1", "abc", ColumnType.STRING))
                       )
                   ))
                   .postAggregators(
@@ -272,7 +304,12 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(
                             new DoubleSumAggregatorFactory("_a0:sum", "a0"),
-                            new CountAggregatorFactory("_a0:count"),
+                            NullHandling.replaceWithDefault() ?
+                            new CountAggregatorFactory("_a0:count") :
+                            new FilteredAggregatorFactory(
+                                new CountAggregatorFactory("_a0:count"),
+                                notNull("a0")
+                            ),
                             new ApproximateHistogramAggregatorFactory(
                                 "_a1:agg",
                                 "a0",
@@ -379,12 +416,21 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
-                  .filters(bound("dim2", "0", "0", false, false, null, StringComparators.NUMERIC))
-                  .aggregators(ImmutableList.of(
-                      new ApproximateHistogramFoldingAggregatorFactory("a0:agg", "hist_m1", null, null, null, null, false),
-                      new ApproximateHistogramAggregatorFactory("a1:agg", "m1", null, null, null, null, false)
-
-                  ))
+                  .filters(numericEquality("dim2", 0L, ColumnType.LONG))
+                  .aggregators(
+                      ImmutableList.of(
+                          new ApproximateHistogramFoldingAggregatorFactory(
+                              "a0:agg",
+                              "hist_m1",
+                              null,
+                              null,
+                              null,
+                              null,
+                              false
+                          ),
+                          new ApproximateHistogramAggregatorFactory("a1:agg", "m1", null, null, null, null, false)
+                      )
+                  )
                   .postAggregators(
                       new QuantilePostAggregator("a0", "a0:agg", 0.01f),
                       new QuantilePostAggregator("a1", "a1:agg", 0.01f)
@@ -411,19 +457,35 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setDimFilter(selector("dim2", "a", null))
+                        .setDimFilter(equality("dim2", "a", ColumnType.STRING))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(expressionVirtualColumn("v0", "'a'", ColumnType.STRING))
                         .setDimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING))
                         .setAggregatorSpecs(
                             aggregators(
                                 new FilteredAggregatorFactory(
-                                    new ApproximateHistogramFoldingAggregatorFactory("a0:agg", "hist_m1", null, null, null, null, false),
-                                    selector("dim1", "nonexistent", null)
+                                    new ApproximateHistogramFoldingAggregatorFactory(
+                                        "a0:agg",
+                                        "hist_m1",
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        false
+                                    ),
+                                    equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
                                 new FilteredAggregatorFactory(
-                                    new ApproximateHistogramAggregatorFactory("a1:agg", "m1", null, null, null, null, false),
-                                    selector("dim1", "nonexistent", null)
+                                    new ApproximateHistogramAggregatorFactory(
+                                        "a1:agg",
+                                        "m1",
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        false
+                                    ),
+                                    equality("dim1", "nonexistent", ColumnType.STRING)
                                 )
                             )
                         )

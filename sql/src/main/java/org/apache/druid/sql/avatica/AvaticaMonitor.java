@@ -50,14 +50,14 @@ public class AvaticaMonitor extends AbstractMonitor implements MetricsSystem
     for (final Map.Entry<String, AtomicLong> entry : counters.entrySet()) {
       final String name = entry.getKey();
       final long value = entry.getValue().getAndSet(0);
-      emitter.emit(ServiceMetricEvent.builder().build(fullMetricName(name), value));
+      emitter.emit(ServiceMetricEvent.builder().setMetric(fullMetricName(name), value));
     }
 
     for (Map.Entry<String, Gauge<?>> entry : gauges.entrySet()) {
       final String name = entry.getKey();
       final Object value = entry.getValue().getValue();
       if (value instanceof Number) {
-        emitter.emit(ServiceMetricEvent.builder().build(fullMetricName(name), (Number) value));
+        emitter.emit(ServiceMetricEvent.builder().setMetric(fullMetricName(name), (Number) value));
       } else {
         log.debug("Not emitting gauge[%s] since value[%s] type was[%s].", name, value, value.getClass().getName());
       }

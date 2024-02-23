@@ -50,12 +50,12 @@ import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 
 /**
- * Base class for writer of global dictionary encoded nested field columns for {@link NestedDataColumnSerializerV4} and
- * {@link NestedDataColumnSerializer}. Nested columns are written in multiple passes. The first pass processes the
- * 'raw' nested data with a {@link StructuredDataProcessor} which will call {@link #addValue(int, Object)} for writers
- * of each field which is present. For this type of writer, this entails building a local dictionary
- * ({@link #localDictionary})to map into to the global dictionary ({@link #globalDictionaryIdLookup}) and writes this
- * unsorted localId to an intermediate integer column, {@link #intermediateValueWriter}.
+ * Base class for writer of global dictionary encoded nested field columns for {@link NestedDataColumnSerializer}.
+ * Nested columns are written in multiple passes. The first pass processes the 'raw' nested data with a
+ * {@link StructuredDataProcessor} which will call {@link #addValue(int, Object)} for writers of each field which is
+ * present. For this type of writer, this entails building a local dictionary ({@link #localDictionary}) to map into
+ * the global dictionary ({@link #globalDictionaryIdLookup}) and writes this unsorted localId to an intermediate
+ * integer column, {@link #intermediateValueWriter}.
  * <p>
  * When processing the 'raw' value column is complete, the {@link #writeTo(int, FileSmoosher)} method will sort the
  * local ids and write them out to a local sorted dictionary, iterate over {@link #intermediateValueWriter} swapping
@@ -292,7 +292,7 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
         }
       }
     };
-    final String fieldFileName = NestedDataColumnSerializerV4.getInternalFileName(columnName, fieldName);
+    final String fieldFileName = NestedCommonFormatColumnSerializer.getInternalFileName(columnName, fieldName);
     final long size = fieldSerializer.getSerializedSize();
     log.debug("Column [%s] serializing [%s] field of size [%d].", columnName, fieldName, size);
     try (SmooshedWriter smooshChannel = smoosher.addWithSmooshedWriter(fieldFileName, size)) {

@@ -24,6 +24,7 @@ import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.initialization.jetty.BadRequestException;
+import org.apache.druid.server.initialization.jetty.ServiceUnavailableException;
 import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 
 import javax.ws.rs.Path;
@@ -73,6 +74,7 @@ public class ChatHandlerResource
       return handler.get();
     }
 
-    throw new BadRequestException(StringUtils.format("Can't find chatHandler for handler[%s]", handlerId));
+    // Return HTTP 503 so SpecificTaskRetryPolicy retries in case the handler is not registered yet or has been registered before shutdown.
+    throw new ServiceUnavailableException(StringUtils.format("Can't find chatHandler for handler[%s]", handlerId));
   }
 }

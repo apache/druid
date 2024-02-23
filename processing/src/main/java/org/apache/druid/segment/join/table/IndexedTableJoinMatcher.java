@@ -48,6 +48,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.SimpleDescendingOffset;
 import org.apache.druid.segment.SimpleSettableOffset;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
@@ -124,7 +125,7 @@ public class IndexedTableJoinMatcher implements JoinMatcher
                  .map(pair -> makeConditionMatcher(pair.lhs, leftSelectorFactory, pair.rhs))
                  .collect(Collectors.toList());
 
-      this.singleRowMatching = indexes.stream().allMatch(pair -> pair.lhs.areKeysUnique());
+      this.singleRowMatching = indexes.stream().allMatch(pair -> pair.lhs.areKeysUnique(pair.rhs.isIncludeNull()));
     } else {
       throw new IAE(
           "Cannot build hash-join matcher on non-equi-join condition: %s",
@@ -168,7 +169,7 @@ public class IndexedTableJoinMatcher implements JoinMatcher
     return ColumnProcessors.makeProcessor(
         condition.getLeftExpr(),
         index.keyType(),
-        new ConditionMatcherFactory(index),
+        new ConditionMatcherFactory(index, condition.isIncludeNull()),
         selectorFactory
     );
   }
@@ -373,21 +374,23 @@ public class IndexedTableJoinMatcher implements JoinMatcher
 
     private final ColumnType keyType;
     private final IndexedTable.Index index;
+    private final boolean includeNull;
 
     // DimensionSelector -> (int) dimension id -> (IntSortedSet) row numbers
     @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")  // updated via computeIfAbsent
     private final LruLoadingHashMap<DimensionSelector, Int2IntSortedSetMap> dimensionCaches;
 
-    ConditionMatcherFactory(IndexedTable.Index index)
+    ConditionMatcherFactory(IndexedTable.Index index, boolean includeNull)
     {
       this.keyType = index.keyType();
       this.index = index;
+      this.includeNull = includeNull;
 
       this.dimensionCaches = new LruLoadingHashMap<>(
           MAX_NUM_CACHE,
           selector -> {
             int cardinality = selector.getValueCardinality();
-            IntFunction<IntSortedSet> loader = dimensionId -> getRowNumbers(selector, dimensionId);
+            IntFunction<IntSortedSet> loader = dimensionId -> getRowNumbers(selector.lookupName(dimensionId));
             return cardinality <= CACHE_MAX_SIZE
                    ? new Int2IntSortedSetLookupTable(cardinality, loader)
                    : new Int2IntSortedSetLruCache(CACHE_MAX_SIZE, loader);
@@ -395,10 +398,13 @@ public class IndexedTableJoinMatcher implements JoinMatcher
       );
     }
 
-    private IntSortedSet getRowNumbers(DimensionSelector selector, int dimensionId)
+    private IntSortedSet getRowNumbers(@Nullable String key)
     {
-      final String key = selector.lookupName(dimensionId);
-      return index.find(key);
+      if (includeNull || !NullHandling.isNullOrEquivalent(key)) {
+        return index.find(key);
+      } else {
+        return IntSortedSets.EMPTY_SET;
+      }
     }
 
     private IntSortedSet getAndCacheRowNumbers(DimensionSelector selector, int dimensionId)
@@ -430,9 +436,9 @@ public class IndexedTableJoinMatcher implements JoinMatcher
 
           if (row.size() == 1) {
             int dimensionId = row.get(0);
-            return getRowNumbers(selector, dimensionId);
+            return getRowNumbers(selector.lookupName(dimensionId));
           } else if (row.size() == 0) {
-            return IntSortedSets.EMPTY_SET;
+            return getRowNumbers(null);
           } else {
             // Multi-valued rows are not handled by the join system right now
             // TODO: Remove when https://github.com/apache/druid/issues/9924 is done
@@ -449,7 +455,7 @@ public class IndexedTableJoinMatcher implements JoinMatcher
             int dimensionId = row.get(0);
             return getAndCacheRowNumbers(selector, dimensionId);
           } else if (row.size() == 0) {
-            return IntSortedSets.EMPTY_SET;
+            return getRowNumbers(null);
           } else {
             // Multi-valued rows are not handled by the join system right now
             // TODO: Remove when https://github.com/apache/druid/issues/9924 is done
@@ -464,6 +470,8 @@ public class IndexedTableJoinMatcher implements JoinMatcher
     {
       if (NullHandling.replaceWithDefault()) {
         return () -> index.find(selector.getFloat());
+      } else if (includeNull) {
+        return () -> selector.isNull() ? index.find(null) : index.find(selector.getFloat());
       } else {
         return () -> selector.isNull() ? IntSortedSets.EMPTY_SET : index.find(selector.getFloat());
       }
@@ -474,6 +482,8 @@ public class IndexedTableJoinMatcher implements JoinMatcher
     {
       if (NullHandling.replaceWithDefault()) {
         return () -> index.find(selector.getDouble());
+      } else if (includeNull) {
+        return () -> selector.isNull() ? index.find(null) : index.find(selector.getDouble());
       } else {
         return () -> selector.isNull() ? IntSortedSets.EMPTY_SET : index.find(selector.getDouble());
       }
@@ -486,9 +496,22 @@ public class IndexedTableJoinMatcher implements JoinMatcher
         return makePrimitiveLongMatcher(selector);
       } else if (NullHandling.replaceWithDefault()) {
         return () -> index.find(selector.getLong());
+      } else if (includeNull) {
+        return () -> selector.isNull() ? index.find(null) : index.find(selector.getLong());
       } else {
         return () -> selector.isNull() ? IntSortedSets.EMPTY_SET : index.find(selector.getLong());
       }
+    }
+
+    @Override
+    public ConditionMatcher makeArrayProcessor(
+        BaseObjectColumnValueSelector<?> selector,
+        @Nullable ColumnCapabilities columnCapabilities
+    )
+    {
+      return () -> {
+        throw new QueryUnsupportedException("Joining against ARRAY columns is not supported.");
+      };
     }
 
     @Override
@@ -529,6 +552,27 @@ public class IndexedTableJoinMatcher implements JoinMatcher
           public IntSortedSet match()
           {
             return index.find(selector.getLong());
+          }
+        };
+      } else if (includeNull) {
+        return new ConditionMatcher()
+        {
+          @Override
+          public int matchSingleRow()
+          {
+            if (selector.isNull()) {
+              final IntSortedSet rowNumbers = index.find(null);
+
+              return rowNumbers == null ? NO_CONDITION_MATCH : rowNumbers.firstInt();
+            } else {
+              return index.findUniqueLong(selector.getLong());
+            }
+          }
+
+          @Override
+          public IntSortedSet match()
+          {
+            return selector.isNull() ? index.find(null) : index.find(selector.getLong());
           }
         };
       } else {

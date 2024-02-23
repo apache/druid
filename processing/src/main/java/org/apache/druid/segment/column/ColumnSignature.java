@@ -50,7 +50,7 @@ class ColumnSignature
 
     // Name must be nonnull, but type can be null (if the type is unknown)
     if (name == null || name.isEmpty()) {
-      throw new IAE(name, "Column name must be non-empty");
+      throw new IAE("Column name must be provided and non-empty");
     }
   }
 

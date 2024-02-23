@@ -34,15 +34,6 @@ import java.util.Map;
 
 public class CoordinatorRunStatsTest
 {
-  private static final CoordinatorStat STAT_1 = new CoordinatorStat("stat1", "s1");
-  private static final CoordinatorStat STAT_2 = new CoordinatorStat("stat2", "s2");
-  private static final CoordinatorStat STAT_3 = new CoordinatorStat("stat3", "s3");
-
-  private static final CoordinatorStat DEBUG_STAT_1
-      = new CoordinatorStat("debugStat1", CoordinatorStat.Level.DEBUG);
-  private static final CoordinatorStat DEBUG_STAT_2
-      = new CoordinatorStat("debugStat2", CoordinatorStat.Level.DEBUG);
-
   private CoordinatorRunStats stats;
 
   @Before
@@ -60,56 +51,56 @@ public class CoordinatorRunStatsTest
   @Test
   public void testAdd()
   {
-    Assert.assertEquals(0, stats.get(STAT_1));
-    stats.add(STAT_1, 1);
-    Assert.assertEquals(1, stats.get(STAT_1));
-    stats.add(STAT_1, -11);
-    Assert.assertEquals(-10, stats.get(STAT_1));
+    Assert.assertEquals(0, stats.get(Stat.ERROR_1));
+    stats.add(Stat.ERROR_1, 1);
+    Assert.assertEquals(1, stats.get(Stat.ERROR_1));
+    stats.add(Stat.ERROR_1, -11);
+    Assert.assertEquals(-10, stats.get(Stat.ERROR_1));
   }
 
   @Test
   public void testAddForRowKey()
   {
-    stats.add(STAT_1, Key.TIER_1, 1);
-    stats.add(STAT_1, Key.TIER_2, 1);
-    stats.add(STAT_1, Key.TIER_1, -5);
-    stats.add(STAT_2, Key.TIER_1, 1);
-    stats.add(STAT_1, Key.TIER_2, 1);
+    stats.add(Stat.ERROR_1, Key.TIER_1, 1);
+    stats.add(Stat.ERROR_1, Key.TIER_2, 1);
+    stats.add(Stat.ERROR_1, Key.TIER_1, -5);
+    stats.add(Stat.INFO_1, Key.TIER_1, 1);
+    stats.add(Stat.ERROR_1, Key.TIER_2, 1);
 
-    Assert.assertFalse(stats.hasStat(STAT_3));
+    Assert.assertFalse(stats.hasStat(Stat.INFO_2));
 
-    Assert.assertEquals(-4, stats.get(STAT_1, Key.TIER_1));
-    Assert.assertEquals(2, stats.get(STAT_1, Key.TIER_2));
-    Assert.assertEquals(1, stats.get(STAT_2, Key.TIER_1));
+    Assert.assertEquals(-4, stats.get(Stat.ERROR_1, Key.TIER_1));
+    Assert.assertEquals(2, stats.get(Stat.ERROR_1, Key.TIER_2));
+    Assert.assertEquals(1, stats.get(Stat.INFO_1, Key.TIER_1));
   }
 
   @Test
   public void testGetSnapshotAndReset()
   {
-    stats.add(STAT_1, 1);
-    stats.add(STAT_2, 3);
-    stats.add(STAT_1, Key.TIER_1, 5);
-    stats.add(STAT_1, Key.DUTY_1, 7);
+    stats.add(Stat.ERROR_1, 1);
+    stats.add(Stat.INFO_1, 3);
+    stats.add(Stat.ERROR_1, Key.TIER_1, 5);
+    stats.add(Stat.ERROR_1, Key.DUTY_1, 7);
 
     final CoordinatorRunStats firstFlush = stats.getSnapshotAndReset();
-    Assert.assertEquals(1, firstFlush.get(STAT_1));
-    Assert.assertEquals(3, firstFlush.get(STAT_2));
-    Assert.assertEquals(5, firstFlush.get(STAT_1, Key.TIER_1));
-    Assert.assertEquals(7, firstFlush.get(STAT_1, Key.DUTY_1));
+    Assert.assertEquals(1, firstFlush.get(Stat.ERROR_1));
+    Assert.assertEquals(3, firstFlush.get(Stat.INFO_1));
+    Assert.assertEquals(5, firstFlush.get(Stat.ERROR_1, Key.TIER_1));
+    Assert.assertEquals(7, firstFlush.get(Stat.ERROR_1, Key.DUTY_1));
 
     Assert.assertEquals(0, stats.rowCount());
 
-    stats.add(STAT_1, 7);
-    stats.add(STAT_1, Key.TIER_1, 5);
-    stats.add(STAT_2, Key.DUTY_1, 3);
-    stats.add(STAT_3, Key.TIER_1, 1);
+    stats.add(Stat.ERROR_1, 7);
+    stats.add(Stat.ERROR_1, Key.TIER_1, 5);
+    stats.add(Stat.INFO_1, Key.DUTY_1, 3);
+    stats.add(Stat.INFO_2, Key.TIER_1, 1);
 
     final CoordinatorRunStats secondFlush = stats.getSnapshotAndReset();
 
-    Assert.assertEquals(7, secondFlush.get(STAT_1));
-    Assert.assertEquals(5, secondFlush.get(STAT_1, Key.TIER_1));
-    Assert.assertEquals(3, secondFlush.get(STAT_2, Key.DUTY_1));
-    Assert.assertEquals(1, secondFlush.get(STAT_3, Key.TIER_1));
+    Assert.assertEquals(7, secondFlush.get(Stat.ERROR_1));
+    Assert.assertEquals(5, secondFlush.get(Stat.ERROR_1, Key.TIER_1));
+    Assert.assertEquals(3, secondFlush.get(Stat.INFO_1, Key.DUTY_1));
+    Assert.assertEquals(1, secondFlush.get(Stat.INFO_2, Key.TIER_1));
 
     Assert.assertEquals(0, stats.rowCount());
   }
@@ -117,38 +108,38 @@ public class CoordinatorRunStatsTest
   @Test
   public void testUpdateMax()
   {
-    stats.updateMax(STAT_1, Key.TIER_1, 2);
-    stats.updateMax(STAT_1, Key.TIER_1, 6);
-    stats.updateMax(STAT_1, Key.TIER_1, 5);
+    stats.updateMax(Stat.ERROR_1, Key.TIER_1, 2);
+    stats.updateMax(Stat.ERROR_1, Key.TIER_1, 6);
+    stats.updateMax(Stat.ERROR_1, Key.TIER_1, 5);
 
-    stats.updateMax(STAT_2, Key.TIER_1, 5);
-    stats.updateMax(STAT_2, Key.TIER_1, 4);
-    stats.updateMax(STAT_2, Key.TIER_1, 5);
+    stats.updateMax(Stat.INFO_1, Key.TIER_1, 5);
+    stats.updateMax(Stat.INFO_1, Key.TIER_1, 4);
+    stats.updateMax(Stat.INFO_1, Key.TIER_1, 5);
 
-    stats.updateMax(STAT_1, Key.TIER_2, 7);
-    stats.updateMax(STAT_1, Key.TIER_2, 9);
-    stats.updateMax(STAT_1, Key.TIER_2, 10);
+    stats.updateMax(Stat.ERROR_1, Key.TIER_2, 7);
+    stats.updateMax(Stat.ERROR_1, Key.TIER_2, 9);
+    stats.updateMax(Stat.ERROR_1, Key.TIER_2, 10);
 
-    Assert.assertFalse(stats.hasStat(STAT_3));
+    Assert.assertFalse(stats.hasStat(Stat.INFO_2));
 
-    Assert.assertEquals(6, stats.get(STAT_1, Key.TIER_1));
-    Assert.assertEquals(5, stats.get(STAT_2, Key.TIER_1));
-    Assert.assertEquals(10, stats.get(STAT_1, Key.TIER_2));
+    Assert.assertEquals(6, stats.get(Stat.ERROR_1, Key.TIER_1));
+    Assert.assertEquals(5, stats.get(Stat.INFO_1, Key.TIER_1));
+    Assert.assertEquals(10, stats.get(Stat.ERROR_1, Key.TIER_2));
   }
 
   @Test
   public void testAddToDutyStat()
   {
-    stats.add(STAT_1, Key.DUTY_1, 1);
-    stats.add(STAT_1, Key.DUTY_2, 1);
-    stats.add(STAT_1, Key.DUTY_1, -5);
-    stats.add(STAT_2, Key.DUTY_1, 1);
-    stats.add(STAT_1, Key.DUTY_2, 1);
+    stats.add(Stat.ERROR_1, Key.DUTY_1, 1);
+    stats.add(Stat.ERROR_1, Key.DUTY_2, 1);
+    stats.add(Stat.ERROR_1, Key.DUTY_1, -5);
+    stats.add(Stat.INFO_1, Key.DUTY_1, 1);
+    stats.add(Stat.ERROR_1, Key.DUTY_2, 1);
 
-    Assert.assertFalse(stats.hasStat(STAT_3));
-    Assert.assertEquals(-4, stats.get(STAT_1, Key.DUTY_1));
-    Assert.assertEquals(2, stats.get(STAT_1, Key.DUTY_2));
-    Assert.assertEquals(1, stats.get(STAT_2, Key.DUTY_1));
+    Assert.assertFalse(stats.hasStat(Stat.INFO_2));
+    Assert.assertEquals(-4, stats.get(Stat.ERROR_1, Key.DUTY_1));
+    Assert.assertEquals(2, stats.get(Stat.ERROR_1, Key.DUTY_2));
+    Assert.assertEquals(1, stats.get(Stat.INFO_1, Key.DUTY_1));
   }
 
   @Test
@@ -161,13 +152,13 @@ public class CoordinatorRunStatsTest
     );
     expected.forEach(
         (duty, count) ->
-            stats.add(STAT_1, RowKey.of(Dimension.DUTY, duty), count)
+            stats.add(Stat.ERROR_1, RowKey.of(Dimension.DUTY, duty), count)
     );
 
     final Map<String, Long> actual = new HashMap<>();
     stats.forEachStat(
         (stat, rowKey, value) -> {
-          if (stat.equals(STAT_1)) {
+          if (stat.equals(Stat.ERROR_1)) {
             actual.put(rowKey.getValues().get(Dimension.DUTY), value);
           }
         }
@@ -176,24 +167,58 @@ public class CoordinatorRunStatsTest
   }
 
   @Test
-  public void testAddWithDebugDimensions()
+  public void testBuildStatsTable()
   {
-    stats.add(DEBUG_STAT_1, 1);
-    Assert.assertFalse(stats.hasStat(DEBUG_STAT_1));
+    stats.add(Stat.ERROR_1, Key.DUTY_1, 10);
+    stats.add(Stat.INFO_1, Key.DUTY_1, 20);
+    stats.add(Stat.DEBUG_1, Key.DUTY_1, 30);
 
-    stats.add(DEBUG_STAT_1, Key.TIER_1, 1);
-    Assert.assertFalse(stats.hasStat(DEBUG_STAT_1));
+    final String expectedTable
+        = "\nError: {duty=duty1} ==> {error1=10}"
+          + "\nInfo : {duty=duty1} ==> {info1=20}"
+          + "\nDebug: 1 hidden stats. Set 'debugDimensions' to see these."
+          + "\nTOTAL: 3 stats for 1 dimension keys";
 
-    final CoordinatorRunStats debugStats
-        = new CoordinatorRunStats(Key.TIER_1.getValues());
-    debugStats.add(DEBUG_STAT_1, 1);
-    Assert.assertFalse(stats.hasStat(DEBUG_STAT_1));
+    Assert.assertEquals(expectedTable, stats.buildStatsTable());
+  }
 
-    debugStats.add(DEBUG_STAT_1, Key.TIER_1, 1);
-    Assert.assertTrue(debugStats.hasStat(DEBUG_STAT_1));
+  @Test
+  public void testBuildStatsTableWithDebugDimensions()
+  {
+    final CoordinatorRunStats debugStats = new CoordinatorRunStats(Key.DUTY_1.getValues());
+    debugStats.add(Stat.ERROR_1, Key.DUTY_1, 10);
+    debugStats.add(Stat.INFO_1, Key.DUTY_1, 20);
+    debugStats.add(Stat.DEBUG_1, Key.DUTY_1, 30);
 
-    debugStats.add(DEBUG_STAT_2, RowKey.of(Dimension.DATASOURCE, "wiki"), 1);
-    Assert.assertFalse(debugStats.hasStat(DEBUG_STAT_2));
+    final String expectedTable
+        = "\nError: {duty=duty1} ==> {error1=10}"
+          + "\nInfo : {duty=duty1} ==> {info1=20}"
+          + "\nDebug: {duty=duty1} ==> {debug1=30}"
+          + "\nTOTAL: 3 stats for 1 dimension keys";
+
+    Assert.assertEquals(expectedTable, debugStats.buildStatsTable());
+  }
+
+  @Test
+  public void testAddToEmptyThrowsException()
+  {
+    CoordinatorRunStats runStats = CoordinatorRunStats.empty();
+    Assert.assertThrows(
+        UnsupportedOperationException.class,
+        () -> runStats.add(Stat.ERROR_1, 10)
+    );
+    Assert.assertThrows(
+        UnsupportedOperationException.class,
+        () -> runStats.add(Stat.ERROR_1, Key.DUTY_1, 10)
+    );
+    Assert.assertThrows(
+        UnsupportedOperationException.class,
+        () -> runStats.addToSegmentStat(Stat.ERROR_1, "t", "ds", 10)
+    );
+    Assert.assertThrows(
+        UnsupportedOperationException.class,
+        () -> runStats.updateMax(Stat.INFO_1, Key.TIER_1, 10)
+    );
   }
 
   /**
@@ -208,4 +233,15 @@ public class CoordinatorRunStatsTest
     static final RowKey DUTY_2 = RowKey.of(Dimension.DUTY, "duty2");
   }
 
+  private static class Stat
+  {
+    static final CoordinatorStat ERROR_1
+        = CoordinatorStat.toLogAndEmit("error1", "e1", CoordinatorStat.Level.ERROR);
+    static final CoordinatorStat INFO_1
+        = CoordinatorStat.toLogAndEmit("info1", "i1", CoordinatorStat.Level.INFO);
+    static final CoordinatorStat INFO_2
+        = CoordinatorStat.toLogAndEmit("info2", "i2", CoordinatorStat.Level.INFO);
+    static final CoordinatorStat DEBUG_1
+        = CoordinatorStat.toDebugAndEmit("debug1", "d1");
+  }
 }

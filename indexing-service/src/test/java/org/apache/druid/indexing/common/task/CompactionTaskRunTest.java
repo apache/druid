@@ -25,13 +25,18 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import com.google.common.io.Files;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.NewSpatialDimensionSchema;
 import org.apache.druid.data.input.impl.ParseSpec;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -64,11 +69,15 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.segment.AutoTypeColumnSchema;
+import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
@@ -111,7 +120,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -178,15 +186,19 @@ public class CompactionTaskRunTest extends IngestionTestBase
   {
     testUtils = new TestUtils();
     overlordClient = new NoopOverlordClient();
-    coordinatorClient = new CoordinatorClient(null, null)
+    coordinatorClient = new NoopCoordinatorClient()
     {
       @Override
-      public Collection<DataSegment> fetchUsedSegmentsInDataSourceForIntervals(
+      public ListenableFuture<List<DataSegment>> fetchUsedSegments(
           String dataSource,
           List<Interval> intervals
       )
       {
-        return getStorageCoordinator().retrieveUsedSegmentsForIntervals(dataSource, intervals, Segments.ONLY_VISIBLE);
+        return Futures.immediateFuture(
+            ImmutableList.copyOf(
+                getStorageCoordinator().retrieveUsedSegmentsForIntervals(dataSource, intervals, Segments.ONLY_VISIBLE)
+            )
+        );
       }
     };
     segmentCacheManagerFactory = new SegmentCacheManagerFactory(getObjectMapper());
@@ -199,16 +211,33 @@ public class CompactionTaskRunTest extends IngestionTestBase
       List<Interval> intervals
   ) throws JsonProcessingException
   {
-    ObjectMapper mapper = new DefaultObjectMapper();
-    // Expected compaction state to exist after compaction as we store compaction state by default
     Map<String, String> expectedLongSumMetric = new HashMap<>();
     expectedLongSumMetric.put("type", "longSum");
     expectedLongSumMetric.put("name", "val");
     expectedLongSumMetric.put("fieldName", "val");
+    return getDefaultCompactionState(
+        segmentGranularity,
+        queryGranularity,
+        intervals,
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
+        expectedLongSumMetric
+    );
+  }
+
+  public static CompactionState getDefaultCompactionState(
+      Granularity segmentGranularity,
+      Granularity queryGranularity,
+      List<Interval> intervals,
+      DimensionsSpec expectedDims,
+      Map<String, String> expectedMetric
+  ) throws JsonProcessingException
+  {
+    ObjectMapper mapper = new DefaultObjectMapper();
+    // Expected compaction state to exist after compaction as we store compaction state by default
     return new CompactionState(
         new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-        ImmutableList.of(expectedLongSumMetric),
+        expectedDims,
+        ImmutableList.of(expectedMetric),
         null,
         IndexSpec.DEFAULT.asMap(mapper),
         mapper.readValue(
@@ -324,6 +353,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 null,
                 null,
                 true,
+                null,
                 null,
                 null,
                 null,
@@ -1566,6 +1596,272 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Assert.assertEquals(TaskState.FAILED, compactionResult.lhs.getStatusCode());
   }
 
+  @Test
+  public void testRunWithSpatialDimensions() throws Exception
+  {
+    final List<String> spatialrows = ImmutableList.of(
+        "2014-01-01T00:00:10Z,a,10,100,1\n",
+        "2014-01-01T00:00:10Z,b,20,110,2\n",
+        "2014-01-01T00:00:10Z,c,30,120,3\n",
+        "2014-01-01T01:00:20Z,a,10,100,1\n",
+        "2014-01-01T01:00:20Z,b,20,110,2\n",
+        "2014-01-01T01:00:20Z,c,30,120,3\n"
+    );
+    final ParseSpec spatialSpec = new CSVParseSpec(
+        new TimestampSpec("ts", "auto", null),
+        DimensionsSpec.builder()
+                      .setDimensions(Arrays.asList(
+                          new StringDimensionSchema("ts"),
+                          new StringDimensionSchema("dim"),
+                          new NewSpatialDimensionSchema("spatial", Arrays.asList("x", "y"))
+                      ))
+                      .build(),
+        "|",
+        Arrays.asList("ts", "dim", "x", "y", "val"),
+        false,
+        0
+    );
+    runIndexTask(null, null, spatialSpec, spatialrows, false);
+
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory,
+        RETRY_POLICY_FACTORY
+    );
+
+    final CompactionTask compactionTask = builder
+        .interval(Intervals.of("2014-01-01/2014-01-02"))
+        .build();
+
+    final Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask);
+
+    Assert.assertTrue(resultPair.lhs.isSuccess());
+
+    final List<DataSegment> segments = resultPair.rhs;
+    Assert.assertEquals(2, segments.size());
+
+    for (int i = 0; i < 2; i++) {
+      Assert.assertEquals(
+          Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
+          segments.get(i).getInterval()
+      );
+      Map<String, String> expectedLongSumMetric = new HashMap<>();
+      expectedLongSumMetric.put("name", "val");
+      expectedLongSumMetric.put("type", "longSum");
+      expectedLongSumMetric.put("fieldName", "val");
+      Assert.assertEquals(
+          getDefaultCompactionState(
+              Granularities.HOUR,
+              Granularities.MINUTE,
+              ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1)),
+              DimensionsSpec.builder()
+                            .setDimensions(Arrays.asList(
+                                new StringDimensionSchema("ts"),
+                                new StringDimensionSchema("dim"),
+                                new NewSpatialDimensionSchema("spatial", Collections.singletonList("spatial"))
+                            ))
+                            .build(),
+              expectedLongSumMetric
+          ),
+          segments.get(i).getLastCompactionState()
+      );
+      if (lockGranularity == LockGranularity.SEGMENT) {
+        Assert.assertEquals(
+            new NumberedOverwriteShardSpec(32768, 0, 2, (short) 1, (short) 1),
+            segments.get(i).getShardSpec()
+        );
+      } else {
+        Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(i).getShardSpec());
+      }
+    }
+
+    final File cacheDir = temporaryFolder.newFolder();
+    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir);
+
+    List<String> rowsFromSegment = new ArrayList<>();
+    for (DataSegment segment : segments) {
+      final File segmentFile = segmentCacheManager.getSegmentFiles(segment);
+
+      final WindowedStorageAdapter adapter = new WindowedStorageAdapter(
+          new QueryableIndexStorageAdapter(testUtils.getTestIndexIO().loadIndex(segmentFile)),
+          segment.getInterval()
+      );
+      final Sequence<Cursor> cursorSequence = adapter.getAdapter().makeCursors(
+          null,
+          segment.getInterval(),
+          VirtualColumns.EMPTY,
+          Granularities.ALL,
+          false,
+          null
+      );
+
+      cursorSequence.accumulate(rowsFromSegment, (accumulated, cursor) -> {
+        cursor.reset();
+        final ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
+        Assert.assertTrue(factory.getColumnCapabilities("spatial").hasSpatialIndexes());
+        while (!cursor.isDone()) {
+          final ColumnValueSelector<?> selector1 = factory.makeColumnValueSelector("ts");
+          final DimensionSelector selector2 = factory.makeDimensionSelector(new DefaultDimensionSpec("dim", "dim"));
+          final DimensionSelector selector3 = factory.makeDimensionSelector(new DefaultDimensionSpec("spatial", "spatial"));
+          final DimensionSelector selector4 = factory.makeDimensionSelector(new DefaultDimensionSpec("val", "val"));
+
+
+          rowsFromSegment.add(
+              StringUtils.format(
+                  "%s,%s,%s,%s\n",
+                  selector1.getObject(),
+                  selector2.getObject(),
+                  selector3.getObject(),
+                  selector4.getObject()
+              )
+          );
+
+          cursor.advance();
+        }
+
+        return accumulated;
+      });
+    }
+    Assert.assertEquals(spatialrows, rowsFromSegment);
+  }
+
+  @Test
+  public void testRunWithAutoCastDimensions() throws Exception
+  {
+    final List<String> rows = ImmutableList.of(
+        "2014-01-01T00:00:10Z,a,10,100,1\n",
+        "2014-01-01T00:00:10Z,b,20,110,2\n",
+        "2014-01-01T00:00:10Z,c,30,120,3\n",
+        "2014-01-01T01:00:20Z,a,10,100,1\n",
+        "2014-01-01T01:00:20Z,b,20,110,2\n",
+        "2014-01-01T01:00:20Z,c,30,120,3\n"
+    );
+    final ParseSpec spec = new CSVParseSpec(
+        new TimestampSpec("ts", "auto", null),
+        DimensionsSpec.builder()
+                      .setDimensions(Arrays.asList(
+                          new AutoTypeColumnSchema("ts", ColumnType.STRING),
+                          new AutoTypeColumnSchema("dim", null),
+                          new AutoTypeColumnSchema("x", ColumnType.LONG),
+                          new AutoTypeColumnSchema("y", ColumnType.LONG)
+                      ))
+                      .build(),
+        "|",
+        Arrays.asList("ts", "dim", "x", "y", "val"),
+        false,
+        0
+    );
+    runIndexTask(null, null, spec, rows, false);
+
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory,
+        RETRY_POLICY_FACTORY
+    );
+
+    final CompactionTask compactionTask = builder
+        .interval(Intervals.of("2014-01-01/2014-01-02"))
+        .build();
+
+    final Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask);
+
+    Assert.assertTrue(resultPair.lhs.isSuccess());
+
+    final List<DataSegment> segments = resultPair.rhs;
+    Assert.assertEquals(2, segments.size());
+
+    for (int i = 0; i < 2; i++) {
+      Assert.assertEquals(
+          Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
+          segments.get(i).getInterval()
+      );
+      Map<String, String> expectedLongSumMetric = new HashMap<>();
+      expectedLongSumMetric.put("name", "val");
+      expectedLongSumMetric.put("type", "longSum");
+      expectedLongSumMetric.put("fieldName", "val");
+      Assert.assertEquals(
+          getDefaultCompactionState(
+              Granularities.HOUR,
+              Granularities.MINUTE,
+              ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1)),
+              DimensionsSpec.builder()
+                            .setDimensions(Arrays.asList(
+                                // check explicitly specified types are preserved
+                                new AutoTypeColumnSchema("ts", ColumnType.STRING),
+                                new AutoTypeColumnSchema("dim", null),
+                                new AutoTypeColumnSchema("x", ColumnType.LONG),
+                                new AutoTypeColumnSchema("y", ColumnType.LONG)
+                            ))
+                            .build(),
+              expectedLongSumMetric
+          ),
+          segments.get(i).getLastCompactionState()
+      );
+      if (lockGranularity == LockGranularity.SEGMENT) {
+        Assert.assertEquals(
+            new NumberedOverwriteShardSpec(32768, 0, 2, (short) 1, (short) 1),
+            segments.get(i).getShardSpec()
+        );
+      } else {
+        Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(i).getShardSpec());
+      }
+    }
+
+    final File cacheDir = temporaryFolder.newFolder();
+    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir);
+
+    List<String> rowsFromSegment = new ArrayList<>();
+    for (DataSegment segment : segments) {
+      final File segmentFile = segmentCacheManager.getSegmentFiles(segment);
+
+      final WindowedStorageAdapter adapter = new WindowedStorageAdapter(
+          new QueryableIndexStorageAdapter(testUtils.getTestIndexIO().loadIndex(segmentFile)),
+          segment.getInterval()
+      );
+      final Sequence<Cursor> cursorSequence = adapter.getAdapter().makeCursors(
+          null,
+          segment.getInterval(),
+          VirtualColumns.EMPTY,
+          Granularities.ALL,
+          false,
+          null
+      );
+
+      cursorSequence.accumulate(rowsFromSegment, (accumulated, cursor) -> {
+        cursor.reset();
+        final ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
+        Assert.assertEquals(ColumnType.STRING, factory.getColumnCapabilities("ts").toColumnType());
+        Assert.assertEquals(ColumnType.STRING, factory.getColumnCapabilities("dim").toColumnType());
+        Assert.assertEquals(ColumnType.LONG, factory.getColumnCapabilities("x").toColumnType());
+        Assert.assertEquals(ColumnType.LONG, factory.getColumnCapabilities("y").toColumnType());
+        while (!cursor.isDone()) {
+          final ColumnValueSelector<?> selector1 = factory.makeColumnValueSelector("ts");
+          final DimensionSelector selector2 = factory.makeDimensionSelector(new DefaultDimensionSpec("dim", "dim"));
+          final DimensionSelector selector3 = factory.makeDimensionSelector(new DefaultDimensionSpec("x", "x"));
+          final DimensionSelector selector4 = factory.makeDimensionSelector(new DefaultDimensionSpec("y", "y"));
+          final DimensionSelector selector5 = factory.makeDimensionSelector(new DefaultDimensionSpec("val", "val"));
+
+
+          rowsFromSegment.add(
+              StringUtils.format(
+                  "%s,%s,%s,%s,%s\n",
+                  selector1.getObject(),
+                  selector2.getObject(),
+                  selector3.getObject(),
+                  selector4.getObject(),
+                  selector5.getObject()
+              )
+          );
+
+          cursor.advance();
+        }
+
+        return accumulated;
+      });
+    }
+    Assert.assertEquals(rows, rowsFromSegment);
+  }
+
   private Pair<TaskStatus, List<DataSegment>> runIndexTask() throws Exception
   {
     return runIndexTask(null, null, false);
@@ -1598,6 +1894,46 @@ public class CompactionTaskRunTest extends IngestionTestBase
             getObjectMapper(),
             tmpDir,
             DEFAULT_PARSE_SPEC,
+            null,
+            new UniformGranularitySpec(
+                Granularities.HOUR,
+                Granularities.MINUTE,
+                null
+            ),
+            IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, false, true),
+            appendToExisting,
+            false
+        ),
+        null
+    );
+
+    return runTask(indexTask, readyLatchToCountDown, latchToAwaitBeforeRun);
+  }
+
+  private Pair<TaskStatus, List<DataSegment>> runIndexTask(
+      @Nullable CountDownLatch readyLatchToCountDown,
+      @Nullable CountDownLatch latchToAwaitBeforeRun,
+      ParseSpec parseSpec,
+      List<String> rows,
+      boolean appendToExisting
+  ) throws Exception
+  {
+    File tmpDir = temporaryFolder.newFolder();
+    File tmpFile = File.createTempFile("druid", "index", tmpDir);
+
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      for (String testRow : rows) {
+        writer.write(testRow);
+      }
+    }
+
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        IndexTaskTest.createIngestionSpec(
+            getObjectMapper(),
+            tmpDir,
+            parseSpec,
             null,
             new UniformGranularitySpec(
                 Granularities.HOUR,

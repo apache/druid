@@ -20,6 +20,7 @@
 package org.apache.druid.frame.key;
 
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -60,7 +61,7 @@ public class RowKeyReaderTest extends InitializedNullHandlingTest
       Arrays.asList("bar", "qux"),
       7d,
       NullHandling.defaultDoubleValue(),
-      Arrays.asList("abc", "xyz")
+      new Object[]{"abc", "xyz"}
   );
 
   private final RowKey key = KeyTestUtils.createKey(signature, objects.toArray());
@@ -70,18 +71,29 @@ public class RowKeyReaderTest extends InitializedNullHandlingTest
   @Test
   public void test_read_all()
   {
-    Assert.assertEquals(objects, keyReader.read(key));
+    FrameTestUtil.assertRowEqual(objects, keyReader.read(key));
   }
 
   @Test
   public void test_read_oneField()
   {
     for (int i = 0; i < signature.size(); i++) {
-      Assert.assertEquals(
-          "read: " + signature.getColumnName(i),
-          objects.get(i),
-          keyReader.read(key, i)
-      );
+      final Object keyPart = keyReader.read(key, i);
+
+      if (objects.get(i) instanceof Object[]) {
+        MatcherAssert.assertThat(keyPart, CoreMatchers.instanceOf(Object[].class));
+        Assert.assertArrayEquals(
+            "read: " + signature.getColumnName(i),
+            (Object[]) objects.get(i),
+            (Object[]) keyPart
+        );
+      } else {
+        Assert.assertEquals(
+            "read: " + signature.getColumnName(i),
+            objects.get(i),
+            keyPart
+        );
+      }
     }
   }
 
@@ -91,7 +103,7 @@ public class RowKeyReaderTest extends InitializedNullHandlingTest
     for (int i = 0; i < signature.size(); i++) {
       Assert.assertEquals(
           "hasMultipleValues: " + signature.getColumnName(i),
-          objects.get(i) instanceof List,
+          objects.get(i) instanceof List || objects.get(i) instanceof Object[],
           keyReader.hasMultipleValues(key, i)
       );
     }

@@ -20,6 +20,7 @@ import { Button, Icon, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Tooltip2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
+import * as JSONBig from 'json-bigint-native';
 import React from 'react';
 import type { Column } from 'react-table';
 import ReactTable from 'react-table';
@@ -34,11 +35,13 @@ import type {
   SegmentGenerationProgressFields,
   SimpleWideCounter,
   StageDefinition,
+  StageInput,
 } from '../../../druid-models';
 import { formatClusterBy, Stages, summarizeInputSource } from '../../../druid-models';
 import { DEFAULT_TABLE_CLASS_NAME } from '../../../react-table';
 import type { NumberLike } from '../../../utils';
 import {
+  assemble,
   capitalizeFirst,
   clamp,
   deepGet,
@@ -49,6 +52,7 @@ import {
   formatInteger,
   formatPercent,
   oneOf,
+  prettyFormatIsoDate,
   twoLines,
 } from '../../../utils';
 
@@ -57,6 +61,15 @@ import './execution-stages-pane.scss';
 const MAX_STAGE_ROWS = 20;
 const MAX_DETAIL_ROWS = 20;
 const NOT_SIZE_ON_DISK = '(does not represent size on disk)';
+
+function summarizeTableInput(tableStageInput: StageInput): string {
+  if (tableStageInput.type !== 'table') return '';
+  return assemble(
+    `Datasource: ${tableStageInput.dataSource}`,
+    `Interval: ${tableStageInput.intervals.join('; ')}`,
+    tableStageInput.filter && `Filter: ${JSONBig.stringify(tableStageInput.filter)}`,
+  ).join('\n');
+}
 
 function formatBreakdown(breakdown: Record<string, number>): string {
   return Object.keys(breakdown)
@@ -84,7 +97,7 @@ function inputLabelContent(stage: StageDefinition, inputIndex: number) {
       Input{' '}
       {stageInput.type === 'stage' && <span className="stage">{`Stage${stageInput.stage}`}</span>}
       {stageInput.type === 'table' && (
-        <span className="datasource" title={stageInput.dataSource}>
+        <span className="datasource" title={summarizeTableInput(stageInput)}>
           {stageInput.dataSource}
         </span>
       )}
@@ -102,6 +115,31 @@ function inputLabelContent(stage: StageDefinition, inputIndex: number) {
       )}
     </>
   );
+}
+
+function formatInputLabel(stage: StageDefinition, inputIndex: number) {
+  const { input, broadcast } = stage.definition;
+  const stageInput = input[inputIndex];
+  let ret = 'Input ';
+  switch (stageInput.type) {
+    case 'stage':
+      ret += `Stage${stageInput.stage}`;
+      break;
+
+    case 'table':
+      ret += stageInput.dataSource;
+      break;
+
+    case 'external':
+      ret += `${stageInput.inputSource.type} external`;
+      break;
+  }
+
+  if (broadcast?.includes(inputIndex)) {
+    ret += ` (broadcast)`;
+  }
+
+  return ret;
 }
 
 export interface ExecutionStagesPaneProps {
@@ -195,7 +233,7 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
             accessor: d => d.index,
             width: 100,
             Cell({ value }) {
-              const taskId = `${execution.id}-worker${value}`;
+              const taskId = `${execution.id}-worker${value}_0`;
               return (
                 <TableClickableCell
                   hoverIcon={IconNames.SHARE}
@@ -354,24 +392,30 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
 
   function dataProcessedInput(stage: StageDefinition, inputNumber: number) {
     const inputCounter: CounterName = `input${inputNumber}`;
-    if (!stages.hasCounterForStage(stage, inputCounter)) return;
-    const inputFileCount = stages.getTotalCounterForStage(stage, inputCounter, 'totalFiles');
-
+    const hasCounter = stages.hasCounterForStage(stage, inputCounter);
     const bytes = stages.getTotalCounterForStage(stage, inputCounter, 'bytes');
+    const inputFileCount = stages.getTotalCounterForStage(stage, inputCounter, 'totalFiles');
     return (
       <div
         className="data-transfer"
         key={inputNumber}
         title={
           bytes
-            ? `Input${inputNumber} uncompressed size: ${formatBytesCompact(
+            ? `${formatInputLabel(
+                stage,
+                inputNumber,
+              )} (input${inputNumber}) uncompressed size: ${formatBytesCompact(
                 bytes,
               )} ${NOT_SIZE_ON_DISK}`
             : undefined
         }
       >
         <BracedText
-          text={formatRows(stages.getTotalCounterForStage(stage, inputCounter, 'rows'))}
+          text={
+            hasCounter
+              ? formatRows(stages.getTotalCounterForStage(stage, inputCounter, 'rows'))
+              : ''
+          }
           braces={rowsValues}
         />
         {inputFileCount ? (
@@ -654,7 +698,7 @@ ${title} uncompressed size: ${formatBytesCompact(
             if (!value) return null;
             return (
               <div title={value + (duration ? `/${formatDurationWithMs(duration)}` : '')}>
-                <div>{value.replace('T', ' ').replace(/\.\d\d\dZ$/, '')}</div>
+                <div>{prettyFormatIsoDate(value)}</div>
                 <div>{duration ? formatDurationDynamic(duration) : ''}</div>
               </div>
             );

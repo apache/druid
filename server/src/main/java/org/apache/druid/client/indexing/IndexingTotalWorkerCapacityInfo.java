@@ -22,6 +22,8 @@ package org.apache.druid.client.indexing;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Objects;
+
 /**
  * Should be synchronized with org.apache.druid.indexing.overlord.http.TotalWorkerCapacityResponse
  */
@@ -58,5 +60,34 @@ public class IndexingTotalWorkerCapacityInfo
   public int getMaximumCapacityWithAutoScale()
   {
     return maximumCapacityWithAutoScale;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    IndexingTotalWorkerCapacityInfo that = (IndexingTotalWorkerCapacityInfo) o;
+    return currentClusterCapacity == that.currentClusterCapacity
+           && maximumCapacityWithAutoScale == that.maximumCapacityWithAutoScale;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(currentClusterCapacity, maximumCapacityWithAutoScale);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "IndexingTotalWorkerCapacityInfo{" +
+           "currentClusterCapacity=" + currentClusterCapacity +
+           ", maximumCapacityWithAutoScale=" + maximumCapacityWithAutoScale +
+           '}';
   }
 }

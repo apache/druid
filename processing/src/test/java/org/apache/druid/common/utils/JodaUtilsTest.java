@@ -39,6 +39,7 @@ import java.util.TreeSet;
 /**
  *
  */
+@SuppressWarnings("CheckReturnValue")
 public class JodaUtilsTest
 {
   @Test

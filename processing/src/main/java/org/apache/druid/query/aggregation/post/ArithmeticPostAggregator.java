@@ -45,6 +45,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
+ *
  */
 public class ArithmeticPostAggregator implements PostAggregator
 {
@@ -75,7 +76,11 @@ public class ArithmeticPostAggregator implements PostAggregator
   )
   {
     Preconditions.checkArgument(fnName != null, "fn cannot not be null");
-    Preconditions.checkArgument(fields != null && fields.size() > 1, "Illegal number of fields[%s], must be > 1");
+    Preconditions.checkArgument(
+        fields != null && fields.size() > 1,
+        "Illegal number of fields[%s], must be > 1",
+        fields.size()
+    );
 
     this.name = name;
     this.fnName = fnName;

@@ -48,6 +48,7 @@ export const FormattedInput = React.memo(function FormattedInput(props: Formatte
     intent,
     placeholder,
     multiline,
+    height,
     ...rest
   } = props;
 
@@ -105,6 +106,7 @@ export const FormattedInput = React.memo(function FormattedInput(props: Formatte
           onBlur={myOnBlur}
           intent={myIntent}
           placeholder={placeholder}
+          style={height ? { height } : undefined}
         />
       ) : (
         <InputGroup

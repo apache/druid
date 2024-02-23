@@ -88,7 +88,7 @@ public interface VectorColumnSelectorFactory extends ColumnInspector
 
   /**
    * Returns an object selector. Should only be called on columns where {@link #getColumnCapabilities} indicates that
-   * they return STRING or COMPLEX, or on nonexistent columns.
+   * they return STRING, ARRAY, or COMPLEX, or on nonexistent columns.
    *
    * For STRING, this is needed if values are not dictionary encoded, such as computed virtual columns, or can
    * optionally be used in place of {@link SingleValueDimensionVectorSelector} when using the dictionary isn't helpful.

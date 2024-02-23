@@ -32,6 +32,8 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.segment.column.RowSignature;
 
+import java.util.Objects;
+
 /**
  * Abstract base class for the various kinds of tables which Druid supports.
  */
@@ -90,5 +92,38 @@ public abstract class DruidTable implements TranslatableTable
   )
   {
     return true;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    DruidTable that = (DruidTable) o;
+
+    if (!Objects.equals(getDataSource(), that.getDataSource())) {
+      return false;
+    }
+    return Objects.equals(rowSignature, that.rowSignature);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(getDataSource(), rowSignature);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "DruidTable{" +
+           "dataSource=" + getDataSource() +
+           ", rowSignature=" + rowSignature +
+           '}';
   }
 }

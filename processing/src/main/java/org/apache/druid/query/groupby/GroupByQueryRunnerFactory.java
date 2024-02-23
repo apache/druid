@@ -30,7 +30,6 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 
@@ -39,23 +38,23 @@ import org.apache.druid.segment.StorageAdapter;
  */
 public class GroupByQueryRunnerFactory implements QueryRunnerFactory<ResultRow, GroupByQuery>
 {
-  private final GroupByStrategySelector strategySelector;
+  private final GroupingEngine groupingEngine;
   private final GroupByQueryQueryToolChest toolChest;
 
   @Inject
   public GroupByQueryRunnerFactory(
-      GroupByStrategySelector strategySelector,
+      GroupingEngine groupingEngine,
       GroupByQueryQueryToolChest toolChest
   )
   {
-    this.strategySelector = strategySelector;
+    this.groupingEngine = groupingEngine;
     this.toolChest = toolChest;
   }
 
   @Override
   public QueryRunner<ResultRow> createRunner(final Segment segment)
   {
-    return new GroupByQueryRunner(segment, strategySelector);
+    return new GroupByQueryRunner(segment, groupingEngine);
   }
 
   @Override
@@ -69,9 +68,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<ResultRow, 
       @Override
       public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
       {
-        QueryRunner<ResultRow> rowQueryRunner = strategySelector
-            .strategize((GroupByQuery) queryPlus.getQuery())
-            .mergeRunners(queryProcessingPool, queryRunners);
+        QueryRunner<ResultRow> rowQueryRunner = groupingEngine.mergeRunners(queryProcessingPool, queryRunners);
         return rowQueryRunner.run(queryPlus, responseContext);
       }
     };
@@ -86,12 +83,12 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<ResultRow, 
   private static class GroupByQueryRunner implements QueryRunner<ResultRow>
   {
     private final StorageAdapter adapter;
-    private final GroupByStrategySelector strategySelector;
+    private final GroupingEngine groupingEngine;
 
-    public GroupByQueryRunner(Segment segment, final GroupByStrategySelector strategySelector)
+    public GroupByQueryRunner(Segment segment, final GroupingEngine groupingEngine)
     {
       this.adapter = segment.asStorageAdapter();
-      this.strategySelector = strategySelector;
+      this.groupingEngine = groupingEngine;
     }
 
     @Override
@@ -102,15 +99,13 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<ResultRow, 
         throw new ISE("Got a [%s] which isn't a %s", query.getClass(), GroupByQuery.class);
       }
 
-      return strategySelector
-          .strategize((GroupByQuery) query)
-          .process((GroupByQuery) query, adapter, (GroupByQueryMetrics) queryPlus.getQueryMetrics());
+      return groupingEngine.process((GroupByQuery) query, adapter, (GroupByQueryMetrics) queryPlus.getQueryMetrics());
     }
   }
 
   @VisibleForTesting
-  public GroupByStrategySelector getStrategySelector()
+  public GroupingEngine getGroupingEngine()
   {
-    return strategySelector;
+    return groupingEngine;
   }
 }

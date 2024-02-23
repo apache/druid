@@ -27,40 +27,29 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
-import org.apache.commons.io.input.NullInputStream;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
-import org.apache.druid.data.input.impl.RetryingInputStream;
 import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.storage.StorageConnector;
+import org.apache.druid.storage.remote.ChunkingStorageConnector;
+import org.apache.druid.storage.remote.ChunkingStorageConnectorParameters;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 
 import javax.annotation.Nonnull;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.SequenceInputStream;
 import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * In this implementation, all remote calls to aws s3 are retried {@link S3OutputConfig#getMaxRetry()} times.
  */
-public class S3StorageConnector implements StorageConnector
+public class S3StorageConnector extends ChunkingStorageConnector<GetObjectRequest>
 {
   private static final Logger log = new Logger(S3StorageConnector.class);
 
@@ -69,7 +58,6 @@ public class S3StorageConnector implements StorageConnector
 
   private static final String DELIM = "/";
   private static final Joiner JOINER = Joiner.on(DELIM).skipNulls();
-  private static final long DOWNLOAD_MAX_CHUNK_SIZE = 100_000_000;
   private static final int MAX_NUMBER_OF_LISTINGS = 1000;
 
   public S3StorageConnector(S3OutputConfig config, ServerSideEncryptingAmazonS3 serverSideEncryptingAmazonS3)
@@ -105,169 +93,61 @@ public class S3StorageConnector implements StorageConnector
   }
 
   @Override
-  public InputStream read(String path)
+  public ChunkingStorageConnectorParameters<GetObjectRequest> buildInputParams(String path)
   {
-    return buildInputStream(new GetObjectRequest(config.getBucket(), objectPath(path)), path);
+    long size;
+    try {
+      size = S3Utils.retryS3Operation(
+          () -> this.s3Client.getObjectMetadata(config.getBucket(), objectPath(path)).getInstanceLength(),
+          config.getMaxRetry()
+      );
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    return buildInputParams(path, 0, size);
   }
 
   @Override
-  public InputStream readRange(String path, long from, long size)
+  public ChunkingStorageConnectorParameters<GetObjectRequest> buildInputParams(String path, long from, long size)
   {
-    if (from < 0 || size < 0) {
-      throw new IAE(
-          "Invalid arguments for reading %s. from = %d, readSize = %d",
-          objectPath(path),
-          from,
-          size
-      );
-    }
-    return buildInputStream(
-        new GetObjectRequest(config.getBucket(), objectPath(path)).withRange(from, from + size - 1),
-        path
-    );
-  }
-
-  private InputStream buildInputStream(GetObjectRequest getObjectRequest, String path)
-  {
-    // fetch the size of the whole object to make chunks
-    long readEnd;
-    AtomicLong currReadStart = new AtomicLong(0);
-    if (getObjectRequest.getRange() != null) {
-      currReadStart.set(getObjectRequest.getRange()[0]);
-      readEnd = getObjectRequest.getRange()[1] + 1;
-    } else {
-      try {
-        readEnd = S3Utils.retryS3Operation(
-            () -> this.s3Client.getObjectMetadata(config.getBucket(), objectPath(path)).getInstanceLength(),
-            config.getMaxRetry()
-        );
-      }
-      catch (Exception e) {
-        throw new RuntimeException(e);
-      }
-    }
-    AtomicBoolean isSequenceStreamClosed = new AtomicBoolean(false);
-
-    // build a sequence input stream from chunks
-    return new SequenceInputStream(new Enumeration<InputStream>()
+    ChunkingStorageConnectorParameters.Builder<GetObjectRequest> builder = new ChunkingStorageConnectorParameters.Builder<>();
+    builder.start(from);
+    builder.end(from + size);
+    builder.cloudStoragePath(objectPath(path));
+    builder.tempDirSupplier(config::getTempDir);
+    builder.maxRetry(config.getMaxRetry());
+    builder.retryCondition(S3Utils.S3RETRY);
+    builder.objectSupplier((start, end) -> new GetObjectRequest(config.getBucket(), objectPath(path)).withRange(start, end - 1));
+    builder.objectOpenFunction(new ObjectOpenFunction<GetObjectRequest>()
     {
-      boolean initStream = false;
       @Override
-      public boolean hasMoreElements()
+      public InputStream open(GetObjectRequest object)
       {
-        // checking if the stream was already closed. If it was, then don't iterate over the remaining chunks
-        // SequenceInputStream's close method closes all the chunk streams in its close. Since we're opening them
-        // lazily, we don't need to close them.
-        if (isSequenceStreamClosed.get()) {
-          return false;
-        }
-        // don't stop until the whole object is downloaded
-        return currReadStart.get() < readEnd;
-      }
-
-      @Override
-      public InputStream nextElement()
-      {
-        // since Sequence input stream calls nextElement in the constructor, we start chunking as soon as we call read.
-        // to avoid that we pass a nullInputStream for the first iteration.
-        if (!initStream) {
-          initStream = true;
-          return new NullInputStream();
-        }
-        File outFile = new File(config.getTempDir().getAbsolutePath(), UUID.randomUUID().toString());
-        // in a single chunk, only download a maximum of DOWNLOAD_MAX_CHUNK_SIZE
-        long endPoint = Math.min(currReadStart.get() + DOWNLOAD_MAX_CHUNK_SIZE, readEnd) - 1;
         try {
-          if (!outFile.createNewFile()) {
-            throw new IOE(
-                StringUtils.format(
-                    "Could not create temporary file [%s] for copying [%s]",
-                    outFile.getAbsolutePath(),
-                    objectPath(path)
-                )
-            );
-          }
-          FileUtils.copyLarge(
-              () -> new RetryingInputStream<>(
-                  new GetObjectRequest(
-                      config.getBucket(),
-                      objectPath(path)
-                  ).withRange(currReadStart.get(), endPoint),
-                  new ObjectOpenFunction<GetObjectRequest>()
-                  {
-                    @Override
-                    public InputStream open(GetObjectRequest object)
-                    {
-                      try {
-                        return S3Utils.retryS3Operation(
-                            () -> s3Client.getObject(object).getObjectContent(),
-                            config.getMaxRetry()
-                        );
-                      }
-                      catch (Exception e) {
-                        throw new RuntimeException(e);
-                      }
-                    }
-
-                    @Override
-                    public InputStream open(GetObjectRequest object, long offset)
-                    {
-                      if (object.getRange() != null) {
-                        long[] oldRange = object.getRange();
-                        object.setRange(oldRange[0] + offset, oldRange[1]);
-                      } else {
-                        object.setRange(offset);
-                      }
-                      return open(object);
-                    }
-                  },
-                  S3Utils.S3RETRY,
-                  config.getMaxRetry()
-              ),
-              outFile,
-              new byte[8 * 1024],
-              Predicates.alwaysFalse(),
-              1,
-              StringUtils.format("Retrying copying of [%s] to [%s]", objectPath(path), outFile.getAbsolutePath())
+          return S3Utils.retryS3Operation(
+              () -> s3Client.getObject(object).getObjectContent(),
+              config.getMaxRetry()
           );
         }
-        catch (IOException e) {
-          throw new RE(e, StringUtils.format("Unable to copy [%s] to [%s]", objectPath(path), outFile));
-        }
-        try {
-          AtomicBoolean isClosed = new AtomicBoolean(false);
-          return new FileInputStream(outFile)
-          {
-            @Override
-            public void close() throws IOException
-            {
-              // close should be idempotent
-              if (isClosed.get()) {
-                return;
-              }
-              isClosed.set(true);
-              super.close();
-              // since endPoint is inclusive in s3's get request API, the next currReadStart is endpoint + 1
-              currReadStart.set(endPoint + 1);
-              if (!outFile.delete()) {
-                throw new RE("Cannot delete temp file [%s]", outFile);
-              }
-            }
-          };
-        }
-        catch (FileNotFoundException e) {
-          throw new RE(e, StringUtils.format("Unable to find temp file [%s]", outFile));
+        catch (Exception e) {
+          throw new RuntimeException(e);
         }
       }
-    })
-    {
+
       @Override
-      public void close() throws IOException
+      public InputStream open(GetObjectRequest object, long offset)
       {
-        isSequenceStreamClosed.set(true);
-        super.close();
+        if (object.getRange() != null) {
+          long[] oldRange = object.getRange();
+          object.setRange(oldRange[0] + offset, oldRange[1]);
+        } else {
+          object.setRange(offset);
+        }
+        return open(object);
       }
-    };
+    });
+    return builder.build();
   }
 
   @Override

@@ -111,6 +111,7 @@ import java.util.stream.Collectors;
  * with <code>isLegacy</code> constructor argument set to false is the default. When {@link BatchAppenderator}
  * proves stable then the plan is to remove this class
  */
+@SuppressWarnings("CheckReturnValue")
 public class AppenderatorImpl implements Appenderator
 {
   // Rough estimate of memory footprint of a ColumnHolder based on actual heap dumps
@@ -187,7 +188,7 @@ public class AppenderatorImpl implements Appenderator
    */
   private final Map<FireHydrant, Pair<File, SegmentId>> persistedHydrantMetadata =
       Collections.synchronizedMap(new IdentityHashMap<>());
-
+  
   /**
    * This constructor allows the caller to provide its own SinkQuerySegmentWalker.
    *
@@ -430,7 +431,8 @@ public class AppenderatorImpl implements Appenderator
               {
                 persistError = t;
               }
-            }
+            },
+            MoreExecutors.directExecutor()
         );
       } else {
         isPersistRequired = true;
@@ -1146,9 +1148,9 @@ public class AppenderatorImpl implements Appenderator
     if (persistExecutor == null) {
       // use a blocking single threaded executor to throttle the firehose when write to disk is slow
       persistExecutor = MoreExecutors.listeningDecorator(
-          Execs.newBlockingSingleThreaded(
+          Execs.newBlockingThreaded(
               "[" + StringUtils.encodeForFormat(myId) + "]-appenderator-persist",
-              maxPendingPersists
+              tuningConfig.getNumPersistThreads(), maxPendingPersists
           )
       );
     }

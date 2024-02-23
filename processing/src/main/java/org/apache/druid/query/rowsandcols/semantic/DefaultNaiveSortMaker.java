@@ -28,6 +28,7 @@ import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 
 public class DefaultNaiveSortMaker implements NaiveSortMaker
@@ -61,6 +62,7 @@ public class DefaultNaiveSortMaker implements NaiveSortMaker
     }
 
 
+    @Nullable
     @Override
     public RowsAndColumns moreData(RowsAndColumns rac)
     {
@@ -75,7 +77,12 @@ public class DefaultNaiveSortMaker implements NaiveSortMaker
         return new EmptyRowsAndColumns();
       }
 
-      ConcatRowsAndColumns rac = new ConcatRowsAndColumns(racBuffer);
+      final RowsAndColumns rac;
+      if (racBuffer.size() == 1) {
+        rac = racBuffer.get(0);
+      } else {
+        rac = new ConcatRowsAndColumns(racBuffer);
+      }
 
       // One int for the racBuffer, another for the rowIndex
       int[] sortedPointers = new int[rac.numRows()];

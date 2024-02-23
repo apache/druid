@@ -23,9 +23,11 @@ sidebar_label: Known issues
   ~ under the License.
   -->
 
-> This page describes SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md)
-> extension, new in Druid 24.0. Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which
-> ingestion method is right for you.
+:::info
+ This page describes SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md)
+ extension, new in Druid 24.0. Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which
+ ingestion method is right for you.
+:::
 
 ## Multi-stage query task runtime
 
@@ -37,19 +39,8 @@ an [UnknownError](./reference.md#error_UnknownError) with a message including "N
 
 ## `SELECT` Statement
 
-- `SELECT` from a Druid datasource does not include unpublished real-time data.
-
-- `GROUPING SETS` and `UNION ALL` are not implemented. Queries using these features return a
+- `GROUPING SETS` are not implemented. Queries using these features return a
   [QueryNotSupported](reference.md#error_QueryNotSupported) error.
-
-- For some `COUNT DISTINCT` queries, you'll encounter a [QueryNotSupported](reference.md#error_QueryNotSupported) error
-  that includes `Must not have 'subtotalsSpec'` as one of its causes. This is caused by the planner attempting to use
-  `GROUPING SET`s, which are not implemented.
-
-- The numeric varieties of the `EARLIEST` and `LATEST` aggregators do not work properly. Attempting to use the numeric
-  varieties of these aggregators lead to an error like
-  `java.lang.ClassCastException: class java.lang.Double cannot be cast to class org.apache.druid.collections.SerializablePair`.
-  The string varieties, however, do work properly.
 
 ## `INSERT` and `REPLACE` Statements
 

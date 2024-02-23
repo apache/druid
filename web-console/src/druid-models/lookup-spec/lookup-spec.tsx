@@ -21,7 +21,7 @@ import React from 'react';
 
 import type { Field } from '../../components';
 import { AutoForm } from '../../components';
-import { deepGet, deepSet, oneOf, pluralIfNeeded, typeIs } from '../../utils';
+import { deepGet, deepSet, oneOf, oneOfKnown, pluralIfNeeded, typeIsKnown } from '../../utils';
 
 export interface ExtractionNamespaceSpec {
   readonly type: string;
@@ -41,6 +41,9 @@ export interface ExtractionNamespaceSpec {
   readonly filter?: any;
   readonly tsColumn?: string;
   readonly pollPeriod?: number | string;
+  readonly jitterSeconds?: number;
+  readonly loadTimeoutSeconds?: number;
+  readonly maxHeapPercentage?: number;
 }
 
 export interface NamespaceParseSpec {
@@ -90,11 +93,14 @@ function issueWithConnectUri(uri: string): string | undefined {
   return;
 }
 
+const KNOWN_TYPES = ['map', 'cachedNamespace', 'kafka'];
+const KNOWN_EXTRACTION_NAMESPACE_TYPES = ['uri', 'jdbc'];
+const KNOWN_NAMESPACE_PARSE_SPEC_FORMATS = ['csv', 'tsv', 'simpleJson', 'customJson'];
 export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
   {
     name: 'type',
     type: 'string',
-    suggestions: ['map', 'cachedNamespace', 'kafka'],
+    suggestions: KNOWN_TYPES,
     required: true,
     adjustment: l => {
       if (l.type === 'map' && !l.map) {
@@ -115,7 +121,7 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     name: 'map',
     type: 'json',
     height: '60vh',
-    defined: typeIs('map'),
+    defined: typeIsKnown(KNOWN_TYPES, 'map'),
     required: true,
     issueWithValue: value => {
       if (!value) return 'map must be defined';
@@ -136,8 +142,8 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     label: 'Extraction type',
     type: 'string',
     placeholder: 'uri',
-    suggestions: ['uri', 'jdbc'],
-    defined: typeIs('cachedNamespace'),
+    suggestions: KNOWN_EXTRACTION_NAMESPACE_TYPES,
+    defined: typeIsKnown(KNOWN_TYPES, 'cachedNamespace'),
     required: true,
   },
 
@@ -147,7 +153,8 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     type: 'string',
     placeholder: 's3://bucket/some/key/prefix/',
     defined: l =>
-      deepGet(l, 'extractionNamespace.type') === 'uri' && !deepGet(l, 'extractionNamespace.uri'),
+      oneOfKnown(deepGet(l, 'extractionNamespace.type'), KNOWN_EXTRACTION_NAMESPACE_TYPES, 'uri') &&
+      !deepGet(l, 'extractionNamespace.uri'),
     required: l =>
       !deepGet(l, 'extractionNamespace.uriPrefix') && !deepGet(l, 'extractionNamespace.uri'),
     issueWithValue: issueWithUri,
@@ -165,7 +172,7 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     label: 'URI (deprecated)',
     placeholder: 's3://bucket/some/key/prefix/lookups-01.gz',
     defined: l =>
-      deepGet(l, 'extractionNamespace.type') === 'uri' &&
+      oneOfKnown(deepGet(l, 'extractionNamespace.type'), KNOWN_EXTRACTION_NAMESPACE_TYPES, 'uri') &&
       !deepGet(l, 'extractionNamespace.uriPrefix'),
     required: l =>
       !deepGet(l, 'extractionNamespace.uriPrefix') && !deepGet(l, 'extractionNamespace.uri'),
@@ -186,7 +193,7 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     type: 'string',
     defaultValue: '.*',
     defined: l =>
-      deepGet(l, 'extractionNamespace.type') === 'uri' &&
+      oneOfKnown(deepGet(l, 'extractionNamespace.type'), KNOWN_EXTRACTION_NAMESPACE_TYPES, 'uri') &&
       Boolean(deepGet(l, 'extractionNamespace.uriPrefix')),
     info: 'Optional regex for matching the file name under uriPrefix.',
   },
@@ -196,8 +203,9 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     name: 'extractionNamespace.namespaceParseSpec.format',
     label: 'Parse format',
     type: 'string',
-    suggestions: ['csv', 'tsv', 'simpleJson', 'customJson'],
-    defined: l => deepGet(l, 'extractionNamespace.type') === 'uri',
+    suggestions: KNOWN_NAMESPACE_PARSE_SPEC_FORMATS,
+    defined: l =>
+      oneOfKnown(deepGet(l, 'extractionNamespace.type'), KNOWN_EXTRACTION_NAMESPACE_TYPES, 'uri'),
     required: true,
     info: (
       <>
@@ -217,7 +225,12 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     type: 'string',
     defaultValue: '\t',
     suggestions: ['\t', ';', '|', '#'],
-    defined: l => deepGet(l, 'extractionNamespace.namespaceParseSpec.format') === 'tsv',
+    defined: l =>
+      oneOfKnown(
+        deepGet(l, 'extractionNamespace.namespaceParseSpec.format'),
+        KNOWN_NAMESPACE_PARSE_SPEC_FORMATS,
+        'tsv',
+      ),
   },
 
   // CSV + TSV
@@ -225,21 +238,39 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     name: 'extractionNamespace.namespaceParseSpec.skipHeaderRows',
     type: 'number',
     defaultValue: 0,
-    defined: l => oneOf(deepGet(l, 'extractionNamespace.namespaceParseSpec.format'), 'csv', 'tsv'),
+    defined: l =>
+      oneOfKnown(
+        deepGet(l, 'extractionNamespace.namespaceParseSpec.format'),
+        KNOWN_NAMESPACE_PARSE_SPEC_FORMATS,
+        'csv',
+        'tsv',
+      ),
     info: `Number of header rows to be skipped.`,
   },
   {
     name: 'extractionNamespace.namespaceParseSpec.hasHeaderRow',
     type: 'boolean',
     defaultValue: false,
-    defined: l => oneOf(deepGet(l, 'extractionNamespace.namespaceParseSpec.format'), 'csv', 'tsv'),
+    defined: l =>
+      oneOfKnown(
+        deepGet(l, 'extractionNamespace.namespaceParseSpec.format'),
+        KNOWN_NAMESPACE_PARSE_SPEC_FORMATS,
+        'csv',
+        'tsv',
+      ),
     info: `A flag to indicate that column information can be extracted from the input files' header row`,
   },
   {
     name: 'extractionNamespace.namespaceParseSpec.columns',
     type: 'string-array',
     placeholder: 'key, value',
-    defined: l => oneOf(deepGet(l, 'extractionNamespace.namespaceParseSpec.format'), 'csv', 'tsv'),
+    defined: l =>
+      oneOfKnown(
+        deepGet(l, 'extractionNamespace.namespaceParseSpec.format'),
+        KNOWN_NAMESPACE_PARSE_SPEC_FORMATS,
+        'csv',
+        'tsv',
+      ),
     required: l => !deepGet(l, 'extractionNamespace.namespaceParseSpec.hasHeaderRow'),
     info: 'The list of columns in the csv file',
   },
@@ -247,14 +278,26 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     name: 'extractionNamespace.namespaceParseSpec.keyColumn',
     type: 'string',
     placeholder: '(optional - defaults to the first column)',
-    defined: l => oneOf(deepGet(l, 'extractionNamespace.namespaceParseSpec.format'), 'csv', 'tsv'),
+    defined: l =>
+      oneOfKnown(
+        deepGet(l, 'extractionNamespace.namespaceParseSpec.format'),
+        KNOWN_NAMESPACE_PARSE_SPEC_FORMATS,
+        'csv',
+        'tsv',
+      ),
     info: 'The name of the column containing the key',
   },
   {
     name: 'extractionNamespace.namespaceParseSpec.valueColumn',
     type: 'string',
     placeholder: '(optional - defaults to the second column)',
-    defined: l => oneOf(deepGet(l, 'extractionNamespace.namespaceParseSpec.format'), 'csv', 'tsv'),
+    defined: l =>
+      oneOfKnown(
+        deepGet(l, 'extractionNamespace.namespaceParseSpec.format'),
+        KNOWN_NAMESPACE_PARSE_SPEC_FORMATS,
+        'csv',
+        'tsv',
+      ),
     info: 'The name of the column containing the value',
   },
 
@@ -263,14 +306,24 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     name: 'extractionNamespace.namespaceParseSpec.keyFieldName',
     type: 'string',
     placeholder: `key`,
-    defined: l => deepGet(l, 'extractionNamespace.namespaceParseSpec.format') === 'customJson',
+    defined: l =>
+      oneOfKnown(
+        deepGet(l, 'extractionNamespace.namespaceParseSpec.format'),
+        KNOWN_NAMESPACE_PARSE_SPEC_FORMATS,
+        'customJson',
+      ),
     required: true,
   },
   {
     name: 'extractionNamespace.namespaceParseSpec.valueFieldName',
     type: 'string',
     placeholder: `value`,
-    defined: l => deepGet(l, 'extractionNamespace.namespaceParseSpec.format') === 'customJson',
+    defined: l =>
+      oneOfKnown(
+        deepGet(l, 'extractionNamespace.namespaceParseSpec.format'),
+        KNOWN_NAMESPACE_PARSE_SPEC_FORMATS,
+        'customJson',
+      ),
     required: true,
   },
 
@@ -279,7 +332,8 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     name: 'extractionNamespace.connectorConfig.connectURI',
     label: 'Connect URI',
     type: 'string',
-    defined: l => deepGet(l, 'extractionNamespace.type') === 'jdbc',
+    defined: l =>
+      oneOfKnown(deepGet(l, 'extractionNamespace.type'), KNOWN_EXTRACTION_NAMESPACE_TYPES, 'jdbc'),
     required: true,
     issueWithValue: issueWithConnectUri,
     info: 'Defines the connectURI for connecting to the database',
@@ -287,20 +341,23 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
   {
     name: 'extractionNamespace.connectorConfig.user',
     type: 'string',
-    defined: l => deepGet(l, 'extractionNamespace.type') === 'jdbc',
+    defined: l =>
+      oneOfKnown(deepGet(l, 'extractionNamespace.type'), KNOWN_EXTRACTION_NAMESPACE_TYPES, 'jdbc'),
     info: 'Defines the user to be used by the connector config',
   },
   {
     name: 'extractionNamespace.connectorConfig.password',
     type: 'string',
-    defined: l => deepGet(l, 'extractionNamespace.type') === 'jdbc',
+    defined: l =>
+      oneOfKnown(deepGet(l, 'extractionNamespace.type'), KNOWN_EXTRACTION_NAMESPACE_TYPES, 'jdbc'),
     info: 'Defines the password to be used by the connector config',
   },
   {
     name: 'extractionNamespace.table',
     type: 'string',
     placeholder: 'lookup_table',
-    defined: l => deepGet(l, 'extractionNamespace.type') === 'jdbc',
+    defined: l =>
+      oneOfKnown(deepGet(l, 'extractionNamespace.type'), KNOWN_EXTRACTION_NAMESPACE_TYPES, 'jdbc'),
     required: true,
     info: (
       <>
@@ -318,7 +375,8 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     name: 'extractionNamespace.keyColumn',
     type: 'string',
     placeholder: 'key_column',
-    defined: l => deepGet(l, 'extractionNamespace.type') === 'jdbc',
+    defined: l =>
+      oneOfKnown(deepGet(l, 'extractionNamespace.type'), KNOWN_EXTRACTION_NAMESPACE_TYPES, 'jdbc'),
     required: true,
     info: (
       <>
@@ -336,7 +394,8 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     name: 'extractionNamespace.valueColumn',
     type: 'string',
     placeholder: 'value_column',
-    defined: l => deepGet(l, 'extractionNamespace.type') === 'jdbc',
+    defined: l =>
+      oneOfKnown(deepGet(l, 'extractionNamespace.type'), KNOWN_EXTRACTION_NAMESPACE_TYPES, 'jdbc'),
     required: true,
     info: (
       <>
@@ -355,7 +414,8 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     type: 'string',
     label: 'Timestamp column',
     placeholder: 'timestamp_column (optional)',
-    defined: l => deepGet(l, 'extractionNamespace.type') === 'jdbc',
+    defined: l =>
+      oneOfKnown(deepGet(l, 'extractionNamespace.type'), KNOWN_EXTRACTION_NAMESPACE_TYPES, 'jdbc'),
     info: (
       <>
         <p>
@@ -372,7 +432,8 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     name: 'extractionNamespace.filter',
     type: 'string',
     placeholder: 'for_lookup = 1 (optional)',
-    defined: l => deepGet(l, 'extractionNamespace.type') === 'jdbc',
+    defined: l =>
+      oneOfKnown(deepGet(l, 'extractionNamespace.type'), KNOWN_EXTRACTION_NAMESPACE_TYPES, 'jdbc'),
     info: (
       <>
         <p>
@@ -389,10 +450,46 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
   {
     name: 'extractionNamespace.pollPeriod',
     type: 'duration',
-    defined: l => oneOf(deepGet(l, 'extractionNamespace.type'), 'uri', 'jdbc'),
+    defined: l =>
+      oneOfKnown(
+        deepGet(l, 'extractionNamespace.type'),
+        KNOWN_EXTRACTION_NAMESPACE_TYPES,
+        'uri',
+        'jdbc',
+      ),
     info: `Period between polling for updates`,
     required: true,
     suggestions: ['PT1M', 'PT10M', 'PT30M', 'PT1H', 'PT6H', 'P1D'],
+  },
+  {
+    name: 'extractionNamespace.jitterSeconds',
+    type: 'number',
+    defaultValue: 0,
+    defined: l =>
+      oneOfKnown(deepGet(l, 'extractionNamespace.type'), KNOWN_EXTRACTION_NAMESPACE_TYPES, 'jdbc'),
+    info: 'How much jitter to add (in seconds) up to maximum as a delay (actual value will be used as random from 0 to jitterSeconds), used to distribute db load more evenly. Default is 0.',
+    required: false,
+    suggestions: [],
+  },
+  {
+    name: 'extractionNamespace.loadTimeoutSeconds',
+    type: 'number',
+    defaultValue: 60,
+    defined: l =>
+      oneOfKnown(deepGet(l, 'extractionNamespace.type'), KNOWN_EXTRACTION_NAMESPACE_TYPES, 'jdbc'),
+    info: 'How much time (in seconds) it can take to query and populate lookup values. It will be helpful in lookup updates. On lookup update, it will wait maximum of `loadTimeoutSeconds` for new lookup to come up and continue serving from old lookup until new lookup successfully loads. Default is 60 Sec.',
+    required: false,
+    suggestions: [],
+  },
+  {
+    name: 'extractionNamespace.maxHeapPercentage',
+    type: 'number',
+    defaultValue: 10,
+    defined: l =>
+      oneOfKnown(deepGet(l, 'extractionNamespace.type'), KNOWN_EXTRACTION_NAMESPACE_TYPES, 'jdbc'),
+    info: 'The maximum percentage of heap size that the lookup should consume. If the lookup grows beyond this size, warning messages will be logged in the respective service logs. Default is 10 % of jvm size.',
+    required: false,
+    suggestions: [],
   },
 
   // Extra cachedNamespace things
@@ -400,14 +497,14 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     name: 'firstCacheTimeout',
     type: 'number',
     defaultValue: 0,
-    defined: typeIs('cachedNamespace'),
+    defined: typeIsKnown(KNOWN_TYPES, 'cachedNamespace'),
     info: `How long to wait (in ms) for the first run of the cache to populate. 0 indicates to not wait`,
   },
   {
     name: 'injective',
     type: 'boolean',
     defaultValue: false,
-    defined: typeIs('cachedNamespace'),
+    defined: typeIsKnown(KNOWN_TYPES, 'cachedNamespace'),
     info: `If the underlying map is injective (keys and values are unique) then optimizations can occur internally by setting this to true`,
   },
 
@@ -415,7 +512,7 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
   {
     name: 'kafkaTopic',
     type: 'string',
-    defined: typeIs('kafka'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kafka'),
     required: true,
     info: `The Kafka topic to read the data from`,
   },
@@ -423,7 +520,7 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     name: 'kafkaProperties',
     type: 'json',
     height: '100px',
-    defined: typeIs('kafka'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kafka'),
     required: true,
     issueWithValue: value => {
       if (!value) return 'kafkaProperties must be defined';
@@ -436,14 +533,14 @@ export const LOOKUP_FIELDS: Field<LookupSpec>[] = [
     name: 'connectTimeout',
     type: 'number',
     defaultValue: 0,
-    defined: typeIs('kafka'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kafka'),
     info: `How long to wait for an initial connection`,
   },
   {
     name: 'isOneToOne',
     type: 'boolean',
     defaultValue: false,
-    defined: typeIs('kafka'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kafka'),
     info: `If the underlying map is one-to-one (keys and values are unique) then optimizations can occur internally by setting this to true`,
   },
 ];

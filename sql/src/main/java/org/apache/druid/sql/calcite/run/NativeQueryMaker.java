@@ -39,6 +39,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
+import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -107,16 +108,20 @@ public class NativeQueryMaker implements QueryMaker
         OrDimFilter orDimFilter = (OrDimFilter) query.getFilter();
         int numBoundFilters = 0;
         for (DimFilter filter : orDimFilter.getFields()) {
-          numBoundFilters += filter instanceof BoundDimFilter ? 1 : 0;
-        }
-        if (numBoundFilters > numFilters) {
-          String dimension = ((BoundDimFilter) (orDimFilter.getFields().get(0))).getDimension();
-          throw new UOE(StringUtils.format(
-              "The number of values in the IN clause for [%s] in query exceeds configured maxNumericFilter limit of [%s] for INs. Cast [%s] values of IN clause to String",
-              dimension,
-              numFilters,
-              orDimFilter.getFields().size()
-          ));
+          if (filter instanceof BoundDimFilter) {
+            final BoundDimFilter bound = (BoundDimFilter) filter;
+            if (StringComparators.NUMERIC.equals(bound.getOrdering())) {
+              numBoundFilters++;
+              if (numBoundFilters > numFilters) {
+                throw new UOE(StringUtils.format(
+                    "The number of values in the IN clause for [%s] in query exceeds configured maxNumericFilter limit of [%s] for INs. Cast [%s] values of IN clause to String",
+                    bound.getDimension(),
+                    numFilters,
+                    orDimFilter.getFields().size()
+                ));
+              }
+            }
+          }
         }
       }
     }

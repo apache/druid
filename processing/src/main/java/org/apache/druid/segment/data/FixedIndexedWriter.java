@@ -24,7 +24,6 @@ import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.column.TypeStrategy;
-import org.apache.druid.segment.serde.Serializer;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.WriteOutBytes;
 
@@ -39,7 +38,7 @@ import java.util.Iterator;
 /**
  * Writer for a {@link FixedIndexed}
  */
-public class FixedIndexedWriter<T> implements Serializer
+public class FixedIndexedWriter<T> implements DictionaryWriter<T>
 {
   private static final int PAGE_SIZE = 4096;
   private final SegmentWriteOutMedium segmentWriteOutMedium;
@@ -73,11 +72,19 @@ public class FixedIndexedWriter<T> implements Serializer
     this.isSorted = isSorted;
   }
 
+  @Override
+  public boolean isSorted()
+  {
+    return isSorted;
+  }
+
+  @Override
   public void open() throws IOException
   {
     this.valuesOut = segmentWriteOutMedium.makeWriteOutBytes();
   }
 
+  @Override
   public int getCardinality()
   {
     return hasNulls ? numWritten + 1 : numWritten;
@@ -89,6 +96,7 @@ public class FixedIndexedWriter<T> implements Serializer
     return Byte.BYTES + Byte.BYTES + Integer.BYTES + valuesOut.size();
   }
 
+  @Override
   public void write(@Nullable T objectToWrite) throws IOException
   {
     if (prevObject != null && isSorted && comparator.compare(prevObject, objectToWrite) >= 0) {
@@ -140,13 +148,14 @@ public class FixedIndexedWriter<T> implements Serializer
   }
 
   @SuppressWarnings("unused")
+  @Override
   @Nullable
   public T get(int index) throws IOException
   {
     if (index == 0 && hasNulls) {
       return null;
     }
-    int startOffset = index * width;
+    int startOffset = (hasNulls ? index - 1 : index) * width;
     readBuffer.clear();
     valuesOut.readFully(startOffset, readBuffer);
     readBuffer.clear();
@@ -188,14 +197,14 @@ public class FixedIndexedWriter<T> implements Serializer
       {
         iteratorBuffer.clear();
         try {
-          if (totalCount - pos < PAGE_SIZE) {
-            int size = (totalCount - pos) * width;
+          if (numWritten - (pos - startPos) < PAGE_SIZE) {
+            int size = (numWritten - (pos - startPos)) * width;
             iteratorBuffer.limit(size);
-            valuesOut.readFully((long) pos * width, iteratorBuffer);
+            valuesOut.readFully((long) (pos - startPos) * width, iteratorBuffer);
           } else {
-            valuesOut.readFully((long) pos * width, iteratorBuffer);
+            valuesOut.readFully((long) (pos - startPos) * width, iteratorBuffer);
           }
-          iteratorBuffer.flip();
+          iteratorBuffer.clear();
         }
         catch (IOException e) {
           throw new RuntimeException(e);

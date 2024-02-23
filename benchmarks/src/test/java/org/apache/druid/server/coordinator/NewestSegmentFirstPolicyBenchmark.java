@@ -24,9 +24,9 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.server.coordinator.duty.CompactionSegmentIterator;
-import org.apache.druid.server.coordinator.duty.CompactionSegmentSearchPolicy;
-import org.apache.druid.server.coordinator.duty.NewestSegmentFirstPolicy;
+import org.apache.druid.server.coordinator.compact.CompactionSegmentIterator;
+import org.apache.druid.server.coordinator.compact.CompactionSegmentSearchPolicy;
+import org.apache.druid.server.coordinator.compact.NewestSegmentFirstPolicy;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -142,8 +142,7 @@ public class NewestSegmentFirstPolicyBenchmark
   {
     final CompactionSegmentIterator iterator = policy.reset(compactionConfigs, dataSources, Collections.emptyMap());
     for (int i = 0; i < numCompactionTaskSlots && iterator.hasNext(); i++) {
-      final List<DataSegment> segments = iterator.next();
-      blackhole.consume(segments);
+      blackhole.consume(iterator.next());
     }
   }
 }

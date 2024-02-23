@@ -37,8 +37,7 @@ public class ColumnCapabilitiesImplTest
                                                 .setHasMultipleValues(true)
                                                 .setHasSpatialIndexes(true)
                                                 .setType(ColumnType.UNKNOWN_COMPLEX)
-                                                .setHasNulls(true)
-                                                .setFilterable(true));
+                                                .setHasNulls(true));
 
     Assert.assertFalse(json.contains("filterable"));
     
@@ -51,7 +50,6 @@ public class ColumnCapabilitiesImplTest
     Assert.assertTrue(cc.hasBitmapIndexes());
     // hasNulls and isFilterable are computed, these should not be set
     Assert.assertFalse(cc.hasNulls().isTrue());
-    Assert.assertFalse(cc.isFilterable());
   }
 
   @Test
@@ -78,6 +76,5 @@ public class ColumnCapabilitiesImplTest
     Assert.assertTrue(cc.hasBitmapIndexes());
     // hasNulls and isFilterable are computed, these should not be set
     Assert.assertFalse(cc.hasNulls().isTrue());
-    Assert.assertFalse(cc.isFilterable());
   }
 }

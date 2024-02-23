@@ -64,6 +64,7 @@ exports[`SegmentsView matches snapshot 1`] = `
             "Num rows",
             "Avg. row size",
             "Replicas",
+            "Replication factor",
             "Is available",
             "Is active",
             "Is realtime",
@@ -217,6 +218,7 @@ exports[`SegmentsView matches snapshot 1`] = `
             "width": 100,
           },
           Object {
+            "Aggregated": [Function],
             "Cell": [Function],
             "Header": "Shard spec",
             "accessor": "shard_spec",
@@ -261,7 +263,9 @@ exports[`SegmentsView matches snapshot 1`] = `
             "Header": <React.Fragment>
               Avg. row size
               <br />
-              (bytes)
+              <i>
+                (bytes)
+              </i>
             </React.Fragment>,
             "accessor": "avg_row_size",
             "className": "padded",
@@ -270,13 +274,34 @@ exports[`SegmentsView matches snapshot 1`] = `
             "width": 100,
           },
           Object {
-            "Header": "Replicas",
+            "Header": <React.Fragment>
+              Replicas
+              <br />
+              <i>
+                (actual)
+              </i>
+            </React.Fragment>,
             "accessor": "num_replicas",
             "className": "padded",
             "defaultSortDesc": true,
             "filterable": false,
             "show": true,
-            "width": 60,
+            "width": 80,
+          },
+          Object {
+            "Header": <React.Fragment>
+              Replication factor
+              <br />
+              <i>
+                (desired)
+              </i>
+            </React.Fragment>,
+            "accessor": "replication_factor",
+            "className": "padded",
+            "defaultSortDesc": true,
+            "filterable": false,
+            "show": true,
+            "width": 80,
           },
           Object {
             "Filter": [Function],

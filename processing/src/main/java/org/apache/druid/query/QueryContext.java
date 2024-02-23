@@ -27,6 +27,7 @@ import org.apache.druid.query.QueryContexts.Vectorize;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
@@ -104,16 +105,6 @@ public class QueryContext
   public Object get(String key)
   {
     return context.get(key);
-  }
-
-  /**
-   * Return a value as a generic {@code Object}, returning the default value if the
-   * context value is not set.
-   */
-  public Object get(String key, Object defaultValue)
-  {
-    final Object val = get(key);
-    return val == null ? defaultValue : val;
   }
 
   /**
@@ -225,6 +216,11 @@ public class QueryContext
   public HumanReadableBytes getHumanReadableBytes(final String key, final HumanReadableBytes defaultValue)
   {
     return QueryContexts.getAsHumanReadableBytes(key, get(key), defaultValue);
+  }
+
+  public HumanReadableBytes getHumanReadableBytes(final String key, final long defaultBytes)
+  {
+    return QueryContexts.getAsHumanReadableBytes(key, get(key), HumanReadableBytes.valueOf(defaultBytes));
   }
 
   public <E extends Enum<E>> E getEnum(String key, Class<E> clazz, E defaultValue)
@@ -357,9 +353,14 @@ public class QueryContext
     return getInt(QueryContexts.MAX_SUBQUERY_ROWS_KEY, defaultSize);
   }
 
-  public long getMaxSubqueryMemoryBytes(long defaultMemoryBytes)
+  public String getMaxSubqueryMemoryBytes(String defaultMemoryBytes)
   {
-    return getLong(QueryContexts.MAX_SUBQUERY_BYTES_KEY, defaultMemoryBytes);
+    // Generic to allow for both strings and numbers to be passed as values in the query context
+    Object maxSubqueryBytesObject = get(QueryContexts.MAX_SUBQUERY_BYTES_KEY);
+    if (maxSubqueryBytesObject == null) {
+      maxSubqueryBytesObject = defaultMemoryBytes;
+    }
+    return String.valueOf(maxSubqueryBytesObject);
   }
 
   public boolean isUseNestedForUnknownTypeInSubquery(boolean defaultUseNestedForUnkownTypeInSubquery)
@@ -581,6 +582,15 @@ public class QueryContext
         QueryContexts.DEFAULT_ENABLE_TIME_BOUNDARY_PLANNING
     );
   }
+
+  public boolean isWindowingStrictValidation()
+  {
+    return getBoolean(
+        QueryContexts.WINDOWING_STRICT_VALIDATION,
+        QueryContexts.DEFAULT_WINDOWING_STRICT_VALIDATION
+    );
+  }
+
 
   public String getBrokerServiceName()
   {

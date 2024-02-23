@@ -29,8 +29,6 @@ import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
-import java.util.Collections;
-import java.util.List;
 
 public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
 {
@@ -53,21 +51,6 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
     this.shouldFinalize = (shouldFinalize == null) ? true : shouldFinalize;
     this.isInputThetaSketch = (isInputThetaSketch == null) ? false : isInputThetaSketch;
     this.errorBoundsStdDev = errorBoundsStdDev;
-  }
-
-  @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(
-        new SketchMergeAggregatorFactory(
-            fieldName,
-            fieldName,
-            size,
-            shouldFinalize,
-            isInputThetaSketch,
-            errorBoundsStdDev
-        )
-    );
   }
 
   @Override

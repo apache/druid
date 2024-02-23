@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.base.Predicate;
+import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.data.IndexedInts;
@@ -55,7 +55,7 @@ final class MapTypeMapVirtualColumnDimensionSelector extends MapVirtualColumnDim
     return new ValueMatcher()
     {
       @Override
-      public boolean matches()
+      public boolean matches(boolean includeUnknown)
       {
         // Map column doesn't match with any string
         return false;
@@ -70,12 +70,12 @@ final class MapTypeMapVirtualColumnDimensionSelector extends MapVirtualColumnDim
   }
 
   @Override
-  public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+  public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
   {
     return new ValueMatcher()
     {
       @Override
-      public boolean matches()
+      public boolean matches(boolean includeUnknown)
       {
         return false;
       }

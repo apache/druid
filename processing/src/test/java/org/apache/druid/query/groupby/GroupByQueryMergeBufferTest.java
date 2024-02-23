@@ -37,9 +37,6 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
-import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
-import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.AfterClass;
@@ -128,25 +125,17 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
   {
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
 
-    final GroupByStrategySelector strategySelector = new GroupByStrategySelector(
+    final GroupingEngine groupingEngine = new GroupingEngine(
+        PROCESSING_CONFIG,
         configSupplier,
-        new GroupByStrategyV1(
-            configSupplier,
-            new GroupByQueryEngine(configSupplier, BUFFER_POOL),
-            QueryRunnerTestHelper.NOOP_QUERYWATCHER
-        ),
-        new GroupByStrategyV2(
-            PROCESSING_CONFIG,
-            configSupplier,
-            BUFFER_POOL,
-            MERGE_BUFFER_POOL,
-            TestHelper.makeJsonMapper(),
-            mapper,
-            QueryRunnerTestHelper.NOOP_QUERYWATCHER
-        )
+        BUFFER_POOL,
+        MERGE_BUFFER_POOL,
+        TestHelper.makeJsonMapper(),
+        mapper,
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
-    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(strategySelector);
-    return new GroupByQueryRunnerFactory(strategySelector, toolChest);
+    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(groupingEngine);
+    return new GroupByQueryRunnerFactory(groupingEngine, toolChest);
   }
 
   private static final CloseableStupidPool<ByteBuffer> BUFFER_POOL = new CloseableStupidPool<>(
@@ -163,11 +152,6 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
       GroupByQueryRunnerTest.DEFAULT_MAPPER,
       new GroupByQueryConfig()
       {
-        @Override
-        public String getDefaultStrategy()
-        {
-          return "v2";
-        }
       }
   );
 
@@ -213,7 +197,7 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, TIMEOUT))
         .build();
 
-    Assert.assertEquals(0, GroupByStrategyV2.countRequiredMergeBufferNum(query));
+    Assert.assertEquals(0, GroupByQueryResources.countRequiredMergeBufferNum(query));
     GroupByQueryRunnerTestHelper.runQuery(FACTORY, runner, query);
 
     Assert.assertEquals(3, MERGE_BUFFER_POOL.getMinRemainBufferNum());
@@ -242,7 +226,7 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, TIMEOUT))
         .build();
 
-    Assert.assertEquals(1, GroupByStrategyV2.countRequiredMergeBufferNum(query));
+    Assert.assertEquals(1, GroupByQueryResources.countRequiredMergeBufferNum(query));
     GroupByQueryRunnerTestHelper.runQuery(FACTORY, runner, query);
 
     Assert.assertEquals(2, MERGE_BUFFER_POOL.getMinRemainBufferNum());
@@ -282,7 +266,7 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, TIMEOUT))
         .build();
 
-    Assert.assertEquals(2, GroupByStrategyV2.countRequiredMergeBufferNum(query));
+    Assert.assertEquals(2, GroupByQueryResources.countRequiredMergeBufferNum(query));
     GroupByQueryRunnerTestHelper.runQuery(FACTORY, runner, query);
 
     // This should be 1 because the broker needs 2 buffers and the queryable node needs one.
@@ -336,7 +320,7 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, TIMEOUT))
         .build();
 
-    Assert.assertEquals(2, GroupByStrategyV2.countRequiredMergeBufferNum(query));
+    Assert.assertEquals(2, GroupByQueryResources.countRequiredMergeBufferNum(query));
     GroupByQueryRunnerTestHelper.runQuery(FACTORY, runner, query);
 
     // This should be 1 because the broker needs 2 buffers and the queryable node needs one.
@@ -365,7 +349,7 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, TIMEOUT))
         .build();
 
-    Assert.assertEquals(1, GroupByStrategyV2.countRequiredMergeBufferNum(query));
+    Assert.assertEquals(1, GroupByQueryResources.countRequiredMergeBufferNum(query));
     GroupByQueryRunnerTestHelper.runQuery(FACTORY, runner, query);
 
     // 1 for subtotal and 1 for GroupByQueryRunnerFactory#mergeRunners
@@ -394,7 +378,7 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, TIMEOUT))
         .build();
 
-    Assert.assertEquals(2, GroupByStrategyV2.countRequiredMergeBufferNum(query));
+    Assert.assertEquals(2, GroupByQueryResources.countRequiredMergeBufferNum(query));
     GroupByQueryRunnerTestHelper.runQuery(FACTORY, runner, query);
 
     // 2 needed by subtotal and 1 for GroupByQueryRunnerFactory#mergeRunners
@@ -436,7 +420,7 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, TIMEOUT))
         .build();
 
-    Assert.assertEquals(3, GroupByStrategyV2.countRequiredMergeBufferNum(query));
+    Assert.assertEquals(3, GroupByQueryResources.countRequiredMergeBufferNum(query));
     GroupByQueryRunnerTestHelper.runQuery(FACTORY, runner, query);
 
     // 2 for subtotal, 1 for nested group by and 1 for GroupByQueryRunnerFactory#mergeRunners
@@ -482,7 +466,7 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, TIMEOUT))
         .build();
 
-    Assert.assertEquals(3, GroupByStrategyV2.countRequiredMergeBufferNum(query));
+    Assert.assertEquals(3, GroupByQueryResources.countRequiredMergeBufferNum(query));
     GroupByQueryRunnerTestHelper.runQuery(FACTORY, runner, query);
 
     // 2 for subtotal, 1 for nested group by and 1 for GroupByQueryRunnerFactory#mergeRunners

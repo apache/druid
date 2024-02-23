@@ -57,7 +57,7 @@ public class SortedInnerJoinOperator implements Operator
 {
   private static final Logger log = new Logger(SortedInnerJoinOperator.class);
 
-  private final ArrayList<JoinPart> parts;
+  private final List<JoinPartDefn> partDefns;
   private final JoinConfig config;
 
   public SortedInnerJoinOperator(
@@ -65,11 +65,7 @@ public class SortedInnerJoinOperator implements Operator
       JoinConfig config
   )
   {
-    this.parts = new ArrayList<>(partDefns.size());
-    for (JoinPartDefn partDefn : partDefns) {
-      parts.add(new JoinPart(partDefn.getOp(), partDefn.getJoinFields(), partDefn.getProjectFields()));
-    }
-
+    this.partDefns = partDefns;
     this.config = config;
   }
 
@@ -78,7 +74,7 @@ public class SortedInnerJoinOperator implements Operator
   {
     JoinLogic joinLogic;
     if (continuation == null) {
-      joinLogic = new JoinLogic(config, parts);
+      joinLogic = new JoinLogic(config, partDefns);
     } else {
       joinLogic = (JoinLogic) continuation;
     }
@@ -119,17 +115,41 @@ public class SortedInnerJoinOperator implements Operator
 
     private JoinLogic(
         JoinConfig config,
-        ArrayList<JoinPart> joinParts
+        List<JoinPartDefn> joinParts
     )
     {
       this.config = config;
-      this.joinParts = joinParts;
+      this.joinParts = new ArrayList<>(joinParts.size());
+      for (JoinPartDefn partDefn : joinParts) {
+        this.joinParts.add(new JoinPart(partDefn.getOp(), partDefn.getJoinFields(), partDefn.getProjectFields()));
+      }
 
       setNextPositionToLoad(joinParts.size() - 1);
     }
 
     public void go(Receiver receiver)
     {
+      if (state == State.PAUSED) {
+        nextPositionToLoad = -1;
+        for (int i = joinParts.size() - 1; i >= 0; i--) {
+          final JoinPart joinPart = joinParts.get(i);
+          if (joinPart.needsData()) {
+            nextPositionToLoad = i;
+            break;
+          }
+        }
+
+        if (nextPositionToLoad == -1) {
+          state = State.READY;
+          // This means that all of the parts have data, so let's process what we have and then let it flow into the
+          // normal processing loop.
+          process(receiver);
+          if (state == State.PAUSED) {
+            return;
+          }
+        }
+      }
+
       while (state != State.COMPLETE) {
         final int position = nextPositionToLoad;
         final JoinPart joinPart = joinParts.get(position);
@@ -179,20 +199,20 @@ public class SortedInnerJoinOperator implements Operator
           case PAUSED:
             return;
           case COMPLETE:
-            receiver.completed();
-
-            try {
-              close();
-            }
-            catch (IOException e) {
-              log.warn("Problem closing a join part[%d], ignoring because we are done anyway.", position);
-            }
-            break;
           case NEEDS_DATA:
             break;
           default:
             throw new ISE("Unknown state[%s]", state);
         }
+      }
+
+      receiver.completed();
+
+      try {
+        close();
+      }
+      catch (IOException e) {
+        log.warn("Problem closing stuff, ignoring because we are done anyway.");
       }
     }
 
@@ -365,11 +385,8 @@ public class SortedInnerJoinOperator implements Operator
           if (rowsToInclude[0].size() > config.getReleaseSize()) {
             // Incrementally push stuff out once we've collected this number of rows
             pushRows(receiver, rowsToInclude);
-            if (state == State.READY) {
-              // We have more to do, so reinitialize rowsToInclude
-              for (DruidIntList intList : rowsToInclude) {
-                intList.resetToSize(config.getBufferSize());
-              }
+            for (DruidIntList intList : rowsToInclude) {
+              intList.resetToSize(config.getBufferSize());
             }
           }
 

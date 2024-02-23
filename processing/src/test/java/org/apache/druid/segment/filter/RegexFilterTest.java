@@ -94,6 +94,9 @@ public class RegexFilterTest extends BaseFilterTest
   @Test
   public void testMultiValueStringColumn()
   {
+    if (isAutoSchema()) {
+      return;
+    }
     if (NullHandling.replaceWithDefault()) {
       assertFilterMatches(new RegexDimFilter("dim2", ".*", null), ImmutableList.of("0", "3", "4"));
     } else {
@@ -130,14 +133,17 @@ public class RegexFilterTest extends BaseFilterTest
     ExtractionFn changeNullFn = new JavaScriptExtractionFn(nullJsFn, false, JavaScriptConfig.getEnabledInstance());
     if (NullHandling.replaceWithDefault()) {
       assertFilterMatches(new RegexDimFilter("dim1", ".*ANYMORE", changeNullFn), ImmutableList.of("0"));
-      assertFilterMatches(new RegexDimFilter("dim2", ".*ANYMORE", changeNullFn), ImmutableList.of("1", "2", "5"));
+      assertFilterMatchesSkipArrays(
+          new RegexDimFilter("dim2", ".*ANYMORE", changeNullFn),
+          ImmutableList.of("1", "2", "5")
+      );
     } else {
       assertFilterMatches(new RegexDimFilter("dim1", ".*ANYMORE", changeNullFn), ImmutableList.of());
-      assertFilterMatches(new RegexDimFilter("dim2", ".*ANYMORE", changeNullFn), ImmutableList.of("1", "5"));
+      assertFilterMatchesSkipArrays(new RegexDimFilter("dim2", ".*ANYMORE", changeNullFn), ImmutableList.of("1", "5"));
     }
     assertFilterMatches(new RegexDimFilter("dim1", "ab.*", changeNullFn), ImmutableList.of("4", "5"));
 
-    assertFilterMatches(new RegexDimFilter("dim2", "a.*", changeNullFn), ImmutableList.of("0", "3"));
+    assertFilterMatchesSkipArrays(new RegexDimFilter("dim2", "a.*", changeNullFn), ImmutableList.of("0", "3"));
 
     assertFilterMatches(new RegexDimFilter("dim3", ".*ANYMORE", changeNullFn), ImmutableList.of("0", "1", "2", "3", "4", "5"));
     assertFilterMatches(new RegexDimFilter("dim3", "a.*", changeNullFn), ImmutableList.of());

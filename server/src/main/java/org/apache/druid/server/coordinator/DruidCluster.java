@@ -45,6 +45,7 @@ public class DruidCluster
   private final Set<ServerHolder> realtimes;
   private final Map<String, NavigableSet<ServerHolder>> historicals;
   private final Set<ServerHolder> brokers;
+  private final List<ServerHolder> allServers;
 
   private DruidCluster(
       Set<ServerHolder> realtimes,
@@ -58,6 +59,7 @@ public class DruidCluster
         holders -> CollectionUtils.newTreeSet(Comparator.naturalOrder(), holders)
     );
     this.brokers = Collections.unmodifiableSet(brokers);
+    this.allServers = initAllServers();
   }
 
   public Set<ServerHolder> getRealtimes()
@@ -85,7 +87,12 @@ public class DruidCluster
     return historicals.get(tier);
   }
 
-  public Collection<ServerHolder> getAllServers()
+  public List<ServerHolder> getAllServers()
+  {
+    return allServers;
+  }
+
+  private List<ServerHolder> initAllServers()
   {
     final int historicalSize = historicals.values().stream().mapToInt(Collection::size).sum();
     final int realtimeSize = realtimes.size();

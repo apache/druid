@@ -41,6 +41,7 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -101,8 +102,8 @@ public class TaskLockBoxConcurrencyTest
       throws ExecutionException, InterruptedException
   {
     final Interval interval = Intervals.of("2017-01-01/2017-01-02");
-    final Task lowPriorityTask = NoopTask.create(10);
-    final Task highPriorityTask = NoopTask.create(100);
+    final Task lowPriorityTask = NoopTask.ofPriority(10);
+    final Task highPriorityTask = NoopTask.ofPriority(100);
     lockbox.add(lowPriorityTask);
     lockbox.add(highPriorityTask);
     taskStorage.insert(lowPriorityTask, TaskStatus.running(lowPriorityTask.getId()));
@@ -119,7 +120,7 @@ public class TaskLockBoxConcurrencyTest
 
       return lockbox.doInCriticalSection(
           lowPriorityTask,
-          Collections.singletonList(interval),
+          Collections.singleton(interval),
           CriticalAction.<Integer>builder()
               .onValidLocks(
                   () -> {
@@ -149,7 +150,7 @@ public class TaskLockBoxConcurrencyTest
 
       return lockbox.doInCriticalSection(
           highPriorityTask,
-          Collections.singletonList(interval),
+          Collections.singleton(interval),
           CriticalAction.<Integer>builder()
               .onValidLocks(
                   () -> {
@@ -199,7 +200,7 @@ public class TaskLockBoxConcurrencyTest
 
     final Future<Integer> future1 = service.submit(() -> lockbox.doInCriticalSection(
         task,
-        intervals.subList(0, 2),
+        new HashSet<>(intervals.subList(0, 2)),
         CriticalAction.<Integer>builder()
             .onValidLocks(
                 () -> {
@@ -222,7 +223,7 @@ public class TaskLockBoxConcurrencyTest
       latch.await();
       return lockbox.doInCriticalSection(
           task,
-          intervals.subList(1, 3),
+          new HashSet<>(intervals.subList(1, 3)),
           CriticalAction.<Integer>builder()
               .onValidLocks(
                   () -> {

@@ -19,7 +19,8 @@
 
 package org.apache.druid.query.rowsandcols.semantic;
 
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
@@ -32,11 +33,13 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -80,15 +83,49 @@ public class DefaultColumnSelectorFactoryMaker implements ColumnSelectorFactoryM
     {
       return withColumnAccessor(dimensionSpec.getDimension(), columnAccessor -> {
         if (columnAccessor == null) {
-          return DimensionSelector.constant(null);
+          return DimensionSelector.nilSelector();
         } else {
+          boolean maybeSupportsUtf8 = columnAccessor.getType().is(ValueType.STRING);
+          int rowCounter = 0;
+          int rowCount = columnAccessor.numRows();
+          while (maybeSupportsUtf8 && rowCounter < rowCount && columnAccessor.isNull(rowCounter)) {
+            ++rowCounter;
+          }
+
+          if (rowCounter == rowCount) {
+            // We iterated through all of the things and got only nulls, might as well specialize to a null
+            return DimensionSelector.nilSelector();
+          }
+
+          final boolean supportsUtf8 = maybeSupportsUtf8 && columnAccessor.getObject(rowCounter) instanceof ByteBuffer;
+
           return new BaseSingleValueDimensionSelector()
           {
             @Nullable
             @Override
             protected String getValue()
             {
-              return String.valueOf(columnAccessor.getObject(cellIdSupplier.get()));
+              final Object retVal = columnAccessor.getObject(cellIdSupplier.get());
+              if (retVal == null) {
+                return null;
+              }
+              if (retVal instanceof ByteBuffer) {
+                return StringUtils.fromUtf8(((ByteBuffer) retVal).asReadOnlyBuffer());
+              }
+              return String.valueOf(retVal);
+            }
+
+            @Nullable
+            @Override
+            public ByteBuffer lookupNameUtf8(int id)
+            {
+              return (ByteBuffer) columnAccessor.getObject(cellIdSupplier.get());
+            }
+
+            @Override
+            public boolean supportsLookupNameUtf8()
+            {
+              return supportsUtf8;
             }
 
             @Override
@@ -107,93 +144,17 @@ public class DefaultColumnSelectorFactoryMaker implements ColumnSelectorFactoryM
     {
       return withColumnAccessor(columnName, columnAccessor -> {
         if (columnAccessor == null) {
-          return DimensionSelector.constant(null);
+          return DimensionSelector.nilSelector();
         } else {
-          return new ColumnValueSelector()
-          {
-            private final AtomicReference<Class> myClazz = new AtomicReference<>(null);
-
-            @Nullable
-            @Override
-            public Object getObject()
-            {
-              return columnAccessor.getObject(cellIdSupplier.get());
-            }
-
-            @SuppressWarnings("rawtypes")
-            @Override
-            public Class classOfObject()
-            {
-              Class retVal = myClazz.get();
-              if (retVal == null) {
-                retVal = findClazz();
-                myClazz.set(retVal);
-              }
-              return retVal;
-            }
-
-            private Class findClazz()
-            {
-              final ColumnType type = columnAccessor.getType();
-              switch (type.getType()) {
-                case LONG:
-                  return long.class;
-                case DOUBLE:
-                  return double.class;
-                case FLOAT:
-                  return float.class;
-                case STRING:
-                  return String.class;
-                case ARRAY:
-                  return List.class;
-                case COMPLEX:
-                  final ComplexMetricSerde serdeForType = ComplexMetrics.getSerdeForType(type.getComplexTypeName());
-                  if (serdeForType != null && serdeForType.getObjectStrategy() != null) {
-                    return serdeForType.getObjectStrategy().getClazz();
-                  }
-
-                  for (int i = 0; i < columnAccessor.numRows(); ++i) {
-                    Object obj = columnAccessor.getObject(i);
-                    if (obj != null) {
-                      return obj.getClass();
-                    }
-                  }
-                  return Object.class;
-                default:
-                  throw new ISE("Unknown type[%s]", type.getType());
-              }
-            }
-
-            @Override
-            public boolean isNull()
-            {
-              return columnAccessor.isNull(cellIdSupplier.get());
-            }
-
-            @Override
-            public long getLong()
-            {
-              return columnAccessor.getLong(cellIdSupplier.get());
-            }
-
-            @Override
-            public float getFloat()
-            {
-              return columnAccessor.getFloat(cellIdSupplier.get());
-            }
-
-            @Override
-            public double getDouble()
-            {
-              return columnAccessor.getDouble(cellIdSupplier.get());
-            }
-
-            @Override
-            public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-            {
-
-            }
-          };
+          final ColumnType type = columnAccessor.getType();
+          switch (type.getType()) {
+            case STRING:
+              return new StringColumnValueSelector(columnAccessor);
+            case COMPLEX:
+              return new ComplexColumnValueSelector(columnAccessor);
+            default:
+              return new PassThroughColumnValueSelector(columnAccessor);
+          }
         }
       });
     }
@@ -202,15 +163,22 @@ public class DefaultColumnSelectorFactoryMaker implements ColumnSelectorFactoryM
     @Override
     public ColumnCapabilities getColumnCapabilities(String column)
     {
-      return withColumnAccessor(column, columnAccessor ->
-          new ColumnCapabilitiesImpl()
+      return withColumnAccessor(column, columnAccessor -> {
+        if (columnAccessor == null) {
+          return null;
+        } else {
+          return new ColumnCapabilitiesImpl()
               .setType(columnAccessor.getType())
+              .setHasMultipleValues(false)
               .setDictionaryEncoded(false)
-              .setHasBitmapIndexes(false));
+              .setHasBitmapIndexes(false);
+        }
+      });
     }
 
     private <T> T withColumnAccessor(String column, Function<ColumnAccessor, T> fn)
     {
+      @Nullable
       ColumnAccessor retVal = accessorCache.get(column);
       if (retVal == null) {
         Column racColumn = rac.findColumn(column);
@@ -218,6 +186,223 @@ public class DefaultColumnSelectorFactoryMaker implements ColumnSelectorFactoryM
         accessorCache.put(column, retVal);
       }
       return fn.apply(retVal);
+    }
+
+    private class PassThroughColumnValueSelector implements ColumnValueSelector
+    {
+      private final Class myClazz;
+      private final ColumnAccessor columnAccessor;
+
+      public PassThroughColumnValueSelector(
+          ColumnAccessor columnAccessor
+      )
+      {
+        this.columnAccessor = columnAccessor;
+        switch (columnAccessor.getType().getType()) {
+          case LONG:
+            myClazz = long.class;
+            break;
+          case DOUBLE:
+            myClazz = double.class;
+            break;
+          case FLOAT:
+            myClazz = float.class;
+            break;
+          case ARRAY:
+            myClazz = List.class;
+          default:
+            throw DruidException.defensive("this class cannot handle type [%s]", columnAccessor.getType());
+        }
+      }
+
+      @Nullable
+      @Override
+      public Object getObject()
+      {
+        return columnAccessor.getObject(cellIdSupplier.get());
+      }
+
+      @SuppressWarnings("rawtypes")
+      @Override
+      public Class classOfObject()
+      {
+        return myClazz;
+      }
+
+      @Override
+      public boolean isNull()
+      {
+        return columnAccessor.isNull(cellIdSupplier.get());
+      }
+
+      @Override
+      public long getLong()
+      {
+        return columnAccessor.getLong(cellIdSupplier.get());
+      }
+
+      @Override
+      public float getFloat()
+      {
+        return columnAccessor.getFloat(cellIdSupplier.get());
+      }
+
+      @Override
+      public double getDouble()
+      {
+        return columnAccessor.getDouble(cellIdSupplier.get());
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+
+      }
+    }
+
+    private class StringColumnValueSelector implements ColumnValueSelector
+    {
+      private final ColumnAccessor columnAccessor;
+
+      public StringColumnValueSelector(
+          ColumnAccessor columnAccessor
+      )
+      {
+        this.columnAccessor = columnAccessor;
+      }
+
+      @Nullable
+      @Override
+      public Object getObject()
+      {
+        // We want our String columns to be ByteBuffers, but users of this ColumnValueSelector interface
+        // would generally expect String objects instead of UTF8 ByteBuffers, so we have to convert here
+        // if we get a ByteBuffer.
+
+        final Object retVal = columnAccessor.getObject(cellIdSupplier.get());
+        if (retVal instanceof ByteBuffer) {
+          return StringUtils.fromUtf8(((ByteBuffer) retVal).asReadOnlyBuffer());
+        }
+        return retVal;
+      }
+
+      @SuppressWarnings("rawtypes")
+      @Override
+      public Class classOfObject()
+      {
+        return String.class;
+      }
+
+      @Override
+      public boolean isNull()
+      {
+        return columnAccessor.isNull(cellIdSupplier.get());
+      }
+
+      @Override
+      public long getLong()
+      {
+        return columnAccessor.getLong(cellIdSupplier.get());
+      }
+
+      @Override
+      public float getFloat()
+      {
+        return columnAccessor.getFloat(cellIdSupplier.get());
+      }
+
+      @Override
+      public double getDouble()
+      {
+        return columnAccessor.getDouble(cellIdSupplier.get());
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+
+      }
+    }
+
+    private class ComplexColumnValueSelector implements ColumnValueSelector
+    {
+      private final AtomicReference<Class> myClazz;
+      private final ColumnAccessor columnAccessor;
+
+      public ComplexColumnValueSelector(ColumnAccessor columnAccessor)
+      {
+        this.columnAccessor = columnAccessor;
+        myClazz = new AtomicReference<>(null);
+      }
+
+      @Nullable
+      @Override
+      public Object getObject()
+      {
+        return columnAccessor.getObject(cellIdSupplier.get());
+      }
+
+      @SuppressWarnings("rawtypes")
+      @Override
+      public Class classOfObject()
+      {
+        Class retVal = myClazz.get();
+        if (retVal == null) {
+          retVal = findClazz();
+          myClazz.set(retVal);
+        }
+        return retVal;
+      }
+
+      private Class findClazz()
+      {
+        final ColumnType type = columnAccessor.getType();
+        if (type.getType() == ValueType.COMPLEX) {
+          final ComplexMetricSerde serdeForType = ComplexMetrics.getSerdeForType(type.getComplexTypeName());
+          if (serdeForType != null && serdeForType.getObjectStrategy() != null) {
+            return serdeForType.getObjectStrategy().getClazz();
+          }
+
+          for (int i = 0; i < columnAccessor.numRows(); ++i) {
+            Object obj = columnAccessor.getObject(i);
+            if (obj != null) {
+              return obj.getClass();
+            }
+          }
+          return Object.class;
+        }
+        throw DruidException.defensive("this class cannot handle type [%s]", type);
+      }
+
+      @Override
+      public boolean isNull()
+      {
+        return columnAccessor.isNull(cellIdSupplier.get());
+      }
+
+      @Override
+      public long getLong()
+      {
+        return columnAccessor.getLong(cellIdSupplier.get());
+      }
+
+      @Override
+      public float getFloat()
+      {
+        return columnAccessor.getFloat(cellIdSupplier.get());
+      }
+
+      @Override
+      public double getDouble()
+      {
+        return columnAccessor.getDouble(cellIdSupplier.get());
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+
+      }
     }
   }
 }

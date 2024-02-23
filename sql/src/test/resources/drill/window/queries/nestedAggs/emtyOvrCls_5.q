@@ -1,0 +1,1 @@
+SELECT AVG(AVG(c1)) OVER( ) FROM "tblWnulls.parquet"

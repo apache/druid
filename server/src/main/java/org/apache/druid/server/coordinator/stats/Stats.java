@@ -28,114 +28,139 @@ public class Stats
   {
     // Decisions taken in a run
     public static final CoordinatorStat ASSIGNED
-        = new CoordinatorStat("assigned", "segment/assigned/count", CoordinatorStat.Level.INFO);
+        = CoordinatorStat.toDebugAndEmit("assigned", "segment/assigned/count");
     public static final CoordinatorStat DROPPED
-        = new CoordinatorStat("dropped", "segment/dropped/count", CoordinatorStat.Level.INFO);
+        = CoordinatorStat.toDebugAndEmit("dropped", "segment/dropped/count");
     public static final CoordinatorStat DELETED
-        = new CoordinatorStat("deleted", "segment/deleted/count", CoordinatorStat.Level.INFO);
+        = CoordinatorStat.toLogAndEmit("deleted", "segment/deleted/count", CoordinatorStat.Level.INFO);
     public static final CoordinatorStat MOVED
-        = new CoordinatorStat("moved", "segment/moved/count");
+        = CoordinatorStat.toDebugAndEmit("moved", "segment/moved/count");
 
     // Skipped decisions in a run
     public static final CoordinatorStat ASSIGN_SKIPPED
-        = new CoordinatorStat("assignSkip", "segment/assignSkipped/count");
+        = CoordinatorStat.toDebugAndEmit("assignSkip", "segment/assignSkipped/count");
     public static final CoordinatorStat DROP_SKIPPED
-        = new CoordinatorStat("dropSkip", "segment/dropSkipped/count");
+        = CoordinatorStat.toDebugAndEmit("dropSkip", "segment/dropSkipped/count");
     public static final CoordinatorStat MOVE_SKIPPED
-        = new CoordinatorStat("moveSkip", "segment/moveSkipped/count");
+        = CoordinatorStat.toDebugAndEmit("moveSkip", "segment/moveSkipped/count");
 
     // Current state of segments of a datasource
     public static final CoordinatorStat USED
-        = new CoordinatorStat("usedSegments", "segment/count");
+        = CoordinatorStat.toDebugAndEmit("usedSegments", "segment/count");
     public static final CoordinatorStat USED_BYTES
-        = new CoordinatorStat("usedSegmentBytes", "segment/size");
+        = CoordinatorStat.toDebugAndEmit("usedSegmentBytes", "segment/size");
     public static final CoordinatorStat UNDER_REPLICATED
-        = new CoordinatorStat("underreplicated", "segment/underReplicated/count");
+        = CoordinatorStat.toDebugAndEmit("underreplicated", "segment/underReplicated/count");
     public static final CoordinatorStat UNAVAILABLE
-        = new CoordinatorStat("unavailable", "segment/unavailable/count");
+        = CoordinatorStat.toDebugAndEmit("unavailable", "segment/unavailable/count");
     public static final CoordinatorStat UNNEEDED
-        = new CoordinatorStat("unneeded", "segment/unneeded/count");
+        = CoordinatorStat.toDebugAndEmit("unneeded", "segment/unneeded/count");
     public static final CoordinatorStat OVERSHADOWED
-        = new CoordinatorStat("overshadowed", "segment/overshadowed/count");
+        = CoordinatorStat.toDebugAndEmit("overshadowed", "segment/overshadowed/count");
+    public static final CoordinatorStat UNNEEDED_ETERNITY_TOMBSTONE
+        = CoordinatorStat.toDebugAndEmit("unneededEternityTombstone", "segment/unneededEternityTombstone/count");
   }
 
   public static class SegmentQueue
   {
     public static final CoordinatorStat NUM_TO_LOAD
-        = new CoordinatorStat("numToLoad", "segment/loadQueue/count");
+        = CoordinatorStat.toDebugAndEmit("numToLoad", "segment/loadQueue/count");
     public static final CoordinatorStat BYTES_TO_LOAD
-        = new CoordinatorStat("bytesToLoad", "segment/loadQueue/size");
+        = CoordinatorStat.toDebugAndEmit("bytesToLoad", "segment/loadQueue/size");
     public static final CoordinatorStat NUM_TO_DROP
-        = new CoordinatorStat("numToDrop", "segment/dropQueue/count");
+        = CoordinatorStat.toDebugAndEmit("numToDrop", "segment/dropQueue/count");
 
     public static final CoordinatorStat ASSIGNED_ACTIONS
-        = new CoordinatorStat("assignedActions", "segment/loadQueue/assigned");
+        = CoordinatorStat.toDebugAndEmit("assignedActions", "segment/loadQueue/assigned");
     public static final CoordinatorStat COMPLETED_ACTIONS
-        = new CoordinatorStat("successActions", "segment/loadQueue/success");
+        = CoordinatorStat.toDebugAndEmit("successActions", "segment/loadQueue/success");
     public static final CoordinatorStat FAILED_ACTIONS
-        = new CoordinatorStat("failedActions", "segment/loadQueue/failed", CoordinatorStat.Level.ERROR);
+        = CoordinatorStat.toLogAndEmit("failedActions", "segment/loadQueue/failed", CoordinatorStat.Level.ERROR);
     public static final CoordinatorStat CANCELLED_ACTIONS
-        = new CoordinatorStat("cancelledActions", "segment/loadQueue/cancelled");
+        = CoordinatorStat.toDebugAndEmit("cancelledActions", "segment/loadQueue/cancelled");
   }
 
   public static class Tier
   {
     public static final CoordinatorStat REQUIRED_CAPACITY
-        = new CoordinatorStat("reqdCap", "tier/required/capacity");
+        = CoordinatorStat.toDebugAndEmit("reqdCap", "tier/required/capacity");
     public static final CoordinatorStat TOTAL_CAPACITY
-        = new CoordinatorStat("totalCap", "tier/total/capacity");
+        = CoordinatorStat.toDebugAndEmit("totalCap", "tier/total/capacity");
     public static final CoordinatorStat REPLICATION_FACTOR
-        = new CoordinatorStat("maxRepFactor", "tier/replication/factor");
+        = CoordinatorStat.toDebugAndEmit("maxRepFactor", "tier/replication/factor");
     public static final CoordinatorStat HISTORICAL_COUNT
-        = new CoordinatorStat("numHistorical", "tier/historical/count");
+        = CoordinatorStat.toDebugAndEmit("numHistorical", "tier/historical/count");
   }
 
   public static class Compaction
   {
     public static final CoordinatorStat SUBMITTED_TASKS
-        = new CoordinatorStat("compactTasks", "compact/task/count");
+        = CoordinatorStat.toDebugAndEmit("compactTasks", "compact/task/count");
     public static final CoordinatorStat MAX_SLOTS
-        = new CoordinatorStat("compactMaxSlots", "compactTask/maxSlot/count");
+        = CoordinatorStat.toDebugAndEmit("compactMaxSlots", "compactTask/maxSlot/count");
     public static final CoordinatorStat AVAILABLE_SLOTS
-        = new CoordinatorStat("compactAvlSlots", "compactTask/availableSlot/count");
+        = CoordinatorStat.toDebugAndEmit("compactAvlSlots", "compactTask/availableSlot/count");
 
     public static final CoordinatorStat PENDING_BYTES
-        = new CoordinatorStat("compactPendingBytes", "segment/waitCompact/bytes");
+        = CoordinatorStat.toDebugAndEmit("compactPendingBytes", "segment/waitCompact/bytes");
     public static final CoordinatorStat COMPACTED_BYTES
-        = new CoordinatorStat("compactedBytes", "segment/compacted/bytes");
+        = CoordinatorStat.toDebugAndEmit("compactedBytes", "segment/compacted/bytes");
     public static final CoordinatorStat SKIPPED_BYTES
-        = new CoordinatorStat("compactSkipBytes", "segment/skipCompact/bytes");
+        = CoordinatorStat.toDebugAndEmit("compactSkipBytes", "segment/skipCompact/bytes");
 
     public static final CoordinatorStat PENDING_SEGMENTS
-        = new CoordinatorStat("compactPendingSeg", "segment/waitCompact/count");
+        = CoordinatorStat.toDebugAndEmit("compactPendingSeg", "segment/waitCompact/count");
     public static final CoordinatorStat COMPACTED_SEGMENTS
-        = new CoordinatorStat("compactedSeg", "segment/compacted/count");
+        = CoordinatorStat.toDebugAndEmit("compactedSeg", "segment/compacted/count");
     public static final CoordinatorStat SKIPPED_SEGMENTS
-        = new CoordinatorStat("compactSkipSeg", "segment/skipCompact/count");
+        = CoordinatorStat.toDebugAndEmit("compactSkipSeg", "segment/skipCompact/count");
 
     public static final CoordinatorStat PENDING_INTERVALS
-        = new CoordinatorStat("compactPendingIntv", "interval/waitCompact/count");
+        = CoordinatorStat.toDebugAndEmit("compactPendingIntv", "interval/waitCompact/count");
     public static final CoordinatorStat COMPACTED_INTERVALS
-        = new CoordinatorStat("compactedIntv", "interval/compacted/count");
+        = CoordinatorStat.toDebugAndEmit("compactedIntv", "interval/compacted/count");
     public static final CoordinatorStat SKIPPED_INTERVALS
-        = new CoordinatorStat("compactSkipIntv", "interval/skipCompact/count");
+        = CoordinatorStat.toDebugAndEmit("compactSkipIntv", "interval/skipCompact/count");
   }
 
   public static class CoordinatorRun
   {
     public static final CoordinatorStat DUTY_RUN_TIME
-        = new CoordinatorStat("dutyRunTime", "coordinator/time");
+        = CoordinatorStat.toDebugAndEmit("dutyRunTime", "coordinator/time");
     public static final CoordinatorStat GROUP_RUN_TIME
-        = new CoordinatorStat("groupRunTime", "coordinator/global/time");
+        = CoordinatorStat.toDebugAndEmit("groupRunTime", "coordinator/global/time");
+  }
+
+  public static class Kill
+  {
+    public static final CoordinatorStat COMPACTION_CONFIGS
+        = CoordinatorStat.toDebugAndEmit("killedCompactConfigs", "metadata/kill/compaction/count");
+    public static final CoordinatorStat SUPERVISOR_SPECS
+        = CoordinatorStat.toDebugAndEmit("killedSupervisorSpecs", "metadata/kill/supervisor/count");
+    public static final CoordinatorStat RULES
+        = CoordinatorStat.toDebugAndEmit("killedRules", "metadata/kill/rule/count");
+    public static final CoordinatorStat AUDIT_LOGS
+        = CoordinatorStat.toDebugAndEmit("killedAuditLogs", "metadata/kill/audit/count");
+    public static final CoordinatorStat DATASOURCES
+        = CoordinatorStat.toDebugAndEmit("killedDatasources", "metadata/kill/datasource/count");
+    public static final CoordinatorStat AVAILABLE_SLOTS
+        = CoordinatorStat.toDebugAndEmit("killAvailSlots", "killTask/availableSlot/count");
+    public static final CoordinatorStat MAX_SLOTS
+        = CoordinatorStat.toDebugAndEmit("killMaxSlots", "killTask/maxSlot/count");
+    public static final CoordinatorStat SUBMITTED_TASKS
+        = CoordinatorStat.toDebugAndEmit("killTasks", "kill/task/count");
+    public static final CoordinatorStat PENDING_SEGMENTS
+        = CoordinatorStat.toDebugAndEmit("killPendingSegs", "kill/pendingSegments/count");
   }
 
   public static class Balancer
   {
-    public static final CoordinatorStat COMPUTATION_ERRORS
-        = new CoordinatorStat("costComputeError", "segment/balancer/compute/error");
-    public static final CoordinatorStat COMPUTATION_TIME
-        = new CoordinatorStat("costComputeTime", "segment/balancer/compute/time");
-    public static final CoordinatorStat COMPUTATION_COUNT
-        = new CoordinatorStat("costComputeCount", "segment/balancer/compute/count");
+    public static final CoordinatorStat COMPUTATION_ERRORS = CoordinatorStat.toLogAndEmit(
+        "costComputeError",
+        "segment/balancer/compute/error",
+        CoordinatorStat.Level.ERROR
+    );
+    public static final CoordinatorStat COMPUTATION_TIME = CoordinatorStat.toDebugOnly("costComputeTime");
+    public static final CoordinatorStat COMPUTATION_COUNT = CoordinatorStat.toDebugOnly("costComputeCount");
   }
 }

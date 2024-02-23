@@ -67,7 +67,16 @@ public class FrameWritersTest extends InitializedNullHandlingTest
     final FrameWriterFactory factory = FrameWriters.makeFrameWriterFactory(
         FrameType.COLUMNAR,
         new ArenaMemoryAllocatorFactory(ALLOCATOR_CAPACITY),
-        RowSignature.builder().add("x", ColumnType.LONG).build(),
+        RowSignature.builder()
+                    .add("a", ColumnType.LONG)
+                    .add("b", ColumnType.FLOAT)
+                    .add("c", ColumnType.DOUBLE)
+                    .add("d", ColumnType.STRING)
+                    .add("e", ColumnType.LONG_ARRAY)
+                    .add("f", ColumnType.FLOAT_ARRAY)
+                    .add("g", ColumnType.DOUBLE_ARRAY)
+                    .add("h", ColumnType.STRING_ARRAY)
+                    .build(),
         Collections.emptyList()
     );
 
@@ -76,48 +85,12 @@ public class FrameWritersTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_rowBased_unsupportedSortingColumnType()
-  {
-    final UnsupportedColumnTypeException e = Assert.assertThrows(
-        UnsupportedColumnTypeException.class,
-        () -> FrameWriters.makeFrameWriterFactory(
-            FrameType.ROW_BASED,
-            new ArenaMemoryAllocatorFactory(ALLOCATOR_CAPACITY),
-            RowSignature.builder().add("x", ColumnType.LONG_ARRAY).build(),
-            Collections.singletonList(new KeyColumn("x", KeyOrder.ASCENDING))
-        )
-    );
-
-    Assert.assertEquals("x", e.getColumnName());
-    Assert.assertEquals(ColumnType.LONG_ARRAY, e.getColumnType());
-  }
-
-  @Test
-  public void test_rowBased_unsupportedNonSortingColumnType()
-  {
-    final FrameWriterFactory factory = FrameWriters.makeFrameWriterFactory(
-        FrameType.ROW_BASED,
-        new ArenaMemoryAllocatorFactory(ALLOCATOR_CAPACITY),
-        RowSignature.builder().add("x", ColumnType.LONG_ARRAY).build(),
-        Collections.emptyList()
-    );
-
-    final UnsupportedColumnTypeException e = Assert.assertThrows(
-        UnsupportedColumnTypeException.class,
-        () -> factory.newFrameWriter(new AllNullColumnSelectorFactory())
-    );
-
-    Assert.assertEquals("x", e.getColumnName());
-    Assert.assertEquals(ColumnType.LONG_ARRAY, e.getColumnType());
-  }
-
-  @Test
   public void test_columnar_unsupportedColumnType()
   {
     final FrameWriterFactory factory = FrameWriters.makeFrameWriterFactory(
         FrameType.COLUMNAR,
         new ArenaMemoryAllocatorFactory(ALLOCATOR_CAPACITY),
-        RowSignature.builder().add("x", ColumnType.LONG_ARRAY).build(),
+        RowSignature.builder().add("x", ColumnType.ofArray(ColumnType.LONG_ARRAY)).build(),
         Collections.emptyList()
     );
 
@@ -127,7 +100,7 @@ public class FrameWritersTest extends InitializedNullHandlingTest
     );
 
     Assert.assertEquals("x", e.getColumnName());
-    Assert.assertEquals(ColumnType.LONG_ARRAY, e.getColumnType());
+    Assert.assertEquals(ColumnType.ofArray(ColumnType.LONG_ARRAY), e.getColumnType());
   }
 
   @Test

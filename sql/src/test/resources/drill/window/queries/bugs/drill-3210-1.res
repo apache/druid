@@ -1,0 +1,10 @@
+1	aaaaa	2015-01-01	1	aaaaa	2015-01-01	1	1
+2	bbbbb	2015-01-02	2	bbbbb	2015-01-02	2	1
+3	ccccc	2015-01-03	3	ccccc	2015-01-03	3	1
+5	eeeee	2015-01-05	5	eeeee	2015-01-05	5	1
+6	fffff	2015-01-06	6	fffff	2015-01-06	6	1
+7	ggggg	2015-01-07	7	ggggg	2015-01-07	7	1
+null	hhhhh	2015-01-08	null	hhhhh	2015-01-08	null	0
+9	iiiii	null	9	iiiii	null	9	1
+10	jjjjj	2015-01-10	10	jjjjj	2015-01-10	10	1
+4	null	2015-01-04	4	null	2015-01-04	4	1

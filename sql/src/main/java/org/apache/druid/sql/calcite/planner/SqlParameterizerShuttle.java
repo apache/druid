@@ -86,7 +86,7 @@ public class SqlParameterizerShuttle extends SqlShuttle
     if (SqlTypeName.TIMESTAMP.equals(typeName) && paramBinding.value instanceof Long) {
       return SqlLiteral.createTimestamp(
           TimestampString.fromMillisSinceEpoch((Long) paramBinding.value),
-          0,
+          DruidTypeSystem.DEFAULT_TIMESTAMP_PRECISION,
           param.getParserPosition()
       );
     }

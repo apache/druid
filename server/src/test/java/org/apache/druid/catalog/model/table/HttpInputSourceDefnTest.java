@@ -68,8 +68,8 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(ImmutableMap.of("type", HttpInputSource.TYPE_KEY))
         .inputFormat(CSV_FORMAT)
-        .column("x", Columns.VARCHAR)
-        .column("y", Columns.BIGINT)
+        .column("x", Columns.STRING)
+        .column("y", Columns.LONG)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
     assertThrows(IAE.class, () -> resolved.validate());
@@ -83,8 +83,8 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         .inputSource(ImmutableMap.of("type", HttpInputSource.TYPE_KEY))
         .property(HttpInputSourceDefn.URI_TEMPLATE_PROPERTY, "http://example.com/")
         .inputFormat(CSV_FORMAT)
-        .column("x", Columns.VARCHAR)
-        .column("y", Columns.BIGINT)
+        .column("x", Columns.STRING)
+        .column("y", Columns.LONG)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
     assertThrows(IAE.class, () -> resolved.validate());
@@ -98,12 +98,13 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         Collections.singletonList(new URI("http://example.com/file.csv")),
         null,
         null,
+        null,
         new HttpInputSourceConfig(null)
     );
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(inputSource))
-        .column("x", Columns.VARCHAR)
-        .column("y", Columns.BIGINT)
+        .column("x", Columns.STRING)
+        .column("y", Columns.LONG)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
     assertThrows(IAE.class, () -> resolved.validate());
@@ -115,6 +116,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     // No format: not valid if URI is provided
     HttpInputSource inputSource = new HttpInputSource(
         Collections.singletonList(new URI("http://example.com/file.csv")),
+        null,
         null,
         null,
         new HttpInputSourceConfig(null)
@@ -145,6 +147,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     // No format: not valid if URI is provided
     HttpInputSource inputSource = new HttpInputSource(
         Collections.singletonList(new URI("http://example.com/file.csv")),
+        null,
         null,
         null,
         new HttpInputSourceConfig(null)
@@ -212,13 +215,14 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         Collections.singletonList(new URI("http://foo.com/my.csv")),
         "bob",
         new DefaultPasswordProvider("secret"),
+        null,
         new HttpInputSourceConfig(null)
     );
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(inputSource))
         .inputFormat(CSV_FORMAT)
-        .column("x", Columns.VARCHAR)
-        .column("y", Columns.BIGINT)
+        .column("x", Columns.STRING)
+        .column("y", Columns.LONG)
         .build();
 
     // Check validation
@@ -252,8 +256,8 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         .inputSource(ImmutableMap.of("type", HttpInputSource.TYPE_KEY))
         .inputFormat(CSV_FORMAT)
         .property(HttpInputSourceDefn.URI_TEMPLATE_PROPERTY, "http://foo.com/{}")
-        .column("x", Columns.VARCHAR)
-        .column("y", Columns.BIGINT)
+        .column("x", Columns.STRING)
+        .column("y", Columns.LONG)
         .build();
 
     // Check validation
@@ -301,8 +305,8 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
          ))
         .inputFormat(CSV_FORMAT)
         .property(HttpInputSourceDefn.URI_TEMPLATE_PROPERTY, "http://foo.com/{}")
-        .column("x", Columns.VARCHAR)
-        .column("y", Columns.BIGINT)
+        .column("x", Columns.STRING)
+        .column("y", Columns.LONG)
         .build();
 
     table.validate();
@@ -339,6 +343,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         Collections.singletonList(new URI("http://foo.com/my.csv")), // removed
         "bob",
         new DefaultPasswordProvider("secret"),
+        null,
         new HttpInputSourceConfig(null)
     );
     TableMetadata table = TableBuilder.external("foo")
@@ -376,13 +381,14 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         Arrays.asList(new URI("http://foo.com/foo.csv"), new URI("http://foo.com/bar.csv")),
         "bob",
         new EnvironmentVariablePasswordProvider("SECRET"),
+        null,
         new HttpInputSourceConfig(null)
     );
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(inputSource))
         .inputFormat(CSV_FORMAT)
-        .column("x", Columns.VARCHAR)
-        .column("y", Columns.BIGINT)
+        .column("x", Columns.STRING)
+        .column("y", Columns.LONG)
         .build();
 
     // Check validation
@@ -408,14 +414,15 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         Collections.singletonList(new URI("http://foo.com/my.csv")), // removed
         "bob",
         new DefaultPasswordProvider("secret"),
+        null,
         new HttpInputSourceConfig(null)
     );
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(httpToMap(inputSource))
         .inputFormat(CSV_FORMAT)
         .property(HttpInputSourceDefn.URI_TEMPLATE_PROPERTY, "http://foo.com/{}")
-        .column("x", Columns.VARCHAR)
-        .column("y", Columns.BIGINT)
+        .column("x", Columns.STRING)
+        .column("y", Columns.LONG)
         .build();
 
     // Check validation
@@ -476,13 +483,14 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         Collections.singletonList(new URI("http://foo.com/my.csv")),
         "bob",
         new EnvironmentVariablePasswordProvider("SECRET"),
+        null,
         new HttpInputSourceConfig(null)
     );
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(inputSource))
         .inputFormat(CSV_FORMAT)
-        .column("x", Columns.VARCHAR)
-        .column("y", Columns.BIGINT)
+        .column("x", Columns.STRING)
+        .column("y", Columns.LONG)
         .build();
 
     // Check validation

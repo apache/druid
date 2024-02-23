@@ -27,9 +27,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
@@ -54,6 +54,7 @@ import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SegmentLockAcquireAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.actions.TaskLocks;
 import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.index.RealtimeAppenderatorIngestionSpec;
@@ -292,7 +293,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     DiscoveryDruidNode discoveryDruidNode = createDiscoveryDruidNode(toolbox);
 
     appenderator = newAppenderator(dataSchema, tuningConfig, metrics, toolbox);
-    TaskLockType lockType = getContextValue(Tasks.USE_SHARED_LOCK, false) ? TaskLockType.SHARED : TaskLockType.EXCLUSIVE;
+    final TaskLockType lockType = TaskLocks.determineLockTypeForAppend(getContext());
     StreamAppenderatorDriver driver = newDriver(dataSchema, appenderator, toolbox, metrics, lockType);
 
     try {
@@ -350,17 +351,11 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       int sequenceNumber = 0;
       String sequenceName = makeSequenceName(getId(), sequenceNumber);
 
-      final TransactionalSegmentPublisher publisher = (mustBeNullOrEmptyOverwriteSegments, mustBeNullOrEmptyDropSegments, segments, commitMetadata) -> {
+      final TransactionalSegmentPublisher publisher = (mustBeNullOrEmptyOverwriteSegments, segments, commitMetadata) -> {
         if (mustBeNullOrEmptyOverwriteSegments != null && !mustBeNullOrEmptyOverwriteSegments.isEmpty()) {
           throw new ISE(
               "Stream ingestion task unexpectedly attempted to overwrite segments: %s",
               SegmentUtils.commaSeparatedIdentifiers(mustBeNullOrEmptyOverwriteSegments)
-          );
-        }
-        if (mustBeNullOrEmptyDropSegments != null && !mustBeNullOrEmptyDropSegments.isEmpty()) {
-          throw new ISE(
-              "Stream ingestion task unexpectedly attempted to drop segments: %s",
-              SegmentUtils.commaSeparatedIdentifiers(mustBeNullOrEmptyDropSegments)
           );
         }
         final SegmentTransactionalInsertAction action = SegmentTransactionalInsertAction.appendAction(
@@ -625,7 +620,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                 getTaskCompletionRowStats(),
                 errorMsg,
                 errorMsg == null,
-                0L
+                0L,
+                Collections.emptyMap()
             )
         )
     );
@@ -698,9 +694,10 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         committerSupplier.get(),
         Collections.singletonList(sequenceName)
     );
-    pendingHandoffs.add(Futures.transform(
+    pendingHandoffs.add(Futures.transformAsync(
         publishFuture,
-        (AsyncFunction<SegmentsAndCommitMetadata, SegmentsAndCommitMetadata>) driver::registerHandoff
+        driver::registerHandoff,
+        MoreExecutors.directExecutor()
     ));
   }
 
@@ -779,6 +776,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   )
   {
     return toolbox.getAppenderatorsManager().createRealtimeAppenderatorForTask(
+        null,
         getId(),
         dataSchema,
         tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
@@ -797,7 +795,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         toolbox.getCachePopulatorStats(),
         rowIngestionMeters,
         parseExceptionHandler,
-        isUseMaxMemoryEstimates()
+        isUseMaxMemoryEstimates(),
+        toolbox.getCentralizedTableSchemaConfig()
     );
   }
 

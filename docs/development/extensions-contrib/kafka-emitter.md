@@ -46,6 +46,7 @@ All the configuration parameters for the Kafka emitter are under `druid.emitter.
 | `druid.emitter.kafka.segmentMetadata.topic`        | Kafka topic name for emitter's target to emit segment metadata. If `event.types` contains `segment_metadata`, this field cannot be empty. | no        | none                  |
 | `druid.emitter.kafka.producer.config`              | JSON configuration to set additional properties to Kafka producer.                                                                        | no        | none                  |
 | `druid.emitter.kafka.clusterName`                  | Optional value to specify the name of your Druid cluster. It can help make groups in your monitoring environment.                         | no        | none                  |
+| `druid.emitter.kafka.extra.dimensions` | Optional JSON configuration to specify a map of extra string dimensions for the events emitted. These can help make groups in your monitoring environment. | no | none |
 
 ### Example
 
@@ -57,5 +58,6 @@ druid.emitter.kafka.alert.topic=druid-alert
 druid.emitter.kafka.request.topic=druid-request-logs
 druid.emitter.kafka.segmentMetadata.topic=druid-segment-metadata 
 druid.emitter.kafka.producer.config={"max.block.ms":10000}
+druid.emitter.kafka.extra.dimensions={"region":"us-east-1","environment":"preProd"}
 ```
 

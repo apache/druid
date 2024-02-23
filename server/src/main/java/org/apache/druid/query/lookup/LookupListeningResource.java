@@ -94,7 +94,9 @@ class LookupListeningResource extends ListenerResource
 
             try {
               state.getToLoad().forEach(manager::add);
-              state.getToDrop().forEach(manager::remove);
+              state.getToDrop().forEach(lookName -> {
+                manager.remove(lookName, state.getToLoad().getOrDefault(lookName, null));
+              });
 
               return Response.status(Response.Status.ACCEPTED).entity(manager.getAllLookupsState()).build();
             }
@@ -135,7 +137,7 @@ class LookupListeningResource extends ListenerResource
           @Override
           public Object delete(String id)
           {
-            manager.remove(id);
+            manager.remove(id, null);
             return id;
           }
         }

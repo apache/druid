@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll.vector;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchBuildBufferAggregatorHelper;
 import org.apache.druid.segment.VectorColumnProcessorFactory;
@@ -81,6 +82,15 @@ public class HllSketchBuildVectorProcessorFactory implements VectorColumnProcess
   public HllSketchBuildVectorProcessor makeLongProcessor(ColumnCapabilities capabilities, VectorValueSelector selector)
   {
     return new LongHllSketchBuildVectorProcessor(helper, selector);
+  }
+
+  @Override
+  public HllSketchBuildVectorProcessor makeArrayProcessor(
+      ColumnCapabilities capabilities,
+      VectorObjectSelector selector
+  )
+  {
+    throw DruidException.defensive("ARRAY types are not supported for hll sketch");
   }
 
   @Override

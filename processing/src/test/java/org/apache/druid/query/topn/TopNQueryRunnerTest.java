@@ -42,7 +42,6 @@ import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BySegmentResultValue;
 import org.apache.druid.query.BySegmentResultValueClass;
-import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -127,14 +126,14 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     RESOURCE_CLOSER.close();
   }
 
-  @Parameterized.Parameters(name = "{0}")
+  @Parameterized.Parameters(name = "{7}")
   public static Iterable<Object[]> constructorFeeder()
   {
     List<QueryRunner<Result<TopNResultValue>>> retVal = queryRunners();
     List<Object[]> parameters = new ArrayList<>();
     for (int i = 0; i < 32; i++) {
       for (QueryRunner<Result<TopNResultValue>> firstParameter : retVal) {
-        Object[] params = new Object[7];
+        Object[] params = new Object[8];
         params[0] = firstParameter;
         params[1] = (i & 1) != 0;
         params[2] = (i & 2) != 0;
@@ -142,8 +141,10 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
         params[4] = (i & 8) != 0;
         params[5] = (i & 16) != 0;
         params[6] = QueryRunnerTestHelper.COMMON_DOUBLE_AGGREGATORS;
-        Object[] params2 = Arrays.copyOf(params, 7);
+        params[7] = firstParameter + " double aggs";
+        Object[] params2 = Arrays.copyOf(params, 8);
         params2[6] = QueryRunnerTestHelper.COMMON_FLOAT_AGGREGATORS;
+        params2[7] = firstParameter + " float aggs";
         parameters.add(params);
         parameters.add(params2);
       }
@@ -161,7 +162,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
 
     List<QueryRunner<Result<TopNResultValue>>> retVal = new ArrayList<>();
     retVal.addAll(
-        QueryRunnerTestHelper.makeQueryRunners(
+        QueryRunnerTestHelper.makeQueryRunnersToMerge(
             new TopNQueryRunnerFactory(
                 defaultPool,
                 new TopNQueryQueryToolChest(new TopNQueryConfig()),
@@ -170,7 +171,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
         )
     );
     retVal.addAll(
-        QueryRunnerTestHelper.makeQueryRunners(
+        QueryRunnerTestHelper.makeQueryRunnersToMerge(
             new TopNQueryRunnerFactory(
                 customPool,
                 new TopNQueryQueryToolChest(new TopNQueryConfig()),
@@ -198,6 +199,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
+  @SuppressWarnings("unused")
   public TopNQueryRunnerTest(
       QueryRunner<Result<TopNResultValue>> runner,
       boolean specializeGeneric1AggPooledTopN,
@@ -205,7 +207,8 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
       boolean specializeHistorical1SimpleDoubleAggPooledTopN,
       boolean specializeHistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopN,
       boolean duplicateSingleAggregatorQueries,
-      List<AggregatorFactory> commonAggregators
+      List<AggregatorFactory> commonAggregators,
+      String testName
   )
   {
     this.runner = runner;
@@ -265,12 +268,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
 
   private Sequence<Result<TopNResultValue>> runWithMerge(TopNQuery query, ResponseContext context)
   {
-    final TopNQueryQueryToolChest chest = new TopNQueryQueryToolChest(new TopNQueryConfig());
-    final QueryRunner<Result<TopNResultValue>> mergeRunner = new FinalizeResultsQueryRunner(
-        chest.mergeResults(runner),
-        chest
-    );
-    return mergeRunner.run(QueryPlus.wrap(query), context);
+    return runner.run(QueryPlus.wrap(query), context);
   }
 
   @Test
@@ -301,7 +299,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = ImmutableList.of(
         new Result<>(
             DateTimes.of("2020-04-02T00:00:00.000Z"),
-            new TopNResultValue(ImmutableList.of())
+            TopNResultValue.create(ImmutableList.of())
         )
     );
     assertExpectedResults(expectedResults, query);
@@ -334,7 +332,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put(QueryRunnerTestHelper.MARKET_DIMENSION, "total_market")
@@ -399,7 +397,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(Collections.<Map<String, Object>>singletonList(resultMap))
+            TopNResultValue.create(Collections.<Map<String, Object>>singletonList(resultMap))
         )
     );
     assertExpectedResults(expectedResults, query);
@@ -421,7 +419,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Collections.<Map<String, Object>>singletonList(
                     ImmutableMap.<String, Object>builder()
                         .put("alias", "theValue")
@@ -461,7 +459,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put(QueryRunnerTestHelper.MARKET_DIMENSION, "total_market")
@@ -523,6 +521,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                 "dimPostAgg",
                 "market + 'x'",
                 null,
+                null,
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -531,7 +530,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put(QueryRunnerTestHelper.MARKET_DIMENSION, "upfront")
@@ -594,7 +593,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("market", "spot")
@@ -646,7 +645,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("market", "spot")
@@ -689,7 +688,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("market", "spot")
@@ -729,6 +728,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                 QueryRunnerTestHelper.HYPER_UNIQUE_FINALIZING_POST_AGG_METRIC,
                 "uniques + 1",
                 null,
+                null,
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -737,7 +737,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("market", "spot")
@@ -783,6 +783,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                 QueryRunnerTestHelper.HYPER_UNIQUE_FINALIZING_POST_AGG_METRIC,
                 "uniques + 1",
                 null,
+                null,
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -791,7 +792,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("market", "spot")
@@ -834,7 +835,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
             DateTimes.of("2011-01-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("market", "total_market")
@@ -856,7 +857,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
         ),
         new Result<>(
             DateTimes.of("2011-02-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("market", "total_market")
@@ -878,7 +879,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
         ),
         new Result<>(
             DateTimes.of("2011-03-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("market", "total_market")
@@ -900,7 +901,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
         ),
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("market", "total_market")
@@ -943,7 +944,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
             DateTimes.of("2011-01-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("market", "total_market")
@@ -965,7 +966,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
         ),
         new Result<>(
             DateTimes.of("2011-02-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("market", "total_market")
@@ -987,7 +988,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
         ),
         new Result<>(
             DateTimes.of("2011-03-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("market", "total_market")
@@ -1009,7 +1010,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
         ),
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("market", "total_market")
@@ -1052,7 +1053,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<>(
             DateTimes.of("2011-01-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("market", "total_market")
@@ -1074,7 +1075,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
         ),
         new Result<>(
             DateTimes.of("2011-02-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("market", "total_market")
@@ -1096,7 +1097,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
         ),
         new Result<>(
             DateTimes.of("2011-03-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("market", "total_market")
@@ -1118,7 +1119,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
         ),
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("market", "total_market")
@@ -1166,7 +1167,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         "addRowsIndexConstant", 5356.814783D,
@@ -1247,7 +1248,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "total_market",
@@ -1295,7 +1296,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         "market", "spot",
@@ -1343,7 +1344,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "total_market",
@@ -1391,7 +1392,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "total_market",
@@ -1432,7 +1433,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Collections.<Map<String, Object>>singletonList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "upfront",
@@ -1466,7 +1467,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "upfront",
@@ -1518,7 +1519,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "upfront",
@@ -1566,7 +1567,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "total_market",
@@ -1605,7 +1606,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
         .build();
     assertExpectedResults(
         Collections.singletonList(
-            new Result<>(DateTimes.of("2011-04-01T00:00:00.000Z"), new TopNResultValue(Collections.emptyList()))
+            new Result<>(DateTimes.of("2011-04-01T00:00:00.000Z"), TopNResultValue.create(Collections.emptyList()))
         ),
         query
     );
@@ -1631,7 +1632,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
         .build();
     assertExpectedResults(
         Collections.singletonList(
-            new Result<>(DateTimes.of("2011-04-01T00:00:00.000Z"), new TopNResultValue(Collections.emptyList()))
+            new Result<>(DateTimes.of("2011-04-01T00:00:00.000Z"), TopNResultValue.create(Collections.emptyList()))
         ),
         query
     );
@@ -1726,7 +1727,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     final List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         "placementish", "a",
@@ -1767,7 +1768,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     final List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         "placementish", "preferred",
@@ -1815,7 +1816,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     final List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         "placementish", "preferred",
@@ -1869,7 +1870,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Collections.singletonList(
                     QueryRunnerTestHelper.orderedMap(
                         "doesn't exist", null,
@@ -1903,7 +1904,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Collections.singletonList(
                     QueryRunnerTestHelper.orderedMap(
                         "doesn't exist", null,
@@ -1937,7 +1938,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Collections.singletonList(
                     QueryRunnerTestHelper.orderedMap(
                         "doesn't exist", null,
@@ -1970,7 +1971,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "spot",
@@ -2015,7 +2016,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "spot"
@@ -2050,7 +2051,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "total_market",
@@ -2090,7 +2091,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "total_market",
@@ -2130,7 +2131,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "total_market",
@@ -2170,7 +2171,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "total_market",
@@ -2217,7 +2218,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Collections.<Map<String, Object>>singletonList(
                     ImmutableMap.of(
                         "addRowsIndexConstant", 504542.5071372986D,
@@ -2264,7 +2265,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Collections.<Map<String, Object>>singletonList(
                     ImmutableMap.of(
                         "addRowsIndexConstant", 504542.5071372986D,
@@ -2309,7 +2310,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.QUALITY_DIMENSION, "e",
@@ -2374,7 +2375,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "s",
@@ -2425,7 +2426,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "s"
@@ -2476,7 +2477,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "2spot0",
@@ -2540,7 +2541,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "2spot0",
@@ -2605,7 +2606,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "2spot0",
@@ -2672,7 +2673,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "spot0",
@@ -2738,7 +2739,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "1upfront",
@@ -2804,7 +2805,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "1upfront",
@@ -2871,7 +2872,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "1upfront",
@@ -2924,7 +2925,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "s",
@@ -2977,7 +2978,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "t",
@@ -3030,7 +3031,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "t",
@@ -3101,7 +3102,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "t",
@@ -3148,7 +3149,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "t",
@@ -3194,7 +3195,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "o",
@@ -3268,7 +3269,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "spot",
@@ -3356,7 +3357,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "spot",
@@ -3405,7 +3406,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "spot",
@@ -3459,7 +3460,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 withDuplicateResults(
                     Arrays.<Map<String, Object>>asList(
                         ImmutableMap.of(
@@ -3516,7 +3517,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 withDuplicateResults(
                     Collections.singletonList(
                         ImmutableMap.of(
@@ -3564,7 +3565,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put(QueryRunnerTestHelper.MARKET_DIMENSION, "total_market")
@@ -3642,7 +3643,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
         )
         .context(ImmutableMap.of(QueryContexts.FINALIZE_KEY, true, QueryContexts.BY_SEGMENT_KEY, true))
         .build();
-    TopNResultValue topNResult = new TopNResultValue(
+    TopNResultValue topNResult = TopNResultValue.create(
         Arrays.<Map<String, Object>>asList(
             ImmutableMap.<String, Object>builder()
                         .put(QueryRunnerTestHelper.MARKET_DIMENSION, "total_market")
@@ -3714,7 +3715,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         "market", "spot",
@@ -3776,7 +3777,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         "dayOfWeek", "Wednesday",
@@ -3832,7 +3833,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Collections.singletonList(
                     map
                 )
@@ -3880,7 +3881,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Collections.singletonList(
                     map
                 )
@@ -3911,7 +3912,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.asList(
                     map,
                     ImmutableMap.<String, Object>of(
@@ -3949,7 +3950,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Collections.singletonList(
                     map
                 )
@@ -3976,7 +3977,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Collections.singletonList(
                     ImmutableMap.<String, Object>of(
                         "partial_null_column", "value",
@@ -4009,7 +4010,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-02T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 withDuplicateResults(
                     Arrays.asList(
                         ImmutableMap.of(
@@ -4048,7 +4049,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-02T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 withDuplicateResults(
                     Arrays.asList(
                         ImmutableMap.of(
@@ -4099,7 +4100,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Collections.<Map<String, Object>>singletonList(
                     ImmutableMap.of(
                         QueryRunnerTestHelper.MARKET_DIMENSION, "spot",
@@ -4170,7 +4171,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Collections.singletonList(
                     map
                 )
@@ -4237,7 +4238,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Collections.singletonList(
                     map
                 )
@@ -4277,7 +4278,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("index_alias", 1000.0f)
@@ -4352,7 +4353,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("index_alias", "super-1000")
@@ -4424,7 +4425,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("qf_alias", "14000.0")
@@ -4496,7 +4497,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("ql_alias", 1400L)
@@ -4569,7 +4570,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("ql_alias", 1400L)
@@ -4631,7 +4632,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                                 .put("quality", "mezzanine")
@@ -4681,7 +4682,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.of(
                         "vc", "spot spot",
@@ -4741,7 +4742,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("ql_alias", "super-1400")
@@ -4813,7 +4814,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("ql_alias", "1400")
@@ -4885,7 +4886,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("qns_alias", 140000L)
@@ -4957,7 +4958,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("qns_alias", 140000.0f)
@@ -5029,7 +5030,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("time_alias", 1296345600000L)
@@ -5089,7 +5090,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("index_alias", 59L)
@@ -5125,7 +5126,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("__time_alias", DateTimes.of("2011-01-12T00:00:00.000Z").getMillis())
@@ -5164,7 +5165,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(Collections.singletonList(nullAliasMap))
+            TopNResultValue.create(Collections.singletonList(nullAliasMap))
         )
     );
     assertExpectedResults(expectedResults, query);
@@ -5185,7 +5186,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("index_alias", 59.021022d)
@@ -5236,7 +5237,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("time_alias", "super-1296345600000")
@@ -5324,7 +5325,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Collections.singletonList(
                     expectedMap
                 )
@@ -5363,7 +5364,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("alias", 9L)
@@ -5441,7 +5442,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("qns_alias", 140000L)
@@ -5510,7 +5511,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("ql_alias", 1400L)
@@ -5637,7 +5638,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
       List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
           new Result<>(
               DateTimes.of("2011-01-12T00:00:00.000Z"),
-              new TopNResultValue(rows)
+              TopNResultValue.create(rows)
           )
       );
       assertExpectedResults(expectedResults, query);
@@ -5672,7 +5673,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(Collections.emptyList())
+            TopNResultValue.create(Collections.emptyList())
         )
     );
     assertExpectedResults(expectedResults, query);
@@ -5724,7 +5725,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-02T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.asList(
                     ImmutableMap.<String, Object>builder()
                         .put("index_alias", 97L)
@@ -5792,7 +5793,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-02T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.asList(
                     ImmutableMap.<String, Object>builder()
                         .put("index_alias", 97L)
@@ -5860,7 +5861,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-04-02T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.asList(
                     ImmutableMap.<String, Object>builder()
                         .put("index_alias", 97L)
@@ -5929,7 +5930,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.asList(
                     makeRowWithNulls("dim", NullHandling.defaultLongValue(), "count", 279L),
                     makeRowWithNulls("dim", 10L, "count", 93L),
@@ -5961,7 +5962,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.asList(
                     makeRowWithNulls("dim", NullHandling.defaultDoubleValue(), "count", 279L),
                     makeRowWithNulls("dim", 10.0, "count", 93L),
@@ -5993,7 +5994,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.asList(
                     makeRowWithNulls("dim", NullHandling.defaultFloatValue(), "count", 279L),
                     makeRowWithNulls("dim", 10.0f, "count", 93L),
@@ -6095,7 +6096,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put(QueryRunnerTestHelper.MARKET_DIMENSION, "spot")
@@ -6168,7 +6169,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
+            TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                                 .put(QueryRunnerTestHelper.MARKET_DIMENSION, "spot")

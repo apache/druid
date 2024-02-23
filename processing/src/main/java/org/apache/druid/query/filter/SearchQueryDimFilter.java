@@ -117,12 +117,6 @@ public class SearchQueryDimFilter extends AbstractOptimizableDimFilter implement
   }
 
   @Override
-  public DimFilter optimize()
-  {
-    return this;
-  }
-
-  @Override
   public Filter toFilter()
   {
     return new SearchQueryFilter(dimension, query, extractionFn, filterTuning);

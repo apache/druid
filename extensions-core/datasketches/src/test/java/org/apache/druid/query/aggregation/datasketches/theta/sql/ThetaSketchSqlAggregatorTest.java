@@ -59,10 +59,10 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.sql.guice.SqlModule;
 import org.apache.druid.timeline.DataSegment;
@@ -138,7 +138,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                              .rows(TestDataBuilder.ROWS1)
                                              .buildMMappedIndex();
 
-    return new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
+    return SpecificSegmentsQuerySegmentWalker.createWalker(injector, conglomerate).add(
         DataSegment.builder()
                    .dataSource(DATA_SOURCE)
                    .interval(index.getDataInterval())
@@ -241,7 +241,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                   null,
                                   null
                               ),
-                              BaseCalciteQueryTest.not(BaseCalciteQueryTest.selector("dim2", "", null))
+                              not(equality("dim2", "", ColumnType.STRING))
                           ),
                           new SketchMergeAggregatorFactory(
                               "a3",
@@ -278,7 +278,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
 
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
-            1L
+            1.0
         }
     );
 
@@ -334,14 +334,14 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .setAggregatorSpecs(
                             NullHandling.replaceWithDefault()
                             ? Arrays.asList(
-                                new LongSumAggregatorFactory("_a0:sum", "a0"),
+                                new DoubleSumAggregatorFactory("_a0:sum", "a0"),
                                 new CountAggregatorFactory("_a0:count")
                             )
                             : Arrays.asList(
-                                new LongSumAggregatorFactory("_a0:sum", "a0"),
+                                new DoubleSumAggregatorFactory("_a0:sum", "a0"),
                                 new FilteredAggregatorFactory(
                                     new CountAggregatorFactory("_a0:count"),
-                                    BaseCalciteQueryTest.not(BaseCalciteQueryTest.selector("a0", null, null))
+                                    notNull("a0")
                                 )
                             )
                         )
@@ -831,7 +831,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
-                  .filters(bound("dim2", "0", "0", false, false, null, StringComparators.NUMERIC))
+                  .filters(numericEquality("dim2", 0L, ColumnType.LONG))
                   .aggregators(
                       ImmutableList.of(
                           new SketchMergeAggregatorFactory(
@@ -890,7 +890,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setDimFilter(selector("dim2", "a", null))
+                        .setDimFilter(equality("dim2", "a", ColumnType.STRING))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(expressionVirtualColumn("v0", "'a'", ColumnType.STRING))
                         .setDimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING))
@@ -905,7 +905,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                         null,
                                         null
                                     ),
-                                    selector("dim1", "nonexistent", null)
+                                    equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
                                 new FilteredAggregatorFactory(
                                     new SketchMergeAggregatorFactory(
@@ -916,7 +916,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                         null,
                                         null
                                     ),
-                                    selector("dim1", "nonexistent", null)
+                                    equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
                                 new FilteredAggregatorFactory(
                                     new SketchMergeAggregatorFactory(
@@ -927,7 +927,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                         null,
                                         null
                                     ),
-                                    selector("dim1", "nonexistent", null)
+                                    equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
                                 new FilteredAggregatorFactory(
                                     new SketchMergeAggregatorFactory(
@@ -938,7 +938,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                         null,
                                         null
                                     ),
-                                    selector("dim1", "nonexistent", null)
+                                    equality("dim1", "nonexistent", ColumnType.STRING)
                                 )
                             )
                         )
@@ -971,7 +971,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setDimFilter(selector("dim2", "a", null))
+                        .setDimFilter(equality("dim2", "a", ColumnType.STRING))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(expressionVirtualColumn("v0", "'a'", ColumnType.STRING))
                         .setDimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING))
@@ -986,7 +986,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                         null,
                                         null
                                     ),
-                                    selector("dim1", "nonexistent", null)
+                                    equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
                                 new FilteredAggregatorFactory(
                                     new SketchMergeAggregatorFactory(
@@ -997,7 +997,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                         null,
                                         null
                                     ),
-                                    selector("dim1", "nonexistent", null)
+                                    equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
                                 new FilteredAggregatorFactory(
                                     new SketchMergeAggregatorFactory(
@@ -1008,7 +1008,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                         null,
                                         null
                                     ),
-                                    selector("dim1", "nonexistent", null)
+                                    equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
                                 new FilteredAggregatorFactory(
                                     new SketchMergeAggregatorFactory(
@@ -1019,7 +1019,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                         null,
                                         null
                                     ),
-                                    selector("dim1", "nonexistent", null)
+                                    equality("dim1", "nonexistent", ColumnType.STRING)
                                 )
                             )
                         )

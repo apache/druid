@@ -55,6 +55,8 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 public abstract class AbstractTask implements Task
 {
@@ -100,6 +102,8 @@ public abstract class AbstractTask implements Task
   private File statusFile;
 
   private final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+
+  private volatile CountDownLatch cleanupCompletionLatch;
 
   protected AbstractTask(String id, String dataSource, Map<String, Object> context, IngestionMode ingestionMode)
   {
@@ -164,11 +168,13 @@ public abstract class AbstractTask implements Task
   @Override
   public final TaskStatus run(TaskToolbox taskToolbox) throws Exception
   {
-    TaskStatus taskStatus = TaskStatus.running(getId());
+    TaskStatus taskStatus = null;
     try {
+      cleanupCompletionLatch = new CountDownLatch(1);
       String errorMessage = setup(taskToolbox);
       if (org.apache.commons.lang3.StringUtils.isNotBlank(errorMessage)) {
-        return TaskStatus.failure(getId(), errorMessage);
+        taskStatus = TaskStatus.failure(getId(), errorMessage);
+        return taskStatus;
       }
       taskStatus = runTask(taskToolbox);
       return taskStatus;
@@ -178,24 +184,33 @@ public abstract class AbstractTask implements Task
       throw e;
     }
     finally {
-      cleanUp(taskToolbox, taskStatus);
+      try {
+        cleanUp(taskToolbox, taskStatus);
+      }
+      finally {
+        cleanupCompletionLatch.countDown();
+      }
     }
   }
 
   public abstract TaskStatus runTask(TaskToolbox taskToolbox) throws Exception;
 
-  public void cleanUp(TaskToolbox toolbox, TaskStatus taskStatus) throws Exception
+  @Override
+  public void cleanUp(TaskToolbox toolbox, @Nullable TaskStatus taskStatus) throws Exception
   {
+    // clear any interrupted status to ensure subsequent cleanup proceeds without interruption.
+    Thread.interrupted();
+
     if (!toolbox.getConfig().isEncapsulatedTask()) {
       log.debug("Not pushing task logs and reports from task.");
       return;
     }
 
+    TaskStatus taskStatusToReport = taskStatus == null
+        ? TaskStatus.failure(id, "Task failed to run")
+        : taskStatus;
     // report back to the overlord
-    UpdateStatusAction status = new UpdateStatusAction("successful");
-    if (taskStatus.isFailure()) {
-      status = new UpdateStatusAction("failure");
-    }
+    UpdateStatusAction status = new UpdateStatusAction("", taskStatusToReport);
     toolbox.getTaskActionClient().submit(status);
     toolbox.getTaskActionClient().submit(new UpdateLocationAction(TaskLocation.unknown()));
 
@@ -207,12 +222,30 @@ public abstract class AbstractTask implements Task
     }
 
     if (statusFile != null) {
-      toolbox.getJsonMapper().writeValue(statusFile, taskStatus);
+      toolbox.getJsonMapper().writeValue(statusFile, taskStatusToReport);
       toolbox.getTaskLogPusher().pushTaskStatus(id, statusFile);
       Files.deleteIfExists(statusFile.toPath());
       log.debug("Pushed task status");
     } else {
       log.debug("No task status file exists to push");
+    }
+  }
+
+  @Override
+  public boolean waitForCleanupToFinish()
+  {
+    try {
+      if (cleanupCompletionLatch != null) {
+        // block until the cleanup process completes
+        return cleanupCompletionLatch.await(300, TimeUnit.SECONDS);
+      }
+
+      return true;
+    }
+    catch (InterruptedException e) {
+      log.warn("Interrupted while waiting for task cleanUp to finish!");
+      Thread.currentThread().interrupt();
+      return false;
     }
   }
 
@@ -412,7 +445,7 @@ public abstract class AbstractTask implements Task
     if (emitter == null || metric == null || value == null) {
       return;
     }
-    emitter.emit(getMetricBuilder().build(metric, value));
+    emitter.emit(getMetricBuilder().setMetric(metric, value));
   }
 
 

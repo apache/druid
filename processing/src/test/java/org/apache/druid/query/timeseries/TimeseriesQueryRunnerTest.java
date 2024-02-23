@@ -110,7 +110,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
   {
     final Iterable<Object[]> baseConstructors = QueryRunnerTestHelper.cartesian(
         // runners
-        QueryRunnerTestHelper.makeQueryRunners(
+        QueryRunnerTestHelper.makeQueryRunnersToMerge(
             new TimeseriesQueryRunnerFactory(
                 new TimeseriesQueryQueryToolChest(),
                 new TimeseriesQueryEngine(),
@@ -140,7 +140,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
         .collect(Collectors.toList());
   }
 
-  private <T> void assertExpectedResults(Iterable<Result<T>> expectedResults, Iterable<Result<T>> results)
+  protected <T> void assertExpectedResults(Iterable<Result<T>> expectedResults, Iterable<Result<T>> results)
   {
     if (descending) {
       expectedResults = TestHelper.revert(expectedResults);
@@ -148,13 +148,13 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
     TestHelper.assertExpectedResults(expectedResults, results);
   }
 
-  protected final QueryRunner runner;
+  protected final QueryRunner<Result<TimeseriesResultValue>> runner;
   protected final boolean descending;
   protected final boolean vectorize;
-  private final List<AggregatorFactory> aggregatorFactoryList;
+  protected final List<AggregatorFactory> aggregatorFactoryList;
 
   public TimeseriesQueryRunnerTest(
-      QueryRunner runner,
+      QueryRunner<Result<TimeseriesResultValue>> runner,
       boolean descending,
       boolean vectorize,
       List<AggregatorFactory> aggregatorFactoryList
@@ -169,9 +169,6 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testEmptyTimeseries()
   {
-    // Cannot vectorize due to "doubleFirst" aggregator.
-    cannotVectorize();
-
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
                                   .granularity(QueryRunnerTestHelper.ALL_GRAN)
@@ -1770,30 +1767,49 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                   .context(makeContext())
                                   .build();
 
-    List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
-        new Result<>(
-            DateTimes.of("2011-04-01"),
-            new TimeseriesResultValue(
-                ImmutableMap.of(
-                    "rows", 13L,
-                    "index", 6626.151596069336,
-                    "addRowsIndexConstant", 6640.151596069336,
-                    "uniques", QueryRunnerTestHelper.UNIQUES_9
-                )
-            )
-        ),
-        new Result<>(
-            DateTimes.of("2011-04-02"),
-            new TimeseriesResultValue(
-                ImmutableMap.of(
-                    "rows", 13L,
-                    "index", 5833.2095947265625,
-                    "addRowsIndexConstant", 5847.2095947265625,
-                    "uniques", QueryRunnerTestHelper.UNIQUES_9
-                )
-            )
-        )
-    );
+
+    List<Result<TimeseriesResultValue>> expectedResults;
+    if (NullHandling.sqlCompatible()) {
+      expectedResults = Arrays.asList(
+          new Result<>(
+              DateTimes.of("2011-04-01"),
+              new TimeseriesResultValue(
+                  TestHelper.makeMap("rows", 0L, "index", null, "uniques", 0.0, "addRowsIndexConstant", null)
+              )
+          ),
+          new Result<>(
+              DateTimes.of("2011-04-02"),
+              new TimeseriesResultValue(
+                  TestHelper.makeMap("rows", 0L, "index", null, "uniques", 0.0, "addRowsIndexConstant", null)
+              )
+          )
+      );
+    } else {
+      expectedResults = Arrays.asList(
+          new Result<>(
+              DateTimes.of("2011-04-01"),
+              new TimeseriesResultValue(
+                  ImmutableMap.of(
+                      "rows", 13L,
+                      "index", 6626.151596069336,
+                      "addRowsIndexConstant", 6640.151596069336,
+                      "uniques", QueryRunnerTestHelper.UNIQUES_9
+                  )
+              )
+          ),
+          new Result<>(
+              DateTimes.of("2011-04-02"),
+              new TimeseriesResultValue(
+                  ImmutableMap.of(
+                      "rows", 13L,
+                      "index", 5833.2095947265625,
+                      "addRowsIndexConstant", 5847.2095947265625,
+                      "uniques", QueryRunnerTestHelper.UNIQUES_9
+                  )
+              )
+          )
+      );
+    }
 
     Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query))
                                                             .toList();
@@ -1960,9 +1976,6 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testTimeseriesWithFirstLastAggregator()
   {
-    // Cannot vectorize due to "doubleFirst", "doubleLast" aggregators.
-    cannotVectorize();
-
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
                                   .granularity(QueryRunnerTestHelper.MONTH_GRAN)
@@ -2965,16 +2978,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                   .context(makeContext())
                                   .build();
 
-    // Must create a toolChest so we can run mergeResults.
-    QueryToolChest<Result<TimeseriesResultValue>, TimeseriesQuery> toolChest = new TimeseriesQueryQueryToolChest();
-
-    // Must wrapped in a results finalizer to stop the runner's builtin finalizer from being called.
-    final FinalizeResultsQueryRunner finalRunner = new FinalizeResultsQueryRunner(
-        toolChest.mergeResults(runner),
-        toolChest
-    );
-
-    final List list = finalRunner.run(QueryPlus.wrap(query)).toList();
+    final List list = runner.run(QueryPlus.wrap(query)).toList();
     Assert.assertEquals(10, list.size());
   }
 

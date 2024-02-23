@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.indexing;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
@@ -47,20 +48,22 @@ import org.apache.druid.msq.indexing.error.WorkerFailedFault;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalLong;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.IntStream;
 
 /**
  * Like {@link org.apache.druid.indexing.common.task.batch.parallel.TaskMonitor}, but different.
@@ -109,10 +112,11 @@ public class MSQWorkerTaskLauncher
   @GuardedBy("taskIds")
   private final IntSet fullyStartedTasks = new IntOpenHashSet();
 
-  // Mutable state accessible only to the main loop. LinkedHashMap since order of key set matters. Tasks are added
-  // here once they are submitted for running, but before they are fully started up.
+  // Mutable state accessed by mainLoop, ControllerImpl, and jetty (/liveReports) threads.
+  // Tasks are added here once they are submitted for running, but before they are fully started up.
   // taskId -> taskTracker
-  private final Map<String, TaskTracker> taskTrackers = new LinkedHashMap<>();
+  private final ConcurrentMap<String, TaskTracker> taskTrackers = new ConcurrentSkipListMap<>(Comparator.comparingInt(
+      MSQTasks::workerFromTaskId));
 
   // Set of tasks which are issued a cancel request by the controller.
   private final Set<String> canceledWorkerTasks = ConcurrentHashMap.newKeySet();
@@ -183,7 +187,19 @@ public class MSQWorkerTaskLauncher
    */
   public void stop(final boolean interrupt)
   {
-    if (state.compareAndSet(State.STARTED, State.STOPPED)) {
+    if (state.compareAndSet(State.NEW, State.STOPPED)) {
+      state.set(State.STOPPED);
+      if (interrupt) {
+        cancelTasksOnStop.set(true);
+      }
+
+      synchronized (taskIds) {
+        // Wake up sleeping mainLoop.
+        taskIds.notifyAll();
+      }
+      exec.shutdown();
+      stopFuture.set(null);
+    } else if (state.compareAndSet(State.STARTED, State.STOPPED)) {
       if (interrupt) {
         cancelTasksOnStop.set(true);
       }
@@ -232,7 +248,7 @@ public class MSQWorkerTaskLauncher
         taskIds.notifyAll();
       }
 
-      while (taskIds.size() < taskCount || !IntStream.range(0, taskCount).allMatch(fullyStartedTasks::contains)) {
+      while (taskIds.size() < taskCount || !allTasksStarted(taskCount)) {
         if (stopFuture.isDone() || stopFuture.isCancelled()) {
           FutureUtils.getUnchecked(stopFuture, false);
           throw new ISE("Stopped");
@@ -276,6 +292,7 @@ public class MSQWorkerTaskLauncher
 
   /**
    * Report a worker that failed without active orders. To be retried if it is requried for future stages only.
+   *
    * @param workerNumber worker number
    */
   public void reportFailedInactiveWorker(int workerNumber)
@@ -289,6 +306,7 @@ public class MSQWorkerTaskLauncher
    * Blocks the call untill the worker tasks are ready to be contacted for work.
    *
    * @param workerSet
+   *
    * @throws InterruptedException
    */
   public void waitUntilWorkersReady(Set<Integer> workerSet) throws InterruptedException
@@ -333,6 +351,70 @@ public class MSQWorkerTaskLauncher
     synchronized (taskIds) {
       return taskId.equals(taskIds.get(worker));
     }
+  }
+
+  public static class WorkerStats
+  {
+    String workerId;
+    TaskState state;
+    long duration;
+
+    /**
+     * For JSON deserialization only
+     */
+    public WorkerStats()
+    {
+    }
+
+    public WorkerStats(String workerId, TaskState state, long duration)
+    {
+      this.workerId = workerId;
+      this.state = state;
+      this.duration = duration;
+    }
+
+    @JsonProperty
+    public String getWorkerId()
+    {
+      return workerId;
+    }
+
+    @JsonProperty
+    public TaskState getState()
+    {
+      return state;
+    }
+
+    @JsonProperty("durationMs")
+    public long getDuration()
+    {
+      return duration;
+    }
+  }
+
+  public Map<Integer, List<WorkerStats>> getWorkerStats()
+  {
+    final Map<Integer, List<WorkerStats>> workerStats = new TreeMap<>();
+
+    for (Map.Entry<String, TaskTracker> taskEntry : taskTrackers.entrySet()) {
+
+      TaskTracker taskTracker = taskEntry.getValue();
+
+      workerStats.computeIfAbsent(taskTracker.workerNumber, k -> new ArrayList<>())
+                 .add(new WorkerStats(taskEntry.getKey(),
+                                      taskTracker.status.getStatusCode(),
+                                      // getDuration() returns -1 for running tasks.
+                                      // It's not calculated on-the-fly here since
+                                      // taskTracker.startTimeMillis marks task
+                                      // submission time rather than the actual start.
+                                      taskTracker.status.getDuration()
+                 ));
+    }
+
+    for (List<WorkerStats> workerStatsList : workerStats.values()) {
+      workerStatsList.sort(Comparator.comparing(WorkerStats::getWorkerId));
+    }
+    return workerStats;
   }
 
   private void mainLoop()
@@ -465,9 +547,13 @@ public class MSQWorkerTaskLauncher
   public WorkerCount getWorkerTaskCount()
   {
     synchronized (taskIds) {
-      int runningTasks = fullyStartedTasks.size();
-      int pendingTasks = desiredTaskCount - runningTasks;
-      return new WorkerCount(runningTasks, pendingTasks);
+      if (stopFuture.isDone()) {
+        return new WorkerCount(0, 0);
+      } else {
+        int runningTasks = fullyStartedTasks.size();
+        int pendingTasks = desiredTaskCount - runningTasks;
+        return new WorkerCount(runningTasks, pendingTasks);
+      }
     }
   }
 
@@ -685,6 +771,21 @@ public class MSQWorkerTaskLauncher
   }
 
   /**
+   * Whether {@link #fullyStartedTasks} contains all tasks from 0 (inclusive) to taskCount (exclusive).
+   */
+  @GuardedBy("taskIds")
+  private boolean allTasksStarted(final int taskCount)
+  {
+    for (int i = 0; i < taskCount; i++) {
+      if (!fullyStartedTasks.contains(i)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
    * Used by the main loop to decide how often to check task status.
    */
   private long computeSleepTime(final long loopDurationMillis)
@@ -763,7 +864,7 @@ public class MSQWorkerTaskLauncher
      * 2. The location has never been reported by the task. If this is not the case, the task has started already.
      * 3. Task has taken more than maxTaskStartDelayMillis to start.
      * 4. No task has started in maxTaskStartDelayMillis. This is in case the cluster is scaling up and other workers
-     *    are starting.
+     * are starting.
      */
     public boolean didRunTimeOut(final long maxTaskStartDelayMillis)
     {

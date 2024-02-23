@@ -24,6 +24,7 @@ import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.guice.annotations.Json;
@@ -191,7 +192,8 @@ public class TaskManagementResource
               log.debug(ex, "Request timed out or closed already.");
             }
           }
-        }
+        },
+        MoreExecutors.directExecutor()
     );
 
     asyncContext.setTimeout(timeout);
@@ -201,13 +203,19 @@ public class TaskManagementResource
   @POST
   @Path("/assignTask")
   @Consumes({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
+  @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
   public Response assignTask(Task task)
   {
+    // Sometimes assignTask API can fail when the supplied task arg can't be interpreted due to some missing extension(s).
+    // In such cases, the call produces an error response without entering the function.
+    // @Produces helps to correctly write back this error response as JSON which otherwise ends up in an empty response
+    // message due to "MessageBodyWriter not found for SingletonImmutableBiMap" error.
+    // Ref: https://github.com/apache/druid/pull/15412.
     try {
       workerTaskManager.assignTask(task);
       return Response.ok().build();
     }
-    catch (RuntimeException ex) {
+    catch (Exception ex) {
       return Response.serverError().entity(ex.getMessage()).build();
     }
   }

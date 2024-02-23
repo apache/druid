@@ -6,7 +6,7 @@ metadata:
     tls.enabled: "false"
   labels:
     druid.k8s.peons: "true"
-  name: "id"
+  name: "id-3e70afe5cd823dfc7dd308eea616426b"
 spec:
   activeDeadlineSeconds: 14400
   backoffLimit: 0
@@ -60,6 +60,6 @@ spec:
               memory: "2400000000"
               cpu: "1000m"
               ephemeral-storage: 1Gi
-      hostname: "id"
+      hostname: "id-3e70afe5cd823dfc7dd308eea616426b"
       restartPolicy: "Never"
   ttlSecondsAfterFinished: 172800

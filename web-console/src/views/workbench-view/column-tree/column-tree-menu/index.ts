@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+export * from './complex-menu-items/complex-menu-items';
 export * from './number-menu-items/number-menu-items';
 export * from './string-menu-items/string-menu-items';
 export * from './time-menu-items/time-menu-items';

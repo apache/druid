@@ -22,35 +22,39 @@ import { Api } from '../singletons';
 
 import { downloadFile } from './download';
 
-interface QueryDetailArchive {
+export interface QueryDetailArchive {
   id: string;
   detailArchiveVersion: number;
   status?: any;
   reports?: any;
   payload?: any;
+  statementsStatus?: any;
   serverStatus?: any;
 }
 
 export async function downloadQueryDetailArchive(id: string) {
+  const encodedId = Api.encodePath(id);
   const profile: QueryDetailArchive = {
     id,
     detailArchiveVersion: 2,
   };
 
   try {
-    profile.status = (
-      await Api.instance.get(`/druid/indexer/v1/task/${Api.encodePath(id)}/status`)
-    ).data;
+    profile.status = (await Api.instance.get(`/druid/indexer/v1/task/${encodedId}/status`)).data;
   } catch {}
 
   try {
-    profile.reports = (
-      await Api.instance.get(`/druid/indexer/v1/task/${Api.encodePath(id)}/reports`)
-    ).data;
+    profile.reports = (await Api.instance.get(`/druid/indexer/v1/task/${encodedId}/reports`)).data;
   } catch {}
 
   try {
-    profile.payload = (await Api.instance.get(`/druid/indexer/v1/task/${Api.encodePath(id)}`)).data;
+    profile.payload = (await Api.instance.get(`/druid/indexer/v1/task/${encodedId}`)).data;
+  } catch {}
+
+  try {
+    profile.statementsStatus = (
+      await Api.instance.get(`/druid/v2/sql/statements/${encodedId}`)
+    ).data;
   } catch {}
 
   try {

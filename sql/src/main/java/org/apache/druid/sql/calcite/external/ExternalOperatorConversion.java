@@ -29,6 +29,8 @@ import org.apache.druid.catalog.model.table.BaseTableFunction;
 import org.apache.druid.catalog.model.table.ExternalTableSpec;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.column.RowSignature;
@@ -89,40 +91,71 @@ public class ExternalOperatorConversion extends DruidExternTableMacroConversion
         final ObjectMapper jsonMapper
     )
     {
-      try {
-        final String sigValue = CatalogUtils.getString(args, SIGNATURE_PARAM);
-        if (sigValue == null && columns == null) {
-          throw new IAE(
-              "EXTERN requires either a %s value or an EXTEND clause",
-              SIGNATURE_PARAM
-          );
-        }
-        if (sigValue != null && columns != null) {
-          throw new IAE(
-              "EXTERN requires either a %s value or an EXTEND clause, but not both",
-              SIGNATURE_PARAM
-          );
-        }
-        final RowSignature rowSignature;
-        if (columns != null) {
-          rowSignature = Columns.convertSignature(columns);
-        } else {
-          rowSignature = jsonMapper.readValue(sigValue, RowSignature.class);
-        }
-
-        String inputSrcStr = CatalogUtils.getString(args, INPUT_SOURCE_PARAM);
-        InputSource inputSource = jsonMapper.readValue(inputSrcStr, InputSource.class);
-        return new ExternalTableSpec(
-            inputSource,
-            jsonMapper.readValue(CatalogUtils.getString(args, INPUT_FORMAT_PARAM), InputFormat.class),
-            rowSignature,
-            inputSource::getTypes
+      final String sigValue = CatalogUtils.getString(args, SIGNATURE_PARAM);
+      if (sigValue == null && columns == null) {
+        throw InvalidInput.exception(
+            "EXTERN requires either a [%s] value or an EXTEND clause",
+            SIGNATURE_PARAM
         );
       }
-      catch (JsonProcessingException e) {
-        throw new RuntimeException(e);
+      if (sigValue != null && columns != null) {
+        throw InvalidInput.exception(
+            "EXTERN requires either a [%s] value or an EXTEND clause, but not both",
+            SIGNATURE_PARAM
+        );
       }
+      final RowSignature rowSignature;
+      if (columns != null) {
+        try {
+          rowSignature = Columns.convertSignature(columns);
+        }
+        catch (IAE e) {
+          throw badArgumentException(e, "columns");
+        }
+      } else {
+        try {
+          rowSignature = jsonMapper.readValue(sigValue, RowSignature.class);
+        }
+        catch (JsonProcessingException e) {
+          throw badArgumentException(e, "rowSignature");
+        }
+      }
+
+      String inputSrcStr = CatalogUtils.getString(args, INPUT_SOURCE_PARAM);
+      InputSource inputSource;
+      try {
+        inputSource = jsonMapper.readValue(inputSrcStr, InputSource.class);
+      }
+      catch (JsonProcessingException e) {
+        throw badArgumentException(e, "inputSource");
+      }
+      InputFormat inputFormat;
+      try {
+        inputFormat = jsonMapper.readValue(CatalogUtils.getString(args, INPUT_FORMAT_PARAM), InputFormat.class);
+      }
+      catch (JsonProcessingException e) {
+        throw badArgumentException(e, "inputFormat");
+      }
+      return new ExternalTableSpec(
+          inputSource,
+          inputFormat,
+          rowSignature,
+          inputSource::getTypes
+      );
     }
+  }
+
+  private static DruidException badArgumentException(
+      Throwable cause,
+      String fieldName
+  )
+  {
+    return InvalidInput.exception(
+        cause,
+        "Invalid value for the field [%s]. Reason: [%s]",
+        fieldName,
+        cause.getMessage()
+    );
   }
 
   @Inject

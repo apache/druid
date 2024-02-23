@@ -28,7 +28,6 @@ import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Window;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
@@ -88,25 +87,25 @@ public class Windowing
 {
   private static final ImmutableMap<String, ProcessorMaker> KNOWN_WINDOW_FNS = ImmutableMap
       .<String, ProcessorMaker>builder()
-      .put("LAG", (agg, typeFactory) ->
-          new WindowOffsetProcessor(agg.getColumn(typeFactory, 0), agg.getOutputName(), -agg.getConstantInt(1)))
-      .put("LEAD", (agg, typeFactory) ->
-          new WindowOffsetProcessor(agg.getColumn(typeFactory, 0), agg.getOutputName(), agg.getConstantInt(1)))
-      .put("FIRST_VALUE", (agg, typeFactory) ->
-          new WindowFirstProcessor(agg.getColumn(typeFactory, 0), agg.getOutputName()))
-      .put("LAST_VALUE", (agg, typeFactory) ->
-          new WindowLastProcessor(agg.getColumn(typeFactory, 0), agg.getOutputName()))
-      .put("CUME_DIST", (agg, typeFactory) ->
+      .put("LAG", (agg) ->
+          new WindowOffsetProcessor(agg.getColumn(0), agg.getOutputName(), -agg.getConstantInt(1, 1)))
+      .put("LEAD", (agg) ->
+          new WindowOffsetProcessor(agg.getColumn(0), agg.getOutputName(), agg.getConstantInt(1, 1)))
+      .put("FIRST_VALUE", (agg) ->
+          new WindowFirstProcessor(agg.getColumn(0), agg.getOutputName()))
+      .put("LAST_VALUE", (agg) ->
+          new WindowLastProcessor(agg.getColumn(0), agg.getOutputName()))
+      .put("CUME_DIST", (agg) ->
           new WindowCumeDistProcessor(agg.getGroup().getOrderingColumNames(), agg.getOutputName()))
-      .put("DENSE_RANK", (agg, typeFactory) ->
+      .put("DENSE_RANK", (agg) ->
           new WindowDenseRankProcessor(agg.getGroup().getOrderingColumNames(), agg.getOutputName()))
-      .put("NTILE", (agg, typeFactory) ->
+      .put("NTILE", (agg) ->
           new WindowPercentileProcessor(agg.getOutputName(), agg.getConstantInt(0)))
-      .put("PERCENT_RANK", (agg, typeFactory) ->
+      .put("PERCENT_RANK", (agg) ->
           new WindowRankProcessor(agg.getGroup().getOrderingColumNames(), agg.getOutputName(), true))
-      .put("RANK", (agg, typeFactory) ->
+      .put("RANK", (agg) ->
           new WindowRankProcessor(agg.getGroup().getOrderingColumNames(), agg.getOutputName(), false))
-      .put("ROW_NUMBER", (agg, typeFactory) ->
+      .put("ROW_NUMBER", (agg) ->
           new WindowRowNumberProcessor(agg.getOutputName()))
       .build();
   private final List<OperatorFactory> ops;
@@ -116,7 +115,8 @@ public class Windowing
       final PartialDruidQuery partialQuery,
       final PlannerContext plannerContext,
       final RowSignature sourceRowSignature,
-      final RexBuilder rexBuilder
+      final RexBuilder rexBuilder,
+      final VirtualColumnRegistry virtualColumnRegistry
   )
   {
     final Window window = Preconditions.checkNotNull(partialQuery.getWindow(), "window");
@@ -173,12 +173,17 @@ public class Windowing
 
         ProcessorMaker maker = KNOWN_WINDOW_FNS.get(aggregateCall.getAggregation().getName());
         if (maker == null) {
+
           final Aggregation aggregation = GroupByRules.translateAggregateCall(
               plannerContext,
               sourceRowSignature,
-              null,
+              virtualColumnRegistry,
               rexBuilder,
-              partialQuery.getSelectProject(),
+              InputAccessor.buildFor(
+                  rexBuilder,
+                  sourceRowSignature,
+                  partialQuery.getSelectProject(),
+                  window.constants),
               Collections.emptyList(),
               aggName,
               aggregateCall,
@@ -196,18 +201,20 @@ public class Windowing
 
           aggregations.add(Iterables.getOnlyElement(aggregation.getAggregatorFactories()));
         } else {
-          processors.add(maker.make(
-              new WindowAggregate(
-                  aggName,
-                  aggregateCall,
-                  sourceRowSignature,
-                  plannerContext,
-                  partialQuery.getSelectProject(),
-                  window.constants,
-                  group
-              ),
-              rexBuilder.getTypeFactory()
-          ));
+          processors.add(
+              maker.make(
+                  new WindowAggregate(
+                      aggName,
+                      aggregateCall,
+                      sourceRowSignature,
+                      plannerContext,
+                      rexBuilder,
+                      partialQuery.getSelectProject(),
+                      window.constants,
+                      group
+                  )
+              )
+          );
         }
       }
 
@@ -280,7 +287,7 @@ public class Windowing
 
   private interface ProcessorMaker
   {
-    Processor make(WindowAggregate agg, RelDataTypeFactory typeFactory);
+    Processor make(WindowAggregate agg);
   }
 
   private static class WindowGroup
@@ -348,12 +355,16 @@ public class Windowing
 
     public WindowFrame getWindowFrame()
     {
+      if (group.lowerBound.isUnbounded() && group.upperBound.isUnbounded()) {
+        return WindowFrame.unbounded();
+      }
       return new WindowFrame(
-          WindowFrame.PeerType.ROWS,
+          group.isRows ? WindowFrame.PeerType.ROWS : WindowFrame.PeerType.RANGE,
           group.lowerBound.isUnbounded(),
           figureOutOffset(group.lowerBound),
           group.upperBound.isUnbounded(),
-          figureOutOffset(group.upperBound)
+          figureOutOffset(group.upperBound),
+          group.isRows ? null : getOrdering()
       );
     }
 
@@ -377,6 +388,7 @@ public class Windowing
     private final AggregateCall call;
     private final RowSignature sig;
     private final PlannerContext context;
+    private final RexBuilder rexBuilder;
     private final Project project;
     private final List<RexLiteral> constants;
     private final WindowGroup group;
@@ -386,6 +398,7 @@ public class Windowing
         AggregateCall call,
         RowSignature sig,
         PlannerContext context,
+        RexBuilder rexBuilder,
         Project project,
         List<RexLiteral> constants,
         WindowGroup group
@@ -395,6 +408,7 @@ public class Windowing
       this.call = call;
       this.sig = sig;
       this.context = context;
+      this.rexBuilder = rexBuilder;
       this.project = project;
       this.constants = constants;
       this.group = group;
@@ -414,10 +428,10 @@ public class Windowing
       return group;
     }
 
-    public String getColumn(final RelDataTypeFactory typeFactory, int argPosition)
+    public String getColumn(int argPosition)
     {
       final RexNode columnArgument =
-          Expressions.fromFieldAccess(typeFactory, sig, project, call.getArgList().get(argPosition));
+          Expressions.fromFieldAccess(rexBuilder.getTypeFactory(), sig, project, call.getArgList().get(argPosition));
       final DruidExpression expression = Expressions.toDruidExpression(context, sig, columnArgument);
       if (expression == null) {
         throw new ISE("Couldn't get an expression from columnArgument[%s]", columnArgument);
@@ -433,6 +447,14 @@ public class Windowing
     public int getConstantInt(int argPosition)
     {
       return ((Number) getConstantArgument(argPosition).getValue()).intValue();
+    }
+
+    public int getConstantInt(int argPosition, int defaultValue)
+    {
+      if (argPosition >= call.getArgList().size()) {
+        return defaultValue;
+      }
+      return getConstantInt(argPosition);
     }
   }
 
@@ -489,10 +511,9 @@ public class Windowing
   )
   {
     final Iterator<ColumnWithDirection> priorIterator = priorSort.iterator();
-    final Iterator<ColumnWithDirection> currentIterator = currentSort.iterator();
 
-    while (currentIterator.hasNext()) {
-      if (!priorIterator.hasNext() || !currentIterator.next().equals(priorIterator.next())) {
+    for (ColumnWithDirection columnWithDirection : currentSort) {
+      if (!priorIterator.hasNext() || !columnWithDirection.equals(priorIterator.next())) {
         return false;
       }
     }

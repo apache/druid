@@ -33,6 +33,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableCauseMatcher;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 
 import java.util.ArrayList;
@@ -203,6 +204,33 @@ public class FutureUtilsTest
     Assert.assertEquals(
         "xy",
         FutureUtils.transform(Futures.immediateFuture("x"), s -> s + "y").get()
+    );
+  }
+
+  @Test
+  public void test_transform_error()
+  {
+    final ListenableFuture<String> future = FutureUtils.transform(
+        Futures.immediateFuture("x"),
+        s -> {
+          throw new ISE("oops");
+        }
+    );
+
+    Assert.assertTrue(future.isDone());
+    final ExecutionException e = Assert.assertThrows(
+        ExecutionException.class,
+        future::get
+    );
+
+    MatcherAssert.assertThat(
+        e,
+        ThrowableCauseMatcher.hasCause(CoreMatchers.instanceOf(IllegalStateException.class))
+    );
+
+    MatcherAssert.assertThat(
+        e,
+        ThrowableCauseMatcher.hasCause(ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("oops")))
     );
   }
 

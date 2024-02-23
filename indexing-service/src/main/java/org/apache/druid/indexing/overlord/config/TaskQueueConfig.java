@@ -39,15 +39,20 @@ public class TaskQueueConfig
   @JsonProperty
   private Duration storageSyncRate;
 
+  @JsonProperty
+  private int taskCompleteHandlerNumThreads;
+
   @JsonCreator
   public TaskQueueConfig(
       @JsonProperty("maxSize") final Integer maxSize,
       @JsonProperty("startDelay") final Period startDelay,
       @JsonProperty("restartDelay") final Period restartDelay,
-      @JsonProperty("storageSyncRate") final Period storageSyncRate
+      @JsonProperty("storageSyncRate") final Period storageSyncRate,
+      @JsonProperty("taskCompleteHandlerNumThreads") final Integer taskCompleteHandlerNumThreads
   )
   {
     this.maxSize = Configs.valueOrDefault(maxSize, Integer.MAX_VALUE);
+    this.taskCompleteHandlerNumThreads = Configs.valueOrDefault(taskCompleteHandlerNumThreads, 5);
     this.startDelay = defaultDuration(startDelay, "PT1M");
     this.restartDelay = defaultDuration(restartDelay, "PT30S");
     this.storageSyncRate = defaultDuration(storageSyncRate, "PT1M");
@@ -56,6 +61,11 @@ public class TaskQueueConfig
   public int getMaxSize()
   {
     return maxSize;
+  }
+
+  public int getTaskCompleteHandlerNumThreads()
+  {
+    return taskCompleteHandlerNumThreads;
   }
 
   public Duration getStartDelay()

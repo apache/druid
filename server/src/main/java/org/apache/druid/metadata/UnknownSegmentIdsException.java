@@ -23,7 +23,11 @@ import java.util.Collection;
 
 /**
  * Exception thrown by {@link SegmentsMetadataManager} when a segment id is unknown.
+ *
+ * @deprecated Usages of this exception will be replaced by the new
+ * {@link org.apache.druid.error.DruidException} in a future release.
  */
+@Deprecated
 public class UnknownSegmentIdsException extends Exception
 {
   private final Collection<String> unknownSegmentIds;

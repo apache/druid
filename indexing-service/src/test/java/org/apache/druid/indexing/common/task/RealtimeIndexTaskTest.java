@@ -30,6 +30,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.FirehoseFactory;
@@ -107,6 +108,7 @@ import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.plumber.ServerTimeRejectionPolicyFactory;
@@ -860,6 +862,7 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
         handoffTimeout,
         null,
         null,
+        null,
         null
     );
     return new RealtimeIndexTask(
@@ -978,6 +981,7 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
     };
     final TestUtils testUtils = new TestUtils();
     final TaskToolboxFactory toolboxFactory = new TaskToolboxFactory(
+        null,
         taskConfig,
         null, // taskExecutorNode
         taskActionClientFactory,
@@ -1011,11 +1015,12 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
         testUtils.getRowIngestionMetersFactory(),
         new TestAppenderatorsManager(),
         new NoopOverlordClient(),
+        new NoopCoordinatorClient(),
         null,
         null,
         null,
-        null,
-        "1"
+        "1",
+        CentralizedDatasourceSchemaConfig.create()
     );
 
     return toolboxFactory.build(task);

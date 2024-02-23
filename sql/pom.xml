@@ -29,7 +29,7 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>27.0.0-SNAPSHOT</version>
+    <version>30.0.0-SNAPSHOT</version>
   </parent>
 
   <dependencies>
@@ -171,13 +171,18 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>javax.validation</groupId>
-      <artifactId>validation-api</artifactId>
+      <groupId>jakarta.validation</groupId>
+      <artifactId>jakarta.validation-api</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.immutables</groupId>
+      <artifactId>value-annotations</artifactId>
       <scope>provided</scope>
     </dependency>
 
@@ -200,8 +205,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.calcite</groupId>
-      <artifactId>calcite-core</artifactId>
-      <type>test-jar</type>
+      <artifactId>calcite-testkit</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -258,6 +262,11 @@
       <artifactId>jdbi</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.reflections</groupId>
+      <artifactId>reflections</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -296,6 +305,15 @@
                   <overWrite>true</overWrite>
                   <outputDirectory>${project.build.directory}/</outputDirectory>
                   <includes>**/Parser.jj</includes>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.apache.calcite</groupId>
+                  <artifactId>calcite-core</artifactId>
+                  <version>${calcite.version}</version>
+                  <type>jar</type>
+                  <overWrite>true</overWrite>
+                  <outputDirectory>${project.build.directory}/</outputDirectory>
+                  <includes>**/default_config.fmpp</includes>
                 </artifactItem>
               </artifactItems>
             </configuration>

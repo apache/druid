@@ -30,7 +30,7 @@ import org.apache.druid.java.util.common.StringUtils;
  *
  * <ul>
  *   <li>When the query is rejected by QueryScheduler.</li>
- *   <li>When the query cannot acquire enough merge buffers for groupBy v2</li>
+ *   <li>When the query cannot acquire enough merge buffers for groupBy</li>
  * </ul>
  * <p>
  * As a {@link QueryException} it is expected to be serialied to a json response, but will be mapped to

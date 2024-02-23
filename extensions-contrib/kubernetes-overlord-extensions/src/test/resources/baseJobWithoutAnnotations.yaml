@@ -1,12 +1,12 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: "id"
+  name: "id-3e70afe5cd823dfc7dd308eea616426b"
 spec:
   template:
     metadata:
       labels:
-        job-name: id
+        job-name: id-3e70afe5cd823dfc7dd308eea616426b
       name: id-kmwkw
     spec:
       containers:

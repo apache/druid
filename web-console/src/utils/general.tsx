@@ -20,9 +20,9 @@ import { Intent } from '@blueprintjs/core';
 import type { IconName } from '@blueprintjs/icons';
 import { IconNames } from '@blueprintjs/icons';
 import copy from 'copy-to-clipboard';
-import hasOwnProp from 'has-own-prop';
 import * as JSONBig from 'json-bigint-native';
 import numeral from 'numeral';
+import type { JSX } from 'react';
 import React from 'react';
 
 import { AppToaster } from '../singletons';
@@ -61,7 +61,7 @@ export function wait(ms: number): Promise<void> {
   });
 }
 
-export function clamp(n: number, min: number, max: number): number {
+export function clamp(n: number, min = -Infinity, max = Infinity): number {
   return Math.min(Math.max(n, min), max);
 }
 
@@ -89,14 +89,41 @@ export function caseInsensitiveContains(testString: string, searchString: string
   return testString.toLowerCase().includes(searchString.toLowerCase());
 }
 
-export function oneOf<T>(thing: T, ...options: T[]): boolean {
-  return options.includes(thing);
+function validateKnown<T>(allKnownValues: T[], options: T[]): void {
+  options.forEach(o => {
+    if (!allKnownValues.includes(o)) {
+      throw new Error(`allKnownValues (${allKnownValues.join(', ')}) must include '${o}'`);
+    }
+  });
+}
+
+export function oneOf<T>(value: T, ...options: T[]): boolean {
+  return options.includes(value);
+}
+
+export function oneOfKnown<T>(value: T, allKnownValues: T[], ...options: T[]): boolean | undefined {
+  validateKnown(allKnownValues, options);
+  if (options.includes(value)) return true;
+  return allKnownValues.includes(value) ? false : undefined;
 }
 
 export function typeIs<T extends { type?: S }, S = string>(...options: S[]): (x: T) => boolean {
   return x => {
     if (x.type == null) return false;
     return options.includes(x.type);
+  };
+}
+
+export function typeIsKnown<T extends { type?: S }, S = string>(
+  allKnownValues: S[],
+  ...options: S[]
+): (x: T) => boolean | undefined {
+  validateKnown(allKnownValues, options);
+  return x => {
+    const value = x.type;
+    if (value == null) return;
+    if (options.includes(value)) return true;
+    return allKnownValues.includes(value) ? false : undefined;
   };
 }
 
@@ -128,7 +155,7 @@ function identity<T>(x: T): T {
 
 export function lookupBy<T, Q = T>(
   array: readonly T[],
-  keyFn: (x: T, index: number) => string = String,
+  keyFn: (x: T, index: number) => string | number = String,
   valueFn?: (x: T, index: number) => Q,
 ): Record<string, Q> {
   if (!valueFn) valueFn = identity as any;
@@ -188,7 +215,7 @@ export function groupByAsMap<T, Q>(
 export function uniq(array: readonly string[]): string[] {
   const seen: Record<string, boolean> = {};
   return array.filter(s => {
-    if (hasOwnProp(seen, s)) {
+    if (Object.hasOwn(seen, s)) {
       return false;
     } else {
       seen[s] = true;
@@ -274,21 +301,25 @@ export function formatDurationHybrid(ms: NumberLike): string {
   }
 }
 
+function pluralize(word: string): string {
+  // Ignoring irregular plurals.
+  if (/(s|x|z|ch|sh)$/.test(word)) {
+    return word + 'es';
+  } else if (/([^aeiou])y$/.test(word)) {
+    return word.slice(0, -1) + 'ies';
+  } else if (/(f|fe)$/.test(word)) {
+    return word.replace(/fe?$/, 'ves');
+  } else {
+    return word + 's';
+  }
+}
+
 export function pluralIfNeeded(n: NumberLike, singular: string, plural?: string): string {
-  if (!plural) plural = singular + 's';
+  if (!plural) plural = pluralize(singular);
   return `${formatInteger(n)} ${n === 1 ? singular : plural}`;
 }
 
 // ----------------------------
-
-export function validJson(json: string): boolean {
-  try {
-    JSONBig.parse(json);
-    return true;
-  } catch (e) {
-    return false;
-  }
-}
 
 export function filterMap<T, Q>(xs: readonly T[], f: (x: T, i: number) => Q | undefined): Q[] {
   return xs.map(f).filter((x: Q | undefined) => typeof x !== 'undefined') as Q[];
@@ -306,7 +337,7 @@ export function compact<T>(xs: (T | undefined | false | null | '')[]): T[] {
 }
 
 export function assemble<T>(...xs: (T | undefined | false | null | '')[]): T[] {
-  return xs.filter(Boolean) as T[];
+  return compact(xs);
 }
 
 export function moveToEnd<T>(
@@ -489,17 +520,19 @@ export function generate8HexId(): string {
   return (Math.random() * 1e10).toString(16).replace('.', '').slice(0, 8);
 }
 
-export function offsetToRowColumn(
-  str: string,
-  offset: number,
-): { row: number; column: number } | undefined {
+export interface RowColumn {
+  row: number;
+  column: number;
+}
+
+export function offsetToRowColumn(str: string, offset: number): RowColumn | undefined {
   // Ensure offset is within the string length
   if (offset < 0 || offset > str.length) return;
 
   const lines = str.split('\n');
   for (let row = 0; row < lines.length; row++) {
     const line = lines[row];
-    if (offset < line.length) {
+    if (offset <= line.length) {
       return {
         row,
         column: offset,

@@ -47,6 +47,7 @@ import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.external.Externals;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
+import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -99,7 +100,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 .dataSource("foo")
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .virtualColumns(expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING))
-                .filters(selector("dim2", "a", null))
+                .filters(equality("dim2", "a", ColumnType.STRING))
                 .columns("v0")
                 .context(PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
@@ -129,7 +130,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                             newScanQueryBuilder()
                                 .dataSource("foo")
                                 .intervals(querySegmentSpec(Filtration.eternity()))
-                                .filters(selector("dim2", "a", null))
+                                .filters(equality("dim2", "a", ColumnType.STRING))
                                 .columns("dim1", "dim2")
                                 .context(PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                                 .build()
@@ -657,7 +658,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
     skipVectorize();
 
     final String resources = "[{\"name\":\"dst\",\"type\":\"DATASOURCE\"},{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
-    final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"dst\",\"partitionedBy\":\"DAY\",\"clusteredBy\":[\"floor_m1\",\"dim1\",\"CEIL(\\\"m2\\\")\"]}";
+    final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":{\"type\":\"table\",\"tableName\":\"dst\"},\"partitionedBy\":\"DAY\",\"clusteredBy\":[\"floor_m1\",\"dim1\",\"CEIL(\\\"m2\\\")\"]}";
 
     final String sql = "EXPLAIN PLAN FOR INSERT INTO druid.dst "
                        + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2 FROM foo "
@@ -756,6 +757,209 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
+  public void testExplainPlanInsertWithAsSubQueryClusteredBy()
+  {
+    skipVectorize();
+
+    final String resources = "[{\"name\":\"EXTERNAL\",\"type\":\"EXTERNAL\"},{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
+    final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":{\"type\":\"table\",\"tableName\":\"foo\"},\"partitionedBy\":{\"type\":\"all\"},\"clusteredBy\":[\"namespace\",\"country\"]}";
+
+    final String sql = "EXPLAIN PLAN FOR\n"
+                       + "INSERT INTO \"foo\"\n"
+                       + "WITH dd AS (\n"
+                       + "SELECT * FROM TABLE(\n"
+                       + "  EXTERN(\n"
+                       + "    '{\"type\":\"inline\",\"data\":\"{\\\" \\\": 1681794225551, \\\"namespace\\\": \\\"day1\\\", \\\"country\\\": \\\"one\\\"}\\n{\\\"__time\\\": 1681794225558, \\\"namespace\\\": \\\"day2\\\", \\\"country\\\": \\\"two\\\"}\"}',\n"
+                       + "    '{\"type\":\"json\"}',\n"
+                       + "    '[{\"name\":\"__time\",\"type\":\"long\"},{\"name\":\"namespace\",\"type\":\"string\"},{\"name\":\"country\",\"type\":\"string\"}]'\n"
+                       + "  )\n"
+                       + "))\n"
+                       + "\n"
+                       + "SELECT\n"
+                       + " __time,\n"
+                       + "  namespace,\n"
+                       + "  country\n"
+                       + "FROM dd\n"
+                       + "PARTITIONED BY ALL\n"
+                       + "CLUSTERED BY 2, 3";
+
+    final String legacyExplanation = "DruidQueryRel("
+                                     + "query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"external\","
+                                     + "\"inputSource\":{\"type\":\"inline\",\"data\":\"{\\\" \\\": 1681794225551, \\\"namespace\\\": \\\"day1\\\", \\\"country\\\": \\\"one\\\"}\\n"
+                                     + "{\\\"__time\\\": 1681794225558, \\\"namespace\\\": \\\"day2\\\", \\\"country\\\": \\\"two\\\"}\"},"
+                                     + "\"inputFormat\":{\"type\":\"json\",\"keepNullColumns\":false,\"assumeNewlineDelimited\":false,\"useJsonNodeReader\":false},"
+                                     + "\"signature\":[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"namespace\",\"type\":\"STRING\"},{\"name\":\"country\",\"type\":\"STRING\"}]},"
+                                     + "\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},"
+                                     + "\"resultFormat\":\"compactedList\",\"orderBy\":[{\"columnName\":\"namespace\",\"order\":\"ascending\"},{\"columnName\":\"country\",\"order\":\"ascending\"}],"
+                                     + "\"columns\":[\"__time\",\"country\",\"namespace\"],\"legacy\":false,\"context\":{\"sqlInsertSegmentGranularity\":\"{\\\"type\\\":\\\"all\\\"}\","
+                                     + "\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"granularity\":{\"type\":\"all\"}}],"
+                                     + " signature=[{__time:LONG, namespace:STRING, country:STRING}])\n";
+
+    // Use testQuery for EXPLAIN (not testIngestionQuery).
+    testQuery(
+        PLANNER_CONFIG_LEGACY_QUERY_EXPLAIN,
+        ImmutableMap.of("sqlQueryId", "dummy"),
+        Collections.emptyList(),
+        sql,
+        CalciteTests.SUPER_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        new DefaultResultsVerifier(
+            ImmutableList.of(
+                new Object[]{
+                    legacyExplanation,
+                    resources,
+                    attributes
+                }
+            ),
+            null
+        ),
+        null
+    );
+
+    // Test correctness of the query when only the CLUSTERED BY clause is present
+    final String explanation = "[{\"query\":{\"queryType\":\"scan\"," + "\"dataSource\":{\"type\":\"external\",\"inputSource\":{\"type\":\"inline\","
+                               + "\"data\":\"{\\\" \\\": 1681794225551, \\\"namespace\\\": \\\"day1\\\", \\\"country\\\": \\\"one\\\"}\\n"
+                               + "{\\\"__time\\\": 1681794225558, \\\"namespace\\\": \\\"day2\\\", \\\"country\\\": \\\"two\\\"}\"},"
+                               + "\"inputFormat\":{\"type\":\"json\",\"keepNullColumns\":false,\"assumeNewlineDelimited\":false,\"useJsonNodeReader\":false},"
+                               + "\"signature\":[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"namespace\",\"type\":\"STRING\"},{\"name\":\"country\",\"type\":\"STRING\"}]},"
+                               + "\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},"
+                               + "\"resultFormat\":\"compactedList\",\"orderBy\":[{\"columnName\":\"namespace\",\"order\":\"ascending\"},{\"columnName\":\"country\",\"order\":\"ascending\"}],"
+                               + "\"columns\":[\"__time\",\"country\",\"namespace\"],\"legacy\":false,\"context\":{\"sqlInsertSegmentGranularity\":\"{\\\"type\\\":\\\"all\\\"}\","
+                               + "\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"granularity\":{\"type\":\"all\"}},"
+                               + "\"signature\":[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"namespace\",\"type\":\"STRING\"},{\"name\":\"country\",\"type\":\"STRING\"}],"
+                               + "\"columnMappings\":[{\"queryColumn\":\"__time\",\"outputColumn\":\"__time\"},{\"queryColumn\":\"namespace\",\"outputColumn\":\"namespace\"},"
+                               + "{\"queryColumn\":\"country\",\"outputColumn\":\"country\"}]}]";
+
+    testQuery(
+        PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN,
+        ImmutableMap.of("sqlQueryId", "dummy"),
+        Collections.emptyList(),
+        sql,
+        CalciteTests.SUPER_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        new DefaultResultsVerifier(
+            ImmutableList.of(
+                new Object[]{
+                    explanation,
+                    resources,
+                    attributes
+                }
+            ),
+            null
+        ),
+        null
+    );
+
+    // Not using testIngestionQuery, so must set didTest manually to satisfy the check in tearDown.
+    didTest = true;
+  }
+
+  @Test
+  public void testExplainPlanInsertJoinQuery()
+  {
+    skipVectorize();
+
+    final String resources = "[{\"name\":\"EXTERNAL\",\"type\":\"EXTERNAL\"},{\"name\":\"my_table\",\"type\":\"DATASOURCE\"}]";
+    final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":{\"type\":\"table\",\"tableName\":\"my_table\"},\"partitionedBy\":\"HOUR\",\"clusteredBy\":[\"__time\",\"isRobotAlias\",\"countryCapital\",\"regionName\"]}";
+
+    final String sql = "EXPLAIN PLAN FOR\n"
+                       + "INSERT INTO my_table\n"
+                       + "WITH\n"
+                       + "wikidata AS (SELECT * FROM TABLE(\n"
+                       + "  EXTERN(\n"
+                       + "    '{\"type\":\"http\",\"uris\":[\"https://boo.gz\"]}',\n"
+                       + "    '{\"type\":\"json\"}',\n"
+                       + "    '[{\"name\":\"isRobot\",\"type\":\"string\"},{\"name\":\"timestamp\",\"type\":\"string\"},{\"name\":\"cityName\",\"type\":\"string\"},{\"name\":\"countryIsoCode\",\"type\":\"string\"},{\"name\":\"regionName\",\"type\":\"string\"}]'\n"
+                       + "  )\n"
+                       + ")),\n"
+                       + "countries AS (SELECT * FROM TABLE(\n"
+                       + "  EXTERN(\n"
+                       + "    '{\"type\":\"http\",\"uris\":[\"https://foo.tsv\"]}',\n"
+                       + "    '{\"type\":\"tsv\",\"findColumnsFromHeader\":true}',\n"
+                       + "    '[{\"name\":\"Country\",\"type\":\"string\"},{\"name\":\"Capital\",\"type\":\"string\"},"
+                       + "{\"name\":\"ISO3\",\"type\":\"string\"},{\"name\":\"ISO2\",\"type\":\"string\"}]'\n"
+                       + "  )\n"
+                       + "))\n"
+                       + "SELECT\n"
+                       + "  TIME_PARSE(\"timestamp\") AS __time,\n"
+                       + "  isRobot AS isRobotAlias,\n"
+                       + "  countries.Capital AS countryCapital,\n"
+                       + "  regionName\n"
+                       + "FROM wikidata\n"
+                       + "LEFT JOIN countries ON wikidata.countryIsoCode = countries.ISO2\n"
+                       + "PARTITIONED BY HOUR\n"
+                       + "CLUSTERED BY 1, 2, 3, regionName";
+
+    final String legacyExplanation = "DruidJoinQueryRel(condition=[=($3, $6)], joinType=[left], query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"__join__\"},"
+                                     + "\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[{\"type\":\"expression\",\"name\":\"v0\","
+                                     + "\"expression\":\"timestamp_parse(\\\"timestamp\\\",null,'UTC')\",\"outputType\":\"LONG\"}],\"resultFormat\":\"compactedList\",\"orderBy\":[{\"columnName\":\"v0\",\"order\":\"ascending\"},{\"columnName\":\"isRobot\",\"order\":\"ascending\"},"
+                                     + "{\"columnName\":\"Capital\",\"order\":\"ascending\"},{\"columnName\":\"regionName\",\"order\":\"ascending\"}],\"columns\":[\"Capital\",\"isRobot\",\"regionName\",\"v0\"],\"legacy\":false,\"context\":{\"sqlInsertSegmentGranularity\":\"\\\"HOUR\\\"\",\"sqlQueryId\":\"dummy\","
+                                     + "\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"granularity\":{\"type\":\"all\"}}], signature=[{v0:LONG, isRobot:STRING, Capital:STRING, regionName:STRING}])\n"
+                                     + "  DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"external\",\"inputSource\":{\"type\":\"http\",\"uris\":[\"https://boo.gz\"]},\"inputFormat\":{\"type\":\"json\",\"keepNullColumns\":false,\"assumeNewlineDelimited\":false,"
+                                     + "\"useJsonNodeReader\":false},\"signature\":[{\"name\":\"isRobot\",\"type\":\"STRING\"},{\"name\":\"timestamp\",\"type\":\"STRING\"},{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"countryIsoCode\",\"type\":\"STRING\"},{\"name\":\"regionName\",\"type\":\"STRING\"}]},"
+                                     + "\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"resultFormat\":\"compactedList\",\"columns\":[\"cityName\",\"countryIsoCode\",\"isRobot\",\"regionName\",\"timestamp\"],\"legacy\":false,"
+                                     + "\"context\":{\"sqlInsertSegmentGranularity\":\"\\\"HOUR\\\"\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"granularity\":{\"type\":\"all\"}}], signature=[{isRobot:STRING, timestamp:STRING, cityName:STRING, countryIsoCode:STRING, regionName:STRING}])\n"
+                                     + "  DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"external\",\"inputSource\":{\"type\":\"http\",\"uris\":[\"https://foo.tsv\"]},\"inputFormat\":{\"type\":\"tsv\",\"delimiter\":\"\\t\",\"findColumnsFromHeader\":true},"
+                                     + "\"signature\":[{\"name\":\"Country\",\"type\":\"STRING\"},{\"name\":\"Capital\",\"type\":\"STRING\"},{\"name\":\"ISO3\",\"type\":\"STRING\"},{\"name\":\"ISO2\",\"type\":\"STRING\"}]},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},"
+                                     + "\"resultFormat\":\"compactedList\",\"columns\":[\"Capital\",\"ISO2\"],\"legacy\":false,\"context\":{\"sqlInsertSegmentGranularity\":\"\\\"HOUR\\\"\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"granularity\":{\"type\":\"all\"}}], signature=[{Capital:STRING, ISO2:STRING}])\n";
+    // Use testQuery for EXPLAIN (not testIngestionQuery).
+    testQuery(
+        PLANNER_CONFIG_LEGACY_QUERY_EXPLAIN,
+        ImmutableMap.of("sqlQueryId", "dummy"),
+        Collections.emptyList(),
+        sql,
+        CalciteTests.SUPER_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        new DefaultResultsVerifier(
+            ImmutableList.of(
+                new Object[]{
+                    legacyExplanation,
+                    resources,
+                    attributes
+                }
+            ),
+            null
+        ),
+        null
+    );
+
+    // Test correctness of the query when only the CLUSTERED BY clause is present
+    final String explanation = "[{\"query\":{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"join\",\"left\":{\"type\":\"external\",\"inputSource\":{\"type\":\"http\",\"uris\":[\"https://boo.gz\"]},\"inputFormat\":{\"type\":\"json\",\"keepNullColumns\":false,"
+                               + "\"assumeNewlineDelimited\":false,\"useJsonNodeReader\":false},\"signature\":[{\"name\":\"isRobot\",\"type\":\"STRING\"},{\"name\":\"timestamp\",\"type\":\"STRING\"},{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"countryIsoCode\",\"type\":\"STRING\"},"
+                               + "{\"name\":\"regionName\",\"type\":\"STRING\"}]},\"right\":{\"type\":\"query\",\"query\":{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"external\",\"inputSource\":{\"type\":\"http\",\"uris\":[\"https://foo.tsv\"]},\"inputFormat\":{\"type\":\"tsv\",\"delimiter\":\"\\t\",\"findColumnsFromHeader\":true},"
+                               + "\"signature\":[{\"name\":\"Country\",\"type\":\"STRING\"},{\"name\":\"Capital\",\"type\":\"STRING\"},{\"name\":\"ISO3\",\"type\":\"STRING\"},{\"name\":\"ISO2\",\"type\":\"STRING\"}]},\"intervals\":{\"type\":\"intervals\","
+                               + "\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"resultFormat\":\"compactedList\",\"columns\":[\"Capital\",\"ISO2\"],\"legacy\":false,\"context\":{\"sqlInsertSegmentGranularity\":\"\\\"HOUR\\\"\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\","
+                               + "\"vectorizeVirtualColumns\":\"false\"},\"granularity\":{\"type\":\"all\"}}},\"rightPrefix\":\"j0.\",\"condition\":\"(\\\"countryIsoCode\\\" == \\\"j0.ISO2\\\")\",\"joinType\":\"LEFT\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},"
+                               + "\"virtualColumns\":[{\"type\":\"expression\",\"name\":\"v0\",\"expression\":\"timestamp_parse(\\\"timestamp\\\",null,'UTC')\",\"outputType\":\"LONG\"}],\"resultFormat\":\"compactedList\",\"orderBy\":[{\"columnName\":\"v0\",\"order\":\"ascending\"},{\"columnName\":\"isRobot\",\"order\":\"ascending\"},"
+                               + "{\"columnName\":\"j0.Capital\",\"order\":\"ascending\"},{\"columnName\":\"regionName\",\"order\":\"ascending\"}],\"columns\":[\"isRobot\",\"j0.Capital\",\"regionName\",\"v0\"],\"legacy\":false,\"context\":{\"sqlInsertSegmentGranularity\":\"\\\"HOUR\\\"\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\","
+                               + "\"vectorizeVirtualColumns\":\"false\"},\"granularity\":{\"type\":\"all\"}},\"signature\":[{\"name\":\"v0\",\"type\":\"LONG\"},{\"name\":\"isRobot\",\"type\":\"STRING\"},{\"name\":\"j0.Capital\",\"type\":\"STRING\"},{\"name\":\"regionName\",\"type\":\"STRING\"}],\"columnMappings\":[{\"queryColumn\":\"v0\",\"outputColumn\":\"__time\"},"
+                               + "{\"queryColumn\":\"isRobot\",\"outputColumn\":\"isRobotAlias\"},{\"queryColumn\":\"j0.Capital\",\"outputColumn\":\"countryCapital\"},{\"queryColumn\":\"regionName\",\"outputColumn\":\"regionName\"}]}]";
+
+    testQuery(
+        PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN,
+        ImmutableMap.of("sqlQueryId", "dummy"),
+        Collections.emptyList(),
+        sql,
+        CalciteTests.SUPER_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        new DefaultResultsVerifier(
+            ImmutableList.of(
+                new Object[]{
+                    explanation,
+                    resources,
+                    attributes
+                }
+            ),
+            null
+        ),
+        null
+    );
+
+    // Not using testIngestionQuery, so must set didTest manually to satisfy the check in tearDown.
+    didTest = true;
+  }
+
+  @Test
   public void testExplainPlanInsertWithClusteredByDescThrowsException()
   {
     skipVectorize();
@@ -810,6 +1014,47 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 .build()
         )
         .expectLogicalPlanFrom("insertWithClusteredBy")
+        .verify();
+  }
+
+  @Test
+  public void testInsertPeriodFormGranularityWithClusteredBy()
+  {
+    // Test correctness of the query when only the CLUSTERED BY clause is present
+    RowSignature targetRowSignature = RowSignature.builder()
+        .add("__time", ColumnType.LONG)
+        .add("floor_m1", ColumnType.FLOAT)
+        .add("dim1", ColumnType.STRING)
+        .add("ceil_m2", ColumnType.DOUBLE)
+        .build();
+    testIngestionQuery()
+        .sql(
+            "INSERT INTO druid.dst "
+            + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2 FROM foo "
+            + "PARTITIONED BY P1D CLUSTERED BY 2, dim1, CEIL(m2)"
+        )
+        .expectTarget("dst", targetRowSignature)
+        .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource("foo")
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("__time", "dim1", "v0", "v1")
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "floor(\"m1\")", ColumnType.FLOAT),
+                    expressionVirtualColumn("v1", "ceil(\"m2\")", ColumnType.DOUBLE)
+                )
+                .orderBy(
+                    ImmutableList.of(
+                        new ScanQuery.OrderBy("v0", ScanQuery.Order.ASCENDING),
+                        new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING),
+                        new ScanQuery.OrderBy("v1", ScanQuery.Order.ASCENDING)
+                    )
+                )
+                .context(queryContextWithGranularity(Granularities.DAY))
+                .build()
+        )
+        .expectLogicalPlanFrom("insertPartitionedByP1DWithClusteredBy")
         .verify();
   }
 
@@ -927,8 +1172,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
       MatcherAssert.assertThat(
           e,
           invalidSqlIs(
-              "Invalid granularity ['invalid_granularity'] after PARTITIONED BY.  "
-              + "Expected HOUR, DAY, MONTH, YEAR, ALL TIME, FLOOR() or TIME_FLOOR()"
+              StringUtils.format(DruidSqlParserUtils.PARTITION_ERROR_MESSAGE, "'invalid_granularity'")
           ));
     }
     didTest = true;
@@ -1022,7 +1266,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         + "}]";
 
     final String resources = "[{\"name\":\"EXTERNAL\",\"type\":\"EXTERNAL\"},{\"name\":\"dst\",\"type\":\"DATASOURCE\"}]";
-    final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"dst\",\"partitionedBy\":{\"type\":\"all\"}}";
+    final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":{\"type\":\"table\",\"tableName\":\"dst\"},\"partitionedBy\":{\"type\":\"all\"}}";
 
     // Use testQuery for EXPLAIN (not testIngestionQuery).
     testQuery(
@@ -1126,7 +1370,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         + "}]";
 
     final String resources = "[{\"name\":\"dst\",\"type\":\"DATASOURCE\"},{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
-    final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"dst\",\"partitionedBy\":\"DAY\",\"clusteredBy\":[\"floor_m1\",\"dim1\",\"CEIL(\\\"m2\\\")\"]}";
+    final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":{\"type\":\"table\",\"tableName\":\"dst\"},\"partitionedBy\":\"DAY\",\"clusteredBy\":[\"floor_m1\",\"dim1\",\"CEIL(\\\"m2\\\")\"]}";
 
     // Use testQuery for EXPLAIN (not testIngestionQuery).
     testQuery(
@@ -1212,6 +1456,15 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
     testIngestionQuery()
         .sql("INSERT INTO dst SELECT * FROM %s PARTITIONED BY ALL TIME", externSql(externalDataSource))
         .expectValidationError(ForbiddenException.class)
+        .verify();
+  }
+
+  @Test
+  public void testInsertWithOverwriteClause()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
+        .expectValidationError(DruidException.class, "An OVERWRITE clause is not allowed with INSERT statements. Use REPLACE statements if overwriting existing segments is required or remove the OVERWRITE clause.")
         .verify();
   }
 
@@ -1409,5 +1662,116 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
             invalidSqlIs("Context parameter [sqlOuterLimit] cannot be provided on operator [INSERT]")
         )
         .verify();
+  }
+
+  @Test
+  public void testErrorWithUnableToConstructColumnSignatureWithExtern()
+  {
+    final String sqlString = "insert into dst \n"
+                             + "select time_parse(\"time\") as __time, * \n"
+                             + "from table( \n"
+                             + "extern(\n"
+                             + "'{\"type\": \"s3\", \"uris\": [\\\"s3://imply-eng-datasets/qa/IngestionTest/wikipedia/files/wikiticker-2015-09-12-sampled.mini.json.gz\\\"]}',\n"
+                             + "'{\"type\": \"json\"}',\n"
+                             + "'[{\"name\": \"time\", \"type\": \"string\"}, {\"name\": \"channel\", \"type\": \"string\"}, {\"countryName\": \"string\"}]'\n"
+                             + ")\n"
+                             + ")\n"
+                             + "partitioned by DAY\n"
+                             + "clustered by channel";
+    HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
+    testIngestionQuery().context(context).sql(sqlString)
+                        .expectValidationError(
+                            new DruidExceptionMatcher(
+                                DruidException.Persona.USER,
+                                DruidException.Category.INVALID_INPUT,
+                                "invalidInput"
+                            ).expectMessageContains(
+                                "Cannot construct instance of `org.apache.druid.segment.column.ColumnSignature`, problem: Column name must be provided and non-empty"
+                            )
+                        )
+                        .verify();
+  }
+
+  @Test
+  public void testErrorWhenBothRowSignatureAndExtendsProvidedToExtern()
+  {
+    final String sqlString = "insert into dst \n"
+                             + "select time_parse(\"time\") as __time, * \n"
+                             + "from table( \n"
+                             + "extern(\n"
+                             + "'{\"type\": \"s3\", \"uris\": [\\\"s3://imply-eng-datasets/qa/IngestionTest/wikipedia/files/wikiticker-2015-09-12-sampled.mini.json.gz\\\"]}',\n"
+                             + "'{\"type\": \"json\"}',\n"
+                             + "'[{\"name\": \"time\", \"type\": \"string\"}, {\"name\": \"channel\", \"type\": \"string\"}]'\n"
+                             + ")\n"
+                             + ") EXTEND (\"time\" VARCHAR, \"channel\" VARCHAR)\n"
+                             + "partitioned by DAY\n"
+                             + "clustered by channel";
+    HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
+    testIngestionQuery().context(context).sql(sqlString)
+                        .expectValidationError(
+                            new DruidExceptionMatcher(
+                                DruidException.Persona.USER,
+                                DruidException.Category.INVALID_INPUT,
+                                "invalidInput"
+                            ).expectMessageContains(
+                                "EXTERN requires either a [signature] value or an EXTEND clause, but not both"
+                            )
+                        )
+                        .verify();
+  }
+
+  @Test
+  public void testErrorWhenNoneOfRowSignatureAndExtendsProvidedToExtern()
+  {
+    final String sqlString = "insert into dst \n"
+                             + "select time_parse(\"time\") as __time, * \n"
+                             + "from table( \n"
+                             + "extern(\n"
+                             + "'{\"type\": \"s3\", \"uris\": [\\\"s3://imply-eng-datasets/qa/IngestionTest/wikipedia/files/wikiticker-2015-09-12-sampled.mini.json.gz\\\"]}',\n"
+                             + "'{\"type\": \"json\"}'\n"
+                             + ")\n"
+                             + ")\n"
+                             + "partitioned by DAY\n"
+                             + "clustered by channel";
+    HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
+    testIngestionQuery().context(context).sql(sqlString)
+                        .expectValidationError(
+                            new DruidExceptionMatcher(
+                                DruidException.Persona.USER,
+                                DruidException.Category.INVALID_INPUT,
+                                "invalidInput"
+                            ).expectMessageContains(
+                                "EXTERN requires either a [signature] value or an EXTEND clause"
+                            )
+                        )
+                        .verify();
+  }
+
+  @Test
+  public void testErrorWhenInputSourceInvalid()
+  {
+    final String sqlString = "insert into dst \n"
+                             + "select time_parse(\"time\") as __time, * \n"
+                             + "from table( \n"
+                             + "extern(\n"
+                             + "'{\"type\": \"local\"}',\n"
+                             + "'{\"type\": \"json\"}',\n"
+                             + "'[{\"name\": \"time\", \"type\": \"string\"}, {\"name\": \"channel\", \"type\": \"string\"}]'\n"
+                             + ")\n"
+                             + ")\n"
+                             + "partitioned by DAY\n"
+                             + "clustered by channel";
+    HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
+    testIngestionQuery().context(context).sql(sqlString)
+                        .expectValidationError(
+                            new DruidExceptionMatcher(
+                                DruidException.Persona.USER,
+                                DruidException.Category.INVALID_INPUT,
+                                "invalidInput"
+                            ).expectMessageContains(
+                                "Invalid value for the field [inputSource]. Reason:"
+                            )
+                        )
+                        .verify();
   }
 }

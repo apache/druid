@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.operator;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
@@ -44,10 +45,15 @@ public class SegmentToRowsAndColumnsOperator implements Operator
   {
     try (final CloseableShapeshifter shifty = segment.as(CloseableShapeshifter.class)) {
       if (shifty == null) {
-        throw new ISE("Segment[%s] cannot shapeshift", segment.getClass());
+        throw DruidException.defensive("Segment [%s] cannot shapeshift", segment.asString());
+      }
+      RowsAndColumns rac;
+      if (shifty instanceof RowsAndColumns) {
+        rac = (RowsAndColumns) shifty;
+      } else {
+        rac = shifty.as(RowsAndColumns.class);
       }
 
-      RowsAndColumns rac = shifty.as(RowsAndColumns.class);
       if (rac == null) {
         throw new ISE("Cannot work with segment of type[%s]", segment.getClass());
       }

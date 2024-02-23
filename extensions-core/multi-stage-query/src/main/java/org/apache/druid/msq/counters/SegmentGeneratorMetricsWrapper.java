@@ -19,12 +19,13 @@
 
 package org.apache.druid.msq.counters;
 
+import org.apache.druid.msq.indexing.processor.SegmentGeneratorFrameProcessor;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 
 /**
  * Wrapper around {@link FireDepartmentMetrics} which updates the progress counters while updating its metrics. This
  * is necessary as the {@link org.apache.druid.segment.realtime.appenderator.BatchAppenderator} used by the
- * {@link org.apache.druid.msq.indexing.SegmentGeneratorFrameProcessor} is not part of the MSQ extension, and hence,
+ * {@link SegmentGeneratorFrameProcessor} is not part of the MSQ extension, and hence,
  * cannot update the counters used in MSQ reports as it persists and pushes segments to deep storage.
  */
 public class SegmentGeneratorMetricsWrapper extends FireDepartmentMetrics

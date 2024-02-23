@@ -81,9 +81,9 @@ public final class NestedDataColumnV4<TStringDictionary extends Indexed<ByteBuff
   @Override
   public String getFieldFileName(String fileNameBase, String field, int fieldIndex)
   {
-    return NestedDataColumnSerializerV4.getInternalFileName(
+    return NestedCommonFormatColumnSerializer.getInternalFileName(
         fileNameBase,
-        NestedDataColumnSerializerV4.NESTED_FIELD_PREFIX + fieldIndex
+        NestedCommonFormatColumnSerializer.NESTED_FIELD_PREFIX + fieldIndex
     );
   }
 

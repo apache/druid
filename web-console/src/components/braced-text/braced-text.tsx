@@ -18,6 +18,7 @@
 
 import classNames from 'classnames';
 import { max } from 'd3-array';
+import type { JSX } from 'react';
 import React, { Fragment } from 'react';
 
 import './braced-text.scss';

@@ -39,7 +39,7 @@ export class BarGroup extends React.Component<BarGroupProps> {
     return nextProps.hoverOn === this.props.hoverOn;
   }
 
-  render(): JSX.Element[] | null {
+  render() {
     const { dataToRender, changeActiveDatasource, xScale, yScale, onHoverBar, barWidth } =
       this.props;
     if (dataToRender === undefined) return null;

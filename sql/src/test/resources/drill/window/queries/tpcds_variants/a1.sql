@@ -1,0 +1,1 @@
+select c.c_first_name, c.c_last_name, sum(s.ss_quantity) over (partition by s.ss_customer_sk order by s.ss_customer_sk) from customer c, store_sales s where c.c_customer_sk = s.ss_customer_sk group by c.c_first_name, c.c_last_name, s.ss_quantity, s.ss_customer_sk limit 20;

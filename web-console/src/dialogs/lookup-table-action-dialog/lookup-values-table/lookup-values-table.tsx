@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { N } from 'druid-query-toolkit';
+import { N } from '@druid-toolkit/query';
 import React from 'react';
 import ReactTable from 'react-table';
 

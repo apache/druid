@@ -20,12 +20,12 @@
 # If you are making a change in load list below, make the necessary changes in github actions too
 druid_extensions_loadList=["druid-kafka-indexing-service","mysql-metadata-storage","druid-s3-extensions","druid-basic-security","simple-client-sslcontext","druid-testing-tools","druid-lookups-cached-global","druid-histogram","druid-datasketches"]
 
-druid_coordinator_period_metadataStoreManagementPeriod=PT1H
+druid_coordinator_period_metadataStoreManagementPeriod=PT5S
 druid_sql_planner_authorizeSystemTablesDirectly=false
 
 #Testing kill supervisor custom coordinator duty
 druid_coordinator_kill_supervisor_on=false
 druid_coordinator_dutyGroups=["cleanupMetadata"]
 druid_coordinator_cleanupMetadata_duties=["killSupervisors"]
-druid_coordinator_cleanupMetadata_duty_killSupervisors_retainDuration=PT0M
+druid_coordinator_cleanupMetadata_duty_killSupervisors_durationToRetain=PT0M
 druid_coordinator_cleanupMetadata_period=PT10S

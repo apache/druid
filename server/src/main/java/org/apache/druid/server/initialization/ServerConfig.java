@@ -20,11 +20,13 @@
 package org.apache.druid.server.initialization;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.NoErrorResponseTransformStrategy;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.HumanReadableBytesRange;
+import org.apache.druid.server.SubqueryGuardrailHelper;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Period;
 
@@ -43,7 +45,6 @@ import java.util.zip.Deflater;
 public class ServerConfig
 {
   public static final int DEFAULT_GZIP_INFLATE_BUFFER_SIZE = 4096;
-  public static final long DEFAULT_MAX_SUBQUERY_BYTES = -1L;
 
   private static final boolean DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY = false;
 
@@ -60,7 +61,7 @@ public class ServerConfig
       long defaultQueryTimeout,
       long maxScatterGatherBytes,
       int maxSubqueryRows,
-      long maxSubqueryBytes,
+      String maxSubqueryBytes,
       boolean useNestedForUnknownTypeInSubquery,
       long maxQueryTimeout,
       int maxRequestHeaderSize,
@@ -104,6 +105,12 @@ public class ServerConfig
 
   }
 
+  @VisibleForTesting
+  public ServerConfig(boolean enableQueryRequestsQueuing)
+  {
+    this.enableQueryRequestsQueuing = enableQueryRequestsQueuing;
+  }
+
   @JsonProperty
   @Min(1)
   private int numThreads = getDefaultNumThreads();
@@ -133,7 +140,7 @@ public class ServerConfig
   private int maxSubqueryRows = 100000;
 
   @JsonProperty
-  private long maxSubqueryBytes = DEFAULT_MAX_SUBQUERY_BYTES;
+  private String maxSubqueryBytes = SubqueryGuardrailHelper.LIMIT_DISABLED_VALUE;
 
   @JsonProperty
   private boolean useNestedForUnknownTypeInSubquery = DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY;
@@ -179,6 +186,13 @@ public class ServerConfig
   @JsonProperty
   private boolean enableHSTS = false;
 
+  /**
+   * This feature flag enables query requests queuing when admins want to reserve some threads for
+   * non-query requests. This feature flag is not documented and will be removed in the future.
+   */
+  @JsonProperty
+  private boolean enableQueryRequestsQueuing = true;
+
   @JsonProperty
   private boolean showDetailedJettyErrors = true;
 
@@ -217,7 +231,7 @@ public class ServerConfig
     return maxSubqueryRows;
   }
 
-  public long getMaxSubqueryBytes()
+  public String getMaxSubqueryBytes()
   {
     return maxSubqueryBytes;
   }
@@ -288,6 +302,11 @@ public class ServerConfig
     return enableHSTS;
   }
 
+  public boolean isEnableQueryRequestsQueuing()
+  {
+    return enableQueryRequestsQueuing;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -303,7 +322,7 @@ public class ServerConfig
            enableRequestLimit == that.enableRequestLimit &&
            defaultQueryTimeout == that.defaultQueryTimeout &&
            maxSubqueryRows == that.maxSubqueryRows &&
-           maxSubqueryBytes == that.maxSubqueryBytes &&
+           Objects.equals(maxSubqueryBytes, that.maxSubqueryBytes) &&
            useNestedForUnknownTypeInSubquery == that.useNestedForUnknownTypeInSubquery &&
            maxQueryTimeout == that.maxQueryTimeout &&
            maxRequestHeaderSize == that.maxRequestHeaderSize &&
@@ -318,7 +337,8 @@ public class ServerConfig
            allowedHttpMethods.equals(that.allowedHttpMethods) &&
            errorResponseTransformStrategy.equals(that.errorResponseTransformStrategy) &&
            Objects.equals(contentSecurityPolicy, that.getContentSecurityPolicy()) &&
-           enableHSTS == that.enableHSTS;
+           enableHSTS == that.enableHSTS &&
+           enableQueryRequestsQueuing == that.enableQueryRequestsQueuing;
   }
 
   @Override
@@ -345,7 +365,8 @@ public class ServerConfig
         errorResponseTransformStrategy,
         showDetailedJettyErrors,
         contentSecurityPolicy,
-        enableHSTS
+        enableHSTS,
+        enableQueryRequestsQueuing
     );
   }
 
@@ -374,6 +395,7 @@ public class ServerConfig
            ", showDetailedJettyErrors=" + showDetailedJettyErrors +
            ", contentSecurityPolicy=" + contentSecurityPolicy +
            ", enableHSTS=" + enableHSTS +
+           ", enableQueryRequestsQueuing=" + enableQueryRequestsQueuing +
            '}';
   }
 

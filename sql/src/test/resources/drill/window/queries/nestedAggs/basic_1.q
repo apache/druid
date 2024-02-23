@@ -1,0 +1,1 @@
+SELECT col0, AVG(SUM(col0)) OVER ( PARTITION BY col7 ORDER BY col8 ) avg_col0, col7 FROM "allTypsUniq.parquet" GROUP BY col0,col8,col7

@@ -19,9 +19,12 @@
 
 package org.apache.druid.query.filter.vector;
 
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.filter.DruidLongPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
@@ -39,23 +42,39 @@ public class LongVectorValueMatcher implements VectorValueMatcherFactory
   public VectorValueMatcher makeMatcher(@Nullable final String value)
   {
     if (value == null) {
-      return makeNullValueMatcher(selector);
+      return VectorValueMatcher.nullMatcher(selector);
     }
 
     final Long matchVal = DimensionHandlerUtils.convertObjectToLong(value);
 
     if (matchVal == null) {
-      return BooleanVectorValueMatcher.of(selector, false);
+      return VectorValueMatcher.allFalseValueMatcher(selector);
     }
 
     final long matchValLong = matchVal;
 
+    return makeLongMatcher(matchValLong);
+  }
+
+  @Override
+  public VectorValueMatcher makeMatcher(Object matchValue, ColumnType matchValueType)
+  {
+    final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnType(matchValueType), matchValue);
+    final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(eval, ExpressionType.LONG);
+    if (castForComparison == null || castForComparison.isNumericNull()) {
+      return VectorValueMatcher.allFalseValueMatcher(selector);
+    }
+    return makeLongMatcher(castForComparison.asLong());
+  }
+
+  private BaseVectorValueMatcher makeLongMatcher(long matchValLong)
+  {
     return new BaseVectorValueMatcher(selector)
     {
       final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
 
       @Override
-      public ReadableVectorMatch match(final ReadableVectorMatch mask)
+      public ReadableVectorMatch match(final ReadableVectorMatch mask, boolean includeUnknown)
       {
         final long[] vector = selector.getLongVector();
         final int[] selection = match.getSelection();
@@ -67,15 +86,15 @@ public class LongVectorValueMatcher implements VectorValueMatcherFactory
         for (int i = 0; i < mask.getSelectionSize(); i++) {
           final int rowNum = mask.getSelection()[i];
           if (hasNulls && nulls[rowNum]) {
-            continue;
-          }
-          if (vector[rowNum] == matchValLong) {
+            if (includeUnknown) {
+              selection[numRows++] = rowNum;
+            }
+          } else if (vector[rowNum] == matchValLong) {
             selection[numRows++] = rowNum;
           }
         }
 
         match.setSelectionSize(numRows);
-        assert match.isValid(mask);
         return match;
       }
     };
@@ -91,7 +110,7 @@ public class LongVectorValueMatcher implements VectorValueMatcherFactory
       final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
 
       @Override
-      public ReadableVectorMatch match(final ReadableVectorMatch mask)
+      public ReadableVectorMatch match(final ReadableVectorMatch mask, boolean includeUnknown)
       {
         final long[] vector = selector.getLongVector();
         final int[] selection = match.getSelection();
@@ -103,16 +122,15 @@ public class LongVectorValueMatcher implements VectorValueMatcherFactory
         for (int i = 0; i < mask.getSelectionSize(); i++) {
           final int rowNum = mask.getSelection()[i];
           if (hasNulls && nulls[rowNum]) {
-            if (predicate.applyNull()) {
+            if (predicate.applyNull().matches(includeUnknown)) {
               selection[numRows++] = rowNum;
             }
-          } else if (predicate.applyLong(vector[rowNum])) {
+          } else if (predicate.applyLong(vector[rowNum]).matches(includeUnknown)) {
             selection[numRows++] = rowNum;
           }
         }
 
         match.setSelectionSize(numRows);
-        assert match.isValid(mask);
         return match;
       }
     };

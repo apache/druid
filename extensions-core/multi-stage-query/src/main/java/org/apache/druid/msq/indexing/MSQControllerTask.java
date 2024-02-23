@@ -43,14 +43,21 @@ import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerImpl;
 import org.apache.druid.msq.exec.MSQTasks;
+import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
+import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
+import org.apache.druid.msq.indexing.destination.MSQDestination;
+import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.run.SqlResults;
 import org.joda.time.Interval;
@@ -59,6 +66,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 @JsonTypeName(MSQControllerTask.TYPE)
@@ -66,6 +74,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery
 {
   public static final String TYPE = "query_controller";
   public static final String DUMMY_DATASOURCE_FOR_SELECT = "__query_select";
+  private static final Logger log = new Logger(MSQControllerTask.class);
 
   private final MSQSpec querySpec;
 
@@ -199,12 +208,19 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery
   {
     // If we're in replace mode, acquire locks for all intervals before declaring the task ready.
     if (isIngestion(querySpec) && ((DataSourceMSQDestination) querySpec.getDestination()).isReplaceTimeChunks()) {
+      final TaskLockType taskLockType =
+          MultiStageQueryContext.validateAndGetTaskLockType(QueryContext.of(querySpec.getQuery().getContext()), true);
       final List<Interval> intervals =
           ((DataSourceMSQDestination) querySpec.getDestination()).getReplaceTimeChunks();
-
+      log.debug(
+          "Task[%s] trying to acquire[%s] locks for intervals[%s] to become ready",
+          getId(),
+          taskLockType,
+          intervals
+      );
       for (final Interval interval : intervals) {
         final TaskLock taskLock =
-            taskActionClient.submit(new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, interval));
+            taskActionClient.submit(new TimeChunkLockTryAcquireAction(taskLockType, interval));
 
         if (taskLock == null) {
           return false;
@@ -259,8 +275,33 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery
     }
   }
 
+  @Override
+  public Optional<Resource> getDestinationResource()
+  {
+    return querySpec.getDestination().getDestinationResource();
+  }
+
   public static boolean isIngestion(final MSQSpec querySpec)
   {
     return querySpec.getDestination() instanceof DataSourceMSQDestination;
+  }
+
+  /**
+   * Returns true if the task reads from the same table as the destionation. In this case, we would prefer to fail
+   * instead of reading any unused segments to ensure that old data is not read.
+   */
+  public static boolean isReplaceInputDataSourceTask(MSQControllerTask task)
+  {
+    return task.getQuerySpec()
+               .getQuery()
+               .getDataSource()
+               .getTableNames()
+               .stream()
+               .anyMatch(datasouce -> task.getDataSource().equals(datasouce));
+  }
+
+  public static boolean writeResultsToDurableStorage(final MSQSpec querySpec)
+  {
+    return querySpec.getDestination() instanceof DurableStorageMSQDestination;
   }
 }

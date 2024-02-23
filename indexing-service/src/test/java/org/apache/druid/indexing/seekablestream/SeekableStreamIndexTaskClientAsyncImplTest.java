@@ -96,7 +96,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   {
     final Map<Integer, Map<Integer, Long>> checkpoints = ImmutableMap.of(0, ImmutableMap.of(2, 3L));
 
-    serviceClient.expect(
+    serviceClient.expectAndRespond(
         new RequestBuilder(HttpMethod.GET, "/checkpoints").timeout(httpTimeout),
         HttpResponseStatus.OK,
         Collections.emptyMap(),
@@ -111,7 +111,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   {
     final ImmutableMap<Integer, Long> offsets = ImmutableMap.of(2, 3L);
 
-    serviceClient.expect(
+    serviceClient.expectAndRespond(
         new RequestBuilder(HttpMethod.GET, "/offsets/current").timeout(httpTimeout),
         HttpResponseStatus.OK,
         Collections.emptyMap(),
@@ -126,7 +126,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   {
     final ImmutableMap<Integer, Long> offsets = ImmutableMap.of(2, 3L);
 
-    serviceClient.expect(
+    serviceClient.expectAndRespond(
         new RequestBuilder(HttpMethod.GET, "/offsets/end").timeout(httpTimeout),
         HttpResponseStatus.OK,
         Collections.emptyMap(),
@@ -139,7 +139,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   @Test
   public void test_getEndOffsetsAsync_notAvailable() throws Exception
   {
-    serviceClient.expect(
+    serviceClient.expectAndThrow(
         new RequestBuilder(HttpMethod.GET, "/offsets/end").timeout(httpTimeout),
         new ServiceNotAvailableException(TASK_ID)
     );
@@ -150,7 +150,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   @Test
   public void test_stopAsync_publish_ok() throws Exception
   {
-    serviceClient.expect(
+    serviceClient.expectAndRespond(
         new RequestBuilder(HttpMethod.POST, "/stop?publish=true").timeout(httpTimeout),
         HttpResponseStatus.OK,
         Collections.emptyMap(),
@@ -163,7 +163,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   @Test
   public void test_stopAsync_noPublish_ok() throws Exception
   {
-    serviceClient.expect(
+    serviceClient.expectAndRespond(
         new RequestBuilder(HttpMethod.POST, "/stop").timeout(httpTimeout),
         HttpResponseStatus.OK,
         Collections.emptyMap(),
@@ -176,7 +176,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   @Test
   public void test_stopAsync_noPublish_httpError() throws Exception
   {
-    serviceClient.expect(
+    serviceClient.expectAndThrow(
         new RequestBuilder(HttpMethod.POST, "/stop").timeout(httpTimeout),
         new HttpResponseException(
             new StringFullResponseHolder(
@@ -192,7 +192,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   @Test
   public void test_stopAsync_noPublish_notAvailable() throws Exception
   {
-    serviceClient.expect(
+    serviceClient.expectAndThrow(
         new RequestBuilder(HttpMethod.POST, "/stop").timeout(httpTimeout),
         new ServiceNotAvailableException(TASK_ID)
     );
@@ -203,7 +203,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   @Test
   public void test_stopAsync_noPublish_closed() throws Exception
   {
-    serviceClient.expect(
+    serviceClient.expectAndThrow(
         new RequestBuilder(HttpMethod.POST, "/stop").timeout(httpTimeout),
         new ServiceClosedException(TASK_ID)
     );
@@ -214,7 +214,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   @Test
   public void test_stopAsync_noPublish_ioException()
   {
-    serviceClient.expect(
+    serviceClient.expectAndThrow(
         new RequestBuilder(HttpMethod.POST, "/stop").timeout(httpTimeout),
         new IOException()
     );
@@ -230,7 +230,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   @Test
   public void test_resumeAsync_ok() throws Exception
   {
-    serviceClient.expect(
+    serviceClient.expectAndRespond(
         new RequestBuilder(HttpMethod.POST, "/resume").timeout(httpTimeout),
         HttpResponseStatus.OK,
         Collections.emptyMap(),
@@ -243,7 +243,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   @Test
   public void test_resumeAsync_ioException() throws Exception
   {
-    serviceClient.expect(
+    serviceClient.expectAndThrow(
         new RequestBuilder(HttpMethod.POST, "/resume").timeout(httpTimeout),
         new IOException()
     );
@@ -256,7 +256,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   {
     final Map<Integer, Long> offsets = ImmutableMap.of(1, 3L);
 
-    serviceClient.expect(
+    serviceClient.expectAndRespond(
         new RequestBuilder(HttpMethod.POST, "/offsets/end?finish=false")
             .content(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(offsets))
             .timeout(httpTimeout),
@@ -271,7 +271,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   @Test
   public void test_setEndOffsetsAsync_ioException() throws Exception
   {
-    serviceClient.expect(
+    serviceClient.expectAndThrow(
         new RequestBuilder(HttpMethod.POST, "/resume").timeout(httpTimeout),
         new IOException()
     );
@@ -282,7 +282,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   @Test
   public void test_getStatusAsync() throws Exception
   {
-    serviceClient.expect(
+    serviceClient.expectAndRespond(
         new RequestBuilder(HttpMethod.GET, "/status").timeout(httpTimeout),
         HttpResponseStatus.OK,
         Collections.emptyMap(),
@@ -295,7 +295,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   @Test
   public void test_getStatusAsync_notAvailable() throws Exception
   {
-    serviceClient.expect(
+    serviceClient.expectAndThrow(
         new RequestBuilder(HttpMethod.GET, "/status").timeout(httpTimeout),
         new ServiceNotAvailableException(TASK_ID)
     );
@@ -308,7 +308,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   {
     final DateTime startTime = DateTimes.of("2000");
 
-    serviceClient.expect(
+    serviceClient.expectAndRespond(
         new RequestBuilder(HttpMethod.GET, "/time/start").timeout(httpTimeout),
         HttpResponseStatus.OK,
         Collections.emptyMap(),
@@ -321,7 +321,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   @Test
   public void test_getStartTimeAsync_noContent() throws Exception
   {
-    serviceClient.expect(
+    serviceClient.expectAndRespond(
         new RequestBuilder(HttpMethod.GET, "/time/start").timeout(httpTimeout),
         HttpResponseStatus.OK,
         Collections.emptyMap(),
@@ -334,7 +334,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   @Test
   public void test_getStartTimeAsync_notAvailable() throws Exception
   {
-    serviceClient.expect(
+    serviceClient.expectAndThrow(
         new RequestBuilder(HttpMethod.GET, "/time/start").timeout(httpTimeout),
         new ServiceNotAvailableException(TASK_ID)
     );
@@ -347,7 +347,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   {
     final Map<Integer, Long> offsets = ImmutableMap.of(1, 3L);
 
-    serviceClient.expect(
+    serviceClient.expectAndRespond(
         new RequestBuilder(HttpMethod.POST, "/pause").timeout(httpTimeout),
         HttpResponseStatus.OK,
         Collections.emptyMap(),
@@ -362,7 +362,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   {
     final Map<Integer, Long> offsets = ImmutableMap.of(1, 3L);
 
-    serviceClient.expect(
+    serviceClient.expectAndRespond(
         new RequestBuilder(HttpMethod.POST, "/pause").timeout(httpTimeout),
         HttpResponseStatus.CONTINUE,
         Collections.emptyMap(),
@@ -386,17 +386,17 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   {
     final Map<Integer, Long> offsets = ImmutableMap.of(1, 3L);
 
-    serviceClient.expect(
+    serviceClient.expectAndRespond(
         new RequestBuilder(HttpMethod.POST, "/pause").timeout(httpTimeout),
         HttpResponseStatus.ACCEPTED,
         Collections.emptyMap(),
         ByteArrays.EMPTY_ARRAY
-    ).expect(
+    ).expectAndRespond(
         new RequestBuilder(HttpMethod.GET, "/status").timeout(httpTimeout),
         HttpResponseStatus.OK,
         Collections.emptyMap(),
         jsonMapper.writeValueAsBytes(SeekableStreamIndexTaskRunner.Status.PAUSED)
-    ).expect(
+    ).expectAndRespond(
         new RequestBuilder(HttpMethod.GET, "/offsets/current").timeout(httpTimeout),
         HttpResponseStatus.OK,
         Collections.emptyMap(),
@@ -409,12 +409,12 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   @Test
   public void test_pauseAsync_oneIterationWithError()
   {
-    serviceClient.expect(
+    serviceClient.expectAndRespond(
         new RequestBuilder(HttpMethod.POST, "/pause").timeout(httpTimeout),
         HttpResponseStatus.ACCEPTED,
         Collections.emptyMap(),
         ByteArrays.EMPTY_ARRAY
-    ).expect(
+    ).expectAndThrow(
         new RequestBuilder(HttpMethod.GET, "/status").timeout(httpTimeout),
         new IOException()
     );
@@ -432,22 +432,22 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   {
     final Map<Integer, Long> offsets = ImmutableMap.of(1, 3L);
 
-    serviceClient.expect(
+    serviceClient.expectAndRespond(
         new RequestBuilder(HttpMethod.POST, "/pause").timeout(httpTimeout),
         HttpResponseStatus.ACCEPTED,
         Collections.emptyMap(),
         ByteArrays.EMPTY_ARRAY
-    ).expect(
+    ).expectAndRespond(
         new RequestBuilder(HttpMethod.GET, "/status").timeout(httpTimeout),
         HttpResponseStatus.OK,
         Collections.emptyMap(),
         jsonMapper.writeValueAsBytes(SeekableStreamIndexTaskRunner.Status.READING)
-    ).expect(
+    ).expectAndRespond(
         new RequestBuilder(HttpMethod.GET, "/status").timeout(httpTimeout),
         HttpResponseStatus.OK,
         Collections.emptyMap(),
         jsonMapper.writeValueAsBytes(SeekableStreamIndexTaskRunner.Status.PAUSED)
-    ).expect(
+    ).expectAndRespond(
         new RequestBuilder(HttpMethod.GET, "/offsets/current").timeout(httpTimeout),
         HttpResponseStatus.OK,
         Collections.emptyMap(),
@@ -460,22 +460,22 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   @Test
   public void test_pauseAsync_threeIterations() throws Exception
   {
-    serviceClient.expect(
+    serviceClient.expectAndRespond(
         new RequestBuilder(HttpMethod.POST, "/pause").timeout(httpTimeout),
         HttpResponseStatus.ACCEPTED,
         Collections.emptyMap(),
         ByteArrays.EMPTY_ARRAY
-    ).expect(
+    ).expectAndRespond(
         new RequestBuilder(HttpMethod.GET, "/status").timeout(httpTimeout),
         HttpResponseStatus.OK,
         Collections.emptyMap(),
         jsonMapper.writeValueAsBytes(SeekableStreamIndexTaskRunner.Status.READING)
-    ).expect(
+    ).expectAndRespond(
         new RequestBuilder(HttpMethod.GET, "/status").timeout(httpTimeout),
         HttpResponseStatus.OK,
         Collections.emptyMap(),
         jsonMapper.writeValueAsBytes(SeekableStreamIndexTaskRunner.Status.READING)
-    ).expect(
+    ).expectAndRespond(
         new RequestBuilder(HttpMethod.GET, "/status").timeout(httpTimeout),
         HttpResponseStatus.OK,
         Collections.emptyMap(),
@@ -499,7 +499,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   {
     final Map<String, Object> retVal = ImmutableMap.of("foo", "xyz");
 
-    serviceClient.expect(
+    serviceClient.expectAndRespond(
         new RequestBuilder(HttpMethod.GET, "/rowStats").timeout(httpTimeout),
         HttpResponseStatus.OK,
         Collections.emptyMap(),
@@ -512,7 +512,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   @Test
   public void test_getMovingAveragesAsync_empty() throws Exception
   {
-    serviceClient.expect(
+    serviceClient.expectAndRespond(
         new RequestBuilder(HttpMethod.GET, "/rowStats").timeout(httpTimeout),
         HttpResponseStatus.OK,
         Collections.emptyMap(),
@@ -525,7 +525,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   @Test
   public void test_getMovingAveragesAsync_null() throws Exception
   {
-    serviceClient.expect(
+    serviceClient.expectAndRespond(
         new RequestBuilder(HttpMethod.GET, "/rowStats").timeout(httpTimeout),
         HttpResponseStatus.OK,
         Collections.emptyMap(),
@@ -542,7 +542,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
         new ParseExceptionReport("xyz", "foo", Collections.emptyList(), 123L)
     );
 
-    serviceClient.expect(
+    serviceClient.expectAndRespond(
         new RequestBuilder(HttpMethod.GET, "/unparseableEvents").timeout(httpTimeout),
         HttpResponseStatus.OK,
         Collections.emptyMap(),
@@ -555,7 +555,7 @@ public class SeekableStreamIndexTaskClientAsyncImplTest
   @Test
   public void test_getParseErrorsAsync_empty() throws Exception
   {
-    serviceClient.expect(
+    serviceClient.expectAndRespond(
         new RequestBuilder(HttpMethod.GET, "/unparseableEvents").timeout(httpTimeout),
         HttpResponseStatus.OK,
         Collections.emptyMap(),

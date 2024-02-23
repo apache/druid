@@ -1,0 +1,1 @@
+SELECT col7 , col2 , LAST_VALUE(col2) OVER(PARTITION BY col7 ORDER BY col2) LAST_VALUE_col2 FROM "allTypsUniq.parquet" WHERE col2 > 0.0 AND col2 < 255.99

@@ -175,7 +175,7 @@ export class DoctorDialog extends React.PureComponent<DoctorDialogProps, DoctorD
     }
   }
 
-  render(): JSX.Element {
+  render() {
     const { onClose } = this.props;
 
     return (

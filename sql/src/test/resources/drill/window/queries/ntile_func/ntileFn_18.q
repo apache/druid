@@ -1,0 +1,1 @@
+SELECT col7 , NTILE(3) OVER (PARTITION by col7 ORDER by col7) tile FROM "allTypsUniq.parquet"

@@ -6,7 +6,7 @@ metadata:
     tls.enabled: "false"
   labels:
     druid.k8s.peons: "true"
-  name: "id"
+  name: "id-3e70afe5cd823dfc7dd308eea616426b"
 spec:
   activeDeadlineSeconds: 14400
   backoffLimit: 0
@@ -86,7 +86,7 @@ spec:
               name: "graveyard"
             - mountPath: "/kubexit"
               name: "kubexit"
-      hostname: "id"
+      hostname: "id-3e70afe5cd823dfc7dd308eea616426b"
       initContainers:
         - command:
             - "cp"

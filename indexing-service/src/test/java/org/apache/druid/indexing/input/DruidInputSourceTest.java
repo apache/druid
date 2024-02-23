@@ -99,7 +99,6 @@ public class DruidInputSourceTest
             indexIO,
             coordinatorClient,
             segmentCacheManagerFactory,
-            retryPolicyFactory,
             taskConfig
         ),
         inputSource
@@ -133,7 +132,6 @@ public class DruidInputSourceTest
             indexIO,
             coordinatorClient,
             segmentCacheManagerFactory,
-            retryPolicyFactory,
             taskConfig
         ),
         inputSource
@@ -173,7 +171,6 @@ public class DruidInputSourceTest
             indexIO,
             coordinatorClient,
             segmentCacheManagerFactory,
-            retryPolicyFactory,
             taskConfig
         ),
         inputSource
@@ -256,7 +253,6 @@ public class DruidInputSourceTest
         indexIO,
         coordinatorClient,
         segmentCacheManagerFactory,
-        retryPolicyFactory,
         taskConfig
     );
     InputRowSchema inputSourceReader = druidInputSource.getInputRowSchemaToUse(inputRowSchema);
@@ -291,7 +287,6 @@ public class DruidInputSourceTest
         indexIO,
         coordinatorClient,
         segmentCacheManagerFactory,
-        retryPolicyFactory,
         taskConfig
     );
     InputRowSchema inputSourceReader = druidInputSource.getInputRowSchemaToUse(inputRowSchema);
@@ -315,7 +310,6 @@ public class DruidInputSourceTest
         indexIO,
         coordinatorClient,
         segmentCacheManagerFactory,
-        retryPolicyFactory,
         taskConfig
     );
     Assert.assertEquals(ImmutableSet.of(DruidInputSource.TYPE_KEY), druidInputSource.getTypes());

@@ -30,17 +30,17 @@ import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.error.InvalidSqlInput;
-import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -49,6 +49,7 @@ import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.run.SqlEngines;
+import org.apache.druid.sql.destination.IngestDestination;
 
 import java.util.HashSet;
 import java.util.List;
@@ -60,8 +61,9 @@ public class MSQTaskSqlEngine implements SqlEngine
   public static final Set<String> SYSTEM_CONTEXT_PARAMETERS =
       ImmutableSet.<String>builder()
                   .addAll(NativeSqlEngine.SYSTEM_CONTEXT_PARAMETERS)
-                  .add(MultiStageQueryContext.CTX_DESTINATION)
                   .add(QueryKitUtils.CTX_TIME_COLUMN_NAME)
+                  .add(DruidSqlIngest.SQL_EXPORT_FILE_FORMAT)
+                  .add(MultiStageQueryContext.CTX_IS_REINDEX)
                   .build();
 
   public static final List<String> TASK_STRUCT_FIELD_NAMES = ImmutableList.of("TASK");
@@ -115,17 +117,19 @@ public class MSQTaskSqlEngine implements SqlEngine
       case TIME_BOUNDARY_QUERY:
       case GROUPING_SETS:
       case WINDOW_FUNCTIONS:
-      case UNNEST:
+      case ALLOW_TOP_LEVEL_UNION_ALL:
         return false;
+      case UNNEST:
       case CAN_SELECT:
       case CAN_INSERT:
       case CAN_REPLACE:
       case READ_EXTERNAL_DATA:
+      case WRITE_EXTERNAL_DATA:
       case SCAN_ORDER_BY_NON_TIME:
       case SCAN_NEEDS_SIGNATURE:
         return true;
       default:
-        throw new IAE("Unrecognized feature: %s", feature);
+        throw SqlEngines.generateUnrecognizedFeatureException(MSQTaskSqlEngine.class.getSimpleName(), feature);
     }
   }
 
@@ -133,9 +137,9 @@ public class MSQTaskSqlEngine implements SqlEngine
   public QueryMaker buildQueryMakerForSelect(
       final RelRoot relRoot,
       final PlannerContext plannerContext
-  ) throws ValidationException
+  )
   {
-    validateSelect(relRoot.fields, plannerContext);
+    validateSelect(plannerContext);
 
     return new MSQTaskQueryMaker(
         null,
@@ -153,15 +157,15 @@ public class MSQTaskSqlEngine implements SqlEngine
 
   @Override
   public QueryMaker buildQueryMakerForInsert(
-      final String targetDataSource,
+      final IngestDestination destination,
       final RelRoot relRoot,
       final PlannerContext plannerContext
-  ) throws ValidationException
+  )
   {
     validateInsert(relRoot.rel, relRoot.fields, plannerContext);
 
     return new MSQTaskQueryMaker(
-        targetDataSource,
+        destination,
         overlordClient,
         plannerContext,
         jsonMapper,
@@ -169,15 +173,23 @@ public class MSQTaskSqlEngine implements SqlEngine
     );
   }
 
-  private static void validateSelect(
-      final List<Pair<Integer, String>> fieldMappings,
-      final PlannerContext plannerContext
-  ) throws ValidationException
+  /**
+   * Checks if the SELECT contains {@link DruidSqlInsert#SQL_INSERT_SEGMENT_GRANULARITY} in the context. This is a
+   * defensive cheeck because {@link org.apache.druid.sql.calcite.planner.DruidPlanner} should have called the
+   * {@link #validateContext}
+   */
+  private static void validateSelect(final PlannerContext plannerContext)
   {
     if (plannerContext.queryContext().containsKey(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY)) {
-      throw new ValidationException(
-          StringUtils.format("Cannot use \"%s\" without INSERT", DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY)
-      );
+      throw DruidException
+          .forPersona(DruidException.Persona.DEVELOPER)
+          .ofCategory(DruidException.Category.DEFENSIVE)
+          .build(
+              "The SELECT query's context contains invalid parameter [%s] which is supposed to be populated "
+              + "by Druid for INSERT queries. If the user is seeing this exception, that means there's a bug in Druid "
+              + "that is populating the query context with the segment's granularity.",
+              DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY
+          );
     }
   }
 
@@ -185,7 +197,7 @@ public class MSQTaskSqlEngine implements SqlEngine
       final RelNode rootRel,
       final List<Pair<Integer, String>> fieldMappings,
       final PlannerContext plannerContext
-  ) throws ValidationException
+  )
   {
     validateNoDuplicateAliases(fieldMappings);
 
@@ -199,12 +211,10 @@ public class MSQTaskSqlEngine implements SqlEngine
         // Validate the __time field has the proper type.
         final SqlTypeName timeType = rootRel.getRowType().getFieldList().get(field.left).getType().getSqlTypeName();
         if (timeType != SqlTypeName.TIMESTAMP) {
-          throw new ValidationException(
-              StringUtils.format(
-                  "Field \"%s\" must be of type TIMESTAMP (was %s)",
-                  ColumnHolder.TIME_COLUMN_NAME,
-                  timeType
-              )
+          throw InvalidSqlInput.exception(
+              "Field [%s] was the wrong type [%s], expected TIMESTAMP",
+              ColumnHolder.TIME_COLUMN_NAME,
+              timeType
           );
         }
       }
@@ -220,13 +230,18 @@ public class MSQTaskSqlEngine implements SqlEngine
       );
     }
     catch (Exception e) {
-      throw new ValidationException(
-          StringUtils.format(
-              "Invalid segmentGranularity: %s",
-              plannerContext.queryContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY)
-          ),
-          e
-      );
+      // This is a defensive check as the DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY in the query context is
+      // populated by Druid. If the user entered an incorrect granularity, that should have been flagged before reaching
+      // here
+      throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
+                          .ofCategory(DruidException.Category.DEFENSIVE)
+                          .build(
+                              e,
+                              "[%s] is not a valid value for [%s]",
+                              plannerContext.queryContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY),
+                              DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY
+                          );
+
     }
 
     final boolean hasSegmentGranularity = !Granularities.ALL.equals(segmentGranularity);
@@ -237,11 +252,10 @@ public class MSQTaskSqlEngine implements SqlEngine
     validateLimitAndOffset(rootRel, !hasSegmentGranularity);
 
     if (hasSegmentGranularity && timeFieldIndex < 0) {
-      throw new ValidationException(
-          StringUtils.format(
-              "INSERT queries with segment granularity other than \"all\" must have a \"%s\" field.",
-              ColumnHolder.TIME_COLUMN_NAME
-          )
+      throw InvalidInput.exception(
+          "The granularity [%s] specified in the PARTITIONED BY clause of the INSERT query is different from ALL. "
+          + "Therefore, the query must specify a time column (named __time).",
+          segmentGranularity
       );
     }
   }

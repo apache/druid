@@ -86,7 +86,7 @@
             <includes>
                 <include>*</include>
             </includes>
-            <fileMode>744</fileMode>
+            <fileMode>755</fileMode>
             <outputDirectory>bin</outputDirectory>
         </fileSet>
     </fileSets>

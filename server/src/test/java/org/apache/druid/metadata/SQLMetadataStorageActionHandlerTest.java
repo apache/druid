@@ -230,7 +230,7 @@ public class SQLMetadataStorageActionHandlerTest
   }
 
   @Test(timeout = 60_000L)
-  public void testRepeatInsert()
+  public void testDuplicateInsertThrowsEntryExistsException()
   {
     final String entryId = "abcd";
     Map<String, Object> entry = ImmutableMap.of("a", 1);
@@ -447,17 +447,17 @@ public class SQLMetadataStorageActionHandlerTest
   @Test
   public void testMigration()
   {
-    int active = 1234;
-    for (int i = 0; i < active; i++) {
-      insertTaskInfo(createRandomTaskInfo(true), false);
+    int numActiveTasks = 123;
+    for (int i = 0; i < numActiveTasks; i++) {
+      insertTaskInfo(createRandomTaskInfo(TaskState.RUNNING), false);
     }
 
-    int completed = 2345;
-    for (int i = 0; i < completed; i++) {
-      insertTaskInfo(createRandomTaskInfo(false), false);
+    int numCompletedTasks = 101;
+    for (int i = 0; i < numCompletedTasks; i++) {
+      insertTaskInfo(createRandomTaskInfo(TaskState.SUCCESS), false);
     }
 
-    Assert.assertEquals(active + completed, getUnmigratedTaskCount().intValue());
+    Assert.assertEquals(numActiveTasks + numCompletedTasks, getUnmigratedTaskCount().intValue());
 
     handler.populateTaskTypeAndGroupId();
 
@@ -468,16 +468,16 @@ public class SQLMetadataStorageActionHandlerTest
   public void testGetTaskStatusPlusListInternal()
   {
     // SETUP
-    TaskInfo<Map<String, Object>, Map<String, Object>> activeUnaltered = createRandomTaskInfo(true);
+    TaskInfo<Map<String, Object>, Map<String, Object>> activeUnaltered = createRandomTaskInfo(TaskState.RUNNING);
     insertTaskInfo(activeUnaltered, false);
 
-    TaskInfo<Map<String, Object>, Map<String, Object>> completedUnaltered = createRandomTaskInfo(false);
+    TaskInfo<Map<String, Object>, Map<String, Object>> completedUnaltered = createRandomTaskInfo(TaskState.SUCCESS);
     insertTaskInfo(completedUnaltered, false);
 
-    TaskInfo<Map<String, Object>, Map<String, Object>> activeAltered = createRandomTaskInfo(true);
+    TaskInfo<Map<String, Object>, Map<String, Object>> activeAltered = createRandomTaskInfo(TaskState.RUNNING);
     insertTaskInfo(activeAltered, true);
 
-    TaskInfo<Map<String, Object>, Map<String, Object>> completedAltered = createRandomTaskInfo(false);
+    TaskInfo<Map<String, Object>, Map<String, Object>> completedAltered = createRandomTaskInfo(TaskState.SUCCESS);
     insertTaskInfo(completedAltered, true);
 
     Map<TaskLookup.TaskLookupType, TaskLookup> taskLookups = new HashMap<>();
@@ -539,7 +539,7 @@ public class SQLMetadataStorageActionHandlerTest
     );
   }
 
-  private TaskInfo<Map<String, Object>, Map<String, Object>> createRandomTaskInfo(boolean active)
+  private TaskInfo<Map<String, Object>, Map<String, Object>> createRandomTaskInfo(TaskState taskState)
   {
     String id = UUID.randomUUID().toString();
     DateTime createdTime = DateTime.now(DateTimeZone.UTC);
@@ -554,7 +554,7 @@ public class SQLMetadataStorageActionHandlerTest
 
     Map<String, Object> status = new HashMap<>();
     status.put("id", id);
-    status.put("status", active ? TaskState.RUNNING : TaskState.SUCCESS);
+    status.put("status", taskState);
     status.put("duration", RANDOM.nextLong());
     status.put("location", TaskLocation.create(UUID.randomUUID().toString(), 8080, 995));
     status.put("errorMsg", UUID.randomUUID().toString());
@@ -568,8 +568,7 @@ public class SQLMetadataStorageActionHandlerTest
     );
   }
 
-  private void insertTaskInfo(TaskInfo<Map<String, Object>, Map<String, Object>> taskInfo,
-                              boolean altered)
+  private void insertTaskInfo(TaskInfo<Map<String, Object>, Map<String, Object>> taskInfo, boolean altered)
   {
     try {
       handler.insert(

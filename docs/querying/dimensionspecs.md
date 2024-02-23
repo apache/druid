@@ -23,10 +23,12 @@ sidebar_label: "Dimensions"
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
-> This document describes the native
-> language. For information about functions available in SQL, refer to the
-> [SQL documentation](sql-scalar.md).
+:::info
+ Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+ This document describes the native
+ language. For information about functions available in SQL, refer to the
+ [SQL documentation](sql-scalar.md).
+:::
 
 The following JSON fields can be used in a query to operate on dimension values.
 
@@ -344,7 +346,9 @@ Example for the `__time` dimension:
 }
 ```
 
-> JavaScript-based functionality is disabled by default. Please refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
+:::info
+ JavaScript-based functionality is disabled by default. Please refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
+:::
 
 ### Registered lookup extraction function
 
@@ -372,7 +376,7 @@ be treated as missing.
 It is illegal to set `retainMissingValue = true` and also specify a `replaceMissingValueWith`.
 
 A property of `injective` can override the lookup's own sense of whether or not it is
-[injective](lookups.md#query-execution). If left unspecified, Druid will use the registered cluster-wide lookup
+[injective](lookups.md#injective-lookups). If left unspecified, Druid will use the registered cluster-wide lookup
 configuration.
 
 A property `optimize` can be supplied to allow optimization of lookup based extraction filter (by default `optimize = true`).

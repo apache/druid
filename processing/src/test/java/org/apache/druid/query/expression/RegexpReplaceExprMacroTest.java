@@ -223,7 +223,7 @@ public class RegexpReplaceExprMacroTest extends MacroTestBase
         "regexp_replace(regexp_replace(a, pattern1, replacement1), pattern2, replacement2)",
         InputBindings.forInputSuppliers(
             ImmutableMap
-                .<String, InputBindings.InputSupplier>builder()
+                .<String, InputBindings.InputSupplier<?>>builder()
                 .put("a", InputBindings.inputSupplier(ExpressionType.STRING, () -> "http://example.com/path/to?query"))
                 .put("pattern1", InputBindings.inputSupplier(ExpressionType.STRING, () -> "\\?(.*)$"))
                 .put("pattern2", InputBindings.inputSupplier(ExpressionType.STRING, () -> "/(\\w+)(?=/|$)"))

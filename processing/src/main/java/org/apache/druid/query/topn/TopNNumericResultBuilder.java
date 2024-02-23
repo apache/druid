@@ -243,6 +243,6 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
 
     // Pull out top aggregated values
     final List<Map<String, Object>> values = Lists.transform(holderValues, DimValHolder::getMetricValues);
-    return new Result<>(timestamp, new TopNResultValue(values));
+    return new Result<>(timestamp, TopNResultValue.create(values));
   }
 }

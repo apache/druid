@@ -66,6 +66,7 @@ import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -337,11 +338,14 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
         .stream()
         .filter(entry -> !runningSpecs.containsKey(entry.getKey()))
         .map(entry -> entry.getValue().getSpec())
+        .sorted(Comparator.comparing(SubTaskSpec::getId))
         .collect(Collectors.toList());
 
     response = task.getCompleteSubTaskSpecs(newRequest());
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(completeSubTaskSpecs, response.getEntity());
+    List<SubTaskSpec<SinglePhaseSubTask>> actual = (List<SubTaskSpec<SinglePhaseSubTask>>) response.getEntity();
+    actual.sort(Comparator.comparing(SubTaskSpec::getId));
+    Assert.assertEquals(completeSubTaskSpecs, actual);
 
     // subTaskSpec
     final String subTaskId = runningSpecs.keySet().iterator().next();
@@ -439,6 +443,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
             null,
             null,
             NUM_SUB_TASKS,
+            null,
             null,
             null,
             null,

@@ -1,0 +1,16 @@
+false	1.0	null
+false	29.13	1.0
+false	63.99	29.13
+false	123.129	63.99
+false	127.0	123.129
+false	128.978	127.0
+false	255.9993	128.978
+true	13.79	null
+true	13.9	13.79
+true	32.9	13.9
+true	69.89	32.9
+true	99.9	69.89
+true	100.09	99.9
+true	127.9	100.09
+true	128.9	127.9
+true	255.99	128.9

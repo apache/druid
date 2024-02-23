@@ -45,6 +45,7 @@ import org.apache.druid.msq.statistics.KeyCollectorSnapshotDeserializerModule;
 import org.apache.druid.msq.statistics.KeyCollectors;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.storage.NilStorageConnector;
 import org.apache.druid.storage.StorageConnector;
 
 import javax.annotation.Nullable;
@@ -155,7 +156,11 @@ public class MSQTasks
   static StorageConnector makeStorageConnector(final Injector injector)
   {
     try {
-      return injector.getInstance(Key.get(StorageConnector.class, MultiStageQuery.class));
+      StorageConnector storageConnector = injector.getInstance(Key.get(StorageConnector.class, MultiStageQuery.class));
+      if (storageConnector instanceof NilStorageConnector) {
+        throw new Exception("Storage connector not configured.");
+      }
+      return storageConnector;
     }
     catch (Exception e) {
       throw new MSQException(new DurableStorageConfigurationFault(e.toString()));

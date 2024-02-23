@@ -217,7 +217,7 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
       bucketBuffer.clear();
       final ByteBuffer valueBuffer = version == FrontCodedIndexed.V1
                                      ? getFromBucketV1(bucketBuffer, relativeIndex, bucketSize)
-                                     : FrontCodedIndexed.getFromBucketV0(bucketBuffer, relativeIndex);
+                                     : FrontCodedIndexed.FrontCodedV0.getValueFromBucket(bucketBuffer, relativeIndex);
       final byte[] valueBytes = new byte[valueBuffer.limit() - valueBuffer.position()];
       valueBuffer.get(valueBytes);
       return valueBytes;
@@ -234,6 +234,7 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
   {
     getOffsetBuffer.clear();
     headerOut.readFully(index * (long) Integer.BYTES, getOffsetBuffer);
+    getOffsetBuffer.clear();
     return getOffsetBuffer.getInt(0);
   }
 
@@ -413,15 +414,15 @@ public class FrontCodedIndexedWriter implements DictionaryWriter<byte[]>
     return StringUtils.compareUtf8UsingJavaStringOrdering(b1, b2);
   }
 
-
   /**
-   * same as {@link FrontCodedIndexed#getFromBucketV1(ByteBuffer, int)} but without re-using prefixLength and buffer position
-   * arrays so has more overhead/garbage creation than the instance method.
+   * same as {@link FrontCodedIndexed.FrontCodedV1#getFromBucket(ByteBuffer, int)} but
+   * without re-using prefixLength and buffer position arrays so has more overhead/garbage creation than the instance
+   * method.
    *
    * Note: adding the unwindPrefixLength and unwindBufferPosition arrays as arguments and having
-   * {@link FrontCodedIndexed#getFromBucketV1(ByteBuffer, int)} call this static method added 5-10ns of overhead
-   * compared to having its own copy of the code, presumably due to the overhead of an additional method call and extra
-   * arguments.
+   * {@link FrontCodedIndexed.FrontCodedV1#getFromBucket(ByteBuffer, int)} call this static method added 5-10ns of
+   * overhead compared to having its own copy of the code, presumably due to the overhead of an additional method call
+   * and extra arguments.
    *
    * As such, since the writer is the only user of this method, it has been copied here...
    */

@@ -29,27 +29,39 @@ public class CoordinatorStat
   private final Level level;
 
   /**
-   * Creates a new non-emitting, DEBUG level stat.
+   * Creates a new DEBUG level stat which is not emitted as a metric.
+   *
+   * @param shortName Unique name used while logging the stat
    */
-  public CoordinatorStat(String shortStatName)
+  public static CoordinatorStat toDebugOnly(String shortName)
   {
-    this(shortStatName, null, Level.DEBUG);
-  }
-
-  public CoordinatorStat(String shortName, Level level)
-  {
-    this(shortName, null, level);
+    return new CoordinatorStat(shortName, null, Level.DEBUG);
   }
 
   /**
-   * Creates a new emitting, DEBUG level stat.
+   * Creates a new DEBUG level stat which is also emitted as a metric.
+   *
+   * @param shortName  Unique name used while logging the stat
+   * @param metricName Name to be used when emitting this stat as a metric
    */
-  public CoordinatorStat(String shortStatName, String metricName)
+  public static CoordinatorStat toDebugAndEmit(String shortName, String metricName)
   {
-    this(shortStatName, metricName, Level.DEBUG);
+    return new CoordinatorStat(shortName, metricName, Level.DEBUG);
   }
 
-  public CoordinatorStat(String shortStatName, String metricName, Level level)
+  /**
+   * Creates a new stat of the specified level, which is also emitted as a metric.
+   *
+   * @param shortName  Unique name used while logging the stat
+   * @param metricName Name to be used when emitting this stat as a metric
+   * @param level      Logging level for this stat
+   */
+  public static CoordinatorStat toLogAndEmit(String shortName, String metricName, Level level)
+  {
+    return new CoordinatorStat(shortName, metricName, level);
+  }
+
+  private CoordinatorStat(String shortStatName, String metricName, Level level)
   {
     this.metricName = metricName;
     this.shortName = shortStatName;
@@ -57,18 +69,25 @@ public class CoordinatorStat
   }
 
   /**
-   * Name of the metric emitted for this stat, if any.
+   * @return Metric name to be used when emitting this stat. {@code null} if
+   * this stat should not be emitted.
    */
   public String getMetricName()
   {
     return metricName;
   }
 
+  /**
+   * Unique name used while logging this stat.
+   */
   public String getShortName()
   {
     return shortName;
   }
 
+  /**
+   * Level of this stat, typically used for logging.
+   */
   public Level getLevel()
   {
     return level;

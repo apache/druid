@@ -25,6 +25,7 @@ import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -75,11 +76,6 @@ public class IndexingWorkerInfo
     return availabilityGroups;
   }
 
-  public int getAvailableCapacity()
-  {
-    return getWorker().getCapacity() - getCurrCapacityUsed();
-  }
-
   @JsonProperty("runningTasks")
   public Collection<String> getRunningTasks()
   {
@@ -96,5 +92,49 @@ public class IndexingWorkerInfo
   public DateTime getBlacklistedUntil()
   {
     return blacklistedUntil;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    IndexingWorkerInfo that = (IndexingWorkerInfo) o;
+    return currCapacityUsed == that.currCapacityUsed
+           && Objects.equals(worker, that.worker)
+           && Objects.equals(availabilityGroups, that.availabilityGroups)
+           && Objects.equals(runningTasks, that.runningTasks)
+           && Objects.equals(lastCompletedTaskTime, that.lastCompletedTaskTime)
+           && Objects.equals(blacklistedUntil, that.blacklistedUntil);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        worker,
+        currCapacityUsed,
+        availabilityGroups,
+        runningTasks,
+        lastCompletedTaskTime,
+        blacklistedUntil
+    );
+  }
+
+  @Override
+  public String toString()
+  {
+    return "IndexingWorkerInfo{" +
+           "worker=" + worker +
+           ", currCapacityUsed=" + currCapacityUsed +
+           ", availabilityGroups=" + availabilityGroups +
+           ", runningTasks=" + runningTasks +
+           ", lastCompletedTaskTime=" + lastCompletedTaskTime +
+           ", blacklistedUntil=" + blacklistedUntil +
+           '}';
   }
 }

@@ -136,7 +136,6 @@ public class CapabilitiesBasedFormat implements ColumnFormat
     if (merged.hasSpatialIndexes() != otherSnapshot.hasSpatialIndexes()) {
       merged.setHasSpatialIndexes(merged.hasSpatialIndexes() || otherSnapshot.hasSpatialIndexes());
     }
-    merged.setFilterable(merged.isFilterable() && otherSnapshot.isFilterable());
 
     return new CapabilitiesBasedFormat(merged);
   }

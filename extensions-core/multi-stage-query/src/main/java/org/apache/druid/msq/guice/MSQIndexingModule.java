@@ -36,7 +36,6 @@ import org.apache.druid.msq.counters.SuperSorterProgressTrackerCounter;
 import org.apache.druid.msq.counters.WarningCounters;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
-import org.apache.druid.msq.indexing.SegmentGeneratorFrameProcessorFactory;
 import org.apache.druid.msq.indexing.error.BroadcastTablesTooLargeFault;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
@@ -69,6 +68,7 @@ import org.apache.druid.msq.indexing.error.TooManyWorkersFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.indexing.error.WorkerFailedFault;
 import org.apache.druid.msq.indexing.error.WorkerRpcFailedFault;
+import org.apache.druid.msq.indexing.processor.SegmentGeneratorFrameProcessorFactory;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.input.NilInputSlice;
 import org.apache.druid.msq.input.NilInputSource;
@@ -88,6 +88,8 @@ import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
 import org.apache.druid.msq.querykit.common.SortMergeJoinFrameProcessorFactory;
 import org.apache.druid.msq.querykit.groupby.GroupByPostShuffleFrameProcessorFactory;
 import org.apache.druid.msq.querykit.groupby.GroupByPreShuffleFrameProcessorFactory;
+import org.apache.druid.msq.querykit.results.ExportResultsFrameProcessorFactory;
+import org.apache.druid.msq.querykit.results.QueryResultFrameProcessorFactory;
 import org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessorFactory;
 import org.apache.druid.msq.util.PassthroughAggregatorFactory;
 import org.apache.druid.query.DruidProcessingConfig;
@@ -155,14 +157,9 @@ public class MSQIndexingModule implements DruidModule
         GroupByPostShuffleFrameProcessorFactory.class,
         OffsetLimitFrameProcessorFactory.class,
         NilExtraInfoHolder.class,
-
-        // FrameChannelWorkerFactory and FrameChannelWorkerFactoryExtraInfoHolder classes
-        ScanQueryFrameProcessorFactory.class,
-        GroupByPreShuffleFrameProcessorFactory.class,
-        GroupByPostShuffleFrameProcessorFactory.class,
         SortMergeJoinFrameProcessorFactory.class,
-        OffsetLimitFrameProcessorFactory.class,
-        NilExtraInfoHolder.class,
+        QueryResultFrameProcessorFactory.class,
+        ExportResultsFrameProcessorFactory.class,
 
         // DataSource classes (note: ExternalDataSource is in MSQSqlModule)
         InputNumberDataSource.class,

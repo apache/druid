@@ -554,11 +554,12 @@ ORDER BY
               switch (row.service_type) {
                 case 'middle_manager':
                 case 'indexer': {
-                  if (deepGet(row, 'worker.version') === '') return 'Disabled';
                   const { workerInfo } = row;
                   if (!workerInfo) {
                     return 'Could not get detail info';
                   }
+
+                  if (workerInfo.worker.version === '') return 'Disabled';
 
                   const details: string[] = [];
                   if (workerInfo.lastCompletedTaskTime) {
@@ -759,7 +760,7 @@ ORDER BY
     );
   }
 
-  render(): JSX.Element {
+  render() {
     const { capabilities } = this.props;
     const { groupServicesBy, visibleColumns } = this.state;
 

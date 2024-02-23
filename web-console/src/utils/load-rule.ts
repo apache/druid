@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+import { sum } from 'd3-array';
+
 import { deepMove, deepSet } from './object-change';
 
 export type RuleType =
@@ -55,8 +57,9 @@ export class RuleUtil {
   static ruleToString(rule: Rule): string {
     const params: string[] = [];
 
-    if (RuleUtil.hasPeriod(rule))
-      params.push(`${rule.period}${rule.includeFuture ? '+future' : ''}`);
+    if (RuleUtil.hasPeriod(rule)) {
+      params.push(`${rule.period}${RuleUtil.getIncludeFuture(rule) ? '+future' : ''}`);
+    }
     if (RuleUtil.hasInterval(rule)) params.push(rule.interval || '?');
     if (RuleUtil.canHaveTieredReplicants(rule)) params.push(`${RuleUtil.totalReplicas(rule)}x`);
 
@@ -67,20 +70,21 @@ export class RuleUtil {
     const newRule = deepSet(rule, 'type', type);
 
     if (RuleUtil.hasPeriod(newRule)) {
-      if (!newRule.period) newRule.period = 'P1M';
+      newRule.period ??= 'P1M';
+      newRule.includeFuture ??= true;
     } else {
       delete newRule.period;
       delete newRule.includeFuture;
     }
 
     if (RuleUtil.hasInterval(newRule)) {
-      if (!newRule.interval) newRule.interval = '2010-01-01/2020-01-01';
+      newRule.interval ??= '2010-01-01/2020-01-01';
     } else {
       delete newRule.interval;
     }
 
     if (RuleUtil.canHaveTieredReplicants(newRule)) {
-      if (!newRule.tieredReplicants) newRule.tieredReplicants = { _default_tier: 2 };
+      newRule.tieredReplicants ??= { _default_tier: 2 };
     } else {
       delete newRule.tieredReplicants;
     }
@@ -98,6 +102,10 @@ export class RuleUtil {
 
   static hasIncludeFuture(rule: Rule): boolean {
     return RuleUtil.hasPeriod(rule) && rule.type !== 'dropBeforeByPeriod';
+  }
+
+  static getIncludeFuture(rule: Rule): boolean {
+    return rule.includeFuture ?? true;
   }
 
   static changeIncludeFuture(rule: Rule, includeFuture: boolean): Rule {
@@ -126,21 +134,17 @@ export class RuleUtil {
   }
 
   static totalReplicas(rule: Rule): number {
-    const tieredReplicants = rule.tieredReplicants || {};
-    let total = 0;
-    for (const k in tieredReplicants) {
-      total += tieredReplicants[k];
-    }
-    return total;
+    return sum(Object.values(rule.tieredReplicants || {}));
   }
 
-  static isColdRule(rule: Rule): boolean {
+  static isZeroReplicaRule(rule: Rule): boolean {
     return RuleUtil.canHaveTieredReplicants(rule) && RuleUtil.totalReplicas(rule) === 0;
   }
 
-  static hasColdRule(rules: Rule[] | undefined, defaultRules: Rule[] | undefined): boolean {
+  static hasZeroReplicaRule(rules: Rule[] | undefined, defaultRules: Rule[] | undefined): boolean {
     return (
-      (rules || []).some(RuleUtil.isColdRule) || (defaultRules || []).some(RuleUtil.isColdRule)
+      (rules || []).some(RuleUtil.isZeroReplicaRule) ||
+      (defaultRules || []).some(RuleUtil.isZeroReplicaRule)
     );
   }
 }

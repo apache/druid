@@ -55,7 +55,7 @@ export function CapacityAlert(props: CapacityAlertProps) {
           The cluster does not have enough total task slot capacity (
           <Code>{formatInteger(totalTaskSlots)}</Code>) to run this query which is set to use up to{' '}
           <Code>{formatInteger(maxNumTasks)}</Code> tasks. Unless more capacity is added this query
-          might stall and never run.
+          will stall and never run.
         </p>
       </AlertDialog>
     );
@@ -73,7 +73,7 @@ export function CapacityAlert(props: CapacityAlertProps) {
           The cluster does not currently have enough available task slots (current usage:{' '}
           <Code>{`${formatInteger(usedTaskSlots)} of ${formatInteger(totalTaskSlots)}`}</Code>) to
           run this query which is set to use up to <Code>{formatInteger(maxNumTasks)}</Code> tasks.
-          This query might have to wait for task slots to free up before running.
+          This query will have to wait for task slots to become available before running.
         </p>
         <p>Are you sure you want to run it?</p>
       </AlertDialog>

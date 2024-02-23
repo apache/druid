@@ -33,7 +33,9 @@ import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.query.DefaultBitmapResultFactory;
+import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.SelectorPredicateFactory;
+import org.apache.druid.query.filter.StringPredicateDruidPredicateFactory;
 import org.apache.druid.segment.AutoTypeColumnIndexer;
 import org.apache.druid.segment.AutoTypeColumnMerger;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -43,12 +45,13 @@ import org.apache.druid.segment.IndexableAdapter;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.DruidPredicateIndex;
-import org.apache.druid.segment.column.NullValueIndex;
 import org.apache.druid.segment.column.StringUtf8DictionaryEncodedColumn;
-import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
+import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
+import org.apache.druid.segment.index.semantic.NullValueIndex;
+import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
+import org.apache.druid.segment.index.semantic.ValueIndexes;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -68,10 +71,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.Objects;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -131,7 +132,7 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
           closer
       );
 
-      AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer();
+      AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
       for (Object o : data) {
         indexer.processRowValsToUnsortedEncodedKeyComponent(o, false);
       }
@@ -248,8 +249,9 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
     ColumnValueSelector<?> valueSelector = column.makeColumnValueSelector(offset);
     DimensionSelector dimSelector = column.makeDimensionSelector(offset, null);
 
-    StringValueSetIndex valueSetIndex = supplier.as(StringValueSetIndex.class);
-    DruidPredicateIndex predicateIndex = supplier.as(DruidPredicateIndex.class);
+    ValueIndexes valueIndexes = supplier.as(ValueIndexes.class);
+    StringValueSetIndexes valueSetIndex = supplier.as(StringValueSetIndexes.class);
+    DruidPredicateIndexes predicateIndex = supplier.as(DruidPredicateIndexes.class);
     NullValueIndex nullValueIndex = supplier.as(NullValueIndex.class);
 
     SortedMap<String, FieldTypeInfo.MutableTypeSet> fields = column.getFieldTypeInfo();
@@ -269,26 +271,27 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
         Assert.assertEquals(row, dimSelectorLookupVal);
         Assert.assertEquals(dimSelector.idLookup().lookupId(dimSelectorLookupVal), dimSelector.getRow().get(0));
 
-        Assert.assertTrue(valueSetIndex.forValue(row).computeBitmapResult(resultFactory).get(i));
-        Assert.assertTrue(valueSetIndex.forSortedValues(new TreeSet<>(ImmutableSet.of(row)))
-                                       .computeBitmapResult(resultFactory)
+        Assert.assertTrue(valueSetIndex.forValue(row).computeBitmapResult(resultFactory, false).get(i));
+        Assert.assertTrue(valueIndexes.forValue(row, ColumnType.STRING).computeBitmapResult(resultFactory, false).get(i));
+        Assert.assertTrue(valueSetIndex.forSortedValues(InDimFilter.ValuesSet.copyOf(ImmutableSet.of(row)))
+                                       .computeBitmapResult(resultFactory, false)
                                        .get(i));
         Assert.assertTrue(predicateIndex.forPredicate(new SelectorPredicateFactory(row))
-                                        .computeBitmapResult(resultFactory)
+                                        .computeBitmapResult(resultFactory, false)
                                         .get(i));
-        Assert.assertFalse(valueSetIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory).get(i));
-        Assert.assertFalse(valueSetIndex.forSortedValues(new TreeSet<>(ImmutableSet.of(NO_MATCH)))
-                                        .computeBitmapResult(resultFactory)
+        Assert.assertFalse(valueSetIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory, false).get(i));
+        Assert.assertFalse(valueSetIndex.forSortedValues(InDimFilter.ValuesSet.copyOf(ImmutableSet.of(NO_MATCH)))
+                                        .computeBitmapResult(resultFactory, false)
                                         .get(i));
         Assert.assertFalse(predicateIndex.forPredicate(new SelectorPredicateFactory(NO_MATCH))
-                                         .computeBitmapResult(resultFactory)
+                                         .computeBitmapResult(resultFactory, false)
                                          .get(i));
-        Assert.assertFalse(nullValueIndex.forNull().computeBitmapResult(resultFactory).get(i));
+        Assert.assertFalse(nullValueIndex.get().computeBitmapResult(resultFactory, false).get(i));
 
-        Assert.assertTrue(dimSelector.makeValueMatcher(row).matches());
-        Assert.assertFalse(dimSelector.makeValueMatcher(NO_MATCH).matches());
-        Assert.assertTrue(dimSelector.makeValueMatcher(x -> Objects.equals(x, row)).matches());
-        Assert.assertFalse(dimSelector.makeValueMatcher(x -> Objects.equals(x, NO_MATCH)).matches());
+        Assert.assertTrue(dimSelector.makeValueMatcher(row).matches(false));
+        Assert.assertFalse(dimSelector.makeValueMatcher(NO_MATCH).matches(false));
+        Assert.assertTrue(dimSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo(row)).matches(false));
+        Assert.assertFalse(dimSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo(NO_MATCH)).matches(false));
       } else {
         Assert.assertNull(valueSelector.getObject());
 
@@ -296,21 +299,21 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
         Assert.assertNull(dimSelector.getObject());
         Assert.assertNull(dimSelector.lookupName(dimSelector.getRow().get(0)));
 
-        Assert.assertTrue(valueSetIndex.forValue(null).computeBitmapResult(resultFactory).get(i));
-        Assert.assertFalse(valueSetIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory).get(i));
-        Assert.assertTrue(nullValueIndex.forNull().computeBitmapResult(resultFactory).get(i));
+        Assert.assertTrue(valueSetIndex.forValue(null).computeBitmapResult(resultFactory, false).get(i));
+        Assert.assertFalse(valueSetIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory, false).get(i));
+        Assert.assertTrue(nullValueIndex.get().computeBitmapResult(resultFactory, false).get(i));
         Assert.assertTrue(predicateIndex.forPredicate(new SelectorPredicateFactory(null))
-                                        .computeBitmapResult(resultFactory)
+                                        .computeBitmapResult(resultFactory, false)
                                         .get(i));
-        Assert.assertFalse(valueSetIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory).get(i));
+        Assert.assertFalse(valueSetIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory, false).get(i));
         Assert.assertFalse(predicateIndex.forPredicate(new SelectorPredicateFactory(NO_MATCH))
-                                         .computeBitmapResult(resultFactory)
+                                         .computeBitmapResult(resultFactory, false)
                                          .get(i));
 
-        Assert.assertTrue(dimSelector.makeValueMatcher((String) null).matches());
-        Assert.assertFalse(dimSelector.makeValueMatcher(NO_MATCH).matches());
-        Assert.assertTrue(dimSelector.makeValueMatcher(x -> x == null).matches());
-        Assert.assertFalse(dimSelector.makeValueMatcher(x -> Objects.equals(x, NO_MATCH)).matches());
+        Assert.assertTrue(dimSelector.makeValueMatcher((String) null).matches(false));
+        Assert.assertFalse(dimSelector.makeValueMatcher(NO_MATCH).matches(false));
+        Assert.assertTrue(dimSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo(null)).matches(false));
+        Assert.assertFalse(dimSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo(NO_MATCH)).matches(false));
       }
 
       offset.increment();

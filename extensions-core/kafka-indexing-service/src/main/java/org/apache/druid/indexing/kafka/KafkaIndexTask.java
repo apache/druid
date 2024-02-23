@@ -27,6 +27,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
+import org.apache.druid.data.input.kafka.KafkaTopicPartition;
+import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
@@ -42,7 +44,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long, KafkaRecordEntity>
+public class KafkaIndexTask extends SeekableStreamIndexTask<KafkaTopicPartition, Long, KafkaRecordEntity>
 {
   private static final String TYPE = "index_kafka";
 
@@ -85,7 +87,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long, Kafka
   }
 
   @Override
-  protected SeekableStreamIndexTaskRunner<Integer, Long, KafkaRecordEntity> createTaskRunner()
+  protected SeekableStreamIndexTaskRunner<KafkaTopicPartition, Long, KafkaRecordEntity> createTaskRunner()
   {
     //noinspection unchecked
     return new IncrementalPublishingKafkaIndexTaskRunner(
@@ -97,7 +99,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long, Kafka
   }
 
   @Override
-  protected KafkaRecordSupplier newTaskRecordSupplier()
+  protected KafkaRecordSupplier newTaskRecordSupplier(final TaskToolbox toolbox)
   {
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     try {
@@ -107,7 +109,15 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long, Kafka
 
       props.put("auto.offset.reset", "none");
 
-      return new KafkaRecordSupplier(props, configMapper, kafkaIndexTaskIOConfig.getConfigOverrides());
+      final KafkaRecordSupplier recordSupplier =
+          new KafkaRecordSupplier(props, configMapper, kafkaIndexTaskIOConfig.getConfigOverrides(),
+                                  kafkaIndexTaskIOConfig.isMultiTopic());
+
+      if (toolbox.getMonitorScheduler() != null) {
+        toolbox.getMonitorScheduler().addMonitor(recordSupplier.monitor());
+      }
+
+      return recordSupplier;
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);

@@ -38,8 +38,6 @@ import java.util.stream.Collectors;
  */
 public class RandomBalancerStrategy implements BalancerStrategy
 {
-  private static final CoordinatorRunStats EMPTY_STATS = new CoordinatorRunStats();
-
   @Override
   public Iterator<ServerHolder> findServersToLoadSegment(
       DataSegment segmentToLoad,
@@ -75,8 +73,8 @@ public class RandomBalancerStrategy implements BalancerStrategy
   }
 
   @Override
-  public CoordinatorRunStats getAndResetStats()
+  public CoordinatorRunStats getStats()
   {
-    return EMPTY_STATS;
+    return CoordinatorRunStats.empty();
   }
 }

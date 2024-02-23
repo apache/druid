@@ -96,13 +96,6 @@ public class ColumnBuilder
     return this;
   }
 
-  @SuppressWarnings("unused")
-  public ColumnBuilder setFilterable(boolean filterable)
-  {
-    this.capabilitiesBuilder.setFilterable(filterable);
-    return this;
-  }
-
   public ColumnBuilder setComplexColumnSupplier(Supplier<? extends ComplexColumn> columnSupplier)
   {
     checkColumnSupplierNotSet();

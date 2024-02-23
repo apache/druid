@@ -22,8 +22,6 @@ package org.apache.druid.query.operator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
@@ -31,14 +29,17 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
-import org.apache.druid.query.spec.LegacySegmentSpec;
+import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+
 
 /**
  * A query that can compute window functions on top of a completely in-memory inline datasource or query results.
@@ -52,27 +53,95 @@ import java.util.Objects;
  */
 public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
 {
+  private static DataSource validateMaybeRewriteDataSource(DataSource dataSource, boolean hasLeafs)
+  {
+    if (hasLeafs) {
+      return dataSource;
+    }
+
+    // We can re-write scan-style sub queries into an operator instead of doing the actual Scan query.  So, we
+    // check for that and, if we are going to do the rewrite, then we return the sub datasource such that the
+    // parent constructor in BaseQuery stores the actual data source that we want to be distributed to.
+
+    // At this point, we could also reach into a QueryDataSource and validate that the ordering expected by the
+    // partitioning at least aligns with the ordering coming from the underlying query.  We unfortunately don't
+    // have enough information to validate that the underlying ordering aligns with expectations for the actual
+    // window operator queries, but maybe we could get that and validate it here too.
+    if (dataSource instanceof QueryDataSource) {
+      final Query<?> subQuery = ((QueryDataSource) dataSource).getQuery();
+      if (subQuery instanceof ScanQuery) {
+        return subQuery.getDataSource();
+      }
+      return dataSource;
+    } else if (dataSource instanceof InlineDataSource) {
+      return dataSource;
+    } else {
+      throw new IAE("WindowOperatorQuery must run on top of a query or inline data source, got [%s]", dataSource);
+    }
+  }
+
   private final RowSignature rowSignature;
   private final List<OperatorFactory> operators;
+  private final List<OperatorFactory> leafOperators;
 
   @JsonCreator
   public WindowOperatorQuery(
       @JsonProperty("dataSource") DataSource dataSource,
+      @JsonProperty("intervals") QuerySegmentSpec intervals,
       @JsonProperty("context") Map<String, Object> context,
       @JsonProperty("outputSignature") RowSignature rowSignature,
-      @JsonProperty("operatorDefinition") List<OperatorFactory> operators
+      @JsonProperty("operatorDefinition") List<OperatorFactory> operators,
+      @JsonProperty("leafOperators") List<OperatorFactory> leafOperators
   )
   {
-    super(dataSource, new LegacySegmentSpec(Intervals.ETERNITY), false, context);
+    super(
+        validateMaybeRewriteDataSource(dataSource, leafOperators != null),
+        intervals,
+        false,
+        context
+    );
     this.rowSignature = rowSignature;
     this.operators = operators;
 
-    // At this point, we can also reach into a QueryDataSource and validate that the ordering expected by the
-    // partitioning at least aligns with the ordering coming from the underlying query.  We unfortunately don't
-    // have enough information to validate that the underlying ordering aligns with expectations for the actual
-    // window operator queries, but maybe we could get that and validate it here too.
-    if (!(dataSource instanceof QueryDataSource || dataSource instanceof InlineDataSource)) {
-      throw new IAE("WindowOperatorQuery must run on top of a query or inline data source, got [%s]", dataSource);
+    if (leafOperators == null) {
+      this.leafOperators = new ArrayList<>();
+      // We have to double check again because this was validated in a static context before passing to the `super()`
+      // and we cannot save state from that...  Ah well.
+
+      if (dataSource instanceof QueryDataSource) {
+        final Query<?> subQuery = ((QueryDataSource) dataSource).getQuery();
+        if (subQuery instanceof ScanQuery) {
+          ScanQuery scan = (ScanQuery) subQuery;
+
+          ArrayList<ColumnWithDirection> ordering = new ArrayList<>();
+          for (ScanQuery.OrderBy orderBy : scan.getOrderBys()) {
+            ordering.add(
+                new ColumnWithDirection(
+                    orderBy.getColumnName(),
+                    ScanQuery.Order.DESCENDING == orderBy.getOrder()
+                    ? ColumnWithDirection.Direction.DESC
+                    : ColumnWithDirection.Direction.ASC
+                )
+            );
+          }
+          if (ordering.isEmpty()) {
+            ordering = null;
+          }
+
+          this.leafOperators.add(
+              new ScanOperatorFactory(
+                  null,
+                  scan.getFilter(),
+                  scan.getOffsetLimit(),
+                  scan.getColumns(),
+                  scan.getVirtualColumns().isEmpty() ? null : scan.getVirtualColumns(),
+                  ordering
+              )
+          );
+        }
+      }
+    } else {
+      this.leafOperators = leafOperators;
     }
   }
 
@@ -80,6 +149,12 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
   public List<OperatorFactory> getOperators()
   {
     return operators;
+  }
+
+  @JsonProperty("leafOperators")
+  public List<OperatorFactory> getLeafOperators()
+  {
+    return leafOperators;
   }
 
   @JsonProperty("outputSignature")
@@ -107,21 +182,31 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
     return Query.WINDOW_OPERATOR;
   }
 
+
   @Override
   public Query<RowsAndColumns> withOverriddenContext(Map<String, Object> contextOverride)
   {
     return new WindowOperatorQuery(
         getDataSource(),
+        getQuerySegmentSpec(),
         computeOverriddenContext(getContext(), contextOverride),
         rowSignature,
-        operators
+        operators,
+        leafOperators
     );
   }
 
   @Override
   public Query<RowsAndColumns> withQuerySegmentSpec(QuerySegmentSpec spec)
   {
-    throw new UOE("Cannot override querySegmentSpec on window operator query. [%s]", spec);
+    return new WindowOperatorQuery(
+        getDataSource(),
+        spec,
+        getContext(),
+        rowSignature,
+        operators,
+        leafOperators
+    );
   }
 
   @Override
@@ -129,9 +214,23 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
   {
     return new WindowOperatorQuery(
         dataSource,
+        getQuerySegmentSpec(),
         getContext(),
         rowSignature,
-        operators
+        operators,
+        leafOperators
+    );
+  }
+
+  public Query<RowsAndColumns> withOperators(List<OperatorFactory> operators)
+  {
+    return new WindowOperatorQuery(
+        getDataSource(),
+        getQuerySegmentSpec(),
+        getContext(),
+        rowSignature,
+        operators,
+        leafOperators
     );
   }
 
@@ -148,16 +247,15 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
       return false;
     }
     WindowOperatorQuery that = (WindowOperatorQuery) o;
-    return Objects.equals(rowSignature, that.rowSignature) && Objects.equals(
-        operators,
-        that.operators
-    );
+    return Objects.equals(rowSignature, that.rowSignature)
+        && Objects.equals(operators, that.operators)
+        && Objects.equals(leafOperators, that.leafOperators);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), rowSignature, operators);
+    return Objects.hash(super.hashCode(), rowSignature, operators, leafOperators);
   }
 
   @Override
@@ -169,6 +267,7 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
            ", context=" + getContext() +
            ", rowSignature=" + rowSignature +
            ", operators=" + operators +
+           ", leafOperators=" + leafOperators +
            '}';
   }
 }

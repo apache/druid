@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.parser;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -32,13 +33,14 @@ import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlNumericLiteral;
-import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOrderBy;
-import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlTimestampLiteral;
-import org.apache.calcite.sql.SqlUtil;
+import org.apache.calcite.sql.SqlUnknownLiteral;
 import org.apache.calcite.sql.dialect.CalciteSqlDialect;
+import org.apache.calcite.sql.parser.SqlParserUtil;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.tools.ValidationException;
+import org.apache.calcite.util.Pair;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.StringUtils;
@@ -76,6 +78,16 @@ public class DruidSqlParserUtils
   private static final Logger log = new Logger(DruidSqlParserUtils.class);
   public static final String ALL = "all";
 
+  private static final List<GranularityType> DOCUMENTED_GRANULARTIES = Arrays.stream(GranularityType.values())
+      .filter(g -> g != GranularityType.WEEK)
+      .collect(Collectors.toList());
+  @VisibleForTesting
+  public static final String PARTITION_ERROR_MESSAGE =
+      "Invalid granularity[%s] specified after PARTITIONED BY clause.  "
+      + "Expected "
+      + StringUtils.replace(StringUtils.replace(DOCUMENTED_GRANULARTIES.toString(), "[", ""), "]", ",").trim()
+      + " ALL TIME, FLOOR() or TIME_FLOOR()";
+
   /**
    * Delegates to {@code convertSqlNodeToGranularity} and converts the exceptions to {@link ParseException}
    * with the underlying message
@@ -95,26 +107,63 @@ public class DruidSqlParserUtils
   }
 
   /**
-   * This method is used to extract the granularity from a SqlNode representing following function calls:
-   * 1. FLOOR(__time TO TimeUnit)
-   * 2. TIME_FLOOR(__time, 'PT1H')
+   * This method is used to extract the granularity from a SqlNode which represents
+   * the argument to the {@code PARTITIONED BY} clause. The node can be any of the following:
+   * <ul>
+   * <li>A literal with a string that matches the SQL keywords
+   * {@code HOUR, DAY, MONTH, YEAR, ALL [TIME]}</li>
+   * <li>A literal string with a period in ISO 8601 format.</li>
+   * <li>Function call: {@code FLOOR(__time TO TimeUnit)}</li>
+   * <li>Function call: TIME_FLOOR(__time, 'PT1H')}</li>
+   * </ul>
    * <p>
-   * Validation on the sqlNode is contingent to following conditions:
-   * 1. sqlNode is an instance of SqlCall
-   * 2. Operator is either one of TIME_FLOOR or FLOOR
-   * 3. Number of operands in the call are 2
-   * 4. First operand is a SimpleIdentifier representing __time
-   * 5. If operator is TIME_FLOOR, the second argument is a literal, and can be converted to the Granularity class
-   * 6. If operator is FLOOR, the second argument is a TimeUnit, and can be mapped using {@link TimeUnits}
+   * Validation of the function sqlNode is contingent to following conditions:
+   * <ol>
+   * <li>sqlNode is an instance of SqlCall</li>
+   * <li>Operator is either one of TIME_FLOOR or FLOOR</li>
+   * <li>Number of operands in the call are 2</li>
+   * <li>First operand is a SimpleIdentifier representing __time</li>
+   * <li>If operator is TIME_FLOOR, the second argument is a literal, and can be converted to the Granularity class</li>
+   * <li>If operator is FLOOR, the second argument is a TimeUnit, and can be mapped using {@link TimeUnits}</li>
+   * </ol>
    * <p>
-   * Since it is to be used primarily while parsing the SqlNode, it is wrapped in {@code convertSqlNodeToGranularityThrowingParseExceptions}
+   * This method is called during validation, which will catch any errors. It is then called again
+   * during conversion, at which time we assume the node is valid.
    *
    * @param sqlNode SqlNode representing a call to a function
+   *
    * @return Granularity as intended by the function call
-   * @throws ParseException SqlNode cannot be converted a granularity
+   *
+   * @throws DruidException if SqlNode cannot be converted to a granularity
    */
-  public static Granularity convertSqlNodeToGranularity(SqlNode sqlNode) throws ParseException
+  @Nullable
+  public static Granularity convertSqlNodeToGranularity(SqlNode sqlNode)
   {
+    if (sqlNode == null) {
+      return null;
+    }
+
+    if (sqlNode instanceof SqlLiteral) {
+      final Granularity retVal;
+      SqlLiteral literal = (SqlLiteral) sqlNode;
+      if (SqlLiteral.valueMatchesType(literal.getValue(), SqlTypeName.CHAR)) {
+        retVal = convertSqlLiteralCharToGranularity(literal);
+      } else {
+        throw makeInvalidPartitionByException(literal);
+      }
+
+      validateSupportedGranularityForPartitionedBy(sqlNode, retVal);
+      return retVal;
+    }
+
+    if (sqlNode instanceof SqlIdentifier) {
+      SqlIdentifier identifier = (SqlIdentifier) sqlNode;
+      final Granularity retVal;
+      retVal = convertSqlIdentiferToGranularity(identifier);
+      validateSupportedGranularityForPartitionedBy(sqlNode, retVal);
+      return retVal;
+    }
+
     if (!(sqlNode instanceof SqlCall)) {
       throw makeInvalidPartitionByException(sqlNode);
     }
@@ -163,7 +212,9 @@ public class DruidSqlParserUtils
         period = new Period(granularityString);
       }
       catch (IllegalArgumentException e) {
-        throw new ParseException(StringUtils.format("%s is an invalid period string", granularitySqlNode.toString()));
+        throw InvalidSqlInput.exception(
+            StringUtils.format("granularity[%s] is an invalid period string", granularitySqlNode.toString()),
+            sqlNode);
       }
       final PeriodGranularity retVal = new PeriodGranularity(period, null, null);
       validateSupportedGranularityForPartitionedBy(sqlNode, retVal);
@@ -197,17 +248,51 @@ public class DruidSqlParserUtils
     throw makeInvalidPartitionByException(sqlNode);
   }
 
+  private static Granularity convertSqlLiteralCharToGranularity(SqlLiteral literal)
+  {
+    String value = literal.getValueAs(String.class);
+    try {
+      return Granularity.fromString(value);
+    }
+    catch (IllegalArgumentException e) {
+      try {
+        return new PeriodGranularity(new Period(value), null, null);
+      }
+      catch (Exception e2) {
+        throw makeInvalidPartitionByException(literal);
+      }
+    }
+  }
+
+  private static Granularity convertSqlIdentiferToGranularity(SqlIdentifier identifier)
+  {
+    if (identifier.names.isEmpty()) {
+      throw makeInvalidPartitionByException(identifier);
+    }
+    String value = identifier.names.get(0);
+    try {
+      return Granularity.fromString(value);
+    }
+    catch (IllegalArgumentException e) {
+      try {
+        return new PeriodGranularity(new Period(value), null, null);
+      }
+      catch (Exception e2) {
+        throw makeInvalidPartitionByException(identifier);
+      }
+    }
+  }
+
   private static DruidException makeInvalidPartitionByException(SqlNode sqlNode)
   {
     return InvalidSqlInput.exception(
-        "Invalid granularity [%s] after PARTITIONED BY.  "
-        + "Expected HOUR, DAY, MONTH, YEAR, ALL TIME, FLOOR() or TIME_FLOOR()",
+        PARTITION_ERROR_MESSAGE,
         sqlNode
     );
   }
 
   /**
-   * This method validates and converts a {@link SqlNode} representing a query into an optimized list of intervals to
+   * Validates and converts a {@link SqlNode} representing a query into an optimized list of intervals to
    * be used in creating an ingestion spec. If the sqlNode is an SqlLiteral of {@link #ALL}, returns a singleton list of
    * "ALL". Otherwise, it converts and optimizes the query using {@link MoveTimeFiltersToIntervals} into a list of
    * intervals which contain all valid values of time as per the query.
@@ -327,67 +412,41 @@ public class DruidSqlParserUtils
    * </pre>
    *
    * <p>
-   * The function will return the following clusteredBy columns for the above SQL: ["__time", "page_alias", "FLOOR(\"cost\")", cityName"]
+   * The function will return the following clusteredBy columns for the above SQL: ["__time", "page_alias", "FLOOR(\"cost\")", cityName"].
    * Any ordinal and expression specified in the CLUSTERED BY clause will resolve to the final output column name.
    * </p>
+   * <p>
+   * This function must be called after the query is prepared when all the validations are complete, including {@link #validateClusteredByColumns},
+   * so we can safely access the arguments.
+   * </p>
    * @param clusteredByNodes  List of {@link SqlNode}s representing columns to be clustered by.
-   * @param sourceNode The select or order by source node.
+   * @param sourceFieldMappings The source field output mappings extracted from the validated root query rel node post prepare phase.
+   *
    */
   @Nullable
-  public static List<String> resolveClusteredByColumnsToOutputColumns(SqlNodeList clusteredByNodes, SqlNode sourceNode)
+  public static List<String> resolveClusteredByColumnsToOutputColumns(
+      final SqlNodeList clusteredByNodes,
+      final ImmutableList<Pair<Integer, String>> sourceFieldMappings
+  )
   {
     // CLUSTERED BY is an optional clause
     if (clusteredByNodes == null) {
       return null;
     }
 
-    Preconditions.checkArgument(
-        sourceNode instanceof SqlSelect || sourceNode instanceof SqlOrderBy,
-        "Source node must be either SqlSelect or SqlOrderBy, but found [%s]",
-        sourceNode == null ? null : sourceNode.getKind()
-    );
-
-    final SqlSelect selectNode = (sourceNode instanceof SqlSelect) ? (SqlSelect) sourceNode
-                                                                   : (SqlSelect) ((SqlOrderBy) sourceNode).query;
-    final List<SqlNode> selectList = selectNode.getSelectList().getList();
     final List<String> retClusteredByNames = new ArrayList<>();
 
     for (SqlNode clusteredByNode : clusteredByNodes) {
 
-      if (SqlUtil.isLiteral(clusteredByNode)) {
-        // The node is a literal number -- an ordinal is specified in the CLUSTERED BY clause. Validate and lookup the
-        // ordinal in the select list.
-        int ordinal = ((SqlNumericLiteral) clusteredByNode).getValueAs(Integer.class);
-        if (ordinal < 1 || ordinal > selectList.size()) {
-          throw InvalidSqlInput.exception(
-              "Ordinal[%d] specified in the CLUSTERED BY clause is invalid. It must be between 1 and %d.",
-              ordinal,
-              selectList.size()
-          );
-        }
-        SqlNode node = selectList.get(ordinal - 1);
-
-        if (node instanceof SqlBasicCall) {
-          retClusteredByNames.add(getColumnNameFromSqlCall(node));
-        } else {
-          Preconditions.checkArgument(
-              node instanceof SqlIdentifier,
-              "Node must be a SqlIdentifier, but found [%s]",
-              node.getKind()
-          );
-          SqlIdentifier n = ((SqlIdentifier) node);
-          retClusteredByNames.add(n.isSimple() ? n.getSimple() : n.names.get(1));
-        }
+      if (clusteredByNode instanceof SqlNumericLiteral) {
+        // The node is a literal number -- an ordinal in the CLUSTERED BY clause. Lookup the ordinal in field mappings.
+        final int ordinal = ((SqlNumericLiteral) clusteredByNode).getValueAs(Integer.class);
+        retClusteredByNames.add(sourceFieldMappings.get(ordinal - 1).right);
       } else if (clusteredByNode instanceof SqlBasicCall) {
         // The node is an expression/operator.
-        retClusteredByNames.add(getColumnNameFromSqlCall(clusteredByNode));
+        retClusteredByNames.add(getColumnNameFromSqlCall((SqlBasicCall) clusteredByNode));
       } else {
-        // The node is a simple SqlIdentifier, add the name.
-        Preconditions.checkArgument(
-            clusteredByNode instanceof SqlIdentifier,
-            "ClusteredBy node must be a SqlIdentifier, but found [%s]",
-            clusteredByNode.getKind()
-        );
+        // For everything else, just return the simple string representation of the node.
         retClusteredByNames.add(clusteredByNode.toString());
       }
     }
@@ -395,16 +454,12 @@ public class DruidSqlParserUtils
     return retClusteredByNames;
   }
 
-  private static String getColumnNameFromSqlCall(final SqlNode sqlCallNode)
+  private static String getColumnNameFromSqlCall(final SqlBasicCall sqlCallNode)
   {
-    Preconditions.checkArgument(sqlCallNode instanceof SqlBasicCall, "Node must be a SqlBasicCall type");
-
     // The node may be an alias or expression, in which case we'll get the output name
-    SqlBasicCall sqlBasicCall = (SqlBasicCall) sqlCallNode;
-    SqlOperator operator = (sqlBasicCall).getOperator();
-    if (operator instanceof SqlAsOperator) {
+    if (sqlCallNode.getOperator() instanceof SqlAsOperator) {
       // Get the output name for the alias operator.
-      SqlNode sqlNode = (sqlBasicCall).getOperandList().get(1);
+      SqlNode sqlNode = sqlCallNode.getOperandList().get(1);
       return sqlNode.toString();
     } else {
       // Return the expression as-is.
@@ -429,6 +484,18 @@ public class DruidSqlParserUtils
             "Invalid CLUSTERED BY clause [%s]: cannot sort in descending order.",
             clusteredByNode
         );
+      }
+
+      // Calcite already throws Ordinal out of range exception for positive non-existent ordinals. This negative ordinal check
+      // is for completeness and is fixed in later Calcite versions.
+      if (clusteredByNode instanceof SqlNumericLiteral) {
+        final int ordinal = ((SqlNumericLiteral) clusteredByNode).getValueAs(Integer.class);
+        if (ordinal < 1) {
+          throw InvalidSqlInput.exception(
+              "Ordinal [%d] specified in the CLUSTERED BY clause is invalid. It must be a positive integer.",
+              ordinal
+          );
+        }
       }
     }
   }
@@ -566,18 +633,38 @@ public class DruidSqlParserUtils
    * @return the timestamp string as milliseconds from epoch
    * @throws DruidException if the SQL node is not a SqlTimestampLiteral
    */
-  private static String parseTimeStampWithTimeZone(SqlNode sqlNode, DateTimeZone timeZone)
+  static String parseTimeStampWithTimeZone(SqlNode sqlNode, DateTimeZone timeZone)
   {
+    Timestamp sqlTimestamp;
+    ZonedDateTime zonedTimestamp;
+
+    // Upgrading from 1.21 to 1.35 introduced SqlUnknownLiteral.
+    // Calcite now has provision to create a literal which is unknown until validation time
+    // Parsing a timestamp needs to accomodate for that change
+    if (sqlNode instanceof SqlUnknownLiteral) {
+      try {
+        SqlTimestampLiteral timestampLiteral = (SqlTimestampLiteral) ((SqlUnknownLiteral) sqlNode).resolve(SqlTypeName.TIMESTAMP);
+        sqlTimestamp = Timestamp.valueOf(timestampLiteral.toFormattedString());
+      }
+      catch (Exception e) {
+        throw InvalidSqlInput.exception("Cannot get a timestamp from sql expression [%s]", sqlNode);
+      }
+      zonedTimestamp = sqlTimestamp.toLocalDateTime().atZone(timeZone.toTimeZone().toZoneId());
+      return String.valueOf(zonedTimestamp.toInstant().toEpochMilli());
+    }
     if (!(sqlNode instanceof SqlTimestampLiteral)) {
       throw InvalidSqlInput.exception("Cannot get a timestamp from sql expression [%s]", sqlNode);
     }
 
-    Timestamp sqlTimestamp = Timestamp.valueOf(((SqlTimestampLiteral) sqlNode).toFormattedString());
-    ZonedDateTime zonedTimestamp = sqlTimestamp.toLocalDateTime().atZone(timeZone.toTimeZone().toZoneId());
+    sqlTimestamp = Timestamp.valueOf(((SqlTimestampLiteral) sqlNode).toFormattedString());
+    zonedTimestamp = sqlTimestamp.toLocalDateTime().atZone(timeZone.toTimeZone().toZoneId());
     return String.valueOf(zonedTimestamp.toInstant().toEpochMilli());
   }
 
-  public static void validateSupportedGranularityForPartitionedBy(SqlNode originalNode, Granularity granularity)
+  public static void validateSupportedGranularityForPartitionedBy(
+      @Nullable SqlNode originalNode,
+      Granularity granularity
+  )
   {
     if (!GranularityType.isStandard(granularity)) {
       throw InvalidSqlInput.exception(
@@ -590,6 +677,33 @@ public class DruidSqlParserUtils
                 .collect(Collectors.joining(", "))
       );
     }
+  }
+
+  /**
+   * Get the timestamp string from a TIMESTAMP (or TIMESTAMP WITH LOCAL TIME ZONE) literal.
+   *
+   * @return string, or null if the provided node is not a timestamp literal
+   */
+  @Nullable
+  private static String getTimestampStringFromLiteral(final SqlNode sqlNode)
+  {
+    if (sqlNode instanceof SqlTimestampLiteral) {
+      return ((SqlTimestampLiteral) sqlNode).toFormattedString();
+    }
+
+    if (sqlNode instanceof SqlUnknownLiteral) {
+      // SqlUnknownLiteral represents a type that is unknown until validation time. The tag is resolved to a proper
+      // type name later on; for example TIMESTAMP may become TIMESTAMP WITH LOCAL TIME ZONE.
+      final SqlUnknownLiteral sqlUnknownLiteral = (SqlUnknownLiteral) sqlNode;
+
+      if (SqlTypeName.TIMESTAMP.getSpaceName().equals(sqlUnknownLiteral.tag)
+          || SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE.getSpaceName().equals(sqlUnknownLiteral.tag)) {
+        return SqlParserUtil.parseTimestampLiteral(sqlUnknownLiteral.getValue(), sqlNode.getParserPosition())
+                            .toFormattedString();
+      }
+    }
+
+    return null;
   }
 
   public static DruidException problemParsing(String message)

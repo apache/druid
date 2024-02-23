@@ -1,0 +1,6 @@
+-- OVER(W) syntax
+select 
+	sum(a2) over(w), 
+	count(*) over(partition by a2 order by a2) 
+from 
+	t2 window w as (partition by a2 order by a2);

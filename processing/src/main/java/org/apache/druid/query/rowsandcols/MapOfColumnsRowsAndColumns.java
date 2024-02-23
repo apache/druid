@@ -27,6 +27,7 @@ import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
 import org.apache.druid.query.rowsandcols.column.ObjectArrayColumn;
 import org.apache.druid.query.rowsandcols.semantic.AppendableRowsAndColumns;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -77,6 +78,27 @@ public class MapOfColumnsRowsAndColumns implements RowsAndColumns
         (Map<String, Column>) map,
         map.values().iterator().next().toAccessor().numRows()
     );
+  }
+
+  public static MapOfColumnsRowsAndColumns fromRowObjects(Object[][] objs, RowSignature signature)
+  {
+    final Builder bob = builder();
+
+    if (objs.length > 0) {
+      Object[][] columnOriented = new Object[objs[0].length][objs.length];
+      for (int i = 0; i < objs.length; ++i) {
+        for (int j = 0; j < objs[i].length; ++j) {
+          columnOriented[j][i] = objs[i][j];
+        }
+      }
+
+      for (int i = 0; i < signature.size(); ++i) {
+        final ColumnType type = signature.getColumnType(i).orElse(null);
+        bob.add(signature.getColumnName(i), columnOriented[i], type);
+      }
+    }
+
+    return bob.build();
   }
 
   private final Map<String, Column> mapOfColumns;

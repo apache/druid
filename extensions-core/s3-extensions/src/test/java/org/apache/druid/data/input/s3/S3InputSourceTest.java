@@ -46,6 +46,8 @@ import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Provides;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import nl.jqno.equalsverifier.Warning;
 import org.apache.druid.common.aws.AWSClientConfig;
 import org.apache.druid.common.aws.AWSCredentialsUtils;
 import org.apache.druid.common.aws.AWSEndpointConfig;
@@ -61,6 +63,8 @@ import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.data.input.impl.systemfield.SystemField;
+import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.HumanReadableBytes;
@@ -92,6 +96,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -261,6 +266,33 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     );
     final S3InputSource serdeWithUris = MAPPER.readValue(MAPPER.writeValueAsString(withUris), S3InputSource.class);
     Assert.assertEquals(withUris, serdeWithUris);
+    Assert.assertEquals(Collections.emptySet(), serdeWithUris.getConfiguredSystemFields());
+  }
+
+  @Test
+  public void testSerdeWithUrisAndSystemFields() throws Exception
+  {
+    final S3InputSource withUris = new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        null,
+        EXPECTED_URIS,
+        null,
+        null,
+        null,
+        new SystemFields(EnumSet.of(SystemField.URI, SystemField.BUCKET, SystemField.PATH)),
+        null,
+        null,
+        null,
+        null
+    );
+    final S3InputSource serdeWithUris = MAPPER.readValue(MAPPER.writeValueAsString(withUris), S3InputSource.class);
+    Assert.assertEquals(withUris, serdeWithUris);
+    Assert.assertEquals(
+        EnumSet.of(SystemField.URI, SystemField.BUCKET, SystemField.PATH),
+        serdeWithUris.getConfiguredSystemFields()
+    );
   }
 
   @Test
@@ -1019,6 +1051,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         null,
         null,
+        null,
         3 // only have three retries since they are slow
     );
 
@@ -1033,14 +1066,15 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         new CsvInputFormat(ImmutableList.of("time", "dim1", "dim2"), "|", false, null, 0),
         temporaryFolder.newFolder()
     );
-
-    final IllegalStateException e = Assert.assertThrows(IllegalStateException.class, reader::read);
-    MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(IOException.class));
-    MatcherAssert.assertThat(e.getCause().getCause(), CoreMatchers.instanceOf(SdkClientException.class));
-    MatcherAssert.assertThat(
-        e.getCause().getCause().getMessage(),
-        CoreMatchers.startsWith("Data read has a different length than the expected")
-    );
+    try (CloseableIterator<InputRow> readerIterator = reader.read()) {
+      final IllegalStateException e = Assert.assertThrows(IllegalStateException.class, readerIterator::hasNext);
+      MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(IOException.class));
+      MatcherAssert.assertThat(e.getCause().getCause(), CoreMatchers.instanceOf(SdkClientException.class));
+      MatcherAssert.assertThat(
+          e.getCause().getCause().getMessage(),
+          CoreMatchers.startsWith("Data read has a different length than the expected")
+      );
+    }
 
     EasyMock.verify(S3_CLIENT);
   }
@@ -1091,6 +1125,48 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     }
 
     EasyMock.verify(S3_CLIENT);
+  }
+
+  @Test
+  public void testSystemFields()
+  {
+    S3InputSource inputSource = new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        null,
+        ImmutableList.of(PREFIXES.get(0), EXPECTED_COMPRESSED_URIS.get(1)),
+        null,
+        null,
+        null,
+        new SystemFields(EnumSet.of(SystemField.URI, SystemField.BUCKET, SystemField.PATH)),
+        null,
+        null,
+        null,
+        null
+    );
+
+    Assert.assertEquals(
+        EnumSet.of(SystemField.URI, SystemField.BUCKET, SystemField.PATH),
+        inputSource.getConfiguredSystemFields()
+    );
+
+    final S3Entity entity = new S3Entity(null, new CloudObjectLocation("foo", "bar"), 0);
+
+    Assert.assertEquals("s3://foo/bar", inputSource.getSystemFieldValue(entity, SystemField.URI));
+    Assert.assertEquals("foo", inputSource.getSystemFieldValue(entity, SystemField.BUCKET));
+    Assert.assertEquals("bar", inputSource.getSystemFieldValue(entity, SystemField.PATH));
+  }
+
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(S3InputSource.class)
+                  .usingGetClass()
+                  .withIgnoredFields("s3ClientSupplier", "inputDataConfig")
+                  // maxRetries is nonfinal due to code structure, although it's effectively final
+                  .suppress(Warning.NONFINAL_FIELDS)
+                  .verify();
   }
 
   private static void expectListObjects(URI prefix, List<URI> uris, byte[] content)

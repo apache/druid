@@ -40,13 +40,13 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   private final Duration coordinatorDatasourceKillPeriod;
   private final Duration coordinatorDatasourceKillDurationToRetain;
   private final int coordinatorKillMaxSegments;
-  private final boolean compactionSkipLockedIntervals;
   private final boolean coordinatorKillIgnoreDurationToRetain;
   private final String loadQueuePeonType;
   private final Duration httpLoadQueuePeonRepeatDelay;
   private final int curatorLoadQueuePeonNumCallbackThreads;
   private final Duration httpLoadQueuePeonHostTimeout;
   private final int httpLoadQueuePeonBatchSize;
+  private final Duration coordinatorKillBufferPeriod;
 
   public TestDruidCoordinatorConfig(
       Duration coordinatorStartDelay,
@@ -66,13 +66,13 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       Duration coordinatorDatasourceKillPeriod,
       Duration coordinatorDatasourceKillDurationToRetain,
       int coordinatorKillMaxSegments,
-      boolean compactionSkipLockedIntervals,
       boolean coordinatorKillIgnoreDurationToRetain,
       String loadQueuePeonType,
       Duration httpLoadQueuePeonRepeatDelay,
       Duration httpLoadQueuePeonHostTimeout,
       int httpLoadQueuePeonBatchSize,
-      int curatorLoadQueuePeonNumCallbackThreads
+      int curatorLoadQueuePeonNumCallbackThreads,
+      Duration coordinatorKillBufferPeriod
   )
   {
     this.coordinatorStartDelay = coordinatorStartDelay;
@@ -92,13 +92,13 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     this.coordinatorDatasourceKillPeriod = coordinatorDatasourceKillPeriod;
     this.coordinatorDatasourceKillDurationToRetain = coordinatorDatasourceKillDurationToRetain;
     this.coordinatorKillMaxSegments = coordinatorKillMaxSegments;
-    this.compactionSkipLockedIntervals = compactionSkipLockedIntervals;
     this.coordinatorKillIgnoreDurationToRetain = coordinatorKillIgnoreDurationToRetain;
     this.loadQueuePeonType = loadQueuePeonType;
     this.httpLoadQueuePeonRepeatDelay = httpLoadQueuePeonRepeatDelay;
     this.httpLoadQueuePeonHostTimeout = httpLoadQueuePeonHostTimeout;
     this.httpLoadQueuePeonBatchSize = httpLoadQueuePeonBatchSize;
     this.curatorLoadQueuePeonNumCallbackThreads = curatorLoadQueuePeonNumCallbackThreads;
+    this.coordinatorKillBufferPeriod = coordinatorKillBufferPeriod;
   }
 
   @Override
@@ -126,6 +126,18 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   }
 
   @Override
+  public boolean isKillUnusedSegmentsEnabled()
+  {
+    return true;
+  }
+
+  @Override
+  public boolean isKillPendingSegmentsEnabled()
+  {
+    return true;
+  }
+
+  @Override
   public Duration getCoordinatorKillPeriod()
   {
     return coordinatorKillPeriod;
@@ -144,9 +156,21 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   }
 
   @Override
+  public boolean isSupervisorKillEnabled()
+  {
+    return true;
+  }
+
+  @Override
   public Duration getCoordinatorSupervisorKillDurationToRetain()
   {
     return coordinatorSupervisorKillDurationToRetain;
+  }
+
+  @Override
+  public boolean isAuditKillEnabled()
+  {
+    return true;
   }
 
   @Override
@@ -162,9 +186,21 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   }
 
   @Override
+  public boolean isCompactionKillEnabled()
+  {
+    return true;
+  }
+
+  @Override
   public Duration getCoordinatorCompactionKillPeriod()
   {
     return coordinatorCompactionKillPeriod;
+  }
+
+  @Override
+  public boolean isRuleKillEnabled()
+  {
+    return true;
   }
 
   @Override
@@ -177,6 +213,12 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   public Duration getCoordinatorRuleKillDurationToRetain()
   {
     return coordinatorRuleKillDurationToRetain;
+  }
+
+  @Override
+  public boolean isDatasourceKillEnabled()
+  {
+    return true;
   }
 
   @Override
@@ -201,12 +243,6 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   public Duration getLoadTimeoutDelay()
   {
     return loadTimeoutDelay == null ? super.getLoadTimeoutDelay() : loadTimeoutDelay;
-  }
-
-  @Override
-  public boolean getCompactionSkipLockedIntervals()
-  {
-    return compactionSkipLockedIntervals;
   }
 
   @Override
@@ -245,6 +281,12 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     return httpLoadQueuePeonBatchSize;
   }
 
+  @Override
+  public Duration getCoordinatorKillBufferPeriod()
+  {
+    return coordinatorKillBufferPeriod;
+  }
+
   public static class Builder
   {
     private static final Duration DEFAULT_COORDINATOR_START_DELAY = new Duration("PT300s");
@@ -268,9 +310,9 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     private static final Duration DEFAULT_HTTP_LOAD_QUEUE_PEON_REPEAT_DELAY = Duration.millis(60000);
     private static final Duration DEFAULT_HTTP_LOAD_QUEUE_PEON_HOST_TIMEOUT = Duration.millis(300000);
     private static final int DEFAULT_HTTP_LOAD_QUEUE_PEON_BATCH_SIZE = 1;
-    private static final boolean DEFAULT_COMPACTION_SKIP_LOCKED_INTERVALS = true;
     private static final Duration DEFAULT_COORDINATOR_AUDIT_KILL_PERIOD = new Duration("PT86400s");
     private static final Duration DEFAULT_COORDINATOR_AUTIT_KILL_DURATION_TO_RETAIN = new Duration("PT7776000s");
+    private static final Duration DEFAULT_COORDINATOR_KILL_BUFFER_PERIOD = new Duration("PT86400s");
 
 
     private Duration coordinatorStartDelay;
@@ -294,9 +336,9 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     private Integer curatorLoadQueuePeonNumCallbackThreads;
     private Duration httpLoadQueuePeonHostTimeout;
     private Integer httpLoadQueuePeonBatchSize;
-    private Boolean compactionSkippedLockedIntervals;
     private Duration coordinatorAuditKillPeriod;
     private Duration coordinatorAuditKillDurationToRetain;
+    private Duration coordinatorKillBufferPeriod;
 
     public Builder()
     {
@@ -428,12 +470,6 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       return this;
     }
 
-    public Builder withCompactionSkippedLockedIntervals(boolean compactionSkippedLockedIntervals)
-    {
-      this.compactionSkippedLockedIntervals = compactionSkippedLockedIntervals;
-      return this;
-    }
-
     public Builder withCoordianatorAuditKillPeriod(Duration coordinatorAuditKillPeriod)
     {
       this.coordinatorAuditKillPeriod = coordinatorAuditKillPeriod;
@@ -443,6 +479,12 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     public Builder withCoordinatorAuditKillDurationToRetain(Duration coordinatorAuditKillDurationToRetain)
     {
       this.coordinatorAuditKillDurationToRetain = coordinatorAuditKillDurationToRetain;
+      return this;
+    }
+
+    public Builder withCoordinatorKillBufferPeriod(Duration coordinatorKillBufferPeriod)
+    {
+      this.coordinatorKillBufferPeriod = coordinatorKillBufferPeriod;
       return this;
     }
 
@@ -466,14 +508,14 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
           coordinatorDatasourceKillPeriod == null ? DEFAULT_COORDINATOR_DATASOURCE_KILL_PERIOD : coordinatorDatasourceKillPeriod,
           coordinatorDatasourceKillDurationToRetain == null ? DEFAULT_COORDINATOR_DATASOURCE_KILL_DURATION_TO_RETAIN : coordinatorDatasourceKillDurationToRetain,
           coordinatorKillMaxSegments == null ? DEFAULT_COORDINATOR_KILL_MAX_SEGMENTS : coordinatorKillMaxSegments,
-          compactionSkippedLockedIntervals == null ? DEFAULT_COMPACTION_SKIP_LOCKED_INTERVALS : compactionSkippedLockedIntervals,
           coordinatorKillIgnoreDurationToRetain == null ? DEFAULT_COORDINATOR_KILL_IGNORE_DURATION_TO_RETAIN : coordinatorKillIgnoreDurationToRetain,
           loadQueuePeonType == null ? DEFAULT_LOAD_QUEUE_PEON_TYPE : loadQueuePeonType,
           httpLoadQueuePeonRepeatDelay == null ? DEFAULT_HTTP_LOAD_QUEUE_PEON_REPEAT_DELAY : httpLoadQueuePeonRepeatDelay,
           httpLoadQueuePeonHostTimeout == null ? DEFAULT_HTTP_LOAD_QUEUE_PEON_HOST_TIMEOUT : httpLoadQueuePeonHostTimeout,
           httpLoadQueuePeonBatchSize == null ? DEFAULT_HTTP_LOAD_QUEUE_PEON_BATCH_SIZE : httpLoadQueuePeonBatchSize,
           curatorLoadQueuePeonNumCallbackThreads == null ? DEFAULT_CURATOR_LOAD_QUEUE_PEON_NUM_CALLBACK_THREADS
-                                                         : curatorLoadQueuePeonNumCallbackThreads
+                                                         : curatorLoadQueuePeonNumCallbackThreads,
+          coordinatorKillBufferPeriod == null ? DEFAULT_COORDINATOR_KILL_BUFFER_PERIOD : coordinatorKillBufferPeriod
       );
     }
 

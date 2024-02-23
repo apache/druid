@@ -1,0 +1,1 @@
+SELECT col6, MAX(MIN(col6)) OVER ( PARTITION BY col7 ORDER BY col0 ) max_col6, col7 FROM "allTypsUniq.parquet" GROUP BY col0,col6,col7

@@ -128,6 +128,12 @@ public class RowReadingVectorColumnProcessorFactory implements VectorColumnProce
   }
 
   @Override
+  public Supplier<Object[]> makeArrayProcessor(ColumnCapabilities capabilities, VectorObjectSelector selector)
+  {
+    return selector::getObjectVector;
+  }
+
+  @Override
   public Supplier<Object[]> makeObjectProcessor(ColumnCapabilities capabilities, VectorObjectSelector selector)
   {
     return selector::getObjectVector;

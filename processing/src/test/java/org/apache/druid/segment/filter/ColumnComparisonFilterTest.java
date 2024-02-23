@@ -97,7 +97,7 @@ public class ColumnComparisonFilterTest extends BaseFilterTest
   {
     // columns have mixed type input and so are ingested as COMPLEX<json>
     // however the comparison filter currently nulls out complex types instead of comparing the values
-    if (testName.contains("AutoTypes")) {
+    if (isAutoSchema()) {
       return;
     }
     assertFilterMatchesSkipVectorize(new ColumnComparisonDimFilter(ImmutableList.of(
@@ -124,7 +124,7 @@ public class ColumnComparisonFilterTest extends BaseFilterTest
   {
     // columns have mixed type input and so are ingested as COMPLEX<json>
     // however the comparison filter currently nulls out complex types instead of comparing the values
-    if (testName.contains("AutoTypes")) {
+    if (isAutoSchema()) {
       return;
     }
     assertFilterMatchesSkipVectorize(new ColumnComparisonDimFilter(ImmutableList.of(

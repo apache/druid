@@ -271,12 +271,6 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
   }
 
   @Override
-  public List<RexNode> getChildExps()
-  {
-    return ImmutableList.of(joinRel.getCondition());
-  }
-
-  @Override
   public RelNode copy(final RelTraitSet traitSet, final List<RelNode> inputs)
   {
     return new DruidJoinQueryRel(

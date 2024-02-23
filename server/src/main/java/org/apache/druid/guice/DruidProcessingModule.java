@@ -38,7 +38,6 @@ import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.concurrent.ExecutorServiceConfig;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.offheap.OffheapBufferGenerator;
@@ -53,7 +52,6 @@ import org.apache.druid.utils.JvmUtils;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ForkJoinPool;
 
 /**
  */
@@ -64,7 +62,7 @@ public class DruidProcessingModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    binder.bind(ExecutorServiceConfig.class).to(DruidProcessingConfig.class);
+    JsonConfigProvider.bind(binder, "druid.processing", DruidProcessingConfig.class);
     MetricsModule.register(binder, ExecutorServiceMonitor.class);
   }
 
@@ -133,26 +131,6 @@ public class DruidProcessingModule implements Module
         new OffheapBufferGenerator("result merging", config.intermediateComputeSizeBytes()),
         config.getNumMergeBuffers()
     );
-  }
-
-  @Provides
-  @ManageLifecycle
-  public LifecycleForkJoinPoolProvider getMergeProcessingPoolProvider(DruidProcessingConfig config)
-  {
-    return new LifecycleForkJoinPoolProvider(
-        config.getMergePoolParallelism(),
-        ForkJoinPool.defaultForkJoinWorkerThreadFactory,
-        (t, e) -> log.error(e, "Unhandled exception in thread [%s]", t),
-        true,
-        config.getMergePoolAwaitShutdownMillis()
-    );
-  }
-
-  @Provides
-  @Merging
-  public ForkJoinPool getMergeProcessingPool(LifecycleForkJoinPoolProvider poolProvider)
-  {
-    return poolProvider.getPool();
   }
 
   private void verifyDirectMemory(DruidProcessingConfig config)

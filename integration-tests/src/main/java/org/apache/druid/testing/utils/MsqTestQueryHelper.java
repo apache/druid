@@ -93,17 +93,22 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
   /**
    * Submits a task to the MSQ API with the given query string, and default headers and parameters
    */
-  public SqlTaskStatus submitMsqTask(String sqlQueryString) throws ExecutionException, InterruptedException
+  public SqlTaskStatus submitMsqTaskSuccesfully(String sqlQueryString) throws ExecutionException, InterruptedException
   {
-    return submitMsqTask(sqlQueryString, ImmutableMap.of());
+    return submitMsqTaskSuccesfully(sqlQueryString, ImmutableMap.of());
   }
 
   /**
    * Submits a task to the MSQ API with the given query string, and default headers and custom context parameters
    */
-  public SqlTaskStatus submitMsqTask(String sqlQueryString, Map<String, Object> context) throws ExecutionException, InterruptedException
+  public SqlTaskStatus submitMsqTaskSuccesfully(String sqlQueryString, Map<String, Object> context) throws ExecutionException, InterruptedException
   {
-    return submitMsqTask(new SqlQuery(sqlQueryString, null, false, false, false, context, null));
+    return submitMsqTaskSuccesfully(new SqlQuery(sqlQueryString, null, false, false, false, context, null), null, null);
+  }
+
+  public SqlTaskStatus submitMsqTaskSuccesfully(SqlQuery sqlQuery) throws ExecutionException, InterruptedException
+  {
+    return submitMsqTaskSuccesfully(sqlQuery, null, null);
   }
 
   // Run the task, wait for it to complete, fetch the reports, verify the results,
@@ -112,27 +117,18 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
    * Submits a {@link SqlQuery} to the MSQ API for execution. This method waits for the task to be accepted by the cluster
    * and returns the status associated with the submitted task
    */
-  public SqlTaskStatus submitMsqTask(SqlQuery sqlQuery) throws ExecutionException, InterruptedException
+  public SqlTaskStatus submitMsqTaskSuccesfully(SqlQuery sqlQuery, String username, String password) throws ExecutionException, InterruptedException
   {
-    String queryUrl = getQueryURL(config.getBrokerUrl());
-    Future<StatusResponseHolder> responseHolderFuture = msqClient.queryAsync(queryUrl, sqlQuery);
-    // It is okay to block here for the result because MSQ tasks return the task id associated with it, which shouldn't
-    // consume a lot of time
-    StatusResponseHolder statusResponseHolder;
-    try {
-      statusResponseHolder = responseHolderFuture.get(5, TimeUnit.MINUTES);
-    }
-    catch (TimeoutException e) {
-      throw new ISE(e, "Unable to fetch the task id for the submitted task in time.");
-    }
-
+    StatusResponseHolder statusResponseHolder = submitMsqTask(sqlQuery, username, password);
     // Check if the task has been accepted successfully
     HttpResponseStatus httpResponseStatus = statusResponseHolder.getStatus();
     if (!httpResponseStatus.equals(HttpResponseStatus.ACCEPTED)) {
       throw new ISE(
-          "Unable to submit the task successfully. Received response status code [%d], and response content:\n[%s]",
-          httpResponseStatus,
-          statusResponseHolder.getContent()
+          StringUtils.format(
+              "Unable to submit the task successfully. Received response status code [%d], and response content:\n[%s]",
+              httpResponseStatus.getCode(),
+              statusResponseHolder.getContent()
+          )
       );
     }
     String content = statusResponseHolder.getContent();
@@ -144,6 +140,20 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
       throw new ISE("Unable to parse the response");
     }
     return sqlTaskStatus;
+  }
+
+  public StatusResponseHolder submitMsqTask(SqlQuery sqlQuery, String username, String password) throws ExecutionException, InterruptedException
+  {
+    String queryUrl = getQueryURL(config.getBrokerUrl());
+    Future<StatusResponseHolder> responseHolderFuture = msqClient.queryAsync(queryUrl, sqlQuery, username, password);
+    // It is okay to block here for the result because MSQ tasks return the task id associated with it, which shouldn't
+    // consume a lot of time
+    try {
+      return responseHolderFuture.get(5, TimeUnit.MINUTES);
+    }
+    catch (TimeoutException e) {
+      throw new ISE(e, "Unable to fetch the task id for the submitted task in time.");
+    }
   }
 
   /**
@@ -251,7 +261,7 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
     for (MsqQueryWithResults queryWithResults : queries) {
       String queryString = queryWithResults.getQuery();
       String queryWithDatasource = StringUtils.replace(queryString, "%%DATASOURCE%%", fullDatasourcePath);
-      SqlTaskStatus sqlTaskStatus = submitMsqTask(queryWithDatasource);
+      SqlTaskStatus sqlTaskStatus = submitMsqTaskSuccesfully(queryWithDatasource);
       if (sqlTaskStatus.getState().isFailure()) {
         throw new ISE(
             "Unable to start the task successfully.\nPossible exception: %s",
@@ -270,7 +280,7 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
   public void submitMsqTaskAndWaitForCompletion(String sqlQueryString, Map<String, Object> context)
       throws Exception
   {
-    SqlTaskStatus sqlTaskStatus = submitMsqTask(sqlQueryString, context);
+    SqlTaskStatus sqlTaskStatus = submitMsqTaskSuccesfully(sqlQueryString, context);
 
     LOG.info("Sql Task submitted with task Id - %s", sqlTaskStatus.getTaskId());
 

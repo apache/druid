@@ -177,11 +177,11 @@ public class FrameProcessors
     }
 
     for (WritableFrameChannel channel : Lists.reverse(writableFrameChannels)) {
-      closer.register(channel::close);
+      closer.register(channel);
     }
 
     for (ReadableFrameChannel channel : Lists.reverse(readableFrameChannels)) {
-      closer.register(channel::close);
+      closer.register(channel);
     }
 
     closer.close();

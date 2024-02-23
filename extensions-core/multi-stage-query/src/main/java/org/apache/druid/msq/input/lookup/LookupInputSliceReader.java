@@ -29,6 +29,7 @@ import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.ReadableInputs;
+import org.apache.druid.msq.input.table.RichSegmentDescriptor;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.segment.Segment;
@@ -99,7 +100,8 @@ public class LookupInputSliceReader implements InputSliceReader
 
                       return ResourceHolder.fromCloseable(segment);
                     },
-                    SegmentId.dummy(lookupName).toDescriptor()
+                    null,
+                    new RichSegmentDescriptor(SegmentId.dummy(lookupName).toDescriptor(), null, null)
                 )
             )
         )

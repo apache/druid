@@ -1,0 +1,28 @@
+{
+    "testId": "wind_fn_aggregates",
+    "type": "group",
+    "description": "Functional tests to verify Window Functions",
+    "submit-type": "jdbc",
+    "categories": [
+        "functional"
+    ],
+    "matrices": [
+        {
+            "query-file": ".*.q",
+            "schema": "dfs.window_functions",
+            "output-format": "tsv",
+            "expected-file": ".*.e",
+            "verification-type": [
+                "in-memory"
+            ]
+        }
+    ],
+    "datasources": [
+        {
+            "mode": "cp",
+            "src": "Datasources/window_functions",
+            "dest": "window_functions"
+        }
+    ]
+}
+

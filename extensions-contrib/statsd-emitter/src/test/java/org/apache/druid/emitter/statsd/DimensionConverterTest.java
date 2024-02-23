@@ -21,7 +21,6 @@ package org.apache.druid.emitter.statsd;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.junit.Assert;
 import org.junit.Test;
@@ -43,7 +42,7 @@ public class DimensionConverterTest
         .setDimension("remoteAddress", "194.0.90.2")
         .setDimension("id", "ID")
         .setDimension("context", "{context}")
-        .build(DateTimes.nowUtc(), "query/time", 10)
+        .setMetric("query/time", 10)
         .build("broker", "brokerHost1");
 
     ImmutableMap.Builder<String, String> actual = new ImmutableMap.Builder<>();

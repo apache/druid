@@ -27,15 +27,18 @@ on:
 
 jobs:
   build:
-    if: github.event_name == 'schedule'
+    if: (github.event_name == 'schedule' && github.repository == 'apache/druid')
     name: build (jdk8)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout branch
         uses: actions/checkout@v3
 
-      - name: Setup java
-        run: export JAVA_HOME=$JAVA_HOME_8_X64
+      - name: setup java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '8'
+          distribution: 'zulu'
 
       - name: Cache Maven m2 repository
         id: maven
@@ -107,10 +110,10 @@ jobs:
       group: other
 
   security_vulnerabilities:
+    if: github.repository == 'apache/druid'
     name: security vulnerabilities
     strategy:
-      matrix:
-        HADOOP_PROFILE: [ '', '-Phadoop3' ]
+      fail-fast: false
     runs-on: ubuntu-latest
     steps:
       - name: Checkout branch
@@ -123,12 +126,12 @@ jobs:
           distribution: 'zulu'
           cache: maven
 
+      - name: maven build # needed to rebuild incase of maven snapshot resolution fails
+        run: mvn clean install dependency:go-offline -P dist -P skip-static-checks,skip-tests -Dmaven.javadoc.skip=true -Dcyclonedx.skip=true -Dweb.console.skip=true
+
       - name: security vulnerabilities check
-        env:
-          MVN: mvn --no-snapshot-updates
-          HADOOP_PROFILE: ${{ matrix.HADOOP_PROFILE }}
         run: |
-          mvn dependency-check:purge dependency-check:check ${HADOOP_PROFILE} || { echo "
+          mvn dependency-check:purge dependency-check:check || { echo "
           The OWASP dependency check has found security vulnerabilities. Please use a newer version
           of the dependency that does not have vulnerabilities. To see a report run
           `mvn dependency-check:check`

@@ -94,7 +94,8 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
         taskResource,
         ingestionSchema.getDataSchema(),
         ingestionSchema.getTuningConfig(),
-        context
+        context,
+        supervisorTaskId
     );
 
     Preconditions.checkArgument(
@@ -109,7 +110,7 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
   @Override
   public final TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
-    final InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource();
+    InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(toolbox);
 
     final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientProvider().build(
         supervisorTaskId,
@@ -246,7 +247,8 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
                 getTaskCompletionRowStats(),
                 "",
                 false, // not applicable for parallel subtask
-                segmentAvailabilityWaitTimeMs
+                segmentAvailabilityWaitTimeMs,
+                Collections.emptyMap()
             )
         )
     );

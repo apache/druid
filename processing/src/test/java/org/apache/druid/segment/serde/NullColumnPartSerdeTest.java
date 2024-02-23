@@ -71,7 +71,6 @@ public class NullColumnPartSerdeTest extends InitializedNullHandlingTest
     Assert.assertTrue(Types.is(columnCapabilities, ValueType.DOUBLE));
     Assert.assertTrue(columnCapabilities.hasNulls().isTrue());
     Assert.assertTrue(columnCapabilities.hasMultipleValues().isFalse());
-    Assert.assertTrue(columnCapabilities.isFilterable());
     Assert.assertTrue(columnCapabilities.hasBitmapIndexes());
     Assert.assertTrue(columnCapabilities.isDictionaryEncoded().isTrue());
     Assert.assertTrue(columnCapabilities.areDictionaryValuesSorted().isTrue());

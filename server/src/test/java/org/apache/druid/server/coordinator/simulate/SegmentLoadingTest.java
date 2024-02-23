@@ -483,6 +483,33 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
   }
 
   @Test
+  public void testLoadOfUnusedSegmentIsCancelled()
+  {
+    final CoordinatorSimulation sim =
+        CoordinatorSimulation.builder()
+                             .withSegments(segments)
+                             .withServers(historicalT11)
+                             .withRules(datasource, Load.on(Tier.T1, 1).forever())
+                             .build();
+
+    startSimulation(sim);
+
+    // Run 1: All segments are assigned
+    runCoordinatorCycle();
+    verifyValue(Metric.ASSIGNED_COUNT, 10L);
+
+    // Run 2: Update rules, all segments are marked as unused
+    setRetentionRules(datasource, Drop.forever());
+    runCoordinatorCycle();
+    verifyValue(Metric.DELETED_COUNT, 10L);
+
+    // Run 3: Loads of unused segments are cancelled
+    runCoordinatorCycle();
+    verifyValue(Metric.LOAD_QUEUE_COUNT, 0L);
+    verifyValue(Metric.CANCELLED_ACTIONS, 10L);
+  }
+
+  @Test
   public void testSegmentsAreDroppedFromFullServersFirst()
   {
     final CoordinatorSimulation sim =
