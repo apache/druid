@@ -101,7 +101,6 @@ public class DruidLogicalRules
                 DruidUnionRule.class.getSimpleName()
             ),
             new DruidJoinRule(
-                plannerContext,
                 LogicalJoin.class,
                 Convention.NONE,
                 DruidLogicalConvention.instance(),
