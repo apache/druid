@@ -84,7 +84,7 @@ public class DruidJoinRule extends RelOptRule
   {
     return new DruidJoinRule(plannerContext);
   }
-  
+
   @Override
   public boolean matches(RelOptRuleCall call)
   {
@@ -95,6 +95,11 @@ public class DruidJoinRule extends RelOptRule
     // 1) Can handle the join condition as a native join.
     // 2) Left has a PartialDruidQuery (i.e., is a real query, not top-level UNION ALL).
     // 3) Right has a PartialDruidQuery (i.e., is a real query, not top-level UNION ALL).
+    return canHandleCondition(join, right) && left.getPartialDruidQuery() != null && right.getPartialDruidQuery() != null;
+  }
+
+  private boolean canHandleCondition(final Join join, final DruidRel<?> right)
+  {
     return canHandleCondition(
         join.getCondition(),
         join.getLeft().getRowType(),
@@ -102,7 +107,13 @@ public class DruidJoinRule extends RelOptRule
         join.getJoinType(),
         join.getSystemFieldList(),
         join.getCluster().getRexBuilder()
-    ) && left.getPartialDruidQuery() != null && right.getPartialDruidQuery() != null;
+    );
+  }
+  private boolean canHandleCondition1(final Join join, final DruidRel<?> right)
+  {
+    ConditionAnalysis conditionAnalysis =
+        analyzeCondition(join.getCondition(), join.getLeft().getRowType(), join.getCluster().getRexBuilder());
+    return enableLeftScanDirect;
   }
 
   @Override
@@ -232,7 +243,9 @@ public class DruidJoinRule extends RelOptRule
     }
   }
 
-  /**
+
+
+/**
    * Returns whether we can handle the join condition. In case, some conditions in an AND expression are not supported,
    * they are extracted into a post-join filter instead.
    */
@@ -275,7 +288,7 @@ public class DruidJoinRule extends RelOptRule
       // for an example.
       return conditionAnalysis.getUnsupportedOnSubConditions().isEmpty();
     }
-    
+
     return true;
   }
 
@@ -429,7 +442,8 @@ public class DruidJoinRule extends RelOptRule
    * that can be extracted into post join filter.
    * {@code f(LeftRel) = RightColumn}, then return a {@link ConditionAnalysis}.
    */
-  public ConditionAnalysis analyzeCondition(
+  // FIXME should be moved inside ConditionAnalysis?
+  public static ConditionAnalysis analyzeCondition(
       final RexNode condition,
       final RelDataType leftRowType,
       final RexBuilder rexBuilder
