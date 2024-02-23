@@ -20,6 +20,7 @@
 package org.apache.druid.msq.exec;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -41,6 +42,7 @@ import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
+import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -62,6 +64,8 @@ import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.frame.write.InvalidNullByteException;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -188,6 +192,7 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -204,6 +209,7 @@ import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.storage.ExportStorageProvider;
+import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
@@ -238,6 +244,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
@@ -1715,12 +1722,77 @@ public class ControllerImpl implements Controller
   {
     if (queryKernel.isSuccess() && MSQControllerTask.isIngestion(task.getQuerySpec())) {
       final StageId finalStageId = queryKernel.getStageId(queryDef.getFinalStageDefinition().getStageNumber());
+      queryDef.getFinalStageDefinition().getClusterBy();
 
       //noinspection unchecked
       @SuppressWarnings("unchecked")
       final Set<DataSegment> segments = (Set<DataSegment>) queryKernel.getResultObjectForStage(finalStageId);
+      DataSchema dataSchema = ((SegmentGeneratorFrameProcessorFactory) queryKernel.getStageDefinition(finalStageId)
+                                                                                  .getProcessorFactory()).getDataSchema();
+      ClusterBy clusterBy = queryDef.getFinalStageDefinition().getClusterBy();
       log.info("Query [%s] publishing %d segments.", queryDef.getQueryId(), segments.size());
-      publishAllSegments(segments);
+      Function<Set<DataSegment>, Set<DataSegment>> compactionStateAnnotateFunction = compactionStateAnnotateFunction(
+          true,
+          context.jsonMapper(),
+          dataSchema,
+          clusterBy
+      );
+      publishAllSegments(compactionStateAnnotateFunction.apply(segments));
+    }
+  }
+
+  public Function<Set<DataSegment>, Set<DataSegment>> compactionStateAnnotateFunction(
+      boolean storeCompactionState,
+      ObjectMapper jsonMapper,
+      DataSchema dataSchema,
+      ClusterBy clusterBy
+  )
+  {
+    if (storeCompactionState) {
+      IndexSpec indexSpec = task().getQuerySpec().getTuningConfig().getIndexSpec();
+      GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
+      DimensionsSpec dimensionsSpec = dataSchema.getDimensionsSpec();
+      Map<String, Object> transformSpec = dataSchema.getTransformSpec() == null
+                                          || TransformSpec.NONE.equals(dataSchema.getTransformSpec())
+                                          ? null
+                                          : new ClientCompactionTaskTransformSpec(dataSchema.getTransformSpec()
+                                                                                            .getFilter()).asMap(
+                                              jsonMapper);
+      List<Object> metricsSpec = dataSchema.getAggregators() == null
+                                 ? null
+                                 : jsonMapper.convertValue(
+                                     dataSchema.getAggregators(),
+                                     new TypeReference<List<Object>>()
+                                     {
+                                     }
+                                 );
+
+      PartitionsSpec partitionSpec = new DimensionRangePartitionsSpec(
+          task().getQuerySpec()
+                .getTuningConfig()
+                .getRowsPerSegment(),
+          null,
+          clusterBy.getColumns()
+                   .stream()
+                   .map(KeyColumn::columnName)
+                   .collect(Collectors.toList()),
+          false
+      );
+
+      final CompactionState compactionState = new CompactionState(
+          partitionSpec,
+          dimensionsSpec,
+          metricsSpec,
+          transformSpec,
+          indexSpec.asMap(jsonMapper),
+          granularitySpec.asMap(jsonMapper)
+      );
+      return segments -> segments
+          .stream()
+          .map(s -> s.withLastCompactionState(compactionState))
+          .collect(Collectors.toSet());
+    } else {
+      return Function.identity();
     }
   }
 
