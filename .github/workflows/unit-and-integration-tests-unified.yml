@@ -60,7 +60,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # skip the "cache: maven" step from setup-java. We explicitly use a
       # different cache key since we cannot reuse it across commits.

@@ -148,7 +148,7 @@ jobs:
       BUILD_DRUID_CLUSTER: true
     steps:
       - name: Checkout branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: setup java
         uses: actions/setup-java@v3
