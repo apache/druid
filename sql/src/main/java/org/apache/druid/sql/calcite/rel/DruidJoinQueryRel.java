@@ -55,7 +55,7 @@ import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.planner.querygen.InputDescProducer.InputDesc;
+import org.apache.druid.sql.calcite.planner.querygen.SourceDescProducer.SourceDesc;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
@@ -137,9 +137,9 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     );
   }
 
-  private InputDesc buildLeftDesc()
+  private SourceDesc buildLeftDesc()
   {
-    final InputDesc leftDesc;
+    final SourceDesc leftDesc;
     final DruidRel<?> leftDruidRel = (DruidRel<?>) left;
     final DruidQuery leftQuery = Preconditions.checkNotNull(leftDruidRel.toDruidQuery(false), "leftQuery");
     final RowSignature leftSignature = leftQuery.getOutputRowSignature();
@@ -152,13 +152,13 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     } else {
       leftDataSource = leftQuery.getDataSource();
     }
-    leftDesc = new InputDesc(leftDataSource, leftSignature);
+    leftDesc = new SourceDesc(leftDataSource, leftSignature);
     return leftDesc;
   }
 
-  private InputDesc buildRightDesc()
+  private SourceDesc buildRightDesc()
   {
-    final InputDesc rightDesc;
+    final SourceDesc rightDesc;
     final DruidRel<?> rightDruidRel = (DruidRel<?>) right;
     final DruidQuery rightQuery = Preconditions.checkNotNull(rightDruidRel.toDruidQuery(false), "rightQuery");
     final RowSignature rightSignature = rightQuery.getOutputRowSignature();
@@ -168,11 +168,11 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     } else {
       rightDataSource = rightQuery.getDataSource();
     }
-    rightDesc = new InputDesc(rightDataSource, rightSignature);
+    rightDesc = new SourceDesc(rightDataSource, rightSignature);
     return rightDesc;
   }
 
-  public static InputDesc buildJoinDataSource(final InputDesc leftDesc, final InputDesc rightDesc, PlannerContext plannerContext, Join joinRel, Filter leftFilter)
+  public static SourceDesc buildJoinDataSource(final SourceDesc leftDesc, final SourceDesc rightDesc, PlannerContext plannerContext, Join joinRel, Filter leftFilter)
   {
     final Pair<String, RowSignature> prefixSignaturePair = computeJoinRowSignature(
         leftDesc.rowSignature,
@@ -221,7 +221,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
         plannerContext.getJoinableFactoryWrapper()
     );
 
-    InputDesc inputDesc = new InputDesc(joinDataSource, signature, virtualColumnRegistry);
+    SourceDesc inputDesc = new SourceDesc(joinDataSource, signature, virtualColumnRegistry);
     return inputDesc;
   }
 
@@ -229,10 +229,10 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
   @Override
   public DruidQuery toDruidQuery(final boolean finalizeAggregations)
   {
-    final InputDesc leftDesc = buildLeftDesc();
-    final InputDesc rightDesc = buildRightDesc();
+    final SourceDesc leftDesc = buildLeftDesc();
+    final SourceDesc rightDesc = buildRightDesc();
 
-    InputDesc inputDesc = buildJoinDataSource(leftDesc, rightDesc, getPlannerContext(), joinRel, leftFilter);
+    SourceDesc inputDesc = buildJoinDataSource(leftDesc, rightDesc, getPlannerContext(), joinRel, leftFilter);
 
     return partialQuery.build(
         inputDesc.dataSource,

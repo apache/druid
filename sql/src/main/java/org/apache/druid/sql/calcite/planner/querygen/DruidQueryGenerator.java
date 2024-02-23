@@ -31,7 +31,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator.PDQVertexFactory.PDQVertex;
-import org.apache.druid.sql.calcite.planner.querygen.InputDescProducer.InputDesc;
+import org.apache.druid.sql.calcite.planner.querygen.SourceDescProducer.SourceDesc;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery.Stage;
@@ -73,7 +73,7 @@ public class DruidQueryGenerator
 
   private Vertex processNodeWithInputs(DruidLogicalNode node, List<Vertex> newInputs, boolean isRoot)
   {
-    if (node instanceof InputDescProducer) {
+    if (node instanceof SourceDescProducer) {
       return vertexFactory.createVertex(PartialDruidQuery.create(node), newInputs);
     }
     if (newInputs.size() == 1) {
@@ -110,18 +110,18 @@ public class DruidQueryGenerator
     Optional<Vertex> extendWith(RelNode parentNode, boolean isRoot);
 
     /**
-     * Decides wether this {@link Vertex} can be unwrapped into an {@link InputDesc}.
+     * Decides wether this {@link Vertex} can be unwrapped into an {@link SourceDesc}.
      */
     boolean canUnwrapInput();
 
     /**
-     * Unwraps this {@link Vertex} into an {@link InputDesc}.
+     * Unwraps this {@link Vertex} into an {@link SourceDesc}.
      *
-     * Unwraps the input of this vertex - if it doesn't do anything beyond reading its input.
+     * Unwraps the source of this vertex - if it doesn't do anything beyond reading its input.
      *
      * @throws DruidException if unwrap is not possible.
      */
-    InputDesc unwrapInputDesc();
+    SourceDesc unwrapSourceDesc();
   }
 
   /**
@@ -157,7 +157,7 @@ public class DruidQueryGenerator
       @Override
       public DruidQuery buildQuery(boolean topLevel)
       {
-        InputDesc input = getInput();
+        SourceDesc input = getInput();
         return partialDruidQuery.build(
             input.dataSource,
             input.rowSignature,
@@ -168,30 +168,30 @@ public class DruidQueryGenerator
       }
 
       /**
-       * Creates the {@link InputDesc} for the current {@link Vertex}.
+       * Creates the {@link SourceDesc} for the current {@link Vertex}.
        */
-      private InputDesc getInput()
+      private SourceDesc getInput()
       {
-        List<InputDesc> inputDescs = new ArrayList<>();
+        List<SourceDesc> sourceDescs = new ArrayList<>();
         for (Vertex inputVertex : inputs) {
-          final InputDesc desc;
+          final SourceDesc desc;
           if (inputVertex.canUnwrapInput()) {
-            desc = inputVertex.unwrapInputDesc();
+            desc = inputVertex.unwrapSourceDesc();
           } else {
             DruidQuery inputQuery = inputVertex.buildQuery(false);
-            desc = new InputDesc(new QueryDataSource(inputQuery.getQuery()), inputQuery.getOutputRowSignature());
+            desc = new SourceDesc(new QueryDataSource(inputQuery.getQuery()), inputQuery.getOutputRowSignature());
           }
-          inputDescs.add(desc);
+          sourceDescs.add(desc);
         }
         RelNode scan = partialDruidQuery.getScan();
-        if (scan instanceof InputDescProducer) {
-          InputDescProducer inp = (InputDescProducer) scan;
-          return inp.getInputDesc(plannerContext, inputDescs);
+        if (scan instanceof SourceDescProducer) {
+          SourceDescProducer inp = (SourceDescProducer) scan;
+          return inp.getSourceDesc(plannerContext, sourceDescs);
         }
         if (inputs.size() == 1) {
-          return inputDescs.get(0);
+          return sourceDescs.get(0);
         }
-        throw DruidException.defensive("Unable to create InputDesc for Operator [%s]", scan);
+        throw DruidException.defensive("Unable to create SourceDesc for Operator [%s]", scan);
       }
 
       /**
@@ -257,12 +257,12 @@ public class DruidQueryGenerator
       }
 
       @Override
-      public InputDesc unwrapInputDesc()
+      public SourceDesc unwrapSourceDesc()
       {
         if (canUnwrapInput()) {
           DruidQuery q = buildQuery(false);
-          InputDesc origInput = getInput();
-          return new InputDesc(origInput.dataSource, q.getOutputRowSignature());
+          SourceDesc origInput = getInput();
+          return new SourceDesc(origInput.dataSource, q.getOutputRowSignature());
         }
         throw DruidException.defensive("Can't unwrap input of vertex[%s]", partialDruidQuery);
       }

@@ -34,7 +34,7 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.schema.Table;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.planner.querygen.InputDescProducer;
+import org.apache.druid.sql.calcite.planner.querygen.SourceDescProducer;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
 import java.util.List;
@@ -42,7 +42,7 @@ import java.util.List;
 /**
  * {@link DruidLogicalNode} convention node for {@link TableScan} plan node.
  */
-public class DruidTableScan extends TableScan implements DruidLogicalNode, InputDescProducer
+public class DruidTableScan extends TableScan implements DruidLogicalNode, SourceDescProducer
 {
   public DruidTableScan(
       RelOptCluster cluster,
@@ -98,10 +98,10 @@ public class DruidTableScan extends TableScan implements DruidLogicalNode, Input
   }
 
   @Override
-  public InputDesc getInputDesc(PlannerContext plannerContext, List<InputDesc> inputs)
+  public SourceDesc getSourceDesc(PlannerContext plannerContext, List<SourceDesc> inputs)
   {
     final DruidTable druidTable = getDruidTable();
-    return new InputDesc(druidTable.getDataSource(), druidTable.getRowSignature());
+    return new SourceDesc(druidTable.getDataSource(), druidTable.getRowSignature());
   }
 
   private DruidTable getDruidTable()

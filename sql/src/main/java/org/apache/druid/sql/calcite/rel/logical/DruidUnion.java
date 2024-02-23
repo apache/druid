@@ -35,11 +35,11 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.planner.querygen.InputDescProducer;
+import org.apache.druid.sql.calcite.planner.querygen.SourceDescProducer;
 import java.util.ArrayList;
 import java.util.List;
 
-public class DruidUnion extends Union implements DruidLogicalNode, InputDescProducer
+public class DruidUnion extends Union implements DruidLogicalNode, SourceDescProducer
 {
   public DruidUnion(
       RelOptCluster cluster,
@@ -64,11 +64,11 @@ public class DruidUnion extends Union implements DruidLogicalNode, InputDescProd
   }
 
   @Override
-  public InputDesc getInputDesc(PlannerContext plannerContext, List<InputDesc> inputs)
+  public SourceDesc getSourceDesc(PlannerContext plannerContext, List<SourceDesc> inputs)
   {
     List<DataSource> dataSources = new ArrayList<>();
     RowSignature signature = null;
-    for (InputDesc inputDesc : inputs) {
+    for (SourceDesc inputDesc : inputs) {
       checkDataSourceSupported(inputDesc.dataSource);
       dataSources.add(inputDesc.dataSource);
       if (signature == null) {
@@ -83,7 +83,7 @@ public class DruidUnion extends Union implements DruidLogicalNode, InputDescProd
         }
       }
     }
-    return new InputDesc(new UnionDataSource(dataSources), signature);
+    return new SourceDesc(new UnionDataSource(dataSources), signature);
   }
 
   private void checkDataSourceSupported(DataSource dataSource)

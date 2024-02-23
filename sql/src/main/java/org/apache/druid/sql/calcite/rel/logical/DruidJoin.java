@@ -31,13 +31,13 @@ import org.apache.calcite.rel.hint.RelHint;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rex.RexNode;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.planner.querygen.InputDescProducer;
+import org.apache.druid.sql.calcite.planner.querygen.SourceDescProducer;
 import org.apache.druid.sql.calcite.rel.DruidJoinQueryRel;
 
 import java.util.List;
 import java.util.Set;
 
-public class DruidJoin extends Join implements DruidLogicalNode, InputDescProducer
+public class DruidJoin extends Join implements DruidLogicalNode, SourceDescProducer
 {
   public DruidJoin(RelOptCluster cluster,
       RelTraitSet traitSet,
@@ -70,10 +70,10 @@ public class DruidJoin extends Join implements DruidLogicalNode, InputDescProduc
   }
 
   @Override
-  public InputDesc getInputDesc(PlannerContext plannerContext, List<InputDesc> inputs)
+  public SourceDesc getSourceDesc(PlannerContext plannerContext, List<SourceDesc> inputs)
   {
-    InputDesc leftDesc = inputs.get(0);
-    InputDesc rightDesc = inputs.get(1);
+    SourceDesc leftDesc = inputs.get(0);
+    SourceDesc rightDesc = inputs.get(1);
     return DruidJoinQueryRel.buildJoinDataSource(leftDesc, rightDesc, plannerContext, this, null);
   }
 }

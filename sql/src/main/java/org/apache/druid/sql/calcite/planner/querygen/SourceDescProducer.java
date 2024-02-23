@@ -31,25 +31,25 @@ import java.util.List;
  *
  * Example: TableScan ; Union; Join.
  */
-public interface InputDescProducer
+public interface SourceDescProducer
 {
   /**
    * Utility class to input related things details.
    *
    * Main reason to have this was that {@link DataSource} doesn't contain the {@link RowSignature}.
    */
-  class InputDesc
+  class SourceDesc
   {
     public final DataSource dataSource;
     public final RowSignature rowSignature;
     public final VirtualColumnRegistry virtualColumnRegistry;
 
-    public InputDesc(DataSource dataSource, RowSignature rowSignature)
+    public SourceDesc(DataSource dataSource, RowSignature rowSignature)
     {
       this(dataSource, rowSignature, null);
     }
 
-    public InputDesc(DataSource dataSource, RowSignature rowSignature, VirtualColumnRegistry virtualColumnRegistry)
+    public SourceDesc(DataSource dataSource, RowSignature rowSignature, VirtualColumnRegistry virtualColumnRegistry)
     {
       this.dataSource = dataSource;
       this.rowSignature = rowSignature;
@@ -57,5 +57,5 @@ public interface InputDescProducer
     }
   }
 
-  InputDesc getInputDesc(PlannerContext plannerContext, List<InputDesc> inputs);
+  SourceDesc getSourceDesc(PlannerContext plannerContext, List<SourceDesc> inputs);
 }
