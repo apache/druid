@@ -31,6 +31,9 @@ public class SegmentsMetadataManagerConfig
   @JsonProperty
   private Period pollDuration = new Period("PT1M");
 
+  @JsonProperty
+  private boolean useFindFullyOvershadowed;
+
   public Period getPollDuration()
   {
     return pollDuration;
@@ -39,5 +42,10 @@ public class SegmentsMetadataManagerConfig
   public void setPollDuration(Period pollDuration)
   {
     this.pollDuration = pollDuration;
+  }
+
+  public boolean isUseFindFullyOvershadowed()
+  {
+    return useFindFullyOvershadowed;
   }
 }
