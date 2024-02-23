@@ -31,14 +31,6 @@ import java.util.List;
  * Abstracts away non-trivial input operation handlings between {@link DataSource}s.
  *
  * Example: TableScan ; Union; Join.
- *
- * FIXME: this class is handy; but it does created a small confusion (for me at least)
- * there are 2 distinct usage of datasources - which are similar but also different:
- *   * for a given query an input is a datasource - that is: the source of the query
- *   * for a given join or more complicated datasource (which will be a base for a query) the inputs are also datasources
- *     * however these datasources are "different" in the sence that they may cover an underlying query or similar
- *     * the Join datasource in particular does more than just "covering" multiple datasource input
- *       and thus may use virtual columns as well
  */
 public interface InputDescProducer
 {
