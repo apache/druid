@@ -158,16 +158,13 @@ public class KillUnusedSegments implements CoordinatorDuty
 
   private DruidCoordinatorRuntimeParams runInternal(final DruidCoordinatorRuntimeParams params)
   {
-    Collection<String> dataSourcesToKill =
-        params.getCoordinatorDynamicConfig().getSpecificDataSourcesToKillUnusedSegmentsIn();
-    final int killTaskCapacity = getKillTaskCapacity(params.getCoordinatorDynamicConfig());
-    final int availableKillTaskSlots = getAvailableKillTaskSlots(
-        killTaskCapacity,
-        CoordinatorDutyUtils.getNumActiveTaskSlots(overlordClient, IS_AUTO_KILL_TASK).size()
-    );
+    final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
     final CoordinatorRunStats stats = params.getCoordinatorStats();
 
-    if (0 < availableKillTaskSlots) {
+    final int availableKillTaskSlots = getAvailableKillTaskSlots(dynamicConfig, stats);
+    Collection<String> dataSourcesToKill = dynamicConfig.getSpecificDataSourcesToKillUnusedSegmentsIn();
+
+    if (availableKillTaskSlots > 0) {
       // If no datasource has been specified, all are eligible for killing unused segments
       if (CollectionUtils.isNullOrEmpty(dataSourcesToKill)) {
         dataSourcesToKill = segmentsMetadataManager.retrieveAllDataSourceNames();
@@ -180,9 +177,6 @@ public class KillUnusedSegments implements CoordinatorDuty
     // any datasources that are no longer being considered for kill should have their
     // last kill interval removed from map.
     datasourceToLastKillIntervalEnd.keySet().retainAll(dataSourcesToKill);
-    
-    stats.add(Stats.Kill.AVAILABLE_SLOTS, availableKillTaskSlots);
-    stats.add(Stats.Kill.MAX_SLOTS, killTaskCapacity);
     return params;
   }
 
@@ -278,7 +272,7 @@ public class KillUnusedSegments implements CoordinatorDuty
         maxUsedStatusLastUpdatedTime
     );
 
-    // Each unused segment interval returned here has a 1:1 correspondance to an unused segment. So we can assume
+    // Each unused segment interval returned here has a 1:1 correspondence with an unused segment. So we can assume
     // these are candidate segments to be killed.
     final RowKey datasourceKey = RowKey.of(Dimension.DATASOURCE, dataSource);
     stats.add(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, datasourceKey, unusedSegmentIntervals.size());
@@ -297,16 +291,20 @@ public class KillUnusedSegments implements CoordinatorDuty
     return lastKillTime == null || !DateTimes.nowUtc().isBefore(lastKillTime.plus(period));
   }
 
-  private int getAvailableKillTaskSlots(final int killTaskCapacity, final int numActiveKillTasks)
+  private int getAvailableKillTaskSlots(final CoordinatorDynamicConfig config, final CoordinatorRunStats stats)
   {
-    return Math.max(0, killTaskCapacity - numActiveKillTasks);
-  }
-
-  private int getKillTaskCapacity(final CoordinatorDynamicConfig config)
-  {
-    return Math.min(
+    final int killTaskCapacity = Math.min(
         (int) (CoordinatorDutyUtils.getTotalWorkerCapacity(overlordClient) * Math.min(config.getKillTaskSlotRatio(), 1.0)),
         config.getMaxKillTaskSlots()
     );
+
+    final int availableKillTaskSlots = Math.max(
+        0,
+        killTaskCapacity - CoordinatorDutyUtils.getNumActiveTaskSlots(overlordClient, IS_AUTO_KILL_TASK).size()
+    );
+
+    stats.add(Stats.Kill.AVAILABLE_SLOTS, availableKillTaskSlots);
+    stats.add(Stats.Kill.MAX_SLOTS, killTaskCapacity);
+    return availableKillTaskSlots;
   }
 }

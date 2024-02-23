@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
@@ -79,9 +80,11 @@ public class KillUnusedSegmentsTest
 
   private static final String DS1 = "DS1";
   private static final String DS2 = "DS2";
+  private static final String DS3 = "DS3";
 
   private static final RowKey DS1_STAT_KEY = RowKey.of(Dimension.DATASOURCE, DS1);
   private static final RowKey DS2_STAT_KEY = RowKey.of(Dimension.DATASOURCE, DS2);
+  private static final RowKey DS3_STAT_KEY = RowKey.of(Dimension.DATASOURCE, DS3);
 
   private final CoordinatorDynamicConfig.Builder dynamicConfigBuilder = CoordinatorDynamicConfig.builder();
   private TestSegmentsMetadataManager segmentsMetadataManager;
@@ -201,6 +204,38 @@ public class KillUnusedSegmentsTest
 
     validateLastKillStateAndReset(DS1, null);
   }
+
+  @Test
+  public void testKillAtCapacity()
+  {
+    dynamicConfigBuilder.withKillTaskSlotRatio(0.3);
+    dynamicConfigBuilder.withMaxKillTaskSlots(2);
+    paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
+
+    createAndAddUnusedSegment(DS1, YEAR_OLD, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS1, MONTH_OLD, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS1, DAY_OLD, NOW.minusDays(1));
+
+    createAndAddUnusedSegment(DS2, YEAR_OLD, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS2, DAY_OLD, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS2, NEXT_MONTH, NOW.minusDays(1));
+
+    createAndAddUnusedSegment(DS3, YEAR_OLD, NOW.minusDays(1));
+
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(2, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
+    Assert.assertEquals(1, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS2_STAT_KEY));
+
+    validateLastKillStateAndReset(DS1, new Interval(YEAR_OLD.getStart(), MONTH_OLD.getEnd()));
+    validateLastKillStateAndReset(DS2, YEAR_OLD);
+    validateLastKillStateAndReset(DS3, null);
+  }
+
 
   @Test
   public void testMultipleDatasources()
@@ -345,32 +380,32 @@ public class KillUnusedSegmentsTest
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
     Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
-
-    validateLastKillStateAndReset(DS1, null);
-    validateLastKillStateAndReset(DS2, null);
   }
 
   @Test
   public void testWhiteList()
   {
     // Only segments more than a day old are killed
-    dynamicConfigBuilder.withSpecificDataSourcesToKillUnusedSegmentsIn(Collections.singleton(DS2));
+    dynamicConfigBuilder.withSpecificDataSourcesToKillUnusedSegmentsIn(ImmutableSet.of(DS2, DS3));
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
     createAndAddUnusedSegment(DS1, YEAR_OLD, NOW.minusDays(1));
     createAndAddUnusedSegment(DS2, YEAR_OLD, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS3, MONTH_OLD, NOW.minusDays(1));
 
     initDuty();
     final CoordinatorRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
-    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.SUBMITTED_TASKS));
     Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
     Assert.assertEquals(0, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
     Assert.assertEquals(1, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS2_STAT_KEY));
+    Assert.assertEquals(1, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS3_STAT_KEY));
 
-    validateLastKillStateAndReset(DS2, YEAR_OLD);
     validateLastKillStateAndReset(DS1, null);
+    validateLastKillStateAndReset(DS2, YEAR_OLD);
+    validateLastKillStateAndReset(DS3, MONTH_OLD);
   }
 
   @Test
@@ -392,10 +427,7 @@ public class KillUnusedSegmentsTest
     Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
     Assert.assertEquals(2, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
 
-    validateLastKillStateAndReset(
-        DS1,
-        new Interval(YEAR_OLD.getStart(), MONTH_OLD.getEnd())
-    );
+    validateLastKillStateAndReset(DS1, new Interval(YEAR_OLD.getStart(), MONTH_OLD.getEnd()));
   }
 
   @Test
@@ -411,7 +443,6 @@ public class KillUnusedSegmentsTest
     createAndAddUnusedSegment(DS1, NEXT_MONTH, NOW.minusDays(10));
 
     initDuty();
-
     final CoordinatorRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
@@ -419,9 +450,7 @@ public class KillUnusedSegmentsTest
     Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
     Assert.assertEquals(5, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
 
-    validateLastKillStateAndReset(
-        DS1,
-        new Interval(YEAR_OLD.getStart(), NEXT_DAY.getEnd())
+    validateLastKillStateAndReset(DS1, new Interval(YEAR_OLD.getStart(), NEXT_DAY.getEnd())
     );
   }
 
@@ -438,7 +467,6 @@ public class KillUnusedSegmentsTest
     createAndAddUnusedSegment(DS1, NEXT_MONTH, NOW.minusDays(10));
 
     initDuty();
-
     final CoordinatorRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
@@ -447,10 +475,7 @@ public class KillUnusedSegmentsTest
     Assert.assertEquals(6, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
 
     // All past and future unused segments should be killed
-    validateLastKillStateAndReset(
-        DS1,
-        new Interval(YEAR_OLD.getStart(), NEXT_MONTH.getEnd())
-    );
+    validateLastKillStateAndReset(DS1, new Interval(YEAR_OLD.getStart(), NEXT_MONTH.getEnd()));
   }
 
   @Test
@@ -466,7 +491,6 @@ public class KillUnusedSegmentsTest
     createAndAddUnusedSegment(DS1, NEXT_MONTH, NOW.minusDays(10));
 
     initDuty();
-
     final CoordinatorRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
@@ -474,10 +498,7 @@ public class KillUnusedSegmentsTest
     Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
     Assert.assertEquals(1, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
 
-    validateLastKillStateAndReset(
-        DS1,
-        YEAR_OLD
-    );
+    validateLastKillStateAndReset(DS1, YEAR_OLD);
   }
 
   @Test
@@ -492,7 +513,6 @@ public class KillUnusedSegmentsTest
     overlordClient.addTask(DS1);
 
     initDuty();
-
     final CoordinatorRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(0, stats.get(Stats.Kill.AVAILABLE_SLOTS));
@@ -515,7 +535,6 @@ public class KillUnusedSegmentsTest
     overlordClient.addTask(DS1);
 
     initDuty();
-
     final CoordinatorRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(0, stats.get(Stats.Kill.AVAILABLE_SLOTS));
@@ -588,11 +607,11 @@ public class KillUnusedSegmentsTest
   @Test
   public void testKillTaskSlotStats5()
   {
-    initDuty();
     dynamicConfigBuilder.withKillTaskSlotRatio(0.3);
     dynamicConfigBuilder.withMaxKillTaskSlots(2);
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
+    initDuty();
     final CoordinatorRunStats stats = runDutyAndGetStats();
 
     Assert.assertEquals(2, stats.get(Stats.Kill.AVAILABLE_SLOTS));
@@ -791,22 +810,6 @@ public class KillUnusedSegmentsTest
   {
     final DruidCoordinatorRuntimeParams params = killDuty.run(paramsBuilder.build());
     return params.getCoordinatorStats();
-  }
-
-  private static class ExpectedStats
-  {
-    private final int availableSlots;
-    private final int submittedTasks;
-    private final int maxSlots;
-    private final Map<String, Long> dataSourceToCandidateSegments = new HashMap<>();
-
-    ExpectedStats(int availableSlots, int submittedTasks, int maxSlots, Map<String, Long> dataSourceToCandidateSegments)
-    {
-      this.availableSlots = availableSlots;
-      this.submittedTasks = submittedTasks;
-      this.maxSlots = maxSlots;
-      this.dataSourceToCandidateSegments.putAll(dataSourceToCandidateSegments);
-    }
   }
 
   /**
