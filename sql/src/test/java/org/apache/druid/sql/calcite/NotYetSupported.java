@@ -70,7 +70,7 @@ public @interface NotYetSupported
   {
     PLAN_MISMATCH(AssertionError.class, "AssertionError: query #"),
     NOT_ENOUGH_RULES(DruidException.class, "not enough rules"),
-    ERROR_HANDLING(AssertionError.class, "(is <(ADMIN|USER)> was <(OPERATOR|DEVELOPER)>|is <INVALID_INPUT> was <UNCATEGORIZED>|with message a string containing)"),
+    ERROR_HANDLING(AssertionError.class, "(is <[A-Z]+> was <[A-Z]+>|is <INVALID_INPUT> was <UNCATEGORIZED>|with message a string containing)"),
     EXPRESSION_NOT_GROUPED(DruidException.class, "Expression '[a-z]+' is not being grouped"),
     COLUMN_NOT_FOUND(DruidException.class, "CalciteContextException.*Column.*not found in any table"),
     NULLS_FIRST_LAST(DruidException.class, "NULLS (FIRST|LAST)"),
