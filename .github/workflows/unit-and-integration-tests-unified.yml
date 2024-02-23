@@ -64,7 +64,7 @@ jobs:
 
       # skip the "cache: maven" step from setup-java. We explicitly use a
       # different cache key since we cannot reuse it across commits.
-      - uses: actions/setup-java@v3
+      - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: ${{ matrix.jdk }}
