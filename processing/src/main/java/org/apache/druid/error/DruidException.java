@@ -403,7 +403,7 @@ public class DruidException extends RuntimeException
 
   public static class DruidExceptionBuilder
   {
-    private final String errorCode;
+    private String errorCode;
     private Persona targetPersona;
     private Category category;
 
