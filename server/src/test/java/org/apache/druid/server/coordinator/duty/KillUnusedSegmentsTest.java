@@ -26,6 +26,8 @@ import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.client.indexing.IndexingWorker;
 import org.apache.druid.client.indexing.IndexingWorkerInfo;
 import org.apache.druid.client.indexing.NoopOverlordClient;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
@@ -45,6 +47,7 @@ import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -674,6 +677,56 @@ public class KillUnusedSegmentsTest
     Assert.assertEquals(1, stats.get(Stats.Kill.CANDIDATE_SEGMENTS_KILLED, DS1_STAT_KEY));
 
     validateLastKillStateAndReset(DS1, secondHalfEternity);
+  }
+
+  @Test
+  public void testInvalidKillPeriod()
+  {
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> new KillUnusedSegments(
+                segmentsMetadataManager,
+                overlordClient,
+                new TestDruidCoordinatorConfig.Builder()
+                    .withCoordinatorIndexingPeriod(Duration.standardSeconds(10))
+                    .withCoordinatorKillPeriod(Duration.standardSeconds(5))
+                    .build()
+            )
+        ),
+        new DruidExceptionMatcher(
+            DruidException.Persona.OPERATOR,
+            DruidException.Category.INVALID_INPUT,
+            "general"
+        ).expectMessageIs(
+            "druid.coordinator.kill.period[PT5S] is invalid. It must be greater than or equal to"
+            + " druid.coordinator.period.indexingPeriod[PT10S]."
+        )
+    );
+  }
+
+  @Test
+  public void testInvalidKillMaxSegments()
+  {
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> new KillUnusedSegments(
+                segmentsMetadataManager,
+                overlordClient,
+                new TestDruidCoordinatorConfig.Builder()
+                    .withCoordinatorKillMaxSegments(-5)
+                    .build()
+            )
+        ),
+        new DruidExceptionMatcher(
+            DruidException.Persona.OPERATOR,
+            DruidException.Category.INVALID_INPUT,
+            "general"
+        ).expectMessageIs(
+            "druid.coordinator.kill.maxSegments[-5] is invalid. It must be a positive integer."
+        )
+    );
   }
 
   private void validateLastKillStateAndReset(final String dataSource, @Nullable final Interval expectedKillInterval)

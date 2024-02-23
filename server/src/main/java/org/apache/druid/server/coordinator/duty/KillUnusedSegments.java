@@ -90,16 +90,17 @@ public class KillUnusedSegments implements CoordinatorDuty
   private final OverlordClient overlordClient;
 
   public KillUnusedSegments(
-      SegmentsMetadataManager segmentsMetadataManager,
-      OverlordClient overlordClient,
-      DruidCoordinatorConfig config
+      final SegmentsMetadataManager segmentsMetadataManager,
+      final OverlordClient overlordClient,
+      final DruidCoordinatorConfig config
   )
   {
     if (config.getCoordinatorKillPeriod().getMillis() < config.getCoordinatorIndexingPeriod().getMillis()) {
       throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build(StringUtils.format(
-                                     "druid.coordinator.kill.period[%s] must be >= druid.coordinator.period.indexingPeriod[%s]",
+                                     "druid.coordinator.kill.period[%s] is invalid. It must be greater than or "
+                                     + "equal to druid.coordinator.period.indexingPeriod[%s].",
                                      config.getCoordinatorKillPeriod(),
                                      config.getCoordinatorIndexingPeriod()
                                  )
@@ -109,7 +110,7 @@ public class KillUnusedSegments implements CoordinatorDuty
       throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build(StringUtils.format(
-                                     "druid.coordinator.kill.maxSegments[%s] is invalid. It must be a positive integer.",
+                                     "druid.coordinator.kill.maxSegments[%d] is invalid. It must be a positive integer.",
                                      config.getCoordinatorKillMaxSegments()
                                  )
                           );
