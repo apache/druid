@@ -89,7 +89,7 @@ public class DruidSqlParserUtilsTest
       args.add(new SqlIdentifier("__time", SqlParserPos.ZERO));
       args.add(SqlLiteral.createCharString(this.periodString, SqlParserPos.ZERO));
       final SqlNode timeFloorCall = TimeFloorOperatorConversion.SQL_FUNCTION.createCall(args);
-      Granularity actualGranularity = DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(
+      Granularity actualGranularity = DruidSqlParserUtils.convertSqlNodeToGranularity(
           timeFloorCall);
       Assert.assertEquals(expectedGranularity, actualGranularity);
     }
@@ -135,7 +135,7 @@ public class DruidSqlParserUtilsTest
       args.add(new SqlIdentifier("__time", SqlParserPos.ZERO));
       args.add(new SqlIntervalQualifier(this.timeUnit, null, SqlParserPos.ZERO));
       final SqlNode floorCall = SqlStdOperatorTable.FLOOR.createCall(args);
-      Granularity actualGranularity = DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(floorCall);
+      Granularity actualGranularity = DruidSqlParserUtils.convertSqlNodeToGranularity(floorCall);
       Assert.assertEquals(expectedGranularity, actualGranularity);
     }
 
@@ -146,7 +146,7 @@ public class DruidSqlParserUtilsTest
     public void testConvertSqlNodeToGranularityAsLiteral() throws ParseException
     {
       SqlNode sqlNode = SqlLiteral.createCharString(timeUnit.name(), SqlParserPos.ZERO);
-      Granularity actualGranularity = DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode);
+      Granularity actualGranularity = DruidSqlParserUtils.convertSqlNodeToGranularity(sqlNode);
       Assert.assertEquals(expectedGranularity, actualGranularity);
     }
 
@@ -157,7 +157,7 @@ public class DruidSqlParserUtilsTest
     public void testConvertSqlNodeToPeriodFormGranularityAsIdentifier() throws ParseException
     {
       SqlNode sqlNode = new SqlIdentifier(period.toString(), SqlParserPos.ZERO);
-      Granularity actualGranularity = DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode);
+      Granularity actualGranularity = DruidSqlParserUtils.convertSqlNodeToGranularity(sqlNode);
       Assert.assertEquals(expectedGranularity, actualGranularity);
     }
 
@@ -168,7 +168,7 @@ public class DruidSqlParserUtilsTest
     public void testConvertSqlNodeToPeriodFormGranularityAsLiteral() throws ParseException
     {
       SqlNode sqlNode = SqlLiteral.createCharString(period.toString(), SqlParserPos.ZERO);
-      Granularity actualGranularity = DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode);
+      Granularity actualGranularity = DruidSqlParserUtils.convertSqlNodeToGranularity(sqlNode);
       Assert.assertEquals(expectedGranularity, actualGranularity);
     }
   }
@@ -353,14 +353,13 @@ public class DruidSqlParserUtilsTest
       args.add(new SqlIdentifier("__time", SqlParserPos.ZERO));
       args.add(new SqlIntervalQualifier(TimeUnit.DAY, null, SqlParserPos.ZERO));
       final SqlNode sqlNode = SqlStdOperatorTable.CEIL.createCall(args);
-      ParseException e = Assert.assertThrows(
-          ParseException.class,
-          () -> DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode)
-      );
-      Assert.assertEquals(
-          "PARTITIONED BY clause only supports FLOOR(__time TO <unit> and TIME_FLOOR(__time, period) functions",
-          e.getMessage()
-      );
+      DruidExceptionMatcher
+          .invalidSqlInput()
+          .expectMessageIs(
+              "Invalid operator[CEIL] specified. PARTITIONED BY clause only supports FLOOR(__time TO <unit>)"
+              + " and TIME_FLOOR(__time, period) functions."
+          )
+          .assertThrowsAndMatches(() -> DruidSqlParserUtils.convertSqlNodeToGranularity(sqlNode));
     }
 
     /**
@@ -372,11 +371,12 @@ public class DruidSqlParserUtilsTest
       final SqlNodeList args = new SqlNodeList(SqlParserPos.ZERO);
       args.add(new SqlIdentifier("__time", SqlParserPos.ZERO));
       final SqlNode sqlNode = SqlStdOperatorTable.FLOOR.createCall(args);
-      ParseException e = Assert.assertThrows(
-          ParseException.class,
-          () -> DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode)
-      );
-      Assert.assertEquals("FLOOR in PARTITIONED BY clause must have two arguments", e.getMessage());
+      DruidExceptionMatcher
+          .invalidSqlInput()
+          .expectMessageIs(
+              "FLOOR in PARTITIONED BY clause must have 2 arguments, but only [1] provided."
+          )
+          .assertThrowsAndMatches(() -> DruidSqlParserUtils.convertSqlNodeToGranularity(sqlNode));
     }
 
     /**
@@ -389,11 +389,13 @@ public class DruidSqlParserUtilsTest
       args.add(new SqlIdentifier("timestamps", SqlParserPos.ZERO));
       args.add(new SqlIntervalQualifier(TimeUnit.DAY, null, SqlParserPos.ZERO));
       final SqlNode sqlNode = SqlStdOperatorTable.FLOOR.createCall(args);
-      ParseException e = Assert.assertThrows(
-          ParseException.class,
-          () -> DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode)
-      );
-      Assert.assertEquals("First argument to FLOOR in PARTITIONED BY clause can only be __time", e.getMessage());
+      DruidExceptionMatcher
+          .invalidSqlInput()
+          .expectMessageIs(
+              "Invalid argument[timestamps] provided. The first argument to FLOOR in PARTITIONED BY"
+              + " clause must be __time."
+          )
+          .assertThrowsAndMatches(() -> DruidSqlParserUtils.convertSqlNodeToGranularity(sqlNode));
     }
 
     /**
@@ -406,11 +408,13 @@ public class DruidSqlParserUtilsTest
       args.add(new SqlIdentifier("timestamps", SqlParserPos.ZERO));
       args.add(SqlLiteral.createCharString("PT1H", SqlParserPos.ZERO));
       final SqlNode sqlNode = TimeFloorOperatorConversion.SQL_FUNCTION.createCall(args);
-      ParseException e = Assert.assertThrows(
-          ParseException.class,
-          () -> DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode)
-      );
-      Assert.assertEquals("First argument to TIME_FLOOR in PARTITIONED BY clause can only be __time", e.getMessage());
+      DruidExceptionMatcher
+          .invalidSqlInput()
+          .expectMessageIs(
+              "Invalid argument[timestamps] provided. The first argument to TIME_FLOOR in"
+              + " PARTITIONED BY clause must be __time."
+          )
+          .assertThrowsAndMatches(() -> DruidSqlParserUtils.convertSqlNodeToGranularity(sqlNode));
     }
 
     /**
@@ -423,11 +427,12 @@ public class DruidSqlParserUtilsTest
       args.add(new SqlIdentifier("__time", SqlParserPos.ZERO));
       args.add(new SqlIntervalQualifier(TimeUnit.ISOYEAR, null, SqlParserPos.ZERO));
       final SqlNode sqlNode = SqlStdOperatorTable.FLOOR.createCall(args);
-      ParseException e = Assert.assertThrows(
-          ParseException.class,
-          () -> DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode)
-      );
-      Assert.assertEquals("ISOYEAR is not a valid granularity for ingestion", e.getMessage());
+      DruidExceptionMatcher
+          .invalidSqlInput()
+          .expectMessageIs(
+              "ISOYEAR is not a valid period granularity for ingestion."
+          )
+          .assertThrowsAndMatches(() -> DruidSqlParserUtils.convertSqlNodeToGranularity(sqlNode));
     }
 
     /**
@@ -440,11 +445,12 @@ public class DruidSqlParserUtilsTest
       args.add(new SqlIdentifier("__time", SqlParserPos.ZERO));
       args.add(SqlLiteral.createCharString("abc", SqlParserPos.ZERO));
       final SqlNode sqlNode = TimeFloorOperatorConversion.SQL_FUNCTION.createCall(args);
-      DruidException e = Assert.assertThrows(
-          DruidException.class,
-          () -> DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(sqlNode)
-      );
-      Assert.assertEquals("granularity['abc'] is an invalid period string", e.getMessage());
+      DruidExceptionMatcher
+          .invalidSqlInput()
+          .expectMessageIs(
+              "granularity['abc'] is an invalid period literal."
+          )
+          .assertThrowsAndMatches(() -> DruidSqlParserUtils.convertSqlNodeToGranularity(sqlNode));
     }
   }
 

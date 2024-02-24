@@ -41,7 +41,6 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Pair;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
@@ -80,24 +79,6 @@ public class DruidSqlParserUtils
                                                                               .filter(g -> g != GranularityType.WEEK &&
                                                                                            g != GranularityType.NONE)
                                                                               .collect(Collectors.toList());
-
-  /**
-   * Delegates to {@code convertSqlNodeToGranularity} and converts the exceptions to {@link ParseException}
-   * with the underlying message
-   */
-  public static Granularity convertSqlNodeToGranularityThrowingParseExceptions(SqlNode sqlNode) throws ParseException
-  {
-    try {
-      return convertSqlNodeToGranularity(sqlNode);
-    }
-    catch (DruidException e) {
-      throw e;
-    }
-    catch (Exception e) {
-      log.debug(e, StringUtils.format("Unable to convert %s to a valid granularity.", sqlNode.toString()));
-      throw new ParseException(e.getMessage());
-    }
-  }
 
   /**
    * This method is used to extract the granularity from a SqlNode which represents
@@ -221,7 +202,7 @@ public class DruidSqlParserUtils
       }
       catch (IllegalArgumentException e) {
         throw InvalidSqlInput.exception(
-            "granularity[%s] is an invalid period string.",
+            "granularity[%s] is an invalid period literal.",
             granularitySqlNode.toString()
         );
       }

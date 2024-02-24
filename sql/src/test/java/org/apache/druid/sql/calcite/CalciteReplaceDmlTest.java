@@ -642,7 +642,6 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   @Test
   public void testReplaceWithPartitionedByContainingInvalidGranularity()
   {
-    // Throws a ValidationException, which gets converted to a DruidException before throwing to end user
     try {
       testQuery(
           "REPLACE INTO dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY 'invalid_granularity'",
