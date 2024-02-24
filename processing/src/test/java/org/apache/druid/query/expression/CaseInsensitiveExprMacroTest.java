@@ -166,11 +166,11 @@ public class CaseInsensitiveExprMacroTest extends MacroTestBase
   @Test
   public void testEmptyStringSearchOnNull()
   {
-    final ExprEval<?> result = eval("icontains_string(a, '')", InputBindings.nilBindings());
-    Assert.assertEquals(
-        ExprEval.ofLongBoolean(!NullHandling.sqlCompatible()).value(),
-        result.value()
-    );
+    ExprEval<?> result = eval("icontains_string(a, '')", InputBindings.nilBindings());
+    if (NullHandling.sqlCompatible()) {
+      Assert.assertNull(result.value());
+    } else {
+      Assert.assertEquals(ExprEval.ofLongBoolean(true).value(), result.value());
+    }
   }
-
 }
