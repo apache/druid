@@ -19,13 +19,11 @@
 
 package org.apache.druid.sql.calcite.parser;
 
-import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.NlsString;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.granularity.Granularity;
 
 import javax.annotation.Nonnull;

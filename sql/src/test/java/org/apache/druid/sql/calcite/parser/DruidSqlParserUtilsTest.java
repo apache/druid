@@ -83,7 +83,7 @@ public class DruidSqlParserUtilsTest
     }
 
     @Test
-    public void testGranularityFromTimeFloor() throws ParseException
+    public void testGranularityFromTimeFloor()
     {
       final SqlNodeList args = new SqlNodeList(SqlParserPos.ZERO);
       args.add(new SqlIdentifier("__time", SqlParserPos.ZERO));
@@ -128,7 +128,7 @@ public class DruidSqlParserUtilsTest
     }
 
     @Test
-    public void testGetGranularityFromFloor() throws ParseException
+    public void testGetGranularityFromFloor()
     {
       // parserPos doesn't matter
       final SqlNodeList args = new SqlNodeList(SqlParserPos.ZERO);
@@ -143,7 +143,7 @@ public class DruidSqlParserUtilsTest
      * Tests clause like "PARTITIONED BY 'day'"
      */
     @Test
-    public void testConvertSqlNodeToGranularityAsLiteral() throws ParseException
+    public void testConvertSqlNodeToGranularityAsLiteral()
     {
       SqlNode sqlNode = SqlLiteral.createCharString(timeUnit.name(), SqlParserPos.ZERO);
       Granularity actualGranularity = DruidSqlParserUtils.convertSqlNodeToGranularity(sqlNode);
@@ -154,7 +154,7 @@ public class DruidSqlParserUtilsTest
      * Tests clause like "PARTITIONED BY PT1D"
      */
     @Test
-    public void testConvertSqlNodeToPeriodFormGranularityAsIdentifier() throws ParseException
+    public void testConvertSqlNodeToPeriodFormGranularityAsIdentifier()
     {
       SqlNode sqlNode = new SqlIdentifier(period.toString(), SqlParserPos.ZERO);
       Granularity actualGranularity = DruidSqlParserUtils.convertSqlNodeToGranularity(sqlNode);
@@ -165,7 +165,7 @@ public class DruidSqlParserUtilsTest
      * Tests clause like "PARTITIONED BY 'PT1D'"
      */
     @Test
-    public void testConvertSqlNodeToPeriodFormGranularityAsLiteral() throws ParseException
+    public void testConvertSqlNodeToPeriodFormGranularityAsLiteral()
     {
       SqlNode sqlNode = SqlLiteral.createCharString(period.toString(), SqlParserPos.ZERO);
       Granularity actualGranularity = DruidSqlParserUtils.convertSqlNodeToGranularity(sqlNode);
