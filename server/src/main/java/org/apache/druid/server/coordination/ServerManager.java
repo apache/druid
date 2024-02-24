@@ -61,6 +61,7 @@ import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
+import org.apache.druid.server.ClientQuerySegmentWalker;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.SetAndVerifyContextQueryRunner;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -164,8 +165,9 @@ public class ServerManager implements QuerySegmentWalker
   }
 
   @Override
-  public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs)
+  public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> theQuery, Iterable<SegmentDescriptor> specs)
   {
+    final Query<T> query = ClientQuerySegmentWalker.populateResourceId(theQuery);
     final DataSource dataSourceFromQuery = query.getDataSource();
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
     if (factory == null) {

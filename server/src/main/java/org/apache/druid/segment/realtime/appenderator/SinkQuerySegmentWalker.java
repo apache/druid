@@ -61,6 +61,7 @@ import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.segment.realtime.plumber.SinkSegmentReference;
+import org.apache.druid.server.ClientQuerySegmentWalker;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -150,8 +151,9 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   }
 
   @Override
-  public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, final Iterable<SegmentDescriptor> specs)
+  public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> theQuery, final Iterable<SegmentDescriptor> specs)
   {
+    final Query<T> query = ClientQuerySegmentWalker.populateResourceId(theQuery);
     // We only handle one particular dataSource. Make sure that's what we have, then ignore from here on out.
     final DataSource dataSourceFromQuery = query.getDataSource();
     final DataSourceAnalysis analysis = dataSourceFromQuery.getAnalysis();
