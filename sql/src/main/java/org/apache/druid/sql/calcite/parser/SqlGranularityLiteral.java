@@ -35,8 +35,8 @@ import javax.annotation.Nonnull;
  */
 public class SqlGranularityLiteral extends SqlLiteral
 {
-  private String unparseString;
-  private Granularity granularity;
+  private final String unparseString;
+  private final Granularity granularity;
 
   public SqlGranularityLiteral(
       @Nonnull Granularity granularity,
@@ -70,8 +70,6 @@ public class SqlGranularityLiteral extends SqlLiteral
   @Override
   public void unparse(SqlWriter writer, int leftPrec, int rightPrec)
   {
-    if (unparseString != null) {
-      writer.keyword(unparseString);
-    }
+    writer.keyword(unparseString);
   }
 }
