@@ -115,13 +115,13 @@ public class KillUnusedSegmentsTest
 
     final DateTime sixtyDaysAgo = NOW.minusDays(60);
 
-    createAndAddUnusedSegmentVersion(DS1, YEAR_OLD, sixtyDaysAgo, VERSION);
-    createAndAddUnusedSegmentVersion(DS1, MONTH_OLD, sixtyDaysAgo, VERSION);
-    createAndAddUnusedSegmentVersion(DS1, DAY_OLD, sixtyDaysAgo, VERSION);
-    createAndAddUnusedSegmentVersion(DS1, HOUR_OLD, sixtyDaysAgo, VERSION);
-    createAndAddUnusedSegmentVersion(DS1, NEXT_DAY, sixtyDaysAgo, VERSION);
-    createAndAddUnusedSegmentVersion(DS1, NEXT_MONTH, sixtyDaysAgo, VERSION);
-    createAndAddUnusedSegmentVersion(DS1, Intervals.ETERNITY, sixtyDaysAgo, VERSION);
+    createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, sixtyDaysAgo);
+    createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, sixtyDaysAgo);
+    createAndAddUnusedSegment(DS1, DAY_OLD, VERSION, sixtyDaysAgo);
+    createAndAddUnusedSegment(DS1, HOUR_OLD, VERSION, sixtyDaysAgo);
+    createAndAddUnusedSegment(DS1, NEXT_DAY, VERSION, sixtyDaysAgo);
+    createAndAddUnusedSegment(DS1, NEXT_MONTH, VERSION, sixtyDaysAgo);
+    createAndAddUnusedSegment(DS1, Intervals.ETERNITY, VERSION, sixtyDaysAgo);
 
     initDuty();
     final CoordinatorRunStats stats = runDutyAndGetStats();
@@ -155,15 +155,15 @@ public class KillUnusedSegmentsTest
     configBuilder.withCoordinatorKillIgnoreDurationToRetain(true);
     configBuilder.withCoordinatorKillMaxSegments(2);
 
-    createAndAddUnusedSegmentVersion(DS1, YEAR_OLD, NOW.minusDays(1), VERSION);
-    createAndAddUnusedSegmentVersion(DS1, MONTH_OLD, NOW.minusDays(1), VERSION);
-    createAndAddUnusedSegmentVersion(DS1, DAY_OLD, NOW.minusDays(1), VERSION);
-    createAndAddUnusedSegmentVersion(DS1, NEXT_DAY, NOW.minusDays(1), VERSION);
-    createAndAddUnusedSegmentVersion(DS1, NEXT_MONTH, NOW.minusDays(1), VERSION);
+    createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS1, DAY_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS1, NEXT_DAY, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS1, NEXT_MONTH, VERSION, NOW.minusDays(1));
 
-    createAndAddUnusedSegmentVersion(DS2, YEAR_OLD, NOW.minusDays(1), VERSION);
-    createAndAddUnusedSegmentVersion(DS2, DAY_OLD, NOW.minusDays(1), VERSION);
-    createAndAddUnusedSegmentVersion(DS2, NEXT_DAY, NOW.minusDays(1), VERSION);
+    createAndAddUnusedSegment(DS2, YEAR_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS2, DAY_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS2, NEXT_DAY, VERSION, NOW.minusDays(1));
 
     initDuty();
     CoordinatorRunStats stats = runDutyAndGetStats();
@@ -213,12 +213,12 @@ public class KillUnusedSegmentsTest
     configBuilder.withCoordinatorKillIgnoreDurationToRetain(true);
     configBuilder.withCoordinatorKillBufferPeriod(Duration.standardDays(3));
 
-    createAndAddUnusedSegmentVersion(DS1, YEAR_OLD, NOW.minusDays(10), VERSION);
-    createAndAddUnusedSegmentVersion(DS1, MONTH_OLD, NOW.minusDays(10), VERSION);
-    createAndAddUnusedSegmentVersion(DS1, DAY_OLD, NOW.minusDays(2), VERSION);
-    createAndAddUnusedSegmentVersion(DS1, HOUR_OLD, NOW.minusDays(2), VERSION);
-    createAndAddUnusedSegmentVersion(DS1, NEXT_DAY, NOW.minusDays(10), VERSION);
-    createAndAddUnusedSegmentVersion(DS1, NEXT_MONTH, NOW.minusDays(10), VERSION);
+    createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, DAY_OLD, VERSION, NOW.minusDays(2));
+    createAndAddUnusedSegment(DS1, HOUR_OLD, VERSION, NOW.minusDays(2));
+    createAndAddUnusedSegment(DS1, NEXT_DAY, VERSION, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, NEXT_MONTH, VERSION, NOW.minusDays(10));
 
     initDuty();
     final CoordinatorRunStats stats = runDutyAndGetStats();
@@ -242,9 +242,9 @@ public class KillUnusedSegmentsTest
     configBuilder.withCoordinatorKillIgnoreDurationToRetain(true);
     configBuilder.withCoordinatorKillMaxSegments(2);
 
-    createAndAddUnusedSegmentVersion(DS1, DAY_OLD, NOW.minusDays(1), VERSION);
-    createAndAddUnusedSegmentVersion(DS1, NEXT_DAY, NOW.minusDays(1), VERSION);
-    createAndAddUnusedSegmentVersion(DS1, NEXT_MONTH, NOW.minusDays(1), VERSION);
+    createAndAddUnusedSegment(DS1, DAY_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS1, NEXT_DAY, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS1, NEXT_MONTH, VERSION, NOW.minusDays(1));
 
     initDuty();
     CoordinatorRunStats stats = runDutyAndGetStats();
@@ -258,8 +258,8 @@ public class KillUnusedSegmentsTest
 
     // Add two old unused segments now. These only get killed much later on when the kill
     // duty eventually round robins its way through until the latest time.
-    createAndAddUnusedSegmentVersion(DS1, YEAR_OLD, NOW.minusDays(1), VERSION);
-    createAndAddUnusedSegmentVersion(DS1, MONTH_OLD, NOW.minusDays(1), VERSION);
+    createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, NOW.minusDays(1));
 
     stats = runDutyAndGetStats();
 
@@ -295,9 +295,9 @@ public class KillUnusedSegmentsTest
     dynamicConfigBuilder.withSpecificDataSourcesToKillUnusedSegmentsIn(ImmutableSet.of(DS2, DS3));
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
-    createAndAddUnusedSegmentVersion(DS1, YEAR_OLD, NOW.minusDays(1), VERSION);
-    createAndAddUnusedSegmentVersion(DS2, YEAR_OLD, NOW.minusDays(1), VERSION);
-    createAndAddUnusedSegmentVersion(DS3, MONTH_OLD, NOW.minusDays(1), VERSION);
+    createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS2, YEAR_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS3, MONTH_OLD, VERSION, NOW.minusDays(1));
 
     initDuty();
     final CoordinatorRunStats stats = runDutyAndGetStats();
@@ -319,12 +319,12 @@ public class KillUnusedSegmentsTest
   {
     configBuilder.withCoordinatorKillDurationToRetain(Duration.standardHours(36).negated());
 
-    createAndAddUnusedSegmentVersion(DS1, YEAR_OLD, NOW.minusDays(10), VERSION);
-    createAndAddUnusedSegmentVersion(DS1, MONTH_OLD, NOW.minusDays(10), VERSION);
-    createAndAddUnusedSegmentVersion(DS1, DAY_OLD, NOW.minusDays(2), VERSION);
-    createAndAddUnusedSegmentVersion(DS1, HOUR_OLD, NOW.minusDays(2), VERSION);
-    createAndAddUnusedSegmentVersion(DS1, NEXT_DAY, NOW.minusDays(10), VERSION);
-    createAndAddUnusedSegmentVersion(DS1, NEXT_MONTH, NOW.minusDays(10), VERSION);
+    createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, DAY_OLD, VERSION, NOW.minusDays(2));
+    createAndAddUnusedSegment(DS1, HOUR_OLD, VERSION, NOW.minusDays(2));
+    createAndAddUnusedSegment(DS1, NEXT_DAY, VERSION, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, NEXT_MONTH, VERSION, NOW.minusDays(10));
 
     initDuty();
     final CoordinatorRunStats stats = runDutyAndGetStats();
@@ -343,12 +343,12 @@ public class KillUnusedSegmentsTest
   {
     configBuilder.withCoordinatorKillIgnoreDurationToRetain(true);
 
-    createAndAddUnusedSegmentVersion(DS1, YEAR_OLD, NOW.minusDays(10), VERSION);
-    createAndAddUnusedSegmentVersion(DS1, MONTH_OLD, NOW.minusDays(10), VERSION);
-    createAndAddUnusedSegmentVersion(DS1, DAY_OLD, NOW.minusDays(2), VERSION);
-    createAndAddUnusedSegmentVersion(DS1, HOUR_OLD, NOW.minusDays(2), VERSION);
-    createAndAddUnusedSegmentVersion(DS1, NEXT_DAY, NOW.minusDays(10), VERSION);
-    createAndAddUnusedSegmentVersion(DS1, NEXT_MONTH, NOW.minusDays(10), VERSION);
+    createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, DAY_OLD, VERSION, NOW.minusDays(2));
+    createAndAddUnusedSegment(DS1, HOUR_OLD, VERSION, NOW.minusDays(2));
+    createAndAddUnusedSegment(DS1, NEXT_DAY, VERSION, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, NEXT_MONTH, VERSION, NOW.minusDays(10));
 
     initDuty();
     final CoordinatorRunStats stats = runDutyAndGetStats();
@@ -367,9 +367,9 @@ public class KillUnusedSegmentsTest
   {
     configBuilder.withCoordinatorKillMaxSegments(1);
 
-    createAndAddUnusedSegmentVersion(DS1, YEAR_OLD, NOW.minusDays(10), VERSION);
-    createAndAddUnusedSegmentVersion(DS1, MONTH_OLD, NOW.minusDays(10), VERSION);
-    createAndAddUnusedSegmentVersion(DS1, DAY_OLD, NOW.minusDays(2), VERSION);
+    createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, DAY_OLD, VERSION, NOW.minusDays(2));
 
     initDuty();
     final CoordinatorRunStats stats = runDutyAndGetStats();
@@ -390,12 +390,12 @@ public class KillUnusedSegmentsTest
   {
     configBuilder.withCoordinatorKillPeriod(Duration.standardHours(1));
 
-    createAndAddUnusedSegmentVersion(DS1, YEAR_OLD, NOW.minusDays(10), VERSION);
-    createAndAddUnusedSegmentVersion(DS1, MONTH_OLD, NOW.minusDays(10), VERSION);
-    createAndAddUnusedSegmentVersion(DS1, DAY_OLD, NOW.minusDays(2), VERSION);
-    createAndAddUnusedSegmentVersion(DS1, HOUR_OLD, NOW.minusDays(2), VERSION);
-    createAndAddUnusedSegmentVersion(DS1, NEXT_DAY, NOW.minusDays(10), VERSION);
-    createAndAddUnusedSegmentVersion(DS1, NEXT_MONTH, NOW.minusDays(10), VERSION);
+    createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, DAY_OLD, VERSION, NOW.minusDays(2));
+    createAndAddUnusedSegment(DS1, HOUR_OLD, VERSION, NOW.minusDays(2));
+    createAndAddUnusedSegment(DS1, NEXT_DAY, VERSION, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, NEXT_MONTH, VERSION, NOW.minusDays(10));
 
     initDuty();
     CoordinatorRunStats stats = runDutyAndGetStats();
@@ -428,15 +428,15 @@ public class KillUnusedSegmentsTest
     dynamicConfigBuilder.withMaxKillTaskSlots(2);
     paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
-    createAndAddUnusedSegmentVersion(DS1, YEAR_OLD, NOW.minusDays(1), VERSION);
-    createAndAddUnusedSegmentVersion(DS1, MONTH_OLD, NOW.minusDays(1), VERSION);
-    createAndAddUnusedSegmentVersion(DS1, DAY_OLD, NOW.minusDays(1), VERSION);
+    createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS1, DAY_OLD, VERSION, NOW.minusDays(1));
 
-    createAndAddUnusedSegmentVersion(DS2, YEAR_OLD, NOW.minusDays(1), VERSION);
-    createAndAddUnusedSegmentVersion(DS2, DAY_OLD, NOW.minusDays(1), VERSION);
-    createAndAddUnusedSegmentVersion(DS2, NEXT_MONTH, NOW.minusDays(1), VERSION);
+    createAndAddUnusedSegment(DS2, YEAR_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS2, DAY_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS2, NEXT_MONTH, VERSION, NOW.minusDays(1));
 
-    createAndAddUnusedSegmentVersion(DS3, YEAR_OLD, NOW.minusDays(1), VERSION);
+    createAndAddUnusedSegment(DS3, YEAR_OLD, VERSION, NOW.minusDays(1));
 
     initDuty();
     final CoordinatorRunStats stats = runDutyAndGetStats();
@@ -571,7 +571,7 @@ public class KillUnusedSegmentsTest
     configBuilder.withCoordinatorKillIgnoreDurationToRetain(true);
 
     final Interval firstHalfEternity = new Interval(DateTimes.MIN, DateTimes.of("2024"));
-    createAndAddUnusedSegmentVersion(DS1, firstHalfEternity, NOW.minusDays(60), VERSION);
+    createAndAddUnusedSegment(DS1, firstHalfEternity, VERSION, NOW.minusDays(60));
 
     initDuty();
     final CoordinatorRunStats stats = runDutyAndGetStats();
@@ -598,11 +598,9 @@ public class KillUnusedSegmentsTest
   @Test
   public void testKillEternitySegment()
   {
-    final DateTime sixtyDaysAgo = NOW.minusDays(60);
-
     configBuilder.withCoordinatorKillIgnoreDurationToRetain(true);
 
-    createAndAddUnusedSegmentVersion(DS1, Intervals.ETERNITY, sixtyDaysAgo, VERSION);
+    createAndAddUnusedSegment(DS1, Intervals.ETERNITY, VERSION, NOW.minusDays(60));
 
     initDuty();
     final CoordinatorRunStats stats = runDutyAndGetStats();
@@ -633,7 +631,7 @@ public class KillUnusedSegmentsTest
     configBuilder.withCoordinatorKillIgnoreDurationToRetain(true);
     final Interval secondHalfEternity = new Interval(DateTimes.of("1970"), DateTimes.MAX);
 
-    createAndAddUnusedSegmentVersion(DS1, secondHalfEternity, NOW.minusDays(60), VERSION);
+    createAndAddUnusedSegment(DS1, secondHalfEternity, VERSION, NOW.minusDays(60));
 
     initDuty();
     final CoordinatorRunStats stats = runDutyAndGetStats();
@@ -651,9 +649,9 @@ public class KillUnusedSegmentsTest
   {
     configBuilder.withCoordinatorKillIgnoreDurationToRetain(true);
 
-    createAndAddUnusedSegmentVersion(DS1, YEAR_OLD, NOW.minusDays(10), "v1");
-    createAndAddUnusedSegmentVersion(DS1, YEAR_OLD, NOW.minusDays(10), "v2");
-    createAndAddUnusedSegmentVersion(DS1, YEAR_OLD, NOW.minusDays(10), "v3");
+    createAndAddUnusedSegment(DS1, YEAR_OLD, "v1", NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, YEAR_OLD, "v2", NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, YEAR_OLD, "v3", NOW.minusDays(10));
 
     initDuty();
     final CoordinatorRunStats stats = runDutyAndGetStats();
@@ -739,6 +737,22 @@ public class KillUnusedSegmentsTest
     overlordClient.deleteLastKillInterval(dataSource);
   }
 
+  private void createAndAddUnusedSegment(
+      final String dataSource,
+      final Interval interval,
+      final String version,
+      final DateTime lastUpdatedTime
+  )
+  {
+    final DataSegment segment = createSegment(dataSource, interval, version);
+    final DataSegmentPlus unusedSegmentPlus = new DataSegmentPlus(
+        segment,
+        DateTimes.nowUtc(),
+        lastUpdatedTime
+    );
+    segmentsMetadataManager.addUnusedSegment(unusedSegmentPlus);
+  }
+
   private DataSegment createSegment(final String dataSource, final Interval interval, final String version)
   {
     return new DataSegment(
@@ -754,21 +768,6 @@ public class KillUnusedSegmentsTest
     );
   }
 
-  private void createAndAddUnusedSegmentVersion(
-      final String dataSource,
-      final Interval interval,
-      final DateTime lastUpdatedTime,
-      final String version
-  )
-  {
-    final DataSegment segment = createSegment(dataSource, interval, version);
-    final DataSegmentPlus unusedSegmentPlus = new DataSegmentPlus(
-        segment,
-        DateTimes.nowUtc(),
-        lastUpdatedTime
-    );
-    segmentsMetadataManager.addUnusedSegment(unusedSegmentPlus);
-  }
 
   private void initDuty()
   {
