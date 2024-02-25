@@ -65,6 +65,7 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 import java.util.List;
 
+import static org.apache.druid.msq.exec.DataServerQueryHandler.toSegmentDescriptorWithFullInterval;
 import static org.apache.druid.query.Druids.newScanQueryBuilder;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -147,11 +148,9 @@ public class DataServerQueryHandlerTest
     );
     doAnswer(invocationOnMock -> {
       ServiceLocation serviceLocation = invocationOnMock.getArgument(0);
-      if (ServiceLocation.fromDruidServerMetadata(DRUID_SERVER_1).equals(serviceLocation))
-      {
+      if (ServiceLocation.fromDruidServerMetadata(DRUID_SERVER_1).equals(serviceLocation)) {
         return dataServerClient1;
-      } else if (ServiceLocation.fromDruidServerMetadata(DRUID_SERVER_2).equals(serviceLocation))
-      {
+      } else if (ServiceLocation.fromDruidServerMetadata(DRUID_SERVER_2).equals(serviceLocation)) {
         return dataServerClient2;
       } else {
         throw new IllegalStateException();
@@ -207,7 +206,7 @@ public class DataServerQueryHandlerTest
       ResponseContext responseContext = invocation.getArgument(1);
       responseContext.addMissingSegments(
           ImmutableList.of(
-              DataServerQueryHandler.toSegmentDescriptorWithFullInterval(SEGMENT_2)
+              toSegmentDescriptorWithFullInterval(SEGMENT_2)
           )
       );
       return Sequences.simple(ImmutableList.of(scanResultValue1));
@@ -224,7 +223,7 @@ public class DataServerQueryHandlerTest
 
     doReturn(Sequences.simple(ImmutableList.of(scanResultValue2))).when(dataServerClient2).run(any(), any(), any(), any());
 
-    doReturn(Futures.immediateFuture(Boolean.FALSE)).when(coordinatorClient).isHandoffComplete(DATASOURCE1, DataServerQueryHandler.toSegmentDescriptorWithFullInterval(SEGMENT_2));
+    doReturn(Futures.immediateFuture(Boolean.FALSE)).when(coordinatorClient).isHandoffComplete(DATASOURCE1, toSegmentDescriptorWithFullInterval(SEGMENT_2));
     doReturn(ImmutableList.of(
         new ImmutableSegmentLoadInfo(
             DataSegment.builder()
@@ -269,14 +268,14 @@ public class DataServerQueryHandlerTest
       ResponseContext responseContext = invocation.getArgument(1);
       responseContext.addMissingSegments(
           ImmutableList.of(
-              DataServerQueryHandler.toSegmentDescriptorWithFullInterval(SEGMENT_1),
-              DataServerQueryHandler.toSegmentDescriptorWithFullInterval(SEGMENT_2)
+              toSegmentDescriptorWithFullInterval(SEGMENT_1),
+              toSegmentDescriptorWithFullInterval(SEGMENT_2)
           )
       );
       return Sequences.empty();
     }).when(dataServerClient1).run(any(), any(), any(), any());
-    doReturn(Futures.immediateFuture(Boolean.TRUE)).when(coordinatorClient).isHandoffComplete(DATASOURCE1, DataServerQueryHandler.toSegmentDescriptorWithFullInterval(SEGMENT_1));
-    doReturn(Futures.immediateFuture(Boolean.TRUE)).when(coordinatorClient).isHandoffComplete(DATASOURCE1, DataServerQueryHandler.toSegmentDescriptorWithFullInterval(SEGMENT_2));
+    doReturn(Futures.immediateFuture(Boolean.TRUE)).when(coordinatorClient).isHandoffComplete(DATASOURCE1, toSegmentDescriptorWithFullInterval(SEGMENT_1));
+    doReturn(Futures.immediateFuture(Boolean.TRUE)).when(coordinatorClient).isHandoffComplete(DATASOURCE1, toSegmentDescriptorWithFullInterval(SEGMENT_2));
 
     DataServerQueryResult<Object[]> dataServerQueryResult = target.fetchRowsFromDataServer(
         query,
@@ -295,7 +294,7 @@ public class DataServerQueryHandlerTest
         new QueryInterruptedException(new RpcException("Could not connect to server"))
     ).when(dataServerClient1).run(any(), any(), any(), any());
 
-    doReturn(Futures.immediateFuture(Boolean.FALSE)).when(coordinatorClient).isHandoffComplete(DATASOURCE1, DataServerQueryHandler.toSegmentDescriptorWithFullInterval(SEGMENT_1));
+    doReturn(Futures.immediateFuture(Boolean.FALSE)).when(coordinatorClient).isHandoffComplete(DATASOURCE1, toSegmentDescriptorWithFullInterval(SEGMENT_1));
 
     ScanQuery queryWithRetry = query.withOverriddenContext(ImmutableMap.of(QueryContexts.NUM_RETRIES_ON_MISSING_SEGMENTS_KEY, 3));
 
@@ -317,8 +316,8 @@ public class DataServerQueryHandlerTest
         new QueryInterruptedException(new RpcException("Could not connect to server"))
     ).when(dataServerClient1).run(any(), any(), any(), any());
 
-    doReturn(Futures.immediateFuture(Boolean.TRUE)).when(coordinatorClient).isHandoffComplete(DATASOURCE1, DataServerQueryHandler.toSegmentDescriptorWithFullInterval(SEGMENT_1));
-    doReturn(Futures.immediateFuture(Boolean.TRUE)).when(coordinatorClient).isHandoffComplete(DATASOURCE1, DataServerQueryHandler.toSegmentDescriptorWithFullInterval(SEGMENT_2));
+    doReturn(Futures.immediateFuture(Boolean.TRUE)).when(coordinatorClient).isHandoffComplete(DATASOURCE1, toSegmentDescriptorWithFullInterval(SEGMENT_1));
+    doReturn(Futures.immediateFuture(Boolean.TRUE)).when(coordinatorClient).isHandoffComplete(DATASOURCE1, toSegmentDescriptorWithFullInterval(SEGMENT_2));
 
     DataServerQueryResult<Object[]> dataServerQueryResult = target.fetchRowsFromDataServer(
         query,
@@ -335,7 +334,7 @@ public class DataServerQueryHandlerTest
   {
     doAnswer(invocation -> {
       ResponseContext responseContext = invocation.getArgument(1);
-      responseContext.addMissingSegments(ImmutableList.of(SEGMENT_1));
+      responseContext.addMissingSegments(ImmutableList.of(toSegmentDescriptorWithFullInterval(SEGMENT_1)));
       return Sequences.empty();
     }).when(dataServerClient1).run(any(), any(), any(), any());
     doReturn(Futures.immediateFuture(Boolean.FALSE)).when(coordinatorClient).isHandoffComplete(DATASOURCE1, SEGMENT_1);
