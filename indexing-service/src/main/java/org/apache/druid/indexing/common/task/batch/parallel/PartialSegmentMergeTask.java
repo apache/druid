@@ -53,7 +53,7 @@ import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.metadata.SchemaFingerprintGenerator;
+import org.apache.druid.segment.metadata.FingerprintGenerator;
 import org.apache.druid.segment.realtime.appenderator.TaskSegmentSchemaUtil;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -85,7 +85,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
   private final int numAttempts;
   private final String subtaskSpecId;
   private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
-  private final SchemaFingerprintGenerator fingerprintGenerator;
+  private final FingerprintGenerator fingerprintGenerator;
 
   PartialSegmentMergeTask(
       // id shouldn't be null except when this task is created by ParallelIndexSupervisorTask
@@ -121,7 +121,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
     this.ioConfig = ioConfig;
     this.numAttempts = numAttempts;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
-    this.fingerprintGenerator = new SchemaFingerprintGenerator(mapper);
+    this.fingerprintGenerator = new FingerprintGenerator(mapper);
   }
 
   @JsonProperty
@@ -319,7 +319,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
               TaskSegmentSchemaUtil.getSegmentSchema(mergedFileAndDimensionNames.lhs, toolbox.getIndexIO());
           minimalSegmentSchemas.addSchema(
               segment.getId().toString(),
-              fingerprintGenerator.generateId(segmentSchemaMetadata.getSchemaPayload()),
+              fingerprintGenerator.generateFingerprint(segmentSchemaMetadata.getSchemaPayload()),
               segmentSchemaMetadata.getNumRows(),
               segmentSchemaMetadata.getSchemaPayload()
           );

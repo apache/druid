@@ -21,23 +21,27 @@ package org.apache.druid.segment.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import org.apache.druid.guice.LazySingleton;
 
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
-public class SchemaFingerprintGenerator
+/**
+ * Utility to generate fingerprint for an object.
+ */
+@LazySingleton
+public class FingerprintGenerator
 {
-
   private final ObjectMapper objectMapper;
 
   @Inject
-  public SchemaFingerprintGenerator(ObjectMapper objectMapper)
+  public FingerprintGenerator(ObjectMapper objectMapper)
   {
     this.objectMapper = objectMapper;
   }
 
-  public String generateId(Object payload)
+  public String generateFingerprint(Object payload)
   {
     try {
       MessageDigest digest = MessageDigest.getInstance("SHA-256");
@@ -48,7 +52,7 @@ public class SchemaFingerprintGenerator
       return bytesToHex(hashBytes);
     }
     catch (NoSuchAlgorithmException | IOException e) {
-      throw new RuntimeException("Error generating object hash", e);
+      throw new RuntimeException("Error generating object fingerprint. ", e);
     }
   }
 

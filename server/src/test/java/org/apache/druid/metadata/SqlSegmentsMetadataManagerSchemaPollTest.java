@@ -29,9 +29,9 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.SchemaPayload;
 import org.apache.druid.segment.column.SegmentSchemaMetadata;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.metadata.SchemaFingerprintGenerator;
-import org.apache.druid.segment.metadata.SchemaManager;
+import org.apache.druid.segment.metadata.FingerprintGenerator;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
+import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -56,7 +56,7 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
     config.setPollDuration(Period.seconds(3));
 
     segmentSchemaCache = new SegmentSchemaCache();
-    schemaManager = new SchemaManager(
+    segmentSchemaManager = new SegmentSchemaManager(
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         jsonMapper,
         connector
@@ -97,18 +97,18 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
   @Test(timeout = 60_000)
   public void testPollSegmentAndSchema()
   {
-    List<SchemaManager.SegmentSchemaMetadataPlus> list = new ArrayList<>();
-    SchemaFingerprintGenerator fingerprintGenerator = new SchemaFingerprintGenerator(jsonMapper);
+    List<SegmentSchemaManager.SegmentSchemaMetadataPlus> list = new ArrayList<>();
+    FingerprintGenerator fingerprintGenerator = new FingerprintGenerator(jsonMapper);
     SchemaPayload payload1 = new SchemaPayload(
         RowSignature.builder().add("c1", ColumnType.FLOAT).build());
     SegmentSchemaMetadata schemaMetadata1 = new SegmentSchemaMetadata(payload1, 20L);
-    list.add(new SchemaManager.SegmentSchemaMetadataPlus(segment1.getId(), schemaMetadata1, fingerprintGenerator.generateId(payload1)));
+    list.add(new SegmentSchemaManager.SegmentSchemaMetadataPlus(segment1.getId(), fingerprintGenerator.generateFingerprint(payload1), schemaMetadata1));
     SchemaPayload payload2 = new SchemaPayload(
         RowSignature.builder().add("c2", ColumnType.FLOAT).build());
     SegmentSchemaMetadata schemaMetadata2 = new SegmentSchemaMetadata(payload2, 40L);
-    list.add(new SchemaManager.SegmentSchemaMetadataPlus(segment2.getId(), schemaMetadata2, fingerprintGenerator.generateId(payload2)));
+    list.add(new SegmentSchemaManager.SegmentSchemaMetadataPlus(segment2.getId(), fingerprintGenerator.generateFingerprint(payload2), schemaMetadata2));
 
-    schemaManager.persistSchemaAndUpdateSegmentsTable(list);
+    segmentSchemaManager.persistSchemaAndUpdateSegmentsTable(list);
 
     CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = new CentralizedDatasourceSchemaConfig();
     centralizedDatasourceSchemaConfig.setEnabled(true);

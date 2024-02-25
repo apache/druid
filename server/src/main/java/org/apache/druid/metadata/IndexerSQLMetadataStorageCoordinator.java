@@ -51,7 +51,7 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.metadata.SchemaManager;
+import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
@@ -115,7 +115,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   private final ObjectMapper jsonMapper;
   private final MetadataStorageTablesConfig dbTables;
   private final SQLMetadataConnector connector;
-  private final SchemaManager schemaManager;
+  private final SegmentSchemaManager segmentSchemaManager;
   private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
   @Inject
@@ -123,16 +123,15 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       ObjectMapper jsonMapper,
       MetadataStorageTablesConfig dbTables,
       SQLMetadataConnector connector,
-      SchemaManager schemaManager,
+      SegmentSchemaManager segmentSchemaManager,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     this.jsonMapper = jsonMapper;
     this.dbTables = dbTables;
     this.connector = connector;
-    this.schemaManager = schemaManager;
+    this.segmentSchemaManager = segmentSchemaManager;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
-    log.info("centralizedDatasourceSchemaConfig is [%s]", centralizedDatasourceSchemaConfig.isEnabled());
   }
 
   @LifecycleStart
@@ -415,9 +414,18 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public Set<DataSegment> commitSegments(final Set<DataSegment> segments, final MinimalSegmentSchemas minimalSegmentSchemas) throws IOException
+  public Set<DataSegment> commitSegments(
+      final Set<DataSegment> segments,
+      final MinimalSegmentSchemas minimalSegmentSchemas
+  ) throws IOException
   {
-    final SegmentPublishResult result = commitSegmentsAndMetadata(segments, null, null, minimalSegmentSchemas);
+    final SegmentPublishResult result =
+        commitSegmentsAndMetadata(
+            segments,
+            null,
+            null,
+            minimalSegmentSchemas
+        );
 
     // Metadata transaction cannot fail because we are not trying to do one.
     if (!result.isSuccess()) {
@@ -496,7 +504,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 }
               }
 
-              final Set<DataSegment> inserted = announceHistoricalSegmentBatch(handle, segments, usedSegments, minimalSegmentSchemas);
+              final Set<DataSegment> inserted =
+                  announceHistoricalSegmentBatch(
+                      handle,
+                      segments,
+                      usedSegments,
+                      minimalSegmentSchemas
+                  );
               return SegmentPublishResult.ok(ImmutableSet.copyOf(inserted));
             }
           },
@@ -1986,14 +2000,16 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     Map<String, Long> fingerprintSchemaIdMap = null;
     boolean schemaPresent = false;
     try {
-      if (centralizedDatasourceSchemaConfig.isEnabled() && minimalSegmentSchemas != null && minimalSegmentSchemas.isNonEmpty()) {
+      if (centralizedDatasourceSchemaConfig.isEnabled()
+          && minimalSegmentSchemas != null
+          && minimalSegmentSchemas.isNonEmpty()) {
         schemaPresent = true;
         log.info("Inserting schema in db table.");
-        schemaManager.persistSchema(handle, minimalSegmentSchemas.getSchemaPayloadMap());
+        segmentSchemaManager.persistSegmentSchema(handle, minimalSegmentSchemas.getSchemaPayloadMap());
 
         // fetch schemaId
         fingerprintSchemaIdMap =
-            schemaManager.schemaIdFetchBatch(handle, minimalSegmentSchemas.getSchemaPayloadMap().keySet());
+            segmentSchemaManager.schemaIdFetchBatch(handle, minimalSegmentSchemas.getSchemaPayloadMap().keySet());
 
         log.info("Fingerprint schema map is [%s]", fingerprintSchemaIdMap);
       }
@@ -2209,11 +2225,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     if (minimalSegmentSchemas != null && minimalSegmentSchemas.isNonEmpty()) {
       schemaPresent = true;
       log.info("Inserting schema in db table.");
-      schemaManager.persistSchema(handle, minimalSegmentSchemas.getSchemaPayloadMap());
+      segmentSchemaManager.persistSegmentSchema(handle, minimalSegmentSchemas.getSchemaPayloadMap());
 
       // fetch schemaId
       fingerprintSchemaIdMap =
-          schemaManager.schemaIdFetchBatch(handle, minimalSegmentSchemas.getSchemaPayloadMap().keySet());
+          segmentSchemaManager.schemaIdFetchBatch(handle, minimalSegmentSchemas.getSchemaPayloadMap().keySet());
 
       log.info("Fingerprint schema map is [%s]", fingerprintSchemaIdMap);
     }

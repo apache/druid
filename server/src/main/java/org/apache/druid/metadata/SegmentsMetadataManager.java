@@ -194,4 +194,6 @@ public interface SegmentsMetadataManager
   void populateUsedFlagLastUpdatedAsync();
 
   void stopAsyncUsedFlagLastUpdatedUpdate();
+
+  void resetLatestSegmentSchemaPollTime();
 }

@@ -33,29 +33,55 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 
 /**
- *
+ * In-memory cache of segment schema.
+ * <p>
+ * Internally, mapping of segmentId to segment level information like schemaId & numRows is maintained.
+ * This mapping is updated on each database poll {@code finalizedSegmentStats}.
+ * Segment schema created since last DB poll is also fetched and updated in the cache {@code finalizedSegmentSchema}.
+ * <p>
+ * Additionally, this class caches schema for realtime segments in {@code realtimeSegmentSchemaMap}. This mapping
+ * is cleared either when the segment is removed or marked as finalized.
+ * <p>
+ * Finalized segments which do not have their schema information present in the DB, fetch their schema via SMQ.
+ * SMQ results are cached in {@code inTransitSMQResults}. Once the schema information is backfilled
+ * in the DB, it is removed from {@code inTransitSMQResults} and added to {@code inTransitSMQPublishedResults}.
+ * {@code inTransitSMQPublishedResults} is cleared on each successfull DB poll.
  */
 @LazySingleton
 public class SegmentSchemaCache
 {
-  private static final EmittingLogger log = new EmittingLogger(SchemaManager.class);
+  private static final EmittingLogger log = new EmittingLogger(SegmentSchemaCache.class);
+
+  // Cache is marked initialized after first DB poll.
   private final CountDownLatch initialized = new CountDownLatch(1);
 
-  // Mapping from segmentId to segmentStats, reference is updated on each database poll.
-  // edge case what happens if first this map is build from db
-  // next new schema is fetch
-  // in between
+  /**
+   * Mapping from segmentId to segment level information which includes numRows and schemaId.
+   * This mapping is updated on each database poll.
+   */
   private volatile ConcurrentMap<SegmentId, SegmentStats> finalizedSegmentStats = new ConcurrentHashMap<>();
 
-  // Mapping from schemaId to schema fingerprint & schema fingerprint to schema payload
-  // On each database poll, fetch newly added schema since last poll.
-  // Coordinator schema cleanup duty, removes orphan schema in the same transaction also remove schema from here
-  // if transaction failed revert stuff by storing in temporary structure
-  private volatile ConcurrentMap<Long, SchemaPayload> finalizedSegmentSchema = new ConcurrentHashMap<>();
+  /**
+   * Mapping from schemaId to payload. Gets updated after DB poll.
+   */
+  private final ConcurrentMap<Long, SchemaPayload> finalizedSegmentSchema = new ConcurrentHashMap<>();
 
+  /**
+   * Schema information for realtime segment. This mapping is updated when schema for realtime segment is received.
+   * The mapping is removed when the segment is either removed or marked as finalized.
+   */
   private final ConcurrentMap<SegmentId, SegmentSchemaMetadata> realtimeSegmentSchemaMap = new ConcurrentHashMap<>();
 
+  /**
+   * If the segment schema is fetched via SMQ, subsequently it is added here.
+   * The mapping is removed when the schema information is backfilled in the DB.
+   */
   private final ConcurrentMap<SegmentId, SegmentSchemaMetadata> inTransitSMQResults = new ConcurrentHashMap<>();
+
+  /**
+   * Once the schema information is backfilled in the DB, it is added here.
+   * This map is cleared after each DB poll.
+   */
   private volatile ConcurrentMap<SegmentId, SegmentSchemaMetadata> inTransitSMQPublishedResults = new ConcurrentHashMap<>();
 
   public void setInitialized()
@@ -73,13 +99,6 @@ public class SegmentSchemaCache
     this.finalizedSegmentStats = segmentStatsMap;
   }
 
-  public void updateFinalizedSegmentSchemaReference(
-      ConcurrentMap<Long, SchemaPayload> schemaPayloadMap
-  )
-  {
-    this.finalizedSegmentSchema = schemaPayloadMap;
-  }
-
   public void addFinalizedSegmentSchema(long schemaId, SchemaPayload schemaPayload)
   {
     finalizedSegmentSchema.put(schemaId, schemaPayload);
@@ -95,10 +114,14 @@ public class SegmentSchemaCache
     inTransitSMQResults.put(segmentId, new SegmentSchemaMetadata(new SchemaPayload(rowSignature), numRows));
   }
 
+  /**
+   * When the SMQ result is published to the DB, it is removed from the {@code inTransitSMQResults}
+   * and added to {@code inTransitSMQPublishedResults}.
+   */
   public void markInTransitSMQResultPublished(SegmentId segmentId)
   {
     if (!inTransitSMQResults.containsKey(segmentId)) {
-      log.error("Segment not found in InTransitSMQResultPublished map");
+      log.error("SegmentId [%s] not found in InTransitSMQResultPublished map.", segmentId);
       return;
     }
 
@@ -106,6 +129,9 @@ public class SegmentSchemaCache
     inTransitSMQResults.remove(segmentId);
   }
 
+  /**
+   * {@code inTransitSMQPublishedResults} is reset on each DB poll.
+   */
   public void resetInTransitSMQResultPublishedOnDBPoll()
   {
     inTransitSMQPublishedResults = new ConcurrentHashMap<>();
@@ -143,6 +169,9 @@ public class SegmentSchemaCache
     return Optional.empty();
   }
 
+  /**
+   * Check if the schema is cached.
+   */
   public boolean isSchemaCached(SegmentId segmentId)
   {
     if (finalizedSegmentStats.containsKey(segmentId)) {
@@ -157,6 +186,9 @@ public class SegmentSchemaCache
            inTransitSMQPublishedResults.containsKey(segmentId);
   }
 
+  /**
+   * On segment removal, remove cached schema for the segment.
+   */
   public boolean segmentRemoved(SegmentId segmentId)
   {
     if (!isSchemaCached(segmentId)) {
@@ -170,6 +202,9 @@ public class SegmentSchemaCache
     return true;
   }
 
+  /**
+   * Encapsulates segment level information like numRows, schemaId.
+   */
   public static class SegmentStats
   {
     @Nullable

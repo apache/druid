@@ -55,7 +55,7 @@ public class MinimalSegmentSchemasTest
     Assert.assertEquals(minimalSegmentSchemas, deserialized);
 
     MinimalSegmentSchemas copy = new MinimalSegmentSchemas();
-    copy.add(minimalSegmentSchemas);
+    copy.merge(minimalSegmentSchemas);
 
     Assert.assertEquals(minimalSegmentSchemas, copy);
 

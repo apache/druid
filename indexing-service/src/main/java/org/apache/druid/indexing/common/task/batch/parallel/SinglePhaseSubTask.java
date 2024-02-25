@@ -465,7 +465,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
             // which makes the size of segments smaller.
             final SegmentsAndCommitMetadata pushed = driver.pushAllAndClear(pushTimeout);
             pushedSegments.addAll(pushed.getSegments());
-            minimalSegmentSchemas.add(pushed.getMinimalSegmentSchemas());
+            minimalSegmentSchemas.merge(pushed.getMinimalSegmentSchemas());
             LOG.info("Pushed [%s] segments", pushed.getSegments().size());
             LOG.infoSegments(pushed.getSegments(), "Pushed segments");
           }
@@ -478,7 +478,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
 
       final SegmentsAndCommitMetadata pushed = driver.pushAllAndClear(pushTimeout);
       pushedSegments.addAll(pushed.getSegments());
-      minimalSegmentSchemas.add(pushed.getMinimalSegmentSchemas());
+      minimalSegmentSchemas.merge(pushed.getMinimalSegmentSchemas());
       LOG.info("Pushed [%s] segments", pushed.getSegments().size());
       LOG.infoSegments(pushed.getSegments(), "Pushed segments");
       appenderator.close();

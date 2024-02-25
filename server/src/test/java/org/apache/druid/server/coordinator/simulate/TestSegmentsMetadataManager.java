@@ -239,4 +239,10 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   public void stopAsyncUsedFlagLastUpdatedUpdate()
   {
   }
+
+  @Override
+  public void resetLatestSegmentSchemaPollTime()
+  {
+
+  }
 }

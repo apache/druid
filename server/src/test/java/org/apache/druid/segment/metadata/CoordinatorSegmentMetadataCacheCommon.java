@@ -49,8 +49,8 @@ public class CoordinatorSegmentMetadataCacheCommon extends SegmentMetadataCacheC
   public TestSegmentMetadataQueryWalker walker;
   public TestCoordinatorServerView serverView;
   public List<DruidServer> druidServers;
-  public SchemaManager schemaManager;
-  public SchemaFingerprintGenerator fingerprintGenerator;
+  public SegmentSchemaManager segmentSchemaManager;
+  public FingerprintGenerator fingerprintGenerator;
   public SegmentSchemaCache segmentSchemaCache;
   public SegmentSchemaBackFillQueue backFillQueue;
 
@@ -94,14 +94,14 @@ public class CoordinatorSegmentMetadataCacheCommon extends SegmentMetadataCacheC
     derbyConnector.createSegmentSchemaTable();
     derbyConnector.createSegmentTable();
 
-    schemaManager = new SchemaManager(
+    segmentSchemaManager = new SegmentSchemaManager(
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         mapper,
         derbyConnector
     );
 
     segmentSchemaCache = new SegmentSchemaCache();
-    fingerprintGenerator = new SchemaFingerprintGenerator(mapper);
+    fingerprintGenerator = new FingerprintGenerator(mapper);
     CentralizedDatasourceSchemaConfig config = CentralizedDatasourceSchemaConfig.create();
     config.setEnabled(true);
     config.setBackFillEnabled(false);
@@ -109,7 +109,7 @@ public class CoordinatorSegmentMetadataCacheCommon extends SegmentMetadataCacheC
 
     backFillQueue =
         new SegmentSchemaBackFillQueue(
-            schemaManager,
+            segmentSchemaManager,
             ScheduledExecutors::fixed,
             segmentSchemaCache,
             fingerprintGenerator,

@@ -48,7 +48,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.metadata.SchemaManager;
+import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -87,7 +87,7 @@ public class MaterializedViewSupervisorTest
   private String derivativeDatasourceName;
   private MaterializedViewSupervisorSpec spec;
   private final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
-  private SchemaManager schemaManager;
+  private SegmentSchemaManager segmentSchemaManager;
 
   @Before
   public void setUp()
@@ -98,12 +98,12 @@ public class MaterializedViewSupervisorTest
     derbyConnector.createSegmentTable();
     taskStorage = EasyMock.createMock(TaskStorage.class);
     taskMaster = EasyMock.createMock(TaskMaster.class);
-    schemaManager = new SchemaManager(derbyConnectorRule.metadataTablesConfigSupplier().get(), objectMapper, derbyConnector);
+    segmentSchemaManager = new SegmentSchemaManager(derbyConnectorRule.metadataTablesConfigSupplier().get(), objectMapper, derbyConnector);
     indexerMetadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
         objectMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector,
-        schemaManager,
+        segmentSchemaManager,
         CentralizedDatasourceSchemaConfig.create()
     );
     metadataSupervisorManager = EasyMock.createMock(MetadataSupervisorManager.class);

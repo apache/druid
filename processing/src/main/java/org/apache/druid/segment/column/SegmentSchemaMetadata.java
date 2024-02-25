@@ -24,6 +24,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Objects;
 
+/**
+ * Wrapper over {@link SchemaPayload} to include {@code numRows} information.
+ */
 public class SegmentSchemaMetadata
 {
   private final SchemaPayload schemaPayload;
@@ -61,7 +64,8 @@ public class SegmentSchemaMetadata
       return false;
     }
     SegmentSchemaMetadata that = (SegmentSchemaMetadata) o;
-    return Objects.equals(schemaPayload, that.schemaPayload) && Objects.equals(numRows, that.numRows);
+    return Objects.equals(schemaPayload, that.schemaPayload)
+           && Objects.equals(numRows, that.numRows);
   }
 
   @Override

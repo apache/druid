@@ -35,8 +35,8 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.MinimalSegmentSchemas;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.metadata.SchemaFingerprintGenerator;
-import org.apache.druid.segment.metadata.SchemaManager;
+import org.apache.druid.segment.metadata.FingerprintGenerator;
+import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.metadata.SegmentSchemaTestUtils;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.http.DataSegmentPlus;
@@ -96,15 +96,15 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     metadataUpdateCounter.set(0);
     segmentTableDropUpdateCounter.set(0);
 
-    schemaManager = new SchemaManager(derbyConnectorRule.metadataTablesConfigSupplier().get(), mapper, derbyConnector);
-    fingerprintGenerator = new SchemaFingerprintGenerator(mapper);
+    segmentSchemaManager = new SegmentSchemaManager(derbyConnectorRule.metadataTablesConfigSupplier().get(), mapper, derbyConnector);
+    fingerprintGenerator = new FingerprintGenerator(mapper);
     segmentSchemaTestUtils = new SegmentSchemaTestUtils(derbyConnectorRule, derbyConnector, mapper);
 
     coordinator = new IndexerSQLMetadataStorageCoordinator(
         mapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector,
-        schemaManager,
+        segmentSchemaManager,
         CentralizedDatasourceSchemaConfig.create()
     )
     {
@@ -426,7 +426,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         mapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector,
-        schemaManager,
+        segmentSchemaManager,
         CentralizedDatasourceSchemaConfig.create()
     )
     {

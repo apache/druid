@@ -20,31 +20,40 @@
 package org.apache.druid.server.coordinator.duty;
 
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.metadata.SchemaManager;
+import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 
 import javax.annotation.Nullable;
 
 /**
- *
+ * Coordinator duty to clean up segment schema which are not referenced by any segment.
  */
 public class KillUnreferencedSegmentSchemas implements CoordinatorDuty
 {
   private static final Logger log = new Logger(KillUnreferencedSegmentSchemas.class);
-  private final SchemaManager schemaManager;
+  private final SegmentSchemaManager segmentSchemaManager;
+  private final SegmentsMetadataManager metadataManager;
 
-  public KillUnreferencedSegmentSchemas(SchemaManager schemaManager)
+  public KillUnreferencedSegmentSchemas(
+      SegmentSchemaManager segmentSchemaManager,
+      SegmentsMetadataManager metadataManager
+  )
   {
-    this.schemaManager = schemaManager;
+    this.segmentSchemaManager = segmentSchemaManager;
+    this.metadataManager = metadataManager;
   }
 
   @Nullable
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    int deleted = schemaManager.cleanUpUnreferencedSchema();
+    int deleted = segmentSchemaManager.cleanUpUnreferencedSchema();
     log.info("Cleaned up [%d] unreferenced schemas from the DB.", deleted);
-    // todo should retrigger schema poll from db?
+    if (deleted > 0) {
+      // reset latest segment schema poll time to trigger full schema refresh.
+      metadataManager.resetLatestSegmentSchemaPollTime();
+    }
     return params;
   }
 }

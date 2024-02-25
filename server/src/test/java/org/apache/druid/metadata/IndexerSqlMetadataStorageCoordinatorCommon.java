@@ -35,8 +35,8 @@ import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.MinimalSegmentSchemas;
-import org.apache.druid.segment.metadata.SchemaFingerprintGenerator;
-import org.apache.druid.segment.metadata.SchemaManager;
+import org.apache.druid.segment.metadata.FingerprintGenerator;
+import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.metadata.SegmentSchemaTestUtils;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.http.DataSegmentPlus;
@@ -307,8 +307,8 @@ public class IndexerSqlMetadataStorageCoordinatorCommon
 
   protected IndexerSQLMetadataStorageCoordinator coordinator;
   protected TestDerbyConnector derbyConnector;
-  protected SchemaManager schemaManager;
-  protected SchemaFingerprintGenerator fingerprintGenerator;
+  protected SegmentSchemaManager segmentSchemaManager;
+  protected FingerprintGenerator fingerprintGenerator;
   protected SegmentSchemaTestUtils segmentSchemaTestUtils;
 
   protected static class DS

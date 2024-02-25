@@ -27,6 +27,9 @@ import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * Representation of schema payload, includes information like RowSignature and aggregator factories.
+ */
 public class SchemaPayload
 {
   private final RowSignature rowSignature;
@@ -72,10 +75,8 @@ public class SchemaPayload
       return false;
     }
     SchemaPayload that = (SchemaPayload) o;
-    return Objects.equals(rowSignature, that.rowSignature) && Objects.equals(
-        aggregatorFactories,
-        that.aggregatorFactories
-    );
+    return Objects.equals(rowSignature, that.rowSignature)
+           && Objects.equals(aggregatorFactories, that.aggregatorFactories);
   }
 
   @Override

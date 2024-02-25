@@ -53,7 +53,7 @@ import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.metadata.SchemaManager;
+import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
@@ -91,7 +91,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
   private IndexerSQLMetadataStorageCoordinator metadataStorageCoordinator;
   private BatchServerInventoryView baseView;
   private BrokerServerView brokerServerView;
-  private SchemaManager schemaManager;
+  private SegmentSchemaManager segmentSchemaManager;
 
   @Before
   public void setUp() throws Exception
@@ -110,7 +110,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
         jsonMapper,
         derbyConnector
     );
-    schemaManager = new SchemaManager(
+    segmentSchemaManager = new SegmentSchemaManager(
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         jsonMapper,
         derbyConnector
@@ -120,7 +120,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
         jsonMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector,
-        schemaManager,
+        segmentSchemaManager,
         CentralizedDatasourceSchemaConfig.create()
     );
 

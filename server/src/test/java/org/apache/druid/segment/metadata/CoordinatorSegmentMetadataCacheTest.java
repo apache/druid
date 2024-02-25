@@ -1524,7 +1524,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     backFillQueue =
         new SegmentSchemaBackFillQueue(
-            schemaManager,
+            segmentSchemaManager,
             ScheduledExecutors::fixed,
             segmentSchemaCache,
             fingerprintGenerator,
@@ -1545,30 +1545,30 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     segmentsToPersist.add(segment2);
     segmentsToPersist.add(segment3);
 
-    List<SchemaManager.SegmentSchemaMetadataPlus> pluses = new ArrayList<>();
-    pluses.add(new SchemaManager.SegmentSchemaMetadataPlus(
+    List<SegmentSchemaManager.SegmentSchemaMetadataPlus> pluses = new ArrayList<>();
+    pluses.add(new SegmentSchemaManager.SegmentSchemaMetadataPlus(
         segment1.getId(),
+        fingerprintGenerator.generateFingerprint(new SchemaPayload(index1StorageAdaptor.getRowSignature())),
         new SegmentSchemaMetadata(
             new SchemaPayload(
                 index1StorageAdaptor.getRowSignature()),
             (long) index1StorageAdaptor.getNumRows()
-        ),
-        fingerprintGenerator.generateId(new SchemaPayload(index1StorageAdaptor.getRowSignature()))
+        )
     ));
-    pluses.add(new SchemaManager.SegmentSchemaMetadataPlus(
+    pluses.add(new SegmentSchemaManager.SegmentSchemaMetadataPlus(
         segment2.getId(),
+        fingerprintGenerator.generateFingerprint(new SchemaPayload(index2StorageAdaptor.getRowSignature())),
         new SegmentSchemaMetadata(
             new SchemaPayload(
                 index2StorageAdaptor.getRowSignature()),
             (long) index2StorageAdaptor.getNumRows()
-        ),
-        fingerprintGenerator.generateId(new SchemaPayload(index2StorageAdaptor.getRowSignature()))
+        )
     ));
 
     SegmentSchemaTestUtils segmentSchemaTestUtils = new SegmentSchemaTestUtils(derbyConnectorRule, derbyConnector, mapper);
     segmentSchemaTestUtils.insertUsedSegments(segmentsToPersist, Collections.emptyMap());
 
-    schemaManager.persistSchemaAndUpdateSegmentsTable(pluses);
+    segmentSchemaManager.persistSchemaAndUpdateSegmentsTable(pluses);
 
     ConcurrentMap<SegmentId, SegmentSchemaCache.SegmentStats> segmentStatsMap = new ConcurrentHashMap<>();
 

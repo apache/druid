@@ -218,7 +218,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
    */
   private volatile @Nullable DatabasePoll latestDatabasePoll = null;
 
-  // Max time of the segment schema polled from the database.
+  // Latest created time of the schema polled from the DB.
   private volatile @Nullable DateTime latestSegmentSchemaPoll = null;
 
   /** Used to cancel periodic poll task in {@link #stopPollingDatabasePeriodically}. */
@@ -1367,5 +1367,11 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
           }
         }
     );
+  }
+
+  @Override
+  public void resetLatestSegmentSchemaPollTime()
+  {
+    latestSegmentSchemaPoll = null;
   }
 }

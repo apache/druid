@@ -25,8 +25,8 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.metadata.SchemaManager;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
+import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
@@ -38,7 +38,7 @@ public class SqlSegmentsMetadataManagerCommon
   protected SqlSegmentsMetadataManager sqlSegmentsMetadataManager;
   protected SQLMetadataSegmentPublisher publisher;
   protected SegmentSchemaCache segmentSchemaCache;
-  protected SchemaManager schemaManager;
+  protected SegmentSchemaManager segmentSchemaManager;
   protected TestDerbyConnector connector;
   protected SegmentsMetadataManagerConfig config;
   protected final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();

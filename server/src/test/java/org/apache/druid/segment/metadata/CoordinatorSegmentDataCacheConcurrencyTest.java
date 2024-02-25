@@ -120,7 +120,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
     );
 
     segmentSchemaCache = new SegmentSchemaCache();
-    SchemaFingerprintGenerator fingerprintGenerator = new SchemaFingerprintGenerator(mapper);
+    FingerprintGenerator fingerprintGenerator = new FingerprintGenerator(mapper);
     CentralizedDatasourceSchemaConfig config = CentralizedDatasourceSchemaConfig.create();
     config.setEnabled(true);
     config.setBackFillEnabled(false);

@@ -61,7 +61,7 @@ public class SegmentSchemaBackFillQueueTest
     derbyConnector.createSegmentSchemaTable();
     derbyConnector.createSegmentTable();
 
-    SchemaManager schemaManager = new SchemaManager(
+    SegmentSchemaManager segmentSchemaManager = new SegmentSchemaManager(
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         mapper,
         derbyConnector
@@ -70,7 +70,7 @@ public class SegmentSchemaBackFillQueueTest
     SegmentSchemaTestUtils segmentSchemaTestUtils =
         new SegmentSchemaTestUtils(derbyConnectorRule, derbyConnector, mapper);
     SegmentSchemaCache segmentSchemaCache = new SegmentSchemaCache();
-    SchemaFingerprintGenerator fingerprintGenerator = new SchemaFingerprintGenerator(mapper);
+    FingerprintGenerator fingerprintGenerator = new FingerprintGenerator(mapper);
     CentralizedDatasourceSchemaConfig config = CentralizedDatasourceSchemaConfig.create();
     config.setEnabled(true);
     config.setBackFillEnabled(true);
@@ -80,7 +80,7 @@ public class SegmentSchemaBackFillQueueTest
 
     SegmentSchemaBackFillQueue segmentSchemaBackFillQueue =
         new SegmentSchemaBackFillQueue(
-            schemaManager,
+            segmentSchemaManager,
             ScheduledExecutors::fixed,
             segmentSchemaCache,
             fingerprintGenerator,

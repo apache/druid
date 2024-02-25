@@ -52,7 +52,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
-public class SchemaManagerTest
+public class SegmentSchemaManagerTest
 {
   static {
     NullHandling.initializeForTests();
@@ -63,11 +63,11 @@ public class SchemaManagerTest
 
   private final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
-  SchemaManager schemaManager;
+  SegmentSchemaManager segmentSchemaManager;
 
   TestDerbyConnector derbyConnector;
   MetadataStorageTablesConfig tablesConfig;
-  SchemaFingerprintGenerator fingerprintGenerator;
+  FingerprintGenerator fingerprintGenerator;
   SegmentSchemaTestUtils segmentSchemaTestUtils;
 
   @Before
@@ -79,9 +79,9 @@ public class SchemaManagerTest
     derbyConnector.createSegmentSchemaTable();
     derbyConnector.createSegmentTable();
 
-    schemaManager = new SchemaManager(derbyConnectorRule.metadataTablesConfigSupplier().get(), mapper, derbyConnector);
+    segmentSchemaManager = new SegmentSchemaManager(derbyConnectorRule.metadataTablesConfigSupplier().get(), mapper, derbyConnector);
     segmentSchemaTestUtils = new SegmentSchemaTestUtils(derbyConnectorRule, derbyConnector, mapper);
-    fingerprintGenerator = new SchemaFingerprintGenerator(mapper);
+    fingerprintGenerator = new FingerprintGenerator(mapper);
   }
 
   @Test
@@ -91,7 +91,7 @@ public class SchemaManagerTest
     Random random = new Random(5);
 
     Set<DataSegment> segments = new HashSet<>();
-    List<SchemaManager.SegmentSchemaMetadataPlus> schemaMetadataPluses = new ArrayList<>();
+    List<SegmentSchemaManager.SegmentSchemaMetadataPlus> schemaMetadataPluses = new ArrayList<>();
 
     for (int i = 1; i < 9; i++) {
       final DataSegment segment = new DataSegment(
@@ -115,18 +115,18 @@ public class SchemaManagerTest
 
       SchemaPayload schemaPayload = new SchemaPayload(rowSignature, aggregatorFactoryMap);
       SegmentSchemaMetadata schemaMetadata = new SegmentSchemaMetadata(schemaPayload, (long) randomNum);
-      SchemaManager.SegmentSchemaMetadataPlus plus =
-          new SchemaManager.SegmentSchemaMetadataPlus(
+      SegmentSchemaManager.SegmentSchemaMetadataPlus plus =
+          new SegmentSchemaManager.SegmentSchemaMetadataPlus(
               segment.getId(),
-              schemaMetadata,
-              fingerprintGenerator.generateId(schemaPayload)
+              fingerprintGenerator.generateFingerprint(schemaPayload),
+              schemaMetadata
           );
       schemaMetadataPluses.add(plus);
       segmentIdSchemaMap.put(segment.getId().toString(), Pair.of(schemaPayload, randomNum));
     }
 
     segmentSchemaTestUtils.insertUsedSegments(segments, Collections.emptyMap());
-    schemaManager.persistSchemaAndUpdateSegmentsTable(schemaMetadataPluses);
+    segmentSchemaManager.persistSchemaAndUpdateSegmentsTable(schemaMetadataPluses);
 
     segmentSchemaTestUtils.verifySegmentSchema(segmentIdSchemaMap);
   }
@@ -138,7 +138,7 @@ public class SchemaManagerTest
     Random random = new Random(5);
 
     Set<DataSegment> segments = new HashSet<>();
-    List<SchemaManager.SegmentSchemaMetadataPlus> schemaMetadataPluses = new ArrayList<>();
+    List<SegmentSchemaManager.SegmentSchemaMetadataPlus> schemaMetadataPluses = new ArrayList<>();
 
     for (int i = 1; i < 9; i++) {
       final DataSegment segment = new DataSegment(
@@ -160,18 +160,18 @@ public class SchemaManagerTest
 
       SchemaPayload schemaPayload = new SchemaPayload(rowSignature);
       SegmentSchemaMetadata schemaMetadata = new SegmentSchemaMetadata(schemaPayload, (long) randomNum);
-      SchemaManager.SegmentSchemaMetadataPlus plus =
-          new SchemaManager.SegmentSchemaMetadataPlus(
+      SegmentSchemaManager.SegmentSchemaMetadataPlus plus =
+          new SegmentSchemaManager.SegmentSchemaMetadataPlus(
               segment.getId(),
-              schemaMetadata,
-              fingerprintGenerator.generateId(schemaPayload)
+              fingerprintGenerator.generateFingerprint(schemaPayload),
+              schemaMetadata
           );
       schemaMetadataPluses.add(plus);
       segmentIdSchemaMap.put(segment.getId().toString(), Pair.of(schemaPayload, randomNum));
     }
 
     segmentSchemaTestUtils.insertUsedSegments(segments, Collections.emptyMap());
-    schemaManager.persistSchemaAndUpdateSegmentsTable(schemaMetadataPluses);
+    segmentSchemaManager.persistSchemaAndUpdateSegmentsTable(schemaMetadataPluses);
 
     segmentSchemaTestUtils.verifySegmentSchema(segmentIdSchemaMap);
 
@@ -181,7 +181,7 @@ public class SchemaManagerTest
       return true;
     });
 
-    schemaManager.cleanUpUnreferencedSchema();
+    segmentSchemaManager.cleanUpUnreferencedSchema();
 
     List<Long> ids = derbyConnector.retryWithHandle(
         handle -> handle.createQuery(StringUtils.format(

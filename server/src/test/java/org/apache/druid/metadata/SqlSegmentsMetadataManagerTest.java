@@ -31,8 +31,8 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.metadata.SchemaManager;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
+import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -67,7 +67,7 @@ public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerCo
     config.setPollDuration(Period.seconds(3));
 
     segmentSchemaCache = new SegmentSchemaCache();
-    schemaManager = new SchemaManager(
+    segmentSchemaManager = new SegmentSchemaManager(
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         jsonMapper,
         connector

@@ -27,17 +27,21 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- *
+ * Compact representation of segment schema for multiple segments.
  */
 public class MinimalSegmentSchemas
 {
+  // Mapping of segmentId to segment level information like schema fingerprint and numRows.
   private final Map<String, SegmentStats> segmentStatsMap;
+
+  // Mapping of schema fingerprint to payload.
   private final Map<String, SchemaPayload> schemaPayloadMap;
 
   @JsonCreator
   public MinimalSegmentSchemas(
       @JsonProperty("segmentStatsMap") Map<String, SegmentStats> segmentStatsMap,
-      @JsonProperty("schemaPayloadMap") Map<String, SchemaPayload> schemaPayloadMap)
+      @JsonProperty("schemaPayloadMap") Map<String, SchemaPayload> schemaPayloadMap
+  )
   {
     this.segmentStatsMap = segmentStatsMap;
     this.schemaPayloadMap = schemaPayloadMap;
@@ -61,32 +65,76 @@ public class MinimalSegmentSchemas
     return schemaPayloadMap;
   }
 
-  public void addSchema(String segmentId, String fingerprint, long numRows, SchemaPayload schemaPayload)
-  {
-    segmentStatsMap.put(segmentId, new SegmentStats(numRows, fingerprint));
-    schemaPayloadMap.put(fingerprint, schemaPayload);
-  }
-
   public boolean isNonEmpty()
   {
     return segmentStatsMap.size() > 0;
   }
 
-  public void add(MinimalSegmentSchemas other)
+  /**
+   * Add schema information for the segment.
+   */
+  public void addSchema(
+      String segmentId,
+      String fingerprint,
+      long numRows,
+      SchemaPayload schemaPayload
+  )
+  {
+    segmentStatsMap.put(segmentId, new SegmentStats(numRows, fingerprint));
+    schemaPayloadMap.put(fingerprint, schemaPayload);
+  }
+
+  /**
+   * Merge with another instance.
+   */
+  public void merge(MinimalSegmentSchemas other)
   {
     this.segmentStatsMap.putAll(other.getSegmentStatsMap());
     this.schemaPayloadMap.putAll(other.getSchemaPayloadMap());
   }
 
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    MinimalSegmentSchemas that = (MinimalSegmentSchemas) o;
+    return Objects.equals(segmentStatsMap, that.segmentStatsMap)
+           && Objects.equals(schemaPayloadMap, that.schemaPayloadMap);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(segmentStatsMap, schemaPayloadMap);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "MinimalSegmentSchemas{" +
+           "segmentStatsMap=" + segmentStatsMap +
+           ", schemaPayloadMap=" + schemaPayloadMap +
+           '}';
+  }
+
+  /**
+   * Encapsulates segment level information like numRows, schema fingerprint.
+   */
   public static class SegmentStats
   {
-    Long numRows;
-    String fingerprint;
+    final Long numRows;
+    final String fingerprint;
 
     @JsonCreator
     public SegmentStats(
         @JsonProperty("numRows") Long numRows,
-        @JsonProperty("fingerprint") String fingerprint)
+        @JsonProperty("fingerprint") String fingerprint
+    )
     {
       this.numRows = numRows;
       this.fingerprint = fingerprint;
@@ -131,36 +179,5 @@ public class MinimalSegmentSchemas
              ", fingerprint='" + fingerprint + '\'' +
              '}';
     }
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    MinimalSegmentSchemas that = (MinimalSegmentSchemas) o;
-    return Objects.equals(segmentStatsMap, that.segmentStatsMap) && Objects.equals(
-        schemaPayloadMap,
-        that.schemaPayloadMap
-    );
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(segmentStatsMap, schemaPayloadMap);
-  }
-
-  @Override
-  public String toString()
-  {
-    return "MinimalSegmentSchemas{" +
-           "segmentStatsMap=" + segmentStatsMap +
-           ", schemaPayloadMap=" + schemaPayloadMap +
-           '}';
   }
 }

@@ -161,10 +161,11 @@ public interface IndexerMetadataStorageCoordinator
   int markSegmentsAsUnusedWithinInterval(String dataSource, Interval interval);
 
   /**
-   * Attempts to insert a set of segments to the metadata storage. Returns the set of segments actually added (segments
-   * with identifiers already in the metadata storage will not be added).
+   * Attempts to insert a set of segments and corresponding schema to the metadata storage.
+   * Returns the set of segments actually added (segments with identifiers already in the metadata storage will not be added).
    *
    * @param segments set of segments to add
+   * @param minimalSegmentSchemas segment schema information to add
    *
    * @return set of segments actually added
    */
@@ -249,8 +250,8 @@ public interface IndexerMetadataStorageCoordinator
   int deletePendingSegments(String dataSource);
 
   /**
-   * Attempts to insert a set of segments to the metadata storage. Returns the set of segments actually added (segments
-   * with identifiers already in the metadata storage will not be added).
+   * Attempts to insert a set of segments and corresponding schema to the metadata storage.
+   * Returns the set of segments actually added (segments with identifiers already in the metadata storage will not be added).
    * <p/>
    * If startMetadata and endMetadata are set, this insertion will be atomic with a compare-and-swap on dataSource
    * commit metadata.
@@ -265,6 +266,7 @@ public interface IndexerMetadataStorageCoordinator
    * @param endMetadata    dataSource metadata post-insert will have this endMetadata merged in with
    *                       {@link DataSourceMetadata#plus(DataSourceMetadata)}. If null, this insert will not
    *                       involve a metadata transaction
+   * @param minimalSegmentSchemas segment schema information to persist.
    *
    * @return segment publish result indicating transaction success or failure, and set of segments actually published.
    * This method must only return a failure code if it is sure that the transaction did not happen. If it is not sure,
@@ -278,11 +280,12 @@ public interface IndexerMetadataStorageCoordinator
       @Nullable DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata,
       MinimalSegmentSchemas minimalSegmentSchemas
-      ) throws IOException;
+  ) throws IOException;
 
   /**
-   * Commits segments created by an APPEND task. This method also handles segment
-   * upgrade scenarios that may result from concurrent append and replace.
+   * Commits segments and corresponding schema created by an APPEND task.
+   * This method also handles segment upgrade scenarios that may result
+   * from concurrent append and replace.
    * <ul>
    * <li>If a REPLACE task committed a segment that overlaps with any of the
    * appendSegments while this APPEND task was in progress, the appendSegments
@@ -320,8 +323,9 @@ public interface IndexerMetadataStorageCoordinator
   );
 
   /**
-   * Commits segments created by a REPLACE task. This method also handles the
-   * segment upgrade scenarios that may result from concurrent append and replace.
+   * Commits segments and corresponding schema created by a REPLACE task.
+   * This method also handles the segment upgrade scenarios that may result
+   * from concurrent append and replace.
    * <ul>
    * <li>If an APPEND task committed a segment to an interval locked by this task,
    * the append segment is upgraded to the version of the corresponding lock.
@@ -332,6 +336,7 @@ public interface IndexerMetadataStorageCoordinator
    * @param replaceSegments        All segments created by a REPLACE task that
    *                               must be committed in a single transaction.
    * @param locksHeldByReplaceTask All active non-revoked REPLACE locks held by the task
+   * @param minimalSegmentSchemas  Segment schema to add.
    */
   SegmentPublishResult commitReplaceSegments(
       Set<DataSegment> replaceSegments,

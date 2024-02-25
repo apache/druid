@@ -72,7 +72,7 @@ import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.metadata.SchemaFingerprintGenerator;
+import org.apache.druid.segment.metadata.FingerprintGenerator;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.plumber.Sink;
@@ -196,7 +196,7 @@ public class AppenderatorImpl implements Appenderator
 
   private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
-  private final SchemaFingerprintGenerator fingerprintGenerator;
+  private final FingerprintGenerator fingerprintGenerator;
 
   /**
    * This constructor allows the caller to provide its own SinkQuerySegmentWalker.
@@ -259,7 +259,7 @@ public class AppenderatorImpl implements Appenderator
       log.debug("Running closed segments appenderator");
     }
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
-    this.fingerprintGenerator = new SchemaFingerprintGenerator(objectMapper);
+    this.fingerprintGenerator = new FingerprintGenerator(objectMapper);
   }
 
   @Override
@@ -813,7 +813,7 @@ public class AppenderatorImpl implements Appenderator
                 SchemaPayload schemaPayload = segmentSchemaMetadata.getSchemaPayload();
                 minimalSegmentSchemas.addSchema(
                     segment.getId().toString(),
-                    fingerprintGenerator.generateId(schemaPayload),
+                    fingerprintGenerator.generateFingerprint(schemaPayload),
                     segmentSchemaMetadata.getNumRows(),
                     schemaPayload
                 );

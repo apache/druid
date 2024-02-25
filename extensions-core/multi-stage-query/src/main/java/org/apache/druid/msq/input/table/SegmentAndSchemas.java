@@ -27,6 +27,9 @@ import org.apache.druid.timeline.DataSegment;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * Encapsulates segment metadata and corresponding schema.
+ */
 public class SegmentAndSchemas
 {
   private final Set<DataSegment> segments;
@@ -63,7 +66,7 @@ public class SegmentAndSchemas
   public SegmentAndSchemas merge(SegmentAndSchemas other)
   {
     segments.addAll(other.getSegments());
-    minimalSegmentSchemas.add(other.getMinimalSegmentSchemas());
+    minimalSegmentSchemas.merge(other.getMinimalSegmentSchemas());
     return this;
   }
 }

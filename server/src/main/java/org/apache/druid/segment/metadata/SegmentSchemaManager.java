@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -49,16 +50,20 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class SchemaManager
+/**
+ * Handles segment schema persistence and cleanup.
+ */
+@LazySingleton
+public class SegmentSchemaManager
 {
-  private static final EmittingLogger log = new EmittingLogger(SchemaManager.class);
+  private static final EmittingLogger log = new EmittingLogger(SegmentSchemaManager.class);
   private static final int DB_ACTION_PARTITION_SIZE = 100;
   private final MetadataStorageTablesConfig dbTables;
   private final ObjectMapper jsonMapper;
   private final SQLMetadataConnector connector;
 
   @Inject
-  public SchemaManager(
+  public SegmentSchemaManager(
       MetadataStorageTablesConfig dbTables,
       ObjectMapper jsonMapper,
       SQLMetadataConnector connector
@@ -69,6 +74,9 @@ public class SchemaManager
     this.connector = connector;
   }
 
+  /**
+   * Remove segment schema which are no longer referenced by any segment.
+   */
   public int cleanUpUnreferencedSchema()
   {
     return connector.retryTransaction(
@@ -82,31 +90,39 @@ public class SchemaManager
     );
   }
 
+  /**
+   * Persist segment schema and update segments in a transaction.
+   */
   public void persistSchemaAndUpdateSegmentsTable(List<SegmentSchemaMetadataPlus> segmentSchemas)
   {
     connector.retryTransaction((TransactionCallback<Void>) (handle, status) -> {
       Map<String, SchemaPayload> schemaPayloadMap = new HashMap<>();
 
       for (SegmentSchemaMetadataPlus segmentSchema : segmentSchemas) {
-        schemaPayloadMap.put(segmentSchema.getFingerprint(), segmentSchema.getSegmentSchemaMetadata().getSchemaPayload());
+        schemaPayloadMap.put(
+            segmentSchema.getFingerprint(),
+            segmentSchema.getSegmentSchemaMetadata().getSchemaPayload()
+        );
       }
-      persistSchema(handle, schemaPayloadMap);
-      updateSegments(handle, segmentSchemas);
+      persistSegmentSchema(handle, schemaPayloadMap);
+      updateSegmentWithSchemaInformation(handle, segmentSchemas);
+
       return null;
     }, 1, 3);
-    log.info("Successfull updated segments.");
   }
 
-  public void persistSchema(Handle handle, Map<String, SchemaPayload> schemaPayloadMap)
+  /**
+   * Persist unique segment schema in the DB.
+   */
+  public void persistSegmentSchema(Handle handle, Map<String, SchemaPayload> schemaPayloadMap)
       throws JsonProcessingException
   {
     try {
-      // find out all the unique schema insert them and get their id
-      // update the segment table with the schema id
-
       // Filter already existing schema
       Set<String> existingSchemas = schemaExistBatch(handle, schemaPayloadMap.keySet());
       log.info("Found already existing schema in the DB: %s", existingSchemas);
+
+      // clear existing schema from the DB.
       schemaPayloadMap.keySet().removeAll(existingSchemas);
 
       final List<List<String>> partitionedFingerprints = Lists.partition(
@@ -146,13 +162,16 @@ public class SchemaManager
     }
     catch (Exception e) {
       log.error("Exception inserting schemas to DB: %s", schemaPayloadMap);
-      // log the schema
       throw e;
     }
   }
 
-  public void updateSegments(Handle handle, List<SegmentSchemaMetadataPlus> batch)
+  /**
+   * Update segment with schemaId and numRows information.
+   */
+  public void updateSegmentWithSchemaInformation(Handle handle, List<SegmentSchemaMetadataPlus> batch)
   {
+    // segments which are already updated with the schema information.
     Set<String> updatedSegments =
         segmentUpdatedBatch(handle, batch.stream().map(plus -> plus.getSegmentId().toString()).collect(Collectors.toSet()));
 
@@ -163,21 +182,29 @@ public class SchemaManager
 
     // fetch schemaId
     Map<String, Long> fingerprintSchemaIdMap =
-        schemaIdFetchBatch(handle, segmentsToUpdate.stream().map(SegmentSchemaMetadataPlus::getFingerprint).collect(Collectors.toSet()));
+        schemaIdFetchBatch(
+            handle,
+            segmentsToUpdate.stream().map(SegmentSchemaMetadataPlus::getFingerprint)
+                            .collect(Collectors.toSet())
+        );
 
     // update schemaId and numRows in segments table
-    String updateSql = StringUtils.format("UPDATE %s SET schema_id = :schema_id, num_rows = :num_rows where id = :id", dbTables.getSegmentsTable());
+    String updateSql =
+        StringUtils.format(
+            "UPDATE %s SET schema_id = :schema_id, num_rows = :num_rows where id = :id",
+            dbTables.getSegmentsTable()
+        );
 
     PreparedBatch segmentUpdateBatch = handle.prepareBatch(updateSql);
 
-    List<List<SegmentSchemaMetadataPlus>> partitionedSegmentIds = Lists.partition(
-        segmentsToUpdate,
-        DB_ACTION_PARTITION_SIZE
-    );
+    List<List<SegmentSchemaMetadataPlus>> partitionedSegmentIds =
+        Lists.partition(
+            segmentsToUpdate,
+            DB_ACTION_PARTITION_SIZE
+        );
 
     for (List<SegmentSchemaMetadataPlus> partition : partitionedSegmentIds) {
       for (SegmentSchemaMetadataPlus segmentSchema : segmentsToUpdate) {
-        log.info("Updating segment schema %s", segmentSchema);
         String fingerprint = segmentSchema.getFingerprint();
         if (!fingerprintSchemaIdMap.containsKey(fingerprint)) {
           // this should not happen
@@ -194,14 +221,15 @@ public class SchemaManager
       final boolean succeeded = Arrays.stream(affectedRows).allMatch(eachAffectedRows -> eachAffectedRows == 1);
 
       if (succeeded) {
-        log.info("Updated segments with num DB: %s", partition);
+        log.info("Updated segments with schemaId & numRows in the DB: %s", partition);
       } else {
-        final List<String> failedToPublish = IntStream.range(0, partition.size())
-                                                      .filter(i -> affectedRows[i] != 1)
-                                                      .mapToObj(partition::get)
-                                                      .map(plus -> plus.getSegmentId().toString())
-                                                      .collect(Collectors.toList());
-        throw new ISE("Failed to publish schemas to DB: %s", failedToPublish);
+        final List<String> failedToUpdate =
+            IntStream.range(0, partition.size())
+                     .filter(i -> affectedRows[i] != 1)
+                     .mapToObj(partition::get)
+                     .map(plus -> plus.getSegmentId().toString())
+                     .collect(Collectors.toList());
+        throw new ISE("Failed to update segments with schema information: %s", failedToUpdate);
       }
     }
   }
@@ -278,7 +306,7 @@ public class SchemaManager
       List<String> updatedSegmentIds =
           handle.createQuery(
                     StringUtils.format(
-                        "SELECT id from %s where id in (%s) and schema_id IS NOT NULL",
+                        "SELECT id from %s where id in (%s) and schema_id IS NOT NULL and num_rows IS NOT NULL",
                         dbTables.getSegmentsTable(),
                         ids
                     ))
@@ -290,13 +318,20 @@ public class SchemaManager
     return updated;
   }
 
+  /**
+   * Wrapper over {@link SegmentSchemaMetadata} class to include segmentId and fingerprint information.
+   */
   public static class SegmentSchemaMetadataPlus
   {
     private final SegmentId segmentId;
     private final String fingerprint;
     private final SegmentSchemaMetadata segmentSchemaMetadata;
 
-    public SegmentSchemaMetadataPlus(SegmentId segmentId, SegmentSchemaMetadata segmentSchemaMetadata, String fingerprint)
+    public SegmentSchemaMetadataPlus(
+        SegmentId segmentId,
+        String fingerprint,
+        SegmentSchemaMetadata segmentSchemaMetadata
+    )
     {
       this.segmentId = segmentId;
       this.segmentSchemaMetadata = segmentSchemaMetadata;

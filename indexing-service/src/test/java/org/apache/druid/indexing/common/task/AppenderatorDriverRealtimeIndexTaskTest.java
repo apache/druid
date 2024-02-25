@@ -123,7 +123,7 @@ import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.metadata.SchemaManager;
+import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
@@ -271,7 +271,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
   private TaskToolboxFactory taskToolboxFactory;
   private File baseDir;
   private File reportsFile;
-  private SchemaManager schemaManager;
+  private SegmentSchemaManager segmentSchemaManager;
 
   @Before
   public void setUp() throws IOException
@@ -291,7 +291,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     baseDir = tempFolder.newFolder();
     reportsFile = File.createTempFile("KafkaIndexTaskTestReports-" + System.currentTimeMillis(), "json");
     makeToolboxFactory(baseDir);
-    schemaManager = new SchemaManager(MetadataStorageTablesConfig.fromBase(null), mapper, derbyConnector);
+    segmentSchemaManager = new SegmentSchemaManager(MetadataStorageTablesConfig.fromBase(null), mapper, derbyConnector);
   }
 
   @After
@@ -1514,7 +1514,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
         mapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnectorRule.getConnector(),
-        schemaManager,
+        segmentSchemaManager,
         CentralizedDatasourceSchemaConfig.create()
     )
     {

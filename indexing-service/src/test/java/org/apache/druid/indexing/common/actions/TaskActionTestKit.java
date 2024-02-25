@@ -39,8 +39,8 @@ import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.metadata.SchemaManager;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
+import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.easymock.EasyMock;
 import org.joda.time.Period;
@@ -56,7 +56,7 @@ public class TaskActionTestKit extends ExternalResource
   private IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private SegmentsMetadataManager segmentsMetadataManager;
   private TaskActionToolbox taskActionToolbox;
-  private SchemaManager schemaManager;
+  private SegmentSchemaManager segmentSchemaManager;
   private SegmentSchemaCache segmentSchemaCache;
 
   public TaskLockbox getTaskLockbox()
@@ -88,12 +88,12 @@ public class TaskActionTestKit extends ExternalResource
         Suppliers.ofInstance(metadataStorageTablesConfig)
     );
     final ObjectMapper objectMapper = new TestUtils().getTestObjectMapper();
-    schemaManager = new SchemaManager(metadataStorageTablesConfig, objectMapper, testDerbyConnector);
+    segmentSchemaManager = new SegmentSchemaManager(metadataStorageTablesConfig, objectMapper, testDerbyConnector);
     metadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
         objectMapper,
         metadataStorageTablesConfig,
         testDerbyConnector,
-        schemaManager,
+        segmentSchemaManager,
         CentralizedDatasourceSchemaConfig.create()
     )
     {

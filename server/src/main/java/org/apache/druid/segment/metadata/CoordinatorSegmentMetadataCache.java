@@ -57,6 +57,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * Coordinator-side cache of segment metadata that combines segments to build
  * datasources. The cache provides metadata about a datasource, see {@link DataSourceInformation}.
+ * <p>
+ * This class differs from the other implementation {@code BrokerSegmentMetadataCache} in two aspects,
+ * <li>Realtime segment schema refresh. Schema update for realtime segment is pushed periodically.
+ * The schema is merged with any existing schema for the segment and the cache is updated.
+ * Corresponding datasource is marked for refresh.</li>
+ * <li>The refresh mechanism is significantly different from the other representation,
+ * <ul><li>SMQ is executed only for those non-realtime segments for which the schema is not cached.</li>
+ * <li>Datasources marked for refresh are then rebuilt.</li></ul>
+ * </li>
  */
 @ManageLifecycle
 public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCache<DataSourceInformation>
@@ -164,9 +173,9 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       String dataSource,
       SegmentId segmentId,
       RowSignature rowSignature,
-      SegmentAnalysis analysis)
+      SegmentAnalysis analysis
+  )
   {
-    log.info("Executing smq action.");
     AtomicBoolean added = new AtomicBoolean(false);
     segmentMetadataInfo.compute(
         dataSource,
@@ -187,7 +196,6 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
                     log.warn("No segment [%s] found, skipping refresh", segmentId);
                     return null;
                   } else {
-                    log.info("Adding segment schema to cache and backfill queue.Id [%s]", segmentId);
                     long numRows = analysis.getNumRows();
                     Map<String, AggregatorFactory> aggregators = analysis.getAggregators();
                     // cache the signature
@@ -261,19 +269,17 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   @Override
   public void refresh(final Set<SegmentId> segmentsToRefresh, final Set<String> dataSourcesToRebuild) throws IOException
   {
-    log.info("Segments to refresh [%s]", segmentsToRefresh);
+    log.debug("Segments to refresh [%s]", segmentsToRefresh);
     final Set<SegmentId> segmentsToRefreshMinusRealtimeSegments = filterMutableSegments(segmentsToRefresh);
-    log.info("Segments to refresh after filtering realtime segments [%s]", segmentsToRefreshMinusRealtimeSegments);
+    log.debug("SegmentsToRefreshMinusRealtimeSegments [%s]", segmentsToRefreshMinusRealtimeSegments);
     final Set<SegmentId> segmentsToRefreshMinusCachedSegments = filterSegmentWithCachedSchema(segmentsToRefreshMinusRealtimeSegments);
     final Set<SegmentId> cachedSegments = Sets.difference(segmentsToRefreshMinusRealtimeSegments, segmentsToRefreshMinusCachedSegments);
-    log.info("Segments to refresh after filtering cached segments [%s]", segmentsToRefreshMinusRealtimeSegments);
-
-    log.info("Cached segments are [%s]", cachedSegments);
+    log.debug("SegmentsToRefreshMinusCachedSegments [%s], cachedSegments [%s]", segmentsToRefreshMinusRealtimeSegments, cachedSegments);
 
     // Refresh the segments.
     final Set<SegmentId> refreshed = refreshSegments(segmentsToRefreshMinusCachedSegments);
 
-    log.info("Refreshed segments are [%s]", refreshed);
+    log.debug("Refreshed segments are [%s]", refreshed);
 
     synchronized (lock) {
       // Add missing segments back to the refresh list.
@@ -288,7 +294,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       dataSourcesNeedingRebuild.clear();
     }
 
-    log.info("Datasources to rebuild are [%s]", dataSourcesToRebuild);
+    log.debug("Datasources to rebuild are [%s]", dataSourcesToRebuild);
     // Rebuild the datasources.
     for (String dataSource : dataSourcesToRebuild) {
       final RowSignature rowSignature = buildDataSourceRowSignature(dataSource);
@@ -304,7 +310,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       if (oldTable == null || !oldTable.getRowSignature().equals(druidTable.getRowSignature())) {
         log.info("[%s] has new signature: %s.", dataSource, druidTable.getRowSignature());
       } else {
-        log.info("[%s] signature is unchanged.", dataSource);
+        log.debug("[%s] signature is unchanged.", dataSource);
       }
     }
   }
@@ -421,10 +427,10 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
                             segmentId,
                             rowSignature.get()
                         );
+                        segmentSchemaCache.addRealtimeSegmentSchema(segmentId, rowSignature.get(), segmentSchema.getNumRows());
+
                         // mark the datasource for rebuilding
                         markDataSourceAsNeedRebuild(dataSource);
-
-                        segmentSchemaCache.addRealtimeSegmentSchema(segmentId, rowSignature.get(), segmentSchema.getNumRows());
                       }
                     }
                     return segmentMetadata;

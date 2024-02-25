@@ -59,7 +59,7 @@ import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.metadata.SchemaManager;
+import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
@@ -99,7 +99,7 @@ public class TaskLockboxTest
   private IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private TaskLockbox lockbox;
   private TaskLockboxValidator validator;
-  private SchemaManager schemaManager;
+  private SegmentSchemaManager segmentSchemaManager;
 
   private final int HIGH_PRIORITY = 15;
   private final int MEDIUM_PRIORITY = 10;
@@ -120,7 +120,7 @@ public class TaskLockboxTest
     derbyConnector.createSegmentTable();
     final MetadataStorageTablesConfig tablesConfig = derby.metadataTablesConfigSupplier().get();
 
-    schemaManager = new SchemaManager(tablesConfig, objectMapper, derbyConnector);
+    segmentSchemaManager = new SegmentSchemaManager(tablesConfig, objectMapper, derbyConnector);
 
     taskStorage = new MetadataTaskStorage(
         derbyConnector,
@@ -139,7 +139,7 @@ public class TaskLockboxTest
         objectMapper,
         tablesConfig,
         derbyConnector,
-        schemaManager,
+        segmentSchemaManager,
         CentralizedDatasourceSchemaConfig.create()
     );
 
@@ -468,7 +468,7 @@ public class TaskLockboxTest
         loadedMapper,
         derby.metadataTablesConfigSupplier().get(),
         derbyConnector,
-        schemaManager,
+        segmentSchemaManager,
         CentralizedDatasourceSchemaConfig.create()
     );
 

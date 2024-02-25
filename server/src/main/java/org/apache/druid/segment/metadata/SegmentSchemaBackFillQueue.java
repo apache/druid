@@ -29,7 +29,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.SchemaPayload;
 import org.apache.druid.segment.column.SegmentSchemaMetadata;
-import org.apache.druid.segment.metadata.SchemaManager.SegmentSchemaMetadataPlus;
+import org.apache.druid.segment.metadata.SegmentSchemaManager.SegmentSchemaMetadataPlus;
 import org.apache.druid.timeline.SegmentId;
 
 import java.util.ArrayList;
@@ -40,6 +40,10 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Responsible for persisting segment schema which are obtained as a result of executing segment metadata queries.
+ * SMQ results are added to a queue and are periodically published to the DB in batches.
+ */
 @ManageLifecycle
 public class SegmentSchemaBackFillQueue
 {
@@ -49,33 +53,31 @@ public class SegmentSchemaBackFillQueue
   private final long executionPeriod;
 
   private final SegmentSchemaCache segmentSchemaCache;
-  private final SchemaManager schemaManager;
-  private final SchemaFingerprintGenerator schemaFingerprintGenerator;
+  private final SegmentSchemaManager segmentSchemaManager;
+  private final FingerprintGenerator fingerprintGenerator;
   private ScheduledExecutorService executor;
 
   @Inject
   public SegmentSchemaBackFillQueue(
-      SchemaManager schemaManager,
+      SegmentSchemaManager segmentSchemaManager,
       ScheduledExecutorFactory scheduledExecutorFactory,
       SegmentSchemaCache segmentSchemaCache,
-      SchemaFingerprintGenerator schemaFingerprintGenerator,
+      FingerprintGenerator fingerprintGenerator,
       CentralizedDatasourceSchemaConfig config
   )
   {
     if (config.isEnabled() && config.isBackFillEnabled()) {
-      this.executor = scheduledExecutorFactory.create(1, "SegmentSchemaBackfillQueue-%s");
+      this.executor = scheduledExecutorFactory.create(1, "SegmentSchemaBackFillQueue-%s");
     }
-    this.schemaManager = schemaManager;
+    this.segmentSchemaManager = segmentSchemaManager;
     this.segmentSchemaCache = segmentSchemaCache;
-    log.info("Backfill period [%s] millis", config.getBackFillPeriod());
     this.executionPeriod = config.getBackFillPeriod();
-    this.schemaFingerprintGenerator = schemaFingerprintGenerator;
+    this.fingerprintGenerator = fingerprintGenerator;
   }
 
   @LifecycleStart
   public void start()
   {
-    log.info("Starting SegmentSchemaBackFillQueue.");
     if (isEnabled()) {
       scheduleQueuePoll(executionPeriod);
     }
@@ -84,22 +86,34 @@ public class SegmentSchemaBackFillQueue
   @LifecycleStop
   public void stop()
   {
-    log.info("Stopping SegmentSchemaBackFillQueue.");
     if (isEnabled()) {
       executor.shutdownNow();
     }
   }
 
-  public void add(SegmentId segmentId, RowSignature rowSignature, long numRows, Map<String, AggregatorFactory> aggregators)
+  public void add(
+      SegmentId segmentId,
+      RowSignature rowSignature,
+      long numRows,
+      Map<String, AggregatorFactory> aggregators
+  )
   {
     SchemaPayload schemaPayload = new SchemaPayload(rowSignature, aggregators);
     SegmentSchemaMetadata schemaMetadata = new SegmentSchemaMetadata(schemaPayload, numRows);
-    queue.add(new SegmentSchemaMetadataPlus(segmentId, schemaMetadata, schemaFingerprintGenerator.generateId(schemaMetadata.getSchemaPayload())));
+    queue.add(new SegmentSchemaMetadataPlus(
+        segmentId,
+        fingerprintGenerator.generateFingerprint(schemaMetadata.getSchemaPayload()),
+        schemaMetadata)
+    );
   }
 
   private void add(SegmentSchemaMetadataPlus plus)
   {
-    queue.add(new SegmentSchemaMetadataPlus(plus.getSegmentId(), plus.getSegmentSchemaMetadata(), plus.getFingerprint()));
+    queue.add(new SegmentSchemaMetadataPlus(
+        plus.getSegmentId(),
+        plus.getFingerprint(),
+        plus.getSegmentSchemaMetadata())
+    );
   }
 
   public boolean isEnabled()
@@ -114,7 +128,8 @@ public class SegmentSchemaBackFillQueue
 
   public void processBatchesDue()
   {
-    log.info("Publishing schemas. Queue size is [%s]", queue.size());
+    log.info("Publishing segment schemas. Queue size is [%s]", queue.size());
+
     int itemsToProcess = Math.min(MAX_BATCH_SIZE, queue.size());
 
     if (queue.isEmpty()) {
@@ -125,24 +140,20 @@ public class SegmentSchemaBackFillQueue
 
     for (int i = 0; i < itemsToProcess; i++) {
       SegmentSchemaMetadataPlus item = queue.poll();
-      log.info("Item to publish is [%s]", item);
       if (item != null) {
         polled.add(item);
       }
     }
 
     try {
-      schemaManager.persistSchemaAndUpdateSegmentsTable(polled);
-    }
-    catch (Exception e) {
-      log.info("exception persisting schema");
-      // implies that the transaction failed
-      polled.forEach(this::add);
-    }
-    finally {
+      segmentSchemaManager.persistSchemaAndUpdateSegmentsTable(polled);
+      // Mark the segments as published in the cache.
       for (SegmentSchemaMetadataPlus plus : polled) {
         segmentSchemaCache.markInTransitSMQResultPublished(plus.getSegmentId());
       }
+    }
+    catch (Exception e) {
+      log.error(e, "Exception persisting schema and updating segments table.");
     }
   }
 }
