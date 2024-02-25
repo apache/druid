@@ -74,7 +74,6 @@ import java.net.URL;
 import java.util.Enumeration;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
@@ -104,10 +103,6 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   private final ServiceEmitter emitter;
 
   private final AtomicInteger openConnections;
-  private final AtomicInteger failedConnections;
-  private final BlockingQueue<Long> connFailedTimesQueue = new LinkedBlockingQueue<>();
-  public static final int DEFAULT_COOLDOWN_TIME_FOR_CONN_FAILURE = 5;
-  private int cooldownTimeForConnFailure;
   private final boolean isSmile;
   private final ScheduledExecutorService queryCancellationExecutor;
 
@@ -148,42 +143,12 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
     this.isSmile = this.objectMapper.getFactory() instanceof SmileFactory;
     this.openConnections = new AtomicInteger();
-    this.failedConnections = new AtomicInteger();
     this.queryCancellationExecutor = queryCancellationExecutor;
-
-    this.cooldownTimeForConnFailure = DEFAULT_COOLDOWN_TIME_FOR_CONN_FAILURE;
-    // might remove this scheduler and entirely depend on whenever getNumFailedConnections is invoked
-    ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-    scheduler.scheduleAtFixedRate(this::flushFailedConnections, 1, 1, TimeUnit.MINUTES);
   }
 
   public int getNumOpenConnections()
   {
     return openConnections.get();
-  }
-
-  public int getNumFailedConnections()
-  {
-    flushFailedConnections();
-    return failedConnections.get();
-  }
-
-  private synchronized void flushFailedConnections()
-  {
-    long curTime = System.currentTimeMillis();
-    while (!connFailedTimesQueue.isEmpty()
-           && curTime > connFailedTimesQueue.peek() + TimeUnit.MINUTES.toMillis(cooldownTimeForConnFailure)
-    ) {
-      connFailedTimesQueue.poll();
-      if (failedConnections.get() > 0) {
-        failedConnections.getAndDecrement();
-      }
-    }
-  }
-
-  public void setCooldownTimeForConnFailure(int cooldownTimeForConnFailure)
-  {
-    this.cooldownTimeForConnFailure = cooldownTimeForConnFailure;
   }
 
   @Override
@@ -499,6 +464,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         ));
       }
 
+      openConnections.getAndIncrement();
       future = httpClient.go(
           new Request(
               HttpMethod.POST,
@@ -513,8 +479,6 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       );
 
       queryWatcher.registerQueryFuture(query, future);
-
-      openConnections.getAndIncrement();
       Futures.addCallback(
           future,
           new FutureCallback<InputStream>()
@@ -528,8 +492,6 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             @Override
             public void onFailure(Throwable t)
             {
-              failedConnections.getAndIncrement();
-              connFailedTimesQueue.add(System.currentTimeMillis());
               openConnections.getAndDecrement();
               if (future.isCancelled()) {
                 cancelQuery(query, cancelUrl);
@@ -541,6 +503,9 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       );
     }
     catch (IOException e) {
+      if (openConnections.get() > 0) {
+        openConnections.getAndDecrement();
+      }
       throw new RuntimeException(e);
     }
 
