@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SortOrder;
 import org.apache.druid.server.http.DataSegmentPlus;
@@ -47,8 +46,6 @@ import java.util.stream.Collectors;
 
 public class TestSegmentsMetadataManager implements SegmentsMetadataManager
 {
-  private static final Logger log = new Logger(TestSegmentsMetadataManager.class);
-
   private final ConcurrentMap<String, DataSegment> allSegments = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, DataSegment> usedSegments = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, DataSegmentPlus> unusedSegments = new ConcurrentHashMap<>();
@@ -140,12 +137,11 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   {
     int numModifiedSegments = 0;
     final DateTime now = DateTimes.nowUtc();
-    final DateTime lastUpdatedDate = now.plus(10);
 
     for (SegmentId segmentId : segmentIds) {
       if (allSegments.containsKey(segmentId.toString())) {
         DataSegment dataSegment = allSegments.get(segmentId.toString());
-        unusedSegments.put(segmentId.toString(), new DataSegmentPlus(dataSegment, now, lastUpdatedDate));
+        unusedSegments.put(segmentId.toString(), new DataSegmentPlus(dataSegment, now, now));
         usedSegments.remove(segmentId.toString());
         ++numModifiedSegments;
       }
@@ -263,7 +259,6 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
         }
       }
     }
-    log.info("Found [%d] unused segment intervals: [%s]", unusedSegmentIntervals.size(), unusedSegmentIntervals);
     return unusedSegmentIntervals.stream().limit(limit).collect(Collectors.toList());
   }
 

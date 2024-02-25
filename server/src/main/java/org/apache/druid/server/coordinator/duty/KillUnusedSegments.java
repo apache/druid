@@ -274,8 +274,8 @@ public class KillUnusedSegments implements CoordinatorDuty
         maxUsedStatusLastUpdatedTime
     );
 
-    // Each unused segment interval returned here has a 1:1 correspondence with an unused segment. So we can assume
-    // these are candidate segments to be killed.
+    // Each unused segment interval returned above has a 1:1 correspondence with an unused segment. So we can assume
+    // these are candidate segments to be killed. After the umbrella interval is computed below, we cannot say the same.
     final RowKey datasourceKey = RowKey.of(Dimension.DATASOURCE, dataSource);
     stats.add(Stats.Kill.CANDIDATE_UNUSED_SEGMENTS, datasourceKey, unusedSegmentIntervals.size());
 
