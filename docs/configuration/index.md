@@ -378,7 +378,7 @@ You can configure Druid services to emit [metrics](../operations/metrics.md) reg
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.monitoring.emissionPeriod`| Frequency that Druid emits metrics.|`PT1M`|
-|[`druid.monitoring.monitors`](#metrics-monitors)|Sets list of Druid monitors used by a service.|none (no monitors)|
+|[`druid.monitoring.monitors`](#metrics-monitors)|Sets list of Druid monitors used by a service.<br /><br />Because individual monitors sometimes only work on specific process types, it is best to set this property for each process type individually in e.g. `historical/runtime.properties` rather than `_common/common.runtime.properties`.|none (no monitors)|
 |[`druid.emitter`](#metrics-emitters)|Setting this value initializes one of the emitter modules.|`noop` (metric emission disabled by default)|
 
 #### Metrics monitors
@@ -803,14 +803,16 @@ Support for 64-bit floating point columns was released in Druid 0.11.0, so if yo
 |`druid.indexing.doubleStorage`|Set to "float" to use 32-bit double representation for double columns.|double|
 
 ### SQL compatible null handling
+These configurations are deprecated and will be removed in a future release at which point Druid will always have SQl compatible null handling.
 
 Prior to version 0.13.0, Druid string columns treated `''` and `null` values as interchangeable, and numeric columns were unable to represent `null` values, coercing `null` to `0`. Druid 0.13.0 introduced a mode which enabled SQL compatible null handling, allowing string columns to distinguish empty strings from nulls, and numeric columns to contain null rows.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.generic.useDefaultValueForNull`|Set to `false` to store and query data in SQL compatible mode. When set to `true` (legacy mode), `null` values will be stored as `''` for string columns and `0` for numeric columns.|`false`|
-|`druid.generic.useThreeValueLogicForNativeFilters`|Set to `true` to use SQL compatible three-value logic when processing native Druid filters when `druid.generic.useDefaultValueForNull=false` and `druid.expressions.useStrictBooleans=true`. When set to `false` Druid uses 2 value logic for filter processing, even when `druid.generic.useDefaultValueForNull=false` and `druid.expressions.useStrictBooleans=true`. See [boolean handling](../querying/sql-data-types.md#boolean-logic) for more details|`true`|
-|`druid.generic.ignoreNullsForStringCardinality`|When set to `true`, `null` values will be ignored for the built-in cardinality aggregator over string columns. Set to `false` to include `null` values while estimating cardinality of only string columns using the built-in cardinality aggregator. This setting takes effect only when `druid.generic.useDefaultValueForNull` is set to `true` and is ignored in SQL compatibility mode. Additionally, empty strings (equivalent to null) are not counted when this is set to `true`. |`false`|
+|`druid.generic.useDefaultValueForNull`|Set to `false` to store and query data in SQL compatible mode. This configuration has been deprecated and will be removed in a future release, taking on the `false` behavior. When set to `true` (deprecated legacy mode), `null` values will be stored as `''` for string columns and `0` for numeric columns.|`false`|
+|`druid.generic.useThreeValueLogicForNativeFilters`|Set to `true` to use SQL compatible three-value logic when processing native Druid filters when `druid.generic.useDefaultValueForNull=false` and `druid.expressions.useStrictBooleans=true`. This configuration has been deprecated and will be removed in a future release, taking on the `true` behavior. When set to `false` Druid uses 2 value logic for filter processing, even when `druid.generic.useDefaultValueForNull=false` and `druid.expressions.useStrictBooleans=true`. See [boolean handling](../querying/sql-data-types.md#boolean-logic) for more details|`true`|
+|`druid.generic.ignoreNullsForStringCardinality`|When set to `true`, `null` values will be ignored for the built-in cardinality aggregator over string columns. Set to `false` to include `null` values while estimating cardinality of only string columns using the built-in cardinality aggregator. This setting takes effect only when `druid.generic.useDefaultValueForNull` is set to `true` and is ignored in SQL compatibility mode. Additionally, empty strings (equivalent to null) are not counted when this is set to `true`. This configuration has been deprecated and will be removed in a future release since it has no effect when `druid.generic.useDefaultValueForNull=false`. |`false`|
+
 This mode does have a storage size and query performance cost, see [segment documentation](../design/segments.md#handling-null-values) for more details.
 
 ### HTTP client
@@ -2196,8 +2198,9 @@ Supported query contexts:
 
 |Key|Description|Default|
 |---|-----------|-------|
-|`druid.expressions.useStrictBooleans`|Controls the behavior of Druid boolean operators and functions, if set to `true` all boolean values are either `1` or `0`. See [expression documentation](../querying/math-expr.md#logical-operator-modes) for more information.|true|
-|`druid.expressions.allowNestedArrays`|If enabled, Druid array expressions can create nested arrays.|true|
+|`druid.expressions.useStrictBooleans`|Controls the behavior of Druid boolean operators and functions, if set to `true` all boolean values are either `1` or `0`. This configuration has been deprecated and will be removed in a future release, taking on the `true` behavior. See [expression documentation](../querying/math-expr.md#logical-operator-modes) for more information.|true|
+|`druid.expressions.allowNestedArrays`|If enabled, Druid array expressions can create nested arrays. This configuration has been deprecated and will be removed in a future release, taking on the `true` behavior.|true|
+
 ### Router
 
 #### Router process configs

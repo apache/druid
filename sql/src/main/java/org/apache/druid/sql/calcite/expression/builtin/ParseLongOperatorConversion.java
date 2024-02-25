@@ -38,7 +38,7 @@ public class ParseLongOperatorConversion implements SqlOperatorConversion
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder(NAME)
       .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.INTEGER)
-      .returnTypeCascadeNullable(SqlTypeName.BIGINT)
+      .returnTypeNullable(SqlTypeName.BIGINT)
       .functionCategory(SqlFunctionCategory.STRING)
       .requiredOperandCount(1)
       .build();

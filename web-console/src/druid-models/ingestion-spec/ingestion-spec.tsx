@@ -50,6 +50,7 @@ import {
   getDimensionSpecName,
   getDimensionSpecs,
 } from '../dimension-spec/dimension-spec';
+import type { FlattenSpec } from '../flatten-spec/flatten-spec';
 import type { IndexSpec } from '../index-spec/index-spec';
 import { summarizeIndexSpec } from '../index-spec/index-spec';
 import type { InputFormat } from '../input-format/input-format';
@@ -379,6 +380,27 @@ export function getPossibleSystemFieldsForSpec(spec: Partial<IngestionSpec>): st
   const inputSource = deepGet(spec, 'spec.ioConfig.inputSource');
   if (!inputSource) return [];
   return getPossibleSystemFieldsForInputSource(inputSource);
+}
+
+export function getFlattenSpec(spec: Partial<IngestionSpec>): FlattenSpec | undefined {
+  const inputFormat: InputFormat | undefined = deepGet(spec, 'spec.ioConfig.inputFormat');
+  if (!inputFormat) return;
+  return (
+    (inputFormat.type === 'kafka'
+      ? inputFormat.valueFormat?.flattenSpec
+      : inputFormat.flattenSpec) || undefined
+  );
+}
+
+export function changeFlattenSpec(
+  spec: Partial<IngestionSpec>,
+  flattenSpec: FlattenSpec | undefined,
+): Partial<IngestionSpec> {
+  if (deepGet(spec, 'spec.ioConfig.inputFormat.type') === 'kafka') {
+    return deepSet(spec, 'spec.ioConfig.inputFormat.valueFormat.flattenSpec', flattenSpec);
+  } else {
+    return deepSet(spec, 'spec.ioConfig.inputFormat.flattenSpec', flattenSpec);
+  }
 }
 
 export function getPossibleSystemFieldsForInputSource(inputSource: InputSource): string[] {
