@@ -91,7 +91,7 @@ A sample task is shown below:
       "type" : "index",
       "partitionsSpec": {
         "type": "hashed",
-        "partitionDimensions": "country",
+        "partitionDimensions": ["country"],
         "targetRowsPerSegment": 5000000
       }
     }
