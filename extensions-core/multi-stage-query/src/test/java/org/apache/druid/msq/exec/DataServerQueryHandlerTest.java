@@ -45,6 +45,7 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryQueryToolChest;
@@ -332,12 +333,13 @@ public class DataServerQueryHandlerTest
   @Test
   public void testQueryFail()
   {
+    SegmentDescriptor segmentDescriptorWithFullInterval = toSegmentDescriptorWithFullInterval(SEGMENT_1);
     doAnswer(invocation -> {
       ResponseContext responseContext = invocation.getArgument(1);
-      responseContext.addMissingSegments(ImmutableList.of(toSegmentDescriptorWithFullInterval(SEGMENT_1)));
+      responseContext.addMissingSegments(ImmutableList.of(segmentDescriptorWithFullInterval));
       return Sequences.empty();
     }).when(dataServerClient1).run(any(), any(), any(), any());
-    doReturn(Futures.immediateFuture(Boolean.FALSE)).when(coordinatorClient).isHandoffComplete(DATASOURCE1, SEGMENT_1);
+    doReturn(Futures.immediateFuture(Boolean.FALSE)).when(coordinatorClient).isHandoffComplete(DATASOURCE1, segmentDescriptorWithFullInterval);
 
     Assert.assertThrows(DruidException.class, () ->
         target.fetchRowsFromDataServer(

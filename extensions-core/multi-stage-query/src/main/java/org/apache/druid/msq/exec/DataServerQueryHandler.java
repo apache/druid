@@ -168,7 +168,7 @@ public class DataServerQueryHandler
         break;
       }
 
-      List<SegmentDescriptor> handedOffSegmentDescriptors = checkSegmentHandoff(missingSegments);
+      final List<SegmentDescriptor> handedOffSegmentDescriptors = checkSegmentHandoff(missingSegments);
 
       Set<RichSegmentDescriptor> missingRichSegmentDescriptors = new HashSet<>();
       for (RichSegmentDescriptor richSegmentDescriptor : processedSegments) {
