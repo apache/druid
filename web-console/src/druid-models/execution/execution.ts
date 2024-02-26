@@ -574,7 +574,7 @@ export class Execution {
     return this.destination?.numTotalRows;
   }
 
-  public isSuccessfulInsert(): boolean {
+  public isSuccessfulIngest(): boolean {
     return Boolean(this.status === 'SUCCESS' && this.getIngestDatasource());
   }
 
