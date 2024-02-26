@@ -44,6 +44,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Stack;
 
+import static org.apache.druid.sql.calcite.rel.PartialDruidQuery.Stage.AGGREGATE;
+import static org.apache.druid.sql.calcite.rel.PartialDruidQuery.Stage.SORT;
+
 /**
  * Converts a DAG of {@link DruidLogicalNode} convention to a native {@link DruidQuery} for execution.
  */
@@ -261,23 +264,24 @@ public class DruidQueryGenerator
         return Optional.empty();
       }
 
-      private boolean accepts(Stack<DruidLogicalNode> stack, Stage stage, Class<? extends RelNode> class1)
+      private boolean accepts(Stack<DruidLogicalNode> stack, Stage stage, Class<? extends RelNode> clazz)
       {
-        if (Project.class == class1 && stack.size() >= 2) {
-          DruidLogicalNode parent2 = stack.get(stack.size() - 2);
-          if (stage.ordinal() > stage.AGGREGATE.ordinal()) {
-            if (parent2 instanceof DruidAggregate && !partialDruidQuery.canAccept(Stage.AGGREGATE)) {
-              return false;
-            }
+        DruidLogicalNode currentNode = stack.peek();
+        if (Project.class == clazz && stack.size() >= 2) {
+          // peek at parent and postpone project for next query stage
+          DruidLogicalNode parentNode = stack.get(stack.size() - 2);
+          if (stage.ordinal() > AGGREGATE.ordinal()
+              && parentNode instanceof DruidAggregate
+              && !partialDruidQuery.canAccept(Stage.AGGREGATE)) {
+            return false;
           }
-          if (stage.ordinal() > stage.SORT.ordinal()) {
-            if (parent2 instanceof DruidSort && !partialDruidQuery.canAccept(Stage.SORT)) {
-              return false;
-            }
+          if (stage.ordinal() > SORT.ordinal()
+              && parentNode instanceof DruidSort
+              && !partialDruidQuery.canAccept(Stage.SORT)) {
+            return false;
           }
         }
-
-        return partialDruidQuery.canAccept(stage) && class1.isInstance(stack.peek());
+        return partialDruidQuery.canAccept(stage) && clazz.isInstance(currentNode);
       }
 
       @Override
