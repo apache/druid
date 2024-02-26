@@ -238,7 +238,7 @@ public class SegmentLoadStatusFetcher implements AutoCloseable
   {
     Request request = brokerClient.makeRequest(HttpMethod.POST, "/druid/v2/sql/");
     SqlQuery sqlQuery = new SqlQuery(StringUtils.format(LOAD_QUERY, datasource, versionsConditionString),
-                                     ResultFormat.OBJECTLINES,
+                                     null, ResultFormat.OBJECTLINES,
                                      false, false, false, null, null
     );
     request.setContent(MediaType.APPLICATION_JSON, objectMapper.writeValueAsBytes(sqlQuery));

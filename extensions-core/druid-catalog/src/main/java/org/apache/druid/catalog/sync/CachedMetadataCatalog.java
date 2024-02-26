@@ -20,6 +20,7 @@
 package org.apache.druid.catalog.sync;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.catalog.model.IngestionTemplate;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.SchemaRegistry;
 import org.apache.druid.catalog.model.SchemaRegistry.SchemaSpec;
@@ -353,6 +354,17 @@ public class CachedMetadataCatalog implements MetadataCatalog, CatalogUpdateList
   {
     SchemaEntry schemaEntry = entryFor(schemaName);
     return schemaEntry == null ? Collections.emptySet() : schemaEntry.tableNames();
+  }
+
+  @Override
+  public List<IngestionTemplate> getTemplates(List<String> templateNames)
+  {
+    List<IngestionTemplate> templates = new ArrayList<>();
+    for (String templateName : templateNames) {
+      IngestionTemplate template = base.getTemplate(templateName);
+      templates.add(template);
+    }
+    return templates;
   }
 
   /**

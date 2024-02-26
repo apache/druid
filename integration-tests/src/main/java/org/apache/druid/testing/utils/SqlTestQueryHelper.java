@@ -51,7 +51,7 @@ public class SqlTestQueryHelper extends AbstractTestQueryHelper<SqlQueryWithResu
   {
     final SqlQuery query = new SqlQuery(
         "SELECT 1 FROM \"" + datasource + "\" LIMIT 1",
-        null,
+        null, null,
         false,
         false,
         false,

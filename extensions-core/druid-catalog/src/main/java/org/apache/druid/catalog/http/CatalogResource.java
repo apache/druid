@@ -25,6 +25,7 @@ import org.apache.curator.shaded.com.google.common.collect.Lists;
 import org.apache.druid.catalog.CatalogException;
 import org.apache.druid.catalog.CatalogException.DuplicateKeyException;
 import org.apache.druid.catalog.CatalogException.NotFoundException;
+import org.apache.druid.catalog.model.IngestionTemplate;
 import org.apache.druid.catalog.model.SchemaRegistry.SchemaSpec;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
@@ -74,6 +75,7 @@ import java.util.stream.Collectors;
 public class CatalogResource
 {
   public static final String ROOT_PATH = "/druid/coordinator/v1/catalog";
+  public static final String TEMPLATES_PATH = "/templates/{name}";
 
   public static final String NAME_FORMAT = "name";
   public static final String PATH_FORMAT = "path";
@@ -91,6 +93,87 @@ public class CatalogResource
   {
     this.catalog = catalog;
     this.authorizerMapper = authorizerMapper;
+  }
+
+  /**
+   * Create or update an ingestion template.
+   */
+  @POST
+  @Path(TEMPLATES_PATH)
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response postTemplate(
+      @PathParam("name") String templateName,
+      IngestionTemplate templateSpec,
+      @QueryParam("overwrite") boolean overwrite,
+      @Context final HttpServletRequest req
+  )
+  {
+    try {
+      try {
+        // No version. Create the table.
+        catalog.tables().createTemplate(templateName, templateSpec);
+      }
+      catch (DuplicateKeyException e) {
+        // Table exists
+        if (overwrite) {
+          // User wants to overwrite, so do so.
+          catalog.tables().replaceTemplate(templateName, templateSpec);
+        } else {
+          throw e;
+        }
+      }
+      return ok();
+    }
+    catch (CatalogException e) {
+      return e.toResponse();
+    }
+  }
+
+  @GET
+  @Path("/templates")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getTemplate(
+      @Context final HttpServletRequest req
+  )
+  {
+    final List<String> templateNames = catalog.tables().getTemplateNames();
+    return Response.ok().entity(templateNames).build();
+  }
+
+  @GET
+  @Path(TEMPLATES_PATH)
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getTemplate(
+      @PathParam("name") String templateName,
+      @Context final HttpServletRequest req
+  )
+  {
+    try {
+      final IngestionTemplate template = catalog.tables().getTemplate(templateName);
+      return Response.ok().entity(template).build();
+    }
+    catch (CatalogException e) {
+      return e.toResponse();
+    }
+  }
+
+
+  @DELETE
+  @Path(TEMPLATES_PATH)
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response deleteTemplate(
+      @PathParam("name") String templateName,
+      @Context final HttpServletRequest req
+  )
+  {
+    try {
+      catalog.tables().deleteTemplate(templateName);
+      return Response.ok().build();
+    }
+    catch (CatalogException e) {
+      return e.toResponse();
+    }
   }
 
   // ---------------------------------------------------------------------
@@ -170,6 +253,8 @@ public class CatalogResource
       return e.toResponse();
     }
   }
+
+
 
   /**
    * Retrieves the table metadata, including the spec.

@@ -29,6 +29,7 @@ import org.apache.druid.catalog.CatalogException;
 import org.apache.druid.catalog.CatalogException.DuplicateKeyException;
 import org.apache.druid.catalog.CatalogException.NotFoundException;
 import org.apache.druid.catalog.model.ColumnSpec;
+import org.apache.druid.catalog.model.IngestionTemplate;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
@@ -61,6 +62,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 public class SQLCatalogManager implements CatalogManager
 {
   public static final String TABLES_TABLE = "tableDefs";
+  public static final String TEMPLATES_TABLE = "templateDefs";
 
   private static final String SCHEMA_NAME_COL = "schemaName";
   private static final String TABLE_NAME_COL = "name";
@@ -71,11 +73,17 @@ public class SQLCatalogManager implements CatalogManager
   private static final String PROPERTIES_COL = "properties";
   private static final String COLUMNS_COL = "columns";
 
+  private static final String TEMPLATE_NAME_COL = "name";
+  private static final String TEMPLATE_TYPE_COL = "templateType";
+  private static final String TEMPLATE_SPEC_COL = "spec";
+
+
   private final MetadataStorageManager metastoreManager;
   private final SQLMetadataConnector connector;
   private final ObjectMapper jsonMapper;
   private final IDBI dbi;
   private final String tableName;
+  private final String templateTableName;
   private final Deque<CatalogUpdateListener> listeners = new ConcurrentLinkedDeque<>();
 
   @Inject
@@ -89,6 +97,7 @@ public class SQLCatalogManager implements CatalogManager
     this.dbi = connector.getDBI();
     this.jsonMapper = metastoreManager.jsonMapper();
     this.tableName = getTableDefnTable();
+    this.templateTableName = getTemplateTableDefnTable();
   }
 
   @Override
@@ -111,6 +120,16 @@ public class SQLCatalogManager implements CatalogManager
       "  PRIMARY KEY(schemaName, name)\n" +
       ")";
 
+  public static final String CREATE_TEMPLATE_TABLE =
+      "CREATE TABLE %s (\n" +
+      "  name VARCHAR(255) NOT NULL,\n" +
+      "  templateType VARCHAR(255) NOT NULL,\n" +
+      "  creationTime BIGINT NOT NULL,\n" +
+      "  updateTime BIGINT NOT NULL,\n" +
+      "  spec %s,\n" +
+      "  PRIMARY KEY(name)\n" +
+      ")";
+
   // TODO: Move to SqlMetadataConnector
   public void createTableDefnTable()
   {
@@ -124,6 +143,17 @@ public class SQLCatalogManager implements CatalogManager
                 CREATE_TABLE,
                 tableName,
                 connector.getPayloadType(),
+                connector.getPayloadType()
+            )
+        )
+    );
+
+    connector.createTable(
+        getTemplateTableDefnTable(),
+        ImmutableList.of(
+            StringUtils.format(
+                CREATE_TEMPLATE_TABLE,
+                getTemplateTableDefnTable(),
                 connector.getPayloadType()
             )
         )
@@ -676,6 +706,202 @@ public class SQLCatalogManager implements CatalogManager
     );
   }
 
+  private static final String INSERT_TEMPLATE_TABLE =
+      "INSERT INTO %s\n" +
+      "  (name, templateType, creationTime, updateTime,\n" +
+      "   spec)\n" +
+      "  VALUES(:name, :templateType, :creationTime, :updateTime,\n" +
+      "         :spec)";
+
+  private static final String REPLACE_TEMPLATE_SPEC_STMT =
+      "UPDATE %s\n SET\n" +
+      "  templateType = :templateType,\n" +
+      "  spec = :spec,\n" +
+      "  updateTime = :updateTime\n" +
+      "WHERE name = :name";
+
+  @Override
+  public long createTemplate(String name, IngestionTemplate template) throws DuplicateKeyException
+  {
+    try {
+      return dbi.withHandle(
+          new HandleCallback<Long>()
+          {
+            @Override
+            public Long withHandle(Handle handle) throws DuplicateKeyException
+            {
+              final long updateTime = System.currentTimeMillis();
+              final Update stmt = handle
+                  .createStatement(templateStatement(INSERT_TEMPLATE_TABLE))
+                  .bind(TEMPLATE_NAME_COL, name)
+                  .bind(TEMPLATE_TYPE_COL, template.getType())
+                  .bind(CREATION_TIME_COL, updateTime)
+                  .bind(UPDATE_TIME_COL, updateTime)
+                  .bind(TEMPLATE_SPEC_COL, JacksonUtils.toBytes(jsonMapper, template));
+              try {
+                stmt.execute();
+              }
+              catch (UnableToExecuteStatementException e) {
+                if (DbUtils.isDuplicateRecordException(e)) {
+                  throw new DuplicateKeyException(
+                      "Tried to insert a duplicate table: %s",
+                      name
+                  );
+                } else {
+                  throw e;
+                }
+              }
+              return updateTime;
+            }
+          }
+      );
+    }
+    catch (CallbackFailedException e) {
+      if (e.getCause() instanceof DuplicateKeyException) {
+        throw (DuplicateKeyException) e.getCause();
+      }
+      throw e;
+    }
+  }
+
+  @Override
+  public long replaceTemplate(String name, IngestionTemplate template) throws NotFoundException
+  {
+    try {
+      final long updateTime = dbi.withHandle(
+          new HandleCallback<Long>()
+          {
+            @Override
+            public Long withHandle(Handle handle) throws NotFoundException
+            {
+              final long updateTime = System.currentTimeMillis();
+              final int updateCount = handle
+                  .createStatement(templateStatement(REPLACE_TEMPLATE_SPEC_STMT))
+                  .bind(TEMPLATE_TYPE_COL, template.getType())
+                  .bind(TEMPLATE_SPEC_COL, JacksonUtils.toBytes(jsonMapper, template))
+                  .bind(UPDATE_TIME_COL, updateTime)
+                  .bind(TEMPLATE_NAME_COL, name)
+                  .execute();
+              if (updateCount == 0) {
+                throw templateNotFound(name);
+              }
+              return updateTime;
+            }
+          }
+      );
+      return updateTime;
+    }
+    catch (CallbackFailedException e) {
+      if (e.getCause() instanceof NotFoundException) {
+        throw (NotFoundException) e.getCause();
+      }
+      throw e;
+    }
+  }
+
+  private static final String DELETE_TEMPLATE_STMT =
+      "DELETE FROM %s\n" +
+      "WHERE name = :name";
+
+  @Override
+  public void deleteTemplate(String name) throws NotFoundException
+  {
+    try {
+      dbi.withHandle(
+          new HandleCallback<Void>()
+          {
+            @Override
+            public Void withHandle(Handle handle) throws NotFoundException
+            {
+              int updateCount = handle
+                  .createStatement(templateStatement(DELETE_TEMPLATE_STMT))
+                  .bind(TEMPLATE_NAME_COL, name)
+                  .execute();
+              if (updateCount == 0) {
+                throw templateNotFound(name);
+              }
+              return null;
+            }
+          }
+      );
+    }
+    catch (CallbackFailedException e) {
+      if (e.getCause() instanceof NotFoundException) {
+        throw (NotFoundException) e.getCause();
+      }
+      throw e;
+    }
+  }
+
+  private static final String SELECT_TEMPLATE_NAMES_STMT =
+      "SELECT name\n" +
+      "FROM %s\n" +
+      "ORDER BY name";
+
+  @Override
+  public List<String> getTemplateNames()
+  {
+    return dbi.withHandle(
+        new HandleCallback<List<String>>()
+        {
+          @Override
+          public List<String> withHandle(Handle handle)
+          {
+            Query<Map<String, Object>> query = handle
+                .createQuery(templateStatement(SELECT_TEMPLATE_NAMES_STMT))
+                .setFetchSize(connector.getStreamingFetchSize());
+            final ResultIterator<String> resultIterator =
+                query.map((index, r, ctx) ->
+                              r.getString(1))
+                     .iterator();
+            return Lists.newArrayList(resultIterator);
+          }
+        }
+    );
+  }
+
+  private static final String SELECT_TEMPLATE =
+      "SELECT creationTime, updateTime, spec\n" +
+      "FROM %s\n" +
+      "WHERE name = :name";
+
+  private static final TypeReference<IngestionTemplate> INGESTION_TEMPLATE_TYPE_REF =
+      new TypeReference<IngestionTemplate>() { };
+
+  @Override
+  public IngestionTemplate getTemplate(String name) throws NotFoundException
+  {
+    try {
+      return dbi.withHandle(
+          new HandleCallback<IngestionTemplate>()
+          {
+            @Override
+            public IngestionTemplate withHandle(Handle handle) throws NotFoundException
+            {
+              final Query<Map<String, Object>> query = handle
+                  .createQuery(templateStatement(SELECT_TEMPLATE))
+                  .setFetchSize(connector.getStreamingFetchSize())
+                  .bind(TEMPLATE_NAME_COL, name);
+              final ResultIterator<IngestionTemplate> resultIterator =
+                  query.map((index, r, ctx) ->
+                                fromBytes(jsonMapper, r.getBytes(3), INGESTION_TEMPLATE_TYPE_REF))
+                       .iterator();
+              if (resultIterator.hasNext()) {
+                return resultIterator.next();
+              }
+              throw templateNotFound(name);
+            }
+          }
+      );
+    }
+    catch (CallbackFailedException e) {
+      if (e.getCause() instanceof NotFoundException) {
+        throw (NotFoundException) e.getCause();
+      }
+      throw e;
+    }
+  }
+
   @Override
   public synchronized void register(CatalogUpdateListener listener)
   {
@@ -721,9 +947,24 @@ public class SQLCatalogManager implements CatalogManager
     }
   }
 
+  public String getTemplateTableDefnTable()
+  {
+    final String base = metastoreManager.tablesConfig().getBase();
+    if (Strings.isNullOrEmpty(base)) {
+      return TEMPLATES_TABLE;
+    } else {
+      return StringUtils.format("%s_%s", base, TEMPLATES_TABLE);
+    }
+  }
+
   private String statement(String baseStmt)
   {
     return StringUtils.format(baseStmt, tableName);
+  }
+
+  private String templateStatement(String baseStmt)
+  {
+    return StringUtils.format(baseStmt, templateTableName);
   }
 
   private NotFoundException tableNotFound(TableId id)
@@ -731,6 +972,14 @@ public class SQLCatalogManager implements CatalogManager
     return new NotFoundException(
         "Table %s: not found",
         id.sqlName()
+    );
+  }
+
+  private NotFoundException templateNotFound(String name)
+  {
+    return new NotFoundException(
+        "Template %s: not found",
+        name
     );
   }
 

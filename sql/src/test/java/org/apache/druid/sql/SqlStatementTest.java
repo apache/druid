@@ -345,7 +345,7 @@ public class SqlStatementTest
   {
     return new SqlQuery(
         sql,
-        null,
+        null, null,
         false,
         false,
         false,

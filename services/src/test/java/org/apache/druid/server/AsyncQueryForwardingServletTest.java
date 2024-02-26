@@ -225,7 +225,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   {
     final SqlQuery query = new SqlQuery(
         "SELECT * FROM foo",
-        ResultFormat.ARRAY,
+        null, ResultFormat.ARRAY,
         false,
         false,
         false,
@@ -550,7 +550,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   {
     final SqlQuery query = new SqlQuery(
         "SELECT * FROM foo",
-        ResultFormat.ARRAY,
+        null, ResultFormat.ARRAY,
         false,
         false,
         false,

@@ -21,6 +21,7 @@ package org.apache.druid.catalog.storage;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.catalog.CatalogException.NotFoundException;
+import org.apache.druid.catalog.model.IngestionTemplate;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.SchemaRegistry;
 import org.apache.druid.catalog.model.SchemaRegistry.SchemaSpec;
@@ -127,5 +128,16 @@ public class CatalogStorage implements CatalogUpdateProvider, CatalogSource
   {
     TableMetadata table = table(id);
     return table == null ? null : tableRegistry.resolve(table.spec());
+  }
+
+  @Override
+  public IngestionTemplate getTemplate(String templateName)
+  {
+    try {
+      return catalogMgr.getTemplate(templateName);
+    }
+    catch (NotFoundException e) {
+      return null;
+    }
   }
 }

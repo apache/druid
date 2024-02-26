@@ -98,7 +98,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
 
     Response response = resource.doPost(new SqlQuery(
         "select cnt,dim1 from foo",
-        null,
+        null, null,
         false,
         false,
         false,
@@ -151,7 +151,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     SqlStatementResourceTest.assertExceptionMessage(
         resource.doPost(new SqlQuery(
             "select * from foo",
-            null,
+            null, null,
             false,
             false,
             false,
@@ -166,7 +166,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     SqlStatementResourceTest.assertExceptionMessage(
         resource.doPost(new SqlQuery(
             "select * from foo",
-            null,
+            null, null,
             false,
             false,
             false,
@@ -184,6 +184,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
   {
     Response response = resource.doPost(new SqlQuery(
         "insert into foo1 select  __time, dim1 , count(*) as cnt from foo where dim1 is not null and __time < TIMESTAMP '1971-01-01 00:00:00' group by 1, 2 PARTITIONED by day clustered by dim1",
+        null,
         null,
         false,
         false,
@@ -215,6 +216,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     Response response = resource.doPost(new SqlQuery(
         "replace into foo1 overwrite all select  __time, dim1 , count(*) as cnt from foo where dim1 is not null and __time < TIMESTAMP '1971-01-01 00:00:00' group by 1, 2 PARTITIONED by day clustered by dim1",
         null,
+        null,
         false,
         false,
         false,
@@ -244,6 +246,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
   {
     Response response = resource.doPost(new SqlQuery(
         "insert into foo1 select  __time, dim1 , count(*) as cnt from foo where dim1 is not null and __time < TIMESTAMP '1971-01-01 00:00:00' group by 1, 2 PARTITIONED by day clustered by dim1",
+        null,
         null,
         false,
         false,
@@ -292,7 +295,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     context.put("sqlQueryId", "queryId");
     Response response = resource.doPost(new SqlQuery(
         "explain plan for select * from foo",
-        null,
+        null, null,
         false,
         false,
         false,
@@ -321,7 +324,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     Assert.assertEquals(Response.Status.FORBIDDEN.getStatusCode(), resource.doPost(
         new SqlQuery(
             StringUtils.format("select * from %s", CalciteTests.FORBIDDEN_DATASOURCE),
-            null,
+            null, null,
             false,
             false,
             false,
@@ -353,7 +356,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     SqlStatementResourceTest.assertExceptionMessage(resourceWithDurableStorage.doPost(
                                                         new SqlQuery(
                                                             "select * from foo",
-                                                            null,
+                                                            null, null,
                                                             false,
                                                             false,
                                                             false,
@@ -376,7 +379,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     SqlStatementResult sqlStatementResult = (SqlStatementResult) resource.doPost(
         new SqlQuery(
             "select cnt,dim1 from foo",
-            null,
+            null, null,
             false,
             false,
             false,
@@ -461,7 +464,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
             + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n"
             + "  )\n"
             + ") where user like '%ot%'",
-            null,
+            null, null,
             false,
             false,
             false,
@@ -544,7 +547,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     SqlStatementResult sqlStatementResult = (SqlStatementResult) resource.doPost(
         new SqlQuery(
             "select cnt,dim1 from foo",
-            null,
+            null, null,
             false,
             false,
             false,
@@ -604,7 +607,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     SqlStatementResult sqlStatementResult = (SqlStatementResult) resource.doPost(
         new SqlQuery(
             "select cnt,dim1 from foo",
-            ResultFormat.OBJECTLINES,
+            null, ResultFormat.OBJECTLINES,
             false,
             false,
             false,
@@ -676,6 +679,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     Response response = resource.doPost(new SqlQuery(
         "insert into foo1 select  __time, dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1",
         null,
+        null,
         false,
         false,
         false,
@@ -718,6 +722,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
   {
     Response response = resource.doPost(new SqlQuery(
         "replace into foo1 overwrite all select  __time, dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1",
+        null,
         null,
         false,
         false,

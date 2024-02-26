@@ -691,7 +691,7 @@ public class SqlStatementResource
                                                       .build();
     return new SqlQuery(
         sqlQuery.getQuery(),
-        sqlQuery.getResultFormat(),
+        null, sqlQuery.getResultFormat(),
         sqlQuery.includeHeader(),
         sqlQuery.includeTypesHeader(),
         sqlQuery.includeSqlTypesHeader(),

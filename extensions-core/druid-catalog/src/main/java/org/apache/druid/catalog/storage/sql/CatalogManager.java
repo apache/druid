@@ -22,6 +22,7 @@ package org.apache.druid.catalog.storage.sql;
 import org.apache.druid.catalog.CatalogException;
 import org.apache.druid.catalog.CatalogException.DuplicateKeyException;
 import org.apache.druid.catalog.CatalogException.NotFoundException;
+import org.apache.druid.catalog.model.IngestionTemplate;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
@@ -176,4 +177,14 @@ public interface CatalogManager
    * schema.
    */
   List<TableMetadata> tablesInSchema(String dbSchema);
+
+  long createTemplate(String name, IngestionTemplate template) throws DuplicateKeyException;
+
+  long replaceTemplate(String name, IngestionTemplate template) throws NotFoundException;
+
+  void deleteTemplate(String name) throws NotFoundException;
+
+  List<String> getTemplateNames();
+
+  IngestionTemplate getTemplate(String name) throws NotFoundException;
 }

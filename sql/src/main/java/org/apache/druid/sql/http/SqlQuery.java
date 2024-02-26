@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.avatica.remote.TypedValue;
+import org.apache.druid.catalog.model.IngestionTemplateInfo;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.QueryContext;
 
@@ -51,12 +52,14 @@ public class SqlQuery
   private final boolean header;
   private final boolean typesHeader;
   private final boolean sqlTypesHeader;
+  private final IngestionTemplateInfo templateInfo;
   private final Map<String, Object> context;
   private final List<SqlParameter> parameters;
 
   @JsonCreator
   public SqlQuery(
       @JsonProperty("query") final String query,
+      @JsonProperty("templateInfo") final IngestionTemplateInfo templateInfo,
       @JsonProperty("resultFormat") final ResultFormat resultFormat,
       @JsonProperty("header") final boolean header,
       @JsonProperty("typesHeader") final boolean typesHeader,
@@ -70,6 +73,7 @@ public class SqlQuery
     this.header = header;
     this.typesHeader = typesHeader;
     this.sqlTypesHeader = sqlTypesHeader;
+    this.templateInfo = templateInfo;
     this.context = context == null ? ImmutableMap.of() : context;
     this.parameters = parameters == null ? ImmutableList.of() : parameters;
 
@@ -86,6 +90,7 @@ public class SqlQuery
   {
     return new SqlQuery(
         getQuery(),
+        getTemplateInfo(),
         getResultFormat(),
         includeHeader(),
         includeTypesHeader(),
@@ -128,6 +133,12 @@ public class SqlQuery
     return sqlTypesHeader;
   }
 
+  @JsonProperty("templateInfo")
+  public IngestionTemplateInfo getTemplateInfo()
+  {
+    return templateInfo;
+  }
+
   @JsonProperty
   public Map<String, Object> getContext()
   {
@@ -165,6 +176,7 @@ public class SqlQuery
            sqlTypesHeader == sqlQuery.sqlTypesHeader &&
            Objects.equals(query, sqlQuery.query) &&
            resultFormat == sqlQuery.resultFormat &&
+           Objects.equals(templateInfo, sqlQuery.templateInfo) &&
            Objects.equals(context, sqlQuery.context) &&
            Objects.equals(parameters, sqlQuery.parameters);
   }
@@ -172,7 +184,7 @@ public class SqlQuery
   @Override
   public int hashCode()
   {
-    return Objects.hash(query, resultFormat, header, typesHeader, sqlTypesHeader, context, parameters);
+    return Objects.hash(query, resultFormat, header, typesHeader, sqlTypesHeader, templateInfo, context, parameters);
   }
 
   @Override
@@ -184,6 +196,7 @@ public class SqlQuery
            ", header=" + header +
            ", typesHeader=" + typesHeader +
            ", sqlTypesHeader=" + sqlTypesHeader +
+           ", templateInfo=" + templateInfo +
            ", context=" + context +
            ", parameters=" + parameters +
            '}';

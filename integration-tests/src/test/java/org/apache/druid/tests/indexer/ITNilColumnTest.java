@@ -165,7 +165,7 @@ public class ITNilColumnTest extends AbstractKafkaIndexingServiceTest
                     NIL_DIM1,
                     NIL_DIM2
                 ),
-                null,
+                null, null,
                 false,
                 false,
                 false,
@@ -190,7 +190,7 @@ public class ITNilColumnTest extends AbstractKafkaIndexingServiceTest
                     NIL_DIM1,
                     NIL_DIM2
                 ),
-                null,
+                null, null,
                 false,
                 false,
                 false,

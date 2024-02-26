@@ -19,6 +19,7 @@
 
 package org.apache.druid.catalog.sync;
 
+import org.apache.druid.catalog.model.IngestionTemplate;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
@@ -44,6 +45,7 @@ public interface MetadataCatalog
     List<TableMetadata> tablesForSchema(String dbSchema);
     TableMetadata table(TableId id);
     ResolvedTable resolveTable(TableId id);
+    IngestionTemplate getTemplate(String templateName);
   }
 
   interface CatalogUpdateProvider
@@ -73,4 +75,6 @@ public interface MetadataCatalog
   List<TableMetadata> tables(String schemaName);
 
   Set<String> tableNames(String schemaName);
+
+  List<IngestionTemplate> getTemplates(List<String> templateNames);
 }

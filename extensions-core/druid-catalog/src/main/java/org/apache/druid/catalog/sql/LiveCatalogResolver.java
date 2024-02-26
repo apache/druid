@@ -22,6 +22,8 @@ package org.apache.druid.catalog.sql;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
+import org.apache.druid.catalog.model.IngestionTemplate;
+import org.apache.druid.catalog.model.IngestionTemplateInfo;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.facade.DatasourceFacade;
@@ -42,6 +44,7 @@ import javax.inject.Inject;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -212,5 +215,12 @@ public class LiveCatalogResolver implements CatalogResolver
         .addAll(datasourceNames)
         .addAll(catalogTableNames)
         .build();
+  }
+
+  @Override
+  public String generateQueryFromTemplate(IngestionTemplateInfo templateInfo)
+  {
+    List<IngestionTemplate> templates = catalog.getTemplates(templateInfo.getRequiredTemplateNames());
+    return templateInfo.generateQueryFromTemplates(templates);
   }
 }

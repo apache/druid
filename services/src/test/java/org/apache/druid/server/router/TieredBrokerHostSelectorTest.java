@@ -389,7 +389,7 @@ public class TieredBrokerHostSelectorTest
   {
     return new SqlQuery(
         "SELECT * FROM test",
-        null,
+        null, null,
         false,
         false,
         false,

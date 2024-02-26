@@ -105,7 +105,7 @@ public class ITKeyStatisticsSketchMergeMode
     );
 
     // Submit the task and wait for the datasource to get loaded
-    SqlQuery sqlQuery = new SqlQuery(queryLocal, null, false, false, false, context, null);
+    SqlQuery sqlQuery = new SqlQuery(queryLocal, null, null, false, false, false, context, null);
     SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTask(sqlQuery);
 
     if (sqlTaskStatus.getState().isFailure()) {
@@ -175,7 +175,7 @@ public class ITKeyStatisticsSketchMergeMode
     );
 
     // Submit the task and wait for the datasource to get loaded
-    SqlQuery sqlQuery = new SqlQuery(queryLocal, null, false, false, false, context, null);
+    SqlQuery sqlQuery = new SqlQuery(queryLocal, null, null, false, false, false, context, null);
     SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTask(sqlQuery);
 
     if (sqlTaskStatus.getState().isFailure()) {
@@ -250,7 +250,7 @@ public class ITKeyStatisticsSketchMergeMode
     );
 
     // Submit the task and wait for the datasource to get loaded
-    SqlQuery sqlQuery = new SqlQuery(queryLocal, null, false, false, false, context, null);
+    SqlQuery sqlQuery = new SqlQuery(queryLocal, null, null, false, false, false, context, null);
     SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTask(sqlQuery);
 
     if (sqlTaskStatus.getState().isFailure()) {

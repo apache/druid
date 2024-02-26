@@ -330,6 +330,7 @@ public class SqlResourceTest extends CalciteTestBase
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         sqlStatementFactory,
         lifecycleManager,
+        CatalogResolver.NULL_RESOLVER,
         new ServerConfig(),
         TEST_RESPONSE_CONTEXT_CONFIG,
         DUMMY_DRUID_NODE
@@ -390,7 +391,7 @@ public class SqlResourceTest extends CalciteTestBase
   {
     final SqlQuery sqlQuery = new SqlQuery(
         "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo",
-        null,
+        null, null,
         false,
         false,
         false,
@@ -478,7 +479,7 @@ public class SqlResourceTest extends CalciteTestBase
     final List<Map<String, Object>> rows = doPost(
         new SqlQuery(
             "SELECT __time, CAST(__time AS DATE) AS t2 FROM druid.foo LIMIT 1",
-            ResultFormat.OBJECT,
+            null, ResultFormat.OBJECT,
             false,
             false,
             false,
@@ -501,7 +502,7 @@ public class SqlResourceTest extends CalciteTestBase
     final List<Map<String, Object>> rows = doPost(
         new SqlQuery(
             "SELECT __time, CAST(__time AS DATE) AS t2 FROM druid.foo LIMIT ?",
-            ResultFormat.OBJECT,
+            null, ResultFormat.OBJECT,
             false,
             false,
             false,
@@ -524,7 +525,7 @@ public class SqlResourceTest extends CalciteTestBase
     final List<Map<String, Object>> rows = doPost(
         new SqlQuery(
             "SELECT __time, CAST(__time AS DATE) AS t2 FROM druid.foo LIMIT 1",
-            ResultFormat.OBJECT,
+            null, ResultFormat.OBJECT,
             false,
             false,
             false,
@@ -547,7 +548,7 @@ public class SqlResourceTest extends CalciteTestBase
     final List<Map<String, Object>> rows = doPost(
         new SqlQuery(
             "SELECT MAX(__time) as t1, MAX(__time) FILTER(WHERE dim1 = 'non_existing') as t2 FROM druid.foo",
-            ResultFormat.OBJECT,
+            null, ResultFormat.OBJECT,
             false,
             false,
             false,
@@ -578,7 +579,7 @@ public class SqlResourceTest extends CalciteTestBase
     final List<Map<String, Object>> rows = doPost(
         new SqlQuery(
             "SELECT dim2 \"x\", dim2 \"y\" FROM druid.foo LIMIT 1",
-            ResultFormat.OBJECT,
+            null, ResultFormat.OBJECT,
             false,
             false,
             false,
@@ -601,7 +602,7 @@ public class SqlResourceTest extends CalciteTestBase
     final List<Map<String, Object>> rows = doPost(
         new SqlQuery(
             "SELECT dim2 \"x\", dim2 \"y\" FROM druid.foo GROUP BY dim2",
-            ResultFormat.OBJECT,
+            null, ResultFormat.OBJECT,
             false,
             false,
             false,
@@ -660,7 +661,7 @@ public class SqlResourceTest extends CalciteTestBase
             )
         ),
         doPost(
-            new SqlQuery(query, ResultFormat.ARRAY, false, false, false, null, null),
+            new SqlQuery(query, null, ResultFormat.ARRAY, false, false, false, null, null),
             new TypeReference<List<List<Object>>>()
             {
             }
@@ -675,7 +676,7 @@ public class SqlResourceTest extends CalciteTestBase
 
     final String query = "SELECT cnt FROM foo";
     final Pair<ErrorResponse, String> response =
-        doPostRaw(new SqlQuery(query, ResultFormat.ARRAY, false, false, false, null, null), req);
+        doPostRaw(new SqlQuery(query, null, ResultFormat.ARRAY, false, false, false, null, null), req);
 
     // Truncated response: missing final ]
     Assert.assertNull(response.lhs);
@@ -689,7 +690,7 @@ public class SqlResourceTest extends CalciteTestBase
 
     final String query = "SELECT cnt FROM foo";
     final Pair<ErrorResponse, String> response =
-        doPostRaw(new SqlQuery(query, ResultFormat.OBJECT, false, false, false, null, null), req);
+        doPostRaw(new SqlQuery(query, null, ResultFormat.OBJECT, false, false, false, null, null), req);
 
     // Truncated response: missing final ]
     Assert.assertNull(response.lhs);
@@ -703,7 +704,7 @@ public class SqlResourceTest extends CalciteTestBase
 
     final String query = "SELECT cnt FROM foo";
     final Pair<ErrorResponse, String> response =
-        doPostRaw(new SqlQuery(query, ResultFormat.ARRAYLINES, false, false, false, null, null), req);
+        doPostRaw(new SqlQuery(query, null, ResultFormat.ARRAYLINES, false, false, false, null, null), req);
 
     // Truncated response: missing final LFLF
     Assert.assertNull(response.lhs);
@@ -717,7 +718,7 @@ public class SqlResourceTest extends CalciteTestBase
 
     final String query = "SELECT cnt FROM foo";
     final Pair<ErrorResponse, String> response =
-        doPostRaw(new SqlQuery(query, ResultFormat.OBJECTLINES, false, false, false, null, null), req);
+        doPostRaw(new SqlQuery(query, null, ResultFormat.OBJECTLINES, false, false, false, null, null), req);
 
     // Truncated response: missing final LFLF
     Assert.assertNull(response.lhs);
@@ -731,7 +732,7 @@ public class SqlResourceTest extends CalciteTestBase
 
     final String query = "SELECT cnt FROM foo";
     final Pair<ErrorResponse, String> response =
-        doPostRaw(new SqlQuery(query, ResultFormat.CSV, false, false, false, null, null), req);
+        doPostRaw(new SqlQuery(query, null, ResultFormat.CSV, false, false, false, null, null), req);
 
     // Truncated response: missing final LFLF
     Assert.assertNull(response.lhs);
@@ -752,7 +753,7 @@ public class SqlResourceTest extends CalciteTestBase
     };
 
     MockHttpServletResponse response = postForAsyncResponse(
-        new SqlQuery(query, ResultFormat.ARRAY, true, true, true, null, null),
+        new SqlQuery(query, null, ResultFormat.ARRAY, true, true, true, null, null),
         req.mimic()
     );
 
@@ -769,7 +770,7 @@ public class SqlResourceTest extends CalciteTestBase
     );
 
     MockHttpServletResponse responseNoSqlTypesHeader = postForAsyncResponse(
-        new SqlQuery(query, ResultFormat.ARRAY, true, true, false, null, null),
+        new SqlQuery(query, null, ResultFormat.ARRAY, true, true, false, null, null),
         req.mimic()
     );
 
@@ -785,7 +786,7 @@ public class SqlResourceTest extends CalciteTestBase
     );
 
     MockHttpServletResponse responseNoTypesHeader = postForAsyncResponse(
-        new SqlQuery(query, ResultFormat.ARRAY, true, false, true, null, null),
+        new SqlQuery(query, null, ResultFormat.ARRAY, true, false, true, null, null),
         req.mimic()
     );
 
@@ -801,7 +802,7 @@ public class SqlResourceTest extends CalciteTestBase
     );
 
     MockHttpServletResponse responseNoTypes = postForAsyncResponse(
-        new SqlQuery(query, ResultFormat.ARRAY, true, false, false, null, null),
+        new SqlQuery(query, null, ResultFormat.ARRAY, true, false, false, null, null),
         req.mimic()
     );
 
@@ -816,7 +817,7 @@ public class SqlResourceTest extends CalciteTestBase
     );
 
     MockHttpServletResponse responseNoHeader = postForAsyncResponse(
-        new SqlQuery(query, ResultFormat.ARRAY, false, false, false, null, null),
+        new SqlQuery(query, null, ResultFormat.ARRAY, false, false, false, null, null),
         req.mimic()
     );
 
@@ -836,7 +837,7 @@ public class SqlResourceTest extends CalciteTestBase
     final String query = "SELECT (1, 2) FROM INFORMATION_SCHEMA.COLUMNS LIMIT 1";
 
     MockHttpServletResponse response = postForAsyncResponse(
-        new SqlQuery(query, ResultFormat.ARRAY, true, true, true, null, null),
+        new SqlQuery(query, null, ResultFormat.ARRAY, true, true, true, null, null),
         req
     );
 
@@ -864,7 +865,7 @@ public class SqlResourceTest extends CalciteTestBase
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
     final Pair<ErrorResponse, String> pair = doPostRaw(
-        new SqlQuery(query, ResultFormat.ARRAYLINES, false, false, false, null, null)
+        new SqlQuery(query, null, ResultFormat.ARRAYLINES, false, false, false, null, null)
     );
     Assert.assertNull(pair.lhs);
     final String response = pair.rhs;
@@ -909,7 +910,7 @@ public class SqlResourceTest extends CalciteTestBase
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
     final Pair<ErrorResponse, String> pair = doPostRaw(
-        new SqlQuery(query, ResultFormat.ARRAYLINES, true, true, true, null, null)
+        new SqlQuery(query, null, ResultFormat.ARRAYLINES, true, true, true, null, null)
     );
     Assert.assertNull(pair.lhs);
     final String response = pair.rhs;
@@ -957,7 +958,7 @@ public class SqlResourceTest extends CalciteTestBase
   {
     final String query = "SELECT (1, 2) FROM INFORMATION_SCHEMA.COLUMNS LIMIT 1";
     final Pair<ErrorResponse, String> pair = doPostRaw(
-        new SqlQuery(query, ResultFormat.ARRAYLINES, true, true, true, null, null)
+        new SqlQuery(query, null, ResultFormat.ARRAYLINES, true, true, true, null, null)
     );
     Assert.assertNull(pair.lhs);
     final String response = pair.rhs;
@@ -1018,7 +1019,7 @@ public class SqlResourceTest extends CalciteTestBase
                 .build()
         ).stream().map(transformer).collect(Collectors.toList()),
         doPost(
-            new SqlQuery(query, ResultFormat.OBJECT, false, false, false, null, null),
+            new SqlQuery(query, null, ResultFormat.OBJECT, false, false, false, null, null),
             new TypeReference<List<Map<String, Object>>>()
             {
             }
@@ -1031,7 +1032,7 @@ public class SqlResourceTest extends CalciteTestBase
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
     final Pair<ErrorResponse, String> pair = doPostRaw(
-        new SqlQuery(query, ResultFormat.OBJECTLINES, false, false, false, null, null)
+        new SqlQuery(query, null, ResultFormat.OBJECTLINES, false, false, false, null, null)
     );
     Assert.assertNull(pair.lhs);
     final String response = pair.rhs;
@@ -1088,7 +1089,7 @@ public class SqlResourceTest extends CalciteTestBase
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
     final Pair<ErrorResponse, String> pair =
-        doPostRaw(new SqlQuery(query, ResultFormat.OBJECTLINES, true, false, false, null, null));
+        doPostRaw(new SqlQuery(query, null, ResultFormat.OBJECTLINES, true, false, false, null, null));
     Assert.assertNull(pair.lhs);
     final String response = pair.rhs;
     final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
@@ -1148,7 +1149,7 @@ public class SqlResourceTest extends CalciteTestBase
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
     final Pair<ErrorResponse, String> pair =
-        doPostRaw(new SqlQuery(query, ResultFormat.OBJECTLINES, true, true, true, null, null));
+        doPostRaw(new SqlQuery(query, null, ResultFormat.OBJECTLINES, true, true, true, null, null));
     Assert.assertNull(pair.lhs);
     final String response = pair.rhs;
     final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
@@ -1214,7 +1215,7 @@ public class SqlResourceTest extends CalciteTestBase
   {
     final String query = "SELECT (1, 2) FROM INFORMATION_SCHEMA.COLUMNS LIMIT 1";
     final Pair<ErrorResponse, String> pair =
-        doPostRaw(new SqlQuery(query, ResultFormat.OBJECTLINES, true, true, true, null, null));
+        doPostRaw(new SqlQuery(query, null, ResultFormat.OBJECTLINES, true, true, true, null, null));
     Assert.assertNull(pair.lhs);
     final String response = pair.rhs;
     final List<String> lines = Splitter.on('\n').splitToList(response);
@@ -1243,7 +1244,7 @@ public class SqlResourceTest extends CalciteTestBase
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
     final Pair<ErrorResponse, String> pair = doPostRaw(
-        new SqlQuery(query, ResultFormat.CSV, false, false, false, null, null)
+        new SqlQuery(query, null, ResultFormat.CSV, false, false, false, null, null)
     );
     Assert.assertNull(pair.lhs);
     final String response = pair.rhs;
@@ -1265,7 +1266,7 @@ public class SqlResourceTest extends CalciteTestBase
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
     final Pair<ErrorResponse, String> pair = doPostRaw(
-        new SqlQuery(query, ResultFormat.CSV, true, true, true, null, null)
+        new SqlQuery(query, null, ResultFormat.CSV, true, true, true, null, null)
     );
     Assert.assertNull(pair.lhs);
     final String response = pair.rhs;
@@ -1290,7 +1291,7 @@ public class SqlResourceTest extends CalciteTestBase
   {
     final String query = "SELECT (1, 2) FROM INFORMATION_SCHEMA.COLUMNS LIMIT 1";
     final Pair<ErrorResponse, String> pair = doPostRaw(
-        new SqlQuery(query, ResultFormat.CSV, true, true, true, null, null)
+        new SqlQuery(query, null, ResultFormat.CSV, true, true, true, null, null)
     );
     Assert.assertNull(pair.lhs);
     final String response = pair.rhs;
@@ -1318,7 +1319,7 @@ public class SqlResourceTest extends CalciteTestBase
     final List<Map<String, Object>> rows = doPost(
         new SqlQuery(
             "EXPLAIN PLAN FOR SELECT COUNT(*) AS cnt FROM druid.foo",
-            ResultFormat.OBJECT,
+            null, ResultFormat.OBJECT,
             false,
             false,
             false,
@@ -1425,7 +1426,7 @@ public class SqlResourceTest extends CalciteTestBase
     final ErrorResponse errorResponse = doPost(
         new SqlQuery(
             "SELECT DISTINCT dim1 FROM foo",
-            ResultFormat.OBJECT,
+            null, ResultFormat.OBJECT,
             false,
             false,
             false,
@@ -1458,7 +1459,7 @@ public class SqlResourceTest extends CalciteTestBase
     ErrorResponse exception = postSyncForException(
         new SqlQuery(
             "SELECT ANSWER TO LIFE",
-            ResultFormat.OBJECT,
+            null, ResultFormat.OBJECT,
             false,
             false,
             false,
@@ -1486,7 +1487,7 @@ public class SqlResourceTest extends CalciteTestBase
     final Response response = postForSyncResponse(
         new SqlQuery(
             "SELECT ANSWER TO LIFE",
-            ResultFormat.OBJECT,
+            null, ResultFormat.OBJECT,
             false,
             false,
             false,
@@ -1511,7 +1512,7 @@ public class SqlResourceTest extends CalciteTestBase
     final Response response = postForSyncResponse(
         new SqlQuery(
             "SELECT ANSWER TO LIFE",
-            ResultFormat.OBJECT,
+            null, ResultFormat.OBJECT,
             false,
             false,
             false,
@@ -1534,6 +1535,7 @@ public class SqlResourceTest extends CalciteTestBase
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         sqlStatementFactory,
         lifecycleManager,
+        CatalogResolver.NULL_RESOLVER,
         new ServerConfig()
         {
           @Override
@@ -1557,7 +1559,7 @@ public class SqlResourceTest extends CalciteTestBase
     ErrorResponse exception = postSyncForException(
         new SqlQuery(
             "SELECT ANSWER TO LIFE",
-            ResultFormat.OBJECT,
+            null, ResultFormat.OBJECT,
             false,
             false,
             false,
@@ -1593,7 +1595,7 @@ public class SqlResourceTest extends CalciteTestBase
     ErrorResponse exception = postSyncForException(
         new SqlQuery(
             "SELECT assertion_error() FROM foo LIMIT 2",
-            ResultFormat.OBJECT,
+            null, ResultFormat.OBJECT,
             false,
             false,
             false,
@@ -1639,7 +1641,7 @@ public class SqlResourceTest extends CalciteTestBase
           return postForAsyncResponse(
               new SqlQuery(
                   "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo",
-                  null,
+                  null, null,
                   false,
                   false,
                   false,
@@ -1662,7 +1664,7 @@ public class SqlResourceTest extends CalciteTestBase
         final Response retVal = postForSyncResponse(
             new SqlQuery(
                 "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo",
-                null,
+                null, null,
                 false,
                 false,
                 false,
@@ -1722,6 +1724,7 @@ public class SqlResourceTest extends CalciteTestBase
     ErrorResponse exception = postSyncForException(
         new SqlQuery(
             "SELECT CAST(__time AS DATE), dim1, dim2, dim3 FROM druid.foo GROUP by __time, dim1, dim2, dim3 ORDER BY dim2 DESC",
+            null,
             ResultFormat.OBJECT,
             false,
             false,
@@ -1867,7 +1870,7 @@ public class SqlResourceTest extends CalciteTestBase
     final ErrorResponse errorResponse = doPost(
         new SqlQuery(
             "SELECT 1337",
-            ResultFormat.OBJECT,
+            null, ResultFormat.OBJECT,
             false,
             false,
             false,
@@ -1891,7 +1894,7 @@ public class SqlResourceTest extends CalciteTestBase
   {
     Map<String, Object> queryContext = ImmutableMap.of(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY, "all");
     ErrorResponse exception = postSyncForException(
-        new SqlQuery("SELECT 1337", ResultFormat.OBJECT, false, false, false, queryContext, null),
+        new SqlQuery("SELECT 1337", null, ResultFormat.OBJECT, false, false, false, queryContext, null),
         Status.BAD_REQUEST.getStatusCode()
     );
 
@@ -1923,7 +1926,7 @@ public class SqlResourceTest extends CalciteTestBase
 
   private static SqlQuery createSimpleQueryWithId(String sqlQueryId, String sql)
   {
-    return new SqlQuery(sql, null, false, false, false, ImmutableMap.of(BaseQuery.SQL_QUERY_ID, sqlQueryId), null);
+    return new SqlQuery(sql, null, null, false, false, false, ImmutableMap.of(BaseQuery.SQL_QUERY_ID, sqlQueryId), null);
   }
 
   private Pair<ErrorResponse, List<Map<String, Object>>> doPost(final SqlQuery query) throws Exception

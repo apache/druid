@@ -40,7 +40,7 @@ public class SqlQueryTest extends CalciteTestBase
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     final SqlQuery query = new SqlQuery(
         "SELECT ?",
-        ResultFormat.ARRAY,
+        null, ResultFormat.ARRAY,
         true,
         true,
         true,

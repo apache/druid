@@ -43,6 +43,7 @@ import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlLifecycleManager.Cancelable;
 import org.apache.druid.sql.SqlRowTransformer;
 import org.apache.druid.sql.SqlStatementFactory;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -80,6 +81,7 @@ public class SqlResource
   private final ServerConfig serverConfig;
   private final ResponseContextConfig responseContextConfig;
   private final DruidNode selfNode;
+  private final CatalogResolver catalogResolver;
 
   @Inject
   SqlResource(
@@ -87,6 +89,7 @@ public class SqlResource
       final AuthorizerMapper authorizerMapper,
       final @NativeQuery SqlStatementFactory sqlStatementFactory,
       final SqlLifecycleManager sqlLifecycleManager,
+      final CatalogResolver catalogResolver,
       final ServerConfig serverConfig,
       ResponseContextConfig responseContextConfig,
       @Self DruidNode selfNode
@@ -96,6 +99,7 @@ public class SqlResource
     this.authorizerMapper = Preconditions.checkNotNull(authorizerMapper, "authorizerMapper");
     this.sqlStatementFactory = Preconditions.checkNotNull(sqlStatementFactory, "sqlStatementFactory");
     this.sqlLifecycleManager = Preconditions.checkNotNull(sqlLifecycleManager, "sqlLifecycleManager");
+    this.catalogResolver = Preconditions.checkNotNull(catalogResolver, "catalogResolver");;
     this.serverConfig = Preconditions.checkNotNull(serverConfig, "serverConfig");
     this.responseContextConfig = responseContextConfig;
     this.selfNode = selfNode;
@@ -110,14 +114,15 @@ public class SqlResource
       @Context final HttpServletRequest req
   )
   {
-    final HttpStatement stmt = sqlStatementFactory.httpStatement(sqlQuery, req);
+    final SqlQuery effectiveQuery = getEffectiveSqlQuery(sqlQuery);
+    final HttpStatement stmt = sqlStatementFactory.httpStatement(effectiveQuery, req);
     final String sqlQueryId = stmt.sqlQueryId();
     final String currThreadName = Thread.currentThread().getName();
 
     try {
       Thread.currentThread().setName(StringUtils.format("sql[%s]", sqlQueryId));
 
-      QueryResultPusher pusher = makePusher(req, stmt, sqlQuery);
+      QueryResultPusher pusher = makePusher(req, stmt, effectiveQuery);
       return pusher.push();
     }
     finally {
@@ -161,6 +166,24 @@ public class SqlResource
       return Response.status(Status.ACCEPTED).build();
     } else {
       return Response.status(Status.FORBIDDEN).build();
+    }
+  }
+
+  private SqlQuery getEffectiveSqlQuery(final SqlQuery sqlQuery) {
+    if (sqlQuery.getTemplateInfo() != null) {
+      String templateGeneratedQuery = catalogResolver.generateQueryFromTemplate(sqlQuery.getTemplateInfo());
+      return new SqlQuery(
+          templateGeneratedQuery,
+          null,
+          sqlQuery.getResultFormat(),
+          sqlQuery.includeHeader(),
+          sqlQuery.includeTypesHeader(),
+          sqlQuery.includeSqlTypesHeader(),
+          sqlQuery.getContext(),
+          sqlQuery.getParameters()
+      );
+    } else {
+      return sqlQuery;
     }
   }
 

@@ -22,6 +22,7 @@ package org.apache.druid.catalog.sync;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.catalog.http.CatalogResource;
+import org.apache.druid.catalog.model.IngestionTemplate;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableDefnRegistry;
 import org.apache.druid.catalog.model.TableId;
@@ -59,11 +60,15 @@ public class CatalogClient implements CatalogSource
 {
   public static final String SCHEMA_SYNC_PATH = CatalogResource.ROOT_PATH + CatalogResource.SCHEMA_SYNC;
   public static final String TABLE_SYNC_PATH = CatalogResource.ROOT_PATH + CatalogResource.TABLE_SYNC;
+  public static final String TEMPLATE_GET_PATH = CatalogResource.ROOT_PATH + CatalogResource.TEMPLATES_PATH;
   private static final TypeReference<List<TableMetadata>> LIST_OF_TABLE_METADATA_TYPE = new TypeReference<List<TableMetadata>>()
   {
   };
   // Not strictly needed as a TypeReference, but doing so makes the code simpler.
   private static final TypeReference<TableMetadata> TABLE_METADATA_TYPE = new TypeReference<TableMetadata>()
+  {
+  };
+  private static final TypeReference<IngestionTemplate> TEMPLATE_TYPE = new TypeReference<IngestionTemplate>()
   {
   };
 
@@ -106,6 +111,13 @@ public class CatalogClient implements CatalogSource
   {
     TableMetadata table = table(id);
     return table == null ? null : tableRegistry.resolve(table.spec());
+  }
+
+  @Override
+  public IngestionTemplate getTemplate(String templateName)
+  {
+    String url = StringUtils.replace(TEMPLATE_GET_PATH, "{name}", templateName);
+    return send(url, TEMPLATE_TYPE);
   }
 
   /**

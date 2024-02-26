@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.planner;
 
+import org.apache.druid.catalog.model.IngestionTemplateInfo;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
@@ -57,6 +58,12 @@ public interface CatalogResolver
     {
       return datasourceNames;
     }
+
+    @Override
+    public String generateQueryFromTemplate(IngestionTemplateInfo templateInfo)
+    {
+      return null;
+    }
   }
 
   /**
@@ -71,4 +78,6 @@ public interface CatalogResolver
   );
 
   Set<String> getTableNames(Set<String> datasourceNames);
+
+  String generateQueryFromTemplate(IngestionTemplateInfo templateInfo);
 }
