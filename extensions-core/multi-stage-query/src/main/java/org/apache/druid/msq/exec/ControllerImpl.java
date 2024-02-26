@@ -65,8 +65,8 @@ import org.apache.druid.frame.write.InvalidNullByteException;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
-import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -1736,65 +1736,68 @@ public class ControllerImpl implements Controller
 
       Function<Set<DataSegment>, Set<DataSegment>> compactionStateAnnotateFunction = Function.identity();
 
-      final boolean storeCompactionState = task.getContextValue(
-          Tasks.STORE_COMPACTION_STATE_KEY,
-          Tasks.DEFAULT_STORE_COMPACTION_STATE
-      );
+
+      Object storeCompactionStateValue = task.getQuerySpec()
+                                             .getQuery()
+                                             .getContext()
+                                             .get(Tasks.STORE_COMPACTION_STATE_KEY);
+
+      final boolean storeCompactionState = storeCompactionStateValue != null
+                                           ? (Boolean) storeCompactionStateValue
+                                           : Tasks.DEFAULT_STORE_COMPACTION_STATE;
 
       if (storeCompactionState) {
-        ShardSpec shardSpec = segments.isEmpty()
-                              ? null
-                              : segments.stream()
-                                        .findFirst()
-                                        .get()
-                                        .getShardSpec();
-        List<String> partitionDimensions = Collections.emptyList();
 
-        if (shardSpec != null && (Objects.equals(shardSpec.getType(), ShardSpec.Type.SINGLE)
-                                  || Objects.equals(shardSpec.getType(), ShardSpec.Type.RANGE))) {
-          partitionDimensions = ((DimensionRangeShardSpec) shardSpec).getDimensions();
-        }
+        ShardSpec shardSpec = segments.isEmpty() ? null : segments.stream().findFirst().get().getShardSpec();
 
         compactionStateAnnotateFunction = compactionStateAnnotateFunction(
             task(),
             context.jsonMapper(),
             dataSchema,
-            partitionDimensions
+            shardSpec,
+            queryDef.getQueryId()
         );
-        log.info("Query [%s] publishing %d segments.", queryDef.getQueryId(), segments.size());
       }
 
+      log.info("Query [%s] publishing %d segments.", queryDef.getQueryId(), segments.size());
       publishAllSegments(compactionStateAnnotateFunction.apply(segments));
     }
   }
 
   public static Function<Set<DataSegment>, Set<DataSegment>> compactionStateAnnotateFunction(
-      MSQControllerTask task,
-      ObjectMapper jsonMapper,
-      DataSchema dataSchema,
-      List<String> partitionDimensions
+      MSQControllerTask task, ObjectMapper jsonMapper, DataSchema dataSchema, ShardSpec shardSpec, String queryId
   )
   {
-      IndexSpec indexSpec = task.getQuerySpec().getTuningConfig().getIndexSpec();
-      GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
-
-    if (granularitySpec instanceof ArbitraryGranularitySpec
-        && task.getQuerySpec().getQuery().getContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY) != null) {
-
-      // In case of MSQ, the segment granularity comes as the context parameter SQL_INSERT_SEGMENT_GRANULARITY
-      Granularity segmentGranularity = QueryKitUtils.getSegmentGranularityFromContext(
-          jsonMapper,
-          task.getQuerySpec()
-              .getQuery()
-              .getContext()
-      );
-      granularitySpec = new UniformGranularitySpec(
-          segmentGranularity,
-          granularitySpec.getQueryGranularity(),
-          granularitySpec.isRollup(),
-          granularitySpec.inputIntervals()
-      );
+    DataSourceMSQDestination destination = (DataSourceMSQDestination) task.getQuerySpec().getDestination();
+    if (!destination.isReplaceTimeChunks()) {
+      // Only do this for replace queries, whether originating directly or via compaction
+      log.error("Query [%s] skipping storing compaction state in segments as query not of type REPLACE", queryId);
+      return Function.identity();
     }
+
+    GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
+
+    if (task.getQuerySpec().getQuery().getContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY) == null) {
+      // This is a defensive check. Should never enter here.
+      log.error("Query [%s] skipping storing compaction state in segments as segment granularity not set", queryId);
+      return Function.identity();
+    }
+
+    // In case of MSQ, the segment granularity comes as the context parameter SQL_INSERT_SEGMENT_GRANULARITY
+    Granularity segmentGranularity = QueryKitUtils.getSegmentGranularityFromContext(
+        jsonMapper,
+        task.getQuerySpec()
+            .getQuery()
+            .getContext()
+    );
+
+    granularitySpec = new UniformGranularitySpec(
+        segmentGranularity,
+        granularitySpec.getQueryGranularity(),
+        granularitySpec.isRollup(),
+        granularitySpec.inputIntervals()
+    );
+
 
     DimensionsSpec dimensionsSpec = dataSchema.getDimensionsSpec();
     Map<String, Object> transformSpec = dataSchema.getTransformSpec() == null
@@ -1806,36 +1809,49 @@ public class ControllerImpl implements Controller
     List<Object> metricsSpec = dataSchema.getAggregators() == null
                                ? null
                                : jsonMapper.convertValue(
-                                   dataSchema.getAggregators(),
-                                     new TypeReference<List<Object>>()
-                                     {
-                                     }
-                                 );
+                                   dataSchema.getAggregators(), new TypeReference<List<Object>>()
+                                   {
+                                   });
 
-      // Even if partition dimensions is empty, use DimensionRangePartitionsSpec to record other info
-      // such as rowsPerSegment
+    PartitionsSpec partitionSpec;
 
-      PartitionsSpec partitionSpec = new DimensionRangePartitionsSpec(
-          task.getQuerySpec()
-              .getTuningConfig()
-              .getRowsPerSegment(),
+    if (shardSpec != null && (Objects.equals(shardSpec.getType(), ShardSpec.Type.SINGLE)
+                              || Objects.equals(shardSpec.getType(), ShardSpec.Type.RANGE))) {
+      List<String> partitionDimensions = ((DimensionRangeShardSpec) shardSpec).getDimensions();
+      partitionSpec = new DimensionRangePartitionsSpec(
+          task.getQuerySpec().getTuningConfig().getRowsPerSegment(),
           null,
           partitionDimensions,
           false
       );
 
-      final CompactionState compactionState = new CompactionState(
-          partitionSpec,
-          dimensionsSpec,
-          metricsSpec,
-          transformSpec,
-          indexSpec.asMap(jsonMapper),
-          granularitySpec.asMap(jsonMapper)
+    } else if (shardSpec != null && Objects.equals(shardSpec.getType(), ShardSpec.Type.NUMBERED)) {
+      partitionSpec = new DynamicPartitionsSpec(task.getQuerySpec().getTuningConfig().getRowsPerSegment(), null);
+    } else {
+      log.error(
+          "Query [%s] skipping storing compaction state in segments as shard spec of unsupported type",
+          queryId
       );
-      return segments -> segments
-          .stream()
-          .map(s -> s.withLastCompactionState(compactionState))
-          .collect(Collectors.toSet());
+      return Function.identity();
+    }
+
+    IndexSpec indexSpec = task.getQuerySpec().getTuningConfig().getIndexSpec();
+
+    final CompactionState compactionState = new CompactionState(
+        partitionSpec,
+        dimensionsSpec,
+        metricsSpec,
+        transformSpec,
+        indexSpec.asMap(jsonMapper),
+        granularitySpec.asMap(jsonMapper)
+    );
+
+    log.info("Query [%s] storing compaction state in segments", queryId);
+
+    return segments -> segments
+        .stream()
+        .map(s -> s.withLastCompactionState(compactionState))
+        .collect(Collectors.toSet());
   }
 
   /**
