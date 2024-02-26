@@ -22,12 +22,14 @@ package org.apache.druid.sql.calcite;
 import com.google.common.base.Throwables;
 import junitparams.JUnitParamsRunner;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.ISE;
 import org.junit.AssumptionViolatedException;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runner.RunWith;
 import org.junit.runners.model.Statement;
 
+import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -94,7 +96,9 @@ public @interface NotYetSupported
     UNION_WITH_COMPLEX_OPERAND(DruidException.class, "Only Table and Values are supported as inputs for Union"),
     UNION_MORE_STRICT_ROWTYPE_CHECK(DruidException.class, "Row signature mismatch in Union inputs"),
     JOIN_CONDITION_NOT_PUSHED_CONDITION(DruidException.class, "SQL requires a join with '.*' condition"),
-    JOIN_CONDITION_UNSUPORTED_OPERAND(DruidException.class, "SQL .* unsupported operand type");
+    JOIN_CONDITION_UNSUPORTED_OPERAND(DruidException.class, "SQL .* unsupported operand type"),
+    JOIN_TABLE_TABLE(ISE.class, "Cannot handle subquery structure for dataSource: JoinDataSource"),
+    CORRELATE_CONVERSION(DruidException.class, "Missing conversion is LogicalCorrelate");
 
     public Class<? extends Throwable> throwableClass;
     public String regex;
@@ -122,7 +126,7 @@ public @interface NotYetSupported
     @Override
     public Statement apply(Statement base, Description description)
     {
-      NotYetSupported annotation = getAnnotation(description);
+      NotYetSupported annotation = getAnnotation(description, NotYetSupported.class);
 
       if (annotation == null) {
         return base;
@@ -182,10 +186,10 @@ public @interface NotYetSupported
       }
     }
 
-    private NotYetSupported getAnnotation(Description description)
+    public static <T extends Annotation> T getAnnotation(Description description,Class<T> annotationType)
     {
-      NotYetSupported annotation = description.getAnnotation(NotYetSupported.class);
-      if(annotation!=null) {
+      T annotation = description.getAnnotation(annotationType);
+      if (annotation != null) {
         return annotation;
       }
       Class<?> testClass = description.getTestClass();
@@ -194,10 +198,10 @@ public @interface NotYetSupported
         return null;
       }
       String mehodName = description.getMethodName();
-      String realMethodName = mehodName.replaceAll("\\(.*","");
+      String realMethodName = mehodName.replaceAll("\\(.*", "");
 
-      Method m =getMethodForName(testClass,realMethodName);
-      return m.getAnnotation(NotYetSupported.class);
+      Method m = getMethodForName(testClass, realMethodName);
+      return m.getAnnotation(annotationType);
     }
   }
 }

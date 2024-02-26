@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite;
 
 import org.apache.druid.query.topn.TopNQueryConfig;
+import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
@@ -27,6 +28,7 @@ import org.junit.rules.ExternalResource;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 
+import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -119,9 +121,9 @@ public @interface SqlTestFrameworkConfig
       return getConfigurationInstance().framework;
     }
 
-    public Description getDescription()
+    public <T extends Annotation> T  getAnnotation(Class<T> annotationType)
     {
-      return description;
+      return NotYetSupportedProcessor.getAnnotation(description, annotationType);
     }
 
     private ConfigurationInstance getConfigurationInstance()
@@ -133,6 +135,7 @@ public @interface SqlTestFrameworkConfig
     {
       return new ConfigurationInstance(config, testHost);
     }
+
 
   }
 

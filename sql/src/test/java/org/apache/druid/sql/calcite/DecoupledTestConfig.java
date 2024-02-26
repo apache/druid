@@ -74,7 +74,13 @@ public @interface DecoupledTestConfig
     /**
      * {@link QueryContexts#SQL_JOIN_LEFT_SCAN_DIRECT} not supported.
      */
-    JOIN_LEFT_DIRECT_ACCESS;
+    JOIN_LEFT_DIRECT_ACCESS,
+    /**
+     * Different filter layout.
+     *
+     * Filter is pushed below join to the left.
+     */
+    JOIN_FILTER_LOCATIONS;
 
     public boolean isPresent()
     {

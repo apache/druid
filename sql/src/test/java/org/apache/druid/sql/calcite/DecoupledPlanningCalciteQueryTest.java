@@ -57,7 +57,7 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
         .cannotVectorize(cannotVectorize)
         .skipVectorize(skipVectorize);
 
-    DecoupledTestConfig decTestConfig = queryFrameworkRule.getDescription().getAnnotation(DecoupledTestConfig.class);
+    DecoupledTestConfig decTestConfig = queryFrameworkRule.getAnnotation(DecoupledTestConfig.class);
 
     if (decTestConfig != null && decTestConfig.nativeQueryIgnore().isPresent()) {
       builder.verifyNativeQueries(x -> false);

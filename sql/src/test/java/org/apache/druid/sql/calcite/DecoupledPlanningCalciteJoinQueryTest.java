@@ -20,7 +20,6 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableMap;
-import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.security.AuthConfig;
@@ -31,17 +30,12 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerComponentSupplier;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import java.util.Map;
 
 import static org.junit.Assert.assertNotNull;
 
-@RunWith(JUnitParamsRunner.class)
-public class DecoupledPlanningCalciteJoinQueryTest extends
-
-BaseCalciteQueryTest
-//CalciteJoinQueryTest
+public class DecoupledPlanningCalciteJoinQueryTest extends CalciteJoinQueryTest
 {
 
   @Rule(order = 0)
@@ -70,7 +64,7 @@ BaseCalciteQueryTest
         .cannotVectorize(cannotVectorize)
         .skipVectorize(skipVectorize);
 
-    DecoupledTestConfig decTestConfig = queryFrameworkRule.getDescription().getAnnotation(DecoupledTestConfig.class);
+    DecoupledTestConfig decTestConfig = queryFrameworkRule.getAnnotation(DecoupledTestConfig.class);
 
     if (decTestConfig != null && decTestConfig.nativeQueryIgnore().isPresent()) {
       builder.verifyNativeQueries(x -> false);
@@ -83,7 +77,7 @@ BaseCalciteQueryTest
   @Parameters(source = QueryContextForJoinProvider.class)
   @DecoupledTestConfig(nativeQueryIgnore = NativeQueryIgnore.JOIN_LEFT_DIRECT_ACCESS)
   public void ensureDecoupledTestConfigAnnotationWorks(Map<String, Object> queryContext) {
-    assertNotNull(queryFrameworkRule.getDescription().getAnnotation(DecoupledTestConfig.class));
+    assertNotNull(queryFrameworkRule.getAnnotation(DecoupledTestConfig.class));
   }
 
 }
