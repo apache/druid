@@ -135,13 +135,10 @@ public @interface SqlTestFrameworkConfig
     {
       return new ConfigurationInstance(config, testHost);
     }
-
-
   }
 
   class ConfigurationInstance
   {
-
     public SqlTestFramework framework;
 
     ConfigurationInstance(SqlTestFrameworkConfig config, QueryComponentSupplier testHost)
@@ -159,5 +156,4 @@ public @interface SqlTestFrameworkConfig
       framework.close();
     }
   }
-
 }
