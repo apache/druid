@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.base.Throwables;
 import junitparams.JUnitParamsRunner;
+import org.apache.commons.lang3.RegExUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.junit.AssumptionViolatedException;
@@ -173,23 +174,22 @@ public @interface NotYetSupported
       };
     }
 
-    private static  Method getMethodForName(Class<?> testClass, String realMethodName)
+    private static Method getMethodForName(Class<?> testClass, String realMethodName)
     {
       List<Method> matches = Stream.of(testClass.getMethods())
           .filter(m -> realMethodName.equals(m.getName()))
           .collect(Collectors.toList());
-      switch (matches.size())
-      {
+      switch (matches.size()) {
         case 0:
-        throw new IllegalArgumentException("Expected to find method...but there is none?");
+          throw new IllegalArgumentException("Expected to find method...but there is none?");
         case 1:
-        return matches.get(0);
+          return matches.get(0);
         default:
-        throw new IllegalArgumentException("method overrides are not supported");
+          throw new IllegalArgumentException("method overrides are not supported");
       }
     }
 
-    public static <T extends Annotation> T getAnnotation(Description description,Class<T> annotationType)
+    public static <T extends Annotation> T getAnnotation(Description description, Class<T> annotationType)
     {
       T annotation = description.getAnnotation(annotationType);
       if (annotation != null) {
@@ -201,7 +201,7 @@ public @interface NotYetSupported
         return null;
       }
       String mehodName = description.getMethodName();
-      String realMethodName = mehodName.replaceAll("\\(.*", "");
+      String realMethodName = RegExUtils.replaceAll(mehodName, "\\(.*", "");
 
       Method m = getMethodForName(testClass, realMethodName);
       return m.getAnnotation(annotationType);

@@ -76,8 +76,8 @@ public class DecoupledPlanningCalciteJoinQueryTest extends CalciteJoinQueryTest
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
   @DecoupledTestConfig(nativeQueryIgnore = NativeQueryIgnore.JOIN_LEFT_DIRECT_ACCESS)
-  public void ensureDecoupledTestConfigAnnotationWorks(Map<String, Object> queryContext) {
+  public void ensureDecoupledTestConfigAnnotationWorks(Map<String, Object> queryContext)
+  {
     assertNotNull(queryFrameworkRule.getAnnotation(DecoupledTestConfig.class));
   }
-
 }

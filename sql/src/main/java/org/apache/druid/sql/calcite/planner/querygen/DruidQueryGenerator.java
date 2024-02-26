@@ -234,7 +234,7 @@ public class DruidQueryGenerator
           PartialDruidQuery newPartialQuery = partialDruidQuery.withAggregate((Aggregate) parentNode);
           return Optional.of(newPartialQuery);
         }
-        if (accepts(stack, Stage.AGGREGATE_PROJECT, Project.class) ) {
+        if (accepts(stack, Stage.AGGREGATE_PROJECT, Project.class)) {
           PartialDruidQuery newPartialQuery = partialDruidQuery.withAggregateProject((Project) parentNode);
           return Optional.of(newPartialQuery);
         }

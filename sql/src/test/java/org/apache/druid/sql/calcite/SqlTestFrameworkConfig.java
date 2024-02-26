@@ -121,7 +121,7 @@ public @interface SqlTestFrameworkConfig
       return getConfigurationInstance().framework;
     }
 
-    public <T extends Annotation> T  getAnnotation(Class<T> annotationType)
+    public <T extends Annotation> T getAnnotation(Class<T> annotationType)
     {
       return NotYetSupportedProcessor.getAnnotation(description, annotationType);
     }

@@ -4955,7 +4955,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
-  @NotYetSupported(  Modes.JOIN_CONDITION_UNSUPORTED_OPERAND)
+  @NotYetSupported(Modes.JOIN_CONDITION_UNSUPORTED_OPERAND)
   public void testNestedGroupByOnInlineDataSourceWithFilter(Map<String, Object> queryContext)
   {
     // Cannot vectorize due to virtual columns.
@@ -5148,7 +5148,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
-  @DecoupledTestConfig(nativeQueryIgnore = NativeQueryIgnore.EQUIV_PLAN )
+  @DecoupledTestConfig(nativeQueryIgnore = NativeQueryIgnore.EQUIV_PLAN)
   public void testTopNOnStringWithNonSortedOrUniqueDictionary(Map<String, Object> queryContext)
   {
     testQuery(
