@@ -1778,7 +1778,8 @@ public class ControllerImpl implements Controller
       IndexSpec indexSpec = task.getQuerySpec().getTuningConfig().getIndexSpec();
       GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
 
-    if (task.getQuerySpec().getQuery().getContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY) != null) {
+    if (granularitySpec instanceof ArbitraryGranularitySpec
+        && task.getQuerySpec().getQuery().getContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY) != null) {
 
       // In case of MSQ, the segment granularity comes as the context parameter SQL_INSERT_SEGMENT_GRANULARITY
       Granularity segmentGranularity = QueryKitUtils.getSegmentGranularityFromContext(
