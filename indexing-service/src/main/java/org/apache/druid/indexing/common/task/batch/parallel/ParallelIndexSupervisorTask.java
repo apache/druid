@@ -1253,6 +1253,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
                 taskStatus.getErrorMsg(),
                 segmentAvailabilityConfirmed,
                 segmentAvailabilityWaitTimeMs,
+                Collections.emptyMap(),
                 segmentsRead,
                 segmentsPublished
             )

@@ -70,6 +70,7 @@ public class TaskReportSerdeTest
             "an error message",
             true,
             1000L,
+            ImmutableMap.of("PartitionA", 5000L),
             0,
             0
         )
