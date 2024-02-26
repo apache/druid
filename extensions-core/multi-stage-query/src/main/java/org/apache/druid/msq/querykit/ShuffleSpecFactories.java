@@ -21,6 +21,7 @@ package org.apache.druid.msq.querykit;
 
 import org.apache.druid.msq.kernel.GlobalSortMaxCountShuffleSpec;
 import org.apache.druid.msq.kernel.GlobalSortTargetSizeShuffleSpec;
+import org.apache.druid.msq.kernel.HashShuffleSpec;
 import org.apache.druid.msq.kernel.MixShuffleSpec;
 
 /**
@@ -53,6 +54,11 @@ public class ShuffleSpecFactories
   public static ShuffleSpecFactory globalSortWithMaxPartitionCount(final int partitions)
   {
     return (clusterBy, aggregate) -> new GlobalSortMaxCountShuffleSpec(clusterBy, partitions, aggregate);
+  }
+
+  public static ShuffleSpecFactory hashLocalSortWithMaxPartitionCount(final int partitions)
+  {
+    return (clusterBy, aggregate) -> new HashShuffleSpec(clusterBy, partitions, aggregate);
   }
 
   /**

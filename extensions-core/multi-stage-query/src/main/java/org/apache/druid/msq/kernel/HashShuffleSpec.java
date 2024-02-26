@@ -20,9 +20,12 @@
 package org.apache.druid.msq.kernel;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.java.util.common.IAE;
+
+import java.util.Objects;
 
 public class HashShuffleSpec implements ShuffleSpec
 {
@@ -30,15 +33,18 @@ public class HashShuffleSpec implements ShuffleSpec
 
   private final ClusterBy clusterBy;
   private final int numPartitions;
+  private final boolean aggregate;
 
   @JsonCreator
   public HashShuffleSpec(
       @JsonProperty("clusterBy") final ClusterBy clusterBy,
-      @JsonProperty("partitions") final int numPartitions
+      @JsonProperty("partitions") final int numPartitions,
+      @JsonProperty("aggregate") final boolean aggregate
   )
   {
     this.clusterBy = clusterBy;
     this.numPartitions = numPartitions;
+    this.aggregate = aggregate;
 
     if (clusterBy.getBucketByCount() > 0) {
       // Only GlobalSortTargetSizeShuffleSpec supports bucket-by.
@@ -60,9 +66,11 @@ public class HashShuffleSpec implements ShuffleSpec
   }
 
   @Override
+  @JsonProperty("aggregate")
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   public boolean doesAggregate()
   {
-    return false;
+    return aggregate;
   }
 
   @Override
@@ -70,5 +78,36 @@ public class HashShuffleSpec implements ShuffleSpec
   public int partitionCount()
   {
     return numPartitions;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    HashShuffleSpec that = (HashShuffleSpec) o;
+    return numPartitions == that.numPartitions
+           && aggregate == that.aggregate
+           && Objects.equals(clusterBy, that.clusterBy);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(clusterBy, numPartitions, aggregate);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "HashShuffleSpec{" +
+           "clusterBy=" + clusterBy +
+           ", numPartitions=" + numPartitions +
+           ", aggregate=" + aggregate +
+           '}';
   }
 }
