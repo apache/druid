@@ -1112,7 +1112,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_DEFAULT,
         ImmutableList.of(
-            new SqlParameter(SqlType.ARRAY, Arrays.asList("1.0", "1.7", null))
+            new SqlParameter(SqlType.ARRAY, Arrays.asList(1.0, 1.7, null))
         ),
         "SELECT dim3 FROM druid.numfoo WHERE ARRAY_OVERLAP(?, d1) LIMIT 5",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
@@ -1146,7 +1146,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_DEFAULT,
         ImmutableList.of(
-            new SqlParameter(SqlType.ARRAY, Arrays.asList("1", "7", null))
+            new SqlParameter(SqlType.ARRAY, Arrays.asList(1, 7, null))
         ),
         "SELECT dim3 FROM druid.numfoo WHERE ARRAY_OVERLAP(?, l1) LIMIT 5",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
