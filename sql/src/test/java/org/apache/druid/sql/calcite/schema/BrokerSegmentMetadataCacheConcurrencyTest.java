@@ -62,13 +62,14 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -85,7 +86,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
-public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMetadataCacheCommon
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMetadataCacheCommon
 {
   private static final String DATASOURCE = "datasource";
   static final BrokerSegmentMetadataCacheConfig SEGMENT_CACHE_CONFIG_DEFAULT = BrokerSegmentMetadataCacheConfig.create("PT1S");
@@ -95,12 +99,12 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
   private AbstractSegmentMetadataCache schema;
   private ExecutorService exec;
 
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws Exception
   {
     super.setUp();
-    tmpDir = temporaryFolder.newFolder();
+    tmpDir = newFolder(temporaryFolder, "junit");
     walker = SpecificSegmentsQuerySegmentWalker.createWalker(conglomerate);
     inventoryView = new TestServerInventoryView();
     serverView = newBrokerServerView(inventoryView);
@@ -109,7 +113,7 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
     exec = Execs.multiThreaded(4, "DruidSchemaConcurrencyTest-%d");
   }
 
-  @After
+  @AfterEach
   @Override
   public void tearDown() throws Exception
   {
@@ -129,8 +133,9 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
    * {@link BrokerServerView#getTimeline} is continuously called to mimic user query
    * processing. All these calls must return without heavy contention.
    */
-  @Test(timeout = 30000L)
-  public void testSegmentMetadataRefreshAndInventoryViewAddSegmentAndBrokerServerViewGetTimeline()
+  @Test
+  @Timeout(value = 30000L, unit = TimeUnit.MILLISECONDS)
+  void segmentMetadataRefreshAndInventoryViewAddSegmentAndBrokerServerViewGetTimeline()
       throws InterruptedException, ExecutionException, TimeoutException
   {
     schema = new BrokerSegmentMetadataCache(
@@ -201,7 +206,7 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
     );
     addSegmentsToCluster(0, numServers, numExistingSegments);
     // Wait for all segments to be loaded in BrokerServerView
-    Assert.assertTrue(segmentLoadLatch.await(5, TimeUnit.SECONDS));
+    assertTrue(segmentLoadLatch.await(5, TimeUnit.SECONDS));
 
     // Trigger refresh of DruidSchema. This will internally run the heavy work
     // mimicked by the overridden buildDruidTable
@@ -219,14 +224,14 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
     // for the first 30 segments, we will still have replicas.
     // for the other 20 segments, they will be completely removed from the cluster.
     removeSegmentsFromCluster(numServers, 50);
-    Assert.assertFalse(refreshFuture.isDone());
+    assertFalse(refreshFuture.isDone());
 
     for (int i = 0; i < 1000; i++) {
       boolean hasTimeline = exec.submit(
           () -> serverView.getTimeline((new TableDataSource(DATASOURCE)).getAnalysis())
                           .isPresent()
       ).get(100, TimeUnit.MILLISECONDS);
-      Assert.assertTrue(hasTimeline);
+      assertTrue(hasTimeline);
       // We want to call getTimeline while BrokerServerView is being updated. Sleep might help with timing.
       Thread.sleep(2);
     }
@@ -245,8 +250,9 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
    * called to mimic reading the segments table of SystemSchema. All these calls
    * must return without heavy contention.
    */
-  @Test(timeout = 30000L)
-  public void testSegmentMetadataRefreshAndDruidSchemaGetSegmentMetadata()
+  @Test
+  @Timeout(value = 30000L, unit = TimeUnit.MILLISECONDS)
+  void segmentMetadataRefreshAndDruidSchemaGetSegmentMetadata()
       throws InterruptedException, ExecutionException, TimeoutException
   {
     schema = new BrokerSegmentMetadataCache(
@@ -317,7 +323,7 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
     );
     addSegmentsToCluster(0, numServers, numExistingSegments);
     // Wait for all segments to be loaded in BrokerServerView
-    Assert.assertTrue(segmentLoadLatch.await(5, TimeUnit.SECONDS));
+    assertTrue(segmentLoadLatch.await(5, TimeUnit.SECONDS));
 
     // Trigger refresh of SegmentMetadataCache. This will internally run the heavy work mimicked
     // by the overridden buildDruidTable
@@ -328,13 +334,13 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
       );
       return null;
     });
-    Assert.assertFalse(refreshFuture.isDone());
+    assertFalse(refreshFuture.isDone());
 
     for (int i = 0; i < 1000; i++) {
       Map<SegmentId, AvailableSegmentMetadata> segmentsMetadata = exec.submit(
           () -> schema.getSegmentMetadataSnapshot()
       ).get(100, TimeUnit.MILLISECONDS);
-      Assert.assertFalse(segmentsMetadata.isEmpty());
+      assertFalse(segmentsMetadata.isEmpty());
       // We want to call getTimeline while refreshing. Sleep might help with timing.
       Thread.sleep(2);
     }
@@ -512,5 +518,23 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
       Set<DataSegment> segments = segmentsMap.get(serverKey);
       return segments != null && segments.contains(segment);
     }
+
+    private static File newFolder(File root, String... subDirs) throws IOException {
+      String subFolder = String.join("/", subDirs);
+      File result = new File(root, subFolder);
+      if (!result.mkdirs()) {
+        throw new IOException("Couldn't create folders " + root);
+      }
+      return result;
+    }
+  }
+
+  private static File newFolder(File root, String... subDirs) throws IOException {
+    String subFolder = String.join("/", subDirs);
+    File result = new File(root, subFolder);
+    if (!result.mkdirs()) {
+      throw new IOException("Couldn't create folders " + root);
+    }
+    return result;
   }
 }

@@ -24,15 +24,19 @@ import org.apache.druid.common.exception.AllowedRegexErrorResponseTransformStrat
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.server.initialization.ServerConfig;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-public class ErrorHandlerTest
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class ErrorHandlerTest
 {
 
   @Test
-  public void testErrorHandlerSanitizesErrorAsExpected()
+  void errorHandlerSanitizesErrorAsExpected()
   {
     ServerConfig serverConfig = Mockito.mock(ServerConfig.class);
     AllowedRegexErrorResponseTransformStrategy emptyAllowedRegexErrorResponseTransformStrategy = new AllowedRegexErrorResponseTransformStrategy(
@@ -44,22 +48,22 @@ public class ErrorHandlerTest
     QueryException input = new QueryException("error", "error message", "error class", "host");
 
     RuntimeException output = errorHandler.sanitize(input);
-    Assert.assertNull(output.getMessage());
+    assertNull(output.getMessage());
   }
 
   @Test
-  public void testErrorHandlerDefaultErrorResponseTransformStrategySanitizesErrorAsExpected()
+  void errorHandlerDefaultErrorResponseTransformStrategySanitizesErrorAsExpected()
   {
     ServerConfig serverConfig = new ServerConfig();
     ErrorHandler errorHandler = new ErrorHandler(serverConfig);
     QueryInterruptedException input = new QueryInterruptedException("error", "error messagez", "error class", "host");
 
     RuntimeException output = errorHandler.sanitize(input);
-    Assert.assertEquals("error messagez", output.getMessage());
+    assertEquals("error messagez", output.getMessage());
   }
 
   @Test
-  public void testErrorHandlerHasAffectingErrorResponseTransformStrategyReturnsTrueWhenNotUsingNoErrorResponseTransformStrategy()
+  void errorHandlerHasAffectingErrorResponseTransformStrategyReturnsTrueWhenNotUsingNoErrorResponseTransformStrategy()
   {
     ServerConfig serverConfig = Mockito.mock(ServerConfig.class);
     AllowedRegexErrorResponseTransformStrategy emptyAllowedRegexErrorResponseTransformStrategy = new AllowedRegexErrorResponseTransformStrategy(
@@ -68,19 +72,19 @@ public class ErrorHandlerTest
     Mockito.when(serverConfig.getErrorResponseTransformStrategy())
            .thenReturn(emptyAllowedRegexErrorResponseTransformStrategy);
     ErrorHandler errorHandler = new ErrorHandler(serverConfig);
-    Assert.assertTrue(errorHandler.hasAffectingErrorResponseTransformStrategy());
+    assertTrue(errorHandler.hasAffectingErrorResponseTransformStrategy());
   }
 
   @Test
-  public void testErrorHandlerHasAffectingErrorResponseTransformStrategyReturnsFalseWhenUsingNoErrorResponseTransformStrategy()
+  void errorHandlerHasAffectingErrorResponseTransformStrategyReturnsFalseWhenUsingNoErrorResponseTransformStrategy()
   {
     ServerConfig serverConfig = new ServerConfig();
     ErrorHandler errorHandler = new ErrorHandler(serverConfig);
-    Assert.assertFalse(errorHandler.hasAffectingErrorResponseTransformStrategy());
+    assertFalse(errorHandler.hasAffectingErrorResponseTransformStrategy());
   }
 
   @Test
-  public void testErrorHandlerHandlesNonSanitizableExceptionCorrectly()
+  void errorHandlerHandlesNonSanitizableExceptionCorrectly()
   {
     ServerConfig serverConfig = Mockito.mock(ServerConfig.class);
     AllowedRegexErrorResponseTransformStrategy emptyAllowedRegexErrorResponseTransformStrategy = new AllowedRegexErrorResponseTransformStrategy(
@@ -92,6 +96,6 @@ public class ErrorHandlerTest
 
     Exception input = new Exception("message");
     RuntimeException output = errorHandler.sanitize(input);
-    Assert.assertEquals(null, output.getMessage());
+    assertNull(output.getMessage());
   }
 }

@@ -27,13 +27,14 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class FiltrationTest extends CalciteTestBase
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+class FiltrationTest extends CalciteTestBase
 {
   @Test
-  public void testNotIntervals()
+  void notIntervals()
   {
     final Filtration filtration = Filtration.create(
         new NotDimFilter(
@@ -46,12 +47,12 @@ public class FiltrationTest extends CalciteTestBase
         null
     ).optimize(RowSignature.builder().add(ColumnHolder.TIME_COLUMN_NAME, ColumnType.LONG).build());
 
-    Assert.assertEquals(
+    assertEquals(
         ImmutableList.of(Filtration.eternity()),
         filtration.getIntervals()
     );
 
-    Assert.assertEquals(
+    assertEquals(
         new NotDimFilter(
             new IntervalDimFilter(
                 ColumnHolder.TIME_COLUMN_NAME,

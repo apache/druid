@@ -25,7 +25,7 @@ import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class CalciteSysQueryTest extends BaseCalciteQueryTest
 {
@@ -33,7 +33,7 @@ public class CalciteSysQueryTest extends BaseCalciteQueryTest
   public NotYetSupportedProcessor NegativeTestProcessor = new NotYetSupportedProcessor();
 
   @Test
-  public void testTasksSum()
+  void tasksSum()
   {
     msqIncompatible();
 
@@ -51,7 +51,7 @@ public class CalciteSysQueryTest extends BaseCalciteQueryTest
 
   @NotYetSupported(Modes.EXPRESSION_NOT_GROUPED)
   @Test
-  public void testTasksSumOver()
+  void tasksSumOver()
   {
     msqIncompatible();
 
@@ -67,7 +67,7 @@ public class CalciteSysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testRoundOnSysTableColumn()
+  void roundOnSysTableColumn()
   {
     msqIncompatible();
 
@@ -85,7 +85,7 @@ public class CalciteSysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testRoundOnAvgOnSysTableColumn()
+  void roundOnAvgOnSysTableColumn()
   {
     msqIncompatible();
 

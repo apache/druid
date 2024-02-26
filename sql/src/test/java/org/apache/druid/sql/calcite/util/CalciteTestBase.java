@@ -30,7 +30,7 @@ import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.SimpleExtraction;
 import org.apache.druid.sql.http.SqlParameter;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.BeforeAll;
 
 import java.util.Collections;
 import java.util.List;
@@ -39,7 +39,7 @@ public abstract class CalciteTestBase
 {
   public static final List<SqlParameter> DEFAULT_PARAMETERS = ImmutableList.of();
 
-  @BeforeClass
+  @BeforeAll
   public static void setupCalciteProperties()
   {
     NullHandling.initializeForTests();

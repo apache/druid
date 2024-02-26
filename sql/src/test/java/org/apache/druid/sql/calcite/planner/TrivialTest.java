@@ -25,8 +25,9 @@ import org.apache.druid.sql.calcite.table.DruidTable;
 import java.util.Collections;
 import java.util.Set;
 
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test class to reference items that are otherwise unused in this package, and
@@ -45,7 +46,7 @@ public class TrivialTest
     @Override
     public DruidTable resolveDatasource(String tableName, PhysicalDatasourceMetadata dsMetadata)
     {
-      assertTrue("foo".equals(tableName));
+      assertEquals("foo", tableName);
       return null;
     }
 

@@ -29,13 +29,14 @@ import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlParameter;
 import org.apache.druid.sql.http.SqlQuery;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class SqlQueryTest extends CalciteTestBase
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+class SqlQueryTest extends CalciteTestBase
 {
   @Test
-  public void testSerde() throws Exception
+  void serde() throws Exception
   {
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     final SqlQuery query = new SqlQuery(
@@ -47,11 +48,11 @@ public class SqlQueryTest extends CalciteTestBase
         ImmutableMap.of("useCache", false),
         ImmutableList.of(new SqlParameter(SqlType.INTEGER, 1))
     );
-    Assert.assertEquals(query, jsonMapper.readValue(jsonMapper.writeValueAsString(query), SqlQuery.class));
+    assertEquals(query, jsonMapper.readValue(jsonMapper.writeValueAsString(query), SqlQuery.class));
   }
 
   @Test
-  public void testEquals()
+  void equals()
   {
     EqualsVerifier.forClass(SqlQuery.class).withNonnullFields("query").usingGetClass().verify();
     EqualsVerifier.forClass(SqlParameter.class).withNonnullFields("type").usingGetClass().verify();

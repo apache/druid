@@ -26,16 +26,18 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.builtin.IPv4AddressMatchOperatorConversion;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class IPv4AddressMatchExpressionTest extends CalciteTestBase
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+class IPv4AddressMatchExpressionTest extends CalciteTestBase
 {
   private static final String IPV4 = "192.168.0.1";
   private static final long IPV4_LONG = 3232235521L;
@@ -57,17 +59,17 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
   private IPv4AddressMatchOperatorConversion target;
   private ExpressionTestHelper testHelper;
 
-  @Before
-  public void setUp()
+  @BeforeEach
+  void setUp()
   {
     target = new IPv4AddressMatchOperatorConversion();
     testHelper = new ExpressionTestHelper(ROW_SIGNATURE, BINDINGS);
   }
 
   @Test
-  public void testTooFewArgs()
+  void tooFewArgs()
   {
-    Throwable t = Assert.assertThrows(
+    Throwable t = assertThrows(
         ExpressionValidationException.class,
         () -> testExpression(
             Collections.emptyList(),
@@ -75,15 +77,15 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
             IGNORE_EXPECTED_RESULT
         )
     );
-    Assert.assertEquals("Function[ipv4_match] requires 2 arguments", t.getMessage());
+    assertEquals("Function[ipv4_match] requires 2 arguments", t.getMessage());
   }
 
   @Test
-  public void testTooManyArgs()
+  void tooManyArgs()
   {
     String address = IPV4;
     String subnet = SUBNET_192_168;
-    Throwable t = Assert.assertThrows(
+    Throwable t = assertThrows(
         ExpressionValidationException.class,
         () -> testExpression(
             Arrays.asList(
@@ -95,15 +97,15 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
             IGNORE_EXPECTED_RESULT
         )
     );
-    Assert.assertEquals("Function[ipv4_match] requires 2 arguments", t.getMessage());
+    assertEquals("Function[ipv4_match] requires 2 arguments", t.getMessage());
   }
 
   @Test
-  public void testSubnetArgNotLiteral()
+  void subnetArgNotLiteral()
   {
     String address = IPV4;
     String variableName = VAR;
-    Throwable t = Assert.assertThrows(
+    Throwable t = assertThrows(
         ExpressionValidationException.class,
         () -> testExpression(
             Arrays.asList(
@@ -114,15 +116,15 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
             IGNORE_EXPECTED_RESULT
         )
     );
-    Assert.assertEquals("Function[ipv4_match] subnet argument must be a literal", t.getMessage());
+    assertEquals("Function[ipv4_match] subnet argument must be a literal", t.getMessage());
   }
 
   @Test
-  public void testSubnetArgInvalid()
+  void subnetArgInvalid()
   {
     String address = IPV4;
     String invalidSubnet = "192.168.0.1/invalid";
-    Throwable t = Assert.assertThrows(
+    Throwable t = assertThrows(
         ExpressionValidationException.class,
         () -> testExpression(
             Arrays.asList(
@@ -133,11 +135,11 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
             IGNORE_EXPECTED_RESULT
         )
     );
-    Assert.assertEquals("Function[ipv4_match] subnet arg has an invalid format: 192.168.0.1/invalid", t.getMessage());
+    assertEquals("Function[ipv4_match] subnet arg has an invalid format: 192.168.0.1/invalid", t.getMessage());
   }
 
   @Test
-  public void testNullArg()
+  void nullArg()
   {
     String subnet = SUBNET_192_168;
     testExpression(
@@ -151,7 +153,7 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
   }
 
   @Test
-  public void testInvalidArgType()
+  void invalidArgType()
   {
     String variableNameWithInvalidType = VAR;
     String subnet = SUBNET_192_168;
@@ -166,73 +168,73 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
   }
 
   @Test
-  public void testMatchingStringArgIPv4()
+  void matchingStringArgIPv4()
   {
     testExpression(IPV4, SUBNET_192_168, MATCH);
   }
 
   @Test
-  public void testNotMatchingStringArgIPv4()
+  void notMatchingStringArgIPv4()
   {
     testExpression(IPV4, SUBNET_10, NO_MATCH);
   }
 
   @Test
-  public void testMatchingStringArgIPv6Mapped()
+  void matchingStringArgIPv6Mapped()
   {
     testExpression(IPV6_MAPPED, SUBNET_192_168, NO_MATCH);
   }
 
   @Test
-  public void testNotMatchingStringArgIPv6Mapped()
+  void notMatchingStringArgIPv6Mapped()
   {
     testExpression(IPV6_MAPPED, SUBNET_10, NO_MATCH);
   }
 
   @Test
-  public void testMatchingStringArgIPv6Compatible()
+  void matchingStringArgIPv6Compatible()
   {
     testExpression(IPV6_COMPATIBLE, SUBNET_192_168, NO_MATCH);
   }
 
   @Test
-  public void testNotMatchingStringArgIPv6Compatible()
+  void notMatchingStringArgIPv6Compatible()
   {
     testExpression(IPV6_COMPATIBLE, SUBNET_10, NO_MATCH);
   }
 
   @Test
-  public void testNotIpAddress()
+  void notIpAddress()
   {
     testExpression("druid.apache.org", SUBNET_192_168, NO_MATCH);
   }
 
   @Test
-  public void testMatchingLongArg()
+  void matchingLongArg()
   {
     testExpression(IPV4_LONG, SUBNET_192_168, MATCH);
   }
 
   @Test
-  public void testNotMatchingLongArg()
+  void notMatchingLongArg()
   {
     testExpression(IPV4_LONG, SUBNET_10, NO_MATCH);
   }
 
   @Test
-  public void testMatchingStringArgUnsignedInt()
+  void matchingStringArgUnsignedInt()
   {
     testExpression(IPV4_UINT, SUBNET_192_168, NO_MATCH);
   }
 
   @Test
-  public void testNotMatchingStringArgUnsignedInt()
+  void notMatchingStringArgUnsignedInt()
   {
     testExpression(IPV4_UINT, SUBNET_10, NO_MATCH);
   }
 
   @Test
-  public void testInclusive()
+  void inclusive()
   {
     String subnet = SUBNET_192_168;
     testExpression(IPV4_NETWORK, subnet, MATCH);

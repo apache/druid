@@ -40,15 +40,16 @@ import org.apache.druid.sql.calcite.schema.NamedViewSchema;
 import org.apache.druid.sql.calcite.schema.ViewSchema;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
-public class ExternalTableScanRuleTest
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+class ExternalTableScanRuleTest
 {
   @Test
-  public void testMatchesWhenExternalScanUnsupported()
+  void matchesWhenExternalScanUnsupported()
   {
     final NativeSqlEngine engine = CalciteTests.createMockSqlEngine(
         EasyMock.createMock(QuerySegmentWalker.class),
@@ -86,7 +87,7 @@ public class ExternalTableScanRuleTest
 
     ExternalTableScanRule rule = new ExternalTableScanRule(plannerContext);
     rule.matches(EasyMock.createMock(RelOptRuleCall.class));
-    Assert.assertEquals(
+    assertEquals(
         "Cannot use [EXTERN] with SQL engine [native].",
         plannerContext.getPlanningError()
     );

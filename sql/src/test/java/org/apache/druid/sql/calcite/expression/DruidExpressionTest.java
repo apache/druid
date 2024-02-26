@@ -24,34 +24,36 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class DruidExpressionTest extends InitializedNullHandlingTest
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class DruidExpressionTest extends InitializedNullHandlingTest
 {
   @Test
-  public void test_doubleLiteral_asString()
+  void double_literal_as_string()
   {
-    Assert.assertEquals("0.0", DruidExpression.doubleLiteral(0));
-    Assert.assertEquals("-2.0", DruidExpression.doubleLiteral(-2));
-    Assert.assertEquals("2.0", DruidExpression.doubleLiteral(2));
-    Assert.assertEquals("2.1", DruidExpression.doubleLiteral(2.1));
-    Assert.assertEquals("2.12345678", DruidExpression.doubleLiteral(2.12345678));
-    Assert.assertEquals("2.2E122", DruidExpression.doubleLiteral(2.2e122));
-    Assert.assertEquals("NaN", DruidExpression.doubleLiteral(Double.NaN));
-    Assert.assertEquals("Infinity", DruidExpression.doubleLiteral(Double.POSITIVE_INFINITY));
-    Assert.assertEquals("-Infinity", DruidExpression.doubleLiteral(Double.NEGATIVE_INFINITY));
+    assertEquals("0.0", DruidExpression.doubleLiteral(0));
+    assertEquals("-2.0", DruidExpression.doubleLiteral(-2));
+    assertEquals("2.0", DruidExpression.doubleLiteral(2));
+    assertEquals("2.1", DruidExpression.doubleLiteral(2.1));
+    assertEquals("2.12345678", DruidExpression.doubleLiteral(2.12345678));
+    assertEquals("2.2E122", DruidExpression.doubleLiteral(2.2e122));
+    assertEquals("NaN", DruidExpression.doubleLiteral(Double.NaN));
+    assertEquals("Infinity", DruidExpression.doubleLiteral(Double.POSITIVE_INFINITY));
+    assertEquals("-Infinity", DruidExpression.doubleLiteral(Double.NEGATIVE_INFINITY));
     //CHECKSTYLE.OFF: Regexp
     // Min/max double are banned by regexp due to often being inappropriate; but they are appropriate here.
-    Assert.assertEquals("4.9E-324", DruidExpression.doubleLiteral(Double.MIN_VALUE));
-    Assert.assertEquals("1.7976931348623157E308", DruidExpression.doubleLiteral(Double.MAX_VALUE));
+    assertEquals("4.9E-324", DruidExpression.doubleLiteral(Double.MIN_VALUE));
+    assertEquals("1.7976931348623157E308", DruidExpression.doubleLiteral(Double.MAX_VALUE));
     //CHECKSTYLE.ON: Regexp
-    Assert.assertEquals("2.2250738585072014E-308", DruidExpression.doubleLiteral(Double.MIN_NORMAL));
+    assertEquals("2.2250738585072014E-308", DruidExpression.doubleLiteral(Double.MIN_NORMAL));
   }
 
   @Test
-  public void test_doubleLiteral_roundTrip()
+  void double_literal_round_trip()
   {
     final double[] doubles = {
         0,
@@ -73,24 +75,24 @@ public class DruidExpressionTest extends InitializedNullHandlingTest
 
     for (double n : doubles) {
       final Expr expr = Parser.parse(DruidExpression.doubleLiteral(n), ExprMacroTable.nil());
-      Assert.assertTrue(expr.isLiteral());
-      MatcherAssert.assertThat(expr.getLiteralValue(), CoreMatchers.instanceOf(Double.class));
-      Assert.assertEquals(n, (double) expr.getLiteralValue(), 0d);
+      assertTrue(expr.isLiteral());
+      assertThat(expr.getLiteralValue(), CoreMatchers.instanceOf(Double.class));
+      assertEquals(n, (double) expr.getLiteralValue(), 0d);
     }
   }
 
   @Test
-  public void test_longLiteral_asString()
+  void long_literal_as_string()
   {
-    Assert.assertEquals("0", DruidExpression.longLiteral(0));
-    Assert.assertEquals("-2", DruidExpression.longLiteral(-2));
-    Assert.assertEquals("2", DruidExpression.longLiteral(2));
-    Assert.assertEquals("9223372036854775807", DruidExpression.longLiteral(Long.MAX_VALUE));
-    Assert.assertEquals("-9223372036854775808", DruidExpression.longLiteral(Long.MIN_VALUE));
+    assertEquals("0", DruidExpression.longLiteral(0));
+    assertEquals("-2", DruidExpression.longLiteral(-2));
+    assertEquals("2", DruidExpression.longLiteral(2));
+    assertEquals("9223372036854775807", DruidExpression.longLiteral(Long.MAX_VALUE));
+    assertEquals("-9223372036854775808", DruidExpression.longLiteral(Long.MIN_VALUE));
   }
 
   @Test
-  public void longLiteral_roundTrip()
+  void longLiteral_roundTrip()
   {
     final long[] longs = {
         0,
@@ -102,9 +104,9 @@ public class DruidExpressionTest extends InitializedNullHandlingTest
 
     for (long n : longs) {
       final Expr expr = Parser.parse(DruidExpression.longLiteral(n), ExprMacroTable.nil());
-      Assert.assertTrue(expr.isLiteral());
-      MatcherAssert.assertThat(expr.getLiteralValue(), CoreMatchers.instanceOf(Number.class));
-      Assert.assertEquals(n, ((Number) expr.getLiteralValue()).longValue());
+      assertTrue(expr.isLiteral());
+      assertThat(expr.getLiteralValue(), CoreMatchers.instanceOf(Number.class));
+      assertEquals(n, ((Number) expr.getLiteralValue()).longValue());
     }
   }
 }

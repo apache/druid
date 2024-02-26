@@ -33,15 +33,15 @@ import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 
-public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
+class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
 {
   // __time for foo is [2000-01-01, 2000-01-02, 2000-01-03, 2001-01-01, 2001-01-02, 2001-01-03]
   @Test
-  public void testMaxTimeQuery()
+  void maxTimeQuery()
   {
     HashMap<String, Object> queryContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     queryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
@@ -62,7 +62,7 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMinTimeQuery()
+  void minTimeQuery()
   {
     HashMap<String, Object> queryContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     queryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
@@ -83,7 +83,7 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMinTimeQueryWithFilters()
+  void minTimeQueryWithFilters()
   {
     HashMap<String, Object> queryContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     queryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
@@ -111,7 +111,7 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
   // Currently, if both min(__time) and max(__time) are present, we don't convert it
   // to a timeBoundary query. (ref : https://github.com/apache/druid/issues/12479)
   @Test
-  public void testMinMaxTimeQuery()
+  void minMaxTimeQuery()
   {
     HashMap<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
@@ -137,7 +137,7 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMaxTimeQueryWithJoin()
+  void maxTimeQueryWithJoin()
   {
     // Cannot vectorize due to JOIN.
     cannotVectorize();

@@ -30,40 +30,43 @@ import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.table.RowSignatures;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class DruidOperatorTableTest
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class DruidOperatorTableTest
 {
   @Test
-  public void testBuiltInOperatorTable()
+  void builtInOperatorTable()
   {
     DruidOperatorTable operatorTable = new DruidOperatorTable(ImmutableSet.of(), ImmutableSet.of());
     List<SqlOperator> operatorList = operatorTable.getOperatorList();
-    Assert.assertNotNull(operatorList);
-    Assert.assertTrue("Built-in operators should be loaded by default", operatorList.size() > 0);
+    assertNotNull(operatorList);
+    assertTrue(operatorList.size() > 0, "Built-in operators should be loaded by default");
   }
 
   @Test
-  public void testIsFunctionSyntax()
+  void isFunctionSyntax()
   {
-    Assert.assertTrue(DruidOperatorTable.isFunctionSyntax(SqlSyntax.FUNCTION));
-    Assert.assertTrue(DruidOperatorTable.isFunctionSyntax(SqlSyntax.FUNCTION_STAR));
-    Assert.assertTrue(DruidOperatorTable.isFunctionSyntax(SqlSyntax.FUNCTION_ID));
-    Assert.assertTrue(DruidOperatorTable.isFunctionSyntax(SqlSyntax.SPECIAL));
-    Assert.assertTrue(DruidOperatorTable.isFunctionSyntax(SqlSyntax.INTERNAL));
+    assertTrue(DruidOperatorTable.isFunctionSyntax(SqlSyntax.FUNCTION));
+    assertTrue(DruidOperatorTable.isFunctionSyntax(SqlSyntax.FUNCTION_STAR));
+    assertTrue(DruidOperatorTable.isFunctionSyntax(SqlSyntax.FUNCTION_ID));
+    assertTrue(DruidOperatorTable.isFunctionSyntax(SqlSyntax.SPECIAL));
+    assertTrue(DruidOperatorTable.isFunctionSyntax(SqlSyntax.INTERNAL));
 
-    Assert.assertFalse(DruidOperatorTable.isFunctionSyntax(SqlSyntax.BINARY));
-    Assert.assertFalse(DruidOperatorTable.isFunctionSyntax(SqlSyntax.PREFIX));
-    Assert.assertFalse(DruidOperatorTable.isFunctionSyntax(SqlSyntax.POSTFIX));
+    assertFalse(DruidOperatorTable.isFunctionSyntax(SqlSyntax.BINARY));
+    assertFalse(DruidOperatorTable.isFunctionSyntax(SqlSyntax.PREFIX));
+    assertFalse(DruidOperatorTable.isFunctionSyntax(SqlSyntax.POSTFIX));
   }
 
   @Test
-  public void testCustomOperatorTable()
+  void customOperatorTable()
   {
     final SqlOperator operator1 = OperatorConversions
         .operatorBuilder("FOO")
@@ -87,14 +90,14 @@ public class DruidOperatorTableTest
 
     DruidOperatorTable operatorTable = new DruidOperatorTable(ImmutableSet.of(), extractionOperators);
     List<SqlOperator> operatorList = operatorTable.getOperatorList();
-    Assert.assertNotNull(operatorList);
-    Assert.assertTrue("We should have at least two operators -- the ones we loaded above plus the built-in"
-                      + " operators that gets loaded by default", operatorList.size() > 2);
+    assertNotNull(operatorList);
+    assertTrue(operatorList.size() > 2, "We should have at least two operators -- the ones we loaded above plus the built-in"
+                      + " operators that gets loaded by default");
 
-    Assert.assertTrue(operatorList.contains(operator1));
-    Assert.assertTrue(operatorList.contains(operator2));
+    assertTrue(operatorList.contains(operator1));
+    assertTrue(operatorList.contains(operator2));
 
-    Assert.assertTrue(DruidOperatorTable.isFunctionSyntax(operator1.getSyntax()));
-    Assert.assertFalse(DruidOperatorTable.isFunctionSyntax(operator2.getSyntax()));
+    assertTrue(DruidOperatorTable.isFunctionSyntax(operator1.getSyntax()));
+    assertFalse(DruidOperatorTable.isFunctionSyntax(operator2.getSyntax()));
   }
 }

@@ -42,9 +42,9 @@ import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.local.LocalFileExportStorageProvider;
 import org.apache.druid.storage.local.LocalFileStorageConnectorProvider;
 import org.hamcrest.CoreMatchers;
-import org.junit.Ignore;
-import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
@@ -77,8 +77,8 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
 
   // Disabled until replace supports external destinations. To be enabled after that point.
   @Test
-  @Ignore
-  public void testReplaceIntoExtern()
+  @Disabled
+  void replaceIntoExtern()
   {
     testIngestionQuery()
         .sql(StringUtils.format("REPLACE INTO EXTERN(%s(basePath => 'export')) "
@@ -102,7 +102,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testReplaceIntoExternShouldThrowUnsupportedException()
+  void replaceIntoExternShouldThrowUnsupportedException()
   {
     testIngestionQuery()
         .sql(StringUtils.format("REPLACE INTO EXTERN(%s(basePath => 'export')) "
@@ -123,7 +123,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testExportWithoutRequiredParameter()
+  void exportWithoutRequiredParameter()
   {
     testIngestionQuery()
         .sql(StringUtils.format("INSERT INTO EXTERN(%s()) "
@@ -139,7 +139,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testExportWithPartitionedBy()
+  void exportWithPartitionedBy()
   {
     testIngestionQuery()
         .sql(StringUtils.format("INSERT INTO EXTERN(%s()) "
@@ -154,7 +154,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertIntoExtern()
+  void insertIntoExtern()
   {
     testIngestionQuery()
         .sql(StringUtils.format("INSERT INTO EXTERN(%s()) "
@@ -177,7 +177,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testExportWithoutFormat()
+  void exportWithoutFormat()
   {
     testIngestionQuery()
         .sql("INSERT INTO EXTERN(testStorage(bucket=>'bucket1',prefix=>'prefix1',tempDir=>'/tempdir',chunkSize=>'5242880',maxRetry=>'1')) "
@@ -190,7 +190,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testWithUnsupportedStorageConnector()
+  void withUnsupportedStorageConnector()
   {
     testIngestionQuery()
         .sql("insert into extern(nonExistent()) as csv select  __time, dim1 from foo")
@@ -204,7 +204,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testWithForbiddenDestination()
+  void withForbiddenDestination()
   {
     testIngestionQuery()
         .sql(StringUtils.format("insert into extern(%s()) as csv select  __time, dim1 from foo", CalciteTests.FORBIDDEN_DESTINATION))
@@ -213,7 +213,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testSelectFromTableNamedExport()
+  void selectFromTableNamedExport()
   {
     testIngestionQuery()
         .sql("INSERT INTO csv SELECT dim2 FROM foo PARTITIONED BY ALL")
@@ -232,7 +232,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testNormalInsertWithFormat()
+  void normalInsertWithFormat()
   {
     testIngestionQuery()
         .sql("REPLACE INTO testTable "
@@ -248,7 +248,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testUnsupportedExportFormat()
+  void unsupportedExportFormat()
   {
     testIngestionQuery()
         .sql("REPLACE INTO testTable "

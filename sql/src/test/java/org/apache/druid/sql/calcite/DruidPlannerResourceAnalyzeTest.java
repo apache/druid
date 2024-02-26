@@ -28,16 +28,16 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
+class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
 {
   @Test
-  public void testTable()
+  void table()
   {
     final String sql = "SELECT COUNT(*) FROM foo WHERE foo.dim1 <> 'z'";
 
@@ -50,7 +50,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testConfusingTable()
+  void confusingTable()
   {
     final String sql = "SELECT COUNT(*) FROM foo as druid WHERE druid.dim1 <> 'z'";
 
@@ -63,7 +63,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSubquery()
+  void subquery()
   {
     final String sql = "SELECT COUNT(*)\n"
                        + "FROM (\n"
@@ -84,7 +84,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSubqueryUnion()
+  void subqueryUnion()
   {
     final String sql = "SELECT\n"
                        + "  SUM(cnt),\n"
@@ -104,7 +104,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testJoin()
+  void join()
   {
     final String sql = "SELECT COUNT(*) FROM foo INNER JOIN numfoo ON foo.dim1 = numfoo.dim1 WHERE numfoo.dim1 <> 'z'";
 
@@ -118,7 +118,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testView()
+  void view()
   {
     final String sql = "SELECT COUNT(*) FROM view.aview as druid WHERE dim1_firstchar <> 'z'";
 
@@ -131,7 +131,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSubqueryView()
+  void subqueryView()
   {
     final String sql = "SELECT COUNT(*)\n"
                        + "FROM (\n"
@@ -152,7 +152,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testJoinView()
+  void joinView()
   {
     final String sql = "SELECT COUNT(*) FROM view.cview as aview INNER JOIN numfoo ON aview.dim2 = numfoo.dim2 WHERE numfoo.dim1 <> 'z'";
 
@@ -166,7 +166,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testConfusingViewIdentifiers()
+  void confusingViewIdentifiers()
   {
     final String sql = "SELECT COUNT(*) FROM view.dview as druid WHERE druid.numfoo <> 'z'";
 
@@ -179,7 +179,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testDynamicParameters()
+  void dynamicParameters()
   {
     final String sql = "SELECT SUBSTRING(dim2, CAST(? as BIGINT), CAST(? as BIGINT)) FROM druid.foo LIMIT ?";
     analyzeResources(
@@ -191,7 +191,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSysTables()
+  void sysTables()
   {
     testSysTable("SELECT * FROM sys.segments", null, PLANNER_CONFIG_DEFAULT);
     testSysTable("SELECT * FROM sys.servers", null, PLANNER_CONFIG_DEFAULT);
@@ -242,7 +242,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSysTableWithQueryContext()
+  void sysTableWithQueryContext()
   {
     final AuthConfig authConfig = AuthConfig.newBuilder().setAuthorizeQueryContextParams(true).build();
     final Map<String, Object> context = ImmutableMap.of(
@@ -275,7 +275,7 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testQueryContext()
+  void queryContext()
   {
     final String sql = "SELECT COUNT(*) FROM foo WHERE foo.dim1 <> 'z'";
     Map<String, Object> context = ImmutableMap.of("baz", "fo", "nested-bar", ImmutableMap.of("nested-key", "nested-val"));

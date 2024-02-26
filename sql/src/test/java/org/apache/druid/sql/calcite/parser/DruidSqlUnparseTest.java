@@ -23,20 +23,20 @@ import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.dialect.CalciteSqlDialect;
 import org.apache.calcite.sql.pretty.SqlPrettyWriter;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.StringReader;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * A class containing unit tests for testing implementations of {@link org.apache.calcite.sql.SqlNode#unparse(SqlWriter, int, int)}
  * in custom Druid SqlNode classes, like {@link DruidSqlInsert} and {@link DruidSqlReplace}.
  */
-public class DruidSqlUnparseTest
+class DruidSqlUnparseTest
 {
   @Test
-  public void testUnparseInsert() throws ParseException
+  void unparseInsert() throws ParseException
   {
     String sqlQuery = "INSERT INTO dst SELECT * FROM foo PARTITIONED BY ALL TIME";
     String prettySqlQuery = "INSERT INTO \"dst\"\n"
@@ -52,7 +52,7 @@ public class DruidSqlUnparseTest
   }
 
   @Test
-  public void testUnparseReplaceAll() throws ParseException
+  void unparseReplaceAll() throws ParseException
   {
     String sqlQuery = "REPLACE INTO dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME CLUSTERED BY dim1";
     String prettySqlQuery = "REPLACE INTO \"dst\"\n"
@@ -70,7 +70,7 @@ public class DruidSqlUnparseTest
   }
 
   @Test
-  public void testUnparseReplaceWhere() throws ParseException
+  void unparseReplaceWhere() throws ParseException
   {
     String sqlQuery = "REPLACE INTO dst OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00' SELECT * FROM foo PARTITIONED BY DAY CLUSTERED BY dim1";
     String prettySqlQuery = "REPLACE INTO \"dst\"\n"
@@ -98,7 +98,7 @@ public class DruidSqlUnparseTest
   }
 
   @Test
-  public void testUnparseExternalSqlIdentifierReplace() throws ParseException
+  void unparseExternalSqlIdentifierReplace() throws ParseException
   {
     String sqlQuery = "REPLACE INTO EXTERN( s3(bucket=>'bucket1',prefix=>'prefix1') ) AS CSV OVERWRITE ALL SELECT dim2 FROM foo";
     String prettySqlQuery = "REPLACE INTO EXTERN(S3(bucket => 'bucket1', prefix => 'prefix1'))\n"
@@ -113,7 +113,7 @@ public class DruidSqlUnparseTest
   }
 
   @Test
-  public void testUnparseExternalSqlIdentifierInsert() throws ParseException
+  void unparseExternalSqlIdentifierInsert() throws ParseException
   {
     String sqlQuery = "INSERT INTO EXTERN( s3(bucket=>'bucket1',prefix=>'prefix1') ) AS CSV SELECT dim2 FROM foo";
     String prettySqlQuery = "INSERT INTO EXTERN(S3(bucket => 'bucket1', prefix => 'prefix1'))\n"

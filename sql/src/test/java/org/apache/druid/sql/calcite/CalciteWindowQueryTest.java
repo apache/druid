@@ -38,10 +38,8 @@ import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.QueryVerification.QueryResultsVerifier;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.hamcrest.Matchers;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.net.URL;
@@ -50,15 +48,14 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeThat;
+import static org.hamcrest.junit.MatcherAssume.assumeThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * These tests are file-based, look in resources -> calcite/tests/window for the set of test specifications.
  */
-@RunWith(Parameterized.class)
 public class CalciteWindowQueryTest extends BaseCalciteQueryTest
 {
 
@@ -72,7 +69,6 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
 
   private static final ObjectMapper YAML_JACKSON = new DefaultObjectMapper(new YAMLFactory(), "tests");
 
-  @Parameterized.Parameters(name = "{0}")
   public static Object parametersForWindowQueryTest() throws Exception
   {
     final URL windowFolderUrl = ClassLoader.getSystemResource("calcite/tests/window");
@@ -86,9 +82,9 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
         .toArray();
   }
 
-  private final String filename;
+  private String filename;
 
-  public CalciteWindowQueryTest(String filename)
+  public void initCalciteWindowQueryTest(String filename)
   {
     this.filename = filename;
   }
@@ -98,7 +94,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
     private WindowQueryTestInputClass input;
     private ObjectMapper queryJackson;
 
-    public TestCase(String filename) throws Exception
+    public void initCalciteWindowQueryTest(String filename) throws Exception
     {
       final URL systemResource = ClassLoader.getSystemResource("calcite/tests/window/" + filename);
 
@@ -125,7 +121,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
       if (results.exception != null) {
         throw new RE(results.exception, "Failed to execute because of exception.");
       }
-      Assert.assertEquals(1, results.recordedQueries.size());
+      assertEquals(1, results.recordedQueries.size());
 
       maybeDumpActualResults(results.results);
       if (input.expectedOperators != null) {
@@ -137,7 +133,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
       ColumnType[] types = new ColumnType[outputSignature.size()];
       for (int i = 0; i < outputSignature.size(); ++i) {
         types[i] = outputSignature.getColumnType(i).get();
-        Assert.assertEquals(types[i], results.signature.getColumnType(i).get());
+        assertEquals(types[i], results.signature.getColumnType(i).get());
       }
 
       for (Object[] result : input.expectedResults) {
@@ -177,13 +173,13 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
         final OperatorFactory expectedOperator = expectedOperators.get(i);
         final OperatorFactory actualOperator = currentOperators.get(i);
         if (!expectedOperator.validateEquivalent(actualOperator)) {
-          assertEquals("Operator Mismatch, index[" + i + "]",
-              queryJackson.writeValueAsString(expectedOperator),
-              queryJackson.writeValueAsString(actualOperator));
+          assertEquals(queryJackson.writeValueAsString(expectedOperator),
+              queryJackson.writeValueAsString(actualOperator),
+              "Operator Mismatch, index[" + i + "]");
           fail("validateEquivalent failed; but textual comparision of operators didn't reported the mismatch!");
         }
       }
-      assertEquals("Operator count mismatch!", expectedOperators.size(), currentOperators.size());
+      assertEquals(expectedOperators.size(), currentOperators.size(), "Operator count mismatch!");
     }
 
     private void maybeDumpActualResults(List<Object[]> results) throws Exception
@@ -200,10 +196,12 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
     }
   }
 
-  @Test
+  @MethodSource("parametersForWindowQueryTest")
+  @ParameterizedTest(name = "{0}")
   @SuppressWarnings("unchecked")
-  public void windowQueryTest() throws Exception
+  public void windowQueryTest(String filename) throws Exception
   {
+    initCalciteWindowQueryTest(filename);
     TestCase testCase = new TestCase(filename);
 
     assumeThat(testCase.getType(), Matchers.not(TestType.failingTest));
@@ -222,10 +220,12 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
     }
   }
 
-  @Test
+  @MethodSource("parametersForWindowQueryTest")
+  @ParameterizedTest(name = "{0}")
   @SuppressWarnings("unchecked")
-  public void windowQueryTestWithCustomContextMaxSubqueryBytes() throws Exception
+  public void windowQueryTestWithCustomContextMaxSubqueryBytes(String filename) throws Exception
   {
+    initCalciteWindowQueryTest(filename);
     TestCase testCase = new TestCase(filename);
 
     assumeThat(testCase.getType(), Matchers.not(TestType.failingTest));

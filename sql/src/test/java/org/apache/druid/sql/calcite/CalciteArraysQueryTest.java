@@ -90,14 +90,16 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Tests for array functions and array types
@@ -128,12 +130,12 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     if (expected instanceof List && actual instanceof List) {
       List expectedList = (List) expected;
       List actualList = (List) actual;
-      Assert.assertEquals(path + " arrays length mismatch", expectedList.size(), actualList.size());
+      assertEquals(expectedList.size(), actualList.size(), path + " arrays length mismatch");
       for (int i = 0; i < expectedList.size(); i++) {
         assertDeepEquals(path + "[" + i + "]", expectedList.get(i), actualList.get(i));
       }
     } else {
-      Assert.assertEquals(path, expected, actual);
+      assertEquals(expected, actual, path);
     }
   }
 
@@ -156,7 +158,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
 
     final QueryableIndex foo = IndexBuilder
         .create()
-        .tmpDir(temporaryFolder.newFolder())
+        .tmpDir(newFolder(temporaryFolder, "junit"))
         .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
         .schema(TestDataBuilder.INDEX_SCHEMA)
         .rows(TestDataBuilder.ROWS1)
@@ -164,7 +166,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
 
     final QueryableIndex numfoo = IndexBuilder
         .create()
-        .tmpDir(temporaryFolder.newFolder())
+        .tmpDir(newFolder(temporaryFolder, "junit"))
         .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
         .schema(TestDataBuilder.INDEX_SCHEMA_NUMERIC_DIMS)
         .rows(TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS)
@@ -172,7 +174,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
 
     final QueryableIndex indexLotsOfColumns = IndexBuilder
         .create()
-        .tmpDir(temporaryFolder.newFolder())
+        .tmpDir(newFolder(temporaryFolder, "junit"))
         .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
         .schema(TestDataBuilder.INDEX_SCHEMA_LOTS_O_COLUMNS)
         .rows(TestDataBuilder.ROWS_LOTS_OF_COLUMNS)
@@ -180,7 +182,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
 
     final QueryableIndex indexArrays =
         IndexBuilder.create()
-                    .tmpDir(temporaryFolder.newFolder())
+                    .tmpDir(newFolder(temporaryFolder, "junit"))
                     .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                     .schema(
                         new IncrementalIndexSchema.Builder()
@@ -199,7 +201,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         )
                     )
                     .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
-                    .inputTmpDir(temporaryFolder.newFolder())
+                    .inputTmpDir(newFolder(temporaryFolder, "junit"))
                     .buildMMappedIndex();
 
     SpecificSegmentsQuerySegmentWalker walker = SpecificSegmentsQuerySegmentWalker.createWalker(
@@ -262,7 +264,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   // test some query stuffs, sort of limited since no native array column types so either need to use constructor or
   // array aggregator
   @Test
-  public void testSelectConstantArrayExpressionFromTable()
+  void selectConstantArrayExpressionFromTable()
   {
     testQuery(
         "SELECT ARRAY[1,2] as arr, dim1 FROM foo LIMIT 1",
@@ -284,7 +286,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByArrayFromCase()
+  void groupByArrayFromCase()
   {
     cannotVectorize();
     testQuery(
@@ -313,7 +315,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByArrayColumnFromCase()
+  void groupByArrayColumnFromCase()
   {
     cannotVectorize();
     testQuery(
@@ -343,7 +345,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectNonConstantArrayExpressionFromTable()
+  void selectNonConstantArrayExpressionFromTable()
   {
     testQuery(
         "SELECT ARRAY[CONCAT(dim1, 'word'),'up'] as arr, dim1 FROM foo LIMIT 5",
@@ -373,7 +375,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectNonConstantArrayExpressionFromTableForMultival()
+  void selectNonConstantArrayExpressionFromTableForMultival()
   {
     // Produces nested string array, that MSQ can't infer from the selector
     msqIncompatible();
@@ -411,7 +413,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSomeArrayFunctionsWithScanQuery()
+  void someArrayFunctionsWithScanQuery()
   {
     List<Object[]> expectedResults;
     if (useDefault) {
@@ -585,7 +587,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSomeArrayFunctionsWithScanQueryArrayColumns()
+  void someArrayFunctionsWithScanQueryArrayColumns()
   {
     List<Object[]> expectedResults;
     if (useDefault) {
@@ -715,7 +717,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSomeArrayFunctionsWithScanQueryNoStringify()
+  void someArrayFunctionsWithScanQueryNoStringify()
   {
     // when not stringifying arrays, some things are still stringified, because they are inferred to be typed as strings
     // the planner context which controls stringification of arrays does not apply to multi-valued string columns,
@@ -833,7 +835,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayOverlapFilter()
+  void arrayOverlapFilter()
   {
     testQuery(
         "SELECT dim3 FROM druid.numfoo WHERE ARRAY_OVERLAP(dim3, ARRAY['a','b']) LIMIT 5",
@@ -856,7 +858,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayOverlapFilterStringArrayColumn()
+  void arrayOverlapFilterStringArrayColumn()
   {
     testQuery(
         "SELECT arrayStringNulls FROM druid.arrays WHERE ARRAY_OVERLAP(arrayStringNulls, ARRAY['a','b']) LIMIT 5",
@@ -887,7 +889,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayOverlapFilterLongArrayColumn()
+  void arrayOverlapFilterLongArrayColumn()
   {
     testQuery(
         "SELECT arrayLongNulls FROM druid.arrays WHERE ARRAY_OVERLAP(arrayLongNulls, ARRAY[1, 2]) LIMIT 5",
@@ -918,7 +920,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayOverlapFilterDoubleArrayColumn()
+  void arrayOverlapFilterDoubleArrayColumn()
   {
     testQuery(
         "SELECT arrayDoubleNulls FROM druid.arrays WHERE ARRAY_OVERLAP(arrayDoubleNulls, ARRAY[1.1, 2.2]) LIMIT 5",
@@ -949,7 +951,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayOverlapFilterWithExtractionFn()
+  void arrayOverlapFilterWithExtractionFn()
   {
     testQuery(
         "SELECT dim3 FROM druid.numfoo WHERE ARRAY_OVERLAP(SUBSTRING(dim3, 1, 1), ARRAY['a','b']) LIMIT 5",
@@ -974,7 +976,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayOverlapFilterNonLiteral()
+  void arrayOverlapFilterNonLiteral()
   {
     testQuery(
         "SELECT dim3 FROM druid.numfoo WHERE ARRAY_OVERLAP(dim3, ARRAY[dim2]) LIMIT 5",
@@ -996,7 +998,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayOverlapFilterArrayStringColumns()
+  void arrayOverlapFilterArrayStringColumns()
   {
     testQuery(
         "SELECT arrayStringNulls, arrayString FROM druid.arrays WHERE ARRAY_OVERLAP(arrayStringNulls, arrayString) LIMIT 5",
@@ -1022,7 +1024,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayOverlapFilterArrayLongColumns()
+  void arrayOverlapFilterArrayLongColumns()
   {
     testQuery(
         "SELECT arrayLongNulls, arrayLong FROM druid.arrays WHERE ARRAY_OVERLAP(arrayLongNulls, arrayLong) LIMIT 5",
@@ -1048,7 +1050,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayOverlapFilterArrayDoubleColumns()
+  void arrayOverlapFilterArrayDoubleColumns()
   {
     testQuery(
         "SELECT arrayDoubleNulls, arrayDouble FROM druid.arrays WHERE ARRAY_OVERLAP(arrayDoubleNulls, arrayDouble) LIMIT 5",
@@ -1073,7 +1075,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayContainsFilter()
+  void arrayContainsFilter()
   {
     testQuery(
         "SELECT dim3 FROM druid.numfoo WHERE ARRAY_CONTAINS(dim3, ARRAY['a','b']) LIMIT 5",
@@ -1100,7 +1102,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayContainsFilterArrayStringColumn()
+  void arrayContainsFilterArrayStringColumn()
   {
     testQuery(
         "SELECT arrayStringNulls FROM druid.arrays WHERE ARRAY_CONTAINS(arrayStringNulls, ARRAY['a','b']) LIMIT 5",
@@ -1130,7 +1132,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayContainsFilterArrayLongColumn()
+  void arrayContainsFilterArrayLongColumn()
   {
     testQuery(
         "SELECT arrayLongNulls FROM druid.arrays WHERE ARRAY_CONTAINS(arrayLongNulls, ARRAY[1, null]) LIMIT 5",
@@ -1158,7 +1160,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayContainsFilterArrayDoubleColumn()
+  void arrayContainsFilterArrayDoubleColumn()
   {
     testQuery(
         "SELECT arrayDoubleNulls FROM druid.arrays WHERE ARRAY_CONTAINS(arrayDoubleNulls, ARRAY[1.1, null]) LIMIT 5",
@@ -1187,7 +1189,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayContainsFilterWithExtractionFn()
+  void arrayContainsFilterWithExtractionFn()
   {
     Druids.ScanQueryBuilder builder = newScanQueryBuilder()
         .dataSource(CalciteTests.DATASOURCE3)
@@ -1223,7 +1225,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayContainsArrayOfOneElement()
+  void arrayContainsArrayOfOneElement()
   {
     testQuery(
         "SELECT dim3 FROM druid.numfoo WHERE ARRAY_CONTAINS(dim3, ARRAY['a']) LIMIT 5",
@@ -1245,7 +1247,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayContainsArrayOfNonLiteral()
+  void arrayContainsArrayOfNonLiteral()
   {
     testQuery(
         "SELECT dim3 FROM druid.numfoo WHERE ARRAY_CONTAINS(dim3, ARRAY[dim2]) LIMIT 5",
@@ -1268,7 +1270,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayContainsFilterArrayStringColumns()
+  void arrayContainsFilterArrayStringColumns()
   {
     testQuery(
         "SELECT arrayStringNulls, arrayString FROM druid.arrays WHERE ARRAY_CONTAINS(arrayStringNulls, arrayString) LIMIT 5",
@@ -1292,7 +1294,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayContainsFilterArrayLongColumns()
+  void arrayContainsFilterArrayLongColumns()
   {
     testQuery(
         "SELECT arrayLong, arrayLongNulls FROM druid.arrays WHERE ARRAY_CONTAINS(arrayLong, arrayLongNulls) LIMIT 5",
@@ -1319,7 +1321,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayContainsFilterArrayDoubleColumns()
+  void arrayContainsFilterArrayDoubleColumns()
   {
     testQuery(
         "SELECT arrayDoubleNulls, arrayDouble FROM druid.arrays WHERE ARRAY_CONTAINS(arrayDoubleNulls, arrayDouble) LIMIT 5",
@@ -1341,7 +1343,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArraySlice()
+  void arraySlice()
   {
     testQuery(
         "SELECT ARRAY_SLICE(dim3, 1) FROM druid.numfoo",
@@ -1369,7 +1371,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArraySliceArrayColumns()
+  void arraySliceArrayColumns()
   {
     testQuery(
         "SELECT ARRAY_SLICE(arrayString, 1), ARRAY_SLICE(arrayLong, 2), ARRAY_SLICE(arrayDoubleNulls, 1) FROM druid.arrays",
@@ -1409,7 +1411,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayLength()
+  void arrayLength()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -1452,7 +1454,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayLengthArrayColumn()
+  void arrayLengthArrayColumn()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -1510,7 +1512,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayAppend()
+  void arrayAppend()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -1567,7 +1569,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayPrepend()
+  void arrayPrepend()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -1624,7 +1626,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayPrependAppend()
+  void arrayPrependAppend()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -1688,7 +1690,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayConcat()
+  void arrayConcat()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -1745,7 +1747,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayOffset()
+  void arrayOffset()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -1784,7 +1786,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayGroupAsLongArray()
+  void arrayGroupAsLongArray()
   {
     // Cannot vectorize as we donot have support in native query subsytem for grouping on arrays
     cannotVectorize();
@@ -1832,7 +1834,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayGroupAsLongArrayColumn()
+  void arrayGroupAsLongArrayColumn()
   {
     // Cannot vectorize as we donot have support in native query subsytem for grouping on arrays
     cannotVectorize();
@@ -1880,7 +1882,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testArrayGroupAsDoubleArray()
+  void arrayGroupAsDoubleArray()
   {
     // Cannot vectorize as we donot have support in native query subsytem for grouping on arrays as keys
     cannotVectorize();
@@ -1929,7 +1931,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayGroupAsDoubleArrayColumn()
+  void arrayGroupAsDoubleArrayColumn()
   {
     // Cannot vectorize as we donot have support in native query subsytem for grouping on arrays
     cannotVectorize();
@@ -1976,7 +1978,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayGroupAsFloatArray()
+  void arrayGroupAsFloatArray()
   {
     // Cannot vectorize as we donot have support in native query subsytem for grouping on arrays as keys
     cannotVectorize();
@@ -2025,7 +2027,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayGroupAsArrayWithFunction()
+  void arrayGroupAsArrayWithFunction()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -2069,7 +2071,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayOrdinal()
+  void arrayOrdinal()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -2112,7 +2114,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayOffsetOf()
+  void arrayOffsetOf()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -2161,7 +2163,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayOrdinalOf()
+  void arrayOrdinalOf()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -2211,7 +2213,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayToString()
+  void arrayToString()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -2267,7 +2269,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayToStringToMultiValueString()
+  void arrayToStringToMultiValueString()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -2326,7 +2328,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayAgg()
+  void arrayAgg()
   {
     cannotVectorize();
     testQuery(
@@ -2408,7 +2410,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayAggMultiValue()
+  void arrayAggMultiValue()
   {
     cannotVectorize();
     testQuery(
@@ -2466,7 +2468,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayAggNumeric()
+  void arrayAggNumeric()
   {
     cannotVectorize();
     testQuery(
@@ -2602,7 +2604,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayAggQuantile()
+  void arrayAggQuantile()
   {
     cannotVectorize();
     testQuery(
@@ -2645,7 +2647,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayAggArrays()
+  void arrayAggArrays()
   {
     // Produces nested array - ARRAY<ARRAY<LONG>>, which frame writers don't support. A way to get this query
     // to run would be to use nested columns.
@@ -2744,7 +2746,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayAggArraysWithMaxSizeBytes()
+  void arrayAggArraysWithMaxSizeBytes()
   {
     // Produces nested array - ARRAY<ARRAY<LONG>>, which frame writers don't support. A way to get this query
     // to run would be to use nested columns.
@@ -2844,7 +2846,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testArrayConcatAggArrays()
+  void arrayConcatAggArrays()
   {
     cannotVectorize();
     testQuery(
@@ -2905,7 +2907,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayConcatAggArraysWithMaxSizeBytes()
+  void arrayConcatAggArraysWithMaxSizeBytes()
   {
     cannotVectorize();
     testQuery(
@@ -2967,9 +2969,8 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
 
-
   @Test
-  public void testArrayAggArrayColumns()
+  void arrayAggArrayColumns()
   {
     msqIncompatible();
     // nested array party
@@ -3055,7 +3056,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayConcatAggArrayColumns()
+  void arrayConcatAggArrayColumns()
   {
     cannotVectorize();
     if (NullHandling.replaceWithDefault()) {
@@ -3139,7 +3140,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayAggToString()
+  void arrayAggToString()
   {
     cannotVectorize();
     testQuery(
@@ -3181,7 +3182,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayAggExpression()
+  void arrayAggExpression()
   {
     cannotVectorize();
     testQuery(
@@ -3225,7 +3226,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayAggMaxBytes()
+  void arrayAggMaxBytes()
   {
     cannotVectorize();
     testQuery(
@@ -3283,7 +3284,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayAggAsArrayFromJoin()
+  void arrayAggAsArrayFromJoin()
   {
     cannotVectorize();
     List<Object[]> expectedResults;
@@ -3366,7 +3367,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayAggGroupByArrayAggFromSubquery()
+  void arrayAggGroupByArrayAggFromSubquery()
   {
     cannotVectorize();
 
@@ -3426,7 +3427,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
 
   @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
-  public void testArrayAggGroupByArrayAggOfLongsFromSubquery()
+  void arrayAggGroupByArrayAggOfLongsFromSubquery()
   {
     cannotVectorize();
     testQuery(
@@ -3499,7 +3500,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
 
   @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
-  public void testArrayAggGroupByArrayAggOfStringsFromSubquery()
+  void arrayAggGroupByArrayAggOfStringsFromSubquery()
   {
     cannotVectorize();
     testQuery(
@@ -3565,7 +3566,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
 
   @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
-  public void testArrayAggGroupByArrayAggOfDoubleFromSubquery()
+  void arrayAggGroupByArrayAggOfDoubleFromSubquery()
   {
     cannotVectorize();
     testQuery(
@@ -3631,7 +3632,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayAggArrayContainsSubquery()
+  void arrayAggArrayContainsSubquery()
   {
     cannotVectorize();
     List<Object[]> expectedResults;
@@ -3715,7 +3716,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayAggGroupByArrayContainsSubquery()
+  void arrayAggGroupByArrayContainsSubquery()
   {
     cannotVectorize();
     List<Object[]> expectedResults;
@@ -3797,7 +3798,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestInline()
+  void unnestInline()
   {
     skipVectorize();
     cannotVectorize();
@@ -3834,7 +3835,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestInlineWithCount()
+  void unnestInlineWithCount()
   {
     skipVectorize();
     cannotVectorize();
@@ -3865,7 +3866,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnest()
+  void unnest()
   {
     // This tells the test to skip generating (vectorize = force) path
     // Generates only 1 native query with vectorize = false
@@ -3915,7 +3916,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestArrayColumnsString()
+  void unnestArrayColumnsString()
   {
     cannotVectorize();
     testQuery(
@@ -3963,7 +3964,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestArrayColumnsStringNulls()
+  void unnestArrayColumnsStringNulls()
   {
     cannotVectorize();
     testQuery(
@@ -4010,7 +4011,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestArrayColumnsLong()
+  void unnestArrayColumnsLong()
   {
     cannotVectorize();
     testQuery(
@@ -4064,7 +4065,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestArrayColumnsLongNulls()
+  void unnestArrayColumnsLongNulls()
   {
     cannotVectorize();
     testQuery(
@@ -4114,7 +4115,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestArrayColumnsDouble()
+  void unnestArrayColumnsDouble()
   {
     cannotVectorize();
     testQuery(
@@ -4168,7 +4169,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestArrayColumnsDoubleNulls()
+  void unnestArrayColumnsDoubleNulls()
   {
     cannotVectorize();
     testQuery(
@@ -4221,7 +4222,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestTwice()
+  void unnestTwice()
   {
     cannotVectorize();
     testQuery(
@@ -4298,7 +4299,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestTwiceArrayColumns()
+  void unnestTwiceArrayColumns()
   {
     cannotVectorize();
     testQuery(
@@ -4381,7 +4382,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestTwiceWithFiltersAndExpressions()
+  void unnestTwiceWithFiltersAndExpressions()
   {
     cannotVectorize();
     testQuery(
@@ -4447,7 +4448,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testUnnestThriceWithFiltersOnDimAndUnnestCol()
+  void unnestThriceWithFiltersOnDimAndUnnestCol()
   {
     cannotVectorize();
     String sql = "    SELECT dimZipf, dim3_unnest1, dim3_unnest2, dim3_unnest3 FROM \n"
@@ -4544,8 +4545,9 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
   @Test
-  public void testUnnestThriceWithFiltersOnDimAndAllUnnestColumns()
+  void unnestThriceWithFiltersOnDimAndAllUnnestColumns()
   {
     cannotVectorize();
     String sql = "    SELECT dimZipf, dim3_unnest1, dim3_unnest2, dim3_unnest3 FROM \n"
@@ -4614,7 +4616,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestThriceWithFiltersOnDimAndAllUnnestColumnsArrayColumns()
+  void unnestThriceWithFiltersOnDimAndAllUnnestColumnsArrayColumns()
   {
     cannotVectorize();
     String sql = "    SELECT arrayString, uln, udn, usn FROM \n"
@@ -4682,7 +4684,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestThriceWithFiltersOnDimAndUnnestColumnsORCombinations()
+  void unnestThriceWithFiltersOnDimAndUnnestColumnsORCombinations()
   {
     cannotVectorize();
     skipVectorize();
@@ -4763,7 +4765,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestThriceWithFiltersOnDimAndAllUnnestColumnsArrayColumnsOrFilters()
+  void unnestThriceWithFiltersOnDimAndAllUnnestColumnsArrayColumnsOrFilters()
   {
     cannotVectorize();
     String sql = "    SELECT arrayString, uln, udn, usn FROM \n"
@@ -4837,7 +4839,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithGroupBy()
+  void unnestWithGroupBy()
   {
     // This tells the test to skip generating (vectorize = force) path
     // Generates only 1 native query with vectorize = false
@@ -4882,7 +4884,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithGroupByArrayColumn()
+  void unnestWithGroupByArrayColumn()
   {
     cannotVectorize();
     testQuery(
@@ -4912,7 +4914,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithGroupByOrderBy()
+  void unnestWithGroupByOrderBy()
   {
     // This tells the test to skip generating (vectorize = force) path
     // Generates only 1 native query with vectorize = false
@@ -4968,7 +4970,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithGroupByOrderByWithLimit()
+  void unnestWithGroupByOrderByWithLimit()
   {
     // This tells the test to skip generating (vectorize = force) path
     // Generates only 1 native query with vectorize = false
@@ -5011,7 +5013,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithGroupByHaving()
+  void unnestWithGroupByHaving()
   {
     skipVectorize();
     cannotVectorize();
@@ -5050,7 +5052,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithLimit()
+  void unnestWithLimit()
   {
     // This tells the test to skip generating (vectorize = force) path
     // Generates only 1 native query with vectorize = false
@@ -5085,7 +5087,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestFirstQueryOnSelect()
+  void unnestFirstQueryOnSelect()
   {
     // This tells the test to skip generating (vectorize = force) path
     // Generates only 1 native query with vectorize = false
@@ -5135,7 +5137,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestVirtualWithColumns1()
+  void unnestVirtualWithColumns1()
   {
     // This tells the test to skip generating (vectorize = force) path
     // Generates only 1 native query with vectorize = false
@@ -5181,7 +5183,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestVirtualWithColumns2()
+  void unnestVirtualWithColumns2()
   {
     // This tells the test to skip generating (vectorize = force) path
     // Generates only 1 native query with vectorize = false
@@ -5223,8 +5225,9 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
   @Test
-  public void testUnnestWithFilters()
+  void unnestWithFilters()
   {
     // This tells the test to skip generating (vectorize = force) path
     // Generates only 1 native query with vectorize = false
@@ -5261,7 +5264,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithFiltersWithExpressionInInnerQuery()
+  void unnestWithFiltersWithExpressionInInnerQuery()
   {
     // This tells the test to skip generating (vectorize = force) path
     // Generates only 1 native query with vectorize = false
@@ -5303,7 +5306,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithInFiltersWithExpressionInInnerQuery()
+  void unnestWithInFiltersWithExpressionInInnerQuery()
   {
     // This tells the test to skip generating (vectorize = force) path
     // Generates only 1 native query with vectorize = false
@@ -5343,7 +5346,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithFiltersInnerLimit()
+  void unnestWithFiltersInnerLimit()
   {
     // This tells the test to skip generating (vectorize = force) path
     // Generates only 1 native query with vectorize = false
@@ -5395,7 +5398,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithFiltersInsideAndOutside()
+  void unnestWithFiltersInsideAndOutside()
   {
     skipVectorize();
     testQuery(
@@ -5433,7 +5436,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithFiltersInsideAndOutside1()
+  void unnestWithFiltersInsideAndOutside1()
   {
     skipVectorize();
     testQuery(
@@ -5474,7 +5477,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithFiltersOutside()
+  void unnestWithFiltersOutside()
   {
     skipVectorize();
     testQuery(
@@ -5516,7 +5519,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithInFilters()
+  void unnestWithInFilters()
   {
     // This tells the test to skip generating (vectorize = force) path
     // Generates only 1 native query with vectorize = false
@@ -5555,7 +5558,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestVirtualWithColumns()
+  void unnestVirtualWithColumns()
   {
     // This tells the test to skip generating (vectorize = force) path
     // Generates only 1 native query with vectorize = false
@@ -5598,7 +5601,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithGroupByOrderByOnVirtualColumn()
+  void unnestWithGroupByOrderByOnVirtualColumn()
   {
     skipVectorize();
     cannotVectorize();
@@ -5654,7 +5657,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithJoinOnTheLeft()
+  void unnestWithJoinOnTheLeft()
   {
     skipVectorize();
     cannotVectorize();
@@ -5716,7 +5719,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithConstant()
+  void unnestWithConstant()
   {
     // Since there is a constant on the right,
     // Druid will plan this as a join query
@@ -5775,7 +5778,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithSQLFunctionOnUnnestedColumn()
+  void unnestWithSQLFunctionOnUnnestedColumn()
   {
     skipVectorize();
     cannotVectorize();
@@ -5822,7 +5825,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithINFiltersWithLeftRewrite()
+  void unnestWithINFiltersWithLeftRewrite()
   {
     skipVectorize();
     cannotVectorize();
@@ -5855,7 +5858,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithINFiltersWithNoLeftRewrite()
+  void unnestWithINFiltersWithNoLeftRewrite()
   {
     skipVectorize();
     cannotVectorize();
@@ -5888,7 +5891,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithInvalidINFiltersOnUnnestedColumn()
+  void unnestWithInvalidINFiltersOnUnnestedColumn()
   {
     skipVectorize();
     cannotVectorize();
@@ -5914,7 +5917,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithNotFiltersOnUnnestedColumn()
+  void unnestWithNotFiltersOnUnnestedColumn()
   {
     skipVectorize();
     cannotVectorize();
@@ -5956,7 +5959,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithSelectorFiltersOnSelectedColumn()
+  void unnestWithSelectorFiltersOnSelectedColumn()
   {
     skipVectorize();
     cannotVectorize();
@@ -5985,7 +5988,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithSelectorFiltersOnVirtualColumn()
+  void unnestWithSelectorFiltersOnVirtualColumn()
   {
     skipVectorize();
     cannotVectorize();
@@ -6016,7 +6019,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithSelectorFiltersOnVirtualStringColumn()
+  void unnestWithSelectorFiltersOnVirtualStringColumn()
   {
     skipVectorize();
     cannotVectorize();
@@ -6048,7 +6051,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithMultipleAndFiltersOnSelectedColumns()
+  void unnestWithMultipleAndFiltersOnSelectedColumns()
   {
     skipVectorize();
     cannotVectorize();
@@ -6083,7 +6086,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithMultipleOrFiltersOnSelectedColumns()
+  void unnestWithMultipleOrFiltersOnSelectedColumns()
   {
     skipVectorize();
     cannotVectorize();
@@ -6119,7 +6122,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithMultipleAndFiltersOnSelectedUnnestedColumns()
+  void unnestWithMultipleAndFiltersOnSelectedUnnestedColumns()
   {
     skipVectorize();
     cannotVectorize();
@@ -6149,7 +6152,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithMultipleOrFiltersOnUnnestedColumns()
+  void unnestWithMultipleOrFiltersOnUnnestedColumns()
   {
     skipVectorize();
     cannotVectorize();
@@ -6179,7 +6182,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithMultipleOrFiltersOnVariationsOfUnnestedColumns()
+  void unnestWithMultipleOrFiltersOnVariationsOfUnnestedColumns()
   {
     skipVectorize();
     cannotVectorize();
@@ -6226,7 +6229,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithMultipleOrFiltersOnSelectedNonUnnestedColumns()
+  void unnestWithMultipleOrFiltersOnSelectedNonUnnestedColumns()
   {
     skipVectorize();
     cannotVectorize();
@@ -6261,7 +6264,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithMultipleOrFiltersOnSelectedVirtualColumns()
+  void unnestWithMultipleOrFiltersOnSelectedVirtualColumns()
   {
     skipVectorize();
     cannotVectorize();
@@ -6299,7 +6302,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithMultipleOrFiltersOnUnnestedColumnsAndOnOriginalColumn()
+  void unnestWithMultipleOrFiltersOnUnnestedColumnsAndOnOriginalColumn()
   {
     skipVectorize();
     cannotVectorize();
@@ -6335,7 +6338,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithMultipleOrFiltersOnUnnestedColumnsAndOnOriginalColumnDiffOrdering()
+  void unnestWithMultipleOrFiltersOnUnnestedColumnsAndOnOriginalColumnDiffOrdering()
   {
     skipVectorize();
     cannotVectorize();
@@ -6372,7 +6375,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithCountOnColumn()
+  void unnestWithCountOnColumn()
   {
     skipVectorize();
     cannotVectorize();
@@ -6398,7 +6401,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithGroupByHavingSelector()
+  void unnestWithGroupByHavingSelector()
   {
     skipVectorize();
     cannotVectorize();
@@ -6428,7 +6431,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithSumOnUnnestedVirtualColumn()
+  void unnestWithSumOnUnnestedVirtualColumn()
   {
     skipVectorize();
     cannotVectorize();
@@ -6454,7 +6457,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithSumOnUnnestedColumn()
+  void unnestWithSumOnUnnestedColumn()
   {
     skipVectorize();
     cannotVectorize();
@@ -6485,7 +6488,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithSumOnUnnestedArrayColumn()
+  void unnestWithSumOnUnnestedArrayColumn()
   {
     skipVectorize();
     cannotVectorize();
@@ -6511,7 +6514,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithGroupByHavingWithWhereOnAggCol()
+  void unnestWithGroupByHavingWithWhereOnAggCol()
   {
     skipVectorize();
     cannotVectorize();
@@ -6542,7 +6545,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithGroupByHavingWithWhereOnUnnestCol()
+  void unnestWithGroupByHavingWithWhereOnUnnestCol()
   {
     skipVectorize();
     cannotVectorize();
@@ -6572,7 +6575,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithGroupByWithWhereOnUnnestArrayCol()
+  void unnestWithGroupByWithWhereOnUnnestArrayCol()
   {
     skipVectorize();
     cannotVectorize();
@@ -6609,7 +6612,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithGroupByHavingWithWhereOnUnnestArrayCol()
+  void unnestWithGroupByHavingWithWhereOnUnnestArrayCol()
   {
     skipVectorize();
     cannotVectorize();
@@ -6645,7 +6648,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestVirtualWithColumnsAndNullIf()
+  void unnestVirtualWithColumnsAndNullIf()
   {
     skipVectorize();
     cannotVectorize();
@@ -6695,7 +6698,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithTimeFilterOnly()
+  void unnestWithTimeFilterOnly()
   {
     testQuery(
         "select c from foo, unnest(MV_TO_ARRAY(dim3)) as u(c)"
@@ -6727,7 +6730,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithTimeFilterOnlyArrayColumn()
+  void unnestWithTimeFilterOnlyArrayColumn()
   {
     testQuery(
         "select c from arrays, unnest(arrayStringNulls) as u(c)"
@@ -6766,7 +6769,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithTimeFilterAndAnotherFilter()
+  void unnestWithTimeFilterAndAnotherFilter()
   {
     testQuery(
         "select c from foo, unnest(MV_TO_ARRAY(dim3)) as u(c) "
@@ -6801,7 +6804,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithTimeFilterOrAnotherFilter()
+  void unnestWithTimeFilterOrAnotherFilter()
   {
     testQuery(
         "select c from foo, unnest(MV_TO_ARRAY(dim3)) as u(c) "
@@ -6837,7 +6840,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithTimeFilterOnlyNested()
+  void unnestWithTimeFilterOnlyNested()
   {
     testQuery(
         "select c from foo CROSS JOIN UNNEST(ARRAY[m1,m2]) as un(d) CROSS JOIN unnest(MV_TO_ARRAY(dim3)) as u(c)"
@@ -6876,7 +6879,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithTimeFilterOnlyNestedAndNestedAgain()
+  void unnestWithTimeFilterOnlyNestedAndNestedAgain()
   {
     testQuery(
         "select c from foo CROSS JOIN UNNEST(ARRAY[m1,m2]) as un(d) CROSS JOIN UNNEST(ARRAY[dim1,dim2]) as ud(a) "
@@ -6926,7 +6929,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithTimeFilterInsideSubquery()
+  void unnestWithTimeFilterInsideSubquery()
   {
     testQuery(
         "select d3 from (select * from foo, UNNEST(MV_TO_ARRAY(dim3)) as u(d3)"
@@ -6981,7 +6984,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithTimeFilterInsideSubqueryArrayColumns()
+  void unnestWithTimeFilterInsideSubqueryArrayColumns()
   {
     testQuery(
         "select uln from (select * from arrays, UNNEST(arrayLongNulls) as u(uln)"
@@ -7031,7 +7034,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithFilterAndUnnestNestedBackToBack()
+  void unnestWithFilterAndUnnestNestedBackToBack()
   {
     testQuery(
         "SELECT m1, dim3_unnest1, dim3_unnest2, dim3_unnest3 FROM \n"
@@ -7112,7 +7115,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithLookup()
+  void unnestWithLookup()
   {
     testQuery(
         "SELECT * FROM lookup.lookyloo, unnest(mv_to_array(v)) as u(d) where k='a'",
@@ -7142,7 +7145,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestWithGroupByOnExpression()
+  void unnestWithGroupByOnExpression()
   {
     skipVectorize();
     cannotVectorize();
@@ -7203,7 +7206,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testArrayToMvPostaggInline()
+  void arrayToMvPostaggInline()
   {
     cannotVectorize();
     testQuery(
@@ -7294,7 +7297,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestExtractionFn()
+  void unnestExtractionFn()
   {
     skipVectorize();
     cannotVectorize();
@@ -7336,7 +7339,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestExtractionFnNull()
+  void unnestExtractionFnNull()
   {
     skipVectorize();
     cannotVectorize();
@@ -7368,5 +7371,14 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             new Object[]{"d"}
         )
     );
+  }
+
+  private static File newFolder(File root, String... subDirs) throws IOException {
+    String subFolder = String.join("/", subDirs);
+    File result = new File(root, subFolder);
+    if (!result.mkdirs()) {
+      throw new IOException("Couldn't create folders " + root);
+    }
+    return result;
   }
 }

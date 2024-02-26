@@ -52,9 +52,8 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.Mock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 
 import javax.validation.Validation;
@@ -64,9 +63,12 @@ import java.util.Set;
 
 import static org.apache.calcite.plan.RelOptRule.any;
 import static org.apache.calcite.plan.RelOptRule.operand;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RunWith(EasyMockRunner.class)
-public class CalcitePlannerModuleTest extends CalciteTestBase
+class CalcitePlannerModuleTest extends CalciteTestBase
 {
   private static final String SCHEMA_1 = "SCHEMA_1";
   private static final String SCHEMA_2 = "SCHEMA_2";
@@ -98,8 +100,8 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
   private Injector injector;
   private RelOptRule customRule;
 
-  @Before
-  public void setUp()
+  @BeforeEach
+  void setUp()
   {
     EasyMock.expect(druidSchema1.getSchema()).andStubReturn(schema1);
     EasyMock.expect(druidSchema2.getSchema()).andStubReturn(schema2);
@@ -143,36 +145,36 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
   }
 
   @Test
-  public void testDruidOperatorTableIsInjectable()
+  void druidOperatorTableIsInjectable()
   {
     DruidOperatorTable operatorTable = injector.getInstance(DruidOperatorTable.class);
-    Assert.assertNotNull(operatorTable);
+    assertNotNull(operatorTable);
 
     // Should be a singleton.
     DruidOperatorTable other = injector.getInstance(DruidOperatorTable.class);
-    Assert.assertSame(other, operatorTable);
+    assertSame(other, operatorTable);
   }
 
   @Test
-  public void testPlannerFactoryIsInjectable()
+  void plannerFactoryIsInjectable()
   {
     PlannerFactory plannerFactory = injector.getInstance(PlannerFactory.class);
-    Assert.assertNotNull(PlannerFactory.class);
+    assertNotNull(PlannerFactory.class);
 
     // Should be a singleton.
     PlannerFactory other = injector.getInstance(PlannerFactory.class);
-    Assert.assertSame(other, plannerFactory);
+    assertSame(other, plannerFactory);
   }
 
   @Test
-  public void testPlannerConfigIsInjected()
+  void plannerConfigIsInjected()
   {
     PlannerConfig plannerConfig = injector.getInstance(PlannerConfig.class);
-    Assert.assertNotNull(plannerConfig);
+    assertNotNull(plannerConfig);
   }
 
   @Test
-  public void testExtensionCalciteRule()
+  void extensionCalciteRule()
   {
     ObjectMapper mapper = new DefaultObjectMapper();
     PlannerToolbox toolbox = new PlannerToolbox(
@@ -200,6 +202,6 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
     boolean containsCustomRule = injector.getInstance(CalciteRulesManager.class)
                                          .druidConventionRuleSet(context)
                                          .contains(customRule);
-    Assert.assertTrue(containsCustomRule);
+    assertTrue(containsCustomRule);
   }
 }

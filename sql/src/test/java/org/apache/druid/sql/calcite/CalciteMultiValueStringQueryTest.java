@@ -50,7 +50,7 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -59,11 +59,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
+class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
 {
   // various queries on multi-valued string dimensions using them like strings
   @Test
-  public void testMultiValueStringWorksLikeStringGroupBy()
+  void multiValueStringWorksLikeStringGroupBy()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -120,7 +120,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueStringGroupByDoesNotWork()
+  void multiValueStringGroupByDoesNotWork()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -144,7 +144,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueStringWorksLikeStringGroupByWithFilter()
+  void multiValueStringWorksLikeStringGroupByWithFilter()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -182,7 +182,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueStringWorksLikeStringScan()
+  void multiValueStringWorksLikeStringScan()
   {
     final String nullVal = NullHandling.replaceWithDefault() ? "foo" : null;
     testQuery(
@@ -210,7 +210,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueStringWorksLikeStringSelfConcatScan()
+  void multiValueStringWorksLikeStringSelfConcatScan()
   {
     final String nullVal = NullHandling.replaceWithDefault() ? "-lol-" : null;
     testQuery(
@@ -238,7 +238,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueStringWorksLikeStringScanWithFilter()
+  void multiValueStringWorksLikeStringScanWithFilter()
   {
     // concat(dim3, '', 'foo') instad of concat(dim3, 'foo'), to disable the FilterDecomposeConcatRule rewrite
     testQuery(
@@ -264,7 +264,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
 
   // these are a copy of the ARRAY functions tests in CalciteArraysQueryTest
   @Test
-  public void testMultiValueStringOverlapFilter()
+  void multiValueStringOverlapFilter()
   {
     testQuery(
         "SELECT dim3 FROM druid.numfoo WHERE MV_OVERLAP(dim3, ARRAY['a','b']) LIMIT 5",
@@ -287,7 +287,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueStringOverlapFilterNull()
+  void multiValueStringOverlapFilterNull()
   {
     testQuery(
         "SELECT dim3 FROM druid.numfoo WHERE MV_OVERLAP(dim3, ARRAY[NULL]) LIMIT 5",
@@ -318,7 +318,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueStringOverlapFilterNonLiteral()
+  void multiValueStringOverlapFilterNonLiteral()
   {
     testQuery(
         "SELECT dim3 FROM druid.numfoo WHERE MV_OVERLAP(dim3, ARRAY[dim2]) LIMIT 5",
@@ -338,7 +338,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueStringContainsFilter()
+  void multiValueStringContainsFilter()
   {
     testQuery(
         "SELECT dim3 FROM druid.numfoo WHERE MV_CONTAINS(dim3, ARRAY['a','b']) LIMIT 5",
@@ -365,7 +365,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueStringContainsFilterNull()
+  void multiValueStringContainsFilterNull()
   {
     testQuery(
         "SELECT dim3 FROM druid.numfoo WHERE MV_CONTAINS(dim3, ARRAY[NULL]) LIMIT 5",
@@ -396,7 +396,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueStringContainsArrayOfOneElement()
+  void multiValueStringContainsArrayOfOneElement()
   {
     testQuery(
         "SELECT dim3 FROM druid.numfoo WHERE MV_CONTAINS(dim3, ARRAY['a']) LIMIT 5",
@@ -418,7 +418,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueStringContainsArrayOfNonLiteral()
+  void multiValueStringContainsArrayOfNonLiteral()
   {
     testQuery(
         "SELECT dim3 FROM druid.numfoo WHERE MV_CONTAINS(dim3, ARRAY[dim2]) LIMIT 5",
@@ -440,7 +440,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueStringSlice()
+  void multiValueStringSlice()
   {
     testQuery(
         "SELECT MV_SLICE(dim3, 1) FROM druid.numfoo",
@@ -467,7 +467,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueStringLength()
+  void multiValueStringLength()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -510,7 +510,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueStringAppend()
+  void multiValueStringAppend()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -570,7 +570,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueStringPrepend()
+  void multiValueStringPrepend()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -630,7 +630,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueStringPrependAppend()
+  void multiValueStringPrependAppend()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -694,7 +694,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueStringConcat()
+  void multiValueStringConcat()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -752,7 +752,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueStringConcatBackwardsCompat0dot22andOlder()
+  void multiValueStringConcatBackwardsCompat0dot22andOlder()
   {
     try {
       ExpressionProcessing.initializeForHomogenizeNullMultiValueStrings();
@@ -816,7 +816,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueStringOffset()
+  void multiValueStringOffset()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -855,7 +855,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueStringOrdinal()
+  void multiValueStringOrdinal()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -898,7 +898,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueStringOffsetOf()
+  void multiValueStringOffsetOf()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -947,7 +947,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueStringOrdinalOf()
+  void multiValueStringOrdinalOf()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -997,7 +997,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueStringToString()
+  void multiValueStringToString()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -1053,7 +1053,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueStringToStringToMultiValueString()
+  void multiValueStringToStringToMultiValueString()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -1116,7 +1116,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectAndFilterByStringToMV()
+  void selectAndFilterByStringToMV()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -1161,7 +1161,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testStringToMVOfConstant()
+  void stringToMVOfConstant()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -1196,7 +1196,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testStringToMVOfConstantGroupedBy()
+  void stringToMVOfConstantGroupedBy()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -1238,7 +1238,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testStringToMVOfStringAgg()
+  void stringToMVOfStringAgg()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -1288,7 +1288,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueListFilter()
+  void multiValueListFilter()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -1333,7 +1333,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueListFilterDeny()
+  void multiValueListFilterDeny()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -1388,7 +1388,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueListFilterComposed()
+  void multiValueListFilterComposed()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -1445,7 +1445,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueListFilterComposedNested()
+  void multiValueListFilterComposedNested()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -1512,7 +1512,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueListFilterComposedNested2Input()
+  void multiValueListFilterComposedNested2Input()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -1567,7 +1567,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueListFilterComposedNestedNullLiteral()
+  void multiValueListFilterComposedNestedNullLiteral()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -1627,7 +1627,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueListFilterComposedDeny()
+  void multiValueListFilterComposedDeny()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -1676,7 +1676,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueListFilterComposedMultipleExpressions()
+  void multiValueListFilterComposedMultipleExpressions()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -1737,7 +1737,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFilterOnMultiValueListFilterNoMatch()
+  void filterOnMultiValueListFilterNoMatch()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -1780,7 +1780,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFilterOnMultiValueListFilterMatch()
+  void filterOnMultiValueListFilterMatch()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -1827,7 +1827,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFilterOnMultiValueListFilterMatchLike()
+  void filterOnMultiValueListFilterMatchLike()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -1874,7 +1874,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueToArrayGroupAsArrayWithMultiValueDimension()
+  void multiValueToArrayGroupAsArrayWithMultiValueDimension()
   {
     // Cannot vectorize as we donot have support in native query subsytem for grouping on arrays as keys
     cannotVectorize();
@@ -1926,7 +1926,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testMultiValueToArrayGroupAsArrayWithSingleValueDim()
+  void multiValueToArrayGroupAsArrayWithSingleValueDim()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -1980,7 +1980,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueToArrayGroupAsArrayWithSingleValueDimIsNotConvertedToTopN()
+  void multiValueToArrayGroupAsArrayWithSingleValueDimIsNotConvertedToTopN()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -2036,7 +2036,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueToArrayMoreArgs()
+  void multiValueToArrayMoreArgs()
   {
     testQueryThrows(
         "SELECT MV_TO_ARRAY(dim3,dim3) FROM druid.numfoo",
@@ -2048,7 +2048,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueToArrayNoArgs()
+  void multiValueToArrayNoArgs()
   {
     testQueryThrows(
         "SELECT MV_TO_ARRAY() FROM druid.numfoo",
@@ -2060,7 +2060,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueToArrayArgsWithMultiValueDimFunc()
+  void multiValueToArrayArgsWithMultiValueDimFunc()
   {
     testQueryThrows(
         "SELECT MV_TO_ARRAY(concat(dim3,'c')) FROM druid.numfoo",
@@ -2069,7 +2069,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueToArrayArgsWithSingleDimFunc()
+  void multiValueToArrayArgsWithSingleDimFunc()
   {
     testQueryThrows(
         "SELECT MV_TO_ARRAY(concat(dim1,'c')) FROM druid.numfoo",
@@ -2078,7 +2078,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueToArrayArgsWithConstant()
+  void multiValueToArrayArgsWithConstant()
   {
     testQueryThrows(
         "SELECT MV_TO_ARRAY(concat(dim1,'c')) FROM druid.numfoo",
@@ -2087,7 +2087,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueToArrayArgsWithArray()
+  void multiValueToArrayArgsWithArray()
   {
     testQueryThrows(
         "SELECT MV_TO_ARRAY(Array[1,2]) FROM druid.numfoo",
@@ -2096,7 +2096,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueStringOverlapFilterCoalesceNvl()
+  void multiValueStringOverlapFilterCoalesceNvl()
   {
     cannotVectorize();
     testQuery(
@@ -2141,7 +2141,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueStringOverlapFilterCoalesceSingleValue()
+  void multiValueStringOverlapFilterCoalesceSingleValue()
   {
     testQuery(
         "SELECT COALESCE(dim3, 'other') FROM druid.numfoo "
@@ -2187,7 +2187,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueStringOverlapFilterCoalesceSingleValueOtherColumn()
+  void multiValueStringOverlapFilterCoalesceSingleValueOtherColumn()
   {
     testQuery(
         "SELECT COALESCE(dim3, dim2) FROM druid.numfoo "
@@ -2236,7 +2236,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValueStringOverlapFilterInconsistentUsage()
+  void multiValueStringOverlapFilterInconsistentUsage()
   {
     testQueryThrows(
         "SELECT COALESCE(dim3, 'other') FROM druid.numfoo "
@@ -2249,7 +2249,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultiValuedFilterOnlyWhenLookupPullsInDuplicates()
+  void multiValuedFilterOnlyWhenLookupPullsInDuplicates()
   {
     cannotVectorize();
     testBuilder()
@@ -2285,7 +2285,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMvContainsFilterWithExtractionFn()
+  void mvContainsFilterWithExtractionFn()
   {
     Druids.ScanQueryBuilder builder = newScanQueryBuilder()
         .dataSource(CalciteTests.DATASOURCE3)

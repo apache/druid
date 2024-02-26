@@ -123,16 +123,14 @@ import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Ignore;
-import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -143,12 +141,15 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
-public class CalciteQueryTest extends BaseCalciteQueryTest
+class CalciteQueryTest extends BaseCalciteQueryTest
 {
   @Test
-  public void testInformationSchemaSchemata()
+  void informationSchemaSchemata()
   {
     msqIncompatible();
     testQuery(
@@ -165,7 +166,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testInformationSchemaTables()
+  void informationSchemaTables()
   {
     msqIncompatible();
     testQuery(
@@ -250,7 +251,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testInformationSchemaColumnsOnTable()
+  void informationSchemaColumnsOnTable()
   {
     msqIncompatible();
     testQuery(
@@ -272,7 +273,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testInformationSchemaColumnsOnForbiddenTable()
+  void informationSchemaColumnsOnForbiddenTable()
   {
     msqIncompatible();
     testQuery(
@@ -303,7 +304,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testInformationSchemaColumnsOnView()
+  void informationSchemaColumnsOnView()
   {
     msqIncompatible();
     testQuery(
@@ -318,7 +319,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testInformationSchemaColumnsOnAnotherView()
+  void informationSchemaColumnsOnAnotherView()
   {
     msqIncompatible();
     testQuery(
@@ -335,10 +336,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCannotInsertWithNativeEngine()
+  void cannotInsertWithNativeEngine()
   {
     msqIncompatible();
-    final DruidException e = Assert.assertThrows(
+    final DruidException e = assertThrows(
         DruidException.class,
         () -> testQuery(
             "INSERT INTO dst SELECT * FROM foo PARTITIONED BY ALL",
@@ -347,17 +348,17 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
 
-    MatcherAssert.assertThat(
+    assertThat(
         e,
         invalidSqlIs("INSERT operations are not supported by requested SQL engine [native], consider using MSQ.")
     );
   }
 
   @Test
-  public void testCannotReplaceWithNativeEngine()
+  void cannotReplaceWithNativeEngine()
   {
     msqIncompatible();
-    final DruidException e = Assert.assertThrows(
+    final DruidException e = assertThrows(
         DruidException.class,
         () -> testQuery(
             "REPLACE INTO dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL",
@@ -366,14 +367,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
 
-    MatcherAssert.assertThat(
+    assertThat(
         e,
         invalidSqlIs("REPLACE operations are not supported by the requested SQL engine [native].  Consider using MSQ.")
     );
   }
 
   @Test
-  public void testAggregatorsOnInformationSchemaColumns()
+  void aggregatorsOnInformationSchemaColumns()
   {
     msqIncompatible();
     // Not including COUNT DISTINCT, since it isn't supported by BindableAggregate, and so it can't work.
@@ -394,7 +395,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFilterAggregatorFunctionsOnInformationSchemaRoutines()
+  void filterAggregatorFunctionsOnInformationSchemaRoutines()
   {
     msqIncompatible();
     testQuery(
@@ -410,7 +411,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFilterScalarFunctionsOnInformationSchemaRoutines()
+  void filterScalarFunctionsOnInformationSchemaRoutines()
   {
     msqIncompatible();
     testQuery(
@@ -426,7 +427,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testNonExistentSchemaOnInformationSchemaRoutines()
+  void nonExistentSchemaOnInformationSchemaRoutines()
   {
     msqIncompatible();
     testQuery(
@@ -439,7 +440,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTopNLimitWrapping()
+  void topNLimitWrapping()
   {
     msqIncompatible();
     List<Object[]> expected;
@@ -477,7 +478,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTopNLimitWrappingOrderByAgg()
+  void topNLimitWrappingOrderByAgg()
   {
     testQuery(
         "SELECT dim1, COUNT(*) FROM druid.foo GROUP BY 1 ORDER BY 2 DESC",
@@ -498,7 +499,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByLimitWrapping()
+  void groupByLimitWrapping()
   {
     List<Object[]> expected;
     if (NullHandling.replaceWithDefault()) {
@@ -540,7 +541,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByWithForceLimitPushDown()
+  void groupByWithForceLimitPushDown()
   {
     final Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, true);
@@ -572,7 +573,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSafeDivide()
+  void safeDivide()
   {
     skipVectorize();
     cannotVectorize();
@@ -597,7 +598,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByLimitWrappingOrderByAgg()
+  void groupByLimitWrappingOrderByAgg()
   {
     testQuery(
         "SELECT dim1, dim2, COUNT(*) FROM druid.foo GROUP BY 1, 2 ORDER BY 3 DESC",
@@ -630,7 +631,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupBySingleColumnDescendingNoTopN()
+  void groupBySingleColumnDescendingNoTopN()
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT,
@@ -669,7 +670,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testEarliestAggregators()
+  void earliestAggregators()
   {
     testQuery(
         "SELECT "
@@ -714,7 +715,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testLatestToLatestByConversion()
+  void latestToLatestByConversion()
   {
     msqIncompatible();
     testQuery(
@@ -743,7 +744,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testLatestVectorAggregators()
+  void latestVectorAggregators()
   {
     msqIncompatible();
     testQuery(
@@ -777,7 +778,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testLatestAggregators()
+  void latestAggregators()
   {
     msqIncompatible();
 
@@ -824,20 +825,21 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testEarliestByInvalidTimestamp()
+  void earliestByInvalidTimestamp()
   {
-    expectedException.expect(DruidException.class);
-    expectedException.expectMessage("Cannot apply 'EARLIEST_BY' to arguments of type 'EARLIEST_BY(<FLOAT>, <BIGINT>)");
+    Throwable exception = assertThrows(DruidException.class, () -> {
 
-    testQuery(
-        "SELECT EARLIEST_BY(m1, l1) FROM druid.numfoo",
-        ImmutableList.of(),
-        ImmutableList.of()
-    );
+      testQuery(
+          "SELECT EARLIEST_BY(m1, l1) FROM druid.numfoo",
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    });
+    assertTrue(exception.getMessage().contains("Cannot apply 'EARLIEST_BY' to arguments of type 'EARLIEST_BY(<FLOAT>, <BIGINT>)"));
   }
 
   @Test
-  public void testLatestByInvalidTimestamp()
+  void latestByInvalidTimestamp()
   {
     expectedException.expect(
         invalidSqlContains("Cannot apply 'LATEST_BY' to arguments of type 'LATEST_BY(<FLOAT>, <BIGINT>)")
@@ -852,7 +854,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   // This test the on-heap version of the AnyAggregator (Double/Float/Long/String)
   @Test
-  public void testAnyAggregator()
+  void anyAggregator()
   {
     // Cannot vectorize virtual expressions.
     skipVectorize();
@@ -895,7 +897,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   // This test the on-heap version of the AnyAggregator (Double/Float/Long) against numeric columns
   // that have null values (when run in SQL compatible null mode)
   @Test
-  public void testAnyAggregatorsOnHeapNumericNulls()
+  void anyAggregatorsOnHeapNumericNulls()
   {
     testQuery(
         "SELECT ANY_VALUE(l1), ANY_VALUE(d1), ANY_VALUE(f1) FROM druid.numfoo",
@@ -922,7 +924,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   // This test is to check if time expressions are accepted properly by the vectorized last aggregator
   @Test
-  public void testLatestVectorAggregatorsOnTimeExpression()
+  void latestVectorAggregatorsOnTimeExpression()
   {
     msqIncompatible();
     testQuery(
@@ -956,7 +958,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   // This test the off-heap (buffer) version of the AnyAggregator (Double/Float/Long) against numeric columns
   // that have null values (when run in SQL compatible null mode)
   @Test
-  public void testAnyAggregatorsOffHeapNumericNulls()
+  void anyAggregatorsOffHeapNumericNulls()
   {
     testQuery(
         "SELECT ANY_VALUE(l1), ANY_VALUE(d1), ANY_VALUE(f1) FROM druid.numfoo GROUP BY dim2",
@@ -994,7 +996,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   // This test the off-heap (buffer) version of the LatestAggregator (Double/Float/Long)
   @Test
-  public void testPrimitiveLatestInSubquery()
+  void primitiveLatestInSubquery()
   {
     msqIncompatible();
     testQuery(
@@ -1042,7 +1044,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testPrimitiveLatestInSubqueryGroupBy()
+  void primitiveLatestInSubqueryGroupBy()
   {
     msqIncompatible();
     testQuery(
@@ -1077,7 +1079,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testStringLatestGroupBy()
+  void stringLatestGroupBy()
   {
     testQuery(
         "SELECT dim2, LATEST(dim4,10) AS val1 FROM druid.numfoo GROUP BY dim2",
@@ -1110,7 +1112,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testNumericLatestEarliestGroupBy()
+  void numericLatestEarliestGroupBy()
   {
     testQuery(
         "SELECT isNew, LATEST(long_last_added), EARLIEST(long_first_added), LATEST(float_last_added), EARLIEST(float_first_added), LATEST(double_last_added), EARLIEST(double_first_added) FROM wikipedia_first_last GROUP BY isNew",
@@ -1140,7 +1142,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testNumericLatestEarliestWithOpratorsGroupBy()
+  void numericLatestEarliestWithOpratorsGroupBy()
   {
     testQuery(
         "SELECT isNew, LATEST(long_last_added)+4, EARLIEST(long_first_added)-4, LATEST(float_last_added)*2, EARLIEST(float_first_added)/2f, LATEST(double_last_added)+2.5, EARLIEST(double_first_added)-2.5 FROM wikipedia_first_last GROUP BY isNew",
@@ -1179,7 +1181,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testStringLatestGroupByWithAlwaysFalseCondition()
+  void stringLatestGroupByWithAlwaysFalseCondition()
   {
     testQuery(
         "SELECT LATEST(dim4, 10), dim2 FROM numfoo WHERE (dim1 = 'something' AND dim1 IN('something else')) GROUP BY dim2",
@@ -1204,7 +1206,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testStringLatestByGroupByWithAlwaysFalseCondition()
+  void stringLatestByGroupByWithAlwaysFalseCondition()
   {
     testQuery(
         "SELECT LATEST_BY(dim4, __time, 10), dim2 FROM numfoo WHERE (dim1 = 'something' AND dim1 IN('something else')) GROUP BY dim2",
@@ -1230,7 +1232,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   // This test the off-heap (buffer) version of the EarliestAggregator (Double/Float/Long)
   @Test
-  public void testPrimitiveEarliestInSubquery()
+  void primitiveEarliestInSubquery()
   {
     testQuery(
         "SELECT SUM(val1), SUM(val2), SUM(val3) FROM (SELECT dim2, EARLIEST(m1) AS val1, EARLIEST(cnt) AS val2, EARLIEST(m2) AS val3 FROM foo GROUP BY dim2)",
@@ -1278,7 +1280,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   // This test the off-heap (buffer) version of the LatestAggregator (String)
   @Test
-  public void testStringLatestInSubquery()
+  void stringLatestInSubquery()
   {
     testQuery(
         "SELECT SUM(val) FROM (SELECT dim2, LATEST(dim1, 10) AS val FROM foo GROUP BY dim2)",
@@ -1326,7 +1328,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   // This test the off-heap (buffer) version of the EarliestAggregator (String)
   @Test
-  public void testStringEarliestInSubquery()
+  void stringEarliestInSubquery()
   {
     testQuery(
         "SELECT SUM(val) FROM (SELECT dim2, EARLIEST(dim1,10) AS val FROM foo GROUP BY dim2)",
@@ -1383,7 +1385,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   // This test the off-heap (buffer) version of the AnyAggregator (Double/Float/Long)
   @Test
-  public void testPrimitiveAnyInSubquery()
+  void primitiveAnyInSubquery()
   {
     // The grouping works like this
     // dim2 ->    m1   |   m2
@@ -1436,7 +1438,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testStringEarliestSingleStringDim()
+  void stringEarliestSingleStringDim()
   {
     testQuery(
         "SELECT dim2, EARLIEST(dim1,10) AS val FROM foo GROUP BY dim2",
@@ -1470,7 +1472,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testStringEarliestMultiStringDim()
+  void stringEarliestMultiStringDim()
   {
     testQuery(
         "SELECT dim2, EARLIEST(dim3,10) AS val FROM foo GROUP BY dim2",
@@ -1505,7 +1507,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   // This test the off-heap (buffer) version of the AnyAggregator (String)
   @Test
-  public void testStringAnyInSubquery()
+  void stringAnyInSubquery()
   {
     testQuery(
         "SELECT SUM(val) FROM (SELECT dim2, ANY_VALUE(dim1, 10) AS val FROM foo GROUP BY dim2)",
@@ -1551,7 +1553,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testEarliestAggregatorsNumericNulls()
+  void earliestAggregatorsNumericNulls()
   {
     testQuery(
         "SELECT EARLIEST(l1), EARLIEST(d1), EARLIEST(f1) FROM druid.numfoo",
@@ -1577,7 +1579,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testLatestAggregatorsNumericNull()
+  void latestAggregatorsNumericNull()
   {
     msqIncompatible();
     testQuery(
@@ -1608,7 +1610,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFirstLatestAggregatorsSkipNulls()
+  void firstLatestAggregatorsSkipNulls()
   {
     final DimFilter filter;
     if (useDefault) {
@@ -1650,7 +1652,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testAnyAggregatorsDoesNotSkipNulls()
+  void anyAggregatorsDoesNotSkipNulls()
   {
     testQuery(
         "SELECT ANY_VALUE(dim1, 32), ANY_VALUE(l2), ANY_VALUE(d2), ANY_VALUE(f2) FROM druid.numfoo",
@@ -1678,7 +1680,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testAnyAggregatorsSkipNullsWithFilter()
+  void anyAggregatorsSkipNullsWithFilter()
   {
     final DimFilter filter;
     if (useDefault) {
@@ -1720,7 +1722,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testOrderByEarliestFloat()
+  void orderByEarliestFloat()
   {
     List<Object[]> expected;
     if (NullHandling.replaceWithDefault()) {
@@ -1765,7 +1767,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testOrderByEarliestDouble()
+  void orderByEarliestDouble()
   {
     List<Object[]> expected;
     if (NullHandling.replaceWithDefault()) {
@@ -1810,7 +1812,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testOrderByEarliestLong()
+  void orderByEarliestLong()
   {
     List<Object[]> expected;
     if (NullHandling.replaceWithDefault()) {
@@ -1855,7 +1857,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testOrderByLatestFloat()
+  void orderByLatestFloat()
   {
     msqIncompatible();
     List<Object[]> expected;
@@ -1902,7 +1904,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testOrderByLatestDouble()
+  void orderByLatestDouble()
   {
     msqIncompatible();
     List<Object[]> expected;
@@ -1948,7 +1950,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testOrderByLatestLong()
+  void orderByLatestLong()
   {
     msqIncompatible();
     List<Object[]> expected;
@@ -1994,7 +1996,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testOrderByAnyFloat()
+  void orderByAnyFloat()
   {
     List<Object[]> expected;
     if (NullHandling.replaceWithDefault()) {
@@ -2045,7 +2047,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testOrderByAnyDouble()
+  void orderByAnyDouble()
   {
     List<Object[]> expected;
     if (NullHandling.replaceWithDefault()) {
@@ -2095,7 +2097,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testOrderByAnyLong()
+  void orderByAnyLong()
   {
     List<Object[]> expected;
     if (NullHandling.replaceWithDefault()) {
@@ -2145,7 +2147,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByLong()
+  void groupByLong()
   {
     testQuery(
         "SELECT cnt, COUNT(*) FROM druid.foo GROUP BY cnt",
@@ -2166,7 +2168,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByOrdinal()
+  void groupByOrdinal()
   {
     testQuery(
         "SELECT cnt, COUNT(*) FROM druid.foo GROUP BY 1",
@@ -2187,8 +2189,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  @Ignore("Disabled since GROUP BY alias can confuse the validator; see DruidConformance::isGroupByAlias")
-  public void testGroupByAndOrderByAlias()
+  @Disabled("Disabled since GROUP BY alias can confuse the validator; see DruidConformance::isGroupByAlias")
+  void groupByAndOrderByAlias()
   {
     msqIncompatible();
     testQuery(
@@ -2222,7 +2224,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByExpressionAliasedAsOriginalColumnName()
+  void groupByExpressionAliasedAsOriginalColumnName()
   {
     testQuery(
         "SELECT\n"
@@ -2247,7 +2249,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByAndOrderByOrdinalOfAlias()
+  void groupByAndOrderByOrdinalOfAlias()
   {
     testQuery(
         "SELECT cnt as theCnt, COUNT(*) FROM druid.foo GROUP BY 1 ORDER BY 1 ASC",
@@ -2269,7 +2271,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByFloat()
+  void groupByFloat()
   {
     testQuery(
         "SELECT m1, COUNT(*) FROM druid.foo GROUP BY m1",
@@ -2295,7 +2297,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByDouble()
+  void groupByDouble()
   {
     testQuery(
         "SELECT m2, COUNT(*) FROM druid.foo GROUP BY m2",
@@ -2321,7 +2323,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFilterOnFloat()
+  void filterOnFloat()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE m1 = 1.0",
@@ -2342,7 +2344,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testDECODE_BASE64_UTF8()
+  void decodeBase64Utf8()
   {
     testQuery(
         "SELECT DECODE_BASE64_UTF8('aGVsbG8=') FROM druid.foo limit 1",
@@ -2371,7 +2373,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFilterOnDouble()
+  void filterOnDouble()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE m2 = 1.0",
@@ -2392,7 +2394,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testHavingOnGrandTotal()
+  void havingOnGrandTotal()
   {
     testQuery(
         "SELECT SUM(m1) AS m1_sum FROM foo HAVING m1_sum = 21",
@@ -2419,7 +2421,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testHavingOnDoubleSum()
+  void havingOnDoubleSum()
   {
     testQuery(
         "SELECT dim1, SUM(m1) AS m1_sum FROM druid.foo GROUP BY dim1 HAVING SUM(m1) > 1",
@@ -2456,7 +2458,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testHavingOnApproximateCountDistinct()
+  void havingOnApproximateCountDistinct()
   {
     testQuery(
         "SELECT dim2, COUNT(DISTINCT m1) FROM druid.foo GROUP BY dim2 HAVING COUNT(DISTINCT m1) > 1",
@@ -2507,7 +2509,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testHavingOnExactCountDistinct()
+  void havingOnExactCountDistinct()
   {
     testQuery(
         PLANNER_CONFIG_NO_HLL,
@@ -2573,13 +2575,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
-  public void testExactCountDistinctWithFilter()
+  void exactCountDistinctWithFilter()
   {
     msqIncompatible();
     final String sqlQuery = "SELECT COUNT(DISTINCT foo.dim1) FILTER(WHERE foo.cnt = 1), SUM(foo.cnt) FROM druid.foo";
     // When useApproximateCountDistinct=false and useGroupingSetForExactDistinct=false, planning fails due
     // to a bug in the Calcite's rule (AggregateExpandDistinctAggregatesRule)
-    Assert.assertThrows(
+    assertThrows(
         RuntimeException.class,
         () -> testQuery(
             PLANNER_CONFIG_NO_HLL.withOverrides(
@@ -2672,7 +2674,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testHavingOnFloatSum()
+  void havingOnFloatSum()
   {
     testQuery(
         "SELECT dim1, CAST(SUM(m1) AS FLOAT) AS m1_sum FROM druid.foo GROUP BY dim1 HAVING CAST(SUM(m1) AS FLOAT) > 1",
@@ -2709,7 +2711,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testColumnComparison()
+  void columnComparison()
   {
     testQuery(
         "SELECT dim1, m1, COUNT(*) FROM druid.foo WHERE m1 - 1 = dim1 GROUP BY dim1, m1",
@@ -2739,7 +2741,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testHavingOnRatio()
+  void havingOnRatio()
   {
     // Test for https://github.com/apache/druid/issues/4264
 
@@ -2785,7 +2787,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByWithSelectProjections()
+  void groupByWithSelectProjections()
   {
     testQuery(
         "SELECT\n"
@@ -2817,7 +2819,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByWithSelectAndOrderByProjections()
+  void groupByWithSelectAndOrderByProjections()
   {
     testQuery(
         "SELECT\n"
@@ -2868,7 +2870,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTopNWithSelectProjections()
+  void topNWithSelectProjections()
   {
     testQuery(
         "SELECT\n"
@@ -2901,7 +2903,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTopNWithSelectAndOrderByProjections()
+  void topNWithSelectAndOrderByProjections()
   {
     testQuery(
         "SELECT\n"
@@ -2939,7 +2941,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @NotYetSupported(Modes.UNION_WITH_COMPLEX_OPERAND)
   @Test
-  public void testUnionAllQueries()
+  void unionAllQueries()
   {
     msqIncompatible();
     testQuery(
@@ -2973,7 +2975,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @NotYetSupported(Modes.UNION_WITH_COMPLEX_OPERAND)
   @Test
-  public void testUnionAllQueriesWithLimit()
+  void unionAllQueriesWithLimit()
   {
     msqIncompatible();
     testQuery(
@@ -3001,7 +3003,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testPruneDeadAggregators()
+  void pruneDeadAggregators()
   {
     // Test for ProjectAggregatePruneUnusedCallRule.
     testQuery(
@@ -3026,7 +3028,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testPruneDeadAggregatorsThroughPostProjection()
+  void pruneDeadAggregatorsThroughPostProjection()
   {
     // Test for ProjectAggregatePruneUnusedCallRule.
     testQuery(
@@ -3052,7 +3054,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testPruneDeadAggregatorsThroughHaving()
+  void pruneDeadAggregatorsThroughHaving()
   {
     // Test for ProjectAggregatePruneUnusedCallRule.
     testQuery(
@@ -3085,7 +3087,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByCaseWhen()
+  void groupByCaseWhen()
   {
     // Cannot vectorize due to virtual columns.
     cannotVectorize();
@@ -3138,7 +3140,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testDecomposeCaseWhenThreeArg()
+  void decomposeCaseWhenThreeArg()
   {
     // Cannot vectorize due to virtual columns.
     cannotVectorize();
@@ -3182,7 +3184,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testDecomposeCaseWhenTwoArg()
+  void decomposeCaseWhenTwoArg()
   {
     // Cannot vectorize due to virtual columns.
     cannotVectorize();
@@ -3217,7 +3219,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByCaseWhenOfTripleAnd()
+  void groupByCaseWhenOfTripleAnd()
   {
     // Cannot vectorize due to virtual columns.
     cannotVectorize();
@@ -3254,7 +3256,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testNullEmptyStringEquality()
+  void nullEmptyStringEquality()
   {
     testQuery(
         "SELECT COUNT(*)\n"
@@ -3293,7 +3295,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testNullLongFilter()
+  void nullLongFilter()
   {
     testQuery(
         "SELECT COUNT(*)\n"
@@ -3331,7 +3333,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testNullDoubleFilter()
+  void nullDoubleFilter()
   {
     testQuery(
         "SELECT COUNT(*)\n"
@@ -3369,7 +3371,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testNullFloatFilter()
+  void nullFloatFilter()
   {
     testQuery(
         "SELECT COUNT(*)\n"
@@ -3412,7 +3414,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
    */
   @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
-  public void testUnionAllSameTableThreeTimes()
+  void unionAllSameTableThreeTimes()
   {
     testQuery(
         "SELECT\n"
@@ -3456,7 +3458,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
-  public void testExactCountDistinctUsingSubqueryOnUnionAllTables()
+  void exactCountDistinctUsingSubqueryOnUnionAllTables()
   {
     testQuery(
         "SELECT\n"
@@ -3508,7 +3510,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testNullDoubleTopN()
+  void nullDoubleTopN()
   {
     // Disabled test in MSQ with SQL-compatible mode till https://github.com/apache/druid/issues/13951 is resolved
     if (NullHandling.sqlCompatible()) {
@@ -3552,7 +3554,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testNullFloatTopN()
+  void nullFloatTopN()
   {
     // Disabled test in MSQ with SQL-compatible mode till https://github.com/apache/druid/issues/13951 is resolved
     if (NullHandling.sqlCompatible()) {
@@ -3596,7 +3598,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testNullLongTopN()
+  void nullLongTopN()
   {
     // Disabled test in MSQ with SQL-compatible mode till https://github.com/apache/druid/issues/13951 is resolved
     if (NullHandling.sqlCompatible()) {
@@ -3640,7 +3642,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testLongPredicateIsNull()
+  void longPredicateIsNull()
   {
     testQuery(
         "SELECT l1 is null FROM druid.numfoo",
@@ -3680,7 +3682,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testLongPredicateFilterNulls()
+  void longPredicateFilterNulls()
   {
     testQuery(
         "SELECT COUNT(*)\n"
@@ -3701,7 +3703,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testDoublePredicateFilterNulls()
+  void doublePredicateFilterNulls()
   {
     testQuery(
         "SELECT COUNT(*)\n"
@@ -3722,7 +3724,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFloatPredicateFilterNulls()
+  void floatPredicateFilterNulls()
   {
     testQuery(
         "SELECT COUNT(*)\n"
@@ -3743,7 +3745,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testEmptyStringEquality()
+  void emptyStringEquality()
   {
     if (NullHandling.replaceWithDefault()) {
       testQuery(
@@ -3789,7 +3791,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testNullStringEquality()
+  void nullStringEquality()
   {
     testQuery(
         "SELECT COUNT(*)\n"
@@ -3814,7 +3816,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCoalesceColumns()
+  void coalesceColumns()
   {
     // Doesn't conform to the SQL standard, but it's how we do it.
     // This example is used in the sql.md doc.
@@ -3858,7 +3860,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCoalesceColumnsFilter()
+  void coalesceColumnsFilter()
   {
     // Cannot vectorize due to virtual columns.
     cannotVectorize();
@@ -3894,7 +3896,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCoalesceColumnsFilterWithEquality()
+  void coalesceColumnsFilterWithEquality()
   {
     // Cannot vectorize due to virtual columns.
     cannotVectorize();
@@ -3934,7 +3936,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCoalesceMoreColumns()
+  void coalesceMoreColumns()
   {
     // Cannot vectorize due to virtual columns.
     cannotVectorize();
@@ -3987,7 +3989,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testColumnIsNull()
+  void columnIsNull()
   {
     // Doesn't conform to the SQL standard, but it's how we do it.
     // This example is used in the sql.md doc.
@@ -4010,7 +4012,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupingWithNullInFilter()
+  void groupingWithNullInFilter()
   {
     msqIncompatible();
     testQuery(
@@ -4035,7 +4037,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testGroupByNothingWithLiterallyFalseFilter()
+  void groupByNothingWithLiterallyFalseFilter()
   {
     msqIncompatible();
     testQuery(
@@ -4061,7 +4063,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByNothingWithImpossibleTimeFilter()
+  void groupByNothingWithImpossibleTimeFilter()
   {
     msqIncompatible();
     // Regression test for https://github.com/apache/druid/issues/7671
@@ -4086,7 +4088,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByWithImpossibleTimeFilter()
+  void groupByWithImpossibleTimeFilter()
   {
     // this gets optimized into 'false'
     testQuery(
@@ -4109,7 +4111,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByOneColumnWithLiterallyFalseFilter()
+  void groupByOneColumnWithLiterallyFalseFilter()
   {
     testQuery(
         "SELECT COUNT(*), MAX(cnt) FROM druid.foo WHERE 1 = 0 GROUP BY dim1",
@@ -4132,7 +4134,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByWithFilterMatchingNothing()
+  void groupByWithFilterMatchingNothing()
   {
     msqIncompatible();
     testQuery(
@@ -4157,7 +4159,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByWithGroupByEmpty()
+  void groupByWithGroupByEmpty()
   {
     testQuery(
         "SELECT COUNT(*), SUM(cnt), MIN(cnt) FROM druid.foo GROUP BY ()",
@@ -4179,7 +4181,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByWithFilterMatchingNothingWithGroupByLiteral()
+  void groupByWithFilterMatchingNothingWithGroupByLiteral()
   {
     testQuery(
         "SELECT COUNT(*), MAX(cnt) FROM druid.foo WHERE dim1 = 'foobar' GROUP BY 'dummy'",
@@ -4201,7 +4203,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountNonNullColumn()
+  void countNonNullColumn()
   {
     testQuery(
         "SELECT COUNT(cnt) FROM druid.foo",
@@ -4230,7 +4232,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountNullableColumn()
+  void countNullableColumn()
   {
     testQuery(
         "SELECT COUNT(dim2) FROM druid.foo",
@@ -4259,7 +4261,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountNullableExpression()
+  void countNullableExpression()
   {
     testQuery(
         "SELECT COUNT(CASE WHEN dim2 = 'abc' THEN 'yes' WHEN dim2 = 'def' THEN 'yes' END) FROM druid.foo",
@@ -4284,7 +4286,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStar()
+  void countStar()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo",
@@ -4304,7 +4306,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarOnCommonTableExpression()
+  void countStarOnCommonTableExpression()
   {
     if (NullHandling.sqlCompatible()) {
       // cannot vectorize due to substring expression
@@ -4345,7 +4347,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarOnView()
+  void countStarOnView()
   {
     if (NullHandling.sqlCompatible()) {
       // cannot vectorize due to substring expression
@@ -4386,7 +4388,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testConfusedView()
+  void confusedView()
   {
     if (NullHandling.sqlCompatible()) {
       // cannot vectorize due to substring expression
@@ -4428,7 +4430,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarWithLikeFilter()
+  void countStarWithLikeFilter()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE dim1 like 'a%' OR dim2 like '%xb%' escape 'x'",
@@ -4454,7 +4456,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarWithLongColumnFilters()
+  void countStarWithLongColumnFilters()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE cnt >= 3 OR cnt = 1",
@@ -4480,7 +4482,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarWithLongColumnFiltersForceRange()
+  void countStarWithLongColumnFiltersForceRange()
   {
     // we can remove this test if PlannerContext.CTX_SQL_USE_BOUNDS_AND_SELECTORS ever defaults to false all the time
     // since it otherwise is a duplicate of testCountStarWithLongColumnFilters
@@ -4510,7 +4512,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testCountStarWithLongColumnFiltersOnFloatLiterals()
+  void countStarWithLongColumnFiltersOnFloatLiterals()
   {
     msqIncompatible();
     testQuery(
@@ -4597,7 +4599,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarWithLongColumnFiltersOnTwoPoints()
+  void countStarWithLongColumnFiltersOnTwoPoints()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE cnt = 1 OR cnt = 2",
@@ -4625,7 +4627,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFilterOnStringAsNumber()
+  void filterOnStringAsNumber()
   {
     testQuery(
         "SELECT distinct dim1 FROM druid.foo WHERE "
@@ -4671,7 +4673,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFilterOnStringAsNumber2()
+  void filterOnStringAsNumber2()
   {
     testQuery(
         "SELECT distinct dim1 FROM druid.foo WHERE CAST(dim1 AS float) > 9 and CAST(dim1 AS float) <= 10.5",
@@ -4696,7 +4698,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSimpleLongAggregations()
+  void simpleLongAggregations()
   {
     testQuery(
         "SELECT  MIN(l1), MIN(cnt), MAX(l1) FROM druid.numfoo",
@@ -4720,7 +4722,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSimpleDoubleAggregations()
+  void simpleDoubleAggregations()
   {
     testQuery(
         "SELECT  MIN(d1), MAX(d1) FROM druid.numfoo",
@@ -4743,7 +4745,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSimpleFloatAggregations()
+  void simpleFloatAggregations()
   {
     testQuery(
         "SELECT  MIN(m1), MAX(m1) FROM druid.numfoo",
@@ -4766,7 +4768,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSimpleAggregations()
+  void simpleAggregations()
   {
     testQuery(
         "SELECT COUNT(*), COUNT(cnt), COUNT(dim1), AVG(cnt), SUM(cnt), SUM(cnt) + MIN(cnt) + MAX(cnt), COUNT(dim2), COUNT(d1), AVG(d1) FROM druid.numfoo",
@@ -4866,7 +4868,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByWithSortOnPostAggregationDefault()
+  void groupByWithSortOnPostAggregationDefault()
   {
     // By default this query uses topN.
 
@@ -4897,7 +4899,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByWithSortOnPostAggregationNoTopNConfig()
+  void groupByWithSortOnPostAggregationNoTopNConfig()
   {
     // Use PlannerConfig to disable topN, so this query becomes a groupBy.
     testQuery(
@@ -4940,7 +4942,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByWithSortOnPostAggregationNoTopNContext()
+  void groupByWithSortOnPostAggregationNoTopNContext()
   {
     // Use context to disable topN, so this query becomes a groupBy.
 
@@ -4987,7 +4989,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFilteredAggregations()
+  void filteredAggregations()
   {
     if (NullHandling.sqlCompatible()) {
       // cannot vectorize due to expression filter
@@ -5165,7 +5167,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCaseFilteredAggregationWithGroupBy()
+  void caseFilteredAggregationWithGroupBy()
   {
     testQuery(
         "SELECT\n"
@@ -5199,7 +5201,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFilteredAggregationWithNotIn()
+  void filteredAggregationWithNotIn()
   {
     testQuery(
         "SELECT\n"
@@ -5240,7 +5242,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testExpressionAggregations()
+  void expressionAggregations()
   {
     // Cannot vectorize due to expressions.
     cannotVectorize();
@@ -5288,7 +5290,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testExpressionFilteringAndGrouping()
+  void expressionFilteringAndGrouping()
   {
     testQuery(
         "SELECT\n"
@@ -5334,7 +5336,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testExpressionFilteringAndGroupingUsingCastToLong()
+  void expressionFilteringAndGroupingUsingCastToLong()
   {
     testQuery(
         "SELECT\n"
@@ -5382,7 +5384,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testExpressionFilteringAndGroupingOnStringCastToNumber()
+  void expressionFilteringAndGroupingOnStringCastToNumber()
   {
     testQuery(
         "SELECT\n"
@@ -5439,7 +5441,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testInFilter()
+  void inFilter()
   {
     testQuery(
         "SELECT dim1, COUNT(*) FROM druid.foo WHERE dim1 IN ('abc', 'def', 'ghi') GROUP BY dim1",
@@ -5466,7 +5468,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testNotInFilter()
+  void notInFilter()
   {
     testQuery(
         "SELECT dim1, COUNT(*) FROM druid.foo WHERE dim1 NOT IN ('abc', 'def', 'ghi') GROUP BY dim1",
@@ -5495,7 +5497,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testInIsNotTrueFilter()
+  void inIsNotTrueFilter()
   {
     testQuery(
         "SELECT dim1, COUNT(*) FROM druid.foo WHERE dim1 IN ('abc', 'def', 'ghi') IS NOT TRUE GROUP BY dim1",
@@ -5527,7 +5529,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testNotInOrIsNullFilter()
+  void notInOrIsNullFilter()
   {
     testQuery(
         "SELECT dim1, COUNT(*) FROM druid.foo WHERE dim1 NOT IN ('abc', 'def', 'ghi') OR dim1 IS NULL GROUP BY dim1",
@@ -5559,7 +5561,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testNotInAndLessThanFilter()
+  void notInAndLessThanFilter()
   {
     testQuery(
         "SELECT dim1, COUNT(*) FROM druid.foo WHERE dim1 NOT IN ('abc', 'def', 'ghi') AND dim1 < 'zzz' GROUP BY dim1",
@@ -5593,7 +5595,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testInIsNotTrueAndLessThanFilter()
+  void inIsNotTrueAndLessThanFilter()
   {
     testQuery(
         "SELECT dim1, COUNT(*) FROM druid.foo WHERE dim1 IN ('abc', 'def', 'ghi') IS NOT TRUE "
@@ -5633,7 +5635,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSqlIsNullToInFilter()
+  void sqlIsNullToInFilter()
   {
     testQuery(
         "SELECT dim1, COUNT(*) FROM druid.foo WHERE dim1 IS NULL OR dim1 = 'abc' OR dim1 = 'def' OR dim1 = 'ghi' "
@@ -5672,7 +5674,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testInFilterWith23Elements()
+  void inFilterWith23Elements()
   {
     // Regression test for https://github.com/apache/druid/issues/4203.
     final List<String> elements = new ArrayList<>();
@@ -5710,7 +5712,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarWithDegenerateFilter()
+  void countStarWithDegenerateFilter()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE dim2 = 'a' and (dim1 > 'a' OR dim1 < 'b' OR dim1 IS NULL)",
@@ -5734,7 +5736,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testCountStarWithNotOfDegenerateFilter()
+  void countStarWithNotOfDegenerateFilter()
   {
 
     msqIncompatible();
@@ -5765,7 +5767,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @NotYetSupported(Modes.ERROR_HANDLING)
   @Test
-  public void testUnplannableScanOrderByNonTime()
+  void unplannableScanOrderByNonTime()
   {
     msqIncompatible();
     // All of these queries are unplannable because they rely on features Druid doesn't support.
@@ -5779,11 +5781,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnplannableJoinQueriesInNonSQLCompatibleMode()
+  void unplannableJoinQueriesInNonSQLCompatibleMode()
   {
     msqIncompatible();
 
-    Assume.assumeFalse(NullHandling.sqlCompatible());
+    Assumptions.assumeFalse(NullHandling.sqlCompatible());
 
     assertQueryIsUnplannable(
         // JOIN condition with not-equals (<>).
@@ -5801,7 +5803,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarWithBoundFilterSimplifyOnMetric()
+  void countStarWithBoundFilterSimplifyOnMetric()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE 2.5 < m1 AND m1 < 3.5",
@@ -5822,7 +5824,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarWithBoundFilterSimplifyOr()
+  void countStarWithBoundFilterSimplifyOr()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE (dim1 >= 'a' and dim1 < 'b') OR dim1 = 'ab'",
@@ -5844,7 +5846,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @NotYetSupported(Modes.ERROR_HANDLING)
   @Test
-  public void testUnplannableExactCountDistinctOnSketch()
+  void unplannableExactCountDistinctOnSketch()
   {
     // COUNT DISTINCT on a sketch cannot be exact.
     assertQueryIsUnplannable(
@@ -5855,7 +5857,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testIsNotDistinctFromLiteral()
+  void isNotDistinctFromLiteral()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE (dim1 >= 'a' and dim1 < 'b') OR dim1 IS NOT DISTINCT FROM 'ab'",
@@ -5881,7 +5883,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
    * the overriding test can be removed and msqCompatible() can be added here instead.
    */
   @Test
-  public void testArrayAggQueryOnComplexDatatypes()
+  void arrayAggQueryOnComplexDatatypes()
   {
     msqIncompatible();
     cannotVectorize();
@@ -5922,22 +5924,22 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testStringAggQueryOnComplexDatatypes()
+  void stringAggQueryOnComplexDatatypes()
   {
     try {
       testQuery("SELECT STRING_AGG(unique_dim1, ',') FROM druid.foo", ImmutableList.of(), ImmutableList.of());
-      Assert.fail("query execution should fail");
+      fail("query execution should fail");
     }
     catch (DruidException e) {
-      Assert.assertTrue(
+      assertTrue(
           e.getMessage().contains("Aggregation [STRING_AGG] does not support type [COMPLEX<hyperUnique>]")
       );
-      Assert.assertEquals("invalidInput", e.getErrorCode());
+      assertEquals("invalidInput", e.getErrorCode());
     }
   }
 
   @Test
-  public void testCountStarWithBoundFilterSimplifyAnd()
+  void countStarWithBoundFilterSimplifyAnd()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE (dim1 >= 'a' and dim1 < 'b') and dim1 = 'abc'",
@@ -5958,7 +5960,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarWithFilterOnCastedString()
+  void countStarWithFilterOnCastedString()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE CAST(dim1 AS bigint) = 2",
@@ -5979,7 +5981,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarWithTimeFilter()
+  void countStarWithTimeFilter()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo "
@@ -6000,7 +6002,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarWithFloorTimeFilter()
+  void countStarWithFloorTimeFilter()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo "
@@ -6022,7 +6024,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarWithMisalignedFloorTimeFilter()
+  void countStarWithMisalignedFloorTimeFilter()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo "
@@ -6044,7 +6046,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarWithTimeInIntervalFilter()
+  void countStarWithTimeInIntervalFilter()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo "
@@ -6066,7 +6068,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarWithTimeInCastedIntervalFilter()
+  void countStarWithTimeInCastedIntervalFilter()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo "
@@ -6088,7 +6090,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarWithTimeInIntervalFilterLosAngeles()
+  void countStarWithTimeInIntervalFilterLosAngeles()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo "
@@ -6110,7 +6112,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarWithTimeInIntervalFilterInvalidInterval()
+  void countStarWithTimeInIntervalFilterInvalidInterval()
   {
     msqIncompatible();
     testQueryThrows(
@@ -6127,7 +6129,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarWithTimeInIntervalFilterNonLiteral()
+  void countStarWithTimeInIntervalFilterNonLiteral()
   {
     msqIncompatible();
     testQueryThrows(
@@ -6142,7 +6144,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarWithBetweenTimeFilterUsingMilliseconds()
+  void countStarWithBetweenTimeFilterUsingMilliseconds()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo "
@@ -6163,7 +6165,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarWithBetweenFloorTimeFilter()
+  void countStarWithBetweenFloorTimeFilter()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo "
@@ -6184,7 +6186,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarWithBetweenTimeFilterUsingMillisecondsInStringLiterals()
+  void countStarWithBetweenTimeFilterUsingMillisecondsInStringLiterals()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo "
@@ -6205,7 +6207,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testRemoveUselessCaseWhen()
+  void removeUselessCaseWhen()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo\n"
@@ -6233,7 +6235,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarWithTimeMillisecondFilters()
+  void countStarWithTimeMillisecondFilters()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo\n"
@@ -6260,7 +6262,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarWithTimeFilterUsingStringLiterals()
+  void countStarWithTimeFilterUsingStringLiterals()
   {
     // Strings are implicitly cast to timestamps. Test a few different forms.
     testQuery(
@@ -6290,7 +6292,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarWithTimeFilterUsingStringLiteralsInvalid_isUnplannable()
+  void countStarWithTimeFilterUsingStringLiteralsInvalidIsUnplannable()
   {
     // Strings are implicitly cast to timestamps. Test an invalid string.
     // This error message isn't ideal but it is at least better than silently ignoring the problem.
@@ -6300,19 +6302,19 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       testBuilder().sql(sql).run();
     }
     catch (DruidException e) {
-      MatcherAssert.assertThat(
+      assertThat(
           e,
           invalidSqlIs("Illegal TIMESTAMP constant [CAST('z2000-01-01 00:00:00'):TIMESTAMP(3) NOT NULL]")
       );
     }
     catch (Exception e) {
       log.error(e, "Expected DruidException for query: %s", sql);
-      Assert.fail(sql);
+      fail(sql);
     }
   }
 
   @Test
-  public void testCountStarWithSinglePointInTime()
+  void countStarWithSinglePointInTime()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE __time = TIMESTAMP '2000-01-01 00:00:00'",
@@ -6332,7 +6334,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarWithTwoPointsInTime()
+  void countStarWithTwoPointsInTime()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE "
@@ -6358,7 +6360,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarWithComplexDisjointTimeFilter()
+  void countStarWithComplexDisjointTimeFilter()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo "
@@ -6398,7 +6400,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarWithNotOfComplexDisjointTimeFilter()
+  void countStarWithNotOfComplexDisjointTimeFilter()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo "
@@ -6439,7 +6441,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarWithNotTimeFilter()
+  void countStarWithNotTimeFilter()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo "
@@ -6469,7 +6471,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarWithTimeAndDimFilter()
+  void countStarWithTimeAndDimFilter()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo "
@@ -6492,7 +6494,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarWithTimeOrDimFilter()
+  void countStarWithTimeOrDimFilter()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo "
@@ -6527,7 +6529,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarWithTimeFilterOnLongColumnUsingExtractEpoch()
+  void countStarWithTimeFilterOnLongColumnUsingExtractEpoch()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE "
@@ -6559,7 +6561,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarWithTimeFilterOnLongColumnUsingExtractEpochFromDate()
+  void countStarWithTimeFilterOnLongColumnUsingExtractEpochFromDate()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE "
@@ -6591,7 +6593,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountStarWithTimeFilterOnLongColumnUsingTimestampToMillis()
+  void countStarWithTimeFilterOnLongColumnUsingTimestampToMillis()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE "
@@ -6623,7 +6625,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSumOfString()
+  void sumOfString()
   {
     testQuery(
         "SELECT SUM(CAST(dim1 AS INTEGER)) FROM druid.foo",
@@ -6653,7 +6655,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSumOfExtractionFn()
+  void sumOfExtractionFn()
   {
     // Cannot vectorize due to expressions in aggregators.
     cannotVectorize();
@@ -6686,7 +6688,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTimeseriesWithTimeFilterOnLongColumnUsingMillisToTimestamp()
+  void timeseriesWithTimeFilterOnLongColumnUsingMillisToTimestamp()
   {
     testQuery(
         "SELECT\n"
@@ -6729,7 +6731,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountDistinct()
+  void countDistinct()
   {
     msqIncompatible();
     testQuery(
@@ -6762,7 +6764,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountDistinctOfCaseWhen()
+  void countDistinctOfCaseWhen()
   {
     testQuery(
         "SELECT\n"
@@ -6813,7 +6815,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testExactCountDistinct()
+  void exactCountDistinct()
   {
     // When HLL is disabled, do exact count distinct through a nested query.
 
@@ -6852,7 +6854,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testApproxCountDistinctWhenHllDisabled()
+  void approxCountDistinctWhenHllDisabled()
   {
     if (NullHandling.sqlCompatible()) {
       // Empty string isn't counted properly; see https://github.com/apache/druid/issues/13950
@@ -6890,7 +6892,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testApproxCountDistinctBuiltin()
+  void approxCountDistinctBuiltin()
   {
     if (NullHandling.sqlCompatible()) {
       // Empty string isn't counted properly; see https://github.com/apache/druid/issues/13950
@@ -6926,7 +6928,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @NotYetSupported(Modes.PLAN_MISMATCH)
   @Test
-  public void testExactCountDistinctWithGroupingAndOtherAggregators()
+  void exactCountDistinctWithGroupingAndOtherAggregators()
   {
     // When HLL is disabled, do exact count distinct through a nested query.
 
@@ -6981,7 +6983,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @DecoupledTestConfig(nativeQueryIgnore = NativeQueryIgnore.AGG_COL_EXCHANGE)
   @Test
-  public void testMultipleExactCountDistinctWithGroupingAndOtherAggregatorsUsingJoin()
+  void multipleExactCountDistinctWithGroupingAndOtherAggregatorsUsingJoin()
   {
     // When HLL is disabled, do multiple exact count distincts through joins of nested queries.
 
@@ -7092,7 +7094,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @SqlTestFrameworkConfig(numMergeBuffers = 4)
   @Test
-  public void testMultipleExactCountDistinctWithGroupingUsingGroupingSets()
+  void multipleExactCountDistinctWithGroupingUsingGroupingSets()
   {
     msqIncompatible();
     testQuery(
@@ -7174,7 +7176,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testApproxCountDistinct()
+  void approxCountDistinct()
   {
     msqIncompatible();
     // Cannot vectorize due to virtual columns.
@@ -7255,7 +7257,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testApproxCountDistinctOnVectorizableSingleStringExpression()
+  void approxCountDistinctOnVectorizableSingleStringExpression()
   {
     testQuery(
         "SELECT APPROX_COUNT_DISTINCT(dim1 || 'hello') FROM druid.foo",
@@ -7286,7 +7288,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testNestedGroupBy()
+  void nestedGroupBy()
   {
     testQuery(
         "SELECT\n"
@@ -7356,7 +7358,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
-  public void testDoubleNestedGroupBy()
+  void doubleNestedGroupBy()
   {
     testQuery(
         "SELECT SUM(cnt), COUNT(*) FROM (\n"
@@ -7411,7 +7413,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
-  public void testDoubleNestedGroupBy2()
+  void doubleNestedGroupBy2()
   {
     // This test fails when AggregateMergeRule is added to Rules.ABSTRACT_RELATIONAL_RULES. So, we don't add that
     // rule for now. Possible bug in the rule.
@@ -7462,7 +7464,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testExactCountDistinctUsingSubquery()
+  void exactCountDistinctUsingSubquery()
   {
     testQuery(
         "SELECT\n"
@@ -7503,7 +7505,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testAvgDailyCountDistinct()
+  void avgDailyCountDistinct()
   {
     // Cannot vectorize outer query due to inlined inner query.
     cannotVectorize();
@@ -7578,53 +7580,54 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testHighestMaxNumericInFilter()
+  void highestMaxNumericInFilter()
   {
-    expectedException.expect(UOE.class);
-    expectedException.expectMessage("Expected parameter[maxNumericInFilters] cannot exceed system set value of [100]");
+    Throwable exception = assertThrows(UOE.class, () -> {
 
-    testQuery(
-        PLANNER_CONFIG_MAX_NUMERIC_IN_FILTER,
-        ImmutableMap.of(QueryContexts.MAX_NUMERIC_IN_FILTERS, 20000),
-        "SELECT COUNT(*)\n"
-        + "FROM druid.numfoo\n"
-        + "WHERE dim6 IN (\n"
-        + "1,2,3\n"
-        + ")\n",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
-        ImmutableList.of(),
-        ImmutableList.of()
-    );
+      testQuery(
+          PLANNER_CONFIG_MAX_NUMERIC_IN_FILTER,
+          ImmutableMap.of(QueryContexts.MAX_NUMERIC_IN_FILTERS, 20000),
+          "SELECT COUNT(*)\n"
+              + "FROM druid.numfoo\n"
+              + "WHERE dim6 IN (\n"
+              + "1,2,3\n"
+              + ")\n",
+          CalciteTests.REGULAR_USER_AUTH_RESULT,
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    });
+    assertTrue(exception.getMessage().contains("Expected parameter[maxNumericInFilters] cannot exceed system set value of [100]"));
   }
 
   @Test
-  public void testQueryWithMoreThanMaxNumericInFilter()
+  void queryWithMoreThanMaxNumericInFilter()
   {
-    if (NullHandling.sqlCompatible()) {
-      // skip in sql compatible mode, this plans to an OR filter with equality filter children...
-      return;
-    }
-    msqIncompatible();
-    expectedException.expect(UOE.class);
-    expectedException.expectMessage(
-        "The number of values in the IN clause for [dim6] in query exceeds configured maxNumericFilter limit of [2] for INs. Cast [3] values of IN clause to String");
+    Throwable exception = assertThrows(UOE.class, () -> {
+      if (NullHandling.sqlCompatible()) {
+        // skip in sql compatible mode, this plans to an OR filter with equality filter children...
+        return;
+      }
+      msqIncompatible();
 
-    testQuery(
-        PLANNER_CONFIG_MAX_NUMERIC_IN_FILTER,
-        ImmutableMap.of(QueryContexts.MAX_NUMERIC_IN_FILTERS, 2),
-        "SELECT COUNT(*)\n"
-        + "FROM druid.numfoo\n"
-        + "WHERE dim6 IN (\n"
-        + "1,2,3\n"
-        + ")\n",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
-        ImmutableList.of(),
-        ImmutableList.of()
-    );
+      testQuery(
+          PLANNER_CONFIG_MAX_NUMERIC_IN_FILTER,
+          ImmutableMap.of(QueryContexts.MAX_NUMERIC_IN_FILTERS, 2),
+          "SELECT COUNT(*)\n"
+              + "FROM druid.numfoo\n"
+              + "WHERE dim6 IN (\n"
+              + "1,2,3\n"
+              + ")\n",
+          CalciteTests.REGULAR_USER_AUTH_RESULT,
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    });
+    assertTrue(exception.getMessage().contains("The number of values in the IN clause for [dim6] in query exceeds configured maxNumericFilter limit of [2] for INs. Cast [3] values of IN clause to String"));
   }
 
   @Test
-  public void testExactCountDistinctUsingSubqueryWithWherePushDown()
+  void exactCountDistinctUsingSubqueryWithWherePushDown()
   {
     testQuery(
         "SELECT\n"
@@ -7706,7 +7709,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCompareExactAndApproximateCountDistinctUsingSubquery()
+  void compareExactAndApproximateCountDistinctUsingSubquery()
   {
     testQuery(
         "SELECT\n"
@@ -7755,7 +7758,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testHistogramUsingSubquery()
+  void histogramUsingSubquery()
   {
     testQuery(
         "SELECT\n"
@@ -7800,7 +7803,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testHistogramUsingSubqueryWithSort()
+  void histogramUsingSubqueryWithSort()
   {
     testQuery(
         "SELECT\n"
@@ -7854,7 +7857,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountDistinctArithmetic()
+  void countDistinctArithmetic()
   {
     if (NullHandling.sqlCompatible()) {
       // Empty string isn't counted properly; see https://github.com/apache/druid/issues/13950
@@ -7903,7 +7906,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountDistinctOfSubstring()
+  void countDistinctOfSubstring()
   {
     // Cannot vectorize due to extraction dimension spec.
     cannotVectorize();
@@ -7943,7 +7946,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountDistinctOfTrim()
+  void countDistinctOfTrim()
   {
     // Test a couple different syntax variants of TRIM.
     // Cannot vectorize due to virtual columns.
@@ -7979,7 +7982,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSillyQuarters()
+  void sillyQuarters()
   {
     // Like FLOOR(__time TO QUARTER) but silly.
 
@@ -8012,7 +8015,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testRegexpExtract()
+  void regexpExtract()
   {
     // Cannot vectorize due to extractionFn in dimension spec.
     cannotVectorize();
@@ -8076,28 +8079,26 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testRegexpExtractWithBadRegexPattern()
+  void regexpExtractWithBadRegexPattern()
   {
-    // Cannot vectorize due to extractionFn in dimension spec.
-    cannotVectorize();
+    Throwable exception = assertThrows(DruidException.class, () -> {
+      // Cannot vectorize due to extractionFn in dimension spec.
+      cannotVectorize();
 
-    expectedException.expect(DruidException.class);
-    expectedException.expectMessage(
-        "An invalid pattern [^(.))] was provided for the REGEXP_EXTRACT function, " +
-        "error: [Unmatched closing ')' near index 3\n^(.))\n   ^]"
-    );
-
-    testQuery(
-        "SELECT DISTINCT\n"
-        + "  REGEXP_EXTRACT(dim1, '^(.))', 1)\n"
-        + "FROM foo",
-        ImmutableList.of(),
-        ImmutableList.of()
-    );
+      testQuery(
+          "SELECT DISTINCT\n"
+              + "  REGEXP_EXTRACT(dim1, '^(.))', 1)\n"
+              + "FROM foo",
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    });
+    assertTrue(exception.getMessage().contains("An invalid pattern [^(.))] was provided for the REGEXP_EXTRACT function, " +
+        "error: [Unmatched closing ')' near index 3\n^(.))\n   ^]"));
   }
 
   @Test
-  public void testRegexpExtractFilterViaNotNullCheck()
+  void regexpExtractFilterViaNotNullCheck()
   {
     // Cannot vectorize due to extractionFn in dimension spec.
     cannotVectorize();
@@ -8146,7 +8147,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testRegexpLikeFilter()
+  void regexpLikeFilter()
   {
     testQuery(
         "SELECT COUNT(*)\n"
@@ -8178,7 +8179,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @DecoupledTestConfig(nativeQueryIgnore = NativeQueryIgnore.AGG_COL_EXCHANGE)
   @Test
-  public void testGroupBySortPushDown()
+  void groupBySortPushDown()
   {
     testQuery(
         "SELECT dim2, dim1, SUM(cnt) FROM druid.foo GROUP BY dim2, dim1 ORDER BY dim1 LIMIT 4",
@@ -8219,7 +8220,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByLimitPushDownWithHavingOnLong()
+  void groupByLimitPushDownWithHavingOnLong()
   {
     testQuery(
         "SELECT dim1, dim2, SUM(cnt) AS thecnt "
@@ -8274,7 +8275,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @DecoupledTestConfig(nativeQueryIgnore = NativeQueryIgnore.IMPROVED_PLAN)
   @Test
-  public void testGroupByLimitPushdownExtraction()
+  void groupByLimitPushdownExtraction()
   {
     cannotVectorize();
 
@@ -8315,7 +8316,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFilterOnTimeFloor()
+  void filterOnTimeFloor()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo\n"
@@ -8338,7 +8339,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupAndFilterOnTimeFloorWithTimeZone()
+  void groupAndFilterOnTimeFloorWithTimeZone()
   {
     testQuery(
         "SELECT TIME_FLOOR(__time, 'P1M', NULL, 'America/Los_Angeles'), COUNT(*)\n"
@@ -8372,7 +8373,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @NotYetSupported(Modes.PLAN_MISMATCH)
   @Test
-  public void testFilterOnCurrentTimestampWithIntervalArithmetic()
+  void filterOnCurrentTimestampWithIntervalArithmetic()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo\n"
@@ -8395,7 +8396,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFilterOnCurrentTimestampLosAngeles()
+  void filterOnCurrentTimestampLosAngeles()
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT,
@@ -8420,7 +8421,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @NotYetSupported(Modes.PLAN_MISMATCH)
   @Test
-  public void testFilterOnCurrentTimestampOnView()
+  void filterOnCurrentTimestampOnView()
   {
     testQuery(
         "SELECT * FROM view.bview",
@@ -8440,7 +8441,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFilterOnCurrentTimestampLosAngelesOnView()
+  void filterOnCurrentTimestampLosAngelesOnView()
   {
     // Tests that query context still applies to view SQL; note the result is different from
     // "testFilterOnCurrentTimestampOnView" above.
@@ -8465,7 +8466,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFilterOnNotTimeFloor()
+  void filterOnNotTimeFloor()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo\n"
@@ -8490,7 +8491,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFilterOnTimeFloorComparison()
+  void filterOnTimeFloorComparison()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo\n"
@@ -8512,7 +8513,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFilterOnTimeFloorComparisonMisaligned()
+  void filterOnTimeFloorComparisonMisaligned()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo\n"
@@ -8534,7 +8535,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFilterOnTimeExtract()
+  void filterOnTimeExtract()
   {
     // Cannot vectorize due to expression filter.
     cannotVectorize();
@@ -8569,7 +8570,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFilterOnTimeExtractWithMultipleDays()
+  void filterOnTimeExtractWithMultipleDays()
   {
     // Cannot vectorize due to expression filters.
     cannotVectorize();
@@ -8618,7 +8619,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFilterOnTimeExtractWithVariousTimeUnits()
+  void filterOnTimeExtractWithVariousTimeUnits()
   {
     msqIncompatible();
     // Cannot vectorize due to virtual columns.
@@ -8681,7 +8682,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFilterOnTimeFloorMisaligned()
+  void filterOnTimeFloorMisaligned()
   {
     msqIncompatible();
     testQuery(
@@ -8701,7 +8702,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByFloor()
+  void groupByFloor()
   {
     testQuery(
         "SELECT floor(CAST(dim1 AS float)), COUNT(*) FROM druid.foo GROUP BY floor(CAST(dim1 AS float))",
@@ -8730,7 +8731,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @DecoupledTestConfig(nativeQueryIgnore = NativeQueryIgnore.SLIGHTLY_WORSE_PLAN)
   @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
-  public void testQueryWithSelectProjectAndIdentityProjectDoesNotRename()
+  void queryWithSelectProjectAndIdentityProjectDoesNotRename()
   {
     msqIncompatible();
     cannotVectorize();
@@ -8833,7 +8834,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testGroupByFloorWithOrderBy()
+  void groupByFloorWithOrderBy()
   {
     testQuery(
         "SELECT floor(CAST(dim1 AS float)) AS fl, COUNT(*) FROM druid.foo GROUP BY floor(CAST(dim1 AS float)) ORDER BY fl DESC",
@@ -8884,7 +8885,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByOrderByBoolean()
+  void groupByOrderByBoolean()
   {
     // Not msqCompatible until https://github.com/apache/druid/pull/14046 is merged.
     testQuery(
@@ -8939,7 +8940,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByFloorTimeAndOneOtherDimensionWithOrderBy()
+  void groupByFloorTimeAndOneOtherDimensionWithOrderBy()
   {
     testQuery(
         "SELECT floor(__time TO year), dim2, COUNT(*)"
@@ -9014,7 +9015,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByStringLength()
+  void groupByStringLength()
   {
     // Cannot vectorize due to virtual columns.
     cannotVectorize();
@@ -9042,7 +9043,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByExpressionFromLookup()
+  void groupByExpressionFromLookup()
   {
     msqIncompatible();
     // Cannot vectorize direct queries on lookup tables.
@@ -9076,7 +9077,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTimeseries()
+  void timeseries()
   {
     testQuery(
         "SELECT SUM(cnt), gran FROM (\n"
@@ -9102,7 +9103,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFilteredTimeAggregators()
+  void filteredTimeAggregators()
   {
     testQuery(
         "SELECT\n"
@@ -9167,7 +9168,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testTimeseriesLosAngelesViaQueryContext()
+  void timeseriesLosAngelesViaQueryContext()
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT,
@@ -9198,7 +9199,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTimeseriesLosAngelesViaPlannerConfig()
+  void timeseriesLosAngelesViaPlannerConfig()
   {
     testQuery(
         PLANNER_CONFIG_LOS_ANGELES,
@@ -9232,7 +9233,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTimeseriesUsingTimeFloor()
+  void timeseriesUsingTimeFloor()
   {
     testQuery(
         "SELECT SUM(cnt), gran FROM (\n"
@@ -9258,7 +9259,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTimeseriesUsingTimeFloorWithTimeShift()
+  void timeseriesUsingTimeFloorWithTimeShift()
   {
     // Cannot vectorize due to virtual columns.
     cannotVectorize();
@@ -9298,7 +9299,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTimeseriesUsingTimeFloorWithTimestampAdd()
+  void timeseriesUsingTimeFloorWithTimestampAdd()
   {
     testQuery(
         "SELECT SUM(cnt), gran FROM (\n"
@@ -9335,7 +9336,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTimeseriesUsingTimeFloorWithOrigin()
+  void timeseriesUsingTimeFloorWithOrigin()
   {
     testQuery(
         "SELECT SUM(cnt), gran FROM (\n"
@@ -9369,7 +9370,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTimeseriesLosAngelesUsingTimeFloorConnectionUtc()
+  void timeseriesLosAngelesUsingTimeFloorConnectionUtc()
   {
     testQuery(
         "SELECT SUM(cnt), gran FROM (\n"
@@ -9397,7 +9398,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTimeseriesLosAngelesUsingTimeFloorConnectionLosAngeles()
+  void timeseriesLosAngelesUsingTimeFloorConnectionLosAngeles()
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT,
@@ -9428,7 +9429,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTimeseriesDontSkipEmptyBuckets()
+  void timeseriesDontSkipEmptyBuckets()
   {
     msqIncompatible();
     // Tests that query context parameters are passed through to the underlying query engine.
@@ -9482,7 +9483,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTimeseriesUsingCastAsDate()
+  void timeseriesUsingCastAsDate()
   {
     testQuery(
         "SELECT SUM(cnt), dt FROM (\n"
@@ -9512,7 +9513,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTimeseriesUsingFloorPlusCastAsDate()
+  void timeseriesUsingFloorPlusCastAsDate()
   {
     testQuery(
         "SELECT SUM(cnt), dt FROM (\n"
@@ -9538,7 +9539,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTimeseriesDescending()
+  void timeseriesDescending()
   {
     // Cannot vectorize due to descending order.
     cannotVectorize();
@@ -9568,7 +9569,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTimeseriesEmptyResultsAggregatorDefaultValues()
+  void timeseriesEmptyResultsAggregatorDefaultValues()
   {
     msqIncompatible();
     // timeseries with all granularity have a single group, so should return default results for given aggregators
@@ -9674,7 +9675,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTimeseriesEmptyResultsAggregatorDefaultValuesNonVectorized()
+  void timeseriesEmptyResultsAggregatorDefaultValuesNonVectorized()
   {
     // Empty-dataset aggregation queries in MSQ return an empty row, rather than a single row as SQL requires.
     msqIncompatible();
@@ -9837,7 +9838,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testGroupByAggregatorDefaultValues()
+  void groupByAggregatorDefaultValues()
   {
     testQuery(
         "SELECT\n"
@@ -9992,7 +9993,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testGroupByAggregatorDefaultValuesNonVectorized()
+  void groupByAggregatorDefaultValuesNonVectorized()
   {
     cannotVectorize();
     skipVectorize();
@@ -10189,7 +10190,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByExtractYear()
+  void groupByExtractYear()
   {
     // Cannot vectorize due to virtual columns.
     cannotVectorize();
@@ -10227,7 +10228,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByFormatYearAndMonth()
+  void groupByFormatYearAndMonth()
   {
     // Cannot vectorize due to virtual columns.
     cannotVectorize();
@@ -10265,7 +10266,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByExtractFloorTime()
+  void groupByExtractFloorTime()
   {
     // Cannot vectorize due to virtual columns.
     cannotVectorize();
@@ -10300,7 +10301,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByExtractFloorTimeLosAngeles()
+  void groupByExtractFloorTimeLosAngeles()
   {
     // Cannot vectorize due to virtual columns.
     cannotVectorize();
@@ -10339,7 +10340,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTimeseriesWithLimitNoTopN()
+  void timeseriesWithLimitNoTopN()
   {
     testQuery(
         PLANNER_CONFIG_NO_TOPN,
@@ -10369,7 +10370,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTimeseriesWithLimit()
+  void timeseriesWithLimit()
   {
     testQuery(
         "SELECT gran, SUM(cnt)\n"
@@ -10396,7 +10397,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTimeseriesWithLimitAndOffset()
+  void timeseriesWithLimitAndOffset()
   {
     // Timeseries cannot handle offsets, so the query morphs into a groupBy.
     testQuery(
@@ -10433,7 +10434,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTimeseriesWithOrderByAndLimit()
+  void timeseriesWithOrderByAndLimit()
   {
     testQuery(
         "SELECT gran, SUM(cnt)\n"
@@ -10461,7 +10462,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByTimeAndOtherDimension()
+  void groupByTimeAndOtherDimension()
   {
     testQuery(
         "SELECT dim2, gran, SUM(cnt)\n"
@@ -10512,7 +10513,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @NotYetSupported(Modes.PLAN_MISMATCH)
   @Test
-  public void testGroupByTimeFloorAndDimOnGroupByTimeFloorAndDim()
+  void groupByTimeFloorAndDimOnGroupByTimeFloorAndDim()
   {
     testQuery(
         "SELECT dim2, time_floor(gran, 'P1M') gran, sum(s)\n"
@@ -10615,7 +10616,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
-  public void testGroupingSets()
+  void groupingSets()
   {
     msqIncompatible();
     // Cannot vectorize due to virtual columns.
@@ -10681,7 +10682,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
-  public void testGroupingAggregatorDifferentOrder()
+  void groupingAggregatorDifferentOrder()
   {
     msqIncompatible();
 
@@ -10744,7 +10745,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupingAggregatorWithPostAggregator()
+  void groupingAggregatorWithPostAggregator()
   {
     msqIncompatible();
     List<Object[]> resultList;
@@ -10804,7 +10805,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupingSetsWithNumericDimension()
+  void groupingSetsWithNumericDimension()
   {
     msqIncompatible();
     testQuery(
@@ -10835,7 +10836,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRollup()
+  void groupByRollup()
   {
     msqIncompatible();
     // Cannot vectorize due to virtual columns.
@@ -10894,7 +10895,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRollupDifferentOrder()
+  void groupByRollupDifferentOrder()
   {
     msqIncompatible();
     // Like "testGroupByRollup", but the ROLLUP exprs are in the reverse order.
@@ -10951,7 +10952,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
-  public void testGroupByCube()
+  void groupByCube()
   {
     msqIncompatible();
     // Cannot vectorize due to virtual columns.
@@ -11014,7 +11015,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
-  public void testGroupingSetsWithDummyDimension()
+  void groupingSetsWithDummyDimension()
   {
     msqIncompatible();
     // Cannot vectorize due to virtual columns.
@@ -11077,7 +11078,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
-  public void testGroupingSetsNoSuperset()
+  void groupingSetsNoSuperset()
   {
     msqIncompatible();
     // Cannot vectorize due to virtual columns.
@@ -11135,7 +11136,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
-  public void testGroupingSetsWithOrderByDimension()
+  void groupingSetsWithOrderByDimension()
   {
     msqIncompatible();
     testQuery(
@@ -11207,7 +11208,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
-  public void testGroupingSetsWithOrderByAggregator()
+  void groupingSetsWithOrderByAggregator()
   {
     msqIncompatible();
     // Cannot vectorize due to virtual columns.
@@ -11277,7 +11278,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
-  public void testGroupingSetsWithOrderByAggregatorWithLimit()
+  void groupingSetsWithOrderByAggregatorWithLimit()
   {
     msqIncompatible();
     // Cannot vectorize due to virtual columns.
@@ -11342,15 +11343,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTimeExtractWithTooFewArguments()
+  void timeExtractWithTooFewArguments()
   {
     // Regression test for https://github.com/apache/druid/pull/7710.
     try {
       testQuery("SELECT TIME_EXTRACT(__time) FROM druid.foo", ImmutableList.of(), ImmutableList.of());
-      Assert.fail("query execution should fail");
+      fail("query execution should fail");
     }
     catch (DruidException e) {
-      MatcherAssert.assertThat(
+      assertThat(
           e,
           invalidSqlIs(
               "Invalid number of arguments to function 'TIME_EXTRACT'. Was expecting 2 arguments (line [1], column [8])"
@@ -11360,7 +11361,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUsingSubqueryWithoutLimit()
+  void usingSubqueryWithoutLimit()
   {
     testQuery(
         "SELECT COUNT(*) AS cnt FROM ( SELECT * FROM druid.foo ) tmpA",
@@ -11380,7 +11381,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnicodeFilterAndGroupBy()
+  void unicodeFilterAndGroupBy()
   {
     testQuery(
         "SELECT\n"
@@ -11417,7 +11418,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testOrderByAlongWithAliasOrderByTimeGroupByMulti()
+  void orderByAlongWithAliasOrderByTimeGroupByMulti()
   {
     testQuery(
         "select  __time as bug, dim2  from druid.foo group by 1, 2 order by 1 limit 1",
@@ -11450,7 +11451,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testOrderByAlongWithAliasOrderByTimeGroupByOneCol()
+  void orderByAlongWithAliasOrderByTimeGroupByOneCol()
   {
     testQuery(
         "select __time as bug from druid.foo group by 1 order by 1 limit 1",
@@ -11474,7 +11475,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testProjectAfterSort()
+  void projectAfterSort()
   {
     testQuery(
         "select dim1 from (select dim1, dim2, count(*) cnt from druid.foo group by dim1, dim2 order by cnt)",
@@ -11504,7 +11505,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testProjectAfterSort2()
+  void projectAfterSort2()
   {
     testQuery(
         "select s / cnt, dim1, dim2, s from (select dim1, dim2, count(*) cnt, sum(m2) s from druid.foo group by dim1, dim2 order by cnt)",
@@ -11544,9 +11545,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  @Ignore("In Calcite 1.17, this test worked, but after upgrading to Calcite 1.21, this query fails with:"
-          + " org.apache.calcite.sql.validate.SqlValidatorException: Column 'dim1' is ambiguous")
-  public void testProjectAfterSort3()
+  @Disabled("In Calcite 1.17, this test worked, but after upgrading to Calcite 1.21, this query fails with:"
+      + " org.apache.calcite.sql.validate.SqlValidatorException: Column 'dim1' is ambiguous")
+  void projectAfterSort3()
   {
     msqIncompatible();
     testQuery(
@@ -11585,7 +11586,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testProjectAfterSort3WithoutAmbiguity()
+  void projectAfterSort3WithoutAmbiguity()
   {
     msqIncompatible();
     // This query is equivalent to the one in testProjectAfterSort3 but renames the second grouping column
@@ -11617,7 +11618,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSortProjectAfterNestedGroupBy()
+  void sortProjectAfterNestedGroupBy()
   {
     testQuery(
         "SELECT "
@@ -11688,7 +11689,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testPostAggWithTimeseries()
+  void postAggWithTimeseries()
   {
     // Cannot vectorize due to descending order.
     cannotVectorize();
@@ -11731,7 +11732,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testPostAggWithTopN()
+  void postAggWithTopN()
   {
     testQuery(
         "SELECT "
@@ -11793,7 +11794,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testConcat()
+  void concat()
   {
     testQuery(
         "SELECT CONCAT(dim1, '-', dim1, '_', dim1) as dimX FROM foo",
@@ -11823,7 +11824,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testConcat2()
+  void concat2()
   {
     // Tests flattening CONCAT, and tests reduction of concat('x', 'y') => 'xy'
     testQuery(
@@ -11854,7 +11855,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testConcatGroup()
+  void concatGroup()
   {
     testQuery(
         "SELECT CONCAT(dim1, '-', dim1, '_', dim1) as dimX FROM foo GROUP BY 1",
@@ -11884,7 +11885,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testConcatGroup2()
+  void concatGroup2()
   {
     final List<Object[]> results;
     if (useDefault) {
@@ -11928,7 +11929,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testConcatDecomposeAlwaysFalseOrUnknown()
+  void concatDecomposeAlwaysFalseOrUnknown()
   {
     testQuery(
         "SELECT CONCAT(dim1, 'x', dim2) as dimX\n"
@@ -11953,7 +11954,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testConcatDecomposeAlwaysFalseOrUnknownNegated()
+  void concatDecomposeAlwaysFalseOrUnknownNegated()
   {
     testQuery(
         "SELECT CONCAT(dim1, 'x', dim2) as dimX\n"
@@ -12017,7 +12018,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testConcatDecomposeIsNull()
+  void concatDecomposeIsNull()
   {
     testQuery(
         "SELECT dim1, dim2, CONCAT(dim1, 'x', dim2) as dimX\n"
@@ -12066,7 +12067,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testConcatDoubleBarsDecompose()
+  void concatDoubleBarsDecompose()
   {
     testQuery(
         "SELECT dim1 || LOWER('x') || dim2 || 'z' as dimX\n"
@@ -12093,7 +12094,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTextcat()
+  void textcat()
   {
     testQuery(
         "SELECT textcat(dim1, dim1) as dimX FROM foo",
@@ -12145,7 +12146,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testRequireTimeConditionPositive()
+  void requireTimeConditionPositive()
   {
     // simple timeseries
     testQuery(
@@ -12175,7 +12176,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testRequireTimeConditionPositive2()
+  void requireTimeConditionPositive2()
   {
     // nested GROUP BY only requires time condition for inner most query
     testQuery(
@@ -12224,7 +12225,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   // __time >= x remains in the join condition
   @NotYetSupported(Modes.JOIN_CONDITION_NOT_PUSHED_CONDITION)
   @Test
-  public void testRequireTimeConditionPositive3()
+  void requireTimeConditionPositive3()
   {
     // Cannot vectorize next test due to extraction dimension spec.
     cannotVectorize();
@@ -12295,7 +12296,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testRequireTimeConditionLogicalValuePositive()
+  void requireTimeConditionLogicalValuePositive()
   {
     testQuery(
         PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
@@ -12318,67 +12319,70 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testRequireTimeConditionSimpleQueryNegative()
+  void requireTimeConditionSimpleQueryNegative()
   {
-    msqIncompatible();
-    expectedException.expect(CannotBuildQueryException.class);
-    expectedException.expectMessage("__time column");
+    Throwable exception = assertThrows(CannotBuildQueryException.class, () -> {
+      msqIncompatible();
 
-    testQuery(
-        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
-        "SELECT SUM(cnt), gran FROM (\n"
-        + "  SELECT __time as t, floor(__time TO month) AS gran,\n"
-        + "  cnt FROM druid.foo\n"
-        + ") AS x\n"
-        + "GROUP BY gran\n"
-        + "ORDER BY gran",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
-        ImmutableList.of(),
-        ImmutableList.of()
-    );
+      testQuery(
+          PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+          "SELECT SUM(cnt), gran FROM (\n"
+              + "  SELECT __time as t, floor(__time TO month) AS gran,\n"
+              + "  cnt FROM druid.foo\n"
+              + ") AS x\n"
+              + "GROUP BY gran\n"
+              + "ORDER BY gran",
+          CalciteTests.REGULAR_USER_AUTH_RESULT,
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    });
+    assertTrue(exception.getMessage().contains("__time column"));
   }
 
   @Test
-  public void testRequireTimeConditionSubQueryNegative()
+  void requireTimeConditionSubQueryNegative()
   {
-    msqIncompatible();
-    expectedException.expect(CannotBuildQueryException.class);
-    expectedException.expectMessage("__time column");
+    Throwable exception = assertThrows(CannotBuildQueryException.class, () -> {
+      msqIncompatible();
 
-    testQuery(
-        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
-        "SELECT\n"
-        + "  SUM(cnt),\n"
-        + "  COUNT(*)\n"
-        + "FROM (SELECT dim2, SUM(cnt) AS cnt FROM druid.foo GROUP BY dim2)",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
-        ImmutableList.of(),
-        ImmutableList.of()
-    );
+      testQuery(
+          PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+          "SELECT\n"
+              + "  SUM(cnt),\n"
+              + "  COUNT(*)\n"
+              + "FROM (SELECT dim2, SUM(cnt) AS cnt FROM druid.foo GROUP BY dim2)",
+          CalciteTests.REGULAR_USER_AUTH_RESULT,
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    });
+    assertTrue(exception.getMessage().contains("__time column"));
   }
 
   @Test
-  public void testRequireTimeConditionSemiJoinNegative()
+  void requireTimeConditionSemiJoinNegative()
   {
-    msqIncompatible();
-    expectedException.expect(CannotBuildQueryException.class);
-    expectedException.expectMessage("__time column");
+    Throwable exception = assertThrows(CannotBuildQueryException.class, () -> {
+      msqIncompatible();
 
-    testQuery(
-        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
-        "SELECT COUNT(*) FROM druid.foo\n"
-        + "WHERE SUBSTRING(dim2, 1, 1) IN (\n"
-        + "  SELECT SUBSTRING(dim1, 1, 1) FROM druid.foo\n"
-        + "  WHERE dim1 <> '' AND __time >= '2000-01-01'\n"
-        + ")",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
-        ImmutableList.of(),
-        ImmutableList.of()
-    );
+      testQuery(
+          PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+          "SELECT COUNT(*) FROM druid.foo\n"
+              + "WHERE SUBSTRING(dim2, 1, 1) IN (\n"
+              + "  SELECT SUBSTRING(dim1, 1, 1) FROM druid.foo\n"
+              + "  WHERE dim1 <> '' AND __time >= '2000-01-01'\n"
+              + ")",
+          CalciteTests.REGULAR_USER_AUTH_RESULT,
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    });
+    assertTrue(exception.getMessage().contains("__time column"));
   }
 
   @Test
-  public void testFilterFloatDimension()
+  void filterFloatDimension()
   {
     testQuery(
         "SELECT dim1 FROM numfoo WHERE f1 = 0.1 LIMIT 1",
@@ -12400,7 +12404,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFilterDoubleDimension()
+  void filterDoubleDimension()
   {
     testQuery(
         "SELECT dim1 FROM numfoo WHERE d1 = 1.7 LIMIT 1",
@@ -12422,7 +12426,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFilterLongDimension()
+  void filterLongDimension()
   {
     testQuery(
         "SELECT dim1 FROM numfoo WHERE l1 = 7 LIMIT 1",
@@ -12444,7 +12448,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTrigonometricFunction()
+  void trigonometricFunction()
   {
     msqIncompatible();
     testQuery(
@@ -12494,7 +12498,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testRadiansAndDegrees()
+  void radiansAndDegrees()
   {
     testQuery(
         "SELECT RADIANS(m1 * 15)/DEGREES(m2) FROM numfoo WHERE dim1 = '1'",
@@ -12518,7 +12522,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTimestampDiff()
+  void timestampDiff()
   {
     testQuery(
         "SELECT TIMESTAMPDIFF(DAY, TIMESTAMP '1999-01-01 00:00:00', __time), \n"
@@ -12570,7 +12574,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTimestampCeil()
+  void timestampCeil()
   {
     testQuery(
         "SELECT CEIL(TIMESTAMP '2000-01-01 00:00:00' TO DAY), \n"
@@ -12608,7 +12612,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testNvlColumns()
+  void nvlColumns()
   {
     testQuery(
         "SELECT NVL(dim2, dim1), COUNT(*) FROM druid.foo GROUP BY NVL(dim2, dim1)\n",
@@ -12647,7 +12651,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @DecoupledTestConfig(nativeQueryIgnore = NativeQueryIgnore.IMPROVED_PLAN)
   @Test
-  public void testGroupByWithLiteralInSubqueryGrouping()
+  void groupByWithLiteralInSubqueryGrouping()
   {
     testQuery(
         "SELECT \n"
@@ -12710,7 +12714,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testLeftRightStringOperators()
+  void leftRightStringOperators()
   {
     testQuery(
         "SELECT\n"
@@ -12744,7 +12748,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testQueryContextOuterLimit()
+  void queryContextOuterLimit()
   {
     msqIncompatible();
     Map<String, Object> outerLimitContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
@@ -12836,7 +12840,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @DecoupledTestConfig(nativeQueryIgnore = NativeQueryIgnore.IMPROVED_PLAN)
   @Test
-  public void testRepeatedIdenticalVirtualExpressionGrouping()
+  void repeatedIdenticalVirtualExpressionGrouping()
   {
     final String query = "SELECT \n"
                          + "\tCASE dim1 WHEN NULL THEN FALSE ELSE TRUE END AS col_a,\n"
@@ -12868,43 +12872,49 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testValidationErrorNullLiteralIllegal()
+  void validationErrorNullLiteralIllegal()
   {
-    expectedException.expectMessage("Illegal use of 'NULL'");
+    Throwable exception = assertThrows(Exception.class, () -> {
 
-    testQuery(
-        "SELECT REGEXP_LIKE('x', NULL)",
-        ImmutableList.of(),
-        ImmutableList.of()
-    );
+      testQuery(
+          "SELECT REGEXP_LIKE('x', NULL)",
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    });
+    assertTrue(exception.getMessage().contains("Illegal use of 'NULL'"));
   }
 
   @Test
-  public void testValidationErrorNonLiteralIllegal()
+  void validationErrorNonLiteralIllegal()
   {
-    expectedException.expectMessage("Argument to function 'REGEXP_LIKE' must be a literal");
+    Throwable exception = assertThrows(Exception.class, () -> {
 
-    testQuery(
-        "SELECT REGEXP_LIKE('x', dim1) FROM foo",
-        ImmutableList.of(),
-        ImmutableList.of()
-    );
+      testQuery(
+          "SELECT REGEXP_LIKE('x', dim1) FROM foo",
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    });
+    assertTrue(exception.getMessage().contains("Argument to function 'REGEXP_LIKE' must be a literal"));
   }
 
   @Test
-  public void testValidationErrorWrongTypeLiteral()
+  void validationErrorWrongTypeLiteral()
   {
-    expectedException.expectMessage("Cannot apply 'REGEXP_LIKE' to arguments");
+    Throwable exception = assertThrows(Exception.class, () -> {
 
-    testQuery(
-        "SELECT REGEXP_LIKE('x', 1) FROM foo",
-        ImmutableList.of(),
-        ImmutableList.of()
-    );
+      testQuery(
+          "SELECT REGEXP_LIKE('x', 1) FROM foo",
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    });
+    assertTrue(exception.getMessage().contains("Cannot apply 'REGEXP_LIKE' to arguments"));
   }
 
   @Test
-  public void testTimeStampAddZeroDayPeriod()
+  void timeStampAddZeroDayPeriod()
   {
     testQuery(
         "SELECT TIMESTAMPADD(DAY, 0, \"__time\") FROM druid.foo",
@@ -12929,7 +12939,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTimeStampAddZeroMonthPeriod()
+  void timeStampAddZeroMonthPeriod()
   {
     testQuery(
         "SELECT TIMESTAMPADD(MONTH, 0, \"__time\") FROM druid.foo",
@@ -12958,7 +12968,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTimeStampAddZeroYearPeriod()
+  void timeStampAddZeroYearPeriod()
   {
     skipVectorize();
 
@@ -12993,7 +13003,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
    * see https://github.com/apache/druid/issues/10530 for more information
    */
   @Test
-  public void testTimeStampAddConversion()
+  void timeStampAddConversion()
   {
     final PeriodGranularity periodGranularity = new PeriodGranularity(new Period("P1M"), null, null);
 
@@ -13057,7 +13067,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
-  public void testGroupingSetsWithLimit()
+  void groupingSetsWithLimit()
   {
     msqIncompatible();
     testQuery(
@@ -13123,7 +13133,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
-  public void testGroupingSetsWithLimitOrderByGran()
+  void groupingSetsWithLimitOrderByGran()
   {
     msqIncompatible();
     // Cannot vectorize due to virtual columns.
@@ -13199,7 +13209,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testRoundFunc()
+  void roundFunc()
   {
     testQuery(
         "SELECT f1, round(f1) FROM druid.numfoo",
@@ -13237,7 +13247,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountAndAverageByConstantVirtualColumn()
+  void countAndAverageByConstantVirtualColumn()
   {
     List<VirtualColumn> virtualColumns;
     List<AggregatorFactory> aggs;
@@ -13310,7 +13320,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testExpressionCounts()
+  void expressionCounts()
   {
     cannotVectorize();
     testQuery(
@@ -13359,7 +13369,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testBitwiseAggregatorsTimeseries()
+  void bitwiseAggregatorsTimeseries()
   {
     cannotVectorize();
     testQuery(
@@ -13446,7 +13456,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testBitwiseAggregatorsGroupBy()
+  void bitwiseAggregatorsGroupBy()
   {
     cannotVectorize();
     testQuery(
@@ -13553,7 +13563,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testStringAgg()
+  void stringAgg()
   {
     cannotVectorize();
     testQuery(
@@ -13640,7 +13650,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testStringAggMultiValue()
+  void stringAggMultiValue()
   {
     cannotVectorize();
     testQuery(
@@ -13704,7 +13714,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testStringAggNumeric()
+  void stringAggNumeric()
   {
     cannotVectorize();
     testQuery(
@@ -13858,7 +13868,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testStringAggExpression()
+  void stringAggExpression()
   {
     cannotVectorize();
     skipVectorize();
@@ -13928,18 +13938,20 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test(expected = DruidException.class)
-  public void testStringAggExpressionNonConstantSeparator()
+  @Test
+  void stringAggExpressionNonConstantSeparator()
   {
-    testQuery(
-        "SELECT STRING_AGG(DISTINCT CONCAT(dim1, dim2), CONCAT('|', dim1)) FROM foo",
-        ImmutableList.of(),
-        ImmutableList.of()
-    );
+    assertThrows(DruidException.class, () -> {
+      testQuery(
+          "SELECT STRING_AGG(DISTINCT CONCAT(dim1, dim2), CONCAT('|', dim1)) FROM foo",
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    });
   }
 
   @Test
-  public void testStringAnyAggArgValidation()
+  void stringAnyAggArgValidation()
   {
     DruidException e = assertThrows(DruidException.class, () -> testBuilder()
         .sql("SELECT ANY_VALUE(dim3, 1000, 'true') FROM foo")
@@ -13950,15 +13962,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     DruidException e1 = assertThrows(DruidException.class, () -> testBuilder()
         .sql("SELECT ANY_VALUE(dim3, 1000, null) FROM foo")
         .queryContext(ImmutableMap.of()).run());
-    Assert.assertEquals("Illegal use of 'NULL' (line [1], column [30])", e1.getMessage());
+    assertEquals("Illegal use of 'NULL' (line [1], column [30])", e1.getMessage());
     DruidException e2 = assertThrows(DruidException.class, () -> testBuilder()
         .sql("SELECT ANY_VALUE(dim3, null, true) FROM foo")
         .queryContext(ImmutableMap.of()).run());
-    Assert.assertEquals("Illegal use of 'NULL' (line [1], column [24])", e2.getMessage());
+    assertEquals("Illegal use of 'NULL' (line [1], column [24])", e2.getMessage());
   }
 
   @Test
-  public void testStringAggMaxBytes()
+  void stringAggMaxBytes()
   {
     cannotVectorize();
     testQuery(
@@ -14026,7 +14038,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
    * for the input data source of this test
    */
   @Test
-  public void testHumanReadableFormatFunction()
+  void humanReadableFormatFunction()
   {
     // For the row where dim1 = '1', m1 = 4.0 and l1 is null
     testQuery(
@@ -14094,53 +14106,46 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testHumanReadableFormatFunctionExceptionWithWrongNumberType()
+  void humanReadableFormatFunctionExceptionWithWrongNumberType()
   {
-    this.expectedException.expect(DruidException.class);
-    this.expectedException.expectMessage("Supported form(s): HUMAN_READABLE_BINARY_BYTE_FORMAT(Number, [Precision])");
-    testQuery(
-        "SELECT HUMAN_READABLE_BINARY_BYTE_FORMAT('45678')",
-        Collections.emptyList(),
-        Collections.emptyList()
-    );
+    Throwable exception = assertThrows(DruidException.class, () -> {
+      testQuery(
+          "SELECT HUMAN_READABLE_BINARY_BYTE_FORMAT('45678')",
+          Collections.emptyList(),
+          Collections.emptyList()
+      );
+    });
+    assertTrue(exception.getMessage().contains("Supported form(s): HUMAN_READABLE_BINARY_BYTE_FORMAT(Number, [Precision])"));
   }
 
   @Test
-  public void testHumanReadableFormatFunctionWithWrongPrecisionType()
+  void humanReadableFormatFunctionWithWrongPrecisionType()
   {
-    this.expectedException.expect(DruidException.class);
-    this.expectedException.expectMessage("Supported form(s): HUMAN_READABLE_BINARY_BYTE_FORMAT(Number, [Precision])");
-    testQuery(
-        "SELECT HUMAN_READABLE_BINARY_BYTE_FORMAT(45678, '2')",
-        Collections.emptyList(),
-        Collections.emptyList()
-    );
+    Throwable exception = assertThrows(DruidException.class, () -> {
+      testQuery(
+          "SELECT HUMAN_READABLE_BINARY_BYTE_FORMAT(45678, '2')",
+          Collections.emptyList(),
+          Collections.emptyList()
+      );
+    });
+    assertTrue(exception.getMessage().contains("Supported form(s): HUMAN_READABLE_BINARY_BYTE_FORMAT(Number, [Precision])"));
   }
 
   @Test
-  public void testHumanReadableFormatFunctionWithInvalidNumberOfArguments()
+  void humanReadableFormatFunctionWithInvalidNumberOfArguments()
   {
-    this.expectedException.expect(DruidException.class);
-
-    /*
-     * frankly speaking, the exception message thrown here is a little bit confusing
-     * it says it's 'expecting 1 arguments' but actually HUMAN_READABLE_BINARY_BYTE_FORMAT supports 1 or 2 arguments
-     *
-     * The message is returned from {@link org.apache.calcite.sql.validate.SqlValidatorImpl#handleUnresolvedFunction},
-     * and we can see from its implementation that it gets the min number arguments to format the exception message.
-     *
-     */
-    this.expectedException.expectMessage(
-        "Invalid number of arguments to function 'HUMAN_READABLE_BINARY_BYTE_FORMAT'. Was expecting 1 arguments");
-    testQuery(
-        "SELECT HUMAN_READABLE_BINARY_BYTE_FORMAT(45678, 2, 1)",
-        Collections.emptyList(),
-        Collections.emptyList()
-    );
+    Throwable exception = assertThrows(DruidException.class, () -> {
+      testQuery(
+          "SELECT HUMAN_READABLE_BINARY_BYTE_FORMAT(45678, 2, 1)",
+          Collections.emptyList(),
+          Collections.emptyList()
+      );
+    });
+    assertTrue(exception.getMessage().contains("Invalid number of arguments to function 'HUMAN_READABLE_BINARY_BYTE_FORMAT'. Was expecting 1 arguments"));
   }
 
   @Test
-  public void testCommonVirtualExpressionWithDifferentValueType()
+  void commonVirtualExpressionWithDifferentValueType()
   {
     testQuery(
         "select\n"
@@ -14180,7 +14185,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   // When optimization in Grouping#applyProject is applied, and it reduces a Group By query to a timeseries, we
   // want it to return empty bucket if no row matches
   @Test
-  public void testReturnEmptyRowWhenGroupByIsConvertedToTimeseriesWithSingleConstantDimension()
+  void returnEmptyRowWhenGroupByIsConvertedToTimeseriesWithSingleConstantDimension()
   {
     skipVectorize();
     testQuery(
@@ -14234,7 +14239,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testReturnEmptyRowWhenGroupByIsConvertedToTimeseriesWithMultipleConstantDimensions()
+  void returnEmptyRowWhenGroupByIsConvertedToTimeseriesWithMultipleConstantDimensions()
   {
     skipVectorize();
     testQuery(
@@ -14289,7 +14294,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testPlanWithInFilterLessThanInSubQueryThreshold()
+  void planWithInFilterLessThanInSubQueryThreshold()
   {
     String query = "SELECT l1 FROM numfoo WHERE l1 IN (4842, 4844, 4845, 14905, 4853, 29064)";
 
@@ -14329,7 +14334,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGreatestFunctionForNumberWithIsNull()
+  void greatestFunctionForNumberWithIsNull()
   {
     String query = "SELECT dim1, MAX(GREATEST(l1, l2)) IS NULL FROM druid.numfoo GROUP BY dim1";
 
@@ -14395,7 +14400,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGreatestFunctionForStringWithIsNull()
+  void greatestFunctionForStringWithIsNull()
   {
     msqIncompatible();
     cannotVectorize();
@@ -14440,7 +14445,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @DecoupledTestConfig(nativeQueryIgnore = NativeQueryIgnore.AGGREGATE_REMOVE_NOT_FIRED)
   @Test
-  public void testSubqueryTypeMismatchWithLiterals()
+  void subqueryTypeMismatchWithLiterals()
   {
     testQuery(
         "SELECT \n"
@@ -14486,7 +14491,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTimeseriesQueryWithEmptyInlineDatasourceAndGranularity()
+  void timeseriesQueryWithEmptyInlineDatasourceAndGranularity()
   {
     // TODO(gianm): this test does not actually test the below thing, b/c the timestamp_floor got baked in
     msqIncompatible();
@@ -14543,7 +14548,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testComplexDecode()
+  void complexDecode()
   {
     cannotVectorize();
     for (String complexDecode : Arrays.asList("COMPLEX_DECODE_BASE64", "DECODE_BASE64_COMPLEX")) {
@@ -14582,7 +14587,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testComplexDecodeAgg()
+  void complexDecodeAgg()
   {
     msqIncompatible();
     cannotVectorize();
@@ -14616,7 +14621,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testComplexDecodeAggWithCastedTypeName()
+  void complexDecodeAggWithCastedTypeName()
   {
     msqIncompatible();
     cannotVectorize();
@@ -14652,7 +14657,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testOrderByAlongWithInternalScanQuery()
+  void orderByAlongWithInternalScanQuery()
   {
     testQuery(
         "select __time as t, m1 from druid.foo where (m1 in (select distinct m1 from druid.foo)) order by 1 limit 1",
@@ -14694,7 +14699,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testOrderByAlongWithInternalScanQueryNoDistinct()
+  void orderByAlongWithInternalScanQueryNoDistinct()
   {
     testQuery(
         "select __time, m1 from druid.foo where (m1 in (select m1 from druid.foo)) order by __time DESC limit 1",
@@ -14736,7 +14741,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFilterWithNVLAndNotIn()
+  void filterWithNVLAndNotIn()
   {
     testQuery(
         "select __time, dim1 from druid.foo where nvl(dim1, '') NOT IN ('a' , '')",
@@ -14762,7 +14767,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFilterWithNVLAndInIsNotTrue()
+  void filterWithNVLAndInIsNotTrue()
   {
     testQuery(
         "select __time, dim1 from druid.foo where (nvl(dim1, '') IN ('a' , '')) IS NOT TRUE",
@@ -14788,7 +14793,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFilterWithNvlishCaseAndNotIn()
+  void filterWithNvlishCaseAndNotIn()
   {
     testQuery(
         "select __time, dim1 from druid.foo where CASE WHEN dim1 IS NULL THEN '' ELSE dim1 END NOT IN ('a' , '')",
@@ -14814,7 +14819,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFilterWithNvlishCase2AndNotIn()
+  void filterWithNvlishCase2AndNotIn()
   {
     testQuery(
         "select __time, dim1 from druid.foo where CASE WHEN dim1 IS NOT NULL THEN dim1 ELSE '' END NOT IN ('a' , '')",
@@ -14838,8 +14843,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
   @Test
-  public void testGroupByDateTrunc()
+  void groupByDateTrunc()
   {
     testQuery(
         "select DATE_TRUNC('HOUR', __time), COUNT(*) from druid.foo group by DATE_TRUNC('HOUR', __time)",
@@ -14864,7 +14870,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testLatestByOnStringColumnWithoutMaxBytesSpecified()
+  void latestByOnStringColumnWithoutMaxBytesSpecified()
   {
     String defaultString = useDefault ? "" : null;
     cannotVectorize();
@@ -14896,7 +14902,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnSupportedNullsFirst()
+  void unSupportedNullsFirst()
   {
     DruidException e = assertThrows(DruidException.class, () -> testBuilder()
         .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
@@ -14907,7 +14913,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnSupportedNullsLast()
+  void unSupportedNullsLast()
   {
     DruidException e = assertThrows(DruidException.class, () -> testBuilder()
         .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
@@ -14917,7 +14923,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnSupportedRangeBounds()
+  void unSupportedRangeBounds()
   {
     assumeFeatureAvailable(EngineFeature.WINDOW_FUNCTIONS);
 
@@ -14929,7 +14935,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnSupportedWindowBoundExpressions()
+  void unSupportedWindowBoundExpressions()
   {
     assumeFeatureAvailable(EngineFeature.WINDOW_FUNCTIONS);
 
@@ -14942,7 +14948,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testUnSupportedWindowBoundTypes()
+  void unSupportedWindowBoundTypes()
   {
     assumeFeatureAvailable(EngineFeature.WINDOW_FUNCTIONS);
 
@@ -14962,7 +14968,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testWindowingErrorWithoutFeatureFlag()
+  void windowingErrorWithoutFeatureFlag()
   {
     DruidException e = assertThrows(DruidException.class, () -> testBuilder()
         .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, false))
@@ -14973,7 +14979,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testInGroupByLimitOutGroupByOrderBy()
+  void inGroupByLimitOutGroupByOrderBy()
   {
     skipVectorize();
     cannotVectorize();
@@ -15051,7 +15057,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testInGroupByOrderByLimitOutGroupByOrderByLimit()
+  void inGroupByOrderByLimitOutGroupByOrderByLimit()
   {
     skipVectorize();
     cannotVectorize();
@@ -15129,7 +15135,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @DecoupledTestConfig(nativeQueryIgnore = NativeQueryIgnore.SLIGHTLY_WORSE_PLAN)
   @Test
-  public void testWindowingWithScanAndSort()
+  void windowingWithScanAndSort()
   {
     skipVectorize();
     cannotVectorize();
@@ -15228,7 +15234,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testWindowingWithOrderBy()
+  void windowingWithOrderBy()
   {
     skipVectorize();
     msqIncompatible();
@@ -15292,7 +15298,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFilterParseLongNullable()
+  void filterParseLongNullable()
   {
     testQuery(
         "select count(*) from druid.foo where parse_long(dim1, 10) is null",

@@ -31,31 +31,35 @@ import org.apache.druid.segment.data.ComparableList;
 import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTimeZone;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-public class SqlResultsTest extends InitializedNullHandlingTest
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
+
+class SqlResultsTest extends InitializedNullHandlingTest
 {
   private static final SqlResults.Context DEFAULT_CONTEXT = new SqlResults.Context(DateTimeZone.UTC, true, false);
 
   private ObjectMapper jsonMapper;
 
-  @Before
-  public void setUp()
+  @BeforeEach
+  void setUp()
   {
     jsonMapper = TestHelper.JSON_MAPPER;
   }
 
   @Test
-  public void testCoerceStringArrays()
+  void coerceStringArrays()
   {
     final List<String> stringList = Arrays.asList("x", "y", "z", null);
     final Object[] stringArray = new Object[]{"x", "y", "z", null};
@@ -69,7 +73,7 @@ public class SqlResultsTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testCoerceLongArrays()
+  void coerceLongArrays()
   {
     final List<Long> listWithNull = Arrays.asList(1L, 2L, null, 3L);
     final Long[] arrayWithNull = new Long[]{1L, 2L, null, 3L};
@@ -85,7 +89,7 @@ public class SqlResultsTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testCoerceDoubleArrays()
+  void coerceDoubleArrays()
   {
     final List<Double> listWithNull = Arrays.asList(1.1, 2.2, null, 3.3);
     final Double[] arrayWithNull = new Double[]{1.1, 2.2, null, 3.3};
@@ -101,7 +105,7 @@ public class SqlResultsTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testCoerceFloatArrays()
+  void coerceFloatArrays()
   {
     final List<Float> listWithNull = Arrays.asList(1.1f, 2.2f, null, 3.3f);
     final Float[] arrayWithNull = new Float[]{1.1f, 2.2f, null, 3.3f};
@@ -117,7 +121,7 @@ public class SqlResultsTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testCoerceNestedArrays()
+  void coerceNestedArrays()
   {
     List<?> nestedList = Arrays.asList(Arrays.asList(1L, 2L, 3L), Arrays.asList(4L, 5L, 6L));
     Object[] nestedArray = new Object[]{new Object[]{1L, 2L, 3L}, new Object[]{4L, 5L, 6L}};
@@ -127,7 +131,7 @@ public class SqlResultsTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testCoerceBoolean()
+  void coerceBoolean()
   {
     assertCoerce(false, false, SqlTypeName.BOOLEAN);
     assertCoerce(false, "xyz", SqlTypeName.BOOLEAN);
@@ -143,7 +147,7 @@ public class SqlResultsTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testCoerceInteger()
+  void coerceInteger()
   {
     assertCoerce(0, 0, SqlTypeName.INTEGER);
     assertCoerce(1, 1L, SqlTypeName.INTEGER);
@@ -158,7 +162,7 @@ public class SqlResultsTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testCoerceBigint()
+  void coerceBigint()
   {
     assertCoerce(0L, 0, SqlTypeName.BIGINT);
     assertCoerce(1L, 1L, SqlTypeName.BIGINT);
@@ -176,7 +180,7 @@ public class SqlResultsTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testCoerceFloat()
+  void coerceFloat()
   {
     assertCoerce(0f, 0, SqlTypeName.FLOAT);
     assertCoerce(1f, 1L, SqlTypeName.FLOAT);
@@ -190,7 +194,7 @@ public class SqlResultsTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testCoerceDouble()
+  void coerceDouble()
   {
     assertCoerce(0d, 0, SqlTypeName.DOUBLE);
     assertCoerce(1d, 1L, SqlTypeName.DOUBLE);
@@ -204,7 +208,7 @@ public class SqlResultsTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testCoerceString()
+  void coerceString()
   {
     assertCoerce(NullHandling.defaultStringValue(), null, SqlTypeName.VARCHAR);
     assertCoerce("1", 1, SqlTypeName.VARCHAR);
@@ -225,63 +229,64 @@ public class SqlResultsTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testCoerceOfArrayOfPrimitives()
+  void coerceOfArrayOfPrimitives()
   {
     try {
       assertCoerce("", new byte[1], SqlTypeName.BIGINT);
-      Assert.fail("Should throw an exception");
+      fail("Should throw an exception");
     }
     catch (Exception e) {
-      Assert.assertEquals("Cannot coerce field [fieldName] from type [Byte Array] to type [BIGINT]", e.getMessage());
+      assertEquals("Cannot coerce field [fieldName] from type [Byte Array] to type [BIGINT]", e.getMessage());
     }
   }
+
   @Test
-  public void testCoerceArrayFails()
+  void coerceArrayFails()
   {
     assertCannotCoerce("xyz", SqlTypeName.ARRAY);
   }
 
   @Test
-  public void testCoerceUnsupportedType()
+  void coerceUnsupportedType()
   {
     assertCannotCoerce("xyz", SqlTypeName.VARBINARY);
   }
 
   @Test
-  public void testMustCoerce()
+  void mustCoerce()
   {
-    Assert.assertNull(SqlResults.maybeCoerceArrayToList("hello", true));
+    assertNull(SqlResults.maybeCoerceArrayToList("hello", true));
   }
 
   @Test
-  public void testMayNotCoerce()
+  void mayNotCoerce()
   {
-    Assert.assertEquals("hello", SqlResults.maybeCoerceArrayToList("hello", false));
+    assertEquals("hello", SqlResults.maybeCoerceArrayToList("hello", false));
   }
 
   private void assertCoerce(Object expected, Object toCoerce, SqlTypeName typeName)
   {
-    Assert.assertEquals(
-        StringUtils.format("Coerce [%s] to [%s]", toCoerce, typeName),
+    assertEquals(
         expected,
-        SqlResults.coerce(jsonMapper, DEFAULT_CONTEXT, toCoerce, typeName, "fieldName")
+        SqlResults.coerce(jsonMapper, DEFAULT_CONTEXT, toCoerce, typeName, "fieldName"),
+        StringUtils.format("Coerce [%s] to [%s]", toCoerce, typeName)
     );
   }
 
   private void assertCannotCoerce(Object toCoerce, SqlTypeName typeName)
   {
-    final DruidException e = Assert.assertThrows(
-        StringUtils.format("Coerce [%s] to [%s]", toCoerce, typeName),
+    final DruidException e = assertThrows(
         DruidException.class,
-        () -> SqlResults.coerce(jsonMapper, DEFAULT_CONTEXT, toCoerce, typeName, "")
+        () -> SqlResults.coerce(jsonMapper, DEFAULT_CONTEXT, toCoerce, typeName, ""),
+        StringUtils.format("Coerce [%s] to [%s]", toCoerce, typeName)
     );
 
-    MatcherAssert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Cannot coerce")));
+    assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Cannot coerce")));
   }
 
   private static void assertCoerceArrayToList(Object expected, Object toCoerce)
   {
     Object coerced = SqlResults.maybeCoerceArrayToList(toCoerce, true);
-    Assert.assertEquals(expected, coerced);
+    assertEquals(expected, coerced);
   }
 }

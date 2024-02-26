@@ -21,16 +21,17 @@ package org.apache.druid.sql.calcite.planner;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.StringUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class OffsetLimitTest
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+class OffsetLimitTest
 {
   @Test
-  public void testAndThen()
+  void andThen()
   {
     final List<String> things = ImmutableList.of("a", "b", "c", "d", "e", "f", "g", "h");
 
@@ -42,14 +43,7 @@ public class OffsetLimitTest
             final OffsetLimit outer = new OffsetLimit(outerOffset, outerLimit < 0 ? null : (long) outerLimit);
             final OffsetLimit combined = inner.andThen(outer);
 
-            Assert.assertEquals(
-                StringUtils.format(
-                    "innerOffset[%s], innerLimit[%s], outerOffset[%s], outerLimit[%s]",
-                    innerOffset,
-                    innerLimit,
-                    outerOffset,
-                    outerLimit
-                ),
+            assertEquals(
                 things.stream()
                       .skip(innerOffset)
                       .limit(innerLimit < 0 ? Long.MAX_VALUE : innerLimit)
@@ -59,7 +53,14 @@ public class OffsetLimitTest
                 things.stream()
                       .skip(combined.getOffset())
                       .limit(combined.hasLimit() ? combined.getLimit() : Long.MAX_VALUE)
-                      .collect(Collectors.toList())
+                      .collect(Collectors.toList()),
+                StringUtils.format(
+                    "innerOffset[%s], innerLimit[%s], outerOffset[%s], outerLimit[%s]",
+                    innerOffset,
+                    innerLimit,
+                    outerOffset,
+                    outerLimit
+                )
             );
           }
         }

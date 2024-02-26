@@ -20,12 +20,12 @@
 package org.apache.druid.sql.calcite.planner;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class ColumnMappingTest
+class ColumnMappingTest
 {
   @Test
-  public void testEquals()
+  void equals()
   {
     EqualsVerifier.simple().forClass(ColumnMapping.class)
                   .usingGetClass()

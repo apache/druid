@@ -33,7 +33,7 @@ import java.lang.annotation.Target;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Can be used to mark tests which are not-yet supported for some reason.
@@ -139,13 +139,13 @@ public @interface NotYetSupported
           }
           Throwable finalE = e;
           assertThrows(
-              "Expected that this testcase will fail - it might got fixed; or failure have changed?",
               ignoreMode.throwableClass,
               () -> {
                 if (finalE != null) {
                   throw finalE;
                 }
-              }
+              },
+              "Expected that this testcase will fail - it might got fixed; or failure have changed?"
           );
 
           String trace = Throwables.getStackTraceAsString(e);

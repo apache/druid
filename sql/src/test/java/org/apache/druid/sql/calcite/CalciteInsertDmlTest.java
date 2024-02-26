@@ -52,10 +52,8 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -63,7 +61,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
+
+class CalciteInsertDmlTest extends CalciteIngestionDmlTest
 {
   protected static final Map<String, Object> PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT = ImmutableMap.of(
       DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
@@ -71,7 +73,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   );
 
   @Test
-  public void testInsertFromTable()
+  void insertFromTable()
   {
     testIngestionQuery()
         .sql("INSERT INTO dst SELECT * FROM foo PARTITIONED BY ALL TIME")
@@ -89,7 +91,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertFromViewA()
+  void insertFromViewA()
   {
     testIngestionQuery()
         .sql("INSERT INTO dst SELECT * FROM view.aview PARTITIONED BY ALL TIME")
@@ -109,7 +111,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertFromViewC()
+  void insertFromViewC()
   {
     final RowSignature expectedSignature =
         RowSignature.builder()
@@ -161,7 +163,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertIntoExistingTable()
+  void insertIntoExistingTable()
   {
     testIngestionQuery()
         .sql("INSERT INTO foo SELECT * FROM foo PARTITIONED BY ALL TIME")
@@ -179,7 +181,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertIntoQualifiedTable()
+  void insertIntoQualifiedTable()
   {
     testIngestionQuery()
         .sql("INSERT INTO druid.dst SELECT * FROM foo PARTITIONED BY ALL TIME")
@@ -197,7 +199,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertIntoInvalidDataSourceName()
+  void insertIntoInvalidDataSourceName()
   {
     testIngestionQuery()
         .sql("INSERT INTO \"in/valid\" SELECT dim1, dim2 FROM foo PARTITIONED BY ALL TIME")
@@ -210,7 +212,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertUsingColumnList()
+  void insertUsingColumnList()
   {
     testIngestionQuery()
         .sql("INSERT INTO dst (foo, bar) SELECT dim1, dim2 FROM foo PARTITIONED BY ALL TIME")
@@ -221,7 +223,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testUpsert()
+  void upsert()
   {
     testIngestionQuery()
         .sql("UPSERT INTO dst SELECT * FROM foo PARTITIONED BY ALL TIME")
@@ -230,7 +232,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testSelectFromSystemTable()
+  void selectFromSystemTable()
   {
     // TestInsertSqlEngine does not include ALLOW_BINDABLE_PLAN, so cannot query system tables.
 
@@ -244,7 +246,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertIntoSystemTable()
+  void insertIntoSystemTable()
   {
     testIngestionQuery()
         .sql("INSERT INTO INFORMATION_SCHEMA.COLUMNS SELECT * FROM foo PARTITIONED BY ALL TIME")
@@ -255,7 +257,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertIntoView()
+  void insertIntoView()
   {
     testIngestionQuery()
         .sql("INSERT INTO view.aview SELECT * FROM foo PARTITIONED BY ALL TIME")
@@ -266,7 +268,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertFromUnauthorizedDataSource()
+  void insertFromUnauthorizedDataSource()
   {
     testIngestionQuery()
         .sql("INSERT INTO dst SELECT * FROM \"%s\" PARTITIONED BY ALL TIME", CalciteTests.FORBIDDEN_DATASOURCE)
@@ -275,7 +277,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertIntoUnauthorizedDataSource()
+  void insertIntoUnauthorizedDataSource()
   {
     testIngestionQuery()
         .sql("INSERT INTO \"%s\" SELECT * FROM foo PARTITIONED BY ALL TIME", CalciteTests.FORBIDDEN_DATASOURCE)
@@ -284,7 +286,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertIntoNonexistentSchema()
+  void insertIntoNonexistentSchema()
   {
     testIngestionQuery()
         .sql("INSERT INTO nonexistent.dst SELECT * FROM foo PARTITIONED BY ALL TIME")
@@ -295,7 +297,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertFromExternal()
+  void insertFromExternal()
   {
     testIngestionQuery()
         .sql("INSERT INTO dst SELECT * FROM %s PARTITIONED BY ALL TIME", externSql(externalDataSource))
@@ -315,7 +317,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertFromExternalWithInputSourceSecurityEnabled()
+  void insertFromExternalWithInputSourceSecurityEnabled()
   {
     testIngestionQuery()
         .sql("INSERT INTO dst SELECT * FROM %s PARTITIONED BY ALL TIME", externSql(externalDataSource))
@@ -336,7 +338,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testUnauthorizedInsertFromExternalWithInputSourceSecurityEnabled()
+  void unauthorizedInsertFromExternalWithInputSourceSecurityEnabled()
   {
     testIngestionQuery()
         .sql("INSERT INTO dst SELECT * FROM %s PARTITIONED BY ALL TIME", externSql(externalDataSource))
@@ -348,7 +350,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertFromExternalWithSchema()
+  void insertFromExternalWithSchema()
   {
     String extern;
     ObjectMapper queryJsonMapper = queryFramework().queryJsonMapper();
@@ -393,7 +395,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertFromExternalWithSchemaWithInputsourceSecurity()
+  void insertFromExternalWithSchemaWithInputsourceSecurity()
   {
     String extern;
     ObjectMapper queryJsonMapper = queryFramework().queryJsonMapper();
@@ -438,7 +440,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertFromExternalFunctionalStyleWithSchemaWithInputsourceSecurity()
+  void insertFromExternalFunctionalStyleWithSchemaWithInputsourceSecurity()
   {
     String extern;
     ObjectMapper queryJsonMapper = queryFramework().queryJsonMapper();
@@ -481,7 +483,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertFromExternalWithoutSecuritySupport()
+  void insertFromExternalWithoutSecuritySupport()
   {
     InputSource inputSource =
         new TestFileInputSource(ImmutableList.of(new File("/tmp/foo.csv").getAbsoluteFile()));
@@ -533,7 +535,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertFromExternalWithoutSecuritySupportWithInputsourceSecurityEnabled()
+  void insertFromExternalWithoutSecuritySupportWithInputsourceSecurityEnabled()
   {
     String extern;
     ObjectMapper queryJsonMapper = queryFramework().queryJsonMapper();
@@ -571,7 +573,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertWithPartitionedBy()
+  void insertWithPartitionedBy()
   {
     // Test correctness of the query when only PARTITIONED BY clause is present
     RowSignature targetRowSignature = RowSignature.builder()
@@ -599,7 +601,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testPartitionedBySupportedClauses()
+  void partitionedBySupportedClauses()
   {
     RowSignature targetRowSignature = RowSignature.builder()
                                                   .add("__time", ColumnType.LONG)
@@ -628,7 +630,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
       }
       catch (JsonProcessingException e) {
         // Won't reach here
-        Assert.fail(e.getMessage());
+        fail(e.getMessage());
       }
 
       testIngestionQuery()
@@ -653,7 +655,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testExplainPlanInsertWithClusteredBy() throws JsonProcessingException
+  void explainPlanInsertWithClusteredBy() throws JsonProcessingException
   {
     skipVectorize();
 
@@ -757,7 +759,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testExplainPlanInsertWithAsSubQueryClusteredBy()
+  void explainPlanInsertWithAsSubQueryClusteredBy()
   {
     skipVectorize();
 
@@ -855,7 +857,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testExplainPlanInsertJoinQuery()
+  void explainPlanInsertJoinQuery()
   {
     skipVectorize();
 
@@ -960,7 +962,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testExplainPlanInsertWithClusteredByDescThrowsException()
+  void explainPlanInsertWithClusteredByDescThrowsException()
   {
     skipVectorize();
 
@@ -977,7 +979,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertWithClusteredBy()
+  void insertWithClusteredBy()
   {
     // Test correctness of the query when only the CLUSTERED BY clause is present
     RowSignature targetRowSignature = RowSignature.builder()
@@ -1018,7 +1020,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertPeriodFormGranularityWithClusteredBy()
+  void insertPeriodFormGranularityWithClusteredBy()
   {
     // Test correctness of the query when only the CLUSTERED BY clause is present
     RowSignature targetRowSignature = RowSignature.builder()
@@ -1059,7 +1061,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertWithoutPartitionedByWithClusteredBy()
+  void insertWithoutPartitionedByWithClusteredBy()
   {
     testIngestionQuery()
         .sql(
@@ -1074,7 +1076,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertWithPartitionedByAndClusteredBy()
+  void insertWithPartitionedByAndClusteredBy()
   {
     // Test correctness of the query when both PARTITIONED BY and CLUSTERED BY clause is present
     RowSignature targetRowSignature = RowSignature.builder()
@@ -1107,7 +1109,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertWithPartitionedByAndLimitOffset()
+  void insertWithPartitionedByAndLimitOffset()
   {
     RowSignature targetRowSignature = RowSignature.builder()
                                                   .add("__time", ColumnType.LONG)
@@ -1135,7 +1137,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertWithClusteredByAndOrderBy()
+  void insertWithClusteredByAndOrderBy()
   {
     try {
       testQuery(
@@ -1146,10 +1148,10 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
           ImmutableList.of(),
           ImmutableList.of()
       );
-      Assert.fail("Exception should be thrown");
+      fail("Exception should be thrown");
     }
     catch (DruidException e) {
-      MatcherAssert.assertThat(e, invalidSqlIs(
+      assertThat(e, invalidSqlIs(
           "Cannot use an ORDER BY clause on a Query of type [INSERT], use CLUSTERED BY instead"
       ));
     }
@@ -1157,7 +1159,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertWithPartitionedByContainingInvalidGranularity()
+  void insertWithPartitionedByContainingInvalidGranularity()
   {
     // Throws a ValidationException, which gets converted to a DruidException before throwing to end user
     try {
@@ -1166,10 +1168,10 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
           ImmutableList.of(),
           ImmutableList.of()
       );
-      Assert.fail("Exception should be thrown");
+      fail("Exception should be thrown");
     }
     catch (DruidException e) {
-      MatcherAssert.assertThat(
+      assertThat(
           e,
           invalidSqlIs(
               StringUtils.format(DruidSqlParserUtils.PARTITION_ERROR_MESSAGE, "'invalid_granularity'")
@@ -1179,7 +1181,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertWithOrderBy()
+  void insertWithOrderBy()
   {
     try {
       testQuery(
@@ -1190,10 +1192,10 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
           ImmutableList.of(),
           ImmutableList.of()
       );
-      Assert.fail("Exception should be thrown");
+      fail("Exception should be thrown");
     }
     catch (DruidException e) {
-      MatcherAssert.assertThat(
+      assertThat(
           e,
           invalidSqlIs("Cannot use an ORDER BY clause on a Query of type [INSERT], use CLUSTERED BY instead")
       );
@@ -1204,9 +1206,9 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertWithoutPartitionedBy()
+  void insertWithoutPartitionedBy()
   {
-    DruidException e = Assert.assertThrows(
+    DruidException e = assertThrows(
         DruidException.class,
         () ->
             testQuery(
@@ -1216,7 +1218,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
             )
     );
 
-    MatcherAssert.assertThat(
+    assertThat(
         e,
         invalidSqlIs("Operation [INSERT] requires a PARTITIONED BY to be explicitly defined, but none was found.")
     );
@@ -1224,7 +1226,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testExplainInsertFromExternal() throws IOException
+  void explainInsertFromExternal() throws IOException
   {
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();
@@ -1315,7 +1317,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testExplainPlanForInsertWithClusteredBy() throws JsonProcessingException
+  void explainPlanForInsertWithClusteredBy() throws JsonProcessingException
   {
     skipVectorize();
 
@@ -1418,10 +1420,10 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testExplainInsertFromExternalUnauthorized()
+  void explainInsertFromExternalUnauthorized()
   {
     // Use testQuery for EXPLAIN (not testIngestionQuery).
-    Assert.assertThrows(
+    assertThrows(
         ForbiddenException.class,
         () ->
             testQuery(
@@ -1439,7 +1441,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testSurfaceErrorsWhenInsertingThroughIncorrectSelectStatment()
+  void surfaceErrorsWhenInsertingThroughIncorrectSelectStatment()
   {
     assertQueryIsUnplannable(
         "INSERT INTO druid.dst SELECT dim2, dim1, m1 FROM foo2 UNION SELECT dim1, dim2, m1 FROM foo PARTITIONED BY ALL TIME",
@@ -1451,7 +1453,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertFromExternalUnauthorized()
+  void insertFromExternalUnauthorized()
   {
     testIngestionQuery()
         .sql("INSERT INTO dst SELECT * FROM %s PARTITIONED BY ALL TIME", externSql(externalDataSource))
@@ -1460,7 +1462,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertWithOverwriteClause()
+  void insertWithOverwriteClause()
   {
     testIngestionQuery()
         .sql("INSERT INTO dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
@@ -1469,7 +1471,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertFromExternalProjectSort()
+  void insertFromExternalProjectSort()
   {
     // INSERT with a particular column ordering.
 
@@ -1500,7 +1502,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertFromExternalAggregate()
+  void insertFromExternalAggregate()
   {
     // INSERT with rollup.
 
@@ -1536,7 +1538,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertFromExternalAggregateAll()
+  void insertFromExternalAggregateAll()
   {
     // INSERT with rollup into a single row (no GROUP BY exprs).
 
@@ -1566,7 +1568,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertWithInvalidSelectStatement()
+  void insertWithInvalidSelectStatement()
   {
     // This test fails because "count" is a reserved word and it is being used without quotes.  So SQL is considering
     // it a token instead of a name.  It would be nice if our message was more direct telling the person that they
@@ -1579,7 +1581,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertWithUnnamedColumnInSelectStatement()
+  void insertWithUnnamedColumnInSelectStatement()
   {
     testIngestionQuery()
         .sql("INSERT INTO t SELECT dim1, dim2 || '-lol' FROM foo PARTITIONED BY ALL")
@@ -1588,7 +1590,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertWithInvalidColumnNameInIngest()
+  void insertWithInvalidColumnNameInIngest()
   {
     testIngestionQuery()
         .sql("INSERT INTO t SELECT __time, dim1 AS EXPR$0 FROM foo PARTITIONED BY ALL")
@@ -1597,7 +1599,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertWithUnnamedColumnInNestedSelectStatement()
+  void insertWithUnnamedColumnInNestedSelectStatement()
   {
     testIngestionQuery()
         .sql("INSERT INTO test "
@@ -1608,7 +1610,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertQueryWithInvalidGranularity()
+  void insertQueryWithInvalidGranularity()
   {
     testIngestionQuery()
         .sql("insert into foo1 select __time, dim1 FROM foo partitioned by time_floor(__time, 'PT2H')")
@@ -1625,7 +1627,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertOnExternalDataSourceWithIncompatibleTimeColumnSignature()
+  void insertOnExternalDataSourceWithIncompatibleTimeColumnSignature()
   {
     ExternalDataSource restrictedSignature = new ExternalDataSource(
         new InlineInputSource("100\nc200\n"),
@@ -1650,7 +1652,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testInsertWithSqlOuterLimit()
+  void insertWithSqlOuterLimit()
   {
     HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
     context.put(PlannerContext.CTX_SQL_OUTER_LIMIT, 100);
@@ -1665,7 +1667,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testErrorWithUnableToConstructColumnSignatureWithExtern()
+  void errorWithUnableToConstructColumnSignatureWithExtern()
   {
     final String sqlString = "insert into dst \n"
                              + "select time_parse(\"time\") as __time, * \n"
@@ -1694,7 +1696,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testErrorWhenBothRowSignatureAndExtendsProvidedToExtern()
+  void errorWhenBothRowSignatureAndExtendsProvidedToExtern()
   {
     final String sqlString = "insert into dst \n"
                              + "select time_parse(\"time\") as __time, * \n"
@@ -1723,7 +1725,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testErrorWhenNoneOfRowSignatureAndExtendsProvidedToExtern()
+  void errorWhenNoneOfRowSignatureAndExtendsProvidedToExtern()
   {
     final String sqlString = "insert into dst \n"
                              + "select time_parse(\"time\") as __time, * \n"
@@ -1751,7 +1753,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testErrorWhenInputSourceInvalid()
+  void errorWhenInputSourceInvalid()
   {
     final String sqlString = "insert into dst \n"
                              + "select time_parse(\"time\") as __time, * \n"

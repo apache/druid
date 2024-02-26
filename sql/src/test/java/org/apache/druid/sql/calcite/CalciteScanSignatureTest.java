@@ -37,7 +37,7 @@ import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.destination.IngestDestination;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -50,7 +50,7 @@ public class CalciteScanSignatureTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testScanSignature()
+  void scanSignature()
   {
     final Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(DruidQuery.CTX_SCAN_SIGNATURE, "[{\"name\":\"v0\",\"type\":\"STRING\"}]");
@@ -83,7 +83,7 @@ public class CalciteScanSignatureTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testScanSignatureWithDimAsValuePrimitiveByteArr()
+  void scanSignatureWithDimAsValuePrimitiveByteArr()
   {
     final Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     testQuery(

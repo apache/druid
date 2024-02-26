@@ -28,16 +28,18 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.builtin.TimeFormatOperatorConversion;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 /**
  * Tests for TIME_FORMAT
  */
-public class TimeFormatOperatorConversionTest extends CalciteTestBase
+class TimeFormatOperatorConversionTest extends CalciteTestBase
 {
   private static final RowSignature ROW_SIGNATURE = RowSignature
       .builder()
@@ -51,15 +53,15 @@ public class TimeFormatOperatorConversionTest extends CalciteTestBase
   private TimeFormatOperatorConversion target;
   private ExpressionTestHelper testHelper;
 
-  @Before
-  public void setUp()
+  @BeforeEach
+  void setUp()
   {
     target = new TimeFormatOperatorConversion();
     testHelper = new ExpressionTestHelper(ROW_SIGNATURE, BINDINGS);
   }
 
   @Test
-  public void testConversionToUTC()
+  void conversionToUTC()
   {
     testExpression(
         "2000-02-03 04:05:06",
@@ -70,7 +72,7 @@ public class TimeFormatOperatorConversionTest extends CalciteTestBase
   }
 
   @Test
-  public void testConversionWithDefaultShouldUseUTC()
+  void conversionWithDefaultShouldUseUTC()
   {
     testExpression(
         "2000-02-03 04:05:06",
@@ -81,7 +83,7 @@ public class TimeFormatOperatorConversionTest extends CalciteTestBase
   }
 
   @Test
-  public void testConversionToTimezone()
+  void conversionToTimezone()
   {
     testExpression(
         "2000-02-02 20:05:06",
@@ -91,15 +93,17 @@ public class TimeFormatOperatorConversionTest extends CalciteTestBase
     );
   }
 
-  @Test(expected = IAE.class)
-  public void testConversionToUnknownTimezoneShouldThrowException()
+  @Test
+  void conversionToUnknownTimezoneShouldThrowException()
   {
-    testExpression(
-        "2000-02-02 20:05:06",
-        "timestamp_format(\"t\",'yyyy-MM-dd HH:mm:ss','America/NO_TZ')",
-        "yyyy-MM-dd HH:mm:ss",
-        "America/NO_TZ"
-    );
+    assertThrows(IAE.class, () -> {
+      testExpression(
+          "2000-02-02 20:05:06",
+          "timestamp_format(\"t\",'yyyy-MM-dd HH:mm:ss','America/NO_TZ')",
+          "yyyy-MM-dd HH:mm:ss",
+          "America/NO_TZ"
+      );
+    });
   }
 
   private void testExpression(

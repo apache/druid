@@ -39,16 +39,19 @@ import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.Mock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 
 import java.util.Collections;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+
 @RunWith(EasyMockRunner.class)
-public class SqlHttpModuleTest
+class SqlHttpModuleTest
 {
   @Mock
   private ObjectMapper jsonMpper;
@@ -56,8 +59,8 @@ public class SqlHttpModuleTest
   private SqlHttpModule target;
   private Injector injector;
 
-  @Before
-  public void setUp()
+  @BeforeEach
+  void setUp()
   {
     target = new SqlHttpModule();
     injector = Guice.createInjector(
@@ -78,22 +81,22 @@ public class SqlHttpModuleTest
   }
 
   @Test
-  public void testSqlResourceIsInjectedAndSingleton()
+  void sqlResourceIsInjectedAndSingleton()
   {
     SqlResource sqlResource = injector.getInstance(SqlResource.class);
-    Assert.assertNotNull(sqlResource);
+    assertNotNull(sqlResource);
     SqlResource other = injector.getInstance(SqlResource.class);
-    Assert.assertSame(other, sqlResource);
+    assertSame(other, sqlResource);
   }
 
   @Test
-  public void testSqlResourceIsAvailableViaJersey()
+  void sqlResourceIsAvailableViaJersey()
   {
     Set<Class<?>> jerseyResourceClasses =
         injector.getInstance(Key.get(new TypeLiteral<Set<Class<?>>>()
         {
         }, JSR311Resource.class));
-    Assert.assertEquals(1, jerseyResourceClasses.size());
-    Assert.assertEquals(SqlResource.class, jerseyResourceClasses.iterator().next());
+    assertEquals(1, jerseyResourceClasses.size());
+    assertEquals(SqlResource.class, jerseyResourceClasses.iterator().next());
   }
 }

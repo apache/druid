@@ -74,8 +74,9 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -193,7 +194,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     NestedDataModule.registerHandlersAndSerde();
     final QueryableIndex index =
         IndexBuilder.create()
-                    .tmpDir(temporaryFolder.newFolder())
+                    .tmpDir(newFolder(temporaryFolder, "junit"))
                     .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                     .schema(
                         new IncrementalIndexSchema.Builder()
@@ -209,7 +210,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
     final QueryableIndex indexMix11 =
         IndexBuilder.create()
-                    .tmpDir(temporaryFolder.newFolder())
+                    .tmpDir(newFolder(temporaryFolder, "junit"))
                     .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                     .schema(
                         new IncrementalIndexSchema.Builder()
@@ -226,7 +227,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
     final QueryableIndex indexMix12 =
         IndexBuilder.create()
-                    .tmpDir(temporaryFolder.newFolder())
+                    .tmpDir(newFolder(temporaryFolder, "junit"))
                     .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                     .schema(
                         new IncrementalIndexSchema.Builder()
@@ -242,7 +243,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
     final QueryableIndex indexMix21 =
         IndexBuilder.create()
-                    .tmpDir(temporaryFolder.newFolder())
+                    .tmpDir(newFolder(temporaryFolder, "junit"))
                     .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                     .schema(
                         new IncrementalIndexSchema.Builder()
@@ -258,7 +259,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
     final QueryableIndex indexMix22 =
         IndexBuilder.create()
-                    .tmpDir(temporaryFolder.newFolder())
+                    .tmpDir(newFolder(temporaryFolder, "junit"))
                     .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                     .schema(
                         new IncrementalIndexSchema.Builder()
@@ -274,7 +275,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
     final QueryableIndex indexArrays =
         IndexBuilder.create()
-                    .tmpDir(temporaryFolder.newFolder())
+                    .tmpDir(newFolder(temporaryFolder, "junit"))
                     .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                     .schema(
                         new IncrementalIndexSchema.Builder()
@@ -293,12 +294,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         )
                     )
                     .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
-                    .inputTmpDir(temporaryFolder.newFolder())
+                    .inputTmpDir(newFolder(temporaryFolder, "junit"))
                     .buildMMappedIndex();
 
     final QueryableIndex indexAllTypesAuto =
         IndexBuilder.create()
-                    .tmpDir(temporaryFolder.newFolder())
+                    .tmpDir(newFolder(temporaryFolder, "junit"))
                     .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                     .schema(
                         new IncrementalIndexSchema.Builder()
@@ -317,7 +318,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         )
                     )
                     .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
-                    .inputTmpDir(temporaryFolder.newFolder())
+                    .inputTmpDir(newFolder(temporaryFolder, "junit"))
                     .buildMMappedIndex();
 
 
@@ -391,7 +392,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPath()
+  void groupByPath()
   {
     testQuery(
         "SELECT "
@@ -428,7 +429,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupJsonValueAny()
+  void groupJsonValueAny()
   {
     testQuery(
         "SELECT "
@@ -465,7 +466,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByJsonValue()
+  void groupByJsonValue()
   {
     testQuery(
         "SELECT "
@@ -502,7 +503,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTopNPath()
+  void topNPath()
   {
     testQuery(
         "SELECT "
@@ -539,7 +540,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootPath()
+  void groupByRootPath()
   {
     testQuery(
         "SELECT "
@@ -576,7 +577,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootSingleTypeLong()
+  void groupByRootSingleTypeLong()
   {
     testQuery(
         "SELECT "
@@ -612,7 +613,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootSingleTypeString()
+  void groupByRootSingleTypeString()
   {
     testQuery(
         "SELECT "
@@ -648,7 +649,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootSingleTypeLongMixed1()
+  void groupByRootSingleTypeLongMixed1()
   {
     testQuery(
         "SELECT "
@@ -684,7 +685,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootSingleTypeStringMixed1()
+  void groupByRootSingleTypeStringMixed1()
   {
     testQuery(
         "SELECT "
@@ -720,7 +721,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootSingleTypeStringMixed1Sparse()
+  void groupByRootSingleTypeStringMixed1Sparse()
   {
     testQuery(
         "SELECT "
@@ -755,7 +756,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootSingleTypeLongMixed2()
+  void groupByRootSingleTypeLongMixed2()
   {
     testQuery(
         "SELECT "
@@ -791,7 +792,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootSingleTypeStringMixed2()
+  void groupByRootSingleTypeStringMixed2()
   {
     testQuery(
         "SELECT "
@@ -827,7 +828,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootSingleTypeStringMixed2Sparse()
+  void groupByRootSingleTypeStringMixed2Sparse()
   {
     testQuery(
         "SELECT "
@@ -862,7 +863,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootSingleTypeStringMixed2SparseJsonValueNonExistentPath()
+  void groupByRootSingleTypeStringMixed2SparseJsonValueNonExistentPath()
   {
     testQuery(
         "SELECT "
@@ -897,7 +898,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testJsonValueArrays()
+  void jsonValueArrays()
   {
     testBuilder()
         .sql(
@@ -992,7 +993,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestRootSingleTypeArrayLongNulls()
+  void unnestRootSingleTypeArrayLongNulls()
   {
     testBuilder()
         .sql("SELECT longs FROM druid.arrays, UNNEST(arrayLongNulls) as u(longs)")
@@ -1052,7 +1053,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestRootSingleTypeArrayStringNulls()
+  void unnestRootSingleTypeArrayStringNulls()
   {
     cannotVectorize();
     testBuilder()
@@ -1110,7 +1111,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestRootSingleTypeArrayDoubleNulls()
+  void unnestRootSingleTypeArrayDoubleNulls()
   {
     cannotVectorize();
     testBuilder()
@@ -1175,7 +1176,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testGroupByRootSingleTypeArrayLong()
+  void groupByRootSingleTypeArrayLong()
   {
     cannotVectorize();
     testBuilder()
@@ -1221,7 +1222,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootSingleTypeArrayLongFilteredArrayEquality()
+  void groupByRootSingleTypeArrayLongFilteredArrayEquality()
   {
     cannotVectorize();
     testBuilder()
@@ -1272,7 +1273,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootSingleTypeArrayLongNulls()
+  void groupByRootSingleTypeArrayLongNulls()
   {
     cannotVectorize();
     testBuilder()
@@ -1321,7 +1322,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootSingleTypeLongJsonValueFilter()
+  void groupByRootSingleTypeLongJsonValueFilter()
   {
     testQuery(
         "SELECT "
@@ -1367,7 +1368,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootSingleTypeArrayLongNullsFilteredArrayEquality()
+  void groupByRootSingleTypeArrayLongNullsFilteredArrayEquality()
   {
     if (NullHandling.replaceWithDefault()) {
       // this fails in default value mode because it relies on equality filter and null filter to behave correctly
@@ -1421,7 +1422,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootSingleTypeArrayLongNullsUnnest()
+  void groupByRootSingleTypeArrayLongNullsUnnest()
   {
     cannotVectorize();
     testBuilder()
@@ -1473,7 +1474,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootSingleTypeArrayLongNullsFiltered()
+  void groupByRootSingleTypeArrayLongNullsFiltered()
   {
     cannotVectorize();
     testBuilder()
@@ -1538,7 +1539,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testGroupByRootSingleTypeArrayLongNullsFilteredMore()
+  void groupByRootSingleTypeArrayLongNullsFilteredMore()
   {
     cannotVectorize();
     testBuilder()
@@ -1591,7 +1592,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootSingleTypeArrayString()
+  void groupByRootSingleTypeArrayString()
   {
     cannotVectorize();
     testBuilder()
@@ -1637,7 +1638,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootSingleTypeArrayStringNulls()
+  void groupByRootSingleTypeArrayStringNulls()
   {
     cannotVectorize();
     testBuilder()
@@ -1685,7 +1686,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootSingleTypeArrayStringNullsUnnest()
+  void groupByRootSingleTypeArrayStringNullsUnnest()
   {
     cannotVectorize();
     testBuilder()
@@ -1740,7 +1741,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootSingleTypeArrayStringNullsFiltered()
+  void groupByRootSingleTypeArrayStringNullsFiltered()
   {
     cannotVectorize();
     testBuilder()
@@ -1805,7 +1806,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootSingleTypeArrayDouble()
+  void groupByRootSingleTypeArrayDouble()
   {
     cannotVectorize();
     testBuilder()
@@ -1851,7 +1852,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootSingleTypeArrayDoubleNulls()
+  void groupByRootSingleTypeArrayDoubleNulls()
   {
     cannotVectorize();
     testBuilder()
@@ -1900,7 +1901,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootSingleTypeArrayDoubleNullsUnnest()
+  void groupByRootSingleTypeArrayDoubleNullsUnnest()
   {
     cannotVectorize();
     testBuilder()
@@ -1956,7 +1957,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootSingleTypeArrayDoubleNullsFiltered()
+  void groupByRootSingleTypeArrayDoubleNullsFiltered()
   {
     cannotVectorize();
     testBuilder()
@@ -2019,7 +2020,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootSingleTypeArrayLongElement()
+  void groupByRootSingleTypeArrayLongElement()
   {
     cannotVectorize();
     testBuilder()
@@ -2067,7 +2068,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootSingleTypeArrayLongElementFiltered()
+  void groupByRootSingleTypeArrayLongElementFiltered()
   {
     cannotVectorize();
     testBuilder()
@@ -2115,7 +2116,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootSingleTypeArrayLongElementDefault()
+  void groupByRootSingleTypeArrayLongElementDefault()
   {
     cannotVectorize();
     testBuilder()
@@ -2163,7 +2164,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootSingleTypeArrayStringElement()
+  void groupByRootSingleTypeArrayStringElement()
   {
     testBuilder()
         .sql(
@@ -2208,7 +2209,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootSingleTypeArrayStringElementFiltered()
+  void groupByRootSingleTypeArrayStringElementFiltered()
   {
     testBuilder()
         .sql(
@@ -2255,7 +2256,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootSingleTypeArrayDoubleElement()
+  void groupByRootSingleTypeArrayDoubleElement()
   {
     testBuilder()
         .sql(
@@ -2301,7 +2302,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootSingleTypeArrayDoubleElementFiltered()
+  void groupByRootSingleTypeArrayDoubleElementFiltered()
   {
     testBuilder()
         .sql(
@@ -2352,7 +2353,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testGroupByJsonValues()
+  void groupByJsonValues()
   {
     testQuery(
         "SELECT "
@@ -2392,7 +2393,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathSelectorFilter()
+  void groupByPathSelectorFilter()
   {
     testQuery(
         "SELECT "
@@ -2431,7 +2432,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathSelectorFilterCoalesce()
+  void groupByPathSelectorFilterCoalesce()
   {
     cannotVectorize();
     testQuery(
@@ -2475,7 +2476,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testJsonAndArrayAgg()
+  void jsonAndArrayAgg()
   {
     cannotVectorize();
     testQuery(
@@ -2554,7 +2555,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathSelectorFilterLong()
+  void groupByPathSelectorFilterLong()
   {
     testQuery(
         "SELECT "
@@ -2594,7 +2595,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathSelectorFilterDouble()
+  void groupByPathSelectorFilterDouble()
   {
     testQuery(
         "SELECT "
@@ -2634,7 +2635,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathSelectorFilterString()
+  void groupByPathSelectorFilterString()
   {
     testQuery(
         "SELECT "
@@ -2674,7 +2675,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathSelectorFilterVariant()
+  void groupByPathSelectorFilterVariant()
   {
     testQuery(
         "SELECT "
@@ -2709,7 +2710,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathSelectorFilterVariant2()
+  void groupByPathSelectorFilterVariant2()
   {
     testQuery(
         "SELECT "
@@ -2747,7 +2748,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathSelectorFilterVariant2Int()
+  void groupByPathSelectorFilterVariant2Int()
   {
     testQuery(
         "SELECT "
@@ -2787,7 +2788,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathSelectorFilterVariant2Double()
+  void groupByPathSelectorFilterVariant2Double()
   {
     testQuery(
         "SELECT "
@@ -2824,7 +2825,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathSelectorFilterVariant2BothTypesMatcher()
+  void groupByPathSelectorFilterVariant2BothTypesMatcher()
   {
     testQuery(
         "SELECT "
@@ -2870,7 +2871,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathSelectorFilterVariant3()
+  void groupByPathSelectorFilterVariant3()
   {
     testQuery(
         "SELECT "
@@ -2908,7 +2909,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathSelectorFilterNonExistent()
+  void groupByPathSelectorFilterNonExistent()
   {
     testQuery(
         "SELECT "
@@ -2943,7 +2944,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathSelectorFilterNull()
+  void groupByPathSelectorFilterNull()
   {
     testQuery(
         "SELECT "
@@ -2981,7 +2982,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathBoundFilterLong()
+  void groupByPathBoundFilterLong()
   {
     testQuery(
         "SELECT "
@@ -3018,7 +3019,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathBoundFilterLongNoUpper()
+  void groupByPathBoundFilterLongNoUpper()
   {
     testQuery(
         "SELECT "
@@ -3055,7 +3056,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathBoundFilterLongNoLower()
+  void groupByPathBoundFilterLongNoLower()
   {
     testQuery(
         "SELECT "
@@ -3091,7 +3092,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathBoundFilterLongNumeric()
+  void groupByPathBoundFilterLongNumeric()
   {
     testQuery(
         "SELECT "
@@ -3129,7 +3130,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathBoundFilterLongNoUpperNumeric()
+  void groupByPathBoundFilterLongNoUpperNumeric()
   {
     testQuery(
         "SELECT "
@@ -3167,7 +3168,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathNumericBoundFilterLongNoUpperNumeric()
+  void groupByPathNumericBoundFilterLongNoUpperNumeric()
   {
     testQuery(
         "SELECT "
@@ -3204,7 +3205,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathBoundFilterLongNoLowerNumeric()
+  void groupByPathBoundFilterLongNoLowerNumeric()
   {
     testQuery(
         "SELECT "
@@ -3246,7 +3247,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathBoundFilterDouble()
+  void groupByPathBoundFilterDouble()
   {
     testQuery(
         "SELECT "
@@ -3283,7 +3284,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathBoundFilterDoubleNoUpper()
+  void groupByPathBoundFilterDoubleNoUpper()
   {
     testQuery(
         "SELECT "
@@ -3320,7 +3321,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathBoundFilterDoubleNoLower()
+  void groupByPathBoundFilterDoubleNoLower()
   {
     testQuery(
         "SELECT "
@@ -3356,7 +3357,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathBoundDoubleFilterNumeric()
+  void groupByPathBoundDoubleFilterNumeric()
   {
     testQuery(
         "SELECT "
@@ -3394,7 +3395,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathBoundFilterDoubleNoUpperNumeric()
+  void groupByPathBoundFilterDoubleNoUpperNumeric()
   {
     testQuery(
         "SELECT "
@@ -3432,7 +3433,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathBoundFilterDoubleNoLowerNumeric()
+  void groupByPathBoundFilterDoubleNoLowerNumeric()
   {
     testQuery(
         "SELECT "
@@ -3474,7 +3475,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathBoundFilterString()
+  void groupByPathBoundFilterString()
   {
     testQuery(
         "SELECT "
@@ -3511,7 +3512,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathBoundFilterStringNoUpper()
+  void groupByPathBoundFilterStringNoUpper()
   {
     testQuery(
         "SELECT "
@@ -3549,7 +3550,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathBoundFilterStringNoLower()
+  void groupByPathBoundFilterStringNoLower()
   {
     testQuery(
         "SELECT "
@@ -3591,7 +3592,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathLikeFilter()
+  void groupByPathLikeFilter()
   {
     testQuery(
         "SELECT "
@@ -3627,7 +3628,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathLikeFilterStringPrefix()
+  void groupByPathLikeFilterStringPrefix()
   {
     testQuery(
         "SELECT "
@@ -3664,7 +3665,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathLikeFilterString()
+  void groupByPathLikeFilterString()
   {
     testQuery(
         "SELECT "
@@ -3701,7 +3702,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathLikeFilterVariant()
+  void groupByPathLikeFilterVariant()
   {
     testQuery(
         "SELECT "
@@ -3738,7 +3739,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathInFilter()
+  void groupByPathInFilter()
   {
     testQuery(
         "SELECT "
@@ -3781,7 +3782,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathInFilterDouble()
+  void groupByPathInFilterDouble()
   {
     testQuery(
         "SELECT "
@@ -3826,7 +3827,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathInFilterString()
+  void groupByPathInFilterString()
   {
     testQuery(
         "SELECT "
@@ -3864,7 +3865,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathInFilterVariant()
+  void groupByPathInFilterVariant()
   {
     testQuery(
         "SELECT "
@@ -3901,7 +3902,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSumPath()
+  void sumPath()
   {
     testQuery(
         "SELECT "
@@ -3928,7 +3929,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testSumPathFilteredAggDouble()
+  void sumPathFilteredAggDouble()
   {
     // this one actually equals 2.1 because the filter is a long so double is cast and is 1 so both rows match
     testQuery(
@@ -3966,7 +3967,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSumPathFilteredAggString()
+  void sumPathFilteredAggString()
   {
     testQuery(
         "SELECT "
@@ -4003,7 +4004,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSumPathMixed()
+  void sumPathMixed()
   {
     // throws a "Cannot make vector value selector for variant typed nested field [[LONG, DOUBLE]]"
     skipVectorize();
@@ -4031,7 +4032,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSumPathMixedFilteredAggLong()
+  void sumPathMixedFilteredAggLong()
   {
     // throws a "Cannot make vector value selector for variant typed nested field [[LONG, DOUBLE]]"
     skipVectorize();
@@ -4070,7 +4071,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSumPathMixedFilteredAggDouble()
+  void sumPathMixedFilteredAggDouble()
   {
     // throws a "Cannot make vector value selector for variant typed nested field [[LONG, DOUBLE]]"
     skipVectorize();
@@ -4106,7 +4107,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCastAndSumPath()
+  void castAndSumPath()
   {
     testQuery(
         "SELECT "
@@ -4133,7 +4134,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testCastAndSumPathStrings()
+  void castAndSumPathStrings()
   {
     testQuery(
         "SELECT "
@@ -4159,7 +4160,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testReturningAndSumPath()
+  void returningAndSumPath()
   {
     testQuery(
         "SELECT "
@@ -4185,7 +4186,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testReturningAndSumPathWithMaths()
+  void returningAndSumPathWithMaths()
   {
     testQuery(
         "SELECT "
@@ -4214,7 +4215,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testReturningAndSumPathDouble()
+  void returningAndSumPathDouble()
   {
     testQuery(
         "SELECT "
@@ -4240,7 +4241,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testReturningAndSumPathDecimal()
+  void returningAndSumPathDecimal()
   {
     testQuery(
         "SELECT "
@@ -4266,7 +4267,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testReturningAndSumPathDecimalWithMaths()
+  void returningAndSumPathDecimalWithMaths()
   {
     testQuery(
         "SELECT "
@@ -4295,7 +4296,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testReturningAndSumPathStrings()
+  void returningAndSumPathStrings()
   {
     testQuery(
         "SELECT "
@@ -4321,7 +4322,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootKeys()
+  void groupByRootKeys()
   {
     cannotVectorize();
     testQuery(
@@ -4363,7 +4364,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootKeysJsonPath()
+  void groupByRootKeysJsonPath()
   {
     cannotVectorize();
     testQuery(
@@ -4405,7 +4406,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootKeys2()
+  void groupByRootKeys2()
   {
     cannotVectorize();
     testQuery(
@@ -4448,7 +4449,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByCastedRootKeysJsonPath()
+  void groupByCastedRootKeysJsonPath()
   {
     cannotVectorize();
     testQuery(
@@ -4490,7 +4491,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByAllPaths()
+  void groupByAllPaths()
   {
     cannotVectorize();
     testQuery(
@@ -4532,7 +4533,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByNestedArrayPath()
+  void groupByNestedArrayPath()
   {
     testQuery(
         "SELECT "
@@ -4568,7 +4569,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByInvalidPath()
+  void groupByInvalidPath()
   {
     testQueryThrows(
         "SELECT "
@@ -4586,7 +4587,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testJsonQuery()
+  void jsonQuery()
   {
     testQuery(
         "SELECT JSON_QUERY(nester, '$.n'), JSON_QUERY(nester, '$')\n"
@@ -4638,7 +4639,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testJsonQueryAndJsonObject()
+  void jsonQueryAndJsonObject()
   {
     testQuery(
         "SELECT JSON_OBJECT(KEY 'n' VALUE JSON_QUERY(nester, '$.n'), KEY 'x' VALUE JSON_VALUE(nest, '$.x'))\n"
@@ -4686,7 +4687,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCompositionTyping()
+  void compositionTyping()
   {
     testQuery(
         "SELECT "
@@ -4734,7 +4735,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testToJsonAndParseJson()
+  void toJsonAndParseJson()
   {
     ExprMacroTable macroTable = queryFramework().macroTable();
     testQuery(
@@ -4793,7 +4794,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByNegativeJsonPathIndex()
+  void groupByNegativeJsonPathIndex()
   {
     // negative array index cannot vectorize
     cannotVectorize();
@@ -4831,7 +4832,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testJsonPathNegativeIndex()
+  void jsonPathNegativeIndex()
   {
     testQuery(
         "SELECT JSON_VALUE(nester, '$.array[-1]'), JSON_QUERY(nester, '$.array[-1]'), JSON_KEYS(nester, '$.array[-1]') FROM druid.nested",
@@ -4884,7 +4885,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testJsonPathsNonJsonInput()
+  void jsonPathsNonJsonInput()
   {
     testQuery(
         "SELECT JSON_PATHS(string), JSON_PATHS(1234), JSON_PATHS('1234'), JSON_PATHS(1.1), JSON_PATHS(null)\n"
@@ -4923,7 +4924,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testJsonKeysNonJsonInput()
+  void jsonKeysNonJsonInput()
   {
     testQuery(
         "SELECT JSON_KEYS(string, '$'), JSON_KEYS(1234, '$'), JSON_KEYS('1234', '$'), JSON_KEYS(1.1, '$'), JSON_KEYS(null, '$')\n"
@@ -4962,7 +4963,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testJsonValueUnDocumentedButSupportedOptions()
+  void jsonValueUnDocumentedButSupportedOptions()
   {
     testQuery(
         "SELECT "
@@ -4988,7 +4989,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testJsonValueUnsupportedOptions()
+  void jsonValueUnsupportedOptions()
   {
     testQueryThrows(
         "SELECT "
@@ -5004,7 +5005,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathSelectorFilterVariantNull()
+  void groupByPathSelectorFilterVariantNull()
   {
     testQuery(
         "SELECT "
@@ -5046,7 +5047,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectPathSelectorFilterVariantNull()
+  void selectPathSelectorFilterVariantNull()
   {
     testQuery(
         "SELECT "
@@ -5086,7 +5087,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathSelectorFilterVariantNotNull()
+  void groupByPathSelectorFilterVariantNotNull()
   {
     testQuery(
         "SELECT "
@@ -5126,7 +5127,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRegularLongLongMixed1FilterNotNull()
+  void groupByRegularLongLongMixed1FilterNotNull()
   {
     testQuery(
         "SELECT "
@@ -5164,7 +5165,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootSingleTypeStringMixed1SparseNotNull()
+  void groupByRootSingleTypeStringMixed1SparseNotNull()
   {
     testQuery(
         "SELECT "
@@ -5198,7 +5199,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testScanStringNotNullCast()
+  void scanStringNotNullCast()
   {
     skipVectorize();
     testQuery(
@@ -5246,7 +5247,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootSingleTypeStringMixed1SparseNotNullCast2()
+  void groupByRootSingleTypeStringMixed1SparseNotNullCast2()
   {
     testQuery(
         "SELECT "
@@ -5292,7 +5293,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
    * MVD version of {@link #testGroupByRootSingleTypeArrayLongNullsUnnest()}
    */
   @Test
-  public void testGroupByRootSingleTypeArrayLongNullsAsMvd()
+  void groupByRootSingleTypeArrayLongNullsAsMvd()
   {
     cannotVectorize();
     testBuilder()
@@ -5345,7 +5346,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByRootSingleTypeArrayLongNullsAsMvdWithExpression()
+  void groupByRootSingleTypeArrayLongNullsAsMvdWithExpression()
   {
     cannotVectorize();
     testBuilder()
@@ -5402,7 +5403,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
    * - filters are adjusted to match strings instead of numbers
    */
   @Test
-  public void testGroupByRootSingleTypeArrayLongNullsAsMvdFiltered()
+  void groupByRootSingleTypeArrayLongNullsAsMvdFiltered()
   {
     cannotVectorize();
     testBuilder()
@@ -5475,7 +5476,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
    * - filters are adjusted to match strings instead of numbers
    */
   @Test
-  public void testGroupByRootSingleTypeArrayLongNullsAsMvdFilteredMore()
+  void groupByRootSingleTypeArrayLongNullsAsMvdFilteredMore()
   {
     cannotVectorize();
     testBuilder()
@@ -5534,7 +5535,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
    * MVD version of {@link #testGroupByRootSingleTypeArrayStringNullsUnnest()}
    */
   @Test
-  public void testGroupByRootSingleTypeArrayStringNullsAsMvdUnnest()
+  void groupByRootSingleTypeArrayStringNullsAsMvdUnnest()
   {
     cannotVectorize();
     testBuilder()
@@ -5589,7 +5590,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
    * - implicit unnest since mvd instead of string array
    */
   @Test
-  public void testGroupByRootSingleTypeArrayStringNullsFilteredAsMvd()
+  void groupByRootSingleTypeArrayStringNullsFilteredAsMvd()
   {
     cannotVectorize();
     testBuilder()
@@ -5658,7 +5659,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByAndFilterVariant()
+  void groupByAndFilterVariant()
   {
     testQuery(
         "SELECT "
@@ -5691,7 +5692,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testScanAllTypesAuto()
+  void scanAllTypesAuto()
   {
     skipVectorize();
     testQuery(
@@ -6321,7 +6322,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFilterJsonIsNotNull()
+  void filterJsonIsNotNull()
   {
     testQuery(
         "SELECT nest\n"
@@ -6351,7 +6352,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFilterJsonIsNull()
+  void filterJsonIsNull()
   {
     testQuery(
         "SELECT nest, nester\n"
@@ -6398,7 +6399,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCoalesceOnNestedColumns()
+  void coalesceOnNestedColumns()
   {
     // jo.unnest is first entry in coalesce
     // so Calcite removes the coalesce to be used here
@@ -6436,7 +6437,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCoalesceOnNestedColumnsLater()
+  void coalesceOnNestedColumnsLater()
   {
     // the first column in coalesce comes from the table
     // so a virtual expression is present for the coalesce
@@ -6490,7 +6491,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByPathDynamicArg()
+  void groupByPathDynamicArg()
   {
     cannotVectorize();
     testQuery(
@@ -6532,7 +6533,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testJsonQueryDynamicArg()
+  void jsonQueryDynamicArg()
   {
     cannotVectorize();
     testQuery(
@@ -6577,7 +6578,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testJsonQueryArrays()
+  void jsonQueryArrays()
   {
     cannotVectorize();
     testBuilder()
@@ -6629,7 +6630,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestJsonQueryArrays()
+  void unnestJsonQueryArrays()
   {
     cannotVectorize();
     testBuilder()
@@ -6698,7 +6699,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestJsonQueryArraysJsonValue()
+  void unnestJsonQueryArraysJsonValue()
   {
     cannotVectorize();
     testBuilder()
@@ -6759,7 +6760,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnnestJsonQueryArraysJsonValueSum()
+  void unnestJsonQueryArraysJsonValueSum()
   {
     cannotVectorize();
     testBuilder()
@@ -6808,7 +6809,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testJsonValueNestedEmptyArray()
+  void jsonValueNestedEmptyArray()
   {
     // test for regression
     skipVectorize();
@@ -6846,5 +6847,14 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     .add("EXPR$0", ColumnType.STRING)
                     .build()
     );
+  }
+
+  private static File newFolder(File root, String... subDirs) throws IOException {
+    String subFolder = String.join("/", subDirs);
+    File result = new File(root, subFolder);
+    if (!result.mkdirs()) {
+      throw new IOException("Couldn't create folders " + root);
+    }
+    return result;
   }
 }

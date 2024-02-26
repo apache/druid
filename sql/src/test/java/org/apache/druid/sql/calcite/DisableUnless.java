@@ -25,7 +25,7 @@ import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Collection of conditional disabler rules.
@@ -48,7 +48,7 @@ class DisableUnless
     @Override
     public Statement apply(Statement base, Description description)
     {
-      assumeTrue("Testcase disabled; because condition not met: " + message, predicate.get());
+      assumeTrue(predicate.get(), "Testcase disabled; because condition not met: " + message);
       return base;
     }
   }

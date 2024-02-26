@@ -23,12 +23,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
-import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.EnumSet;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class ResultFormatTest
 {
@@ -36,20 +37,20 @@ public class ResultFormatTest
 
   @ParameterizedTest
   @MethodSource("provideResultFormats")
-  public void testSerde(ResultFormat target) throws JsonProcessingException
+  void serde(ResultFormat target) throws JsonProcessingException
   {
     final String json = jsonMapper.writeValueAsString(target);
-    Assert.assertEquals(StringUtils.format("\"%s\"", target.toString()), json);
-    Assert.assertEquals(target, jsonMapper.readValue(json, ResultFormat.class));
+    assertEquals(StringUtils.format("\"%s\"", target.toString()), json);
+    assertEquals(target, jsonMapper.readValue(json, ResultFormat.class));
   }
 
   @Test
-  public void testDeserializeWithDifferentCase() throws JsonProcessingException
+  void deserializeWithDifferentCase() throws JsonProcessingException
   {
-    Assert.assertEquals(ResultFormat.OBJECTLINES, jsonMapper.readValue("\"OBJECTLINES\"", ResultFormat.class));
-    Assert.assertEquals(ResultFormat.OBJECTLINES, jsonMapper.readValue("\"objectLines\"", ResultFormat.class));
-    Assert.assertEquals(ResultFormat.OBJECTLINES, jsonMapper.readValue("\"objectlines\"", ResultFormat.class));
-    Assert.assertEquals(ResultFormat.OBJECTLINES, jsonMapper.readValue("\"oBjEcTlInEs\"", ResultFormat.class));
+    assertEquals(ResultFormat.OBJECTLINES, jsonMapper.readValue("\"OBJECTLINES\"", ResultFormat.class));
+    assertEquals(ResultFormat.OBJECTLINES, jsonMapper.readValue("\"objectLines\"", ResultFormat.class));
+    assertEquals(ResultFormat.OBJECTLINES, jsonMapper.readValue("\"objectlines\"", ResultFormat.class));
+    assertEquals(ResultFormat.OBJECTLINES, jsonMapper.readValue("\"oBjEcTlInEs\"", ResultFormat.class));
   }
 
   public static Object[] provideResultFormats()

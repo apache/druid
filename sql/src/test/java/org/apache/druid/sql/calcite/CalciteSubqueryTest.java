@@ -64,9 +64,8 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -76,6 +75,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 
 /**
  * Calcite tests which involve subqueries and materializing the intermediate results on {@link org.apache.druid.server.ClientQuerySegmentWalker}
@@ -83,14 +84,13 @@ import java.util.Map;
  * 1. Where the memory limit is not set. The intermediate results are materialized as inline rows
  * 2. Where the memory limit is set. The intermediate results are materialized as frames
  */
-@RunWith(Parameterized.class)
 public class CalciteSubqueryTest extends BaseCalciteQueryTest
 {
 
   public String testName;
   public Map<String, Object> queryContext;
 
-  public CalciteSubqueryTest(
+  public void initCalciteSubqueryTest(
       String testName,
       Map<String, Object> queryContext
   )
@@ -99,7 +99,6 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     this.queryContext = queryContext;
   }
 
-  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
@@ -112,9 +111,11 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     return constructors;
   }
 
-  @Test
-  public void testExactCountDistinctUsingSubqueryWithWhereToOuterFilter()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void exactCountDistinctUsingSubqueryWithWhereToOuterFilter(String testName, Map<String, Object> queryContext)
   {
+    initCalciteSubqueryTest(testName, queryContext);
     // Cannot vectorize topN operator.
     cannotVectorize();
 
@@ -160,9 +161,11 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test
-  public void testExactCountDistinctOfSemiJoinResult()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void exactCountDistinctOfSemiJoinResult(String testName, Map<String, Object> queryContext)
   {
+    initCalciteSubqueryTest(testName, queryContext);
     // Cannot vectorize due to extraction dimension spec.
     cannotVectorize();
 
@@ -235,9 +238,11 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test
-  public void testTwoExactCountDistincts()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void twoExactCountDistincts(String testName, Map<String, Object> queryContext)
   {
+    initCalciteSubqueryTest(testName, queryContext);
     testQuery(
         PLANNER_CONFIG_NO_HLL,
         queryContext,
@@ -312,9 +317,11 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test
-  public void testViewAndJoin()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void viewAndJoin(String testName, Map<String, Object> queryContext)
   {
+    initCalciteSubqueryTest(testName, queryContext);
     cannotVectorize();
     Map<String, Object> queryContextModified = withLeftDirectAccessEnabled(queryContext);
     testQuery(
@@ -379,9 +386,11 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test
-  public void testGroupByWithPostAggregatorReferencingTimeFloorColumnOnTimeseries()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void groupByWithPostAggregatorReferencingTimeFloorColumnOnTimeseries(String testName, Map<String, Object> queryContext)
   {
+    initCalciteSubqueryTest(testName, queryContext);
     cannotVectorize();
 
     testQuery(
@@ -426,9 +435,11 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test
-  public void testUsingSubqueryAsFilterWithInnerSort()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void usingSubqueryAsFilterWithInnerSort(String testName, Map<String, Object> queryContext)
   {
+    initCalciteSubqueryTest(testName, queryContext);
     // Regression test for https://github.com/apache/druid/issues/4208
 
     testQuery(
@@ -479,9 +490,11 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test
-  public void testUsingSubqueryAsFilterOnTwoColumns()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void usingSubqueryAsFilterOnTwoColumns(String testName, Map<String, Object> queryContext)
   {
+    initCalciteSubqueryTest(testName, queryContext);
     testQuery(
         "SELECT __time, cnt, dim1, dim2 FROM druid.foo "
         + " WHERE (dim1, dim2) IN ("
@@ -539,9 +552,11 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test
-  public void testMinMaxAvgDailyCountWithLimit()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void minMaxAvgDailyCountWithLimit(String testName, Map<String, Object> queryContext)
   {
+    initCalciteSubqueryTest(testName, queryContext);
     // Cannot vectorize due to virtual columns.
     cannotVectorize();
 
@@ -608,9 +623,11 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test
-  public void testEmptyGroupWithOffsetDoesntInfiniteLoop()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void emptyGroupWithOffsetDoesntInfiniteLoop(String testName, Map<String, Object> queryContext)
   {
+    initCalciteSubqueryTest(testName, queryContext);
     testQuery(
         "SELECT r0.c, r1.c\n"
         + "FROM (\n"
@@ -671,101 +688,111 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   }
 
 
-  @Test
-  public void testMaxSubqueryRows()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void maxSubqueryRows(String testName, Map<String, Object> queryContext)
   {
-    if ("without memory limit".equals(testName)) {
-      expectedException.expect(ResourceLimitExceededException.class);
-      expectedException.expectMessage("Subquery generated results beyond maximum[1]");
+    Throwable exception = assertThrows(ResourceLimitExceededException.class, () -> {
+      initCalciteSubqueryTest(testName, queryContext);
+      if ("without memory limit".equals(testName)) {
+        expectedException.expect(ResourceLimitExceededException.class);
+        expectedException.expectMessage("Subquery generated results beyond maximum[1]");
+        Map<String, Object> modifiedQueryContext = new HashMap<>(queryContext);
+        modifiedQueryContext.put(QueryContexts.MAX_SUBQUERY_ROWS_KEY, 1);
+
+        testQuery(
+            "SELECT\n"
+                + "  SUM(cnt),\n"
+                + "  COUNT(*)\n"
+                + "FROM (SELECT dim2, SUM(cnt) AS cnt FROM druid.foo GROUP BY dim2 LIMIT 2) \n"
+                + "WHERE cnt > 0",
+            modifiedQueryContext,
+            ImmutableList.of(),
+            ImmutableList.of()
+        );
+      } else {
+        // Since the results are materializable as frames, we are able to use the memory limit and donot rely on the
+        // row limit for the subquery
+        Map<String, Object> modifiedQueryContext = new HashMap<>(queryContext);
+        modifiedQueryContext.put(QueryContexts.MAX_SUBQUERY_ROWS_KEY, 1);
+
+        testQuery(
+            "SELECT\n"
+                + "  SUM(cnt),\n"
+                + "  COUNT(*)\n"
+                + "FROM (SELECT dim2, SUM(cnt) AS cnt FROM druid.foo GROUP BY dim2 LIMIT 1)\n"
+                + "WHERE cnt > 0",
+            modifiedQueryContext,
+            ImmutableList.of(
+                GroupByQuery.builder()
+                    .setDataSource(
+                        new QueryDataSource(
+                            new TopNQueryBuilder()
+                                .dataSource(CalciteTests.DATASOURCE1)
+                                .intervals(querySegmentSpec(Filtration.eternity()))
+                                .granularity(Granularities.ALL)
+                                .dimension(new DefaultDimensionSpec("dim2", "d0"))
+                                .aggregators(new LongSumAggregatorFactory("a0", "cnt"))
+                                .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
+                                .threshold(1)
+                                .build()
+                        )
+                    )
+                    .setDimFilter(range("a0", ColumnType.LONG, 0L, null, true, false))
+                    .setInterval(querySegmentSpec(Filtration.eternity()))
+                    .setGranularity(Granularities.ALL)
+                    .setAggregatorSpecs(aggregators(
+                        new LongSumAggregatorFactory("_a0", "a0"),
+                        new CountAggregatorFactory("_a1")
+                    ))
+                    .setContext(queryContext)
+                    .build()
+            ),
+            NullHandling.replaceWithDefault() ?
+                ImmutableList.of(
+                    new Object[]{3L, 1L}
+                ) :
+                ImmutableList.of(
+                    new Object[]{2L, 1L}
+                )
+        );
+      }
+    });
+    assertTrue(exception.getMessage().contains("Subquery generated results beyond maximum[1]"));
+  }
+
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void zeroMaxNumericInFilter(String testName, Map<String, Object> queryContext)
+  {
+    Throwable exception = assertThrows(UOE.class, () -> {
+      initCalciteSubqueryTest(testName, queryContext);
+
       Map<String, Object> modifiedQueryContext = new HashMap<>(queryContext);
-      modifiedQueryContext.put(QueryContexts.MAX_SUBQUERY_ROWS_KEY, 1);
+      modifiedQueryContext.put(QueryContexts.MAX_NUMERIC_IN_FILTERS, 0);
+
 
       testQuery(
-          "SELECT\n"
-          + "  SUM(cnt),\n"
-          + "  COUNT(*)\n"
-          + "FROM (SELECT dim2, SUM(cnt) AS cnt FROM druid.foo GROUP BY dim2 LIMIT 2) \n"
-          + "WHERE cnt > 0",
+          PLANNER_CONFIG_DEFAULT,
           modifiedQueryContext,
+          "SELECT COUNT(*)\n"
+              + "FROM druid.numfoo\n"
+              + "WHERE dim6 IN (\n"
+              + "1,2,3\n"
+              + ")\n",
+          CalciteTests.REGULAR_USER_AUTH_RESULT,
           ImmutableList.of(),
           ImmutableList.of()
       );
-    } else {
-      // Since the results are materializable as frames, we are able to use the memory limit and donot rely on the
-      // row limit for the subquery
-      Map<String, Object> modifiedQueryContext = new HashMap<>(queryContext);
-      modifiedQueryContext.put(QueryContexts.MAX_SUBQUERY_ROWS_KEY, 1);
-
-      testQuery(
-          "SELECT\n"
-          + "  SUM(cnt),\n"
-          + "  COUNT(*)\n"
-          + "FROM (SELECT dim2, SUM(cnt) AS cnt FROM druid.foo GROUP BY dim2 LIMIT 1)\n"
-          + "WHERE cnt > 0",
-          modifiedQueryContext,
-          ImmutableList.of(
-              GroupByQuery.builder()
-                          .setDataSource(
-                              new QueryDataSource(
-                                  new TopNQueryBuilder()
-                                      .dataSource(CalciteTests.DATASOURCE1)
-                                      .intervals(querySegmentSpec(Filtration.eternity()))
-                                      .granularity(Granularities.ALL)
-                                      .dimension(new DefaultDimensionSpec("dim2", "d0"))
-                                      .aggregators(new LongSumAggregatorFactory("a0", "cnt"))
-                                      .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
-                                      .threshold(1)
-                                      .build()
-                              )
-                          )
-                          .setDimFilter(range("a0", ColumnType.LONG, 0L, null, true, false))
-                          .setInterval(querySegmentSpec(Filtration.eternity()))
-                          .setGranularity(Granularities.ALL)
-                          .setAggregatorSpecs(aggregators(
-                              new LongSumAggregatorFactory("_a0", "a0"),
-                              new CountAggregatorFactory("_a1")
-                          ))
-                          .setContext(queryContext)
-                          .build()
-          ),
-          NullHandling.replaceWithDefault() ?
-          ImmutableList.of(
-              new Object[]{3L, 1L}
-          ) :
-          ImmutableList.of(
-              new Object[]{2L, 1L}
-          )
-      );
-    }
+    });
+    assertTrue(exception.getMessage().contains("[maxNumericInFilters] must be greater than 0"));
   }
 
-  @Test
-  public void testZeroMaxNumericInFilter()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void useTimeFloorInsteadOfGranularityOnJoinResult(String testName, Map<String, Object> queryContext)
   {
-    expectedException.expect(UOE.class);
-    expectedException.expectMessage("[maxNumericInFilters] must be greater than 0");
-
-    Map<String, Object> modifiedQueryContext = new HashMap<>(queryContext);
-    modifiedQueryContext.put(QueryContexts.MAX_NUMERIC_IN_FILTERS, 0);
-
-
-    testQuery(
-        PLANNER_CONFIG_DEFAULT,
-        modifiedQueryContext,
-        "SELECT COUNT(*)\n"
-        + "FROM druid.numfoo\n"
-        + "WHERE dim6 IN (\n"
-        + "1,2,3\n"
-        + ")\n",
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
-        ImmutableList.of(),
-        ImmutableList.of()
-    );
-  }
-
-  @Test
-  public void testUseTimeFloorInsteadOfGranularityOnJoinResult()
-  {
+    initCalciteSubqueryTest(testName, queryContext);
     cannotVectorize();
 
     testQuery(
@@ -845,9 +872,11 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test
-  public void testJoinWithTimeDimension()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void joinWithTimeDimension(String testName, Map<String, Object> queryContext)
   {
+    initCalciteSubqueryTest(testName, queryContext);
     testQuery(
         PLANNER_CONFIG_DEFAULT,
         queryContext,
@@ -881,9 +910,11 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test
-  public void testUsingSubqueryWithLimit()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void usingSubqueryWithLimit(String testName, Map<String, Object> queryContext)
   {
+    initCalciteSubqueryTest(testName, queryContext);
     // Cannot vectorize scan query.
     cannotVectorize();
 
@@ -913,9 +944,11 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test
-  public void testSelfJoin()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void selfJoin(String testName, Map<String, Object> queryContext)
   {
+    initCalciteSubqueryTest(testName, queryContext);
     // Cannot vectorize due to virtual columns.
     cannotVectorize();
 
@@ -964,9 +997,11 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test
-  public void testJoinWithSubqueries()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void joinWithSubqueries(String testName, Map<String, Object> queryContext)
   {
+    initCalciteSubqueryTest(testName, queryContext);
     cannotVectorize();
 
     List<Object[]> results = new ArrayList<>(ImmutableList.of(
@@ -1050,9 +1085,11 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test
-  public void testSingleValueFloatAgg()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void singleValueFloatAgg(String testName, Map<String, Object> queryContext)
   {
+    initCalciteSubqueryTest(testName, queryContext);
     skipVectorize();
     cannotVectorize();
     testQuery(
@@ -1108,9 +1145,11 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test
-  public void testSingleValueDoubleAgg()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void singleValueDoubleAgg(String testName, Map<String, Object> queryContext)
   {
+    initCalciteSubqueryTest(testName, queryContext);
     skipVectorize();
     cannotVectorize();
     testQuery(
@@ -1166,9 +1205,11 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test
-  public void testSingleValueLongAgg()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void singleValueLongAgg(String testName, Map<String, Object> queryContext)
   {
+    initCalciteSubqueryTest(testName, queryContext);
     skipVectorize();
     cannotVectorize();
     testQuery(
@@ -1227,9 +1268,11 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test
-  public void testSingleValueStringAgg()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void singleValueStringAgg(String testName, Map<String, Object> queryContext)
   {
+    initCalciteSubqueryTest(testName, queryContext);
     skipVectorize();
     cannotVectorize();
     testQuery(
@@ -1289,9 +1332,11 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test
-  public void testSingleValueStringMultipleRowsAgg()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void singleValueStringMultipleRowsAgg(String testName, Map<String, Object> queryContext)
   {
+    initCalciteSubqueryTest(testName, queryContext);
     skipVectorize();
     cannotVectorize();
     testQueryThrows(
@@ -1300,9 +1345,11 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test
-  public void testSingleValueEmptyInnerAgg()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void singleValueEmptyInnerAgg(String testName, Map<String, Object> queryContext)
   {
+    initCalciteSubqueryTest(testName, queryContext);
     skipVectorize();
     cannotVectorize();
     testQuery(

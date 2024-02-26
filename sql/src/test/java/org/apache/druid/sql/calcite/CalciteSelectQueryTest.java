@@ -53,17 +53,17 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class CalciteSelectQueryTest extends BaseCalciteQueryTest
+class CalciteSelectQueryTest extends BaseCalciteQueryTest
 {
   @Test
-  public void testSelectConstantExpression()
+  void selectConstantExpression()
   {
     // Test with a Druid-specific function, to make sure they are hooked up correctly even when not selecting
     // from a table.
@@ -99,7 +99,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testExpressionContainingNull()
+  void expressionContainingNull()
   {
     testQuery(
         "SELECT ARRAY ['Hello', NULL]",
@@ -131,7 +131,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testValuesContainingNull()
+  void valuesContainingNull()
   {
     testQuery(
         "SELECT * FROM (VALUES (NULL, 'United States'))",
@@ -159,7 +159,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultipleValuesContainingNull()
+  void multipleValuesContainingNull()
   {
     testQuery(
         "SELECT * FROM (VALUES (NULL, 'United States'), ('Delhi', 'India'))",
@@ -187,7 +187,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMultipleValuesContainingNullAndIntegerValues()
+  void multipleValuesContainingNullAndIntegerValues()
   {
     testQuery(
         "SELECT * FROM (VALUES (NULL, 'United States'), (50, 'India'))",
@@ -215,7 +215,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectNonNumericNumberLiterals()
+  void selectNonNumericNumberLiterals()
   {
     // Tests to convert NaN, positive infinity and negative infinity as literals.
     testQuery(
@@ -262,7 +262,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   // Test that the integers are getting correctly casted after being passed through a function when not selecting from
   // a table
   @Test
-  public void testDruidLogicalValuesRule()
+  void druidLogicalValuesRule()
   {
     testQuery(
         "SELECT FLOOR(123), CEIL(123), CAST(123.0 AS INTEGER)",
@@ -291,7 +291,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectConstantExpressionFromTable()
+  void selectConstantExpressionFromTable()
   {
     testQuery(
         "SELECT 1 + 1, dim1 FROM foo LIMIT 1",
@@ -313,7 +313,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectConstantExpressionEquivalentToNaN()
+  void selectConstantExpressionEquivalentToNaN()
   {
     expectedException.expect(invalidSqlIs(
         "Expression [(log10(0) - log10(0))] evaluates to an unsupported value [NaN], "
@@ -327,7 +327,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectConstantExpressionEquivalentToInfinity()
+  void selectConstantExpressionEquivalentToInfinity()
   {
     expectedException.expect(invalidSqlIs(
         "Expression [log10(0)] evaluates to an unsupported value [-Infinity], "
@@ -341,7 +341,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectTrimFamily()
+  void selectTrimFamily()
   {
     // TRIM has some whacky parsing. Make sure the different forms work.
 
@@ -389,7 +389,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectPadFamily()
+  void selectPadFamily()
   {
     testQuery(
         "SELECT\n"
@@ -425,7 +425,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testBitwiseExpressions()
+  void bitwiseExpressions()
   {
     List<Object[]> expected;
     if (useDefault) {
@@ -483,7 +483,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSafeDivideWithoutTable()
+  void safeDivideWithoutTable()
   {
     skipVectorize();
     cannotVectorize();
@@ -529,7 +529,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSafeDivideExpressions()
+  void safeDivideExpressions()
   {
     List<Object[]> expected;
     if (useDefault) {
@@ -579,7 +579,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testExplainSelectConstantExpression()
+  void explainSelectConstantExpression()
   {
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();
@@ -629,7 +629,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectStarWithDimFilter()
+  void selectStarWithDimFilter()
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT_NO_COMPLEX_SERDE,
@@ -660,7 +660,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectDistinctWithCascadeExtractionFilter()
+  void selectDistinctWithCascadeExtractionFilter()
   {
     if (NullHandling.sqlCompatible()) {
       // cannot vectorize due to expression filter
@@ -708,7 +708,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectDistinctWithStrlenFilter()
+  void selectDistinctWithStrlenFilter()
   {
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
@@ -748,7 +748,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectDistinctWithLimit()
+  void selectDistinctWithLimit()
   {
     // Should use topN even if approximate topNs are off, because this query is exact.
 
@@ -781,7 +781,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectDistinctWithSortAsOuterQuery()
+  void selectDistinctWithSortAsOuterQuery()
   {
     testQuery(
         "SELECT * FROM (SELECT DISTINCT dim2 FROM druid.foo ORDER BY dim2) LIMIT 10",
@@ -812,7 +812,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectDistinctWithSortAsOuterQuery2()
+  void selectDistinctWithSortAsOuterQuery2()
   {
     testQuery(
         "SELECT * FROM (SELECT DISTINCT dim2 FROM druid.foo ORDER BY dim2 LIMIT 5) LIMIT 10",
@@ -843,7 +843,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectDistinctWithSortAsOuterQuery3()
+  void selectDistinctWithSortAsOuterQuery3()
   {
     testQuery(
         "SELECT * FROM (SELECT DISTINCT dim2 FROM druid.foo ORDER BY dim2 DESC LIMIT 5) LIMIT 10",
@@ -874,7 +874,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectNonAggregatingWithLimitLiterallyZero()
+  void selectNonAggregatingWithLimitLiterallyZero()
   {
     // Query reduces to LIMIT 0.
 
@@ -900,7 +900,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectNonAggregatingWithLimitReducedToZero()
+  void selectNonAggregatingWithLimitReducedToZero()
   {
     // Query reduces to LIMIT 0.
 
@@ -925,7 +925,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectAggregatingWithLimitReducedToZero()
+  void selectAggregatingWithLimitReducedToZero()
   {
     // Query reduces to LIMIT 0.
 
@@ -950,7 +950,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectCurrentTimeAndDateLosAngeles()
+  void selectCurrentTimeAndDateLosAngeles()
   {
     final Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00.123Z");
@@ -1026,7 +1026,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectCurrentTimePrecisionTooHigh()
+  void selectCurrentTimePrecisionTooHigh()
   {
     testQueryThrows(
         "SELECT CURRENT_TIMESTAMP(4)",
@@ -1040,7 +1040,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectCountStar()
+  void selectCountStar()
   {
     // timeseries with all granularity have a single group, so should return default results for given aggregators
     // which for count is 0 and sum is null in sql compatible mode or 0.0 in default mode.
@@ -1131,7 +1131,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectStarFromLookup()
+  void selectStarFromLookup()
   {
     testQuery(
         "SELECT * FROM lookup.lookyloo",
@@ -1153,7 +1153,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectStar()
+  void selectStar()
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT_NO_COMPLEX_SERDE,
@@ -1181,7 +1181,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectStarOnForbiddenTable()
+  void selectStarOnForbiddenTable()
   {
     assertQueryIsForbidden(
         "SELECT * FROM druid.forbiddenDatasource",
@@ -1225,7 +1225,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectStarOnForbiddenView()
+  void selectStarOnForbiddenView()
   {
     assertQueryIsForbidden(
         "SELECT * FROM view.forbiddenView",
@@ -1266,7 +1266,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectStarOnRestrictedView()
+  void selectStarOnRestrictedView()
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT,
@@ -1318,7 +1318,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnqualifiedTableName()
+  void unqualifiedTableName()
   {
     testQuery(
         "SELECT COUNT(*) FROM foo",
@@ -1338,7 +1338,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testExplainSelectStar()
+  void explainSelectStar()
   {
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();
@@ -1388,7 +1388,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectStarWithLimit()
+  void selectStarWithLimit()
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT_NO_COMPLEX_SERDE,
@@ -1413,7 +1413,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectStarWithLimitAndOffset()
+  void selectStarWithLimitAndOffset()
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT_NO_COMPLEX_SERDE,
@@ -1439,7 +1439,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectWithProjection()
+  void selectWithProjection()
   {
     testQuery(
         "SELECT SUBSTRING(dim2, 1, 1) FROM druid.foo LIMIT 2",
@@ -1464,7 +1464,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectWithExpressionFilter()
+  void selectWithExpressionFilter()
   {
     testQuery(
         "SELECT dim1 FROM druid.foo WHERE m1 + 1 = 7",
@@ -1492,7 +1492,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectStarWithLimitTimeDescending()
+  void selectStarWithLimitTimeDescending()
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT_NO_COMPLEX_SERDE,
@@ -1518,7 +1518,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectStarWithoutLimitTimeAscending()
+  void selectStarWithoutLimitTimeAscending()
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT_NO_COMPLEX_SERDE,
@@ -1549,7 +1549,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testSelectSingleColumnTwice()
+  void selectSingleColumnTwice()
   {
     testQuery(
         "SELECT dim2 x, dim2 y FROM druid.foo LIMIT 2",
@@ -1571,7 +1571,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectSingleColumnWithLimitDescending()
+  void selectSingleColumnWithLimitDescending()
   {
     testQuery(
         "SELECT dim1 FROM druid.foo ORDER BY __time DESC LIMIT 2",
@@ -1594,7 +1594,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectStarFromSelectSingleColumnWithLimitDescending()
+  void selectStarFromSelectSingleColumnWithLimitDescending()
   {
     // After upgrading to Calcite 1.21, Calcite no longer respects the ORDER BY __time DESC
     // in the inner query. This is valid, as the SQL standard considers the subquery results to be an unordered
@@ -1620,7 +1620,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectLimitWrapping()
+  void selectLimitWrapping()
   {
     testQuery(
         "SELECT dim1 FROM druid.foo ORDER BY __time DESC",
@@ -1644,7 +1644,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectLimitWrappingOnTopOfOffset()
+  void selectLimitWrappingOnTopOfOffset()
   {
     testQuery(
         "SELECT dim1 FROM druid.foo ORDER BY __time DESC OFFSET 1",
@@ -1669,7 +1669,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectLimitWrappingOnTopOfOffsetAndLowLimit()
+  void selectLimitWrappingOnTopOfOffsetAndLowLimit()
   {
     testQuery(
         "SELECT dim1 FROM druid.foo ORDER BY __time DESC LIMIT 1 OFFSET 1",
@@ -1693,7 +1693,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectLimitWrappingOnTopOfOffsetAndHighLimit()
+  void selectLimitWrappingOnTopOfOffsetAndHighLimit()
   {
     testQuery(
         "SELECT dim1 FROM druid.foo ORDER BY __time DESC LIMIT 10 OFFSET 1",
@@ -1718,7 +1718,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectLimitWrappingAgainAkaIDontReallyQuiteUnderstandCalciteQueryPlanning()
+  void selectLimitWrappingAgainAkaIDontReallyQuiteUnderstandCalciteQueryPlanning()
   {
     // this test is for a specific bug encountered where the 2nd query would not plan with auto limit wrapping, but if
     // *any* column was removed from the select output, e.g. the first query in this test, then it does plan and
@@ -1866,7 +1866,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectProjectionFromSelectSingleColumnWithInnerLimitDescending()
+  void selectProjectionFromSelectSingleColumnWithInnerLimitDescending()
   {
     testQuery(
         "SELECT 'beep ' || dim1 FROM (SELECT dim1 FROM druid.foo ORDER BY __time DESC LIMIT 2)",
@@ -1890,7 +1890,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectProjectionFromSelectSingleColumnDescending()
+  void selectProjectionFromSelectSingleColumnDescending()
   {
     // Regression test for https://github.com/apache/druid/issues/7768.
 
@@ -1922,7 +1922,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectProjectionFromSelectSingleColumnWithInnerAndOuterLimitDescending()
+  void selectProjectionFromSelectSingleColumnWithInnerAndOuterLimitDescending()
   {
     testQuery(
         "SELECT 'beep ' || dim1 FROM (SELECT dim1 FROM druid.foo ORDER BY __time DESC LIMIT 4) LIMIT 2",
@@ -1946,7 +1946,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testOrderThenLimitThenFilter()
+  void orderThenLimitThenFilter()
   {
     testQuery(
         "SELECT dim1 FROM "
@@ -1982,7 +1982,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testAggregateFilterInTheAbsenceOfProjection()
+  void aggregateFilterInTheAbsenceOfProjection()
   {
     cannotVectorize();
     testQuery(
@@ -2004,7 +2004,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountDistinctNonApproximateEmptySet()
+  void countDistinctNonApproximateEmptySet()
   {
     cannotVectorize();
     testQuery(
@@ -2041,7 +2041,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountDistinctNonApproximateBasic()
+  void countDistinctNonApproximateBasic()
   {
     cannotVectorize();
     testQuery(
@@ -2077,7 +2077,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountDistinctNonApproximateWithFilter()
+  void countDistinctNonApproximateWithFilter()
   {
     cannotVectorize();
 
@@ -2117,7 +2117,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCountDistinctNonApproximateWithFilterHaving()
+  void countDistinctNonApproximateWithFilterHaving()
   {
     cannotVectorize();
 
