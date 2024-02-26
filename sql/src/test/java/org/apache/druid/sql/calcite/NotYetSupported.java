@@ -98,7 +98,9 @@ public @interface NotYetSupported
     JOIN_CONDITION_NOT_PUSHED_CONDITION(DruidException.class, "SQL requires a join with '.*' condition"),
     JOIN_CONDITION_UNSUPORTED_OPERAND(DruidException.class, "SQL .* unsupported operand type"),
     JOIN_TABLE_TABLE(ISE.class, "Cannot handle subquery structure for dataSource: JoinDataSource"),
-    CORRELATE_CONVERSION(DruidException.class, "Missing conversion is LogicalCorrelate");
+    CORRELATE_CONVERSION(DruidException.class, "Missing conversion( is|s are) LogicalCorrelate"),
+    SORT_REMOVE_TROUBLE(DruidException.class, "Calcite assertion violated.*Sort\\.<init>"),
+    STACK_OVERFLOW(StackOverflowError.class, "");
 
     public Class<? extends Throwable> throwableClass;
     public String regex;

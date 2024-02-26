@@ -238,6 +238,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  @NotYetSupported(Modes.STACK_OVERFLOW)
   public void testJoinOuterGroupByAndSubqueryHasLimit()
   {
     // Cannot vectorize JOIN operator.
@@ -409,6 +410,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  @NotYetSupported(Modes.JOIN_TABLE_TABLE)
   public void testJoinWithLimitBeforeJoining()
   {
     // Cannot vectorize JOIN operator.
@@ -1708,6 +1710,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
+  @NotYetSupported(Modes.JOIN_TABLE_TABLE)
   public void testInnerJoinTwoLookupsToTableUsingNumericColumnInReverse(Map<String, Object> queryContext)
 
   {
@@ -1848,6 +1851,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
+  @NotYetSupported(Modes.JOIN_TABLE_TABLE)
   public void testInnerJoinLookupTableTableChained(Map<String, Object> queryContext)
   {
     // Cannot vectorize JOIN operator.
@@ -2075,6 +2079,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
+  @NotYetSupported(Modes.JOIN_TABLE_TABLE)
   public void testJoinTableLookupTableMismatchedTypesWithoutComma(Map<String, Object> queryContext)
   {
     // Empty-dataset aggregation queries in MSQ return an empty row, rather than a single row as SQL requires.
@@ -3714,6 +3719,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
+  @NotYetSupported(Modes.JOIN_TABLE_TABLE)
   public void testLeftJoinWithNotNullFilter(Map<String, Object> queryContext)
   {
     testQuery(
@@ -3816,6 +3822,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
+  @NotYetSupported(Modes.JOIN_TABLE_TABLE)
   public void testJoinWithExplicitIsNotDistinctFromCondition(Map<String, Object> queryContext)
   {
     // Like "testInnerJoin", but uses IS NOT DISTINCT FROM instead of equals.
@@ -3920,7 +3927,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  @NotYetSupported(Modes.JOIN_CONDITION_UNSUPORTED_OPERAND)
+  @NotYetSupported(Modes.JOIN_CONDITION_NOT_PUSHED_CONDITION)
   public void testSemiJoinWithOuterTimeExtractScan()
   {
     testQuery(
@@ -4302,6 +4309,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
+  @NotYetSupported(Modes.UNION_WITH_COMPLEX_OPERAND)
   public void testUnionAllTwoQueriesLeftQueryIsJoin(Map<String, Object> queryContext)
   {
     // MSQ does not support UNION ALL.
@@ -5615,6 +5623,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
+  @NotYetSupported(Modes.SORT_REMOVE_TROUBLE)
   public void testRegressionFilteredAggregatorsSubqueryJoins(Map<String, Object> queryContext)
   {
     cannotVectorize();
@@ -6176,6 +6185,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  @NotYetSupported(Modes.CORRELATE_CONVERSION)
   public void testJoinsWithUnnestOverFilteredDSOnLeft()
   {
     // Segment map function of MSQ needs some work
@@ -6390,7 +6400,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  @NotYetSupported(Modes.JOIN_CONDITION_UNSUPORTED_OPERAND)
+  @NotYetSupported(Modes.JOIN_CONDITION_NOT_PUSHED_CONDITION)
   public void testJoinsOverUnnestOverFilterDSOverJoin()
   {
     // Segment map function of MSQ needs some work
