@@ -63,10 +63,11 @@ public class DruidSqlInsert extends DruidSqlIngest
   }
 
   /**
-   * While partitionedBy can be null as arguments to the constructor, this is
-   * disallowed (semantically) and the constructor performs checks to ensure that. This helps in producing friendly
-   * errors when the PARTITIONED BY custom clause is not present, and keeps its error separate from JavaCC/Calcite's
-   * custom errors which can be cryptic when someone accidentally forgets to explicitly specify the PARTITIONED BY clause
+   * While partitionedBy can be null as arguments to the constructor, this is disallowed (semantically) and
+   * {@link org.apache.druid.sql.calcite.planner.IngestHandler#validate()} performs checks to ensure that. This helps
+   * in producing friendly errors when the PARTITIONED BY custom clause is not present, and keeps its error separate
+   * from JavaCC/Calcite's custom errors which can be cryptic when someone accidentally forgets to explicitly specify
+   * the PARTITIONED BY clause
    */
   public DruidSqlInsert(
       SqlParserPos pos,
