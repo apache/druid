@@ -144,6 +144,7 @@ import java.util.stream.Collectors;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assume.assumeTrue;
 
 public class CalciteQueryTest extends BaseCalciteQueryTest
 {
@@ -15127,6 +15128,26 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .run();
   }
 
+
+  @Test
+  public void testScanAndSortCanGetSchemaFromScanQuery()
+  {
+    assumeTrue(NullHandling.sqlCompatible());
+    msqIncompatible();
+    String sql = "select * from (select * from \"wikipedia\" limit 3) order by \"user\"";
+    ImmutableList<Object[]> expectedResults = ImmutableList.of(
+        new Object[]{1442018825474L, "#en.wikipedia", "Auburn", "/* Status of peremptory norms under international law */ fixed spelling of 'Wimbledon'", "AU", "Australia", "true", "false", "false", "false", "false", null, "Main", "Peremptory norm", "NSW", "New South Wales", "60.225.66.142", 0L, 0L, 0L},
+        new Object[]{1442018818771L, "#en.wikipedia", null, "added project", null, null, "false", "false", "false", "false", "false", null, "Talk", "Talk:Oswald Tilghman", null, null, "GELongstreet", 36L, 36L, 0L},
+        new Object[]{1442018820496L, "#ca.wikipedia", null, "Robot inserta {{Commonscat}} que enlla\u00E7a amb [[commons:category:Rallicula]]", null, null, "false", "true", "false", "true", "false", null, "Main", "Rallicula", null, null, "PereBot", 17L, 17L, 0L}
+    );
+
+    testBuilder()
+        .sql(sql)
+        .expectedResults(expectedResults)
+        .run();
+  }
+
+
   @DecoupledTestConfig(nativeQueryIgnore = NativeQueryIgnore.SLIGHTLY_WORSE_PLAN)
   @Test
   public void testWindowingWithScanAndSort()
@@ -15317,33 +15338,31 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testLatestByAggregatorOnSecondaryTimestamp()
+  public void testLatestByAggregatorOnSecondaryTimestampGroupBy()
   {
     msqIncompatible();
-
     testQuery(
-        "SELECT "
-        + "LATEST_BY(cnt + 1, TIME_PARSE('2000-01-01 00:00:00', 'yyyy-MM-dd HH:mm:ss')) "
-        + "FROM druid.numfoo",
+        "SELECT __time, m1, LATEST_BY(m1, MILLIS_TO_TIMESTAMP(CAST(m2 AS NUMERIC))) from druid.numfoo GROUP BY 1,2",
         ImmutableList.of(
-            Druids.newTimeseriesQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE3)
-                  .intervals(querySegmentSpec(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .virtualColumns(
-                      expressionVirtualColumn("v0", "(\"cnt\" + 1)", ColumnType.LONG),
-                      expressionVirtualColumn("v1", "946684800000", ColumnType.LONG)
-                  )
-                  .aggregators(
-                      aggregators(
-                          new LongLastAggregatorFactory("a0", "v0", "v1")
-                      )
-                  )
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build()
+            new GroupByQuery.Builder()
+                .setDataSource(CalciteTests.DATASOURCE3)
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+                .setDimensions(
+                    new DefaultDimensionSpec("__time", "_d0", ColumnType.LONG),
+                    new DefaultDimensionSpec("m1", "_d1", ColumnType.FLOAT)
+                )
+                .setAggregatorSpecs(aggregators(new FloatLastAggregatorFactory("a0", "m1", "m2")))
+                .setContext(OUTER_LIMIT_CONTEXT)
+                .build()
         ),
         ImmutableList.of(
-            new Object[]{2L}
+            new Object[]{946684800000L, 1.0F, 1.0F},
+            new Object[]{946771200000L, 2.0F, 2.0F},
+            new Object[]{946857600000L, 3.0F, 3.0F},
+            new Object[]{978307200000L, 4.0F, 4.0F},
+            new Object[]{978393600000L, 5.0F, 5.0F},
+            new Object[]{978480000000L, 6.0F, 6.0F}
         )
     );
   }
