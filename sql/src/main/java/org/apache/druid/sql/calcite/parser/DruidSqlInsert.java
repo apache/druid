@@ -19,12 +19,14 @@
 
 package org.apache.druid.sql.calcite.parser;
 
+import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlInsert;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.druid.sql.calcite.planner.DruidSqlIngestOperator;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -39,13 +41,13 @@ public class DruidSqlInsert extends DruidSqlIngest
   public static final String SQL_INSERT_SEGMENT_GRANULARITY = "sqlInsertSegmentGranularity";
 
   // This allows reusing super.unparse
-  public static final SqlOperator OPERATOR = SqlInsert.OPERATOR;
+  public static final SqlOperator OPERATOR = DruidSqlIngestOperator.INSERT_OPERATOR;
 
   public static DruidSqlInsert create(
       @Nonnull SqlInsert insertNode,
       @Nullable SqlGranularityLiteral partitionedBy,
       @Nullable SqlNodeList clusteredBy,
-      @Nullable String exportFileFormat
+      @Nullable SqlIdentifier exportFileFormat
   )
   {
     return new DruidSqlInsert(
@@ -74,7 +76,7 @@ public class DruidSqlInsert extends DruidSqlIngest
       SqlNodeList columnList,
       @Nullable SqlGranularityLiteral partitionedBy,
       @Nullable SqlNodeList clusteredBy,
-      @Nullable String exportFileFormat
+      @Nullable SqlIdentifier exportFileFormat
   )
   {
     super(
@@ -110,7 +112,7 @@ public class DruidSqlInsert extends DruidSqlIngest
     writer.newlineAndIndent();
     if (getExportFileFormat() != null) {
       writer.keyword("AS");
-      writer.print(getExportFileFormat());
+      writer.print(getExportFileFormat().toString());
       writer.newlineAndIndent();
     }
     getSource().unparse(writer, 0, 0);
