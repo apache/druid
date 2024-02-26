@@ -59,11 +59,13 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
               "'ARRAY_OVERLAP(array, array)'",
               OperandTypes.or(
                   OperandTypes.family(SqlTypeFamily.ARRAY),
-                  OperandTypes.family(SqlTypeFamily.STRING)
+                  OperandTypes.family(SqlTypeFamily.STRING),
+                  OperandTypes.family(SqlTypeFamily.NUMERIC)
               ),
               OperandTypes.or(
                   OperandTypes.family(SqlTypeFamily.ARRAY),
-                  OperandTypes.family(SqlTypeFamily.STRING)
+                  OperandTypes.family(SqlTypeFamily.STRING),
+                  OperandTypes.family(SqlTypeFamily.NUMERIC)
               )
           )
       )
