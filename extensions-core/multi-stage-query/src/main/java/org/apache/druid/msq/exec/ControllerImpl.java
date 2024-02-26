@@ -80,6 +80,7 @@ import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction
 import org.apache.druid.indexing.common.actions.SegmentTransactionalReplaceAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.TooManyBucketsException;
 import org.apache.druid.indexing.common.task.batch.parallel.TombstoneHelper;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
@@ -1729,27 +1730,40 @@ public class ControllerImpl implements Controller
       final Set<DataSegment> segments = (Set<DataSegment>) queryKernel.getResultObjectForStage(finalStageId);
       DataSchema dataSchema = ((SegmentGeneratorFrameProcessorFactory) queryKernel.getStageDefinition(finalStageId)
                                                                                   .getProcessorFactory()).getDataSchema();
-      ClusterBy clusterBy = queryDef.getFinalStageDefinition().getClusterBy();
-      log.info("Query [%s] publishing %d segments.", queryDef.getQueryId(), segments.size());
+
+      List<String> partitionDimensions = segments.isEmpty()
+                                         ? Collections.emptyList()
+                                         : ((DimensionRangeShardSpec) segments.stream()
+                                                                              .findFirst()
+                                                                              .get()
+                                                                              .getShardSpec()).getDimensions();
+
+
       Function<Set<DataSegment>, Set<DataSegment>> compactionStateAnnotateFunction = compactionStateAnnotateFunction(
-          true,
+          task(),
           context.jsonMapper(),
           dataSchema,
-          clusterBy
+          partitionDimensions
       );
+      log.info("Query [%s] publishing %d segments.", queryDef.getQueryId(), segments.size());
       publishAllSegments(compactionStateAnnotateFunction.apply(segments));
     }
   }
 
-  public Function<Set<DataSegment>, Set<DataSegment>> compactionStateAnnotateFunction(
-      boolean storeCompactionState,
+  public static Function<Set<DataSegment>, Set<DataSegment>> compactionStateAnnotateFunction(
+      MSQControllerTask task,
       ObjectMapper jsonMapper,
       DataSchema dataSchema,
-      ClusterBy clusterBy
+      List<String> partitionDimensions
   )
   {
+    final boolean storeCompactionState = task.getContextValue(
+        Tasks.STORE_COMPACTION_STATE_KEY,
+        Tasks.DEFAULT_STORE_COMPACTION_STATE
+    );
+
     if (storeCompactionState) {
-      IndexSpec indexSpec = task().getQuerySpec().getTuningConfig().getIndexSpec();
+      IndexSpec indexSpec = task.getQuerySpec().getTuningConfig().getIndexSpec();
       GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
       DimensionsSpec dimensionsSpec = dataSchema.getDimensionsSpec();
       Map<String, Object> transformSpec = dataSchema.getTransformSpec() == null
@@ -1767,15 +1781,15 @@ public class ControllerImpl implements Controller
                                      }
                                  );
 
+      // Even if partition dimensions is empty, use DimensionRangePartitionsSpec to record other info
+      // such as rowsPerSegment
+
       PartitionsSpec partitionSpec = new DimensionRangePartitionsSpec(
-          task().getQuerySpec()
-                .getTuningConfig()
-                .getRowsPerSegment(),
+          task.getQuerySpec()
+              .getTuningConfig()
+              .getRowsPerSegment(),
           null,
-          clusterBy.getColumns()
-                   .stream()
-                   .map(KeyColumn::columnName)
-                   .collect(Collectors.toList()),
+          partitionDimensions,
           false
       );
 
