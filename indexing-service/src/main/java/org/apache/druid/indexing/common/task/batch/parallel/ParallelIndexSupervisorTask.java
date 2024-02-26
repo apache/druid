@@ -1181,8 +1181,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
             buildPublishAction(segmentsToBeOverwritten, segmentsToPublish, map, taskLockType)
         );
 
-    LOG.info("Minimal segment schema is [%s]", minimalSegmentSchemas);
-
     final boolean published =
         newSegments.isEmpty()
         || publisher.publishSegments(oldSegments, newSegments, annotateFunction, null, minimalSegmentSchemas).isSuccess();

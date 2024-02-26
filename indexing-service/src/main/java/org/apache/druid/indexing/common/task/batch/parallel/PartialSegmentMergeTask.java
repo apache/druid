@@ -201,8 +201,6 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
         intervalToUnzippedFiles
     );
 
-    LOG.info("Partial Segment Merge Task Segment is is [%s]", pushedSegments.rhs);
-
     taskClient.report(new PushedSegmentsReport(getId(), Collections.emptySet(), pushedSegments.lhs, ImmutableMap.of(), pushedSegments.rhs));
 
     return TaskStatus.success(getId());

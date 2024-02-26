@@ -956,8 +956,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           pushTimeout
       );
 
-      log.info("Schema for pushed segments is [%s]", pushed.getMinimalSegmentSchemas());
-
       // If we use timeChunk lock, then we don't have to specify what segments will be overwritten because
       // it will just overwrite all segments overlapped with the new segments.
       final Set<DataSegment> inputSegments = getTaskLockHelper().isUseSegmentLock()
