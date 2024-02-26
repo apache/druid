@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite;
 
 import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -80,7 +81,15 @@ public @interface DecoupledTestConfig
      *
      * Filter is pushed below join to the left.
      */
-    JOIN_FILTER_LOCATIONS;
+    JOIN_FILTER_LOCATIONS,
+    /**
+     * New scans / etc.
+     */
+    DEFINETLY_WORSE_PLAN,
+    /**
+     * A new {@link FinalizingFieldAccessPostAggregator} appeared in the plan.
+     */
+    FINALIZING_FIELD_ACCESS;
 
     public boolean isPresent()
     {

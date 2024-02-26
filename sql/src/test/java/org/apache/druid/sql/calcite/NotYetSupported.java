@@ -100,7 +100,8 @@ public @interface NotYetSupported
     JOIN_TABLE_TABLE(ISE.class, "Cannot handle subquery structure for dataSource: JoinDataSource"),
     CORRELATE_CONVERSION(DruidException.class, "Missing conversion( is|s are) LogicalCorrelate"),
     SORT_REMOVE_TROUBLE(DruidException.class, "Calcite assertion violated.*Sort\\.<init>"),
-    STACK_OVERFLOW(StackOverflowError.class, "");
+    STACK_OVERFLOW(StackOverflowError.class, ""),
+    CANNOT_JOIN_LOOKUP_NON_KEY(RuntimeException.class, "Cannot join lookup with condition referring to non-key");
 
     public Class<? extends Throwable> throwableClass;
     public String regex;
