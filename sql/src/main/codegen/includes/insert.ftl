@@ -35,7 +35,7 @@ SqlNode DruidSqlInsertEof() :
   final Pair<SqlNodeList, SqlNodeList> p;
   SqlGranularityLiteral partitionedBy = null;
   SqlNodeList clusteredBy = null;
-  String exportFileFormat = null;
+  SqlIdentifier exportFileFormat = null;
 }
 {
   (
