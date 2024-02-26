@@ -25,7 +25,9 @@ import org.apache.druid.storage.ExportStorageProvider;
 import org.apache.druid.storage.StorageConnector;
 
 import java.io.IOException;
-import java.io.PrintStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.Set;
 
 /**
@@ -51,9 +53,10 @@ public class ManifestFileManager
       if (storageConnector.pathExists(MANIFEST_FILE)) {
         throw DruidException.defensive("Found manifest file already present at path.");
       }
-      try (PrintStream printStream = new PrintStream(storageConnector.write(MANIFEST_FILE))) {
+
+      try (PrintWriter printWriter = new PrintWriter(new OutputStreamWriter(storageConnector.write(MANIFEST_FILE), StandardCharsets.UTF_8))) {
         for (String exportedFile : exportedFiles) {
-          printStream.println(exportStorageProvider.getFilePathForManifest(exportedFile));
+          printWriter.println(exportStorageProvider.getFilePathForManifest(exportedFile));
         }
       }
     }

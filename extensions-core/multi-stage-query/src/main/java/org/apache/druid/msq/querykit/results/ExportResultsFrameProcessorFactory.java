@@ -56,7 +56,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 @JsonTypeName("exportResults")
-public class ExportResultsFrameProcessorFactory implements FrameProcessorFactory<String, Set<String>,Object>
+public class ExportResultsFrameProcessorFactory implements FrameProcessorFactory<String, Set<String>, Object>
 {
   private final String queryId;
   private final ExportStorageProvider exportStorageProvider;
