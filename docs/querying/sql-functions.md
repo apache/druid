@@ -543,7 +543,7 @@ Converts an angle from radians to degrees.
 
 **Function type:** [Window](sql-window-functions.md#window-function-reference)
 
-Returns the rank for a row within a window without gaps. For example, if two rows tie for rank of 1, the subsequent row is ranked 2.
+Returns the rank for a row within a window without gaps. For example, if two rows tie for a rank of 1, the subsequent row is ranked 2.
 
 ## DIV
 
@@ -890,7 +890,7 @@ Extracts a literal value from `expr` at the specified `path`. If you specify `RE
 
 **Function type:** [Window](sql-window-functions.md#window-function-reference)
 
-If you do not supply an `offset`, returns the value evaluated at the row preding the current row. Specify an offset number `n` to return the value evaluated at `n` rows preceding the current one.
+If you do not supply an `offset`, returns the value evaluated at the row preceding the current row. Specify an offset number `n` to return the value evaluated at `n` rows preceding the current one.
 
 ## LAST_VALUE
 

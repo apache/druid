@@ -90,7 +90,7 @@ Window functions support aliasing.
 
 ## Window function syntax
 
-In general, Druid Window functions use the following syntax:
+In general, window functions in Druid use the following syntax:
 
 
 ```sql
