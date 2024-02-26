@@ -63,7 +63,13 @@ public @interface DecoupledTestConfig
     /**
      * Worse plan; may loose vectorization; but no extra queries
      */
-    SLIGHTLY_WORSE_PLAN;
+    SLIGHTLY_WORSE_PLAN,
+    /**
+     * Equvivalent plan.
+     *
+     * Renamed variable
+     */
+    EQUIV_PLAN;
 
     public boolean isPresent()
     {

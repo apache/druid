@@ -85,6 +85,7 @@ import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.security.Access;
+import org.apache.druid.sql.calcite.DecoupledTestConfig.NativeQueryIgnore;
 import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.filtration.Filtration;
@@ -761,6 +762,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
+  @NotYetSupported(Modes.JOIN_CONDITION_NOT_PUSHED_CONDITION)
   public void testFilterAndGroupByLookupUsingJoinOperatorBackwards(Map<String, Object> queryContext)
   {
     // Like "testFilterAndGroupByLookupUsingJoinOperator", but with the table and lookup reversed.
@@ -816,6 +818,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
+  @NotYetSupported(Modes.JOIN_CONDITION_NOT_PUSHED_CONDITION)
   public void testFilterAndGroupByLookupUsingJoinOperatorWithNotFilter(Map<String, Object> queryContext)
 
   {
@@ -858,6 +861,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.JOIN_CONDITION_NOT_PUSHED_CONDITION)
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
   public void testJoinUnionTablesOnLookup(Map<String, Object> queryContext)
@@ -4323,6 +4327,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
+  @NotYetSupported(Modes.UNION_WITH_COMPLEX_OPERAND)
   public void testUnionAllTwoQueriesRightQueryIsJoin(Map<String, Object> queryContext)
   {
     // MSQ does not support UNION ALL.
@@ -4700,6 +4705,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
+  @NotYetSupported(Modes.JOIN_CONDITION_UNSUPORTED_OPERAND)
   public void testJoinWithEquiAndNonEquiCondition(Map<String, Object> queryContext)
   {
     // Native JOIN operator cannot handle the condition, so a SQL JOIN with greater-than is translated into a
@@ -4904,6 +4910,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
+  @NotYetSupported(  Modes.JOIN_CONDITION_UNSUPORTED_OPERAND)
   public void testNestedGroupByOnInlineDataSourceWithFilter(Map<String, Object> queryContext)
   {
     // Cannot vectorize due to virtual columns.
@@ -5096,6 +5103,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
+  @DecoupledTestConfig(nativeQueryIgnore = NativeQueryIgnore.EQUIV_PLAN )
   public void testTopNOnStringWithNonSortedOrUniqueDictionary(Map<String, Object> queryContext)
   {
     testQuery(

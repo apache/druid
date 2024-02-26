@@ -20,18 +20,24 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.base.Throwables;
+import junitparams.JUnitParamsRunner;
 import org.apache.druid.error.DruidException;
 import org.junit.AssumptionViolatedException;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
+import org.junit.runner.RunWith;
 import org.junit.runners.model.Statement;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.lang.reflect.Method;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.junit.Assert.assertThrows;
 
@@ -87,7 +93,8 @@ public @interface NotYetSupported
     UNSUPPORTED_NULL_ORDERING(DruidException.class, "(A|DE)SCENDING ordering with NULLS (LAST|FIRST)"),
     UNION_WITH_COMPLEX_OPERAND(DruidException.class, "Only Table and Values are supported as inputs for Union"),
     UNION_MORE_STRICT_ROWTYPE_CHECK(DruidException.class, "Row signature mismatch in Union inputs"),
-    JOIN_CONDITION_NOT_PUSHED_CONDITION(DruidException.class, "SQL requires a join with '.*' condition");
+    JOIN_CONDITION_NOT_PUSHED_CONDITION(DruidException.class, "SQL requires a join with '.*' condition"),
+    JOIN_CONDITION_UNSUPORTED_OPERAND(DruidException.class, "SQL .* unsupported operand type");
 
     public Class<? extends Throwable> throwableClass;
     public String regex;
@@ -115,7 +122,7 @@ public @interface NotYetSupported
     @Override
     public Statement apply(Statement base, Description description)
     {
-      NotYetSupported annotation = description.getAnnotation(NotYetSupported.class);
+      NotYetSupported annotation = getAnnotation(description);
 
       if (annotation == null) {
         return base;
@@ -158,5 +165,40 @@ public @interface NotYetSupported
         }
       };
     }
+
+    private static  Method getMethodForName(Class<?> testClass, String realMethodName)
+    {
+      List<Method> matches = Stream.of(testClass.getMethods())
+          .filter(m -> realMethodName.equals(m.getName()))
+          .collect(Collectors.toList());
+      switch (matches.size())
+      {
+        case 0:
+        throw new IllegalArgumentException("Expected to find method...but there is none?");
+        case 1:
+        return matches.get(0);
+        default:
+        throw new IllegalArgumentException("method overrides are not supported");
+      }
+    }
+
+    private NotYetSupported getAnnotation(Description description)
+    {
+      NotYetSupported annotation = description.getAnnotation(NotYetSupported.class);
+      if(annotation!=null) {
+        return annotation;
+      }
+      Class<?> testClass = description.getTestClass();
+      RunWith runWith = testClass.getAnnotation(RunWith.class);
+      if (runWith == null || !runWith.value().equals(JUnitParamsRunner.class)) {
+        return null;
+      }
+      String mehodName = description.getMethodName();
+      String realMethodName = mehodName.replaceAll("\\(.*","");
+
+      Method m =getMethodForName(testClass,realMethodName);
+      return m.getAnnotation(NotYetSupported.class);
+    }
+
   }
 }
