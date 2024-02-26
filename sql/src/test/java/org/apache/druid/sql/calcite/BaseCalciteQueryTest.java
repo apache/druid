@@ -1363,7 +1363,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
    * This is a provider of query contexts that should be used by join tests.
    * It tests various configs that can be passed to join queries. All the configs provided by this provider should
    * have the join query engine return the same results.
-   * @return
    */
   public static class QueryContextForJoinProvider
   {
