@@ -38,9 +38,9 @@ Set the context parameter `enableWindowing: true` to use window functions.
 
 Window functions in Apache Druid produce values based upon the relationship of one row within a window of rows to the other rows within the same window. A window is a group of related rows within a result set. For example, rows with the same value for a specific dimension.
 
-The following example organizes results with the same `channel` value into windows. For each window, the query returns the rank of each row in ascending order based upon its `delta` value.
-
 Window functions in Druid require a GROUP BY statement. Druid performs the row-level aggregations for the GROUP BY before performing the window function calculations.
+
+The following example organizes results with the same `channel` value into windows. For each window, the query returns the rank of each row in ascending order based upon its `changed` value.
 
 ```sql
 SELECT FLOOR(__time TO DAY) AS event_time,
@@ -105,18 +105,18 @@ GROUP BY dimensions
 ```sql
 window_function() OVER w
 FROM table
-WINDOW w AS ([PARTITION BY ] [ORDER BY]
+WINDOW w AS ([PARTITION BY partitioning expression] [ORDER BY order expression]
   [[ROWS, RANGE] BETWEEN range start AND range end])
 GROUP BY dimensions
 ```
 
 The OVER clause defines the query windows for window functions as follows:
-- PARTITION BY indicates the dimension that defines the rows within the window
+- PARTITION BY indicates the dimension that defines window boundaries
 - ORDER BY specifies the order of the rows within the windows
 
 An empty OVER clause or the absence of a PARTITION BY clause indicates that all data belongs to a single window.
 
-For example, the following OVER clause example sets the window dimension to `channel` and orders the results by the absolute value of `delta` ascending:
+In the following example, the following OVER clause example sets the window dimension to `channel` and orders the results by the absolute value of `delta` ascending:
 
 ```sql
 ...
@@ -200,7 +200,7 @@ For example:
 - You cannot use two FOLLOWING expressions in the window frame. For example: `ROWS BETWEEN 2 ROWS FOLLOWING and 3 ROWS FOLLOWING`.
 - You can only use a RANGE frames when both endpoints are unbounded or current row.
 
-If you write a query that violates one of these conditions, Druid throws an error: "The query contains a window frame which may return incorrect results. To disregard this warning, set [`windowingStrictValidation`] to false in the query context."
+If you write a query that violates one of these conditions, Druid throws an error: "The query contains a window frame which may return incorrect results. To disregard this warning, set `windowingStrictValidation` to false in the query context."
 
 ## Window function reference
 
