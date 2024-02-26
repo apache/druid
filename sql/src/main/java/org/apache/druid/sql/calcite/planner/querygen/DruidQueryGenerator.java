@@ -44,9 +44,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Stack;
 
-import static org.apache.druid.sql.calcite.rel.PartialDruidQuery.Stage.AGGREGATE;
-import static org.apache.druid.sql.calcite.rel.PartialDruidQuery.Stage.SORT;
-
 /**
  * Converts a DAG of {@link DruidLogicalNode} convention to a native {@link DruidQuery} for execution.
  */
@@ -270,12 +267,12 @@ public class DruidQueryGenerator
         if (Project.class == clazz && stack.size() >= 2) {
           // peek at parent and postpone project for next query stage
           DruidLogicalNode parentNode = stack.get(stack.size() - 2);
-          if (stage.ordinal() > AGGREGATE.ordinal()
+          if (stage.ordinal() > Stage.AGGREGATE.ordinal()
               && parentNode instanceof DruidAggregate
               && !partialDruidQuery.canAccept(Stage.AGGREGATE)) {
             return false;
           }
-          if (stage.ordinal() > SORT.ordinal()
+          if (stage.ordinal() > Stage.SORT.ordinal()
               && parentNode instanceof DruidSort
               && !partialDruidQuery.canAccept(Stage.SORT)) {
             return false;
