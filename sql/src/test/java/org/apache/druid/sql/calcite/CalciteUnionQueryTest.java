@@ -31,15 +31,14 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.junit.jupiter.api.Test;
+import org.hamcrest.MatcherAssert;
+import org.junit.Assert;
+import org.junit.Test;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.fail;
-
-class CalciteUnionQueryTest extends BaseCalciteQueryTest
+public class CalciteUnionQueryTest extends BaseCalciteQueryTest
 {
   @Test
-  void unionAllDifferentTablesWithMapping()
+  public void testUnionAllDifferentTablesWithMapping()
   {
     testQuery(
         "SELECT\n"
@@ -81,7 +80,7 @@ class CalciteUnionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void joinUnionAllDifferentTablesWithMapping()
+  public void testJoinUnionAllDifferentTablesWithMapping()
   {
     testQuery(
         "SELECT\n"
@@ -123,7 +122,7 @@ class CalciteUnionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void unionAllTablesColumnCountMismatch()
+  public void testUnionAllTablesColumnCountMismatch()
   {
     try {
       testQuery(
@@ -135,16 +134,16 @@ class CalciteUnionQueryTest extends BaseCalciteQueryTest
           ImmutableList.of(),
           ImmutableList.of()
       );
-      fail("query execution should fail");
+      Assert.fail("query execution should fail");
     }
     catch (DruidException e) {
-      assertThat(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [42])"));
+      MatcherAssert.assertThat(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [42])"));
     }
   }
 
   @NotYetSupported(Modes.UNION_MORE_STRICT_ROWTYPE_CHECK)
   @Test
-  void unionAllTablesColumnTypeMismatchFloatLong()
+  public void testUnionAllTablesColumnTypeMismatchFloatLong()
   {
     // "m1" has a different type in foo and foo2 (float vs long), but this query is OK anyway because they can both
     // be implicitly cast to double.
@@ -191,7 +190,7 @@ class CalciteUnionQueryTest extends BaseCalciteQueryTest
 
   @NotYetSupported(Modes.ERROR_HANDLING)
   @Test
-  void unionAllTablesColumnTypeMismatchStringLong()
+  public void testUnionAllTablesColumnTypeMismatchStringLong()
   {
     // "dim3" has a different type in foo and foo2 (string vs long), which requires a casting subquery, so this
     // query cannot be planned.
@@ -209,7 +208,7 @@ class CalciteUnionQueryTest extends BaseCalciteQueryTest
 
   @NotYetSupported(Modes.ERROR_HANDLING)
   @Test
-  void unionAllTablesWhenMappingIsRequired()
+  public void testUnionAllTablesWhenMappingIsRequired()
   {
     // Cannot plan this UNION ALL operation, because the column swap would require generating a subquery.
 
@@ -226,7 +225,7 @@ class CalciteUnionQueryTest extends BaseCalciteQueryTest
 
   @NotYetSupported(Modes.ERROR_HANDLING)
   @Test
-  void unionIsUnplannable()
+  public void testUnionIsUnplannable()
   {
     // Cannot plan this UNION operation
     assertQueryIsUnplannable(
@@ -237,7 +236,7 @@ class CalciteUnionQueryTest extends BaseCalciteQueryTest
 
   @NotYetSupported(Modes.ERROR_HANDLING)
   @Test
-  void unionAllTablesWhenCastAndMappingIsRequired()
+  public void testUnionAllTablesWhenCastAndMappingIsRequired()
   {
     // Cannot plan this UNION ALL operation, because the column swap would require generating a subquery.
     assertQueryIsUnplannable(
@@ -252,7 +251,7 @@ class CalciteUnionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void unionAllSameTableTwice()
+  public void testUnionAllSameTableTwice()
   {
     testQuery(
         "SELECT\n"
@@ -294,7 +293,7 @@ class CalciteUnionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void unionAllSameTableTwiceWithSameMapping()
+  public void testUnionAllSameTableTwiceWithSameMapping()
   {
     testQuery(
         "SELECT\n"
@@ -337,7 +336,7 @@ class CalciteUnionQueryTest extends BaseCalciteQueryTest
 
   @NotYetSupported(Modes.ERROR_HANDLING)
   @Test
-  void unionAllSameTableTwiceWithDifferentMapping()
+  public void testUnionAllSameTableTwiceWithDifferentMapping()
   {
     // Cannot plan this UNION ALL operation, because the column swap would require generating a subquery.
     assertQueryIsUnplannable(
@@ -351,7 +350,7 @@ class CalciteUnionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void unionAllThreeTablesColumnCountMismatch1()
+  public void testUnionAllThreeTablesColumnCountMismatch1()
   {
     try {
       testQuery(
@@ -363,15 +362,15 @@ class CalciteUnionQueryTest extends BaseCalciteQueryTest
           ImmutableList.of(),
           ImmutableList.of()
       );
-      fail("query execution should fail");
+      Assert.fail("query execution should fail");
     }
     catch (DruidException e) {
-      assertThat(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [45])"));
+      MatcherAssert.assertThat(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [45])"));
     }
   }
 
   @Test
-  void unionAllThreeTablesColumnCountMismatch2()
+  public void testUnionAllThreeTablesColumnCountMismatch2()
   {
     try {
       testQuery(
@@ -383,15 +382,15 @@ class CalciteUnionQueryTest extends BaseCalciteQueryTest
           ImmutableList.of(),
           ImmutableList.of()
       );
-      fail("query execution should fail");
+      Assert.fail("query execution should fail");
     }
     catch (DruidException e) {
-      assertThat(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [45])"));
+      MatcherAssert.assertThat(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [45])"));
     }
   }
 
   @Test
-  void unionAllThreeTablesColumnCountMismatch3()
+  public void testUnionAllThreeTablesColumnCountMismatch3()
   {
     try {
       testQuery(
@@ -403,10 +402,10 @@ class CalciteUnionQueryTest extends BaseCalciteQueryTest
           ImmutableList.of(),
           ImmutableList.of()
       );
-      fail("query execution should fail");
+      Assert.fail("query execution should fail");
     }
     catch (DruidException e) {
-      assertThat(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [70])"));
+      MatcherAssert.assertThat(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [70])"));
     }
   }
 

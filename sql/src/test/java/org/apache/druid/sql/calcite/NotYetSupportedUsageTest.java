@@ -19,7 +19,7 @@
 
 package org.apache.druid.sql.calcite;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 import org.reflections.Reflections;
 import org.reflections.scanners.MethodAnnotationsScanner;
 
@@ -29,12 +29,12 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.Assert.assertEquals;
 
-class NotYetSupportedUsageTest
+public class NotYetSupportedUsageTest
 {
   @Test
-  void ensureAllModesUsed()
+  public void ensureAllModesUsed()
   {
     Set<Method> methodsAnnotatedWith = new Reflections("org.apache.druid.sql", new MethodAnnotationsScanner())
         .getMethodsAnnotatedWith(NotYetSupported.class);
@@ -45,6 +45,6 @@ class NotYetSupportedUsageTest
       modes.remove(annot.value());
     }
 
-    assertEquals(Collections.emptySet(), modes, "There are unused modes which should be removed");
+    assertEquals("There are unused modes which should be removed", Collections.emptySet(), modes);
   }
 }

@@ -29,21 +29,21 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.IS_NOT_NULL;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
-class FilterJoinExcludePushToChildRuleTest
+public class FilterJoinExcludePushToChildRuleTest
 {
   private final RexBuilder rexBuilder = new RexBuilder(new JavaTypeFactoryImpl());
   private final RelDataTypeFactory typeFactory = new SqlTypeFactoryImpl(DruidTypeSystem.INSTANCE);
 
   @Test
-  void removeRedundantIsNotNullFiltersWithSQLCompatibility()
+  public void testRemoveRedundantIsNotNullFiltersWithSQLCompatibility()
   {
     RexNode equalityFilter = rexBuilder.makeCall(
         SqlStdOperatorTable.EQUALS,
@@ -57,16 +57,16 @@ class FilterJoinExcludePushToChildRuleTest
     joinFilters.add(equalityFilter);
 
     FilterJoinExcludePushToChildRule.removeRedundantIsNotNullFilters(joinFilters, JoinRelType.INNER, true);
-    assertEquals(1, joinFilters.size());
-    assertEquals(joinFilters.get(0), equalityFilter, "Equality Filter changed");
+    Assert.assertEquals(joinFilters.size(), 1);
+    Assert.assertEquals("Equality Filter changed", joinFilters.get(0), equalityFilter);
 
     // add IS NOT NULL filter on a join column
     joinFilters.add(isNotNullFilterOnNonJoinColumn);
     joinFilters.add(isNotNullFilterOnJoinColumn);
-    assertEquals(3, joinFilters.size());
+    Assert.assertEquals(joinFilters.size(), 3);
     FilterJoinExcludePushToChildRule.removeRedundantIsNotNullFilters(joinFilters, JoinRelType.INNER, true);
-    assertEquals(2, joinFilters.size());
-    assertEquals(joinFilters.get(0), equalityFilter, "Equality Filter changed");
-    assertEquals(joinFilters.get(1), isNotNullFilterOnNonJoinColumn, "IS NOT NULL filter on non-join column changed");
+    Assert.assertEquals(joinFilters.size(), 2);
+    Assert.assertEquals("Equality Filter changed", joinFilters.get(0), equalityFilter);
+    Assert.assertEquals("IS NOT NULL filter on non-join column changed", joinFilters.get(1), isNotNullFilterOnNonJoinColumn);
   }
 }

@@ -74,8 +74,9 @@ import org.apache.druid.sql.http.SqlResourceTest;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.Mock;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import javax.validation.Validation;
@@ -83,11 +84,8 @@ import javax.validation.Validator;
 import java.util.Map;
 import java.util.Properties;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 @RunWith(EasyMockRunner.class)
-class SqlModuleTest
+public class SqlModuleTest
 {
   @Mock
   private ServiceEmitter serviceEmitter;
@@ -124,8 +122,8 @@ class SqlModuleTest
 
   private Injector injector;
 
-  @BeforeEach
-  void setUp()
+  @Before
+  public void setUp()
   {
     EasyMock.replay(
         serviceEmitter,
@@ -143,7 +141,7 @@ class SqlModuleTest
   }
 
   @Test
-  void defaultViewManagerBind()
+  public void testDefaultViewManagerBind()
   {
     final Properties props = new Properties();
     props.setProperty(SqlModule.PROPERTY_SQL_ENABLE, "true");
@@ -153,12 +151,12 @@ class SqlModuleTest
     injector = makeInjectorWithProperties(props);
 
     ViewManager viewManager = injector.getInstance(Key.get(ViewManager.class));
-    assertNotNull(viewManager);
-    assertTrue(viewManager instanceof NoopViewManager);
+    Assert.assertNotNull(viewManager);
+    Assert.assertTrue(viewManager instanceof NoopViewManager);
   }
 
   @Test
-  void nonDefaultViewManagerBind()
+  public void testNonDefaultViewManagerBind()
   {
     final Properties props = new Properties();
     props.setProperty(SqlModule.PROPERTY_SQL_ENABLE, "true");
@@ -169,8 +167,8 @@ class SqlModuleTest
     injector = makeInjectorWithProperties(props);
 
     ViewManager viewManager = injector.getInstance(Key.get(ViewManager.class));
-    assertNotNull(viewManager);
-    assertTrue(viewManager instanceof BindTestViewManager);
+    Assert.assertNotNull(viewManager);
+    Assert.assertTrue(viewManager instanceof BindTestViewManager);
   }
 
   private Injector makeInjectorWithProperties(final Properties props)

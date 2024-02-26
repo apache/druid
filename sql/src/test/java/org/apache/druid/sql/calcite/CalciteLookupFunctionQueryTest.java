@@ -54,8 +54,10 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rule.ReverseLookupRule;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
+import org.junit.Assert;
+import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
-import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -63,10 +65,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
-class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
+public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
 {
   private static final Map<String, Object> QUERY_CONTEXT =
       ImmutableMap.<String, Object>builder()
@@ -82,7 +81,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
       new RegisteredLookupExtractionFn(null, "lookyloo121", false, null, null, false);
 
   @Test
-  void filterEquals()
+  public void testFilterEquals()
   {
     cannotVectorize();
 
@@ -95,7 +94,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterLookupOfFunction()
+  public void testFilterLookupOfFunction()
   {
     cannotVectorize();
 
@@ -111,7 +110,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterFunctionOfLookup()
+  public void testFilterFunctionOfLookup()
   {
     cannotVectorize();
 
@@ -127,7 +126,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterLookupOfConcat()
+  public void testFilterLookupOfConcat()
   {
     cannotVectorize();
 
@@ -146,7 +145,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterInLookupOfConcat()
+  public void testFilterInLookupOfConcat()
   {
     cannotVectorize();
 
@@ -170,7 +169,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterConcatOfLookup()
+  public void testFilterConcatOfLookup()
   {
     cannotVectorize();
 
@@ -186,7 +185,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterInConcatOfLookup()
+  public void testFilterInConcatOfLookup()
   {
     cannotVectorize();
 
@@ -209,7 +208,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterConcatOfLookupOfConcat()
+  public void testFilterConcatOfLookupOfConcat()
   {
     cannotVectorize();
 
@@ -229,7 +228,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterInConcatOfLookupOfConcat()
+  public void testFilterInConcatOfLookupOfConcat()
   {
     cannotVectorize();
 
@@ -265,7 +264,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterConcatOfCoalesceLookupOfConcat()
+  public void testFilterConcatOfCoalesceLookupOfConcat()
   {
     cannotVectorize();
 
@@ -285,7 +284,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterImpossibleLookupOfConcat()
+  public void testFilterImpossibleLookupOfConcat()
   {
     cannotVectorize();
 
@@ -299,7 +298,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterChainedEquals()
+  public void testFilterChainedEquals()
   {
     cannotVectorize();
 
@@ -312,7 +311,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterEqualsLiteralFirst()
+  public void testFilterEqualsLiteralFirst()
   {
     cannotVectorize();
 
@@ -325,7 +324,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterEqualsAlwaysFalse()
+  public void testFilterEqualsAlwaysFalse()
   {
     cannotVectorize();
 
@@ -338,7 +337,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterIsNotDistinctFrom()
+  public void testFilterIsNotDistinctFrom()
   {
     cannotVectorize();
 
@@ -351,7 +350,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterMultipleIsNotDistinctFrom()
+  public void testFilterMultipleIsNotDistinctFrom()
   {
     cannotVectorize();
 
@@ -366,7 +365,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterIn()
+  public void testFilterIn()
   {
     cannotVectorize();
 
@@ -379,7 +378,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterInOverMaxSize()
+  public void testFilterInOverMaxSize()
   {
     cannotVectorize();
 
@@ -407,7 +406,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterInOverMaxSize2()
+  public void testFilterInOverMaxSize2()
   {
     cannotVectorize();
 
@@ -435,7 +434,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterInOrIsNull()
+  public void testFilterInOrIsNull()
   {
     cannotVectorize();
 
@@ -462,7 +461,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterInAndIsNotNull()
+  public void testFilterInAndIsNotNull()
   {
     cannotVectorize();
 
@@ -492,7 +491,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterInOrIsNullInjective()
+  public void testFilterInOrIsNullInjective()
   {
     cannotVectorize();
 
@@ -513,7 +512,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterNotInAndIsNotNull()
+  public void testFilterNotInAndIsNotNull()
   {
     cannotVectorize();
 
@@ -541,7 +540,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterInIsNotTrueAndIsNotNull()
+  public void testFilterInIsNotTrueAndIsNotNull()
   {
     cannotVectorize();
 
@@ -569,7 +568,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterNotInAndIsNotNullInjective()
+  public void testFilterNotInAndIsNotNullInjective()
   {
     cannotVectorize();
 
@@ -590,7 +589,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterNotInOrIsNull()
+  public void testFilterNotInOrIsNull()
   {
     cannotVectorize();
 
@@ -623,7 +622,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterInIsNotTrueOrIsNull()
+  public void testFilterInIsNotTrueOrIsNull()
   {
     cannotVectorize();
 
@@ -653,7 +652,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterNotIn()
+  public void testFilterNotIn()
   {
     cannotVectorize();
 
@@ -677,7 +676,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterInIsNotTrue()
+  public void testFilterInIsNotTrue()
   {
     cannotVectorize();
 
@@ -697,7 +696,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterNotInInjective()
+  public void testFilterNotInInjective()
   {
     cannotVectorize();
 
@@ -710,7 +709,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterNotInWithReplaceMissingValue()
+  public void testFilterNotInWithReplaceMissingValue()
   {
     cannotVectorize();
 
@@ -723,7 +722,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterInIsNotTrueWithReplaceMissingValue()
+  public void testFilterInIsNotTrueWithReplaceMissingValue()
   {
     cannotVectorize();
 
@@ -739,7 +738,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterMvContains()
+  public void testFilterMvContains()
   {
     cannotVectorize();
 
@@ -752,7 +751,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterMvContainsNull()
+  public void testFilterMvContainsNull()
   {
     cannotVectorize();
 
@@ -765,7 +764,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterMvContainsNullInjective()
+  public void testFilterMvContainsNullInjective()
   {
     cannotVectorize();
 
@@ -780,7 +779,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterMvOverlap()
+  public void testFilterMvOverlap()
   {
     cannotVectorize();
 
@@ -793,7 +792,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterMvOverlapNull()
+  public void testFilterMvOverlapNull()
   {
     cannotVectorize();
 
@@ -811,7 +810,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterMvOverlapNullInjective()
+  public void testFilterMvOverlapNullInjective()
   {
     cannotVectorize();
 
@@ -828,7 +827,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterNotMvContains()
+  public void testFilterNotMvContains()
   {
     cannotVectorize();
 
@@ -850,7 +849,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterMvContainsIsNotTrue()
+  public void testFilterMvContainsIsNotTrue()
   {
     cannotVectorize();
 
@@ -872,7 +871,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterNotMvContainsInjective()
+  public void testFilterNotMvContainsInjective()
   {
     cannotVectorize();
 
@@ -885,7 +884,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterNotMvOverlap()
+  public void testFilterNotMvOverlap()
   {
     cannotVectorize();
 
@@ -904,7 +903,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterMvOverlapIsNotTrue()
+  public void testFilterMvOverlapIsNotTrue()
   {
     cannotVectorize();
 
@@ -923,7 +922,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterNotMvOverlapInjective()
+  public void testFilterNotMvOverlapInjective()
   {
     cannotVectorize();
 
@@ -936,7 +935,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterMultipleIsDistinctFrom()
+  public void testFilterMultipleIsDistinctFrom()
   {
     cannotVectorize();
 
@@ -974,7 +973,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterIsNull()
+  public void testFilterIsNull()
   {
     cannotVectorize();
 
@@ -992,7 +991,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterIsNullInjective()
+  public void testFilterIsNullInjective()
   {
     cannotVectorize();
 
@@ -1007,7 +1006,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterIsNotNull()
+  public void testFilterIsNotNull()
   {
     cannotVectorize();
 
@@ -1027,7 +1026,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterIsNotNullInjective()
+  public void testFilterIsNotNullInjective()
   {
     cannotVectorize();
 
@@ -1047,7 +1046,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterNotEquals()
+  public void testFilterNotEquals()
   {
     cannotVectorize();
 
@@ -1073,7 +1072,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterNotEqualsInjective()
+  public void testFilterNotEqualsInjective()
   {
     cannotVectorize();
 
@@ -1086,7 +1085,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterEqualsIsNotTrue()
+  public void testFilterEqualsIsNotTrue()
   {
     cannotVectorize();
 
@@ -1106,7 +1105,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterEqualsIsNotTrueInjective()
+  public void testFilterEqualsIsNotTrueInjective()
   {
     cannotVectorize();
 
@@ -1122,7 +1121,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterIsDistinctFrom()
+  public void testFilterIsDistinctFrom()
   {
     cannotVectorize();
 
@@ -1142,7 +1141,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterIsDistinctFromReplaceMissingValueWithSameLiteral()
+  public void testFilterIsDistinctFromReplaceMissingValueWithSameLiteral()
   {
     cannotVectorize();
 
@@ -1165,7 +1164,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterNotEquals2()
+  public void testFilterNotEquals2()
   {
     cannotVectorize();
 
@@ -1197,7 +1196,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterEqualsIsNotTrue2()
+  public void testFilterEqualsIsNotTrue2()
   {
     cannotVectorize();
 
@@ -1222,7 +1221,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterNotEquals2Injective()
+  public void testFilterNotEquals2Injective()
   {
     cannotVectorize();
 
@@ -1241,7 +1240,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterCoalesceSameLiteral()
+  public void testFilterCoalesceSameLiteral()
   {
     cannotVectorize();
 
@@ -1261,7 +1260,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterCoalesceSameLiteralInjective()
+  public void testFilterCoalesceSameLiteralInjective()
   {
     cannotVectorize();
 
@@ -1276,7 +1275,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterInCoalesceSameLiteral()
+  public void testFilterInCoalesceSameLiteral()
   {
     cannotVectorize();
 
@@ -1305,7 +1304,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterInCoalesceSameLiteralInjective()
+  public void testFilterInCoalesceSameLiteralInjective()
   {
     cannotVectorize();
 
@@ -1322,7 +1321,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterMvContainsCoalesceSameLiteral()
+  public void testFilterMvContainsCoalesceSameLiteral()
   {
     cannotVectorize();
 
@@ -1345,7 +1344,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterMvOverlapCoalesceSameLiteral()
+  public void testFilterMvOverlapCoalesceSameLiteral()
   {
     cannotVectorize();
 
@@ -1361,7 +1360,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterCoalesceSameLiteralNotEquals()
+  public void testFilterCoalesceSameLiteralNotEquals()
   {
     cannotVectorize();
 
@@ -1384,7 +1383,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterCoalesceSameLiteralNotEqualsInjective()
+  public void testFilterCoalesceSameLiteralNotEqualsInjective()
   {
     cannotVectorize();
 
@@ -1397,7 +1396,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterCoalesceDifferentLiteral()
+  public void testFilterCoalesceDifferentLiteral()
   {
     cannotVectorize();
 
@@ -1410,7 +1409,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterCoalesceDifferentLiteralAlwaysFalse()
+  public void testFilterCoalesceDifferentLiteralAlwaysFalse()
   {
     cannotVectorize();
 
@@ -1423,7 +1422,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterCoalesceCastVarcharDifferentLiteral()
+  public void testFilterCoalesceCastVarcharDifferentLiteral()
   {
     cannotVectorize();
 
@@ -1436,7 +1435,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterCoalesceCastBigintDifferentLiteral()
+  public void testFilterCoalesceCastBigintDifferentLiteral()
   {
     cannotVectorize();
 
@@ -1452,7 +1451,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterMvContainsCoalesceDifferentLiteral()
+  public void testFilterMvContainsCoalesceDifferentLiteral()
   {
     cannotVectorize();
 
@@ -1465,7 +1464,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterMvOverlapCoalesceDifferentLiteral()
+  public void testFilterMvOverlapCoalesceDifferentLiteral()
   {
     cannotVectorize();
 
@@ -1479,7 +1478,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterCoalesceDifferentLiteralNotEquals()
+  public void testFilterCoalesceDifferentLiteralNotEquals()
   {
     cannotVectorize();
 
@@ -1495,7 +1494,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterCoalesceDifferentLiteralNotEqualsAlwaysTrue()
+  public void testFilterCoalesceDifferentLiteralNotEqualsAlwaysTrue()
   {
     cannotVectorize();
 
@@ -1511,7 +1510,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterCoalesceSameColumn()
+  public void testFilterCoalesceSameColumn()
   {
     cannotVectorize();
 
@@ -1527,7 +1526,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterInCoalesceSameColumn()
+  public void testFilterInCoalesceSameColumn()
   {
     cannotVectorize();
 
@@ -1546,7 +1545,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterCoalesceFunctionOfSameColumn()
+  public void testFilterCoalesceFunctionOfSameColumn()
   {
     cannotVectorize();
 
@@ -1562,7 +1561,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterCoalesceDifferentColumn()
+  public void testFilterCoalesceDifferentColumn()
   {
     cannotVectorize();
 
@@ -1578,11 +1577,11 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void filterMaxUnapplyCount()
+  public void testFilterMaxUnapplyCount()
   {
     // Test to verify that "maxUnapplyCountForDruidReverseLookupRule" works properly. This ensures that the *other*
     // tests are correctly validating that we aren't doing too many reverse lookups.
-    final DruidException e = assertThrows(
+    final DruidException e = Assert.assertThrows(
         DruidException.class,
         () -> testQuery(
             buildFilterTestSql("LOOKUP(dim1, 'lookyloo') = 'xabc' OR LOOKUP(dim2, 'lookyloo') = 'x6'"),
@@ -1592,14 +1591,14 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         )
     );
 
-    assertThat(
+    MatcherAssert.assertThat(
         e,
         ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("Too many optimize calls[2]"))
     );
   }
 
   @Test
-  void lookupReplaceMissingValueWith()
+  public void testLookupReplaceMissingValueWith()
   {
     // Cannot vectorize due to extraction dimension specs.
     cannotVectorize();
@@ -1654,7 +1653,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void countDistinctOfLookup()
+  public void testCountDistinctOfLookup()
   {
     // Cannot vectorize due to extraction dimension spec.
     cannotVectorize();
@@ -1686,7 +1685,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void lookupOnValueThatIsNull()
+  public void testLookupOnValueThatIsNull()
   {
     List<Object[]> expected;
     if (useDefault) {
@@ -1723,7 +1722,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void lookupOnValueThatIsNotDistinctFromNull()
+  public void testLookupOnValueThatIsNotDistinctFromNull()
   {
     List<Object[]> expected;
     if (useDefault) {
@@ -1761,7 +1760,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
 
   @SqlTestFrameworkConfig(numMergeBuffers = 3)
   @Test
-  void exactCountDistinct()
+  public void testExactCountDistinct()
   {
     msqIncompatible();
     final String sqlQuery = "SELECT CAST(LOOKUP(dim1, 'lookyloo') AS VARCHAR), "
@@ -1844,7 +1843,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void pullUpLookup()
+  public void testPullUpLookup()
   {
     testQuery(
         "SELECT LOOKUP(dim1, 'lookyloo121'), COUNT(*) FROM druid.foo GROUP BY 1",
@@ -1872,7 +1871,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void pullUpAndReverseLookup()
+  public void testPullUpAndReverseLookup()
   {
     testQuery(
         "SELECT LOOKUP(dim1, 'lookyloo121'), COUNT(*)\n"
@@ -1900,7 +1899,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void dontPullUpLookupWhenUsedByAggregation()
+  public void testDontPullUpLookupWhenUsedByAggregation()
   {
     cannotVectorize();
 
@@ -1948,7 +1947,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void pullUpLookupGroupOnLookupInput()
+  public void testPullUpLookupGroupOnLookupInput()
   {
     testQuery(
         "SELECT dim1, LOOKUP(dim1, 'lookyloo121'), COUNT(*) FROM druid.foo GROUP BY 1, 2",
@@ -1976,7 +1975,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void pullUpLookupMoreDimensions()
+  public void testPullUpLookupMoreDimensions()
   {
     testQuery(
         "SELECT COUNT(*), dim2, dim1, LOOKUP(dim1, 'lookyloo121') FROM druid.foo GROUP BY 2, 3",
@@ -2007,7 +2006,7 @@ class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void pullUpLookupOneInjectiveOneNot()
+  public void testPullUpLookupOneInjectiveOneNot()
   {
     cannotVectorize();
 

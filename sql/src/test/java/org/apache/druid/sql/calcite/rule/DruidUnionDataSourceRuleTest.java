@@ -36,15 +36,14 @@ import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.DatasourceTable.PhysicalDatasourceMetadata;
 import org.apache.druid.sql.calcite.table.DruidTable;
 import org.easymock.EasyMock;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-class DruidUnionDataSourceRuleTest
+public class DruidUnionDataSourceRuleTest
 {
   private final DruidTable fooDruidTable = new DatasourceTable(
       new PhysicalDatasourceMetadata(
@@ -60,7 +59,7 @@ class DruidUnionDataSourceRuleTest
   );
 
   @Test
-  void get_column_names_if_table_or_union_table_scan()
+  public void test_getColumnNamesIfTableOrUnion_tableScan()
   {
     final DruidRel<?> druidRel = DruidRelsTest.mockDruidRel(
         DruidQueryRel.class,
@@ -70,14 +69,14 @@ class DruidUnionDataSourceRuleTest
         null
     );
 
-    assertEquals(
+    Assert.assertEquals(
         Optional.of(ImmutableList.of("__time", "col1", "col2")),
         DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel, null)
     );
   }
 
   @Test
-  void get_column_names_if_table_or_union_table_mapping()
+  public void test_getColumnNamesIfTableOrUnion_tableMapping()
   {
     final DruidRel<?> druidRel = DruidRelsTest.mockDruidRel(
         DruidQueryRel.class,
@@ -87,14 +86,14 @@ class DruidUnionDataSourceRuleTest
         null
     );
 
-    assertEquals(
+    Assert.assertEquals(
         Optional.of(ImmutableList.of("col1")),
         DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel, null)
     );
   }
 
   @Test
-  void get_column_names_if_table_or_union_table_project()
+  public void test_getColumnNamesIfTableOrUnion_tableProject()
   {
     final DruidRel<?> druidRel = DruidRelsTest.mockDruidRel(
         DruidQueryRel.class,
@@ -104,14 +103,14 @@ class DruidUnionDataSourceRuleTest
         null
     );
 
-    assertEquals(
+    Assert.assertEquals(
         Optional.empty(),
         DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel, null)
     );
   }
 
   @Test
-  void get_column_names_if_table_or_union_table_filter_plus_mapping()
+  public void test_getColumnNamesIfTableOrUnion_tableFilterPlusMapping()
   {
     final DruidRel<?> druidRel = DruidRelsTest.mockDruidRel(
         DruidQueryRel.class,
@@ -121,14 +120,14 @@ class DruidUnionDataSourceRuleTest
         DruidRelsTest.mockFilter()
     );
 
-    assertEquals(
+    Assert.assertEquals(
         Optional.empty(),
         DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel, null)
     );
   }
 
   @Test
-  void get_column_names_if_table_or_union_union_scan()
+  public void test_getColumnNamesIfTableOrUnion_unionScan()
   {
     final DruidUnionDataSourceRel druidRel = DruidRelsTest.mockDruidRel(
         DruidUnionDataSourceRel.class,
@@ -139,14 +138,14 @@ class DruidUnionDataSourceRuleTest
         null
     );
 
-    assertEquals(
+    Assert.assertEquals(
         Optional.of(ImmutableList.of("__time", "col1", "col2")),
         DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel, null)
     );
   }
 
   @Test
-  void get_column_names_if_table_or_union_union_mapping()
+  public void test_getColumnNamesIfTableOrUnion_unionMapping()
   {
     final Project project = DruidRelsTest.mockMappingProject(ImmutableList.of(2, 1), 3);
     final Mappings.TargetMapping mapping = project.getMapping();
@@ -166,14 +165,14 @@ class DruidUnionDataSourceRuleTest
         null
     );
 
-    assertEquals(
+    Assert.assertEquals(
         Optional.of(ImmutableList.of("col2", "col1")),
         DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel, null)
     );
   }
 
   @Test
-  void get_column_names_if_table_or_union_union_project()
+  public void test_getColumnNamesIfTableOrUnion_unionProject()
   {
     final DruidUnionDataSourceRel druidRel = DruidRelsTest.mockDruidRel(
         DruidUnionDataSourceRel.class,
@@ -184,14 +183,14 @@ class DruidUnionDataSourceRuleTest
         null
     );
 
-    assertEquals(
+    Assert.assertEquals(
         Optional.of(ImmutableList.of("__time", "col1", "col2")),
         DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel, null)
     );
   }
 
   @Test
-  void get_column_names_if_table_or_union_outer_query()
+  public void test_getColumnNamesIfTableOrUnion_outerQuery()
   {
     final DruidRel<?> druidRel = DruidRelsTest.mockDruidRel(
         DruidOuterQueryRel.class,
@@ -201,14 +200,14 @@ class DruidUnionDataSourceRuleTest
         null
     );
 
-    assertEquals(
+    Assert.assertEquals(
         Optional.empty(),
         DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel, null)
     );
   }
 
   @Test
-  void get_column_names_if_table_or_union_join()
+  public void test_getColumnNamesIfTableOrUnion_join()
   {
     final DruidRel<?> druidRel = DruidRelsTest.mockDruidRel(
         DruidJoinQueryRel.class,
@@ -218,7 +217,7 @@ class DruidUnionDataSourceRuleTest
         null
     );
 
-    assertEquals(
+    Assert.assertEquals(
         Optional.empty(),
         DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel, null)
     );

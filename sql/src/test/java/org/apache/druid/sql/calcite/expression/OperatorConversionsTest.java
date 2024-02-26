@@ -38,8 +38,12 @@ import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.experimental.runners.Enclosed;
+import org.junit.rules.ExpectedException;
+import org.junit.runner.RunWith;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
@@ -47,20 +51,16 @@ import org.mockito.stubbing.Answer;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-
-
+@RunWith(Enclosed.class)
 public class OperatorConversionsTest
 {
-  @Nested
-  class DefaultOperandTypeCheckerTest
+  public static class DefaultOperandTypeCheckerTest
   {
+    @Rule
+    public ExpectedException expectedException = ExpectedException.none();
 
     @Test
-    void getOperandCountRange()
+    public void testGetOperandCountRange()
     {
       SqlOperandTypeChecker typeChecker = DefaultOperandTypeChecker
           .builder()
@@ -70,12 +70,12 @@ public class OperatorConversionsTest
           .literalOperands()
           .build();
       SqlOperandCountRange countRange = typeChecker.getOperandCountRange();
-      assertEquals(2, countRange.getMin());
-      assertEquals(3, countRange.getMax());
+      Assert.assertEquals(2, countRange.getMin());
+      Assert.assertEquals(3, countRange.getMax());
     }
 
     @Test
-    void isOptional()
+    public void testIsOptional()
     {
       SqlOperandTypeChecker typeChecker = DefaultOperandTypeChecker
           .builder()
@@ -84,13 +84,13 @@ public class OperatorConversionsTest
           .requiredOperandCount(2)
           .literalOperands()
           .build();
-      assertFalse(typeChecker.isOptional(0));
-      assertFalse(typeChecker.isOptional(1));
-      assertTrue(typeChecker.isOptional(2));
+      Assert.assertFalse(typeChecker.isOptional(0));
+      Assert.assertFalse(typeChecker.isOptional(1));
+      Assert.assertTrue(typeChecker.isOptional(2));
     }
 
     @Test
-    void allowFullOperands()
+    public void testAllowFullOperands()
     {
       SqlFunction function = OperatorConversions
           .operatorBuilder("testAllowFullOperands")
@@ -99,7 +99,7 @@ public class OperatorConversionsTest
           .returnTypeNonNull(SqlTypeName.CHAR)
           .build();
       SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
-      assertTrue(
+      Assert.assertTrue(
           typeChecker.checkOperandTypes(
               mockCallBinding(
                   function,
@@ -114,7 +114,7 @@ public class OperatorConversionsTest
     }
 
     @Test
-    void requiredOperandsOnly()
+    public void testRequiredOperandsOnly()
     {
       SqlFunction function = OperatorConversions
           .operatorBuilder("testRequiredOperandsOnly")
@@ -122,7 +122,7 @@ public class OperatorConversionsTest
           .returnTypeNonNull(SqlTypeName.CHAR)
           .build();
       SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
-      assertTrue(
+      Assert.assertTrue(
           typeChecker.checkOperandTypes(
               mockCallBinding(
                   function,
@@ -134,7 +134,7 @@ public class OperatorConversionsTest
     }
 
     @Test
-    void literalOperandCheckLiteral()
+    public void testLiteralOperandCheckLiteral()
     {
       SqlFunction function = OperatorConversions
           .operatorBuilder("testLiteralOperandCheckLiteral")
@@ -144,7 +144,7 @@ public class OperatorConversionsTest
           .returnTypeNonNull(SqlTypeName.CHAR)
           .build();
       SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
-      assertFalse(
+      Assert.assertFalse(
           typeChecker.checkOperandTypes(
               mockCallBinding(
                   function,
@@ -156,30 +156,29 @@ public class OperatorConversionsTest
     }
 
     @Test
-    void literalOperandCheckLiteralThrow()
+    public void testLiteralOperandCheckLiteralThrow()
     {
-      Throwable exception = assertThrows(CalciteContextException.class, () -> {
-        SqlFunction function = OperatorConversions
-            .operatorBuilder("testLiteralOperandCheckLiteralThrow")
-            .operandTypes(SqlTypeFamily.INTEGER)
-            .requiredOperandCount(1)
-            .literalOperands(0)
-            .returnTypeNonNull(SqlTypeName.CHAR)
-            .build();
-        SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
-        typeChecker.checkOperandTypes(
-            mockCallBinding(
-                function,
-                ImmutableList.of(new OperandSpec(SqlTypeName.INTEGER, false))
-            ),
-            true
-        );
-      });
-      assertTrue(exception.getMessage().contains("Argument to function 'testLiteralOperandCheckLiteralThrow' must be a literal"));
+      SqlFunction function = OperatorConversions
+          .operatorBuilder("testLiteralOperandCheckLiteralThrow")
+          .operandTypes(SqlTypeFamily.INTEGER)
+          .requiredOperandCount(1)
+          .literalOperands(0)
+          .returnTypeNonNull(SqlTypeName.CHAR)
+          .build();
+      SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
+      expectedException.expect(CalciteContextException.class);
+      expectedException.expectMessage("Argument to function 'testLiteralOperandCheckLiteralThrow' must be a literal");
+      typeChecker.checkOperandTypes(
+          mockCallBinding(
+              function,
+              ImmutableList.of(new OperandSpec(SqlTypeName.INTEGER, false))
+          ),
+          true
+      );
     }
 
     @Test
-    void anyTypeOperand()
+    public void testAnyTypeOperand()
     {
       SqlFunction function = OperatorConversions
           .operatorBuilder("testAnyTypeOperand")
@@ -188,7 +187,7 @@ public class OperatorConversionsTest
           .returnTypeNonNull(SqlTypeName.CHAR)
           .build();
       SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
-      assertTrue(
+      Assert.assertTrue(
           typeChecker.checkOperandTypes(
               mockCallBinding(
                   function,
@@ -200,7 +199,7 @@ public class OperatorConversionsTest
     }
 
     @Test
-    void castableFromDateTimestampToDatetimeFamily()
+    public void testCastableFromDateTimestampToDatetimeFamily()
     {
       SqlFunction function = OperatorConversions
           .operatorBuilder("testCastableFromDatetimeFamilyToTimestamp")
@@ -209,7 +208,7 @@ public class OperatorConversionsTest
           .returnTypeNonNull(SqlTypeName.CHAR)
           .build();
       SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
-      assertTrue(
+      Assert.assertTrue(
           typeChecker.checkOperandTypes(
               mockCallBinding(
                   function,
@@ -218,7 +217,7 @@ public class OperatorConversionsTest
               true
           )
       );
-      assertTrue(
+      Assert.assertTrue(
           typeChecker.checkOperandTypes(
               mockCallBinding(
                   function,
@@ -230,7 +229,7 @@ public class OperatorConversionsTest
     }
 
     @Test
-    void nullForNullableOperand()
+    public void testNullForNullableOperand()
     {
       SqlFunction function = OperatorConversions
           .operatorBuilder("testNullForNullableOperand")
@@ -239,7 +238,7 @@ public class OperatorConversionsTest
           .returnTypeNonNull(SqlTypeName.CHAR)
           .build();
       SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
-      assertTrue(
+      Assert.assertTrue(
           typeChecker.checkOperandTypes(
               mockCallBinding(
                   function,
@@ -254,7 +253,7 @@ public class OperatorConversionsTest
     }
 
     @Test
-    void nullLiteralForNullableOperand()
+    public void testNullLiteralForNullableOperand()
     {
       SqlFunction function = OperatorConversions
           .operatorBuilder("testNullLiteralForNullableOperand")
@@ -263,7 +262,7 @@ public class OperatorConversionsTest
           .returnTypeNonNull(SqlTypeName.CHAR)
           .build();
       SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
-      assertTrue(
+      Assert.assertTrue(
           typeChecker.checkOperandTypes(
               mockCallBinding(
                   function,
@@ -278,7 +277,7 @@ public class OperatorConversionsTest
     }
 
     @Test
-    void nullForNullableOperandNonNullOutput()
+    public void testNullForNullableOperandNonNullOutput()
     {
       SqlFunction function = OperatorConversions
           .operatorBuilder("testNullForNullableNonnull")
@@ -293,13 +292,13 @@ public class OperatorConversionsTest
               new OperandSpec(SqlTypeName.CHAR, false, true)
           )
       );
-      assertTrue(typeChecker.checkOperandTypes(binding, true));
+      Assert.assertTrue(typeChecker.checkOperandTypes(binding, true));
       RelDataType returnType = function.getReturnTypeInference().inferReturnType(binding);
-      assertFalse(returnType.isNullable());
+      Assert.assertFalse(returnType.isNullable());
     }
 
     @Test
-    void nullForNullableOperandCascadeNullOutput()
+    public void testNullForNullableOperandCascadeNullOutput()
     {
       SqlFunction function = OperatorConversions
           .operatorBuilder("testNullForNullableCascade")
@@ -314,13 +313,13 @@ public class OperatorConversionsTest
               new OperandSpec(SqlTypeName.CHAR, false, true)
           )
       );
-      assertTrue(typeChecker.checkOperandTypes(binding, true));
+      Assert.assertTrue(typeChecker.checkOperandTypes(binding, true));
       RelDataType returnType = function.getReturnTypeInference().inferReturnType(binding);
-      assertTrue(returnType.isNullable());
+      Assert.assertTrue(returnType.isNullable());
     }
 
     @Test
-    void nullForNullableOperandAlwaysNullableOutput()
+    public void testNullForNullableOperandAlwaysNullableOutput()
     {
       SqlFunction function = OperatorConversions
           .operatorBuilder("testNullForNullableNonnull")
@@ -335,88 +334,91 @@ public class OperatorConversionsTest
               new OperandSpec(SqlTypeName.CHAR, false, false)
           )
       );
-      assertTrue(typeChecker.checkOperandTypes(binding, true));
+      Assert.assertTrue(typeChecker.checkOperandTypes(binding, true));
       RelDataType returnType = function.getReturnTypeInference().inferReturnType(binding);
-      assertTrue(returnType.isNullable());
+      Assert.assertTrue(returnType.isNullable());
     }
 
     @Test
-    void nullForNonNullableOperand()
+    public void testNullForNonNullableOperand()
     {
-      Throwable exception = assertThrows(CalciteContextException.class, () -> {
-        SqlFunction function = OperatorConversions
-            .operatorBuilder("testNullForNonNullableOperand")
-            .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.INTERVAL_DAY_TIME)
-            .requiredOperandCount(1)
-            .returnTypeNonNull(SqlTypeName.CHAR)
-            .build();
-        SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
-        typeChecker.checkOperandTypes(
-            mockCallBinding(
-                function,
-                ImmutableList.of(
-                    new OperandSpec(SqlTypeName.NULL, false),
-                    new OperandSpec(SqlTypeName.INTERVAL_HOUR, false)
-                )
-            ),
-            true
-        );
-      });
-      assertTrue(exception.getMessage().contains("Exception in test for operator[testNullForNonNullableOperand]: Illegal use of 'NULL'"));
+      SqlFunction function = OperatorConversions
+          .operatorBuilder("testNullForNonNullableOperand")
+          .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.INTERVAL_DAY_TIME)
+          .requiredOperandCount(1)
+          .returnTypeNonNull(SqlTypeName.CHAR)
+          .build();
+      SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
+      expectedException.expect(CalciteContextException.class);
+      expectedException.expectMessage(
+          "Exception in test for operator[testNullForNonNullableOperand]: Illegal use of 'NULL'"
+      );
+      typeChecker.checkOperandTypes(
+          mockCallBinding(
+              function,
+              ImmutableList.of(
+                  new OperandSpec(SqlTypeName.NULL, false),
+                  new OperandSpec(SqlTypeName.INTERVAL_HOUR, false)
+              )
+          ),
+          true
+      );
     }
 
     @Test
-    void nullLiteralForNonNullableOperand()
+    public void testNullLiteralForNonNullableOperand()
     {
-      Throwable exception = assertThrows(CalciteContextException.class, () -> {
-        SqlFunction function = OperatorConversions
-            .operatorBuilder("testNullLiteralForNonNullableOperand")
-            .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.INTERVAL_DAY_TIME)
-            .requiredOperandCount(1)
-            .returnTypeNonNull(SqlTypeName.CHAR)
-            .build();
-        SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
-        typeChecker.checkOperandTypes(
-            mockCallBinding(
-                function,
-                ImmutableList.of(
-                    new OperandSpec(SqlTypeName.NULL, true),
-                    new OperandSpec(SqlTypeName.INTERVAL_HOUR, false)
-                )
-            ),
-            true
-        );
-      });
-      assertTrue(exception.getMessage().contains("Exception in test for operator[testNullLiteralForNonNullableOperand]: Illegal use of 'NULL'"));
+      SqlFunction function = OperatorConversions
+          .operatorBuilder("testNullLiteralForNonNullableOperand")
+          .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.INTERVAL_DAY_TIME)
+          .requiredOperandCount(1)
+          .returnTypeNonNull(SqlTypeName.CHAR)
+          .build();
+      SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
+      expectedException.expect(CalciteContextException.class);
+      expectedException.expectMessage(
+          "Exception in test for operator[testNullLiteralForNonNullableOperand]: Illegal use of 'NULL'"
+      );
+      typeChecker.checkOperandTypes(
+          mockCallBinding(
+              function,
+              ImmutableList.of(
+                  new OperandSpec(SqlTypeName.NULL, true),
+                  new OperandSpec(SqlTypeName.INTERVAL_HOUR, false)
+              )
+          ),
+          true
+      );
     }
 
     @Test
-    void nonCastableType()
+    public void testNonCastableType()
     {
-      Throwable exception = assertThrows(CalciteContextException.class, () -> {
-        SqlFunction function = OperatorConversions
-            .operatorBuilder("testNonCastableType")
-            .operandTypes(SqlTypeFamily.CURSOR, SqlTypeFamily.INTERVAL_DAY_TIME)
-            .requiredOperandCount(2)
-            .returnTypeNonNull(SqlTypeName.CHAR)
-            .build();
-        SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
-        typeChecker.checkOperandTypes(
-            mockCallBinding(
-                function,
-                ImmutableList.of(
-                    new OperandSpec(SqlTypeName.INTEGER, true),
-                    new OperandSpec(SqlTypeName.INTERVAL_HOUR, false)
-                )
-            ),
-            true
-        );
-      });
-      assertTrue(exception.getMessage().contains("Exception in test for operator[testNonCastableType]: Cannot apply 'testNonCastableType' to arguments of type"));
+      SqlFunction function = OperatorConversions
+          .operatorBuilder("testNonCastableType")
+          .operandTypes(SqlTypeFamily.CURSOR, SqlTypeFamily.INTERVAL_DAY_TIME)
+          .requiredOperandCount(2)
+          .returnTypeNonNull(SqlTypeName.CHAR)
+          .build();
+      SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
+      expectedException.expect(CalciteContextException.class);
+      expectedException.expectMessage(
+          "Exception in test for operator[testNonCastableType]: Cannot apply 'testNonCastableType' to arguments of type"
+      );
+      typeChecker.checkOperandTypes(
+          mockCallBinding(
+              function,
+              ImmutableList.of(
+                  new OperandSpec(SqlTypeName.INTEGER, true),
+                  new OperandSpec(SqlTypeName.INTERVAL_HOUR, false)
+              )
+          ),
+          true
+      );
     }
 
     @Test
-    void signatureWithNames()
+    public void testSignatureWithNames()
     {
       SqlFunction function = OperatorConversions
           .operatorBuilder("testSignatureWithNames")
@@ -427,14 +429,14 @@ public class OperatorConversionsTest
           .build();
       SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
 
-      assertEquals(
+      Assert.assertEquals(
           "'testSignatureWithNames(<x>, [<y>, [<z>]])'",
           typeChecker.getAllowedSignatures(function, function.getName())
       );
     }
 
     @Test
-    void signatureWithoutNames()
+    public void testSignatureWithoutNames()
     {
       SqlFunction function = OperatorConversions
           .operatorBuilder("testSignatureWithoutNames")
@@ -444,7 +446,7 @@ public class OperatorConversionsTest
           .build();
       SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
 
-      assertEquals(
+      Assert.assertEquals(
           "'testSignatureWithoutNames(<INTEGER>, [<DATE>, [<ANY>]])'",
           typeChecker.getAllowedSignatures(function, function.getName())
       );

@@ -28,56 +28,53 @@ import org.apache.calcite.util.mapping.MappingType;
 import org.apache.calcite.util.mapping.Mappings;
 import org.apache.druid.sql.calcite.table.DruidTable;
 import org.easymock.EasyMock;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Test;
 
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.function.Consumer;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 public class DruidRelsTest
 {
   @Test
-  void is_scan_or_mapping_scan()
+  public void test_isScanOrMapping_scan()
   {
     final DruidRel<?> rel = mockDruidRel(DruidQueryRel.class, PartialDruidQuery.Stage.SCAN, null, null, null);
-    assertTrue(DruidRels.isScanOrMapping(rel, true));
-    assertTrue(DruidRels.isScanOrMapping(rel, false));
+    Assert.assertTrue(DruidRels.isScanOrMapping(rel, true));
+    Assert.assertTrue(DruidRels.isScanOrMapping(rel, false));
     EasyMock.verify(rel, rel.getPartialDruidQuery());
   }
 
   @Test
-  void is_scan_or_mapping_scan_join()
+  public void test_isScanOrMapping_scanJoin()
   {
     final DruidRel<?> rel = mockDruidRel(DruidJoinQueryRel.class, PartialDruidQuery.Stage.SCAN, null, null, null);
-    assertTrue(DruidRels.isScanOrMapping(rel, true));
-    assertFalse(DruidRels.isScanOrMapping(rel, false));
+    Assert.assertTrue(DruidRels.isScanOrMapping(rel, true));
+    Assert.assertFalse(DruidRels.isScanOrMapping(rel, false));
     EasyMock.verify(rel, rel.getPartialDruidQuery());
   }
 
   @Test
-  void is_scan_or_mapping_scan_union()
+  public void test_isScanOrMapping_scanUnion()
   {
     final DruidRel<?> rel = mockDruidRel(DruidUnionDataSourceRel.class, PartialDruidQuery.Stage.SCAN, null, null, null);
-    assertTrue(DruidRels.isScanOrMapping(rel, true));
-    assertFalse(DruidRels.isScanOrMapping(rel, false));
+    Assert.assertTrue(DruidRels.isScanOrMapping(rel, true));
+    Assert.assertFalse(DruidRels.isScanOrMapping(rel, false));
     EasyMock.verify(rel, rel.getPartialDruidQuery());
   }
 
   @Test
-  void is_scan_or_mapping_scan_query()
+  public void test_isScanOrMapping_scanQuery()
   {
     final DruidRel<?> rel = mockDruidRel(DruidOuterQueryRel.class, PartialDruidQuery.Stage.SCAN, null, null, null);
-    assertFalse(DruidRels.isScanOrMapping(rel, true));
-    assertFalse(DruidRels.isScanOrMapping(rel, false));
+    Assert.assertFalse(DruidRels.isScanOrMapping(rel, true));
+    Assert.assertFalse(DruidRels.isScanOrMapping(rel, false));
     EasyMock.verify(rel, rel.getPartialDruidQuery());
   }
 
   @Test
-  void is_scan_or_mapping_mapping()
+  public void test_isScanOrMapping_mapping()
   {
     final Project project = mockMappingProject(ImmutableList.of(1, 0), 2);
     final DruidRel<?> rel = mockDruidRel(
@@ -87,14 +84,14 @@ public class DruidRelsTest
         project,
         null
     );
-    assertTrue(DruidRels.isScanOrMapping(rel, true));
-    assertTrue(DruidRels.isScanOrMapping(rel, false));
+    Assert.assertTrue(DruidRels.isScanOrMapping(rel, true));
+    Assert.assertTrue(DruidRels.isScanOrMapping(rel, false));
 
     EasyMock.verify(rel, rel.getPartialDruidQuery(), project);
   }
 
   @Test
-  void is_scan_or_mapping_mapping_join()
+  public void test_isScanOrMapping_mappingJoin()
   {
     final Project project = mockMappingProject(ImmutableList.of(1, 0), 2);
     final DruidRel<?> rel = mockDruidRel(
@@ -104,14 +101,14 @@ public class DruidRelsTest
         project,
         null
     );
-    assertTrue(DruidRels.isScanOrMapping(rel, true));
-    assertFalse(DruidRels.isScanOrMapping(rel, false));
+    Assert.assertTrue(DruidRels.isScanOrMapping(rel, true));
+    Assert.assertFalse(DruidRels.isScanOrMapping(rel, false));
 
     EasyMock.verify(rel, rel.getPartialDruidQuery(), project);
   }
 
   @Test
-  void is_scan_or_mapping_mapping_union()
+  public void test_isScanOrMapping_mappingUnion()
   {
     final Project project = mockMappingProject(ImmutableList.of(1, 0), 2);
     final DruidRel<?> rel = mockDruidRel(
@@ -121,14 +118,14 @@ public class DruidRelsTest
         project,
         null
     );
-    assertTrue(DruidRels.isScanOrMapping(rel, true));
-    assertFalse(DruidRels.isScanOrMapping(rel, false));
+    Assert.assertTrue(DruidRels.isScanOrMapping(rel, true));
+    Assert.assertFalse(DruidRels.isScanOrMapping(rel, false));
 
     EasyMock.verify(rel, rel.getPartialDruidQuery(), project);
   }
 
   @Test
-  void is_scan_or_mapping_mapping_query()
+  public void test_isScanOrMapping_mappingQuery()
   {
     final Project project = mockMappingProject(ImmutableList.of(1, 0), 2);
     final DruidRel<?> rel = mockDruidRel(
@@ -138,14 +135,14 @@ public class DruidRelsTest
         project,
         null
     );
-    assertFalse(DruidRels.isScanOrMapping(rel, true));
-    assertFalse(DruidRels.isScanOrMapping(rel, false));
+    Assert.assertFalse(DruidRels.isScanOrMapping(rel, true));
+    Assert.assertFalse(DruidRels.isScanOrMapping(rel, false));
 
     EasyMock.verify(rel, rel.getPartialDruidQuery(), project);
   }
 
   @Test
-  void is_scan_or_mapping_non_mapping()
+  public void test_isScanOrMapping_nonMapping()
   {
     final Project project = mockNonMappingProject();
     final DruidRel<?> rel = mockDruidRel(
@@ -155,14 +152,14 @@ public class DruidRelsTest
         project,
         null
     );
-    assertFalse(DruidRels.isScanOrMapping(rel, true));
-    assertFalse(DruidRels.isScanOrMapping(rel, false));
+    Assert.assertFalse(DruidRels.isScanOrMapping(rel, true));
+    Assert.assertFalse(DruidRels.isScanOrMapping(rel, false));
 
     EasyMock.verify(rel, rel.getPartialDruidQuery(), project);
   }
 
   @Test
-  void is_scan_or_mapping_non_mapping_join()
+  public void test_isScanOrMapping_nonMappingJoin()
   {
     final Project project = mockNonMappingProject();
     final DruidRel<?> rel = mockDruidRel(
@@ -172,14 +169,14 @@ public class DruidRelsTest
         project,
         null
     );
-    assertFalse(DruidRels.isScanOrMapping(rel, true));
-    assertFalse(DruidRels.isScanOrMapping(rel, false));
+    Assert.assertFalse(DruidRels.isScanOrMapping(rel, true));
+    Assert.assertFalse(DruidRels.isScanOrMapping(rel, false));
 
     EasyMock.verify(rel, rel.getPartialDruidQuery(), project);
   }
 
   @Test
-  void is_scan_or_mapping_non_mapping_union()
+  public void test_isScanOrMapping_nonMappingUnion()
   {
     final Project project = mockNonMappingProject();
     final DruidRel<?> rel = mockDruidRel(
@@ -189,14 +186,14 @@ public class DruidRelsTest
         project,
         null
     );
-    assertFalse(DruidRels.isScanOrMapping(rel, true));
-    assertFalse(DruidRels.isScanOrMapping(rel, false));
+    Assert.assertFalse(DruidRels.isScanOrMapping(rel, true));
+    Assert.assertFalse(DruidRels.isScanOrMapping(rel, false));
 
     EasyMock.verify(rel, rel.getPartialDruidQuery(), project);
   }
 
   @Test
-  void is_scan_or_mapping_filter_then_project()
+  public void test_isScanOrMapping_filterThenProject()
   {
     final Project project = mockMappingProject(ImmutableList.of(1, 0), 2);
     final DruidRel<?> rel = mockDruidRel(
@@ -206,14 +203,14 @@ public class DruidRelsTest
         project,
         mockFilter()
     );
-    assertFalse(DruidRels.isScanOrMapping(rel, true));
-    assertFalse(DruidRels.isScanOrMapping(rel, false));
+    Assert.assertFalse(DruidRels.isScanOrMapping(rel, true));
+    Assert.assertFalse(DruidRels.isScanOrMapping(rel, false));
 
     EasyMock.verify(rel, rel.getPartialDruidQuery(), project);
   }
 
   @Test
-  void is_scan_or_mapping_filter_then_project_join()
+  public void test_isScanOrMapping_filterThenProjectJoin()
   {
     final Project project = mockMappingProject(ImmutableList.of(1, 0), 2);
     final DruidRel<?> rel = mockDruidRel(
@@ -223,14 +220,14 @@ public class DruidRelsTest
         project,
         mockFilter()
     );
-    assertFalse(DruidRels.isScanOrMapping(rel, true));
-    assertFalse(DruidRels.isScanOrMapping(rel, false));
+    Assert.assertFalse(DruidRels.isScanOrMapping(rel, true));
+    Assert.assertFalse(DruidRels.isScanOrMapping(rel, false));
 
     EasyMock.verify(rel, rel.getPartialDruidQuery(), project);
   }
 
   @Test
-  void is_scan_or_mapping_filter_then_project_union()
+  public void test_isScanOrMapping_filterThenProjectUnion()
   {
     final Project project = mockMappingProject(ImmutableList.of(1, 0), 2);
     final DruidRel<?> rel = mockDruidRel(
@@ -240,14 +237,14 @@ public class DruidRelsTest
         project,
         mockFilter()
     );
-    assertFalse(DruidRels.isScanOrMapping(rel, true));
-    assertFalse(DruidRels.isScanOrMapping(rel, false));
+    Assert.assertFalse(DruidRels.isScanOrMapping(rel, true));
+    Assert.assertFalse(DruidRels.isScanOrMapping(rel, false));
 
     EasyMock.verify(rel, rel.getPartialDruidQuery(), project);
   }
 
   @Test
-  void is_scan_or_mapping_filter()
+  public void test_isScanOrMapping_filter()
   {
     final DruidRel<?> rel = mockDruidRel(
         DruidQueryRel.class,
@@ -256,14 +253,14 @@ public class DruidRelsTest
         null,
         mockFilter()
     );
-    assertFalse(DruidRels.isScanOrMapping(rel, true));
-    assertFalse(DruidRels.isScanOrMapping(rel, false));
+    Assert.assertFalse(DruidRels.isScanOrMapping(rel, true));
+    Assert.assertFalse(DruidRels.isScanOrMapping(rel, false));
 
     EasyMock.verify(rel, rel.getPartialDruidQuery());
   }
 
   @Test
-  void is_scan_or_mapping_filter_join()
+  public void test_isScanOrMapping_filterJoin()
   {
     final DruidRel<?> rel = mockDruidRel(
         DruidJoinQueryRel.class,
@@ -272,14 +269,14 @@ public class DruidRelsTest
         null,
         mockFilter()
     );
-    assertFalse(DruidRels.isScanOrMapping(rel, true));
-    assertFalse(DruidRels.isScanOrMapping(rel, false));
+    Assert.assertFalse(DruidRels.isScanOrMapping(rel, true));
+    Assert.assertFalse(DruidRels.isScanOrMapping(rel, false));
 
     EasyMock.verify(rel, rel.getPartialDruidQuery());
   }
 
   @Test
-  void is_scan_or_mapping_all_stages()
+  public void test_isScanOrMapping_allStages()
   {
     final ImmutableSet<PartialDruidQuery.Stage> okStages = ImmutableSet.of(
         PartialDruidQuery.Stage.SCAN,
@@ -296,8 +293,8 @@ public class DruidRelsTest
           null
       );
 
-      assertEquals(okStages.contains(stage), DruidRels.isScanOrMapping(rel, true), stage.toString());
-      assertEquals(okStages.contains(stage), DruidRels.isScanOrMapping(rel, false), stage.toString());
+      Assert.assertEquals(stage.toString(), okStages.contains(stage), DruidRels.isScanOrMapping(rel, true));
+      Assert.assertEquals(stage.toString(), okStages.contains(stage), DruidRels.isScanOrMapping(rel, false));
 
       EasyMock.verify(rel, rel.getPartialDruidQuery(), project);
     }

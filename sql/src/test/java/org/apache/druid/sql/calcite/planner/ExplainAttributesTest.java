@@ -24,30 +24,28 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.sql.destination.TableDestination;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Test;
 
 import java.util.Arrays;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-
-class ExplainAttributesTest
+public class ExplainAttributesTest
 {
   private static final ObjectMapper DEFAULT_OBJECT_MAPPER = new DefaultObjectMapper();
 
   @Test
-  void simpleGetters()
+  public void testSimpleGetters()
   {
     ExplainAttributes selectAttributes = new ExplainAttributes("SELECT", null, null, null, null);
-    assertEquals("SELECT", selectAttributes.getStatementType());
-    assertNull(selectAttributes.getTargetDataSource());
-    assertNull(selectAttributes.getPartitionedBy());
-    assertNull(selectAttributes.getClusteredBy());
-    assertNull(selectAttributes.getReplaceTimeChunks());
+    Assert.assertEquals("SELECT", selectAttributes.getStatementType());
+    Assert.assertNull(selectAttributes.getTargetDataSource());
+    Assert.assertNull(selectAttributes.getPartitionedBy());
+    Assert.assertNull(selectAttributes.getClusteredBy());
+    Assert.assertNull(selectAttributes.getReplaceTimeChunks());
   }
 
   @Test
-  void serializeSelectAttributes() throws JsonProcessingException
+  public void testSerializeSelectAttributes() throws JsonProcessingException
   {
     ExplainAttributes selectAttributes = new ExplainAttributes(
         "SELECT",
@@ -59,11 +57,11 @@ class ExplainAttributesTest
     final String expectedAttributes = "{"
                                       + "\"statementType\":\"SELECT\""
                                       + "}";
-    assertEquals(expectedAttributes, DEFAULT_OBJECT_MAPPER.writeValueAsString(selectAttributes));
+    Assert.assertEquals(expectedAttributes, DEFAULT_OBJECT_MAPPER.writeValueAsString(selectAttributes));
   }
 
   @Test
-  void serializeInsertAttributes() throws JsonProcessingException
+  public void testSerializeInsertAttributes() throws JsonProcessingException
   {
     ExplainAttributes insertAttributes = new ExplainAttributes(
         "INSERT",
@@ -77,11 +75,11 @@ class ExplainAttributesTest
                                       + "\"targetDataSource\":{\"type\":\"table\",\"tableName\":\"foo\"},"
                                       + "\"partitionedBy\":\"DAY\""
                                       + "}";
-    assertEquals(expectedAttributes, DEFAULT_OBJECT_MAPPER.writeValueAsString(insertAttributes));
+    Assert.assertEquals(expectedAttributes, DEFAULT_OBJECT_MAPPER.writeValueAsString(insertAttributes));
   }
 
   @Test
-  void serializeInsertAllAttributes() throws JsonProcessingException
+  public void testSerializeInsertAllAttributes() throws JsonProcessingException
   {
     ExplainAttributes insertAttributes = new ExplainAttributes(
         "INSERT",
@@ -95,11 +93,11 @@ class ExplainAttributesTest
                                       + "\"targetDataSource\":{\"type\":\"table\",\"tableName\":\"foo\"},"
                                       + "\"partitionedBy\":{\"type\":\"all\"}"
                                       + "}";
-    assertEquals(expectedAttributes, DEFAULT_OBJECT_MAPPER.writeValueAsString(insertAttributes));
+    Assert.assertEquals(expectedAttributes, DEFAULT_OBJECT_MAPPER.writeValueAsString(insertAttributes));
   }
 
   @Test
-  void serializeReplaceAttributes() throws JsonProcessingException
+  public void testSerializeReplaceAttributes() throws JsonProcessingException
   {
     ExplainAttributes replaceAttributes1 = new ExplainAttributes(
         "REPLACE",
@@ -114,7 +112,7 @@ class ExplainAttributesTest
         + "\"partitionedBy\":\"HOUR\","
         + "\"replaceTimeChunks\":\"ALL\""
         + "}";
-    assertEquals(expectedAttributes1, DEFAULT_OBJECT_MAPPER.writeValueAsString(replaceAttributes1));
+    Assert.assertEquals(expectedAttributes1, DEFAULT_OBJECT_MAPPER.writeValueAsString(replaceAttributes1));
 
 
     ExplainAttributes replaceAttributes2 = new ExplainAttributes(
@@ -130,11 +128,11 @@ class ExplainAttributesTest
                                       + "\"partitionedBy\":\"HOUR\","
                                       + "\"replaceTimeChunks\":\"2019-08-25T02:00:00.000Z/2019-08-25T03:00:00.000Z\""
                                       + "}";
-    assertEquals(expectedAttributes2, DEFAULT_OBJECT_MAPPER.writeValueAsString(replaceAttributes2));
+    Assert.assertEquals(expectedAttributes2, DEFAULT_OBJECT_MAPPER.writeValueAsString(replaceAttributes2));
   }
 
   @Test
-  void serializeReplaceWithClusteredByAttributes() throws JsonProcessingException
+  public void testSerializeReplaceWithClusteredByAttributes() throws JsonProcessingException
   {
     ExplainAttributes replaceAttributes1 = new ExplainAttributes(
         "REPLACE",
@@ -150,7 +148,7 @@ class ExplainAttributesTest
                                        + "\"clusteredBy\":[\"foo\",\"CEIL(`f2`)\"],"
                                        + "\"replaceTimeChunks\":\"ALL\""
                                        + "}";
-    assertEquals(expectedAttributes1, DEFAULT_OBJECT_MAPPER.writeValueAsString(replaceAttributes1));
+    Assert.assertEquals(expectedAttributes1, DEFAULT_OBJECT_MAPPER.writeValueAsString(replaceAttributes1));
 
 
     ExplainAttributes replaceAttributes2 = new ExplainAttributes(
@@ -167,6 +165,6 @@ class ExplainAttributesTest
                                        + "\"clusteredBy\":[\"foo\",\"boo\"],"
                                        + "\"replaceTimeChunks\":\"2019-08-25T02:00:00.000Z/2019-08-25T03:00:00.000Z\""
                                        + "}";
-    assertEquals(expectedAttributes2, DEFAULT_OBJECT_MAPPER.writeValueAsString(replaceAttributes2));
+    Assert.assertEquals(expectedAttributes2, DEFAULT_OBJECT_MAPPER.writeValueAsString(replaceAttributes2));
   }
 }

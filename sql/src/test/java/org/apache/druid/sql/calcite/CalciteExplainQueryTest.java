@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -31,10 +31,10 @@ import java.util.Map;
 /**
  * Unit tests for EXPLAIN PLAN queries.
  */
-class CalciteExplainQueryTest extends BaseCalciteQueryTest
+public class CalciteExplainQueryTest extends BaseCalciteQueryTest
 {
   @Test
-  void explainCountStarOnView()
+  public void testExplainCountStarOnView()
   {
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();
@@ -91,7 +91,7 @@ class CalciteExplainQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void explainInformationSchemaColumns()
+  public void testExplainInformationSchemaColumns()
   {
     final String explanation =
         "BindableProject(COLUMN_NAME=[$3], DATA_TYPE=[$7])\n"
@@ -114,7 +114,7 @@ class CalciteExplainQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void explainExactCountDistinctOfSemiJoinResult()
+  public void testExplainExactCountDistinctOfSemiJoinResult()
   {
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();
@@ -173,7 +173,7 @@ class CalciteExplainQueryTest extends BaseCalciteQueryTest
   // This testcase has been added here and not in CalciteSelectQueryTest since this checks if the overrides are working
   // properly when displaying the output of "EXPLAIN PLAN FOR ..." queries
   @Test
-  void explainSelectStarWithOverrides()
+  public void testExplainSelectStarWithOverrides()
   {
     Map<String, Object> useRegularExplainContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     useRegularExplainContext.put(PlannerConfig.CTX_KEY_USE_NATIVE_QUERY_EXPLAIN, true);
@@ -246,7 +246,7 @@ class CalciteExplainQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void explainMultipleTopLevelUnionAllQueries()
+  public void testExplainMultipleTopLevelUnionAllQueries()
   {
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();
@@ -306,7 +306,7 @@ class CalciteExplainQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void explainSelectMvfilterExpressions()
+  public void testExplainSelectMvfilterExpressions()
   {
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();
@@ -375,7 +375,7 @@ class CalciteExplainQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void explainSelectTimestampExpression()
+  public void testExplainSelectTimestampExpression()
   {
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();

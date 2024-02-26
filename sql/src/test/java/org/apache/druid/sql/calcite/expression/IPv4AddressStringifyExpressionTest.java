@@ -26,18 +26,16 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.builtin.IPv4AddressStringifyOperatorConversion;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
-class IPv4AddressStringifyExpressionTest extends CalciteTestBase
+public class IPv4AddressStringifyExpressionTest extends CalciteTestBase
 {
   private static final long VALID = 3232235521L;
   private static final String EXPECTED = "192.168.0.1";
@@ -51,17 +49,17 @@ class IPv4AddressStringifyExpressionTest extends CalciteTestBase
   private IPv4AddressStringifyOperatorConversion target;
   private ExpressionTestHelper testHelper;
 
-  @BeforeEach
-  void setUp()
+  @Before
+  public void setUp()
   {
     target = new IPv4AddressStringifyOperatorConversion();
     testHelper = new ExpressionTestHelper(ROW_SIGNATURE, BINDINGS);
   }
 
   @Test
-  void tooFewArgs()
+  public void testTooFewArgs()
   {
-    Throwable t = assertThrows(
+    Throwable t = Assert.assertThrows(
         ExpressionValidationException.class,
         () -> testExpression(
             Collections.emptyList(),
@@ -69,13 +67,13 @@ class IPv4AddressStringifyExpressionTest extends CalciteTestBase
             IGNORE_EXPECTED_RESULT
         )
     );
-    assertEquals("Function[ipv4_stringify] requires 1 argument", t.getMessage());
+    Assert.assertEquals("Function[ipv4_stringify] requires 1 argument", t.getMessage());
   }
 
   @Test
-  void tooManyArgs()
+  public void testTooManyArgs()
   {
-    Throwable t = assertThrows(
+    Throwable t = Assert.assertThrows(
         ExpressionValidationException.class,
         () -> testExpression(
             Arrays.asList(
@@ -86,11 +84,11 @@ class IPv4AddressStringifyExpressionTest extends CalciteTestBase
             IGNORE_EXPECTED_RESULT
         )
     );
-    assertEquals("Function[ipv4_stringify] requires 1 argument", t.getMessage());
+    Assert.assertEquals("Function[ipv4_stringify] requires 1 argument", t.getMessage());
   }
 
   @Test
-  void nullArg()
+  public void testNullArg()
   {
     testExpression(
         testHelper.getConstantNull(),
@@ -100,7 +98,7 @@ class IPv4AddressStringifyExpressionTest extends CalciteTestBase
   }
 
   @Test
-  void invalidArgType()
+  public void testInvalidArgType()
   {
     String variableNameWithInvalidType = VAR;
     testExpression(
@@ -111,7 +109,7 @@ class IPv4AddressStringifyExpressionTest extends CalciteTestBase
   }
 
   @Test
-  void invalidIntegerArgTooLow()
+  public void testInvalidIntegerArgTooLow()
   {
     long tooLow = -1L;
     testExpression(
@@ -122,7 +120,7 @@ class IPv4AddressStringifyExpressionTest extends CalciteTestBase
   }
 
   @Test
-  void validIntegerArgLowest()
+  public void testValidIntegerArgLowest()
   {
     long lowest = 0L;
     testExpression(
@@ -133,7 +131,7 @@ class IPv4AddressStringifyExpressionTest extends CalciteTestBase
   }
 
   @Test
-  void validIntegerArgHighest()
+  public void testValidIntegerArgHighest()
   {
     long highest = 0xff_ff_ff_ffL;
     testExpression(
@@ -144,7 +142,7 @@ class IPv4AddressStringifyExpressionTest extends CalciteTestBase
   }
 
   @Test
-  void invalidIntegerArgTooHigh()
+  public void testInvalidIntegerArgTooHigh()
   {
     long tooHigh = 0x1_00_00_00_00L;
     testExpression(
@@ -155,7 +153,7 @@ class IPv4AddressStringifyExpressionTest extends CalciteTestBase
   }
 
   @Test
-  void validIntegerArg()
+  public void testValidIntegerArg()
   {
     testExpression(
         testHelper.makeLiteral(VALID),
@@ -165,7 +163,7 @@ class IPv4AddressStringifyExpressionTest extends CalciteTestBase
   }
 
   @Test
-  void invalidStringArgNotIPAddress()
+  public void testInvalidStringArgNotIPAddress()
   {
     String notIpAddress = "druid.apache.org";
     testExpression(
@@ -176,7 +174,7 @@ class IPv4AddressStringifyExpressionTest extends CalciteTestBase
   }
 
   @Test
-  void invalidStringArgIPv6Compatible()
+  public void testInvalidStringArgIPv6Compatible()
   {
     String ipv6Compatible = "::192.168.0.1";
     testExpression(
@@ -187,7 +185,7 @@ class IPv4AddressStringifyExpressionTest extends CalciteTestBase
   }
 
   @Test
-  void validStringArgIPv6Mapped()
+  public void testValidStringArgIPv6Mapped()
   {
     String ipv6Mapped = "::ffff:192.168.0.1";
     testExpression(
@@ -198,7 +196,7 @@ class IPv4AddressStringifyExpressionTest extends CalciteTestBase
   }
 
   @Test
-  void validStringArgIPv4()
+  public void testValidStringArgIPv4()
   {
     testExpression(
         testHelper.makeLiteral(EXPECTED),
@@ -208,7 +206,7 @@ class IPv4AddressStringifyExpressionTest extends CalciteTestBase
   }
 
   @Test
-  void validStringArgUnsignedInt()
+  public void testValidStringArgUnsignedInt()
   {
     String unsignedInt = "3232235521";
     testExpression(

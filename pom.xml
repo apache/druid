@@ -1344,23 +1344,6 @@
 
     <build>
         <plugins>
-    <plugin>
-      <groupId>org.openrewrite.maven</groupId>
-      <artifactId>rewrite-maven-plugin</artifactId>
-      <version>5.23.1</version>
-      <configuration>
-        <activeRecipes>
-          <recipe>org.openrewrite.java.testing.junit5.JUnit5BestPractices</recipe>
-        </activeRecipes>
-      </configuration>
-      <dependencies>
-        <dependency>
-          <groupId>org.openrewrite.recipe</groupId>
-          <artifactId>rewrite-testing-frameworks</artifactId>
-          <version>2.4.1</version>
-        </dependency>
-      </dependencies>
-    </plugin>
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>

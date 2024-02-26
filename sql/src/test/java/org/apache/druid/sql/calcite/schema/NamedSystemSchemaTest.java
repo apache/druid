@@ -24,13 +24,11 @@ import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.easymock.EasyMock;
 import org.easymock.Mock;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-
-class NamedSystemSchemaTest extends CalciteTestBase
+public class NamedSystemSchemaTest extends CalciteTestBase
 {
   private static final String SCHEMA_NAME = "sys";
 
@@ -41,40 +39,40 @@ class NamedSystemSchemaTest extends CalciteTestBase
 
   private NamedSystemSchema target;
 
-  @BeforeEach
-  void setUp()
+  @Before
+  public void setUp()
   {
     plannerConfig = EasyMock.createMock(PlannerConfig.class);
     target = new NamedSystemSchema(plannerConfig, systemSchema);
   }
 
   @Test
-  void getSchemaNameShouldReturnName()
+  public void testGetSchemaNameShouldReturnName()
   {
-    assertEquals(SCHEMA_NAME, target.getSchemaName());
+    Assert.assertEquals(SCHEMA_NAME, target.getSchemaName());
   }
 
   @Test
-  void getSchemaShouldReturnSchema()
+  public void testGetSchemaShouldReturnSchema()
   {
-    assertEquals(systemSchema, target.getSchema());
+    Assert.assertEquals(systemSchema, target.getSchema());
   }
 
   @Test
-  void resourceTypeAuthDisabled()
+  public void testResourceTypeAuthDisabled()
   {
     EasyMock.expect(plannerConfig.isAuthorizeSystemTablesDirectly()).andReturn(false).once();
     EasyMock.replay(plannerConfig);
-    assertNull(target.getSchemaResourceType("servers"));
+    Assert.assertNull(target.getSchemaResourceType("servers"));
     EasyMock.verify(plannerConfig);
   }
 
   @Test
-  void resourceTypeAuthEnabled()
+  public void testResourceTypeAuthEnabled()
   {
     EasyMock.expect(plannerConfig.isAuthorizeSystemTablesDirectly()).andReturn(true).once();
     EasyMock.replay(plannerConfig);
-    assertEquals(ResourceType.SYSTEM_TABLE, target.getSchemaResourceType("servers"));
+    Assert.assertEquals(ResourceType.SYSTEM_TABLE, target.getSchemaResourceType("servers"));
     EasyMock.verify(plannerConfig);
   }
 }

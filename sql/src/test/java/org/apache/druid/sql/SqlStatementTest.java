@@ -61,37 +61,37 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.http.SqlQuery;
 import org.easymock.EasyMock;
+import org.hamcrest.MatcherAssert;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import javax.servlet.http.HttpServletRequest;
-
-import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class SqlStatementTest
 {
   private static QueryRunnerFactoryConglomerate conglomerate;
   private static SpecificSegmentsQuerySegmentWalker walker;
   private static Closer resourceCloser;
-  @TempDir
-  public static File temporaryFolder;
+  @ClassRule
+  public static TemporaryFolder temporaryFolder = new TemporaryFolder();
   @Rule
   public QueryLogHook queryLogHook = QueryLogHook.create();
   private TestRequestLogger testRequestLogger;
@@ -100,8 +100,8 @@ public class SqlStatementTest
   private final DefaultQueryConfig defaultQueryConfig = new DefaultQueryConfig(
       ImmutableMap.of("DEFAULT_KEY", "DEFAULT_VALUE"));
 
-  @BeforeAll
-  static void setUpClass() throws Exception
+  @BeforeClass
+  public static void setUpClass() throws Exception
   {
     resourceCloser = Closer.create();
     conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
@@ -123,18 +123,18 @@ public class SqlStatementTest
       }
     };
 
-    walker = CalciteTests.createMockWalker(conglomerate, newFolder(temporaryFolder, "junit"), scheduler);
+    walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder(), scheduler);
     resourceCloser.register(walker);
   }
 
-  @AfterAll
-  static void tearDownClass() throws IOException
+  @AfterClass
+  public static void tearDownClass() throws IOException
   {
     resourceCloser.close();
   }
 
-  @BeforeEach
-  void setUp()
+  @Before
+  public void setUp()
   {
     executorService = MoreExecutors.listeningDecorator(Execs.multiThreaded(8, "test_sql_resource_%s"));
 
@@ -178,8 +178,8 @@ public class SqlStatementTest
     );
   }
 
-  @AfterEach
-  void tearDown() throws Exception
+  @After
+  public void tearDown() throws Exception
   {
     executorService.shutdownNow();
     executorService.awaitTermination(2, TimeUnit.SECONDS);
@@ -219,7 +219,7 @@ public class SqlStatementTest
   }
 
   @Test
-  void directHappyPath()
+  public void testDirectHappyPath()
   {
     SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo",
@@ -241,7 +241,7 @@ public class SqlStatementTest
   }
 
   @Test
-  void directPlanTwice()
+  public void testDirectPlanTwice()
   {
     SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo",
@@ -259,7 +259,7 @@ public class SqlStatementTest
   }
 
   @Test
-  void directExecTwice()
+  public void testDirectExecTwice()
   {
     SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo",
@@ -278,7 +278,7 @@ public class SqlStatementTest
   }
 
   @Test
-  void directSyntaxError()
+  public void testDirectSyntaxError()
   {
     SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS",
@@ -290,7 +290,7 @@ public class SqlStatementTest
       fail();
     }
     catch (DruidException e) {
-      assertThat(
+      MatcherAssert.assertThat(
           e,
           DruidExceptionMatcher
               .invalidSqlInput()
@@ -300,7 +300,7 @@ public class SqlStatementTest
   }
 
   @Test
-  void directValidationError()
+  public void testDirectValidationError()
   {
     SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.bogus",
@@ -312,7 +312,7 @@ public class SqlStatementTest
       fail();
     }
     catch (DruidException e) {
-      assertThat(
+      MatcherAssert.assertThat(
           e,
           DruidExceptionMatcher
               .invalidSqlInput()
@@ -322,7 +322,7 @@ public class SqlStatementTest
   }
 
   @Test
-  void directPermissionError()
+  public void testDirectPermissionError()
   {
     SqlQueryPlus sqlReq = queryPlus(
         "select count(*) from forbiddenDatasource",
@@ -355,7 +355,7 @@ public class SqlStatementTest
   }
 
   @Test
-  void httpHappyPath()
+  public void testHttpHappyPath()
   {
     HttpStatement stmt = sqlStatementFactory.httpStatement(
         makeQuery("SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo"),
@@ -368,7 +368,7 @@ public class SqlStatementTest
   }
 
   @Test
-  void httpSyntaxError()
+  public void testHttpSyntaxError()
   {
     HttpStatement stmt = sqlStatementFactory.httpStatement(
         makeQuery("SELECT COUNT(*) AS cnt, 'foo' AS"),
@@ -379,7 +379,7 @@ public class SqlStatementTest
       fail();
     }
     catch (DruidException e) {
-      assertThat(
+      MatcherAssert.assertThat(
           e,
           DruidExceptionMatcher
               .invalidSqlInput()
@@ -389,7 +389,7 @@ public class SqlStatementTest
   }
 
   @Test
-  void httpValidationError()
+  public void testHttpValidationError()
   {
     HttpStatement stmt = sqlStatementFactory.httpStatement(
         makeQuery("SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.bogus"),
@@ -400,7 +400,7 @@ public class SqlStatementTest
       fail();
     }
     catch (DruidException e) {
-      assertThat(
+      MatcherAssert.assertThat(
           e,
           DruidExceptionMatcher
               .invalidSqlInput()
@@ -410,7 +410,7 @@ public class SqlStatementTest
   }
 
   @Test
-  void httpPermissionError()
+  public void testHttpPermissionError()
   {
     HttpStatement stmt = sqlStatementFactory.httpStatement(
         makeQuery("select count(*) from forbiddenDatasource"),
@@ -429,7 +429,7 @@ public class SqlStatementTest
   // Prepared statements: using a prepare/execute model.
 
   @Test
-  void preparedHappyPath()
+  public void testPreparedHappyPath()
   {
     SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo",
@@ -460,7 +460,7 @@ public class SqlStatementTest
   }
 
   @Test
-  void prepareSyntaxError()
+  public void testPrepareSyntaxError()
   {
     SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS",
@@ -472,7 +472,7 @@ public class SqlStatementTest
       fail();
     }
     catch (DruidException e) {
-      assertThat(
+      MatcherAssert.assertThat(
           e,
           DruidExceptionMatcher
               .invalidSqlInput()
@@ -482,7 +482,7 @@ public class SqlStatementTest
   }
 
   @Test
-  void prepareValidationError()
+  public void testPrepareValidationError()
   {
     SqlQueryPlus sqlReq = queryPlus(
         "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.bogus",
@@ -494,7 +494,7 @@ public class SqlStatementTest
       fail();
     }
     catch (DruidException e) {
-      assertThat(
+      MatcherAssert.assertThat(
           e,
           DruidExceptionMatcher
               .invalidSqlInput()
@@ -504,7 +504,7 @@ public class SqlStatementTest
   }
 
   @Test
-  void preparePermissionError()
+  public void testPreparePermissionError()
   {
     SqlQueryPlus sqlReq = queryPlus(
         "select count(*) from forbiddenDatasource",
@@ -524,7 +524,7 @@ public class SqlStatementTest
   // Generic tests.
 
   @Test
-  void ignoredQueryContextParametersAreIgnored()
+  public void testIgnoredQueryContextParametersAreIgnored()
   {
     SqlQueryPlus sqlReq = SqlQueryPlus
         .builder("select 1 + ?")
@@ -533,13 +533,13 @@ public class SqlStatementTest
         .build();
     DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
     Map<String, Object> context = stmt.context();
-    assertEquals(2, context.size());
+    Assert.assertEquals(2, context.size());
     // should contain only query id, not bySegment since it is not valid for SQL
-    assertTrue(context.containsKey(QueryContexts.CTX_SQL_QUERY_ID));
+    Assert.assertTrue(context.containsKey(QueryContexts.CTX_SQL_QUERY_ID));
   }
 
   @Test
-  void defaultQueryContextIsApplied()
+  public void testDefaultQueryContextIsApplied()
   {
     SqlQueryPlus sqlReq = SqlQueryPlus
         .builder("select 1 + ?")
@@ -548,19 +548,10 @@ public class SqlStatementTest
         .build();
     DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
     Map<String, Object> context = stmt.context();
-    assertEquals(2, context.size());
+    Assert.assertEquals(2, context.size());
     // Statement should contain default query context values
     for (String defaultContextKey : defaultQueryConfig.getContext().keySet()) {
-      assertTrue(context.containsKey(defaultContextKey));
+      Assert.assertTrue(context.containsKey(defaultContextKey));
     }
-  }
-
-  private static File newFolder(File root, String... subDirs) throws IOException {
-    String subFolder = String.join("/", subDirs);
-    File result = new File(root, subFolder);
-    if (!result.mkdirs()) {
-      throw new IOException("Couldn't create folders " + root);
-    }
-    return result;
   }
 }

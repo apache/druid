@@ -45,8 +45,9 @@ import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.util.ArrayList;
@@ -56,17 +57,13 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-class InformationSchemaTest extends BaseCalciteQueryTest
+public class InformationSchemaTest extends BaseCalciteQueryTest
 {
   private InformationSchema informationSchema;
   private SqlTestFramework qf;
 
-  @BeforeEach
-  void setUp()
+  @Before
+  public void setUp()
   {
     qf = queryFramework();
     DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
@@ -88,16 +85,16 @@ class InformationSchemaTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void getTableNamesMap()
+  public void testGetTableNamesMap()
   {
-    assertEquals(
+    Assert.assertEquals(
         ImmutableSet.of("SCHEMATA", "TABLES", "COLUMNS", "ROUTINES"),
         informationSchema.getTableNames()
     );
   }
 
   @Test
-  void scanRoutinesTable()
+  public void testScanRoutinesTable()
   {
     DruidOperatorTable operatorTable = qf.operatorTable();
     InformationSchema.RoutinesTable routinesTable = new InformationSchema.RoutinesTable(operatorTable);
@@ -105,25 +102,25 @@ class InformationSchemaTest extends BaseCalciteQueryTest
 
     List<Object[]> rows = routinesTable.scan(dataContext).toList();
 
-    assertTrue(rows.size() > 0,
-                      "There should at least be 1 built-in function that gets statically loaded by default");
+    Assert.assertTrue("There should at least be 1 built-in function that gets statically loaded by default",
+                      rows.size() > 0);
     RelDataType rowType = routinesTable.getRowType(new JavaTypeFactoryImpl());
-    assertEquals(6, rowType.getFieldCount());
+    Assert.assertEquals(6, rowType.getFieldCount());
 
     for (Object[] row : rows) {
-      assertEquals(rowType.getFieldCount(), row.length);
-      assertEquals("druid", row[0]);
-      assertEquals("INFORMATION_SCHEMA", row[1]);
-      assertNotNull(row[2]);
-      assertNotNull(row[3]);
+      Assert.assertEquals(rowType.getFieldCount(), row.length);
+      Assert.assertEquals("druid", row[0]);
+      Assert.assertEquals("INFORMATION_SCHEMA", row[1]);
+      Assert.assertNotNull(row[2]);
+      Assert.assertNotNull(row[3]);
       String isAggregator = row[4].toString();
-      assertTrue(isAggregator.contains("YES") || isAggregator.contains("NO"));
+      Assert.assertTrue(isAggregator.contains("YES") || isAggregator.contains("NO"));
       // nothing to validate for signatures as it may be not be present if operandTypeChecker is not defined.
     }
   }
 
   @Test
-  void scanRoutinesTableWithCustomOperators()
+  public void testScanRoutinesTableWithCustomOperators()
   {
     Set<SqlOperatorConversion> sqlOperatorConversions = customOperatorsToOperatorConversions();
     final List<SqlOperator> sqlOperators = sqlOperatorConversions.stream()
@@ -138,17 +135,18 @@ class InformationSchemaTest extends BaseCalciteQueryTest
 
     List<Object[]> rows = routinesTable.scan(dataContext).toList();
 
-    assertNotNull(rows);
-    assertEquals(2, rows.size(), "There should be exactly 2 rows; any non-function syntax operator should get filtered out");
+    Assert.assertNotNull(rows);
+    Assert.assertEquals("There should be exactly 2 rows; any non-function syntax operator should get filtered out",
+                        2, rows.size());
     Object[] expectedRow1 = {"druid", "INFORMATION_SCHEMA", "FOO", "FUNCTION", "NO", "'FOO([<ANY>])'"};
-    assertTrue(rows.stream().anyMatch(row -> Arrays.equals(row, expectedRow1)));
+    Assert.assertTrue(rows.stream().anyMatch(row -> Arrays.equals(row, expectedRow1)));
 
     Object[] expectedRow2 = {"druid", "INFORMATION_SCHEMA", "BAR", "FUNCTION", "NO", "'BAR(<INTEGER>, <INTEGER>)'"};
-    assertTrue(rows.stream().anyMatch(row -> Arrays.equals(row, expectedRow2)));
+    Assert.assertTrue(rows.stream().anyMatch(row -> Arrays.equals(row, expectedRow2)));
   }
 
   @Test
-  void scanRoutinesTableWithAnEmptyOperatorTable()
+  public void testScanRoutinesTableWithAnEmptyOperatorTable()
   {
     DruidOperatorTable mockOperatorTable = Mockito.mock(DruidOperatorTable.class);
 
@@ -161,8 +159,8 @@ class InformationSchemaTest extends BaseCalciteQueryTest
 
     List<Object[]> rows = routinesTable.scan(dataContext).toList();
 
-    assertNotNull(rows);
-    assertEquals(0, rows.size());
+    Assert.assertNotNull(rows);
+    Assert.assertEquals(0, rows.size());
   }
 
   private static Set<SqlOperatorConversion> customOperatorsToOperatorConversions()

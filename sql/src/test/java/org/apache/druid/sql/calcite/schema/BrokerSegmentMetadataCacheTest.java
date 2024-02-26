@@ -78,9 +78,10 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
@@ -99,12 +100,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCommon
 {
   private static final BrokerSegmentMetadataCacheConfig SEGMENT_CACHE_CONFIG_DEFAULT = BrokerSegmentMetadataCacheConfig.create("PT1S");
@@ -116,14 +111,14 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
   private CountDownLatch markDataSourceLatch = new CountDownLatch(1);
   private CountDownLatch refreshLatch = new CountDownLatch(1);
 
-  @BeforeEach
+  @Before
   @Override
   public void setUp() throws Exception
   {
     super.setUp();
   }
 
-  @AfterEach
+  @After
   @Override
   public void tearDown() throws Exception
   {
@@ -215,7 +210,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
    * Test the case when coordinator returns information for all the requested datasources.
    */
   @Test
-  void coordinatorReturnsAllDSSchema() throws InterruptedException
+  public void testCoordinatorReturnsAllDSSchema() throws InterruptedException
   {
     final RowSignature dataSource1RowSignature = new QueryableIndexStorageAdapter(index1).getRowSignature();
     final RowSignature dataSource2RowSignature = new QueryableIndexStorageAdapter(index2).getRowSignature();
@@ -253,12 +248,12 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
     schema.start();
     schema.awaitInitialization();
     final Set<String> tableNames = schema.getDatasourceNames();
-    assertEquals(ImmutableSet.of(CalciteTests.DATASOURCE1, CalciteTests.DATASOURCE2, CalciteTests.SOME_DATASOURCE, "foo3"), tableNames);
+    Assert.assertEquals(ImmutableSet.of(CalciteTests.DATASOURCE1, CalciteTests.DATASOURCE2, CalciteTests.SOME_DATASOURCE, "foo3"), tableNames);
 
-    assertEquals(dataSource1RowSignature, schema.getDatasource(DATASOURCE1).getRowSignature());
-    assertEquals(dataSource2RowSignature, schema.getDatasource(DATASOURCE2).getRowSignature());
-    assertEquals(someDataSourceRowSignature, schema.getDatasource(SOME_DATASOURCE).getRowSignature());
-    assertEquals(foo3RowSignature, schema.getDatasource("foo3").getRowSignature());
+    Assert.assertEquals(dataSource1RowSignature, schema.getDatasource(DATASOURCE1).getRowSignature());
+    Assert.assertEquals(dataSource2RowSignature, schema.getDatasource(DATASOURCE2).getRowSignature());
+    Assert.assertEquals(someDataSourceRowSignature, schema.getDatasource(SOME_DATASOURCE).getRowSignature());
+    Assert.assertEquals(foo3RowSignature, schema.getDatasource("foo3").getRowSignature());
   }
 
   /**
@@ -266,7 +261,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
    * Check if SegmentMetadataQuery is fired for segments of the remaining datasources.
    */
   @Test
-  void coordinatorReturnsFewDSSchema() throws InterruptedException
+  public void testCoordinatorReturnsFewDSSchema() throws InterruptedException
   {
     final RowSignature dataSource1RowSignature = new QueryableIndexStorageAdapter(index1).getRowSignature();
     final RowSignature dataSource2RowSignature = new QueryableIndexStorageAdapter(index2).getRowSignature();
@@ -325,7 +320,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
    * Verify that broker polls schema for all datasources in every cycle.
    */
   @Test
-  void brokerPollsAllDSSchema() throws InterruptedException
+  public void testBrokerPollsAllDSSchema() throws InterruptedException
   {
     ArgumentCaptor<Set<String>> argumentCaptor = ArgumentCaptor.forClass(Set.class);
     CoordinatorClient coordinatorClient = Mockito.mock(CoordinatorClient.class);
@@ -344,7 +339,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
     schema.start();
     schema.awaitInitialization();
 
-    assertEquals(Sets.newHashSet(DATASOURCE1, DATASOURCE2, DATASOURCE3, SOME_DATASOURCE), argumentCaptor.getValue());
+    Assert.assertEquals(Sets.newHashSet(DATASOURCE1, DATASOURCE2, DATASOURCE3, SOME_DATASOURCE), argumentCaptor.getValue());
 
     refreshLatch = new CountDownLatch(1);
     serverView.addSegment(newSegment("xyz", 0), ServerType.HISTORICAL);
@@ -352,18 +347,18 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
     refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS);
 
     // verify that previously refreshed are included in the last coordinator poll
-    assertEquals(Sets.newHashSet(DATASOURCE1, DATASOURCE2, DATASOURCE3, SOME_DATASOURCE, "xyz"), argumentCaptor.getValue());
+    Assert.assertEquals(Sets.newHashSet(DATASOURCE1, DATASOURCE2, DATASOURCE3, SOME_DATASOURCE, "xyz"), argumentCaptor.getValue());
   }
 
   @Test
-  void getTableMap() throws InterruptedException
+  public void testGetTableMap() throws InterruptedException
   {
     BrokerSegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
-    assertEquals(ImmutableSet.of(CalciteTests.DATASOURCE1, CalciteTests.DATASOURCE2, CalciteTests.SOME_DATASOURCE), schema.getDatasourceNames());
+    Assert.assertEquals(ImmutableSet.of(CalciteTests.DATASOURCE1, CalciteTests.DATASOURCE2, CalciteTests.SOME_DATASOURCE), schema.getDatasourceNames());
   }
 
   @Test
-  void getTableMapFoo() throws InterruptedException
+  public void testGetTableMapFoo() throws InterruptedException
   {
     BrokerSegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
     final DatasourceTable.PhysicalDatasourceMetadata fooDs = schema.getDatasource("foo");
@@ -371,29 +366,29 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
     final RelDataType rowType = fooTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> fields = rowType.getFieldList();
 
-    assertEquals(6, fields.size());
+    Assert.assertEquals(6, fields.size());
 
-    assertEquals("__time", fields.get(0).getName());
-    assertEquals(SqlTypeName.TIMESTAMP, fields.get(0).getType().getSqlTypeName());
+    Assert.assertEquals("__time", fields.get(0).getName());
+    Assert.assertEquals(SqlTypeName.TIMESTAMP, fields.get(0).getType().getSqlTypeName());
 
-    assertEquals("dim2", fields.get(1).getName());
-    assertEquals(SqlTypeName.VARCHAR, fields.get(1).getType().getSqlTypeName());
+    Assert.assertEquals("dim2", fields.get(1).getName());
+    Assert.assertEquals(SqlTypeName.VARCHAR, fields.get(1).getType().getSqlTypeName());
 
-    assertEquals("m1", fields.get(2).getName());
-    assertEquals(SqlTypeName.DOUBLE, fields.get(2).getType().getSqlTypeName());
+    Assert.assertEquals("m1", fields.get(2).getName());
+    Assert.assertEquals(SqlTypeName.DOUBLE, fields.get(2).getType().getSqlTypeName());
 
-    assertEquals("dim1", fields.get(3).getName());
-    assertEquals(SqlTypeName.VARCHAR, fields.get(3).getType().getSqlTypeName());
+    Assert.assertEquals("dim1", fields.get(3).getName());
+    Assert.assertEquals(SqlTypeName.VARCHAR, fields.get(3).getType().getSqlTypeName());
 
-    assertEquals("cnt", fields.get(4).getName());
-    assertEquals(SqlTypeName.BIGINT, fields.get(4).getType().getSqlTypeName());
+    Assert.assertEquals("cnt", fields.get(4).getName());
+    Assert.assertEquals(SqlTypeName.BIGINT, fields.get(4).getType().getSqlTypeName());
 
-    assertEquals("unique_dim1", fields.get(5).getName());
-    assertEquals(SqlTypeName.OTHER, fields.get(5).getType().getSqlTypeName());
+    Assert.assertEquals("unique_dim1", fields.get(5).getName());
+    Assert.assertEquals(SqlTypeName.OTHER, fields.get(5).getType().getSqlTypeName());
   }
 
   @Test
-  void getTableMapFoo2() throws InterruptedException
+  public void testGetTableMapFoo2() throws InterruptedException
   {
     BrokerSegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
     final DatasourceTable.PhysicalDatasourceMetadata fooDs = schema.getDatasource("foo2");
@@ -401,20 +396,20 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
     final RelDataType rowType = fooTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> fields = rowType.getFieldList();
 
-    assertEquals(3, fields.size());
+    Assert.assertEquals(3, fields.size());
 
-    assertEquals("__time", fields.get(0).getName());
-    assertEquals(SqlTypeName.TIMESTAMP, fields.get(0).getType().getSqlTypeName());
+    Assert.assertEquals("__time", fields.get(0).getName());
+    Assert.assertEquals(SqlTypeName.TIMESTAMP, fields.get(0).getType().getSqlTypeName());
 
-    assertEquals("dim2", fields.get(1).getName());
-    assertEquals(SqlTypeName.VARCHAR, fields.get(1).getType().getSqlTypeName());
+    Assert.assertEquals("dim2", fields.get(1).getName());
+    Assert.assertEquals(SqlTypeName.VARCHAR, fields.get(1).getType().getSqlTypeName());
 
-    assertEquals("m1", fields.get(2).getName());
-    assertEquals(SqlTypeName.BIGINT, fields.get(2).getType().getSqlTypeName());
+    Assert.assertEquals("m1", fields.get(2).getName());
+    Assert.assertEquals(SqlTypeName.BIGINT, fields.get(2).getType().getSqlTypeName());
   }
 
   @Test
-  void getTableMapSomeTable() throws InterruptedException
+  public void testGetTableMapSomeTable() throws InterruptedException
   {
     // using 'newest first' column type merge strategy, the types are expected to be the types defined in the newer
     // segment, except for json, which is special handled
@@ -433,40 +428,40 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
     final RelDataType rowType = table.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> fields = rowType.getFieldList();
 
-    assertEquals(9, fields.size());
+    Assert.assertEquals(9, fields.size());
 
-    assertEquals("__time", fields.get(0).getName());
-    assertEquals(SqlTypeName.TIMESTAMP, fields.get(0).getType().getSqlTypeName());
+    Assert.assertEquals("__time", fields.get(0).getName());
+    Assert.assertEquals(SqlTypeName.TIMESTAMP, fields.get(0).getType().getSqlTypeName());
 
-    assertEquals("numbery", fields.get(1).getName());
-    assertEquals(SqlTypeName.BIGINT, fields.get(1).getType().getSqlTypeName());
+    Assert.assertEquals("numbery", fields.get(1).getName());
+    Assert.assertEquals(SqlTypeName.BIGINT, fields.get(1).getType().getSqlTypeName());
 
-    assertEquals("numberyArrays", fields.get(2).getName());
-    assertEquals(SqlTypeName.ARRAY, fields.get(2).getType().getSqlTypeName());
-    assertEquals(SqlTypeName.DOUBLE, fields.get(2).getType().getComponentType().getSqlTypeName());
+    Assert.assertEquals("numberyArrays", fields.get(2).getName());
+    Assert.assertEquals(SqlTypeName.ARRAY, fields.get(2).getType().getSqlTypeName());
+    Assert.assertEquals(SqlTypeName.DOUBLE, fields.get(2).getType().getComponentType().getSqlTypeName());
 
-    assertEquals("stringy", fields.get(3).getName());
-    assertEquals(SqlTypeName.VARCHAR, fields.get(3).getType().getSqlTypeName());
+    Assert.assertEquals("stringy", fields.get(3).getName());
+    Assert.assertEquals(SqlTypeName.VARCHAR, fields.get(3).getType().getSqlTypeName());
 
-    assertEquals("array", fields.get(4).getName());
-    assertEquals(SqlTypeName.ARRAY, fields.get(4).getType().getSqlTypeName());
-    assertEquals(SqlTypeName.BIGINT, fields.get(4).getType().getComponentType().getSqlTypeName());
+    Assert.assertEquals("array", fields.get(4).getName());
+    Assert.assertEquals(SqlTypeName.ARRAY, fields.get(4).getType().getSqlTypeName());
+    Assert.assertEquals(SqlTypeName.BIGINT, fields.get(4).getType().getComponentType().getSqlTypeName());
 
-    assertEquals("nested", fields.get(5).getName());
-    assertEquals(SqlTypeName.OTHER, fields.get(5).getType().getSqlTypeName());
+    Assert.assertEquals("nested", fields.get(5).getName());
+    Assert.assertEquals(SqlTypeName.OTHER, fields.get(5).getType().getSqlTypeName());
 
-    assertEquals("cnt", fields.get(6).getName());
-    assertEquals(SqlTypeName.BIGINT, fields.get(6).getType().getSqlTypeName());
+    Assert.assertEquals("cnt", fields.get(6).getName());
+    Assert.assertEquals(SqlTypeName.BIGINT, fields.get(6).getType().getSqlTypeName());
 
-    assertEquals("m1", fields.get(7).getName());
-    assertEquals(SqlTypeName.DOUBLE, fields.get(7).getType().getSqlTypeName());
+    Assert.assertEquals("m1", fields.get(7).getName());
+    Assert.assertEquals(SqlTypeName.DOUBLE, fields.get(7).getType().getSqlTypeName());
 
-    assertEquals("unique_dim1", fields.get(8).getName());
-    assertEquals(SqlTypeName.OTHER, fields.get(8).getType().getSqlTypeName());
+    Assert.assertEquals("unique_dim1", fields.get(8).getName());
+    Assert.assertEquals(SqlTypeName.OTHER, fields.get(8).getType().getSqlTypeName());
   }
 
   @Test
-  void getTableMapSomeTableLeastRestrictiveTypeMerge() throws InterruptedException
+  public void testGetTableMapSomeTableLeastRestrictiveTypeMerge() throws InterruptedException
   {
     // using 'least restrictive' column type merge strategy, the types are expected to be the types defined as the
     // least restrictive blend across all segments
@@ -476,37 +471,37 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
     final RelDataType rowType = table.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> fields = rowType.getFieldList();
 
-    assertEquals(9, fields.size());
+    Assert.assertEquals(9, fields.size());
 
-    assertEquals("__time", fields.get(0).getName());
-    assertEquals(SqlTypeName.TIMESTAMP, fields.get(0).getType().getSqlTypeName());
+    Assert.assertEquals("__time", fields.get(0).getName());
+    Assert.assertEquals(SqlTypeName.TIMESTAMP, fields.get(0).getType().getSqlTypeName());
 
-    assertEquals("numbery", fields.get(1).getName());
-    assertEquals(SqlTypeName.DOUBLE, fields.get(1).getType().getSqlTypeName());
+    Assert.assertEquals("numbery", fields.get(1).getName());
+    Assert.assertEquals(SqlTypeName.DOUBLE, fields.get(1).getType().getSqlTypeName());
 
-    assertEquals("numberyArrays", fields.get(2).getName());
-    assertEquals(SqlTypeName.ARRAY, fields.get(2).getType().getSqlTypeName());
-    assertEquals(SqlTypeName.DOUBLE, fields.get(2).getType().getComponentType().getSqlTypeName());
+    Assert.assertEquals("numberyArrays", fields.get(2).getName());
+    Assert.assertEquals(SqlTypeName.ARRAY, fields.get(2).getType().getSqlTypeName());
+    Assert.assertEquals(SqlTypeName.DOUBLE, fields.get(2).getType().getComponentType().getSqlTypeName());
 
-    assertEquals("stringy", fields.get(3).getName());
-    assertEquals(SqlTypeName.ARRAY, fields.get(3).getType().getSqlTypeName());
-    assertEquals(SqlTypeName.VARCHAR, fields.get(3).getType().getComponentType().getSqlTypeName());
+    Assert.assertEquals("stringy", fields.get(3).getName());
+    Assert.assertEquals(SqlTypeName.ARRAY, fields.get(3).getType().getSqlTypeName());
+    Assert.assertEquals(SqlTypeName.VARCHAR, fields.get(3).getType().getComponentType().getSqlTypeName());
 
-    assertEquals("array", fields.get(4).getName());
-    assertEquals(SqlTypeName.ARRAY, fields.get(4).getType().getSqlTypeName());
-    assertEquals(SqlTypeName.DOUBLE, fields.get(4).getType().getComponentType().getSqlTypeName());
+    Assert.assertEquals("array", fields.get(4).getName());
+    Assert.assertEquals(SqlTypeName.ARRAY, fields.get(4).getType().getSqlTypeName());
+    Assert.assertEquals(SqlTypeName.DOUBLE, fields.get(4).getType().getComponentType().getSqlTypeName());
 
-    assertEquals("nested", fields.get(5).getName());
-    assertEquals(SqlTypeName.OTHER, fields.get(5).getType().getSqlTypeName());
+    Assert.assertEquals("nested", fields.get(5).getName());
+    Assert.assertEquals(SqlTypeName.OTHER, fields.get(5).getType().getSqlTypeName());
 
-    assertEquals("cnt", fields.get(6).getName());
-    assertEquals(SqlTypeName.BIGINT, fields.get(6).getType().getSqlTypeName());
+    Assert.assertEquals("cnt", fields.get(6).getName());
+    Assert.assertEquals(SqlTypeName.BIGINT, fields.get(6).getType().getSqlTypeName());
 
-    assertEquals("m1", fields.get(7).getName());
-    assertEquals(SqlTypeName.DOUBLE, fields.get(7).getType().getSqlTypeName());
+    Assert.assertEquals("m1", fields.get(7).getName());
+    Assert.assertEquals(SqlTypeName.DOUBLE, fields.get(7).getType().getSqlTypeName());
 
-    assertEquals("unique_dim1", fields.get(8).getName());
-    assertEquals(SqlTypeName.OTHER, fields.get(8).getType().getSqlTypeName());
+    Assert.assertEquals("unique_dim1", fields.get(8).getName());
+    Assert.assertEquals(SqlTypeName.OTHER, fields.get(8).getType().getSqlTypeName());
   }
 
   /**
@@ -516,7 +511,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
    * @throws InterruptedException
    */
   @Test
-  void availableSegmentMetadataNumRows() throws InterruptedException
+  public void testAvailableSegmentMetadataNumRows() throws InterruptedException
   {
     BrokerSegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
 
@@ -525,13 +520,13 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
                                                        .stream()
                                                        .map(AvailableSegmentMetadata::getSegment)
                                                        .collect(Collectors.toList());
-    assertEquals(6, segments.size());
+    Assert.assertEquals(6, segments.size());
     // find the only segment with datasource "foo2"
     final DataSegment existingSegment = segments.stream()
                                                 .filter(segment -> segment.getDataSource().equals("foo2"))
                                                 .findFirst()
                                                 .orElse(null);
-    assertNotNull(existingSegment);
+    Assert.assertNotNull(existingSegment);
     final AvailableSegmentMetadata existingMetadata = segmentsMetadata.get(existingSegment.getId());
     // update AvailableSegmentMetadata of existingSegment with numRows=5
     AvailableSegmentMetadata updatedMetadata = AvailableSegmentMetadata.from(existingMetadata).withNumRows(5).build();
@@ -547,9 +542,9 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
         )
         .findAny()
         .orElse(null);
-    assertNotNull(pair);
+    Assert.assertNotNull(pair);
     final ImmutableDruidServer server = pair.lhs;
-    assertNotNull(server);
+    Assert.assertNotNull(server);
     final DruidServerMetadata druidServerMetadata = server.getMetadata();
     // invoke SegmentMetadataCache#addSegment on existingSegment
     schema.addSegment(druidServerMetadata, existingSegment);
@@ -560,14 +555,14 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
                                                .findFirst()
                                                .orElse(null);
     final AvailableSegmentMetadata currentMetadata = segmentsMetadata.get(currentSegment.getId());
-    assertEquals(updatedMetadata.getSegment().getId(), currentMetadata.getSegment().getId());
-    assertEquals(updatedMetadata.getNumRows(), currentMetadata.getNumRows());
+    Assert.assertEquals(updatedMetadata.getSegment().getId(), currentMetadata.getSegment().getId());
+    Assert.assertEquals(updatedMetadata.getNumRows(), currentMetadata.getNumRows());
     // numreplicas do not change here since we addSegment with the same server which was serving existingSegment before
-    assertEquals(updatedMetadata.getNumReplicas(), currentMetadata.getNumReplicas());
+    Assert.assertEquals(updatedMetadata.getNumReplicas(), currentMetadata.getNumReplicas());
   }
 
   @Test
-  void nullDatasource() throws IOException, InterruptedException
+  public void testNullDatasource() throws IOException, InterruptedException
   {
     BrokerSegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
     final Map<SegmentId, AvailableSegmentMetadata> segmentMetadatas = schema.getSegmentMetadataSnapshot();
@@ -575,24 +570,24 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
                                                        .stream()
                                                        .map(AvailableSegmentMetadata::getSegment)
                                                        .collect(Collectors.toList());
-    assertEquals(6, segments.size());
+    Assert.assertEquals(6, segments.size());
     // segments contains two segments with datasource "foo" and one with datasource "foo2"
     // let's remove the only segment with datasource "foo2"
     final DataSegment segmentToRemove = segments.stream()
                                                 .filter(segment -> segment.getDataSource().equals("foo2"))
                                                 .findFirst()
                                                 .orElse(null);
-    assertNotNull(segmentToRemove);
+    Assert.assertNotNull(segmentToRemove);
     schema.removeSegment(segmentToRemove);
 
     // The following line can cause NPE without segmentMetadata null check in
     // SegmentMetadataCache#refreshSegmentsForDataSource
     schema.refreshSegments(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()));
-    assertEquals(5, schema.getSegmentMetadataSnapshot().size());
+    Assert.assertEquals(5, schema.getSegmentMetadataSnapshot().size());
   }
 
   @Test
-  void allDatasourcesRebuiltOnDatasourceRemoval() throws IOException, InterruptedException
+  public void testAllDatasourcesRebuiltOnDatasourceRemoval() throws IOException, InterruptedException
   {
     CountDownLatch addSegmentLatch = new CountDownLatch(7);
     BrokerSegmentMetadataCache schema = new BrokerSegmentMetadataCache(
@@ -643,11 +638,11 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
                                                        .stream()
                                                        .map(AvailableSegmentMetadata::getSegment)
                                                        .collect(Collectors.toList());
-    assertEquals(6, segments.size());
+    Assert.assertEquals(6, segments.size());
 
     // verify that dim3 column isn't present in the schema for foo
     DatasourceTable.PhysicalDatasourceMetadata fooDs = schema.getDatasource("foo");
-    assertTrue(fooDs.getRowSignature().getColumnNames().stream().noneMatch("dim3"::equals));
+    Assert.assertTrue(fooDs.getRowSignature().getColumnNames().stream().noneMatch("dim3"::equals));
 
     // segments contains two segments with datasource "foo" and one with datasource "foo2"
     // let's remove the only segment with datasource "foo2"
@@ -655,7 +650,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
                                                 .filter(segment -> segment.getDataSource().equals("foo2"))
                                                 .findFirst()
                                                 .orElse(null);
-    assertNotNull(segmentToRemove);
+    Assert.assertNotNull(segmentToRemove);
     schema.removeSegment(segmentToRemove);
 
     // we will add a segment to another datasource and
@@ -669,7 +664,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
                    .size(0)
                    .build();
 
-    final File tmpDir = newFolder(temporaryFolder, "junit");
+    final File tmpDir = temporaryFolder.newFolder();
 
     List<InputRow> rows = ImmutableList.of(
         createRow(ImmutableMap.of("t", "2002-01-01", "m1", "1.0", "dim1", "", "dim3", "c1")),
@@ -696,7 +691,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
     walker.add(newSegment, index);
     serverView.addSegment(newSegment, ServerType.HISTORICAL);
 
-    assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
+    Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
 
     Set<String> dataSources = segments.stream().map(DataSegment::getDataSource).collect(Collectors.toSet());
     dataSources.remove("foo2");
@@ -712,17 +707,17 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
                      .collect(Collectors.toList());
 
     schema.refresh(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()), dataSourcesToRefresh);
-    assertEquals(6, schema.getSegmentMetadataSnapshot().size());
+    Assert.assertEquals(6, schema.getSegmentMetadataSnapshot().size());
 
     fooDs = schema.getDatasource("foo");
 
     // check if the new column present in the added segment is present in the datasource schema
     // ensuring that the schema is rebuilt
-    assertTrue(fooDs.getRowSignature().getColumnNames().stream().anyMatch("dim3"::equals));
+    Assert.assertTrue(fooDs.getRowSignature().getColumnNames().stream().anyMatch("dim3"::equals));
   }
 
   @Test
-  void nullAvailableSegmentMetadata() throws IOException, InterruptedException
+  public void testNullAvailableSegmentMetadata() throws IOException, InterruptedException
   {
     BrokerSegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
     final Map<SegmentId, AvailableSegmentMetadata> segmentMetadatas = schema.getSegmentMetadataSnapshot();
@@ -730,19 +725,19 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
                                                        .stream()
                                                        .map(AvailableSegmentMetadata::getSegment)
                                                        .collect(Collectors.toList());
-    assertEquals(6, segments.size());
+    Assert.assertEquals(6, segments.size());
     // remove one of the segments with datasource "foo"
     final DataSegment segmentToRemove = segments.stream()
                                                 .filter(segment -> segment.getDataSource().equals("foo"))
                                                 .findFirst()
                                                 .orElse(null);
-    assertNotNull(segmentToRemove);
+    Assert.assertNotNull(segmentToRemove);
     schema.removeSegment(segmentToRemove);
 
     // The following line can cause NPE without segmentMetadata null check in
     // SegmentMetadataCache#refreshSegmentsForDataSource
     schema.refreshSegments(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()));
-    assertEquals(5, schema.getSegmentMetadataSnapshot().size());
+    Assert.assertEquals(5, schema.getSegmentMetadataSnapshot().size());
   }
 
   /**
@@ -757,16 +752,16 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
    * moving parts. A simpler technique is sorely needed.
    */
   @Test
-  void localSegmentCacheSetsDataSourceAsGlobalAndJoinable() throws InterruptedException
+  public void testLocalSegmentCacheSetsDataSourceAsGlobalAndJoinable() throws InterruptedException
   {
     BrokerSegmentMetadataCache schema = buildSchemaMarkAndRefreshLatch();
-    assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
+    Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
     DatasourceTable.PhysicalDatasourceMetadata fooTable = schema.getDatasource("foo");
-    assertNotNull(fooTable);
-    assertTrue(fooTable.dataSource() instanceof TableDataSource);
-    assertFalse(fooTable.dataSource() instanceof GlobalTableDataSource);
-    assertFalse(fooTable.isJoinable());
-    assertFalse(fooTable.isBroadcast());
+    Assert.assertNotNull(fooTable);
+    Assert.assertTrue(fooTable.dataSource() instanceof TableDataSource);
+    Assert.assertFalse(fooTable.dataSource() instanceof GlobalTableDataSource);
+    Assert.assertFalse(fooTable.isJoinable());
+    Assert.assertFalse(fooTable.isBroadcast());
 
     markDataSourceLatch = new CountDownLatch(1);
     refreshLatch = new CountDownLatch(1);
@@ -786,19 +781,19 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
     segmentDataSourceNames.add("foo");
     joinableDataSourceNames.add("foo");
     serverView.addSegment(someNewBrokerSegment, ServerType.BROKER);
-    assertTrue(markDataSourceLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
+    Assert.assertTrue(markDataSourceLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
     // wait for build twice
-    assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
+    Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
     // wait for get again, just to make sure table has been updated (latch counts down just before tables are updated)
     refreshLatch = new CountDownLatch(1);
-    assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
+    Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
 
     fooTable = schema.getDatasource("foo");
-    assertNotNull(fooTable);
-    assertTrue(fooTable.dataSource() instanceof TableDataSource);
-    assertTrue(fooTable.dataSource() instanceof GlobalTableDataSource);
-    assertTrue(fooTable.isJoinable());
-    assertTrue(fooTable.isBroadcast());
+    Assert.assertNotNull(fooTable);
+    Assert.assertTrue(fooTable.dataSource() instanceof TableDataSource);
+    Assert.assertTrue(fooTable.dataSource() instanceof GlobalTableDataSource);
+    Assert.assertTrue(fooTable.isJoinable());
+    Assert.assertTrue(fooTable.isBroadcast());
 
     // now remove it
     markDataSourceLatch = new CountDownLatch(1);
@@ -807,33 +802,33 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
     segmentDataSourceNames.remove("foo");
     serverView.removeSegment(someNewBrokerSegment, ServerType.BROKER);
 
-    assertTrue(markDataSourceLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
+    Assert.assertTrue(markDataSourceLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
     // wait for build twice
-    assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
+    Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
     // wait for get again, just to make sure table has been updated (latch counts down just before tables are updated)
     refreshLatch = new CountDownLatch(1);
-    assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
+    Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
 
     fooTable = schema.getDatasource("foo");
-    assertNotNull(fooTable);
-    assertTrue(fooTable.dataSource() instanceof TableDataSource);
-    assertFalse(fooTable.dataSource() instanceof GlobalTableDataSource);
-    assertFalse(fooTable.isJoinable());
-    assertFalse(fooTable.isBroadcast());
+    Assert.assertNotNull(fooTable);
+    Assert.assertTrue(fooTable.dataSource() instanceof TableDataSource);
+    Assert.assertFalse(fooTable.dataSource() instanceof GlobalTableDataSource);
+    Assert.assertFalse(fooTable.isJoinable());
+    Assert.assertFalse(fooTable.isBroadcast());
   }
 
   @Test
-  void localSegmentCacheSetsDataSourceAsBroadcastButNotJoinable() throws InterruptedException
+  public void testLocalSegmentCacheSetsDataSourceAsBroadcastButNotJoinable() throws InterruptedException
   {
     BrokerSegmentMetadataCache schema = buildSchemaMarkAndRefreshLatch();
-    assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
+    Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
     DatasourceTable.PhysicalDatasourceMetadata fooTable = schema.getDatasource("foo");
-    assertNotNull(fooTable);
-    assertNotNull(fooTable);
-    assertTrue(fooTable.dataSource() instanceof TableDataSource);
-    assertFalse(fooTable.dataSource() instanceof GlobalTableDataSource);
-    assertFalse(fooTable.isJoinable());
-    assertFalse(fooTable.isBroadcast());
+    Assert.assertNotNull(fooTable);
+    Assert.assertNotNull(fooTable);
+    Assert.assertTrue(fooTable.dataSource() instanceof TableDataSource);
+    Assert.assertFalse(fooTable.dataSource() instanceof GlobalTableDataSource);
+    Assert.assertFalse(fooTable.isJoinable());
+    Assert.assertFalse(fooTable.isBroadcast());
 
     markDataSourceLatch = new CountDownLatch(1);
     refreshLatch = new CountDownLatch(1);
@@ -853,21 +848,21 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
     segmentDataSourceNames.add("foo");
     serverView.addSegment(someNewBrokerSegment, ServerType.BROKER);
 
-    assertTrue(markDataSourceLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
+    Assert.assertTrue(markDataSourceLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
     // wait for build twice
-    assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
+    Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
     // wait for get again, just to make sure table has been updated (latch counts down just before tables are updated)
     refreshLatch = new CountDownLatch(1);
-    assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
+    Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
 
     fooTable = schema.getDatasource("foo");
-    assertNotNull(fooTable);
-    assertTrue(fooTable.dataSource() instanceof TableDataSource);
+    Assert.assertNotNull(fooTable);
+    Assert.assertTrue(fooTable.dataSource() instanceof TableDataSource);
     // Should not be a GlobalTableDataSource for now, because isGlobal is couple with joinability. Ideally this will be
     // changed in the future and we should expect.
-    assertFalse(fooTable.dataSource() instanceof GlobalTableDataSource);
-    assertTrue(fooTable.isBroadcast());
-    assertFalse(fooTable.isJoinable());
+    Assert.assertFalse(fooTable.dataSource() instanceof GlobalTableDataSource);
+    Assert.assertTrue(fooTable.isBroadcast());
+    Assert.assertFalse(fooTable.isJoinable());
 
     // now remove it
     markDataSourceLatch = new CountDownLatch(1);
@@ -875,26 +870,26 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
     segmentDataSourceNames.remove("foo");
     serverView.removeSegment(someNewBrokerSegment, ServerType.BROKER);
 
-    assertTrue(markDataSourceLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
+    Assert.assertTrue(markDataSourceLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
     // wait for build twice
-    assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
+    Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
     // wait for get again, just to make sure table has been updated (latch counts down just before tables are updated)
     refreshLatch = new CountDownLatch(1);
-    assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
+    Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
 
     fooTable = schema.getDatasource("foo");
-    assertNotNull(fooTable);
-    assertTrue(fooTable.dataSource() instanceof TableDataSource);
-    assertFalse(fooTable.dataSource() instanceof GlobalTableDataSource);
-    assertFalse(fooTable.isBroadcast());
-    assertFalse(fooTable.isJoinable());
+    Assert.assertNotNull(fooTable);
+    Assert.assertTrue(fooTable.dataSource() instanceof TableDataSource);
+    Assert.assertFalse(fooTable.dataSource() instanceof GlobalTableDataSource);
+    Assert.assertFalse(fooTable.isBroadcast());
+    Assert.assertFalse(fooTable.isJoinable());
   }
 
   /**
    * Ensure that the BrokerInternalQueryConfig context is honored for this internally generated SegmentMetadata Query
    */
   @Test
-  void runSegmentMetadataQueryWithContext() throws Exception
+  public void testRunSegmentMetadataQueryWithContext() throws Exception
   {
     String brokerInternalQueryConfigJson = "{\"context\": { \"priority\": 5} }";
 
@@ -957,19 +952,19 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
   }
 
   @Test
-  void staleDatasourceRefresh() throws IOException, InterruptedException
+  public void testStaleDatasourceRefresh() throws IOException, InterruptedException
   {
     BrokerSegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
     Set<SegmentId> segments = new HashSet<>();
     Set<String> datasources = new HashSet<>();
     datasources.add("wat");
-    assertNull(schema.getDatasource("wat"));
+    Assert.assertNull(schema.getDatasource("wat"));
     schema.refresh(segments, datasources);
-    assertNull(schema.getDatasource("wat"));
+    Assert.assertNull(schema.getDatasource("wat"));
   }
 
   @Test
-  void refreshShouldEmitMetrics() throws InterruptedException, IOException
+  public void testRefreshShouldEmitMetrics() throws InterruptedException, IOException
   {
     String dataSource = "xyz";
     CountDownLatch addSegmentLatch = new CountDownLatch(2);
@@ -1007,7 +1002,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
     );
     serverView.addSegment(segments.get(0), ServerType.HISTORICAL);
     serverView.addSegment(segments.get(1), ServerType.INDEXER_EXECUTOR);
-    assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
+    Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
     schema.refresh(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()), Sets.newHashSet(dataSource));
 
     emitter.verifyEmitted("metadatacache/refresh/time", ImmutableMap.of(DruidMetrics.DATASOURCE, dataSource), 1);
@@ -1016,18 +1011,9 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
 
   // This test is present to achieve coverage for BrokerSegmentMetadataCache#initServerViewTimelineCallback
   @Test
-  void invokeSegmentSchemaAnnounced() throws InterruptedException
+  public void testInvokeSegmentSchemaAnnounced() throws InterruptedException
   {
     buildSchemaMarkAndTableLatch();
     serverView.invokeSegmentSchemasAnnouncedDummy();
-  }
-
-  private static File newFolder(File root, String... subDirs) throws IOException {
-    String subFolder = String.join("/", subDirs);
-    File result = new File(root, subFolder);
-    if (!result.mkdirs()) {
-      throw new IOException("Couldn't create folders " + root);
-    }
-    return result;
   }
 }

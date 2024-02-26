@@ -28,16 +28,16 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
+public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
 {
   @Test
-  void table()
+  public void testTable()
   {
     final String sql = "SELECT COUNT(*) FROM foo WHERE foo.dim1 <> 'z'";
 
@@ -50,7 +50,7 @@ class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void confusingTable()
+  public void testConfusingTable()
   {
     final String sql = "SELECT COUNT(*) FROM foo as druid WHERE druid.dim1 <> 'z'";
 
@@ -63,7 +63,7 @@ class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void subquery()
+  public void testSubquery()
   {
     final String sql = "SELECT COUNT(*)\n"
                        + "FROM (\n"
@@ -84,7 +84,7 @@ class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void subqueryUnion()
+  public void testSubqueryUnion()
   {
     final String sql = "SELECT\n"
                        + "  SUM(cnt),\n"
@@ -104,7 +104,7 @@ class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void join()
+  public void testJoin()
   {
     final String sql = "SELECT COUNT(*) FROM foo INNER JOIN numfoo ON foo.dim1 = numfoo.dim1 WHERE numfoo.dim1 <> 'z'";
 
@@ -118,7 +118,7 @@ class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void view()
+  public void testView()
   {
     final String sql = "SELECT COUNT(*) FROM view.aview as druid WHERE dim1_firstchar <> 'z'";
 
@@ -131,7 +131,7 @@ class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void subqueryView()
+  public void testSubqueryView()
   {
     final String sql = "SELECT COUNT(*)\n"
                        + "FROM (\n"
@@ -152,7 +152,7 @@ class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void joinView()
+  public void testJoinView()
   {
     final String sql = "SELECT COUNT(*) FROM view.cview as aview INNER JOIN numfoo ON aview.dim2 = numfoo.dim2 WHERE numfoo.dim1 <> 'z'";
 
@@ -166,7 +166,7 @@ class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void confusingViewIdentifiers()
+  public void testConfusingViewIdentifiers()
   {
     final String sql = "SELECT COUNT(*) FROM view.dview as druid WHERE druid.numfoo <> 'z'";
 
@@ -179,7 +179,7 @@ class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void dynamicParameters()
+  public void testDynamicParameters()
   {
     final String sql = "SELECT SUBSTRING(dim2, CAST(? as BIGINT), CAST(? as BIGINT)) FROM druid.foo LIMIT ?";
     analyzeResources(
@@ -191,7 +191,7 @@ class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void sysTables()
+  public void testSysTables()
   {
     testSysTable("SELECT * FROM sys.segments", null, PLANNER_CONFIG_DEFAULT);
     testSysTable("SELECT * FROM sys.servers", null, PLANNER_CONFIG_DEFAULT);
@@ -242,7 +242,7 @@ class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void sysTableWithQueryContext()
+  public void testSysTableWithQueryContext()
   {
     final AuthConfig authConfig = AuthConfig.newBuilder().setAuthorizeQueryContextParams(true).build();
     final Map<String, Object> context = ImmutableMap.of(
@@ -275,7 +275,7 @@ class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void queryContext()
+  public void testQueryContext()
   {
     final String sql = "SELECT COUNT(*) FROM foo WHERE foo.dim1 <> 'z'";
     Map<String, Object> context = ImmutableMap.of("baz", "fo", "nested-bar", ImmutableMap.of("nested-key", "nested-val"));

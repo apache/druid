@@ -42,18 +42,16 @@ import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
 import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.junit.jupiter.api.Test;
+import org.hamcrest.MatcherAssert;
+import org.junit.Assert;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.fail;
-
-class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
+public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
 {
   private static final Map<String, Object> REPLACE_ALL_TIME_CHUNKS = ImmutableMap.of(
       DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
@@ -71,7 +69,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceFromTableWithReplaceAll()
+  public void testReplaceFromTableWithReplaceAll()
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
@@ -89,7 +87,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceFromTableWithDeleteWhereClause()
+  public void testReplaceFromTableWithDeleteWhereClause()
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00' "
@@ -113,7 +111,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceFromTableWithTimeZoneInQueryContext()
+  public void testReplaceFromTableWithTimeZoneInQueryContext()
   {
     HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
     context.put(PlannerContext.CTX_SQL_TIME_ZONE, "+05:30");
@@ -140,7 +138,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceFromTableWithIntervalLargerThanOneGranularity()
+  public void testReplaceFromTableWithIntervalLargerThanOneGranularity()
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE WHERE "
@@ -165,7 +163,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceFromTableWithComplexDeleteWhereClause()
+  public void testReplaceFromTableWithComplexDeleteWhereClause()
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE WHERE "
@@ -191,7 +189,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceFromTableWithBetweenClause()
+  public void testReplaceFromTableWithBetweenClause()
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE WHERE "
@@ -216,7 +214,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceForUnsupportedDeleteWhereClause()
+  public void testReplaceForUnsupportedDeleteWhereClause()
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE WHERE __time LIKE '20__-02-01' SELECT * FROM foo PARTITIONED BY MONTH")
@@ -227,7 +225,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceForInvalidDeleteWhereClause()
+  public void testReplaceForInvalidDeleteWhereClause()
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE WHERE TRUE SELECT * FROM foo PARTITIONED BY MONTH")
@@ -238,7 +236,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceForDeleteWhereClauseOnUnsupportedColumns()
+  public void testReplaceForDeleteWhereClauseOnUnsupportedColumns()
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE WHERE dim1 > TIMESTAMP '2000-01-05 00:00:00' SELECT * FROM foo PARTITIONED BY ALL TIME")
@@ -250,7 +248,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
 
 
   @Test
-  void replaceWithOrderBy()
+  public void testReplaceWithOrderBy()
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE ALL SELECT * FROM foo ORDER BY dim1 PARTITIONED BY ALL TIME")
@@ -261,7 +259,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceForMisalignedPartitionInterval()
+  public void testReplaceForMisalignedPartitionInterval()
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE WHERE __time >= TIMESTAMP '2000-01-05 00:00:00' AND __time <= TIMESTAMP '2000-01-06 00:00:00' SELECT * FROM foo PARTITIONED BY MONTH")
@@ -275,7 +273,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceForInvalidPartition()
+  public void testReplaceForInvalidPartition()
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE WHERE __time >= TIMESTAMP '2000-01-05 00:00:00' AND __time <= TIMESTAMP '2000-02-05 00:00:00' SELECT * FROM foo PARTITIONED BY ALL TIME")
@@ -287,7 +285,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceFromTableWithEmptyInterval()
+  public void testReplaceFromTableWithEmptyInterval()
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE WHERE "
@@ -301,7 +299,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceForWithInvalidInterval()
+  public void testReplaceForWithInvalidInterval()
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE WHERE __time >= TIMESTAMP '2000-01-INVALID0:00' AND __time <= TIMESTAMP '2000-02-05 00:00:00' SELECT * FROM foo PARTITIONED BY ALL TIME")
@@ -310,7 +308,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceForWithoutPartitionSpec()
+  public void testReplaceForWithoutPartitionSpec()
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst SELECT * FROM foo PARTITIONED BY ALL TIME")
@@ -319,7 +317,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceFromView()
+  public void testReplaceFromView()
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE ALL SELECT * FROM view.aview PARTITIONED BY ALL TIME")
@@ -339,7 +337,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceIntoQualifiedTable()
+  public void testReplaceIntoQualifiedTable()
   {
     testIngestionQuery()
         .sql("REPLACE INTO druid.dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
@@ -357,7 +355,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceContainingWithList()
+  public void testReplaceContainingWithList()
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE ALL WITH foo_data AS (SELECT * FROM foo) SELECT dim1, dim3 FROM foo_data PARTITIONED BY ALL TIME")
@@ -380,7 +378,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceIntoInvalidDataSourceName()
+  public void testReplaceIntoInvalidDataSourceName()
   {
     testIngestionQuery()
         .sql("REPLACE INTO \"in/valid\" OVERWRITE ALL SELECT dim1, dim2 FROM foo PARTITIONED BY ALL TIME")
@@ -393,7 +391,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceUsingColumnList()
+  public void testReplaceUsingColumnList()
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst (foo, bar) OVERWRITE ALL SELECT dim1, dim2 FROM foo PARTITIONED BY ALL TIME")
@@ -404,7 +402,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceWithoutPartitionedBy()
+  public void testReplaceWithoutPartitionedBy()
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE ALL SELECT __time, FLOOR(m1) as floor_m1, dim1 FROM foo")
@@ -415,7 +413,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceWithoutPartitionedByWithClusteredBy()
+  public void testReplaceWithoutPartitionedByWithClusteredBy()
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE ALL SELECT __time, FLOOR(m1) as floor_m1, dim1 FROM foo CLUSTERED BY dim1")
@@ -426,7 +424,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceWithoutOverwriteClause()
+  public void testReplaceWithoutOverwriteClause()
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst SELECT * FROM foo PARTITIONED BY ALL TIME")
@@ -438,7 +436,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceWithoutCompleteOverwriteClause()
+  public void testReplaceWithoutCompleteOverwriteClause()
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE SELECT * FROM foo PARTITIONED BY ALL TIME")
@@ -450,7 +448,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceIntoSystemTable()
+  public void testReplaceIntoSystemTable()
   {
     testIngestionQuery()
         .sql("REPLACE INTO INFORMATION_SCHEMA.COLUMNS OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
@@ -462,7 +460,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceIntoView()
+  public void testReplaceIntoView()
   {
     testIngestionQuery()
         .sql("REPLACE INTO view.aview OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
@@ -473,7 +471,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceFromUnauthorizedDataSource()
+  public void testReplaceFromUnauthorizedDataSource()
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE ALL SELECT * FROM \"%s\" PARTITIONED BY ALL TIME", CalciteTests.FORBIDDEN_DATASOURCE)
@@ -482,7 +480,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceIntoUnauthorizedDataSource()
+  public void testReplaceIntoUnauthorizedDataSource()
   {
     testIngestionQuery()
         .sql("REPLACE INTO \"%s\" OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME", CalciteTests.FORBIDDEN_DATASOURCE)
@@ -491,7 +489,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceIntoNonexistentSchema()
+  public void testReplaceIntoNonexistentSchema()
   {
     testIngestionQuery()
         .sql("REPLACE INTO nonexistent.dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
@@ -502,7 +500,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceFromExternal()
+  public void testReplaceFromExternal()
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE ALL SELECT * FROM %s PARTITIONED BY ALL TIME", externSql(externalDataSource))
@@ -521,7 +519,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceWithPartitionedByAndLimitOffset()
+  public void testReplaceWithPartitionedByAndLimitOffset()
   {
     RowSignature targetRowSignature = RowSignature.builder()
                                                   .add("__time", ColumnType.LONG)
@@ -554,7 +552,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceWithClusteredBy()
+  public void testReplaceWithClusteredBy()
   {
     // Test correctness of the query when CLUSTERED BY clause is present
     RowSignature targetRowSignature = RowSignature.builder()
@@ -591,7 +589,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceWithPartitionedByContainingInvalidGranularity()
+  public void testReplaceWithPartitionedByContainingInvalidGranularity()
   {
     // Throws a ValidationException, which gets converted to a DruidException before throwing to end user
     try {
@@ -600,10 +598,10 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
           ImmutableList.of(),
           ImmutableList.of()
       );
-      fail("Exception should be thrown");
+      Assert.fail("Exception should be thrown");
     }
     catch (DruidException e) {
-      assertThat(
+      MatcherAssert.assertThat(
           e,
           invalidSqlIs(
               StringUtils.format(DruidSqlParserUtils.PARTITION_ERROR_MESSAGE, "'invalid_granularity'")
@@ -613,7 +611,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void explainReplaceFromExternal() throws IOException
+  public void testExplainReplaceFromExternal() throws IOException
   {
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();
@@ -702,7 +700,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void explainReplaceTimeChunksWithPartitioningAndClustering() throws IOException
+  public void testExplainReplaceTimeChunksWithPartitioningAndClustering() throws IOException
   {
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();
@@ -784,7 +782,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void explainReplaceWithLimitAndClusteredByOrdinals() throws IOException
+  public void testExplainReplaceWithLimitAndClusteredByOrdinals() throws IOException
   {
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();
@@ -889,7 +887,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
 
 
   @Test
-  void explainPlanReplaceWithClusteredByDescThrowsException()
+  public void testExplainPlanReplaceWithClusteredByDescThrowsException()
   {
     skipVectorize();
 
@@ -907,10 +905,10 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void explainReplaceFromExternalUnauthorized()
+  public void testExplainReplaceFromExternalUnauthorized()
   {
     // Use testQuery for EXPLAIN (not testIngestionQuery).
-    assertThrows(
+    Assert.assertThrows(
         ForbiddenException.class,
         () ->
             testQuery(
@@ -928,7 +926,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceFromExternalUnauthorized()
+  public void testReplaceFromExternalUnauthorized()
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE ALL SELECT * FROM %s PARTITIONED BY ALL TIME", externSql(externalDataSource))
@@ -937,7 +935,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceWithNonExistentOrdinalInClusteredBy()
+  public void testReplaceWithNonExistentOrdinalInClusteredBy()
   {
     skipVectorize();
 
@@ -956,7 +954,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceWithNegativeOrdinalInClusteredBy()
+  public void testReplaceWithNegativeOrdinalInClusteredBy()
   {
     skipVectorize();
 
@@ -975,7 +973,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceFromExternalProjectSort()
+  public void testReplaceFromExternalProjectSort()
   {
     testIngestionQuery()
         .sql(
@@ -998,7 +996,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceFromExternalAggregate()
+  public void testReplaceFromExternalAggregate()
   {
     testIngestionQuery()
         .sql(
@@ -1032,7 +1030,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceFromExternalAggregateAll()
+  public void testReplaceFromExternalAggregateAll()
   {
     testIngestionQuery()
         .sql(
@@ -1060,7 +1058,7 @@ class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void replaceWithSqlOuterLimit()
+  public void testReplaceWithSqlOuterLimit()
   {
     HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
     context.put(PlannerContext.CTX_SQL_OUTER_LIMIT, 100);

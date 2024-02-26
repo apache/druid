@@ -27,21 +27,18 @@ import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.segment.metadata.AbstractSegmentMetadataCache;
 import org.apache.druid.sql.calcite.planner.CalcitePlannerModule;
 import org.joda.time.Period;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Test;
 
 import java.util.Properties;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-class BrokerSegmentMetadataCacheConfigTest
+public class BrokerSegmentMetadataCacheConfigTest
 {
 
   private static final String CONFIG_BASE = CalcitePlannerModule.CONFIG_BASE;
 
   @Test
-  void defaultConfig()
+  public void testDefaultConfig()
   {
     final Injector injector = createInjector();
     final JsonConfigProvider<BrokerSegmentMetadataCacheConfig> provider = JsonConfigProvider.of(
@@ -52,14 +49,14 @@ class BrokerSegmentMetadataCacheConfigTest
     final Properties properties = new Properties();
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     final BrokerSegmentMetadataCacheConfig config = provider.get();
-    assertTrue(config.isAwaitInitializationOnStart());
-    assertFalse(config.isMetadataSegmentCacheEnable());
-    assertEquals(Period.minutes(1), config.getMetadataRefreshPeriod());
-    assertEquals(new AbstractSegmentMetadataCache.LeastRestrictiveTypeMergePolicy(), config.getMetadataColumnTypeMergePolicy());
+    Assert.assertTrue(config.isAwaitInitializationOnStart());
+    Assert.assertFalse(config.isMetadataSegmentCacheEnable());
+    Assert.assertEquals(Period.minutes(1), config.getMetadataRefreshPeriod());
+    Assert.assertEquals(new AbstractSegmentMetadataCache.LeastRestrictiveTypeMergePolicy(), config.getMetadataColumnTypeMergePolicy());
   }
 
   @Test
-  void customizedConfig()
+  public void testCustomizedConfig()
   {
     final Injector injector = createInjector();
     final JsonConfigProvider<BrokerSegmentMetadataCacheConfig> provider = JsonConfigProvider.of(
@@ -75,10 +72,10 @@ class BrokerSegmentMetadataCacheConfigTest
     properties.setProperty(CONFIG_BASE + ".awaitInitializationOnStart", "false");
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     final BrokerSegmentMetadataCacheConfig config = provider.get();
-    assertFalse(config.isAwaitInitializationOnStart());
-    assertFalse(config.isMetadataSegmentCacheEnable());
-    assertEquals(Period.minutes(2), config.getMetadataRefreshPeriod());
-    assertEquals(
+    Assert.assertFalse(config.isAwaitInitializationOnStart());
+    Assert.assertFalse(config.isMetadataSegmentCacheEnable());
+    Assert.assertEquals(Period.minutes(2), config.getMetadataRefreshPeriod());
+    Assert.assertEquals(
         new AbstractSegmentMetadataCache.FirstTypeMergePolicy(),
         config.getMetadataColumnTypeMergePolicy()
     );

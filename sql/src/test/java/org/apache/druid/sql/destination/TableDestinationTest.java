@@ -21,16 +21,15 @@ package org.apache.druid.sql.destination;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Test;
 
 import java.io.IOException;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-class TableDestinationTest
+public class TableDestinationTest
 {
   @Test
-  void serde() throws IOException
+  public void testSerde() throws IOException
   {
     TableDestination tableDestination = new TableDestination("tableName");
 
@@ -38,6 +37,6 @@ class TableDestinationTest
     byte[] bytes = objectMapper.writeValueAsBytes(tableDestination);
 
     TableDestination deserialized = objectMapper.readValue(bytes, TableDestination.class);
-    assertEquals(tableDestination, deserialized);
+    Assert.assertEquals(tableDestination, deserialized);
   }
 }

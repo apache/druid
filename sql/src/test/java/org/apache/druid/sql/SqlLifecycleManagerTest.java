@@ -22,70 +22,68 @@ package org.apache.druid.sql;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.SqlLifecycleManager.Cancelable;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-class SqlLifecycleManagerTest
+public class SqlLifecycleManagerTest
 {
   private SqlLifecycleManager lifecycleManager;
 
-  @BeforeEach
-  void setup()
+  @Before
+  public void setup()
   {
     lifecycleManager = new SqlLifecycleManager();
   }
 
   @Test
-  void addAuthorizedLifecycle()
+  public void testAddAuthorizedLifecycle()
   {
     final String sqlId = "sqlId";
     Cancelable lifecycle = mockLifecycle();
     lifecycleManager.add(sqlId, lifecycle);
-    assertEquals(ImmutableList.of(lifecycle), lifecycleManager.getAll(sqlId));
+    Assert.assertEquals(ImmutableList.of(lifecycle), lifecycleManager.getAll(sqlId));
   }
 
   @Test
-  void removeValidLifecycle()
+  public void testRemoveValidLifecycle()
   {
     final String sqlId = "sqlId";
     Cancelable lifecycle = mockLifecycle();
     lifecycleManager.add(sqlId, lifecycle);
-    assertEquals(ImmutableList.of(lifecycle), lifecycleManager.getAll(sqlId));
+    Assert.assertEquals(ImmutableList.of(lifecycle), lifecycleManager.getAll(sqlId));
     lifecycleManager.remove(sqlId, lifecycle);
-    assertEquals(ImmutableList.of(), lifecycleManager.getAll(sqlId));
+    Assert.assertEquals(ImmutableList.of(), lifecycleManager.getAll(sqlId));
   }
 
   @Test
-  void removeInvalidSqlQueryId()
+  public void testRemoveInvalidSqlQueryId()
   {
     final String sqlId = "sqlId";
     Cancelable lifecycle = mockLifecycle();
     lifecycleManager.add(sqlId, lifecycle);
-    assertEquals(ImmutableList.of(lifecycle), lifecycleManager.getAll(sqlId));
+    Assert.assertEquals(ImmutableList.of(lifecycle), lifecycleManager.getAll(sqlId));
     lifecycleManager.remove("invalid", lifecycle);
-    assertEquals(ImmutableList.of(lifecycle), lifecycleManager.getAll(sqlId));
+    Assert.assertEquals(ImmutableList.of(lifecycle), lifecycleManager.getAll(sqlId));
   }
 
   @Test
-  void removeValidSqlQueryIdDifferntLifecycleObject()
+  public void testRemoveValidSqlQueryIdDifferntLifecycleObject()
   {
     final String sqlId = "sqlId";
     Cancelable lifecycle = mockLifecycle();
     lifecycleManager.add(sqlId, lifecycle);
-    assertEquals(ImmutableList.of(lifecycle), lifecycleManager.getAll(sqlId));
+    Assert.assertEquals(ImmutableList.of(lifecycle), lifecycleManager.getAll(sqlId));
     lifecycleManager.remove(sqlId, mockLifecycle());
-    assertEquals(ImmutableList.of(lifecycle), lifecycleManager.getAll(sqlId));
+    Assert.assertEquals(ImmutableList.of(lifecycle), lifecycleManager.getAll(sqlId));
   }
 
   @Test
-  void removeAllValidSqlQueryIdSubsetOfLifecycles()
+  public void testRemoveAllValidSqlQueryIdSubsetOfLifecycles()
   {
     final String sqlId = "sqlId";
     final List<Cancelable> lifecycles = ImmutableList.of(
@@ -94,13 +92,13 @@ class SqlLifecycleManagerTest
         mockLifecycle()
     );
     lifecycles.forEach(lifecycle -> lifecycleManager.add(sqlId, lifecycle));
-    assertEquals(lifecycles, lifecycleManager.getAll(sqlId));
+    Assert.assertEquals(lifecycles, lifecycleManager.getAll(sqlId));
     lifecycleManager.removeAll(sqlId, ImmutableList.of(lifecycles.get(0), lifecycles.get(1)));
-    assertEquals(ImmutableList.of(lifecycles.get(2)), lifecycleManager.getAll(sqlId));
+    Assert.assertEquals(ImmutableList.of(lifecycles.get(2)), lifecycleManager.getAll(sqlId));
   }
 
   @Test
-  void removeAllInvalidSqlQueryId()
+  public void testRemoveAllInvalidSqlQueryId()
   {
     final String sqlId = "sqlId";
     final List<Cancelable> lifecycles = ImmutableList.of(
@@ -109,13 +107,13 @@ class SqlLifecycleManagerTest
         mockLifecycle()
     );
     lifecycles.forEach(lifecycle -> lifecycleManager.add(sqlId, lifecycle));
-    assertEquals(lifecycles, lifecycleManager.getAll(sqlId));
+    Assert.assertEquals(lifecycles, lifecycleManager.getAll(sqlId));
     lifecycleManager.removeAll("invalid", ImmutableList.of(lifecycles.get(0), lifecycles.get(1)));
-    assertEquals(lifecycles, lifecycleManager.getAll(sqlId));
+    Assert.assertEquals(lifecycles, lifecycleManager.getAll(sqlId));
   }
 
   @Test
-  void getAllReturnsListCopy()
+  public void testGetAllReturnsListCopy()
   {
     final String sqlId = "sqlId";
     final List<Cancelable> lifecycles = ImmutableList.of(
@@ -126,8 +124,8 @@ class SqlLifecycleManagerTest
     lifecycles.forEach(lifecycle -> lifecycleManager.add(sqlId, lifecycle));
     final List<Cancelable> lifecyclesFromGetAll = lifecycleManager.getAll(sqlId);
     lifecycleManager.removeAll(sqlId, lifecyclesFromGetAll);
-    assertEquals(lifecycles, lifecyclesFromGetAll);
-    assertTrue(lifecycleManager.getAll(sqlId).isEmpty());
+    Assert.assertEquals(lifecycles, lifecyclesFromGetAll);
+    Assert.assertTrue(lifecycleManager.getAll(sqlId).isEmpty());
   }
 
   private static Cancelable mockLifecycle()

@@ -41,7 +41,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.http.SqlParameter;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -53,10 +53,10 @@ import java.util.List;
  * tests were merely chosen to produce a selection of parameter types and
  * positions within query expressions and have been renamed to reflect this
  */
-class CalciteParameterQueryTest extends BaseCalciteQueryTest
+public class CalciteParameterQueryTest extends BaseCalciteQueryTest
 {
   @Test
-  void selectConstantParamGetsConstant()
+  public void testSelectConstantParamGetsConstant()
   {
     testQuery(
         "SELECT 1 + ?",
@@ -82,7 +82,7 @@ class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void paramsGetOptimizedIntoConstant()
+  public void testParamsGetOptimizedIntoConstant()
   {
     testQuery(
         "SELECT 1 + ?, dim1 FROM foo LIMIT ?",
@@ -108,7 +108,7 @@ class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void parametersInSelectAndFilter()
+  public void testParametersInSelectAndFilter()
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT,
@@ -140,7 +140,7 @@ class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void selectTrimFamilyWithParameters()
+  public void testSelectTrimFamilyWithParameters()
   {
     // TRIM has some whacky parsing. Abuse this to test a bunch of parameters
 
@@ -207,7 +207,7 @@ class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void paramsInInformationSchema()
+  public void testParamsInInformationSchema()
   {
     // Not including COUNT DISTINCT, since it isn't supported by BindableAggregate, and so it can't work.
     testQuery(
@@ -231,7 +231,7 @@ class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void paramsInSelectExpressionAndLimit()
+  public void testParamsInSelectExpressionAndLimit()
   {
     testQuery(
         "SELECT SUBSTRING(dim2, ?, ?) FROM druid.foo LIMIT ?",
@@ -261,7 +261,7 @@ class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void paramsTuckedInACast()
+  public void testParamsTuckedInACast()
   {
     testQuery(
         "SELECT dim1, m1, COUNT(*) FROM druid.foo WHERE m1 - CAST(? as INT) = dim1 GROUP BY dim1, m1",
@@ -294,7 +294,7 @@ class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void parametersInStrangePlaces()
+  public void testParametersInStrangePlaces()
   {
     testQuery(
         "SELECT\n"
@@ -343,7 +343,7 @@ class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void parametersInCases()
+  public void testParametersInCases()
   {
     testQuery(
         "SELECT\n"
@@ -377,7 +377,7 @@ class CalciteParameterQueryTest extends BaseCalciteQueryTest
 
 
   @Test
-  void timestamp()
+  public void testTimestamp()
   {
     // with millis
     testQuery(
@@ -414,7 +414,7 @@ class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void timestampString()
+  public void testTimestampString()
   {
     // with timestampstring
     testQuery(
@@ -450,7 +450,7 @@ class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void date()
+  public void testDate()
   {
     // with date from millis
 
@@ -487,7 +487,7 @@ class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void doubles()
+  public void testDoubles()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE cnt > ? and cnt < ?",
@@ -543,7 +543,7 @@ class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void floats()
+  public void testFloats()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE cnt = ?",
@@ -565,7 +565,7 @@ class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void longs()
+  public void testLongs()
   {
     testQuery(
         "SELECT COUNT(*)\n"
@@ -587,7 +587,7 @@ class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void missingParameter()
+  public void testMissingParameter()
   {
     expectedException.expect(
         DruidExceptionMatcher.invalidSqlInput().expectMessageIs("No value bound for parameter (position [1])")
@@ -603,7 +603,7 @@ class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void partiallyMissingParameter()
+  public void testPartiallyMissingParameter()
   {
     expectedException.expect(
         DruidExceptionMatcher.invalidSqlInput().expectMessageIs("No value bound for parameter (position [2])")
@@ -619,7 +619,7 @@ class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void partiallyMissingParameterInTheMiddle()
+  public void testPartiallyMissingParameterInTheMiddle()
   {
     List<SqlParameter> params = new ArrayList<>();
     params.add(null);
@@ -636,7 +636,7 @@ class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void wrongTypeParameter()
+  public void testWrongTypeParameter()
   {
     if (!useDefault) {
       // cannot vectorize inline datasource
@@ -685,7 +685,7 @@ class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  void nullParameter()
+  public void testNullParameter()
   {
     cannotVectorize();
     // contrived example of using null as an sql parameter to at least test the codepath because lots of things dont

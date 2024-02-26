@@ -46,7 +46,8 @@ import org.apache.druid.sql.calcite.planner.PlannerCaptureHook;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
-import org.junit.jupiter.api.Assumptions;
+import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.rules.ExpectedException;
 
 import java.util.ArrayList;
@@ -56,11 +57,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Runs a test built up by {@link QueryTestBuilder}. Running a SQL query test
@@ -417,16 +413,16 @@ public class QueryTestRunner
           .map(q -> BaseCalciteQueryTest.recursivelyClearContext(q, queryJsonMapper))
           .collect(Collectors.toList());
 
-      assertEquals(
+      Assert.assertEquals(
+          StringUtils.format("query count: %s", builder.sql),
           expectedQueries.size(),
-          recordedQueries.size(),
-          StringUtils.format("query count: %s", builder.sql)
+          recordedQueries.size()
       );
       for (int i = 0; i < expectedQueries.size(); i++) {
-        assertEquals(
+        Assert.assertEquals(
+            StringUtils.format("query #%d: %s", i + 1, builder.sql),
             expectedQueries.get(i),
-            recordedQueries.get(i),
-            StringUtils.format("query #%d: %s", i + 1, builder.sql)
+            recordedQueries.get(i)
         );
 
         try {
@@ -437,10 +433,10 @@ public class QueryTestRunner
           final Query<?> stringAndBack = queryJsonMapper.readValue(recordedString, Query.class);
           final String expectedString = queryJsonMapper.writeValueAsString(expectedQueries.get(i));
           final Query<?> expectedStringAndBack = queryJsonMapper.readValue(expectedString, Query.class);
-          assertEquals(expectedStringAndBack, stringAndBack);
+          Assert.assertEquals(expectedStringAndBack, stringAndBack);
         }
         catch (JsonProcessingException e) {
-          fail(e.getMessage());
+          Assert.fail(e.getMessage());
         }
       }
     }
@@ -462,7 +458,7 @@ public class QueryTestRunner
     public void verify()
     {
       QueryTestBuilder builder = prepareStep.builder();
-      assertEquals(
+      Assert.assertEquals(
           ImmutableSet.copyOf(builder.expectedResources),
           prepareStep.resourceActions()
       );
@@ -485,7 +481,7 @@ public class QueryTestRunner
     public void verify()
     {
       QueryTestBuilder builder = prepareStep.builder();
-      assertEquals(
+      Assert.assertEquals(
           builder.expectedSqlSchema,
           SqlSchema.of(prepareStep.sqlSignature)
       );
@@ -510,7 +506,7 @@ public class QueryTestRunner
     {
       QueryTestBuilder builder = execStep.builder();
       for (QueryResults queryResults : execStep.results()) {
-        assertEquals(
+        Assert.assertEquals(
             builder.expectedSqlSchema,
             SqlSchema.of(queryResults.sqlSignature)
         );
@@ -539,7 +535,7 @@ public class QueryTestRunner
     {
       String expectedPlan = execStep.builder().expectedLogicalPlan;
       String actualPlan = visualizePlan(queryResults.capture);
-      assertEquals(expectedPlan, actualPlan);
+      Assert.assertEquals(expectedPlan, actualPlan);
     }
 
     private String visualizePlan(PlannerCaptureHook hook)
@@ -597,35 +593,32 @@ public class QueryTestRunner
     @Override
     public void verify()
     {
-      Throwable exception = assertThrows(RuntimeException.class, () -> {
-        QueryTestBuilder builder = execStep.builder();
+      QueryTestBuilder builder = execStep.builder();
 
-        // The builder specifies one exception, but the query can run multiple
-        // times. Pick the first failure as that emulates the original code flow
-        // where the first exception ended the test.
-        ExpectedException expectedException = builder.config.expectedException();
-        for (QueryResults queryResults : execStep.results()) {
-          if (queryResults.exception == null) {
-            continue;
-          }
+      // The builder specifies one exception, but the query can run multiple
+      // times. Pick the first failure as that emulates the original code flow
+      // where the first exception ended the test.
+      ExpectedException expectedException = builder.config.expectedException();
+      for (QueryResults queryResults : execStep.results()) {
+        if (queryResults.exception == null) {
+          continue;
+        }
 
-          // This variation uses JUnit exception validation: we configure the expected
-          // exception, then throw the exception from the run.
-          // If the expected exception is not configured here, then the test may
-          // have done it outside of the test builder.
-          if (builder.queryCannotVectorize && "force".equals(queryResults.vectorizeOption)) {
-            expectedException.expect(RuntimeException.class);
-            expectedException.expectMessage("Cannot vectorize");
-          } else if (builder.expectedExceptionInitializer != null) {
-            builder.expectedExceptionInitializer.accept(expectedException);
-          }
-          throw queryResults.exception;
+        // This variation uses JUnit exception validation: we configure the expected
+        // exception, then throw the exception from the run.
+        // If the expected exception is not configured here, then the test may
+        // have done it outside of the test builder.
+        if (builder.queryCannotVectorize && "force".equals(queryResults.vectorizeOption)) {
+          expectedException.expect(RuntimeException.class);
+          expectedException.expectMessage("Cannot vectorize");
+        } else if (builder.expectedExceptionInitializer != null) {
+          builder.expectedExceptionInitializer.accept(expectedException);
         }
-        if (builder.expectedExceptionInitializer != null) {
-          throw new ISE("Expected query to throw an exception, but none was thrown.");
-        }
-      });
-      assertTrue(exception.getMessage().contains("Cannot vectorize"));
+        throw queryResults.exception;
+      }
+      if (builder.expectedExceptionInitializer != null) {
+        throw new ISE("Expected query to throw an exception, but none was thrown.");
+      }
     }
   }
 
@@ -639,7 +632,7 @@ public class QueryTestRunner
   {
     QueryTestConfig config = builder.config;
     if (config.isRunningMSQ()) {
-      Assumptions.assumeTrue(builder.msqCompatible);
+      Assume.assumeTrue(builder.msqCompatible);
     }
     if (builder.expectedResultsVerifier == null && builder.expectedResults != null) {
       builder.expectedResultsVerifier = config.defaultResultsVerifier(

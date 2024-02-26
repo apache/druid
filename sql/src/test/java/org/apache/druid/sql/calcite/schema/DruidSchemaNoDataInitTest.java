@@ -36,18 +36,17 @@ import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.TestTimelineServerView;
 import org.easymock.EasyMock;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Test;
 
 import java.util.Collections;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-class DruidSchemaNoDataInitTest extends CalciteTestBase
+public class DruidSchemaNoDataInitTest extends CalciteTestBase
 {
   private static final BrokerSegmentMetadataCacheConfig SEGMENT_CACHE_CONFIG_DEFAULT = BrokerSegmentMetadataCacheConfig.create();
 
   @Test
-  void initializationWithNoData() throws Exception
+  public void testInitializationWithNoData() throws Exception
   {
     try (final Closer closer = Closer.create()) {
       final QueryRunnerFactoryConglomerate conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(closer);
@@ -71,7 +70,7 @@ class DruidSchemaNoDataInitTest extends CalciteTestBase
       cache.awaitInitialization();
       final DruidSchema druidSchema = new DruidSchema(cache, null, CatalogResolver.NULL_RESOLVER);
 
-      assertEquals(ImmutableSet.of(), druidSchema.getTableNames());
+      Assert.assertEquals(ImmutableSet.of(), druidSchema.getTableNames());
     }
   }
 }

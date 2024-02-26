@@ -31,21 +31,20 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.sql.calcite.expression.builtin.ConcatOperatorConversion;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Test;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-class FilterDecomposeConcatRuleTest extends InitializedNullHandlingTest
+public class FilterDecomposeConcatRuleTest extends InitializedNullHandlingTest
 {
   private final RelDataTypeFactory typeFactory = DruidTypeSystem.TYPE_FACTORY;
   private final RexBuilder rexBuilder = new RexBuilder(typeFactory);
   private final RexShuttle shuttle = new FilterDecomposeConcatRule.DecomposeConcatShuttle(rexBuilder);
 
   @Test
-  void not_concat()
+  public void test_notConcat()
   {
     final RexNode call =
         equals(
@@ -53,58 +52,58 @@ class FilterDecomposeConcatRuleTest extends InitializedNullHandlingTest
             literal("2")
         );
 
-    assertEquals(call, shuttle.apply(call));
+    Assert.assertEquals(call, shuttle.apply(call));
   }
 
   @Test
-  void one_input()
+  public void test_oneInput()
   {
     final RexNode concatCall =
         concat(literal("it's "), inputRef(0));
 
-    assertEquals(
+    Assert.assertEquals(
         and(equals(inputRef(0), literal("2"))),
         shuttle.apply(equals(concatCall, literal("it's 2")))
     );
   }
 
   @Test
-  void one_input_lhs_literal()
+  public void test_oneInput_lhsLiteral()
   {
     final RexNode concatCall =
         concat(literal("it's "), inputRef(0));
 
-    assertEquals(
+    Assert.assertEquals(
         and(equals(inputRef(0), literal("2"))),
         shuttle.apply(equals(literal("it's 2"), concatCall))
     );
   }
 
   @Test
-  void one_input_no_literal()
+  public void test_oneInput_noLiteral()
   {
     final RexNode concatCall = concat(inputRef(0));
 
-    assertEquals(
+    Assert.assertEquals(
         and(equals(inputRef(0), literal("it's 2"))),
         shuttle.apply(equals(literal("it's 2"), concatCall))
     );
   }
 
   @Test
-  void two_inputs()
+  public void test_twoInputs()
   {
     final RexNode concatCall =
         concat(inputRef(0), literal("x"), inputRef(1));
 
-    assertEquals(
+    Assert.assertEquals(
         and(equals(inputRef(0), literal("2")), equals(inputRef(1), literal("3"))),
         shuttle.apply(equals(concatCall, literal("2x3")))
     );
   }
 
   @Test
-  void two_inputs_cast_number_input_ref()
+  public void test_twoInputs_castNumberInputRef()
   {
     // CAST(x AS VARCHAR) when x is BIGINT
     final RexNode numericInputRef = rexBuilder.makeCast(
@@ -118,7 +117,7 @@ class FilterDecomposeConcatRuleTest extends InitializedNullHandlingTest
     final RexNode concatCall =
         concat(numericInputRef, literal("x"), inputRef(1));
 
-    assertEquals(
+    Assert.assertEquals(
         and(
             equals(
                 numericInputRef,
@@ -134,7 +133,7 @@ class FilterDecomposeConcatRuleTest extends InitializedNullHandlingTest
   }
 
   @Test
-  void two_inputs_not_equals()
+  public void test_twoInputs_notEquals()
   {
     final RexNode call =
         notEquals(
@@ -142,7 +141,7 @@ class FilterDecomposeConcatRuleTest extends InitializedNullHandlingTest
             literal("2x3")
         );
 
-    assertEquals(
+    Assert.assertEquals(
         rexBuilder.makeCall(
             SqlStdOperatorTable.NOT,
             and(equals(inputRef(0), literal("2")), equals(inputRef(1), literal("3")))
@@ -152,7 +151,7 @@ class FilterDecomposeConcatRuleTest extends InitializedNullHandlingTest
   }
 
   @Test
-  void two_inputs_cast_number_literal()
+  public void test_twoInputs_castNumberLiteral()
   {
     final RexNode three = rexBuilder.makeCast(
         typeFactory.createSqlType(SqlTypeName.VARCHAR),
@@ -162,26 +161,26 @@ class FilterDecomposeConcatRuleTest extends InitializedNullHandlingTest
     final RexNode concatCall =
         concat(inputRef(0), three, inputRef(1), literal("4"));
 
-    assertEquals(
+    Assert.assertEquals(
         and(equals(inputRef(0), literal("x")), equals(inputRef(1), literal("y"))),
         shuttle.apply(equals(concatCall, literal("x3y4")))
     );
   }
 
   @Test
-  void two_inputs_no_literal()
+  public void test_twoInputs_noLiteral()
   {
     final RexNode call = equals(concat(inputRef(0), inputRef(1)), literal("2x3"));
-    assertEquals(call, shuttle.apply(call));
+    Assert.assertEquals(call, shuttle.apply(call));
   }
 
   @Test
-  void two_inputs_is_null()
+  public void test_twoInputs_isNull()
   {
     final RexNode call =
         isNull(concat(inputRef(0), literal("x"), inputRef(1)));
 
-    assertEquals(
+    Assert.assertEquals(
         NullHandling.sqlCompatible()
         ? or(isNull(inputRef(0)), isNull(inputRef(1)))
         : rexBuilder.makeLiteral(false),
@@ -190,12 +189,12 @@ class FilterDecomposeConcatRuleTest extends InitializedNullHandlingTest
   }
 
   @Test
-  void two_inputs_is_not_null()
+  public void test_twoInputs_isNotNull()
   {
     final RexNode call =
         notNull(concat(inputRef(0), literal("x"), inputRef(1)));
 
-    assertEquals(
+    Assert.assertEquals(
         rexBuilder.makeCall(
             SqlStdOperatorTable.NOT,
             NullHandling.sqlCompatible()
@@ -207,7 +206,7 @@ class FilterDecomposeConcatRuleTest extends InitializedNullHandlingTest
   }
 
   @Test
-  void two_inputs_too_many_xes()
+  public void test_twoInputs_tooManyXes()
   {
     final RexNode call =
         equals(
@@ -215,11 +214,11 @@ class FilterDecomposeConcatRuleTest extends InitializedNullHandlingTest
             literal("2xx3") // ambiguous match
         );
 
-    assertEquals(call, shuttle.apply(call));
+    Assert.assertEquals(call, shuttle.apply(call));
   }
 
   @Test
-  void two_inputs_not_enough_xes()
+  public void test_twoInputs_notEnoughXes()
   {
     final RexNode call =
         equals(
@@ -228,7 +227,7 @@ class FilterDecomposeConcatRuleTest extends InitializedNullHandlingTest
         );
 
     final RexLiteral unknown = rexBuilder.makeNullLiteral(typeFactory.createSqlType(SqlTypeName.BOOLEAN));
-    assertEquals(
+    Assert.assertEquals(
         NullHandling.sqlCompatible()
         ? or(
             and(isNull(inputRef(0)), unknown),
@@ -240,7 +239,7 @@ class FilterDecomposeConcatRuleTest extends InitializedNullHandlingTest
   }
 
   @Test
-  void two_inputs_delimiters_wrong_order()
+  public void test_twoInputs_delimitersWrongOrder()
   {
     final RexNode call =
         equals(
@@ -249,7 +248,7 @@ class FilterDecomposeConcatRuleTest extends InitializedNullHandlingTest
         );
 
     final RexLiteral unknown = rexBuilder.makeNullLiteral(typeFactory.createSqlType(SqlTypeName.BOOLEAN));
-    assertEquals(
+    Assert.assertEquals(
         NullHandling.sqlCompatible()
         ? or(
             and(isNull(inputRef(0)), unknown),
@@ -261,7 +260,7 @@ class FilterDecomposeConcatRuleTest extends InitializedNullHandlingTest
   }
 
   @Test
-  void two_inputs_empty_delimiter()
+  public void test_twoInputs_emptyDelimiter()
   {
     final RexNode call =
         equals(
@@ -269,11 +268,11 @@ class FilterDecomposeConcatRuleTest extends InitializedNullHandlingTest
             literal("23") // must be recognized as ambiguous
         );
 
-    assertEquals(call, shuttle.apply(call));
+    Assert.assertEquals(call, shuttle.apply(call));
   }
 
   @Test
-  void two_inputs_ambiguous_overlapping_deliminters()
+  public void test_twoInputs_ambiguousOverlappingDeliminters()
   {
     final RexNode call =
         equals(
@@ -281,11 +280,11 @@ class FilterDecomposeConcatRuleTest extends InitializedNullHandlingTest
             literal("2---3") // must be recognized as ambiguous
         );
 
-    assertEquals(call, shuttle.apply(call));
+    Assert.assertEquals(call, shuttle.apply(call));
   }
 
   @Test
-  void two_inputs_impossible_overlapping_delimiters()
+  public void test_twoInputs_impossibleOverlappingDelimiters()
   {
     final RexNode call =
         equals(
@@ -294,7 +293,7 @@ class FilterDecomposeConcatRuleTest extends InitializedNullHandlingTest
         );
 
     final RexLiteral unknown = rexBuilder.makeNullLiteral(typeFactory.createSqlType(SqlTypeName.BOOLEAN));
-    assertEquals(
+    Assert.assertEquals(
         NullHandling.sqlCompatible()
         ? or(
             and(isNull(inputRef(0)), unknown),
@@ -306,7 +305,7 @@ class FilterDecomposeConcatRuleTest extends InitializedNullHandlingTest
   }
 
   @Test
-  void three_inputs_delimiters_ignored_when_out_of_position()
+  public void test_threeInputs_delimitersIgnoredWhenOutOfPosition()
   {
     final RexNode call =
         equals(
@@ -314,7 +313,7 @@ class FilterDecomposeConcatRuleTest extends InitializedNullHandlingTest
             literal("xxx (4x5)") // unambiguous, because 'x' before ' (' can be ignored
         );
 
-    assertEquals(
+    Assert.assertEquals(
         and(
             equals(inputRef(0), literal("xxx")),
             equals(inputRef(1), literal("4")),
@@ -325,12 +324,12 @@ class FilterDecomposeConcatRuleTest extends InitializedNullHandlingTest
   }
 
   @Test
-  void two_inputs_back_to_back_literals()
+  public void test_twoInputs_backToBackLiterals()
   {
     final RexNode concatCall =
         concat(inputRef(0), literal("x"), literal("y"), inputRef(1));
 
-    assertEquals(
+    Assert.assertEquals(
         and(equals(inputRef(0), literal("2")), equals(inputRef(1), literal("3"))),
         shuttle.apply(equals(concatCall, literal("2xy3")))
     );

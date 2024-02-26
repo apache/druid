@@ -31,17 +31,14 @@ import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.easymock.EasyMock;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.Optional;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-class PhysicalDataSourceMetadataFactoryTest
+public class PhysicalDataSourceMetadataFactoryTest
 {
   private Set<String> segmentDataSourceNames;
   private Set<String> joinableDataSourceNames;
@@ -50,8 +47,8 @@ class PhysicalDataSourceMetadataFactoryTest
 
   private PhysicalDatasourceMetadataFactory datasourceMetadataFactory;
 
-  @BeforeEach
-  void setUp()
+  @Before
+  public void setUp()
   {
     segmentDataSourceNames = Sets.newConcurrentHashSet();
     joinableDataSourceNames = Sets.newConcurrentHashSet();
@@ -87,7 +84,7 @@ class PhysicalDataSourceMetadataFactoryTest
   }
 
   @Test
-  void build()
+  public void testBuild()
   {
     segmentDataSourceNames.add("foo");
     joinableDataSourceNames.add("foo");
@@ -105,15 +102,15 @@ class PhysicalDataSourceMetadataFactoryTest
                     .build();
 
     DatasourceTable.PhysicalDatasourceMetadata fooDs = datasourceMetadataFactory.build("foo", fooSignature);
-    assertTrue(fooDs.isJoinable());
-    assertTrue(fooDs.isBroadcast());
-    assertEquals("foo", fooDs.dataSource().getName());
-    assertEquals(fooDs.getRowSignature(), fooSignature);
+    Assert.assertTrue(fooDs.isJoinable());
+    Assert.assertTrue(fooDs.isBroadcast());
+    Assert.assertEquals(fooDs.dataSource().getName(), "foo");
+    Assert.assertEquals(fooDs.getRowSignature(), fooSignature);
 
     DatasourceTable.PhysicalDatasourceMetadata barDs = datasourceMetadataFactory.build("bar", barSignature);
-    assertFalse(barDs.isJoinable());
-    assertFalse(barDs.isBroadcast());
-    assertEquals("bar", barDs.dataSource().getName());
-    assertEquals(barDs.getRowSignature(), barSignature);
+    Assert.assertFalse(barDs.isJoinable());
+    Assert.assertFalse(barDs.isBroadcast());
+    Assert.assertEquals(barDs.dataSource().getName(), "bar");
+    Assert.assertEquals(barDs.getRowSignature(), barSignature);
   }
 }

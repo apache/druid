@@ -45,7 +45,7 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.http.SqlParameter;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.io.File;
 import java.net.URI;
@@ -63,7 +63,7 @@ import java.util.Collections;
  * query ensure that the resulting MSQ task is identical regardless of the path
  * taken.
  */
-class IngestTableFunctionTest extends CalciteIngestionDmlTest
+public class IngestTableFunctionTest extends CalciteIngestionDmlTest
 {
   protected static URI toURI(String uri)
   {
@@ -95,7 +95,7 @@ class IngestTableFunctionTest extends CalciteIngestionDmlTest
    * Basic use of EXTERN
    */
   @Test
-  void httpExtern()
+  public void testHttpExtern()
   {
     testIngestionQuery()
         .sql("INSERT INTO dst SELECT * FROM %s PARTITIONED BY ALL TIME", externSql(httpDataSource))
@@ -118,7 +118,7 @@ class IngestTableFunctionTest extends CalciteIngestionDmlTest
    * Http function
    */
   @Test
-  void httpFunction()
+  public void testHttpFunction()
   {
     String extern = "TABLE(http("
              + "userName => 'bob',"
@@ -147,7 +147,7 @@ class IngestTableFunctionTest extends CalciteIngestionDmlTest
    * Http function
    */
   @Test
-  void httpFunctionWithInputsourceSecurity()
+  public void testHttpFunctionWithInputsourceSecurity()
   {
     String extern = "TABLE(http("
                     + "userName => 'bob',"
@@ -196,7 +196,7 @@ class IngestTableFunctionTest extends CalciteIngestionDmlTest
    * to the basic EXTERN.
    */
   @Test
-  void httpExternByName()
+  public void testHttpExternByName()
   {
     testIngestionQuery()
         .sql("INSERT INTO dst SELECT *\nFROM %s\nPARTITIONED BY ALL TIME", externSqlByName(httpDataSource))
@@ -220,7 +220,7 @@ class IngestTableFunctionTest extends CalciteIngestionDmlTest
    * to the basic EXTERN.
    */
   @Test
-  void httpFn()
+  public void testHttpFn()
   {
     testIngestionQuery()
         .sql("INSERT INTO dst SELECT x, y, z\n" +
@@ -246,7 +246,7 @@ class IngestTableFunctionTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void httpFn2()
+  public void testHttpFn2()
   {
     final ExternalDataSource httpDataSource = new ExternalDataSource(
         new HttpInputSource(
@@ -294,7 +294,7 @@ class IngestTableFunctionTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void explainHttpFn()
+  public void testExplainHttpFn()
   {
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();
@@ -337,7 +337,7 @@ class IngestTableFunctionTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void explainHttpFnUnauthorized()
+  public void testExplainHttpFnUnauthorized()
   {
     final String query =
         "EXPLAIN PLAN FOR\n" +
@@ -362,7 +362,7 @@ class IngestTableFunctionTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void httpFnWithParameters()
+  public void testHttpFnWithParameters()
   {
     testIngestionQuery()
         .sql("INSERT INTO dst SELECT *\n" +
@@ -389,7 +389,7 @@ class IngestTableFunctionTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  void httpJson()
+  public void testHttpJson()
   {
     final ExternalDataSource httpDataSource = new ExternalDataSource(
         new HttpInputSource(
@@ -436,7 +436,7 @@ class IngestTableFunctionTest extends CalciteIngestionDmlTest
    * Basic use of an inline input source via EXTERN
    */
   @Test
-  void inlineExtern()
+  public void testInlineExtern()
   {
     testIngestionQuery()
         .sql("INSERT INTO dst SELECT * FROM %s PARTITIONED BY ALL TIME", externSql(externalDataSource))
@@ -499,7 +499,7 @@ class IngestTableFunctionTest extends CalciteIngestionDmlTest
    * Use an inline input source with EXTERN and EXTEND
    */
   @Test
-  void inlineExternWithExtend()
+  public void testInlineExternWithExtend()
   {
     testIngestionQuery()
         .sql("INSERT INTO dst SELECT *\n" +
@@ -528,7 +528,7 @@ class IngestTableFunctionTest extends CalciteIngestionDmlTest
    * to the basic EXTERN.
    */
   @Test
-  void inlineFn()
+  public void testInlineFn()
   {
     testIngestionQuery()
         .sql("INSERT INTO dst SELECT *\n" +
@@ -570,7 +570,7 @@ class IngestTableFunctionTest extends CalciteIngestionDmlTest
    * Basic use of LOCALFILES
    */
   @Test
-  void localExtern()
+  public void testLocalExtern()
   {
     testIngestionQuery()
         .sql("INSERT INTO dst SELECT * FROM %s PARTITIONED BY ALL TIME", externSql(localDataSource))
@@ -594,7 +594,7 @@ class IngestTableFunctionTest extends CalciteIngestionDmlTest
    * to the basic EXTERN.
    */
   @Test
-  void localFilesFn()
+  public void testLocalFilesFn()
   {
     testIngestionQuery()
         .sql("INSERT INTO dst SELECT *\n" +
@@ -622,7 +622,7 @@ class IngestTableFunctionTest extends CalciteIngestionDmlTest
    * Logical plan and native query are identical to the basic EXTERN.
    */
   @Test
-  void localFnOmitExtend()
+  public void testLocalFnOmitExtend()
   {
     testIngestionQuery()
         .sql("INSERT INTO dst SELECT *\n" +
@@ -649,7 +649,7 @@ class IngestTableFunctionTest extends CalciteIngestionDmlTest
    * Local with a table alias an explicit column references.
    */
   @Test
-  void localFnWithAlias()
+  public void testLocalFnWithAlias()
   {
     testIngestionQuery()
         .sql("INSERT INTO dst\n" +
@@ -679,7 +679,7 @@ class IngestTableFunctionTest extends CalciteIngestionDmlTest
    * Local with NOT NULL on columns, which is ignored.
    */
   @Test
-  void localFnNotNull()
+  public void testLocalFnNotNull()
   {
     testIngestionQuery()
         .sql("INSERT INTO dst\n" +

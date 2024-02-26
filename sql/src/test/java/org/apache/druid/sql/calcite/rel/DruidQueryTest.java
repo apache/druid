@@ -38,13 +38,12 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.ExpressionParserImpl;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.joda.time.Interval;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Test;
 
 import java.util.Collections;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-class DruidQueryTest
+public class DruidQueryTest
 {
 
   static {
@@ -59,7 +58,7 @@ class DruidQueryTest
   );
 
   @Test
-  void filtration_no_join_and_interval()
+  public void test_filtration_noJoinAndInterval()
   {
     DataSource dataSource = new TableDataSource("test");
 
@@ -77,7 +76,7 @@ class DruidQueryTest
   }
 
   @Test
-  void filtration_interval_in_query_filter()
+  public void test_filtration_intervalInQueryFilter()
   {
     DataSource dataSource = new TableDataSource("test");
     Pair<DataSource, Filtration> pair = DruidQuery.getFiltration(
@@ -94,7 +93,7 @@ class DruidQueryTest
   }
 
   @Test
-  void filtration_join_data_source_interval_in_query_filter()
+  public void test_filtration_joinDataSource_intervalInQueryFilter()
   {
     DataSource dataSource = join(JoinType.INNER, otherFilter);
     Pair<DataSource, Filtration> pair = DruidQuery.getFiltration(
@@ -111,7 +110,7 @@ class DruidQueryTest
   }
 
   @Test
-  void filtration_join_data_source_interval_in_base_table_filter_inner()
+  public void test_filtration_joinDataSource_intervalInBaseTableFilter_inner()
   {
     DataSource dataSource = join(JoinType.INNER, filterWithInterval);
     DataSource expectedDataSource = join(JoinType.INNER, selectorFilter);
@@ -129,7 +128,7 @@ class DruidQueryTest
   }
 
   @Test
-  void filtration_join_data_source_interval_in_base_table_filter_left()
+  public void test_filtration_joinDataSource_intervalInBaseTableFilter_left()
   {
     DataSource dataSource = join(JoinType.LEFT, filterWithInterval);
     DataSource expectedDataSource = join(JoinType.LEFT, selectorFilter);
@@ -147,7 +146,7 @@ class DruidQueryTest
   }
 
   @Test
-  void filtration_join_data_source_interval_in_base_table_filter_right()
+  public void test_filtration_joinDataSource_intervalInBaseTableFilter_right()
   {
     DataSource dataSource = join(JoinType.RIGHT, filterWithInterval);
     DataSource expectedDataSource = join(JoinType.RIGHT, selectorFilter);
@@ -165,7 +164,7 @@ class DruidQueryTest
   }
 
   @Test
-  void filtration_join_data_source_interval_in_base_table_filter_full()
+  public void test_filtration_joinDataSource_intervalInBaseTableFilter_full()
   {
     DataSource dataSource = join(JoinType.FULL, filterWithInterval);
     DataSource expectedDataSource = join(JoinType.FULL, selectorFilter);
@@ -183,7 +182,7 @@ class DruidQueryTest
   }
 
   @Test
-  void filtration_intervals_in_both_filters()
+  public void test_filtration_intervalsInBothFilters()
   {
     DataSource dataSource = join(JoinType.INNER, filterWithInterval);
     DataSource expectedDataSource = join(JoinType.INNER, selectorFilter);
@@ -226,8 +225,8 @@ class DruidQueryTest
       Interval interval
   )
   {
-    assertEquals(dataSource, pair.lhs);
-    assertEquals(columnFilter, pair.rhs.getDimFilter(), "dim-filter: " + pair.rhs.getDimFilter());
-    assertEquals(Collections.singletonList(interval), pair.rhs.getIntervals());
+    Assert.assertEquals(dataSource, pair.lhs);
+    Assert.assertEquals("dim-filter: " + pair.rhs.getDimFilter(), columnFilter, pair.rhs.getDimFilter());
+    Assert.assertEquals(Collections.singletonList(interval), pair.rhs.getIntervals());
   }
 }

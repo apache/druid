@@ -29,8 +29,8 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.builtin.LeastOperatorConversion;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
@@ -38,7 +38,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-class LeastExpressionTest extends CalciteTestBase
+public class LeastExpressionTest extends CalciteTestBase
 {
   private static final String DOUBLE_KEY = "d";
   private static final double DOUBLE_VALUE = 3.1;
@@ -61,15 +61,15 @@ class LeastExpressionTest extends CalciteTestBase
   private LeastOperatorConversion target;
   private ExpressionTestHelper testHelper;
 
-  @BeforeEach
-  void setUp()
+  @Before
+  public void setUp()
   {
     target = new LeastOperatorConversion();
     testHelper = new ExpressionTestHelper(ROW_SIGNATURE, BINDINGS);
   }
 
   @Test
-  void noArgs()
+  public void testNoArgs()
   {
     testExpression(
         Collections.emptyList(),
@@ -79,7 +79,7 @@ class LeastExpressionTest extends CalciteTestBase
   }
 
   @Test
-  void allNull()
+  public void testAllNull()
   {
     testExpression(
         Arrays.asList(
@@ -92,7 +92,7 @@ class LeastExpressionTest extends CalciteTestBase
   }
 
   @Test
-  void someNull()
+  public void testSomeNull()
   {
     testExpression(
         Arrays.asList(
@@ -110,7 +110,7 @@ class LeastExpressionTest extends CalciteTestBase
   }
 
   @Test
-  void allDouble()
+  public void testAllDouble()
   {
     testExpression(
         Arrays.asList(
@@ -130,7 +130,7 @@ class LeastExpressionTest extends CalciteTestBase
   }
 
   @Test
-  void allLong()
+  public void testAllLong()
   {
     testExpression(
         Arrays.asList(
@@ -146,7 +146,7 @@ class LeastExpressionTest extends CalciteTestBase
   }
 
   @Test
-  void allString()
+  public void testAllString()
   {
     testExpression(
         Arrays.asList(
@@ -164,7 +164,7 @@ class LeastExpressionTest extends CalciteTestBase
   }
 
   @Test
-  void coerceString()
+  public void testCoerceString()
   {
     testExpression(
         Arrays.asList(
@@ -182,7 +182,7 @@ class LeastExpressionTest extends CalciteTestBase
   }
 
   @Test
-  void coerceDouble()
+  public void testCoerceDouble()
   {
     testExpression(
         Arrays.asList(
@@ -198,7 +198,7 @@ class LeastExpressionTest extends CalciteTestBase
   }
 
   @Test
-  void decimal()
+  public void testDecimal()
   {
     testExpression(
         Arrays.asList(
@@ -214,7 +214,7 @@ class LeastExpressionTest extends CalciteTestBase
   }
 
   @Test
-  void decimalWithNullShouldReturnString()
+  public void testDecimalWithNullShouldReturnString()
   {
     testExpression(
         Arrays.asList(
@@ -232,7 +232,7 @@ class LeastExpressionTest extends CalciteTestBase
   }
 
   @Test
-  void timestamp()
+  public void testTimestamp()
   {
     testExpression(
         Arrays.asList(
@@ -248,7 +248,7 @@ class LeastExpressionTest extends CalciteTestBase
   }
 
   @Test
-  void intervalYearMonth()
+  public void testIntervalYearMonth()
   {
     testExpression(
         Collections.singletonList(

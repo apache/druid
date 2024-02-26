@@ -32,21 +32,19 @@ import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.ISODateTimeFormat;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-class SqlRowTransformerTest extends CalciteTestBase
+public class SqlRowTransformerTest extends CalciteTestBase
 {
   private RelDataType rowType;
 
-  @BeforeEach
-  void setup()
+  @Before
+  public void setup()
   {
     final RelDataTypeFactory typeFactory = new SqlTypeFactoryImpl(DruidTypeSystem.INSTANCE);
     rowType = typeFactory.createStructType(
@@ -66,7 +64,7 @@ class SqlRowTransformerTest extends CalciteTestBase
   }
 
   @Test
-  void transformUTC()
+  public void testTransformUTC()
   {
     SqlRowTransformer transformer = new SqlRowTransformer(
         DateTimeZone.UTC,
@@ -86,14 +84,14 @@ class SqlRowTransformerTest extends CalciteTestBase
         expectedRow[2],
         null
     };
-    assertArrayEquals(
+    Assert.assertArrayEquals(
         expectedRow,
         IntStream.range(0, expectedRow.length).mapToObj(i -> transformer.transform(row, i)).toArray()
     );
   }
 
   @Test
-  void transformNonUTC()
+  public void testTransformNonUTC()
   {
     DateTimeZone timeZone = DateTimes.inferTzFromString("Asia/Seoul");
     SqlRowTransformer transformer = new SqlRowTransformer(
@@ -114,21 +112,21 @@ class SqlRowTransformerTest extends CalciteTestBase
         expectedRow[2],
         null
     };
-    assertArrayEquals(
+    Assert.assertArrayEquals(
         expectedRow,
         IntStream.range(0, expectedRow.length).mapToObj(i -> transformer.transform(row, i)).toArray()
     );
   }
 
   @Test
-  void getFieldList()
+  public void testGetFieldList()
   {
     SqlRowTransformer transformer = new SqlRowTransformer(
         DateTimeZone.UTC,
         rowType
     );
 
-    assertEquals(
+    Assert.assertEquals(
         rowType.getFieldList().stream().map(RelDataTypeField::getName).collect(Collectors.toList()),
         transformer.getFieldList()
     );

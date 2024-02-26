@@ -65,6 +65,7 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+import org.junit.Assert;
 
 import javax.annotation.Nullable;
 import java.math.BigDecimal;
@@ -75,9 +76,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class ExpressionTestHelper
 {
@@ -330,18 +328,18 @@ public class ExpressionTestHelper
   )
   {
     DruidExpression expression = Expressions.toDruidExpression(PLANNER_CONTEXT, rowSignature, rexNode);
-    assertNotNull(expression);
+    Assert.assertNotNull(expression);
     if (deepCompare) {
-      assertEquals(expectedExpression, expression, "Expression for: " + rexNode);
+      Assert.assertEquals("Expression for: " + rexNode, expectedExpression, expression);
     } else {
-      assertEquals(expectedExpression.getExpression(), expression.getExpression(), "Expression for: " + rexNode);
+      Assert.assertEquals("Expression for: " + rexNode, expectedExpression.getExpression(), expression.getExpression());
     }
 
     ExprEval<?> result = PLANNER_CONTEXT.parseExpression(expression.getExpression())
                                         
                                         .eval(expressionBindings);
 
-    assertEquals(expectedResult, result.value(), "Result for: " + rexNode);
+    Assert.assertEquals("Result for: " + rexNode, expectedResult, result.value());
   }
 
   void testFilter(
@@ -360,7 +358,7 @@ public class ExpressionTestHelper
     );
 
     final DimFilter filter = Expressions.toFilter(PLANNER_CONTEXT, rowSignature, virtualColumnRegistry, rexNode);
-    assertEquals(expectedFilter, filter, "Filter for: " + rexNode);
+    Assert.assertEquals("Filter for: " + rexNode, expectedFilter, filter);
 
     final List<VirtualColumn> virtualColumns =
         filter.getRequiredColumns()
@@ -370,12 +368,12 @@ public class ExpressionTestHelper
               .sorted(Comparator.comparing(VirtualColumn::getOutputName))
               .collect(Collectors.toList());
 
-    assertEquals(
+    Assert.assertEquals(
+        "Virtual columns for: " + rexNode,
         expectedVirtualColumns.stream()
                               .sorted(Comparator.comparing(VirtualColumn::getOutputName))
                               .collect(Collectors.toList()),
-        virtualColumns,
-        "Virtual columns for: " + rexNode
+        virtualColumns
     );
 
     final ValueMatcher matcher = expectedFilter.toFilter().makeMatcher(
@@ -391,6 +389,6 @@ public class ExpressionTestHelper
         )
     );
 
-    assertEquals(expectedResult, matcher.matches(false), "Result for: " + rexNode);
+    Assert.assertEquals("Result for: " + rexNode, expectedResult, matcher.matches(false));
   }
 }

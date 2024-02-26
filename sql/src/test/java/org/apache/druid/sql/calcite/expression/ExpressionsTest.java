@@ -68,17 +68,15 @@ import org.apache.druid.sql.calcite.expression.builtin.TruncateOperatorConversio
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.joda.time.Period;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
-class ExpressionsTest extends CalciteTestBase
+public class ExpressionsTest extends CalciteTestBase
 {
   private static final RowSignature ROW_SIGNATURE = RowSignature
       .builder()
@@ -134,8 +132,8 @@ class ExpressionsTest extends CalciteTestBase
 
   final DruidOperatorTable operatorTable = new DruidOperatorTable(Collections.emptySet(), Collections.emptySet());
 
-  @BeforeEach
-  void setUp()
+  @Before
+  public void setUp()
   {
     testHelper = new ExpressionTestHelper(ROW_SIGNATURE, BINDINGS);
   }
@@ -146,7 +144,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void concat()
+  public void testConcat()
   {
     testHelper.testExpression(
         SqlTypeName.VARCHAR,
@@ -168,7 +166,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void characterLength()
+  public void testCharacterLength()
   {
     testHelper.testExpression(
         SqlStdOperatorTable.CHARACTER_LENGTH,
@@ -185,7 +183,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void substring()
+  public void testSubstring()
   {
     testHelper.testExpressionString(
         new SubstringOperatorConversion().calciteOperator(),
@@ -275,7 +273,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void regexpExtract()
+  public void testRegexpExtract()
   {
     testHelper.testExpressionString(
         new RegexpExtractOperatorConversion().calciteOperator(),
@@ -406,7 +404,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void regexpReplace()
+  public void testRegexpReplace()
   {
     testHelper.testExpressionString(
         new RegexpReplaceOperatorConversion().calciteOperator(),
@@ -458,7 +456,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void regexpLike()
+  public void testRegexpLike()
   {
     testHelper.testExpressionString(
         new RegexpLikeOperatorConversion().calciteOperator(),
@@ -610,7 +608,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void regexpLikeAsFilter()
+  public void testRegexpLikeAsFilter()
   {
     testHelper.testFilter(
         new RegexpLikeOperatorConversion().calciteOperator(),
@@ -703,7 +701,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void stringFormat()
+  public void testStringFormat()
   {
     testHelper.testExpressionString(
         new StringFormatOperatorConversion().calciteOperator(),
@@ -762,7 +760,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void strpos()
+  public void testStrpos()
   {
     testHelper.testExpressionString(
         new StrposOperatorConversion().calciteOperator(),
@@ -796,7 +794,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void parseLong()
+  public void testParseLong()
   {
     testHelper.testExpression(
         new ParseLongOperatorConversion().calciteOperator(),
@@ -871,7 +869,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void position()
+  public void testPosition()
   {
     testHelper.testExpressionString(
         SqlStdOperatorTable.POSITION,
@@ -907,7 +905,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void power()
+  public void testPower()
   {
     testHelper.testExpressionString(
         SqlStdOperatorTable.POWER,
@@ -921,7 +919,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void floor()
+  public void testFloor()
   {
     testHelper.testExpression(
         SqlStdOperatorTable.FLOOR,
@@ -977,7 +975,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void ceil()
+  public void testCeil()
   {
     testHelper.testExpression(
         SqlStdOperatorTable.CEIL,
@@ -1033,7 +1031,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void truncate()
+  public void testTruncate()
   {
     final SqlFunction truncateFunction = new TruncateOperatorConversion().calciteOperator();
 
@@ -1159,7 +1157,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void round()
+  public void testRound()
   {
     final SqlOperator roundFunction = getOperatorConversion(SqlStdOperatorTable.ROUND).calciteOperator();
 
@@ -1264,13 +1262,13 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void roundWithInvalidArgument()
+  public void testRoundWithInvalidArgument()
   {
 
     final SqlOperator roundFunction = getOperatorConversion(SqlStdOperatorTable.ROUND).calciteOperator();
 
     if (!NullHandling.sqlCompatible()) {
-      Throwable t = assertThrows(
+      Throwable t = Assert.assertThrows(
           DruidException.class,
           () -> testHelper.testExpression(
               roundFunction,
@@ -1285,7 +1283,7 @@ class ExpressionsTest extends CalciteTestBase
               NullHandling.sqlCompatible() ? null : "IAE Exception"
           )
       );
-      assertEquals(
+      Assert.assertEquals(
           "Function[round] first argument should be a LONG or DOUBLE but got STRING instead",
           t.getMessage()
       );
@@ -1293,11 +1291,11 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void roundWithInvalidSecondArgument()
+  public void testRoundWithInvalidSecondArgument()
   {
     final SqlOperator roundFunction = getOperatorConversion(SqlStdOperatorTable.ROUND).calciteOperator();
 
-    Throwable t = assertThrows(
+    Throwable t = Assert.assertThrows(
         DruidException.class,
         () -> testHelper.testExpressionString(
             roundFunction,
@@ -1316,11 +1314,11 @@ class ExpressionsTest extends CalciteTestBase
             "IAE Exception"
         )
     );
-    assertEquals("Function[round] second argument should be a LONG but got STRING instead", t.getMessage());
+    Assert.assertEquals("Function[round] second argument should be a LONG but got STRING instead", t.getMessage());
   }
 
   @Test
-  void roundWithNanShouldRoundTo0()
+  public void testRoundWithNanShouldRoundTo0()
   {
     final SqlOperator roundFunction = getOperatorConversion(SqlStdOperatorTable.ROUND).calciteOperator();
 
@@ -1351,7 +1349,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void roundWithInfinityShouldRoundTo0()
+  public void testRoundWithInfinityShouldRoundTo0()
   {
     final SqlOperator roundFunction = getOperatorConversion(SqlStdOperatorTable.ROUND).calciteOperator();
 
@@ -1408,7 +1406,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void dateTrunc()
+  public void testDateTrunc()
   {
     testHelper.testExpressionString(
         new DateTruncOperatorConversion().calciteOperator(),
@@ -1432,7 +1430,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void trim()
+  public void testTrim()
   {
     testHelper.testExpressionString(
         SqlStdOperatorTable.TRIM,
@@ -1469,7 +1467,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void pad()
+  public void testPad()
   {
     testHelper.testExpressionString(
         new LPadOperatorConversion().calciteOperator(),
@@ -1495,7 +1493,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void contains()
+  public void testContains()
   {
     testHelper.testExpressionString(
         ContainsOperatorConversion.caseSensitive().calciteOperator(),
@@ -1607,7 +1605,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void containsAsFilter()
+  public void testContainsAsFilter()
   {
     testHelper.testFilter(
         ContainsOperatorConversion.caseSensitive().calciteOperator(),
@@ -1721,7 +1719,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void timeFloor()
+  public void testTimeFloor()
   {
     testHelper.testExpressionString(
         new TimeFloorOperatorConversion().calciteOperator(),
@@ -1747,7 +1745,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void otherTimeFloor()
+  public void testOtherTimeFloor()
   {
     // FLOOR(__time TO unit)
 
@@ -1763,7 +1761,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void timeCeil()
+  public void testTimeCeil()
   {
     testHelper.testExpressionString(
         new TimeCeilOperatorConversion().calciteOperator(),
@@ -1789,7 +1787,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void otherTimeCeil()
+  public void testOtherTimeCeil()
   {
     // CEIL(__time TO unit)
 
@@ -1805,7 +1803,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void timeShift()
+  public void testTimeShift()
   {
     testHelper.testExpressionString(
         new TimeShiftOperatorConversion().calciteOperator(),
@@ -1832,7 +1830,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void timeExtract()
+  public void testTimeExtract()
   {
     testHelper.testExpressionString(
         new TimeExtractOperatorConversion().calciteOperator(),
@@ -1868,7 +1866,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void timePlusDayTimeInterval()
+  public void testTimePlusDayTimeInterval()
   {
     final Period period = new Period("P1DT1H1M");
 
@@ -1887,7 +1885,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void timePlusYearMonthInterval()
+  public void testTimePlusYearMonthInterval()
   {
     final Period period = new Period("P1Y1M");
 
@@ -1906,7 +1904,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void timeMinusDayTimeInterval()
+  public void testTimeMinusDayTimeInterval()
   {
     final Period period = new Period("P1DT1H1M");
 
@@ -1933,7 +1931,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void timeMinusYearMonthInterval()
+  public void testTimeMinusYearMonthInterval()
   {
     final Period period = new Period("P1Y1M");
 
@@ -1962,7 +1960,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void timeParse()
+  public void testTimeParse()
   {
     testHelper.testExpressionString(
         new TimeParseOperatorConversion().calciteOperator(),
@@ -1987,7 +1985,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void timeFormat()
+  public void testTimeFormat()
   {
     testHelper.testExpressionString(
         new TimeFormatOperatorConversion().calciteOperator(),
@@ -2012,7 +2010,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void extract()
+  public void testExtract()
   {
     testHelper.testExpressionString(
         SqlStdOperatorTable.EXTRACT,
@@ -2036,7 +2034,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void castAsTimestamp()
+  public void testCastAsTimestamp()
   {
     testHelper.testExpression(
         testHelper.makeAbstractCast(
@@ -2070,7 +2068,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void castFromTimestamp()
+  public void testCastFromTimestamp()
   {
     testHelper.testExpression(
         testHelper.makeAbstractCast(
@@ -2106,7 +2104,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void castAsDate()
+  public void testCastAsDate()
   {
     testHelper.testExpression(
         testHelper.makeAbstractCast(
@@ -2154,7 +2152,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void castFromDate()
+  public void testCastFromDate()
   {
     testHelper.testExpression(
         testHelper.makeAbstractCast(
@@ -2208,7 +2206,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void reverse()
+  public void testReverse()
   {
     testHelper.testExpression(
         new ReverseOperatorConversion().calciteOperator(),
@@ -2264,9 +2262,9 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void abnormalReverseWithWrongType()
+  public void testAbnormalReverseWithWrongType()
   {
-    Throwable t = assertThrows(
+    Throwable t = Assert.assertThrows(
         DruidException.class,
         () -> testHelper.testExpression(
             new ReverseOperatorConversion().calciteOperator(),
@@ -2281,11 +2279,11 @@ class ExpressionsTest extends CalciteTestBase
             null
         )
     );
-    assertEquals("Function[reverse] needs a STRING argument but got LONG instead", t.getMessage());
+    Assert.assertEquals("Function[reverse] needs a STRING argument but got LONG instead", t.getMessage());
   }
 
   @Test
-  void right()
+  public void testRight()
   {
     testHelper.testExpressionString(
         new RightOperatorConversion().calciteOperator(),
@@ -2339,9 +2337,9 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void abnormalRightWithNegativeNumber()
+  public void testAbnormalRightWithNegativeNumber()
   {
-    Throwable t = assertThrows(
+    Throwable t = Assert.assertThrows(
         DruidException.class,
         () -> testHelper.testExpressionString(
             new RightOperatorConversion().calciteOperator(),
@@ -2353,13 +2351,13 @@ class ExpressionsTest extends CalciteTestBase
             null
         )
     );
-    assertEquals("Function[right] needs a positive integer as the second argument", t.getMessage());
+    Assert.assertEquals("Function[right] needs a positive integer as the second argument", t.getMessage());
   }
 
   @Test
-  void abnormalRightWithWrongType()
+  public void testAbnormalRightWithWrongType()
   {
-    Throwable t = assertThrows(
+    Throwable t = Assert.assertThrows(
         DruidException.class,
         () -> testHelper.testExpressionString(
             new RightOperatorConversion().calciteOperator(),
@@ -2371,14 +2369,14 @@ class ExpressionsTest extends CalciteTestBase
             null
         )
     );
-    assertEquals(
+    Assert.assertEquals(
         "Function[right] needs a STRING as first argument and a LONG as second argument",
         t.getMessage()
     );
   }
 
   @Test
-  void left()
+  public void testLeft()
   {
     testHelper.testExpressionString(
         new LeftOperatorConversion().calciteOperator(),
@@ -2432,9 +2430,9 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void abnormalLeftWithNegativeNumber()
+  public void testAbnormalLeftWithNegativeNumber()
   {
-    Throwable t = assertThrows(
+    Throwable t = Assert.assertThrows(
         DruidException.class,
         () -> testHelper.testExpressionString(
             new LeftOperatorConversion().calciteOperator(),
@@ -2446,13 +2444,13 @@ class ExpressionsTest extends CalciteTestBase
             null
         )
     );
-    assertEquals("Function[left] needs a postive integer as second argument", t.getMessage());
+    Assert.assertEquals("Function[left] needs a postive integer as second argument", t.getMessage());
   }
 
   @Test
-  void abnormalLeftWithWrongType()
+  public void testAbnormalLeftWithWrongType()
   {
-    Throwable t = assertThrows(
+    Throwable t = Assert.assertThrows(
         DruidException.class,
         () -> testHelper.testExpressionString(
             new LeftOperatorConversion().calciteOperator(),
@@ -2464,14 +2462,14 @@ class ExpressionsTest extends CalciteTestBase
             null
         )
     );
-    assertEquals(
+    Assert.assertEquals(
         "Function[left] needs a STRING as first argument and a LONG as second argument",
         t.getMessage()
     );
   }
 
   @Test
-  void repeat()
+  public void testRepeat()
   {
     testHelper.testExpressionString(
         new RepeatOperatorConversion().calciteOperator(),
@@ -2505,9 +2503,9 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void abnormalRepeatWithWrongType()
+  public void testAbnormalRepeatWithWrongType()
   {
-    Throwable t = assertThrows(
+    Throwable t = Assert.assertThrows(
         DruidException.class,
         () -> testHelper.testExpressionString(
             new RepeatOperatorConversion().calciteOperator(),
@@ -2519,14 +2517,14 @@ class ExpressionsTest extends CalciteTestBase
             null
         )
     );
-    assertEquals(
+    Assert.assertEquals(
         "Function[repeat] needs a STRING as first argument and a LONG as second argument",
         t.getMessage()
     );
   }
 
   @Test
-  void operatorConversionsDruidUnaryLongFn()
+  public void testOperatorConversionsDruidUnaryLongFn()
   {
     testHelper.testExpressionString(
         OperatorConversions.druidUnaryLongFn("BITWISE_COMPLEMENT", "bitwiseComplement").calciteOperator(),
@@ -2557,7 +2555,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void operatorConversionsDruidUnaryDoubleFn()
+  public void testOperatorConversionsDruidUnaryDoubleFn()
   {
     testHelper.testExpressionString(
         OperatorConversions.druidUnaryDoubleFn("BITWISE_CONVERT_LONG_BITS_TO_DOUBLE", "bitwiseConvertLongBitsToDouble")
@@ -2591,7 +2589,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void operatorConversionsDruidBinaryLongFn()
+  public void testOperatorConversionsDruidBinaryLongFn()
   {
     testHelper.testExpressionString(
         OperatorConversions.druidBinaryLongFn("BITWISE_AND", "bitwiseAnd").calciteOperator(),
@@ -2625,7 +2623,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void humanReadableBinaryByteFormat()
+  public void testHumanReadableBinaryByteFormat()
   {
     /*
      * Basic Test
@@ -2722,7 +2720,7 @@ class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  void humanReadableDecimalByteFormat()
+  public void testHumanReadableDecimalByteFormat()
   {
     /*
      * Basic Test
