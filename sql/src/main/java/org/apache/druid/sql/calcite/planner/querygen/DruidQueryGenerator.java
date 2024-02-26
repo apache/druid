@@ -264,26 +264,17 @@ public class DruidQueryGenerator
       private boolean accepts(Stack<DruidLogicalNode> stack, Stage stage, Class<? extends RelNode> class1)
       {
         if (Project.class == class1 && stack.size() >= 2) {
-          // a projet is proposed
-          DruidLogicalNode parentOfFilter = stack.get(stack.size()-2);
-          if(stage.ordinal() > stage.AGGREGATE.ordinal())
-          {
-           if (parentOfFilter instanceof DruidAggregate && !partialDruidQuery.canAccept(Stage.AGGREGATE)) {
-             return false;
-           }
-           //          if(parentOfFilter instanceof Sort && !partialDruidQuery.canAccept(Stage.SORT)) {
-//221/139           return false;
-//         }
-         }
-          if(stage.ordinal() > stage.SORT.ordinal())
-          {
-           if (parentOfFilter instanceof DruidSort && !partialDruidQuery.canAccept(Stage.SORT)) {
-             return false;
-           }
-           //          if(parentOfFilter instanceof Sort && !partialDruidQuery.canAccept(Stage.SORT)) {
-//221/139           return false;
-//         }
-         }
+          DruidLogicalNode parent2 = stack.get(stack.size() - 2);
+          if (stage.ordinal() > stage.AGGREGATE.ordinal()) {
+            if (parent2 instanceof DruidAggregate && !partialDruidQuery.canAccept(Stage.AGGREGATE)) {
+              return false;
+            }
+          }
+          if (stage.ordinal() > stage.SORT.ordinal()) {
+            if (parent2 instanceof DruidSort && !partialDruidQuery.canAccept(Stage.SORT)) {
+              return false;
+            }
+          }
         }
 
         return partialDruidQuery.canAccept(stage) && class1.isInstance(stack.peek());

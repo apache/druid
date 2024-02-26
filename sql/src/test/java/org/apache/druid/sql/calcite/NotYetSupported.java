@@ -199,6 +199,5 @@ public @interface NotYetSupported
       Method m =getMethodForName(testClass,realMethodName);
       return m.getAnnotation(NotYetSupported.class);
     }
-
   }
 }

@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite;
 
 import org.apache.calcite.rel.rules.CoreRules;
+import org.apache.druid.query.QueryContexts;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -69,7 +70,11 @@ public @interface DecoupledTestConfig
      *
      * Renamed variable
      */
-    EQUIV_PLAN;
+    EQUIV_PLAN,
+    /**
+     * {@link QueryContexts#SQL_JOIN_LEFT_SCAN_DIRECT} not supported.
+     */
+    JOIN_LEFT_DIRECT_ACCESS;
 
     public boolean isPresent()
     {
