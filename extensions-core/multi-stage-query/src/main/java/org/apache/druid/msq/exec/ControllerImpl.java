@@ -202,10 +202,12 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
+import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
@@ -1725,7 +1727,6 @@ public class ControllerImpl implements Controller
   {
     if (queryKernel.isSuccess() && MSQControllerTask.isIngestion(task.getQuerySpec())) {
       final StageId finalStageId = queryKernel.getStageId(queryDef.getFinalStageDefinition().getStageNumber());
-      queryDef.getFinalStageDefinition().getClusterBy();
 
       //noinspection unchecked
       @SuppressWarnings("unchecked")
@@ -1733,26 +1734,36 @@ public class ControllerImpl implements Controller
       DataSchema dataSchema = ((SegmentGeneratorFrameProcessorFactory) queryKernel.getStageDefinition(finalStageId)
                                                                                   .getProcessorFactory()).getDataSchema();
 
-      ShardSpec shardSpec = segments.isEmpty()
-                            ? null
-                            : segments.stream()
-                                                                 .findFirst()
-                                                                 .get()
-                                                                 .getShardSpec();
-      List<String> partitionDimensions = Collections.emptyList();
+      Function<Set<DataSegment>, Set<DataSegment>> compactionStateAnnotateFunction = Function.identity();
 
-      if (shardSpec != null && (Objects.equals(shardSpec.getType(), ShardSpec.Type.SINGLE)
-                                || Objects.equals(shardSpec.getType(), ShardSpec.Type.RANGE))) {
-        partitionDimensions = ((DimensionRangeShardSpec) shardSpec).getDimensions();
+      final boolean storeCompactionState = task.getContextValue(
+          Tasks.STORE_COMPACTION_STATE_KEY,
+          Tasks.DEFAULT_STORE_COMPACTION_STATE
+      );
+
+      if (storeCompactionState) {
+        ShardSpec shardSpec = segments.isEmpty()
+                              ? null
+                              : segments.stream()
+                                        .findFirst()
+                                        .get()
+                                        .getShardSpec();
+        List<String> partitionDimensions = Collections.emptyList();
+
+        if (shardSpec != null && (Objects.equals(shardSpec.getType(), ShardSpec.Type.SINGLE)
+                                  || Objects.equals(shardSpec.getType(), ShardSpec.Type.RANGE))) {
+          partitionDimensions = ((DimensionRangeShardSpec) shardSpec).getDimensions();
+        }
+
+        compactionStateAnnotateFunction = compactionStateAnnotateFunction(
+            task(),
+            context.jsonMapper(),
+            dataSchema,
+            partitionDimensions
+        );
+        log.info("Query [%s] publishing %d segments.", queryDef.getQueryId(), segments.size());
       }
 
-      Function<Set<DataSegment>, Set<DataSegment>> compactionStateAnnotateFunction = compactionStateAnnotateFunction(
-          task(),
-          context.jsonMapper(),
-          dataSchema,
-          partitionDimensions
-      );
-      log.info("Query [%s] publishing %d segments.", queryDef.getQueryId(), segments.size());
       publishAllSegments(compactionStateAnnotateFunction.apply(segments));
     }
   }
@@ -1764,25 +1775,37 @@ public class ControllerImpl implements Controller
       List<String> partitionDimensions
   )
   {
-    final boolean storeCompactionState = task.getContextValue(
-        Tasks.STORE_COMPACTION_STATE_KEY,
-        Tasks.DEFAULT_STORE_COMPACTION_STATE
-    );
-
-    if (storeCompactionState) {
       IndexSpec indexSpec = task.getQuerySpec().getTuningConfig().getIndexSpec();
       GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
-      DimensionsSpec dimensionsSpec = dataSchema.getDimensionsSpec();
-      Map<String, Object> transformSpec = dataSchema.getTransformSpec() == null
-                                          || TransformSpec.NONE.equals(dataSchema.getTransformSpec())
-                                          ? null
-                                          : new ClientCompactionTaskTransformSpec(dataSchema.getTransformSpec()
-                                                                                            .getFilter()).asMap(
-                                              jsonMapper);
-      List<Object> metricsSpec = dataSchema.getAggregators() == null
-                                 ? null
-                                 : jsonMapper.convertValue(
-                                     dataSchema.getAggregators(),
+
+    if (task.getQuerySpec().getQuery().getContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY) != null) {
+
+      // In case of MSQ, the segment granularity comes as the context parameter SQL_INSERT_SEGMENT_GRANULARITY
+      Granularity segmentGranularity = QueryKitUtils.getSegmentGranularityFromContext(
+          jsonMapper,
+          task.getQuerySpec()
+              .getQuery()
+              .getContext()
+      );
+      granularitySpec = new UniformGranularitySpec(
+          segmentGranularity,
+          granularitySpec.getQueryGranularity(),
+          granularitySpec.isRollup(),
+          granularitySpec.inputIntervals()
+      );
+    }
+
+    DimensionsSpec dimensionsSpec = dataSchema.getDimensionsSpec();
+    Map<String, Object> transformSpec = dataSchema.getTransformSpec() == null
+                                        || TransformSpec.NONE.equals(dataSchema.getTransformSpec())
+                                        ? null
+                                        : new ClientCompactionTaskTransformSpec(dataSchema.getTransformSpec()
+                                                                                          .getFilter()).asMap(
+                                            jsonMapper);
+    List<Object> metricsSpec = dataSchema.getAggregators() == null
+                               ? null
+                               : jsonMapper.convertValue(
+                                   dataSchema.getAggregators(),
                                      new TypeReference<List<Object>>()
                                      {
                                      }
@@ -1812,9 +1835,6 @@ public class ControllerImpl implements Controller
           .stream()
           .map(s -> s.withLastCompactionState(compactionState))
           .collect(Collectors.toSet());
-    } else {
-      return Function.identity();
-    }
   }
 
   /**
