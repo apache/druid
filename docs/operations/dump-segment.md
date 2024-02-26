@@ -36,6 +36,20 @@ java -classpath "/my/druid/lib/*" -Ddruid.extensions.loadList="[]" org.apache.dr
   --out /home/druid/output.txt
 ```
 
+If you use JDK11 and above, you need to add the following additional parameters
++ --add-opens java.base/java.lang=ALL-UNNAMED
++ --add-opens java.base/sun.nio.ch=ALL-UNNAMED
+  The following is a example
+
+```
+java --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/sun.nio.ch=ALL-UNNAMED \
+  -classpath "/my/druid/lib/*" \
+  -Ddruid.extensions.loadList="[]" org.apache.druid.cli.Main \
+  tools dump-segment \
+  --directory /home/druid/path/to/segment/ \
+  --out /home/druid/output.txt
+```
+
 ### Output format
 
 #### Data dumps
