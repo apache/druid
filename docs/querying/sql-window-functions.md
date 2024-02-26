@@ -106,7 +106,7 @@ GROUP BY dimensions
 window_function() OVER w
 FROM table
 WINDOW w AS ([PARTITION BY ] [ORDER BY]
-  [[ROWS, RANGE] BETWEEN range start AND range end] )
+  [[ROWS, RANGE] BETWEEN range start AND range end])
 GROUP BY dimensions
 ```
 
