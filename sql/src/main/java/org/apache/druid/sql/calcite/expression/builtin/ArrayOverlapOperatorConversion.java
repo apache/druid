@@ -19,12 +19,16 @@
 
 package org.apache.druid.sql.calcite.expression.builtin;
 
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlCallBinding;
 import org.apache.calcite.sql.SqlFunction;
-import org.apache.calcite.sql.type.OperandTypes;
+import org.apache.calcite.sql.SqlOperandCountRange;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.ReturnTypes;
-import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.calcite.sql.type.SqlOperandCountRanges;
+import org.apache.calcite.sql.type.SqlOperandTypeChecker;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -55,20 +59,35 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder("ARRAY_OVERLAP")
       .operandTypeChecker(
-          OperandTypes.sequence(
-              "'ARRAY_OVERLAP(array, array)'",
-              OperandTypes.or(
-                  OperandTypes.family(SqlTypeFamily.ARRAY),
-                  OperandTypes.family(SqlTypeFamily.STRING)
-              ),
-              OperandTypes.or(
-                  OperandTypes.family(SqlTypeFamily.ARRAY),
-                  OperandTypes.family(SqlTypeFamily.STRING)
-              )
-          )
+          new MyCustomOpChevker ()
       )
       .returnTypeInference(ReturnTypes.BOOLEAN)
       .build();
+
+  static class MyCustomOpChevker implements SqlOperandTypeChecker {
+
+    @Override
+    public boolean checkOperandTypes(SqlCallBinding callBinding, boolean throwOnFailure)
+    {
+      RelDataType t0 = callBinding.getOperandType(0);
+      RelDataType t1 = callBinding.getOperandType(1);
+      return true;
+    }
+
+    @Override
+    public SqlOperandCountRange getOperandCountRange()
+    {
+      return SqlOperandCountRanges.of(2) ;
+
+    }
+
+    @Override
+    public String getAllowedSignatures(SqlOperator op, String opName)
+    {
+      return "someSig";
+    }
+
+  }
 
   public ArrayOverlapOperatorConversion()
   {
