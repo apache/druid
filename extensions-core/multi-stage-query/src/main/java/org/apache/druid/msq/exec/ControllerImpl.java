@@ -66,6 +66,7 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -234,6 +235,7 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
@@ -1731,13 +1733,18 @@ public class ControllerImpl implements Controller
       DataSchema dataSchema = ((SegmentGeneratorFrameProcessorFactory) queryKernel.getStageDefinition(finalStageId)
                                                                                   .getProcessorFactory()).getDataSchema();
 
-      List<String> partitionDimensions = segments.isEmpty()
-                                         ? Collections.emptyList()
-                                         : ((DimensionRangeShardSpec) segments.stream()
-                                                                              .findFirst()
-                                                                              .get()
-                                                                              .getShardSpec()).getDimensions();
+      ShardSpec shardSpec = segments.isEmpty()
+                            ? null
+                            : segments.stream()
+                                                                 .findFirst()
+                                                                 .get()
+                                                                 .getShardSpec();
+      List<String> partitionDimensions = Collections.emptyList();
 
+      if (shardSpec != null && (Objects.equals(shardSpec.getType(), ShardSpec.Type.SINGLE)
+                                || Objects.equals(shardSpec.getType(), ShardSpec.Type.RANGE))) {
+        partitionDimensions = ((DimensionRangeShardSpec) shardSpec).getDimensions();
+      }
 
       Function<Set<DataSegment>, Set<DataSegment>> compactionStateAnnotateFunction = compactionStateAnnotateFunction(
           task(),
