@@ -45,6 +45,7 @@ import {
   externalConfigToIngestQueryPattern,
   ingestQueryPatternToQuery,
 } from '../ingest-query-pattern/ingest-query-pattern';
+import type { ArrayMode } from '../ingestion-spec/ingestion-spec';
 import type { QueryContext } from '../query-context/query-context';
 
 const ISSUE_MARKER = '--:ISSUE:';
@@ -89,20 +90,22 @@ export class WorkbenchQuery {
 
   static fromInitExternalConfig(
     externalConfig: ExternalConfig,
-    isArrays: boolean[],
     timeExpression: SqlExpression | undefined,
     partitionedByHint: string | undefined,
+    arrayMode: ArrayMode,
   ): WorkbenchQuery {
     return new WorkbenchQuery({
       queryString: ingestQueryPatternToQuery(
         externalConfigToIngestQueryPattern(
           externalConfig,
-          isArrays,
           timeExpression,
           partitionedByHint,
+          arrayMode,
         ),
       ).toString(),
-      queryContext: {},
+      queryContext: {
+        arrayIngestMode: 'array',
+      },
     });
   }
 
@@ -155,7 +158,7 @@ export class WorkbenchQuery {
       .changeQueryString(queryString)
       .changeQueryContext(cleanContext);
 
-    if (noSqlOuterLimit && !retQuery.getIngestDatasource()) {
+    if (noSqlOuterLimit && !retQuery.isIngestQuery()) {
       retQuery = retQuery.changeUnlimited(true);
     }
 
@@ -216,23 +219,6 @@ export class WorkbenchQuery {
 
   static isTaskEngineNeeded(queryString: string): boolean {
     return /EXTERN\s*\(|(?:INSERT|REPLACE)\s+INTO/im.test(queryString);
-  }
-
-  static getIngestDatasourceFromQueryFragment(queryFragment: string): string | undefined {
-    // Assuming the queryFragment is no parsable find the prefix that look like:
-    // REPLACE<space>INTO<space><whatever><space>SELECT<space or EOF>
-    const matchInsertReplaceIndex = queryFragment.match(/(?:INSERT|REPLACE)\s+INTO/i)?.index;
-    if (typeof matchInsertReplaceIndex !== 'number') return;
-
-    const queryStartingWithInsertOrReplace = queryFragment.substring(matchInsertReplaceIndex);
-
-    const matchEnd = queryStartingWithInsertOrReplace.match(/\b(?:SELECT|WITH)\b|$/i);
-    const fragmentQuery = SqlQuery.maybeParse(
-      queryStartingWithInsertOrReplace.substring(0, matchEnd?.index) + ' SELECT * FROM t',
-    );
-    if (!fragmentQuery) return;
-
-    return fragmentQuery.getIngestTable()?.getName();
   }
 
   public readonly queryString: string;
@@ -406,21 +392,17 @@ export class WorkbenchQuery {
     }
   }
 
-  public getIngestDatasource(): string | undefined {
-    if (this.getEffectiveEngine() !== 'sql-msq-task') return;
+  public isIngestQuery(): boolean {
+    if (this.getEffectiveEngine() !== 'sql-msq-task') return false;
 
     const { queryString, parsedQuery } = this;
     if (parsedQuery) {
-      return parsedQuery.getIngestTable()?.getName();
+      return Boolean(parsedQuery.getIngestTable());
     }
 
-    if (this.isJsonLike()) return;
+    if (this.isJsonLike()) return false;
 
-    return WorkbenchQuery.getIngestDatasourceFromQueryFragment(queryString);
-  }
-
-  public isIngestQuery(): boolean {
-    return Boolean(this.getIngestDatasource());
+    return /(?:INSERT|REPLACE)\s+INTO/i.test(queryString);
   }
 
   public toggleUnlimited(): WorkbenchQuery {
@@ -550,9 +532,16 @@ export class WorkbenchQuery {
 
     if (engine === 'sql-msq-task') {
       apiQuery.context.executionMode ??= 'async';
-      apiQuery.context.finalizeAggregations ??= !ingestQuery;
-      apiQuery.context.groupByEnableMultiValueUnnesting ??= !ingestQuery;
-      apiQuery.context.waitUntilSegmentsLoad ??= true;
+      if (ingestQuery) {
+        // Alter these defaults for ingest queries if unset
+        apiQuery.context.finalizeAggregations ??= false;
+        apiQuery.context.groupByEnableMultiValueUnnesting ??= false;
+        apiQuery.context.waitUntilSegmentsLoad ??= true;
+      }
+    }
+
+    if (engine === 'sql-native' || engine === 'sql-msq-task') {
+      apiQuery.context.sqlStringifyArrays ??= false;
     }
 
     if (Array.isArray(queryParameters) && queryParameters.length) {

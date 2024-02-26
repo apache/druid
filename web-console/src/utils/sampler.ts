@@ -32,9 +32,11 @@ import type {
   TransformSpec,
 } from '../druid-models';
 import {
+  ALL_POSSIBLE_SYSTEM_FIELDS,
   DETECTION_TIMESTAMP_SPEC,
   getDimensionNamesFromTransforms,
   getDimensionSpecName,
+  getFlattenSpec,
   getSpecType,
   getTimestampSchema,
   isDruidSource,
@@ -46,7 +48,7 @@ import { Api } from '../singletons';
 
 import { getDruidErrorMessage, queryDruidRune } from './druid-query';
 import { EMPTY_ARRAY, filterMap } from './general';
-import { deepGet, deepSet } from './object-change';
+import { allowKeys, deepGet, deepSet } from './object-change';
 
 const BASE_SAMPLER_CONFIG: SamplerConfig = {
   numRows: 500,
@@ -130,7 +132,10 @@ export interface SampleEntry {
 }
 
 export function getCacheRowsFromSampleResponse(sampleResponse: SampleResponse): CacheRows {
-  return filterMap(sampleResponse.data, d => d.input).slice(0, 20);
+  return filterMap(sampleResponse.data, d => ({
+    ...d.input,
+    ...allowKeys<any>(d.parsed, ALL_POSSIBLE_SYSTEM_FIELDS),
+  })).slice(0, 20);
 }
 
 export function applyCache(sampleSpec: SampleSpec, cacheRows: CacheRows) {
@@ -153,7 +158,7 @@ export function applyCache(sampleSpec: SampleSpec, cacheRows: CacheRows) {
     data: cacheRows.map(r => JSONBig.stringify(r)).join('\n'),
   });
 
-  const flattenSpec = deepGet(sampleSpec, 'spec.ioConfig.inputFormat.flattenSpec');
+  const flattenSpec = getFlattenSpec(sampleSpec);
   let inputFormat: InputFormat = { type: 'json', keepNullColumns: true };
   if (flattenSpec) {
     inputFormat = deepSet(inputFormat, 'flattenSpec', flattenSpec);
@@ -349,6 +354,7 @@ export async function sampleForParser(
         dataSource: 'sample',
         timestampSpec: reingestMode ? REINDEX_TIMESTAMP_SPEC : DETECTION_TIMESTAMP_SPEC,
         dimensionsSpec: {
+          dimensions: deepGet(ioConfig, 'inputSource.systemFields'),
           useSchemaDiscovery: true,
         },
         granularitySpec: {

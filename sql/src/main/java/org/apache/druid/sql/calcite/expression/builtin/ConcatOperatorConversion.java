@@ -28,7 +28,7 @@ import org.apache.druid.sql.calcite.expression.OperatorConversions;
 
 public class ConcatOperatorConversion extends DirectOperatorConversion
 {
-  private static final SqlFunction SQL_FUNCTION = OperatorConversions
+  public static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder("CONCAT")
       .operandTypeChecker(OperandTypes.SAME_VARIADIC)
       .returnTypeCascadeNullable(SqlTypeName.VARCHAR)

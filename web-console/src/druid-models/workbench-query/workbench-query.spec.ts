@@ -289,6 +289,7 @@ describe('WorkbenchQuery', () => {
           context: {
             sqlOuterLimit: 1001,
             sqlQueryId: 'deadbeef-9fb0-499c-8475-ea461e96a4fd',
+            sqlStringifyArrays: false,
             useCache: false,
           },
           header: true,
@@ -316,6 +317,7 @@ describe('WorkbenchQuery', () => {
           context: {
             sqlOuterLimit: 1001,
             sqlQueryId: 'lol',
+            sqlStringifyArrays: false,
           },
           header: true,
           query: 'SELECT * FROM wikipedia',
@@ -354,6 +356,7 @@ describe('WorkbenchQuery', () => {
           context: {
             sqlOuterLimit: 1001,
             sqlQueryId: 'deadbeef-9fb0-499c-8475-ea461e96a4fd',
+            sqlStringifyArrays: false,
             useCache: false,
             x: 1,
           },
@@ -394,6 +397,7 @@ describe('WorkbenchQuery', () => {
           context: {
             sqlOuterLimit: 1001,
             sqlQueryId: 'lol',
+            sqlStringifyArrays: false,
             x: 1,
           },
           header: true,
@@ -422,6 +426,7 @@ describe('WorkbenchQuery', () => {
             executionMode: 'async',
             finalizeAggregations: false,
             groupByEnableMultiValueUnnesting: false,
+            sqlStringifyArrays: false,
             useCache: false,
             waitUntilSegmentsLoad: true,
           },
@@ -447,88 +452,6 @@ describe('WorkbenchQuery', () => {
       expect(() => workbenchQuery.getApiQuery(makeQueryId)).toThrow(
         `This query contains an ISSUE comment: There is something wrong with this query. (Please resolve the issue in the comment, delete the ISSUE comment and re-run the query.)`,
       );
-    });
-  });
-
-  describe('#getIngestDatasource', () => {
-    it('works with INSERT', () => {
-      const sql = sane`
-        -- Some comment
-        INSERT INTO trips2
-        SELECT
-          TIME_PARSE(pickup_datetime) AS __time,
-          *
-        FROM TABLE(
-          EXTERN(
-            '{"type": "local", ...}',
-            '{"type":"csv", ...}'
-          )
-        ) EXTEND (cab_type, VARCHAR)
-        CLUSTERED BY trip_id
-      `;
-
-      const workbenchQuery = WorkbenchQuery.blank().changeQueryString(sql);
-      expect(workbenchQuery.getIngestDatasource()).toEqual('trips2');
-      expect(workbenchQuery.changeEngine('sql-native').getIngestDatasource()).toBeUndefined();
-    });
-
-    it('works with INSERT (unparsable)', () => {
-      const sql = sane`
-        -- Some comment
-        INSERT into trips2
-        SELECT
-          TIME_PARSE(pickup_datetime) AS __time,
-          *
-        FROM TABLE(
-      `;
-
-      const workbenchQuery = WorkbenchQuery.blank().changeQueryString(sql);
-      expect(workbenchQuery.getIngestDatasource()).toEqual('trips2');
-      expect(workbenchQuery.changeEngine('sql-native').getIngestDatasource()).toBeUndefined();
-    });
-
-    it('works with REPLACE', () => {
-      const sql = sane`
-        REPLACE INTO trips2 OVERWRITE ALL
-        SELECT
-          TIME_PARSE(pickup_datetime) AS __time,
-          *
-        FROM TABLE(
-          EXTERN(
-            '{"type": "local", ...}',
-            '{"type":"csv", ...}'
-          )
-        ) EXTEND (cab_type, VARCHAR)
-        CLUSTERED BY trip_id
-      `;
-
-      const workbenchQuery = WorkbenchQuery.blank().changeQueryString(sql);
-      expect(workbenchQuery.getIngestDatasource()).toEqual('trips2');
-      expect(workbenchQuery.changeEngine('sql-native').getIngestDatasource()).toBeUndefined();
-    });
-
-    it('works with REPLACE (unparsable)', () => {
-      const sql = sane`
-        REPLACE INTO trips2 OVERWRITE ALL
-        WITH kttm_data AS (SELECT *
-      `;
-
-      const workbenchQuery = WorkbenchQuery.blank().changeQueryString(sql);
-      expect(workbenchQuery.getIngestDatasource()).toEqual('trips2');
-      expect(workbenchQuery.changeEngine('sql-native').getIngestDatasource()).toBeUndefined();
-    });
-
-    it('works with REPLACE (unparsable with comment at start)', () => {
-      const sql = sane`
-        -- Hello world SELECT
-
-        REPLACE INTO trips2 OVERWRITE ALL
-        WITH kttm_data AS (SELECT *
-      `;
-
-      const workbenchQuery = WorkbenchQuery.blank().changeQueryString(sql);
-      expect(workbenchQuery.getIngestDatasource()).toEqual('trips2');
-      expect(workbenchQuery.changeEngine('sql-native').getIngestDatasource()).toBeUndefined();
     });
   });
 

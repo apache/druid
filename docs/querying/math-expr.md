@@ -66,8 +66,9 @@ The following built-in functions are available.
 |name|description|
 |----|-----------|
 |cast|cast(expr,LONG or DOUBLE or STRING or ARRAY<LONG\>, or ARRAY<DOUBLE\> or ARRAY<STRING\>) returns expr with specified type. exception can be thrown. Scalar types may be cast to array types and will take the form of a single element list (null will still be null). |
+|coalesce|coalesce(exprs) returns the first non-null expression, or null if all expressions are null. |
 |if|if(predicate,then,else) returns 'then' if 'predicate' evaluates to a positive number, otherwise it returns 'else' |
-|nvl|nvl(expr,expr-for-null) returns 'expr-for-null' if 'expr' is null (or empty string for string type) |
+|nvl|nvl(expr,expr-for-null) returns 'expr-for-null' if 'expr' is null. |
 |like|like(expr, pattern[, escape]) is equivalent to SQL `expr LIKE pattern`|
 |case_searched|case_searched(expr1, result1, \[\[expr2, result2, ...\], else-result\]) is similar to `CASE WHEN expr1 THEN result1 [ELSE else_result] END` in SQL|
 |case_simple|case_simple(expr, value1, result1, \[\[value2, result2, ...\], else-result\]) is similar to `CASE expr WHEN value THEN result [ELSE else_result] END` in SQL|
@@ -183,8 +184,8 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 | array_ordinal(arr,long) | returns the array element at the 1 based index supplied, or null for an out of range index |
 | array_contains(arr,expr) | returns 1 if the array contains the element specified by expr, or contains all elements specified by expr if expr is an array, else 0 |
 | array_overlap(arr1,arr2) | returns 1 if arr1 and arr2 have any elements in common, else 0 |
-| array_offset_of(arr,expr) | returns the 0 based index of the first occurrence of expr in the array, or `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (legacy mode) if no matching elements exist in the array. |
-| array_ordinal_of(arr,expr) | returns the 1 based index of the first occurrence of expr in the array, or `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (legacy mode) if no matching elements exist in the array. |
+| array_offset_of(arr,expr) | returns the 0 based index of the first occurrence of expr in the array, or `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode) if no matching elements exist in the array. |
+| array_ordinal_of(arr,expr) | returns the 1 based index of the first occurrence of expr in the array, or `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode) if no matching elements exist in the array. |
 | array_prepend(expr,arr) | adds expr to arr at the beginning, the resulting array type determined by the type of the array |
 | array_append(arr,expr) | appends expr to arr, the resulting array type determined by the type of the first array |
 | array_concat(arr1,arr2) | concatenates 2 arrays, the resulting array type determined by the type of the first array |
@@ -192,7 +193,7 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 | array_set_add_all(arr1,arr2) | combines the unique set of elements of 2 arrays, the resulting array type determined by the type of the first array |
 | array_slice(arr,start,end) | return the subarray of arr from the 0 based index start(inclusive) to end(exclusive), or `null`, if start is less than 0, greater than length of arr or less than end|
 | array_to_string(arr,str) | joins all elements of arr by the delimiter specified by str |
-| string_to_array(str1,str2) | splits str1 into an array on the delimiter specified by str2 |
+| string_to_array(str1,str2) | splits str1 into an array on the delimiter specified by str2, which is a regular expression |
 
 
 ## Apply functions
@@ -235,8 +236,9 @@ JSON functions provide facilities to extract, transform, and create `COMPLEX<jso
 
 | function | description |
 |---|---|
-| json_value(expr, path[, type]) | Extract a Druid literal (`STRING`, `LONG`, `DOUBLE`) value from `expr` using JSONPath syntax of `path`. The optional `type` argument can be set to `'LONG'`,`'DOUBLE'` or `'STRING'` to cast values to that type. |
+| json_value(expr, path[, type]) | Extract a Druid literal (`STRING`, `LONG`, `DOUBLE`, `ARRAY<STRING>`, `ARRAY<LONG>`, or `ARRAY<DOUBLE>`) value from `expr` using JSONPath syntax of `path`. The optional `type` argument can be set to `'LONG'`,`'DOUBLE'`, `'STRING'`, `'ARRAY<LONG>'`, `'ARRAY<DOUBLE>'`, or `'ARRAY<STRING>'` to cast values to that type. |
 | json_query(expr, path) | Extract a `COMPLEX<json>` value from `expr` using JSONPath syntax of `path` |
+| json_query_array(expr, path) | Extract an `ARRAY<COMPLEX<json>>` value from `expr` using JSONPath syntax of `path`. If value is not an `ARRAY`, it gets translated into a single element `ARRAY` containing the value at `path`. The primary use of this function is to extract arrays of objects to use as inputs to other [array functions](#array-functions). |
 | json_object(expr1, expr2[, expr3, expr4 ...]) | Construct a `COMPLEX<json>` with alternating 'key' and 'value' arguments|
 | parse_json(expr) | Deserialize a JSON `STRING` into a `COMPLEX<json>`. If the input is not a `STRING` or it is invalid JSON, this function will result in an error.|
 | try_parse_json(expr) | Deserialize a JSON `STRING` into a `COMPLEX<json>`. If the input is not a `STRING` or it is invalid JSON, this function will result in a `NULL` value. |
@@ -275,13 +277,16 @@ type of the result:
 
 ## IP address functions
 
-For the IPv4 address functions, the `address` argument accepts either an IPv4 dotted-decimal string (e.g., "192.168.0.1") or an IP address represented as a long (e.g., 3232235521). Format the `subnet` argument as an IPv4 address subnet in CIDR notation (e.g., "192.168.0.0/16").
+For the IPv4 address functions, the `address` argument accepts either an IPv4 dotted-decimal string (e.g. "192.168.0.1") or an IP address represented as a long (e.g. 3232235521). Format the `subnet` argument as an IPv4 address subnet in CIDR notation (e.g. "192.168.0.0/16").
+
+For the IPv6 address function, the `address` argument accepts a semicolon separated string (e.g. "75e9:efa4:29c6:85f6::232c"). The format of the `subnet` argument should be an IPv6 address subnet in CIDR notation (e.g. "75e9:efa4:29c6:85f6::/64").
 
 | function | description |
 | --- | --- |
-| ipv4_match(address, subnet) | Returns 1 if the `address` belongs to the `subnet` literal, else 0. If `address` is not a valid IPv4 address, then 0 is returned. This function is more efficient if `address` is a long instead of a string.|
+| ipv4_match(address, subnet) | Returns 1 if the IPv4 `address` belongs to the `subnet` literal, else 0. If `address` is not a valid IPv4 address, then 0 is returned. This function is more efficient if `address` is a long instead of a string.|
 | ipv4_parse(address) | Parses `address` into an IPv4 address stored as a long. Returns `address` if it is already a valid IPv4 integer address.  Returns null if `address` cannot be represented as an IPv4 address. |
 | ipv4_stringify(address) | Converts `address` into an IPv4 address dotted-decimal string. Returns `address` if it is already a valid IPv4 dotted-decimal string. Returns null if `address` cannot be represented as an IPv4 address.|
+| ipv6_match(address, subnet) | Returns 1 if the IPv6 `address` belongs to the `subnet` literal, else 0. If `address` is not a valid IPv6 address, then 0 is returned.|
 
 ## Other functions
 

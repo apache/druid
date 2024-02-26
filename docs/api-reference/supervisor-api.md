@@ -6,9 +6,7 @@ sidebar_label: Supervisors
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-
 <!--
-
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
   ~ distributed with this work for additional information
@@ -38,8 +36,8 @@ The following table lists the properties of a supervisor object:
 |Property|Type|Description|
 |---|---|---|
 |`id`|String|Unique identifier.|
-|`state`|String|Generic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. See [Apache Kafka operations](../development/extensions-core/kafka-supervisor-operations.md) for details.|
-|`detailedState`|String|Detailed state of the supervisor. This property contains a more descriptive, implementation-specific state that may provide more insight into the supervisor's activities than the `state` property. See [Apache Kafka ingestion](../development/extensions-core/kafka-ingestion.md) and [Amazon Kinesis ingestion](../development/extensions-core/kinesis-ingestion.md) for supervisor-specific states.|
+|`state`|String|Generic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. See [Supervisor reference](../ingestion/supervisor.md#status-report) for more information.|
+|`detailedState`|String|Detailed state of the supervisor. This property contains a more descriptive, implementation-specific state that may provide more insight into the supervisor's activities than the `state` property. See [Apache Kafka ingestion](../ingestion/kafka-ingestion.md) and [Amazon Kinesis ingestion](../ingestion/kinesis-ingestion.md) for supervisor-specific states.|
 |`healthy`|Boolean|Supervisor health indicator.|
 |`spec`|Object|Container object for the supervisor configuration.|
 |`suspended`|Boolean|Indicates whether the supervisor is in a suspended state.|
@@ -1207,9 +1205,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 Retrieves the current status report for a single supervisor. The report contains the state of the supervisor tasks and an array of recently thrown exceptions.
 
-For additional information about the status report, see the topic for each streaming ingestion methods:
-* [Amazon Kinesis](../development/extensions-core/kinesis-ingestion.md#get-supervisor-status-report)
-* [Apache Kafka](../development/extensions-core/kafka-supervisor-operations.md#getting-supervisor-status-report)
+For additional information about the status report, see [Supervisor reference](../ingestion/supervisor.md#status-report).
 
 #### URL
 
@@ -1311,13 +1307,184 @@ Host: http://ROUTER_IP:ROUTER_PORT
   ```
 </details>
 
+### Get supervisor health
+
+Retrieves the current health report for a single supervisor. The health of a supervisor is determined by the supervisor's `state` (as returned by the `/status` endpoint) and the `druid.supervisor.*` Overlord configuration thresholds.
+
+#### URL
+
+<code class="getAPI">GET</code> <code>/druid/indexer/v1/supervisor/:supervisorId/health</code>
+
+#### Responses
+
+<Tabs>
+
+<TabItem value="18" label="200 SUCCESS">
+
+*Supervisor is healthy*
+
+</TabItem>
+
+<TabItem value="19" label="404 NOT FOUND">
+
+*Invalid supervisor ID*
+
+</TabItem>
+
+<TabItem value="20" label="503 SERVICE UNAVAILABLE">
+
+*Supervisor is unhealthy*
+
+</TabItem>
+
+</Tabs>
+
+---
+
+#### Sample request
+
+The following example shows how to retrieve the health report for a supervisor with the name `social_media`.
+
+<Tabs>
+
+<TabItem value="21" label="cURL">
+
+```shell
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/social_media/health"
+```
+</TabItem>
+
+<TabItem value="22" label="HTTP">
+
+```HTTP
+GET /druid/indexer/v1/supervisor/social_media/health HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+```
+</TabItem>
+
+</Tabs>
+
+#### Sample response
+
+<details>
+  <summary>Click to show sample response</summary>
+
+  ```json
+  {
+    "healthy": false
+  }
+  ```
+</details>
+
+### Get supervisor ingestion stats
+
+Returns a snapshot of the current ingestion row counters for each task being managed by the supervisor, along with moving averages for the row counters. See [Row stats](../ingestion/tasks.md#row-stats) for more information.
+
+#### URL
+
+<code class="getAPI">GET</code> <code>/druid/indexer/v1/supervisor/:supervisorId/stats</code>
+
+#### Responses
+
+<Tabs>
+
+<TabItem value="23" label="200 SUCCESS">
+
+*Successfully retrieved supervisor stats*
+
+</TabItem>
+
+<TabItem value="24" label="404 NOT FOUND">
+
+*Invalid supervisor ID*
+
+</TabItem>
+
+</Tabs>
+
+---
+
+#### Sample request
+
+The following example shows how to retrieve the current ingestion row counters for a supervisor with the name `custom_data`.
+
+<Tabs>
+
+<TabItem value="25" label="cURL">
+
+
+```shell
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/custom_data/stats"
+```
+
+</TabItem>
+<TabItem value="26" label="HTTP">
+
+
+```HTTP
+GET /druid/indexer/v1/supervisor/custom_data/stats HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+```
+
+</TabItem>
+</Tabs>
+
+#### Sample response
+
+<details>
+  <summary>Click to show sample response</summary>
+
+  ```json
+  {
+    "0": {
+        "index_kafka_custom_data_881d621078f6b7c_ccplchbi": {
+            "movingAverages": {
+                "buildSegments": {
+                    "5m": {
+                        "processed": 53.401225142603316,
+                        "processedBytes": 5226.400757148808,
+                        "unparseable": 0.0,
+                        "thrownAway": 0.0,
+                        "processedWithError": 0.0
+                    },
+                    "15m": {
+                        "processed": 56.92994990102502,
+                        "processedBytes": 5571.772059828217,
+                        "unparseable": 0.0,
+                        "thrownAway": 0.0,
+                        "processedWithError": 0.0
+                    },
+                    "1m": {
+                        "processed": 37.134921285556636,
+                        "processedBytes": 3634.2766230628677,
+                        "unparseable": 0.0,
+                        "thrownAway": 0.0,
+                        "processedWithError": 0.0
+                    }
+                }
+            },
+            "totals": {
+                "buildSegments": {
+                    "processed": 665,
+                    "processedBytes": 65079,
+                    "processedWithError": 0,
+                    "thrownAway": 0,
+                    "unparseable": 0
+                    }
+                }
+            }
+        }
+    }
+  ```
+</details>
+
 ## Audit history
 
 An audit history provides a comprehensive log of events, including supervisor configuration, creation, suspension, and modification history.
 
 ### Get audit history for all supervisors
 
-Retrieve an audit history of specs for all supervisors.
+Retrieves an audit history of specs for all supervisors.
 
 #### URL
 
@@ -1327,7 +1494,7 @@ Retrieve an audit history of specs for all supervisors.
 
 <Tabs>
 
-<TabItem value="18" label="200 SUCCESS">
+<TabItem value="27" label="200 SUCCESS">
 
 
 *Successfully retrieved audit history*
@@ -1341,7 +1508,7 @@ Retrieve an audit history of specs for all supervisors.
 
 <Tabs>
 
-<TabItem value="19" label="cURL">
+<TabItem value="28" label="cURL">
 
 
 ```shell
@@ -1349,7 +1516,7 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/history"
 ```
 
 </TabItem>
-<TabItem value="20" label="HTTP">
+<TabItem value="29" label="HTTP">
 
 
 ```HTTP
@@ -1688,13 +1855,13 @@ Retrieves an audit history of specs for a single supervisor.
 
 <Tabs>
 
-<TabItem value="21" label="200 SUCCESS">
+<TabItem value="30" label="200 SUCCESS">
 
 
 *Successfully retrieved supervisor audit history*
 
 </TabItem>
-<TabItem value="22" label="404 NOT FOUND">
+<TabItem value="31" label="404 NOT FOUND">
 
 
 *Invalid supervisor ID*
@@ -1718,7 +1885,7 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/wikipedia_stream/
 ```
 
 </TabItem>
-<TabItem value="24" label="HTTP">
+<TabItem value="32" label="HTTP">
 
 
 ```HTTP
@@ -2046,11 +2213,22 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ### Create or update a supervisor
 
-Creates a new supervisor or updates an existing one for the same datasource with a new schema and configuration.
+Creates a new supervisor spec or updates an existing one with new configuration and schema information. When updating a supervisor spec, the datasource must remain the same as the previous supervisor.
 
-You can define a supervisor spec for [Apache Kafka](../development/extensions-core/kafka-ingestion.md#define-a-supervisor-spec) or [Amazon Kinesis](../development/extensions-core/kinesis-ingestion.md#supervisor-spec) streaming ingestion methods. Once created, the supervisor persists in the metadata database.
+You can define a supervisor spec for [Apache Kafka](../ingestion/kafka-ingestion.md) or [Amazon Kinesis](../ingestion/kinesis-ingestion.md) streaming ingestion methods.
 
-When you call this endpoint on an existing supervisor for the same datasource, the running supervisor signals its tasks to stop reading and begin publishing, exiting itself. Druid then uses the provided configuration from the request body to create a new supervisor. Druid submits a new schema while retaining existing publishing tasks and starts new tasks at the previous task offsets.
+The following table lists the properties of a supervisor spec:
+
+|Property|Type|Description|Required|
+|--------|----|-----------|--------|
+|`type`|String|The supervisor type. One of`kafka` or `kinesis`.|Yes|
+|`spec`|Object|The container object for the supervisor configuration.|Yes|
+|`ioConfig`|Object|The I/O configuration object to define the connection and I/O-related settings for the supervisor and indexing task.|Yes|
+|`dataSchema`|Object|The schema for the indexing task to use during ingestion. See [`dataSchema`](../ingestion/ingestion-spec.md#dataschema) for more information.|Yes|
+|`tuningConfig`|Object|The tuning configuration object to define performance-related settings for the supervisor and indexing tasks.|No|
+
+When you call this endpoint on an existing supervisor, the running supervisor signals its tasks to stop reading and begin publishing, exiting itself. Druid then uses the provided configuration from the request body to create a new supervisor. Druid submits a new schema while retaining existing publishing tasks and starts new tasks at the previous task offsets.
+This way, you can apply configuration changes without a pause in ingestion.
 
 #### URL
 
@@ -2060,13 +2238,13 @@ When you call this endpoint on an existing supervisor for the same datasource, t
 
 <Tabs>
 
-<TabItem value="25" label="200 SUCCESS">
+<TabItem value="33" label="200 SUCCESS">
 
 
 *Successfully created a new supervisor or updated an existing supervisor*
 
 </TabItem>
-<TabItem value="26" label="415 UNSUPPORTED MEDIA TYPE">
+<TabItem value="34" label="415 UNSUPPORTED MEDIA TYPE">
 
 
 *Request body content type is not in JSON format*
@@ -2082,8 +2260,7 @@ The following example uses JSON input format to create a supervisor spec for Kaf
 
 <Tabs>
 
-<TabItem value="27" label="cURL">
-
+<TabItem value="35" label="cURL">
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor" \
@@ -2141,8 +2318,8 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor" \
 ```
 
 </TabItem>
-<TabItem value="28" label="HTTP">
 
+<TabItem value="36" label="HTTP">
 
 ```HTTP
 POST /druid/indexer/v1/supervisor HTTP/1.1
@@ -2220,6 +2397,7 @@ Content-Length: 1359
 ### Suspend a running supervisor
 
 Suspends a single running supervisor. Returns the updated supervisor spec, where the `suspended` property is set to `true`. The suspended supervisor continues to emit logs and metrics.
+Indexing tasks remain suspended until you [resume the supervisor](#resume-a-supervisor).
 
 #### URL
 <code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/:supervisorId/suspend</code>
@@ -2228,19 +2406,19 @@ Suspends a single running supervisor. Returns the updated supervisor spec, where
 
 <Tabs>
 
-<TabItem value="29" label="200 SUCCESS">
+<TabItem value="37" label="200 SUCCESS">
 
 
 *Successfully shut down supervisor*
 
 </TabItem>
-<TabItem value="30" label="400 BAD REQUEST">
+<TabItem value="38" label="400 BAD REQUEST">
 
 
 *Supervisor already suspended*
 
 </TabItem>
-<TabItem value="31" label="404 NOT FOUND">
+<TabItem value="39" label="404 NOT FOUND">
 
 
 *Invalid supervisor ID*
@@ -2256,7 +2434,7 @@ The following example shows how to suspend a running supervisor with the name `s
 
 <Tabs>
 
-<TabItem value="32" label="cURL">
+<TabItem value="40" label="cURL">
 
 
 ```shell
@@ -2264,7 +2442,7 @@ curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/so
 ```
 
 </TabItem>
-<TabItem value="33" label="HTTP">
+<TabItem value="41" label="HTTP">
 
 
 ```HTTP
@@ -2594,7 +2772,7 @@ Suspends all supervisors. Note that this endpoint returns an HTTP `200 Success` 
 
 <Tabs>
 
-<TabItem value="34" label="200 SUCCESS">
+<TabItem value="42" label="200 SUCCESS">
 
 
 *Successfully suspended all supervisors*
@@ -2608,7 +2786,7 @@ Suspends all supervisors. Note that this endpoint returns an HTTP `200 Success` 
 
 <Tabs>
 
-<TabItem value="35" label="cURL">
+<TabItem value="43" label="cURL">
 
 
 ```shell
@@ -2616,7 +2794,7 @@ curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/su
 ```
 
 </TabItem>
-<TabItem value="36" label="HTTP">
+<TabItem value="44" label="HTTP">
 
 
 ```HTTP
@@ -2651,19 +2829,19 @@ Resumes indexing tasks for a supervisor. Returns an updated supervisor spec with
 
 <Tabs>
 
-<TabItem value="37" label="200 SUCCESS">
+<TabItem value="45" label="200 SUCCESS">
 
 
 *Successfully resumed supervisor*
 
 </TabItem>
-<TabItem value="38" label="400 BAD REQUEST">
+<TabItem value="46" label="400 BAD REQUEST">
 
 
 *Supervisor already running*
 
 </TabItem>
-<TabItem value="39" label="404 NOT FOUND">
+<TabItem value="47" label="404 NOT FOUND">
 
 
 *Invalid supervisor ID*
@@ -2679,7 +2857,7 @@ The following example resumes a previously suspended supervisor with name `socia
 
 <Tabs>
 
-<TabItem value="40" label="cURL">
+<TabItem value="48" label="cURL">
 
 
 ```shell
@@ -2687,7 +2865,7 @@ curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/so
 ```
 
 </TabItem>
-<TabItem value="41" label="HTTP">
+<TabItem value="49" label="HTTP">
 
 
 ```HTTP
@@ -3018,7 +3196,7 @@ Resumes all supervisors. Note that this endpoint returns an HTTP `200 Success` c
 
 <Tabs>
 
-<TabItem value="42" label="200 SUCCESS">
+<TabItem value="50" label="200 SUCCESS">
 
 
 *Successfully resumed all supervisors*
@@ -3032,7 +3210,7 @@ Resumes all supervisors. Note that this endpoint returns an HTTP `200 Success` c
 
 <Tabs>
 
-<TabItem value="43" label="cURL">
+<TabItem value="51" label="cURL">
 
 
 ```shell
@@ -3040,7 +3218,7 @@ curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/re
 ```
 
 </TabItem>
-<TabItem value="44" label="HTTP">
+<TabItem value="52" label="HTTP">
 
 
 ```HTTP
@@ -3065,9 +3243,15 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ### Reset a supervisor
 
-Resets the specified supervisor. This endpoint clears _all_ stored offsets in Kafka or sequence numbers in Kinesis, prompting the supervisor to resume data reading. The supervisor will start from the earliest or latest available position, depending on the platform (offsets in Kafka or sequence numbers in Kinesis). It kills and recreates active tasks to read from valid positions.
+The supervisor must be running for this endpoint to be available.
+
+Resets the specified supervisor. This endpoint clears all stored offsets in Kafka or sequence numbers in Kinesis, prompting the supervisor to resume data reading. The supervisor restarts from the earliest or latest available position, depending on the platform: offsets in Kafka or sequence numbers in Kinesis.
+After clearing all stored offsets in Kafka or sequence numbers in Kinesis, the supervisor kills and recreates active tasks,
+so that tasks begin reading from valid positions.
 
 Use this endpoint to recover from a stopped state due to missing offsets in Kafka or sequence numbers in Kinesis. Use this endpoint with caution as it may result in skipped messages and lead to data loss or duplicate data.
+
+The indexing service keeps track of the latest persisted offsets in Kafka or sequence numbers in Kinesis to provide exactly-once ingestion guarantees across tasks. Subsequent tasks must start reading from where the previous task completed for Druid to accept the generated segments. If the messages at the expected starting offsets in Kafka or sequence numbers in Kinesis are no longer available, the supervisor refuses to start and in-flight tasks fail. Possible causes for missing messages include the message retention period elapsing or the topic being removed and re-created. Use the `reset` endpoint to recover from this condition.
 
 #### URL
 
@@ -3077,13 +3261,13 @@ Use this endpoint to recover from a stopped state due to missing offsets in Kafk
 
 <Tabs>
 
-<TabItem value="45" label="200 SUCCESS">
+<TabItem value="53" label="200 SUCCESS">
 
 
 *Successfully reset supervisor*
 
 </TabItem>
-<TabItem value="46" label="404 NOT FOUND">
+<TabItem value="54" label="404 NOT FOUND">
 
 
 *Invalid supervisor ID*
@@ -3099,7 +3283,7 @@ The following example shows how to reset a supervisor with the name `social_medi
 
 <Tabs>
 
-<TabItem value="47" label="cURL">
+<TabItem value="55" label="cURL">
 
 
 ```shell
@@ -3107,7 +3291,7 @@ curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/so
 ```
 
 </TabItem>
-<TabItem value="48" label="HTTP">
+<TabItem value="56" label="HTTP">
 
 
 ```HTTP
@@ -3130,13 +3314,19 @@ Host: http://ROUTER_IP:ROUTER_PORT
   ```
 </details>
 
-### Reset Offsets for a supervisor
+### Reset offsets for a supervisor
 
-Resets the specified offsets for a supervisor. This endpoint clears _only_ the specified offsets in Kafka or sequence numbers in Kinesis, prompting the supervisor to resume data reading.
-If there are no stored offsets, the specified offsets will be set in the metadata store. The supervisor will start from the reset offsets for the partitions specified and for the other partitions from the stored offset.
-It kills and recreates active tasks pertaining to the partitions specified to read from valid offsets.
+The supervisor must be running for this endpoint to be available.
 
-Use this endpoint to selectively reset offsets for partitions without resetting the entire set.
+Resets the specified offsets for partitions without resetting the entire set.
+
+This endpoint clears only the specified offsets in Kafka or sequence numbers in Kinesis, prompting the supervisor to resume reading data from the specified offsets.
+If there are no stored offsets, the specified offsets are set in the metadata store.
+
+After resetting stored offsets, the supervisor kills and recreates any active tasks pertaining to the specified partitions,
+so that tasks begin reading specified offsets. For partitions that are not specified in this operation, the supervisor resumes from the last stored offset.
+
+Use this endpoint with caution. It can cause skipped messages, leading to data loss or duplicate data.
 
 #### URL
 
@@ -3144,17 +3334,21 @@ Use this endpoint to selectively reset offsets for partitions without resetting 
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="1" label="200 SUCCESS">
+
 
 *Successfully reset offsets*
 
-<!--404 NOT FOUND-->
+</TabItem>
+<TabItem value="2" label="404 NOT FOUND">
+
 
 *Invalid supervisor ID*
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 ---
 #### Reset Offsets Metadata
@@ -3178,12 +3372,12 @@ The following table defines the fields within the `partitions` object in the res
 
 #### Sample request
 
-The following example shows how to reset offsets for a kafka supervisor with the name `social_media`. Let's say the supervisor is reading
-from a kafka topic `ads_media_stream` and has the stored offsets: `{"0": 0, "1": 10, "2": 20, "3": 40}`.
+The following example shows how to reset offsets for a Kafka supervisor with the name `social_media`. For example, the supervisor is reading from a Kafka topic `ads_media_stream` and has the stored offsets: `{"0": 0, "1": 10, "2": 20, "3": 40}`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="3" label="cURL">
+
 
 ```shell
 curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/social_media/resetOffsets"
@@ -3191,7 +3385,9 @@ curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/so
 --data-raw '{"type":"kafka","partitions":{"type":"end","stream":"ads_media_stream","partitionOffsetMap":{"0":100, "2": 650}}}'
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="4" label="HTTP">
+
 
 ```HTTP
 POST /druid/indexer/v1/supervisor/social_media/resetOffsets HTTP/1.1
@@ -3211,10 +3407,11 @@ Content-Type: application/json
 }
 ```
 
-The above operation will reset offsets only for partitions 0 and 2 to 100 and 650 respectively. After a successful reset,
-when the supervisor's tasks restart, they will resume reading from `{"0": 100, "1": 10, "2": 650, "3": 40}`.
+The example operation resets offsets only for partitions `0` and `2` to 100 and 650 respectively. After a successful reset,
+when the supervisor's tasks restart, they resume reading from `{"0": 100, "1": 10, "2": 650, "3": 40}`.
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 

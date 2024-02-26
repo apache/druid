@@ -201,7 +201,7 @@ field in the `context` field of the ingestion spec. `tags` is expected to be a m
 
 ### Ingestion metrics for Kafka
 
-These metrics apply to the [Kafka indexing service](../development/extensions-core/kafka-ingestion.md).
+These metrics apply to the [Kafka indexing service](../ingestion/kafka-ingestion.md).
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
@@ -212,7 +212,7 @@ These metrics apply to the [Kafka indexing service](../development/extensions-co
 
 ### Ingestion metrics for Kinesis
 
-These metrics apply to the [Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md).
+These metrics apply to the [Kinesis indexing service](../ingestion/kinesis-ingestion.md).
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
@@ -329,6 +329,7 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 |`segment/size`|Total size of used segments in a data source. Emitted only for data sources to which at least one used segment belongs.|`dataSource`|Varies|
 |`segment/count`|Number of used segments belonging to a data source. Emitted only for data sources to which at least one used segment belongs.|`dataSource`|< max|
 |`segment/overShadowed/count`|Number of segments marked as unused due to being overshadowed.| |Varies|
+|`segment/unneededEternityTombstone/count`|Number of non-overshadowed eternity tombstones marked as unused.| |Varies|
 |`segment/unavailable/count`|Number of unique segments left to load until all used segments are available for queries.|`dataSource`|0|
 |`segment/underReplicated/count`|Number of segments, including replicas, left to load until all used segments are available for queries.|`tier`, `dataSource`|0|
 |`tier/historical/count`|Number of available historical nodes in each tier.|`tier`|Varies|

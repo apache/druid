@@ -29,7 +29,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -66,7 +65,6 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
-import org.apache.druid.indexing.seekablestream.TestSeekableStreamDataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
@@ -79,8 +77,8 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
-import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -89,7 +87,6 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.hamcrest.MatcherAssert;
@@ -105,7 +102,6 @@ import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -118,7 +114,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 {
@@ -143,7 +138,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   private RowIngestionMetersFactory rowIngestionMetersFactory;
   private SupervisorStateManagerConfig supervisorConfig;
 
-  private TestEmitter emitter;
+  private StubServiceEmitter emitter;
 
   @Before
   public void setupTest()
@@ -162,7 +157,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     supervisorConfig = new SupervisorStateManagerConfig();
 
-    emitter = new TestEmitter();
+    emitter = new StubServiceEmitter("test-supervisor-state", "localhost");
 
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
 
@@ -840,7 +835,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     Map<String, Object> context = new HashMap<>();
     context.put("checkpoints", new ObjectMapper().writeValueAsString(sequenceOffsets));
 
-    SeekableStreamIndexTask id1 = new TestSeekableStreamIndexTask(
+    TestSeekableStreamIndexTask id1 = new TestSeekableStreamIndexTask(
             "id1",
             null,
             getDataSchema(),
@@ -850,7 +845,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             "0"
     );
 
-    SeekableStreamIndexTask id2 = new TestSeekableStreamIndexTask(
+    TestSeekableStreamIndexTask id2 = new TestSeekableStreamIndexTask(
             "id2",
             null,
             getDataSchema(),
@@ -860,31 +855,52 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             "0"
     );
 
+    TestSeekableStreamIndexTask id3 = new TestSeekableStreamIndexTask(
+        "id3",
+        null,
+        getDataSchema(),
+        taskTuningConfig,
+        taskIoConfig,
+        context,
+        "0"
+    );
+
     final TaskLocation location1 = TaskLocation.create("testHost", 1234, -1);
     final TaskLocation location2 = TaskLocation.create("testHost2", 145, -1);
+    final TaskLocation location3 = TaskLocation.create("testHost3", 145, -1);
 
     Collection workItems = new ArrayList<>();
     workItems.add(new TestTaskRunnerWorkItem(id1, null, location1));
     workItems.add(new TestTaskRunnerWorkItem(id2, null, location2));
+    workItems.add(new TestTaskRunnerWorkItem(id3, null, location3));
 
     EasyMock.expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
     EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE))
-            .andReturn(ImmutableList.of(id1, id2))
+            .andReturn(ImmutableList.of(id1, id2, id3))
             .anyTimes();
     EasyMock.expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
     EasyMock.expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
+    EasyMock.expect(taskStorage.getStatus("id3")).andReturn(Optional.of(TaskStatus.running("id3"))).anyTimes();
     EasyMock.expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
     EasyMock.expect(taskStorage.getTask("id2")).andReturn(Optional.of(id2)).anyTimes();
+    EasyMock.expect(taskStorage.getTask("id3")).andReturn(Optional.of(id2)).anyTimes();
 
     EasyMock.reset(indexerMetadataStorageCoordinator);
-    EasyMock.expect(
-            indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(new TestSeekableStreamDataSourceMetadata(null)
-    ).anyTimes();
-    EasyMock.expect(indexTaskClient.getStatusAsync("id1")).andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.READING)).anyTimes();
-    EasyMock.expect(indexTaskClient.getStatusAsync("id2")).andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.READING)).anyTimes();
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE))
+            .andReturn(new TestSeekableStreamDataSourceMetadata(null)).anyTimes();
+    EasyMock.expect(indexTaskClient.getStatusAsync("id1"))
+            .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.READING))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.getStatusAsync("id2"))
+            .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.READING))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.getStatusAsync("id3"))
+            .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.PAUSED))
+            .anyTimes();
 
     EasyMock.expect(indexTaskClient.getStartTimeAsync("id1")).andReturn(Futures.immediateFuture(startTime)).anyTimes();
     EasyMock.expect(indexTaskClient.getStartTimeAsync("id2")).andReturn(Futures.immediateFuture(startTime)).anyTimes();
+    EasyMock.expect(indexTaskClient.getStartTimeAsync("id3")).andReturn(Futures.immediateFuture(startTime)).anyTimes();
 
     ImmutableMap<String, String> partitionOffset = ImmutableMap.of("0", "10");
     final TreeMap<Integer, Map<String, String>> checkpoints = new TreeMap<>();
@@ -896,10 +912,16 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(indexTaskClient.getCheckpointsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints))
             .anyTimes();
+    EasyMock.expect(indexTaskClient.getCheckpointsAsync(EasyMock.contains("id3"), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(checkpoints))
+            .anyTimes();
     EasyMock.expect(indexTaskClient.pauseAsync("id1"))
             .andReturn(Futures.immediateFuture(partitionOffset))
             .anyTimes();
     EasyMock.expect(indexTaskClient.pauseAsync("id2"))
+            .andReturn(Futures.immediateFuture(partitionOffset))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.pauseAsync("id3"))
             .andReturn(Futures.immediateFuture(partitionOffset))
             .anyTimes();
     EasyMock.expect(indexTaskClient.setEndOffsetsAsync("id1", partitionOffset, false))
@@ -908,11 +930,17 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(indexTaskClient.setEndOffsetsAsync("id2", partitionOffset, false))
             .andReturn(Futures.immediateFuture(true))
             .anyTimes();
+    EasyMock.expect(indexTaskClient.setEndOffsetsAsync("id3", partitionOffset, false))
+            .andReturn(Futures.immediateFuture(true))
+            .anyTimes();
     EasyMock.expect(indexTaskClient.resumeAsync("id1"))
             .andReturn(Futures.immediateFuture(true))
             .anyTimes();
     EasyMock.expect(indexTaskClient.resumeAsync("id2"))
             .andReturn(Futures.immediateFuture(true))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.resumeAsync("id3"))
+            .andReturn(Futures.immediateFuture(false))
             .anyTimes();
     EasyMock.expect(indexTaskClient.stopAsync("id1", false))
             .andReturn(Futures.immediateFuture(true))
@@ -920,6 +948,13 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(indexTaskClient.stopAsync("id2", false))
             .andReturn(Futures.immediateFuture(true))
             .anyTimes();
+
+    taskQueue.shutdown(
+        "id3",
+        "Killing forcefully as task could not be resumed in the"
+        + " first supervisor run after Overlord change."
+    );
+    EasyMock.expectLastCall().atLeastOnce();
 
     replayAll();
 
@@ -933,6 +968,231 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             new TestSeekableStreamDataSourceMetadata(
                     new SeekableStreamStartSequenceNumbers<>(STREAM, checkpoints.get(0), ImmutableSet.of())
             )
+    );
+
+    while (supervisor.getNoticesQueueSize() > 0) {
+      Thread.sleep(100);
+    }
+
+    verifyAll();
+
+    Assert.assertTrue(supervisor.getNoticesQueueSize() == 0);
+  }
+
+  @Test(timeout = 60_000L)
+  public void testEarlyStoppingOfTaskGroupBasedOnStopTaskCount() throws InterruptedException, JsonProcessingException
+  {
+    // Assuming tasks have surpassed their duration limit at test execution
+    DateTime startTime = DateTimes.nowUtc().minusHours(2);
+    // Configure supervisor to stop only one task at a time
+    int stopTaskCount = 1;
+    SeekableStreamSupervisorIOConfig ioConfig = new SeekableStreamSupervisorIOConfig(
+        STREAM,
+        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
+        1,
+        3,
+        new Period("PT1H"),
+        new Period("PT1S"),
+        new Period("PT30S"),
+        false,
+        new Period("PT30M"),
+        null,
+        null,
+        null,
+        null,
+        new IdleConfig(true, 200L),
+        stopTaskCount
+    )
+    {
+    };
+
+    EasyMock.reset(spec);
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
+    EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
+    EasyMock.expect(spec.getMonitorSchedulerConfig()).andReturn(new DruidMonitorSchedulerConfig()
+    {
+      @Override
+      public Duration getEmissionDuration()
+      {
+        return new Period("PT2S").toStandardDuration();
+      }
+    }).anyTimes();
+    EasyMock.expect(spec.getType()).andReturn("stream").anyTimes();
+    EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
+    EasyMock.expect(spec.getContextValue("tags")).andReturn("").anyTimes();
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+
+    SeekableStreamIndexTaskTuningConfig taskTuningConfig = getTuningConfig().convertToTaskTuningConfig();
+
+    TreeMap<Integer, Map<String, Long>> sequenceOffsets = new TreeMap<>();
+    sequenceOffsets.put(0, ImmutableMap.of("0", 10L, "1", 20L));
+
+    Map<String, Object> context = new HashMap<>();
+    context.put("checkpoints", new ObjectMapper().writeValueAsString(sequenceOffsets));
+
+    TestSeekableStreamIndexTask id1 = new TestSeekableStreamIndexTask(
+        "id1",
+        null,
+        getDataSchema(),
+        taskTuningConfig,
+        createTaskIoConfigExt(
+            0,
+            Collections.singletonMap("0", "10"),
+            Collections.singletonMap("0", "20"),
+            "test",
+            startTime,
+            null,
+            Collections.emptySet(),
+            ioConfig
+        ),
+        context,
+        "0"
+    );
+
+    TestSeekableStreamIndexTask id2 = new TestSeekableStreamIndexTask(
+        "id2",
+        null,
+        getDataSchema(),
+        taskTuningConfig,
+        createTaskIoConfigExt(
+            1,
+            Collections.singletonMap("1", "10"),
+            Collections.singletonMap("1", "20"),
+            "test",
+            startTime,
+            null,
+            Collections.emptySet(),
+            ioConfig
+        ),
+        context,
+        "1"
+    );
+
+    TestSeekableStreamIndexTask id3 = new TestSeekableStreamIndexTask(
+        "id3",
+        null,
+        getDataSchema(),
+        taskTuningConfig,
+        createTaskIoConfigExt(
+            2,
+            Collections.singletonMap("2", "10"),
+            Collections.singletonMap("2", "20"),
+            "test",
+            startTime,
+            null,
+            Collections.emptySet(),
+            ioConfig
+        ),
+        context,
+        "2"
+    );
+
+    final TaskLocation location1 = TaskLocation.create("testHost", 1234, -1);
+    final TaskLocation location2 = TaskLocation.create("testHost2", 145, -1);
+    final TaskLocation location3 = TaskLocation.create("testHost3", 145, -1);
+
+    Collection workItems = new ArrayList<>();
+    workItems.add(new TestTaskRunnerWorkItem(id1, null, location1));
+    workItems.add(new TestTaskRunnerWorkItem(id2, null, location2));
+    workItems.add(new TestTaskRunnerWorkItem(id3, null, location3));
+
+    EasyMock.expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
+    EasyMock.expect(taskRunner.getTaskLocation(id1.getId())).andReturn(location1).anyTimes();
+    EasyMock.expect(taskRunner.getTaskLocation(id2.getId())).andReturn(location2).anyTimes();
+    EasyMock.expect(taskRunner.getTaskLocation(id3.getId())).andReturn(location3).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE))
+            .andReturn(ImmutableList.of(id1, id2, id3))
+            .anyTimes();
+    EasyMock.expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
+    EasyMock.expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
+    EasyMock.expect(taskStorage.getStatus("id3")).andReturn(Optional.of(TaskStatus.running("id3"))).anyTimes();
+    EasyMock.expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
+    EasyMock.expect(taskStorage.getTask("id2")).andReturn(Optional.of(id2)).anyTimes();
+    EasyMock.expect(taskStorage.getTask("id3")).andReturn(Optional.of(id2)).anyTimes();
+
+    EasyMock.reset(indexerMetadataStorageCoordinator);
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE))
+            .andReturn(new TestSeekableStreamDataSourceMetadata(null)).anyTimes();
+    EasyMock.expect(indexTaskClient.getStatusAsync("id1"))
+            .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.READING))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.getStatusAsync("id2"))
+            .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.READING))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.getStatusAsync("id3"))
+            .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.READING))
+            .anyTimes();
+
+    EasyMock.expect(indexTaskClient.getStartTimeAsync("id1"))
+            .andReturn(Futures.immediateFuture(startTime.plusSeconds(1)))
+            .anyTimes();
+    // Mocking to return the earliest start time for task id2, indicating it's the first group to start
+    EasyMock.expect(indexTaskClient.getStartTimeAsync("id2"))
+            .andReturn(Futures.immediateFuture(startTime)).anyTimes();
+    EasyMock.expect(indexTaskClient.getStartTimeAsync("id3"))
+            .andReturn(Futures.immediateFuture(startTime.plusSeconds(2)))
+            .anyTimes();
+
+    ImmutableMap<String, String> partitionOffset = ImmutableMap.of("0", "10");
+    final TreeMap<Integer, Map<String, String>> checkpoints = new TreeMap<>();
+    checkpoints.put(0, partitionOffset);
+
+    EasyMock.expect(indexTaskClient.getCheckpointsAsync(EasyMock.contains("id1"), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(checkpoints))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.getCheckpointsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(checkpoints))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.getCheckpointsAsync(EasyMock.contains("id3"), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(checkpoints))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.setEndOffsetsAsync("id1", partitionOffset, false))
+            .andReturn(Futures.immediateFuture(true))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.setEndOffsetsAsync("id2", partitionOffset, false))
+            .andReturn(Futures.immediateFuture(true))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.setEndOffsetsAsync("id3", partitionOffset, false))
+            .andReturn(Futures.immediateFuture(true))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.resumeAsync("id1"))
+            .andReturn(Futures.immediateFuture(true))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.resumeAsync("id2"))
+            .andReturn(Futures.immediateFuture(true))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.resumeAsync("id3"))
+            .andReturn(Futures.immediateFuture(true))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.pauseAsync("id1"))
+            .andReturn(Futures.immediateFuture(true))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.pauseAsync("id2"))
+            .andReturn(Futures.immediateFuture(true))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.pauseAsync("id3"))
+            .andReturn(Futures.immediateFuture(true))
+            .anyTimes();
+
+    // Expect the earliest-started task (id2) to transition to publishing first
+    taskQueue.shutdown("id2", "All tasks in group[%s] failed to transition to publishing state", 1);
+
+    replayAll();
+
+    SeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+
+    supervisor.start();
+    supervisor.runInternal();
+
+    supervisor.checkpoint(
+        0,
+        new TestSeekableStreamDataSourceMetadata(
+            new SeekableStreamStartSequenceNumbers<>(STREAM, checkpoints.get(0), ImmutableSet.of())
+        )
     );
 
     while (supervisor.getNoticesQueueSize() > 0) {
@@ -968,29 +1228,14 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
 
     latch.await();
-    List<Event> events = emitter.getEvents();
-    List<String> whitelist = Arrays.asList("ingest/test/lag", "ingest/test/maxLag",
-        "ingest/test/avgLag", "ingest/test/lag/time", "ingest/test/maxLag/time", "ingest/test/avgLag/time");
-    events = filterMetrics(events, whitelist);
-    Assert.assertEquals(6, events.size());
-    Assert.assertEquals("ingest/test/lag", events.get(0).toMap().get("metric"));
-    Assert.assertEquals(850L, events.get(0).toMap().get("value"));
-    Assert.assertEquals(METRIC_TAGS, events.get(0).toMap().get(DruidMetrics.TAGS));
-    Assert.assertEquals("ingest/test/maxLag", events.get(1).toMap().get("metric"));
-    Assert.assertEquals(500L, events.get(1).toMap().get("value"));
-    Assert.assertEquals(METRIC_TAGS, events.get(1).toMap().get(DruidMetrics.TAGS));
-    Assert.assertEquals("ingest/test/avgLag", events.get(2).toMap().get("metric"));
-    Assert.assertEquals(283L, events.get(2).toMap().get("value"));
-    Assert.assertEquals(METRIC_TAGS, events.get(2).toMap().get(DruidMetrics.TAGS));
-    Assert.assertEquals("ingest/test/lag/time", events.get(3).toMap().get("metric"));
-    Assert.assertEquals(45000L, events.get(3).toMap().get("value"));
-    Assert.assertEquals(METRIC_TAGS, events.get(3).toMap().get(DruidMetrics.TAGS));
-    Assert.assertEquals("ingest/test/maxLag/time", events.get(4).toMap().get("metric"));
-    Assert.assertEquals(20000L, events.get(4).toMap().get("value"));
-    Assert.assertEquals(METRIC_TAGS, events.get(4).toMap().get(DruidMetrics.TAGS));
-    Assert.assertEquals("ingest/test/avgLag/time", events.get(5).toMap().get("metric"));
-    Assert.assertEquals(15000L, events.get(5).toMap().get("value"));
-    Assert.assertEquals(METRIC_TAGS, events.get(5).toMap().get(DruidMetrics.TAGS));
+
+    final Map<String, Object> dimFilters = ImmutableMap.of(DruidMetrics.TAGS, METRIC_TAGS);
+    emitter.verifyValue("ingest/test/lag", dimFilters, 850L);
+    emitter.verifyValue("ingest/test/maxLag", dimFilters, 500L);
+    emitter.verifyValue("ingest/test/avgLag", dimFilters, 283L);
+    emitter.verifyValue("ingest/test/lag/time", dimFilters, 45000L);
+    emitter.verifyValue("ingest/test/maxLag/time", dimFilters, 20000L);
+    emitter.verifyValue("ingest/test/avgLag/time", dimFilters, 15000L);
     verifyAll();
   }
 
@@ -1017,16 +1262,11 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
 
     latch.await();
-    List<Event> events = emitter.getEvents();
-    List<String> whitelist = Arrays.asList("ingest/test/lag", "ingest/test/maxLag", "ingest/test/avgLag");
-    events = filterMetrics(events, whitelist);
-    Assert.assertEquals(3, events.size());
-    Assert.assertEquals("ingest/test/lag", events.get(0).toMap().get("metric"));
-    Assert.assertEquals(850L, events.get(0).toMap().get("value"));
-    Assert.assertEquals("ingest/test/maxLag", events.get(1).toMap().get("metric"));
-    Assert.assertEquals(500L, events.get(1).toMap().get("value"));
-    Assert.assertEquals("ingest/test/avgLag", events.get(2).toMap().get("metric"));
-    Assert.assertEquals(283L, events.get(2).toMap().get("value"));
+
+    final Map<String, Object> dimFilters = ImmutableMap.of(DruidMetrics.TAGS, METRIC_TAGS);
+    emitter.verifyValue("ingest/test/lag", dimFilters, 850L);
+    emitter.verifyValue("ingest/test/maxLag", dimFilters, 500L);
+    emitter.verifyValue("ingest/test/avgLag", dimFilters, 283L);
     verifyAll();
   }
 
@@ -1054,19 +1294,12 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
 
     latch.await();
-    List<Event> events = emitter.getEvents();
-    List<String> whitelist = Arrays.asList("ingest/test/lag/time", "ingest/test/maxLag/time", "ingest/test/avgLag/time");
-    events = filterMetrics(events, whitelist);
-    Assert.assertEquals(3, events.size());
-    Assert.assertEquals("ingest/test/lag/time", events.get(0).toMap().get("metric"));
-    Assert.assertEquals(45000L, events.get(0).toMap().get("value"));
-    Assert.assertEquals(METRIC_TAGS, events.get(0).toMap().get(DruidMetrics.TAGS));
-    Assert.assertEquals("ingest/test/maxLag/time", events.get(1).toMap().get("metric"));
-    Assert.assertEquals(20000L, events.get(1).toMap().get("value"));
-    Assert.assertEquals(METRIC_TAGS, events.get(1).toMap().get(DruidMetrics.TAGS));
-    Assert.assertEquals("ingest/test/avgLag/time", events.get(2).toMap().get("metric"));
-    Assert.assertEquals(15000L, events.get(2).toMap().get("value"));
-    Assert.assertEquals(METRIC_TAGS, events.get(2).toMap().get(DruidMetrics.TAGS));
+
+    final Map<String, Object> dimFilters = ImmutableMap.of(DruidMetrics.TAGS, METRIC_TAGS);
+    emitter.verifyValue("ingest/test/lag/time", dimFilters, 45000L);
+    emitter.verifyValue("ingest/test/maxLag/time", dimFilters, 20000L);
+    emitter.verifyValue("ingest/test/avgLag/time", dimFilters, 15000L);
+
     verifyAll();
   }
 
@@ -1094,14 +1327,13 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
 
     latch.await();
-    List<Event> events = emitter.getEvents();
-    List<String> whitelist = Collections.singletonList("ingest/notices/queueSize");
-    events = filterMetrics(events, whitelist);
-    Assert.assertEquals(1, events.size());
-    Assert.assertEquals("ingest/notices/queueSize", events.get(0).toMap().get("metric"));
-    Assert.assertEquals(0, events.get(0).toMap().get("value"));
-    Assert.assertEquals(METRIC_TAGS, events.get(0).toMap().get(DruidMetrics.TAGS));
-    Assert.assertEquals("testDS", events.get(0).toMap().get("dataSource"));
+
+    final Map<String, Object> dimFilters = ImmutableMap.of(
+        DruidMetrics.TAGS, METRIC_TAGS,
+        DruidMetrics.DATASOURCE, "testDS"
+    );
+    emitter.verifyValue("ingest/notices/queueSize", dimFilters, 0);
+
     verifyAll();
   }
 
@@ -1123,15 +1355,15 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
     Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
     latch.await();
-    List<Event> events = emitter.getEvents();
-    List<String> whitelist = Collections.singletonList("ingest/notices/time");
-    events = filterMetrics(events, whitelist);
-    Assert.assertEquals(1, events.size());
-    Assert.assertEquals("ingest/notices/time", events.get(0).toMap().get("metric"));
-    Assert.assertEquals(METRIC_TAGS, events.get(0).toMap().get(DruidMetrics.TAGS));
-    Assert.assertTrue(String.valueOf(events.get(0).toMap().get("value")), (long) events.get(0).toMap().get("value") > 0);
-    Assert.assertEquals("testDS", events.get(0).toMap().get("dataSource"));
-    Assert.assertEquals("run_notice", events.get(0).toMap().get("noticeType"));
+
+    final Map<String, Object> dimFilters = ImmutableMap.of(
+        DruidMetrics.TAGS, METRIC_TAGS,
+        DruidMetrics.DATASOURCE, "testDS",
+        "noticeType", "run_notice"
+    );
+    long observedNoticeTime = emitter.getValue("ingest/notices/time", dimFilters).longValue();
+    Assert.assertTrue(observedNoticeTime > 0);
+
     verifyAll();
   }
 
@@ -1159,11 +1391,14 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
 
     latch.await();
-    List<Event> events = emitter.getEvents();
-    List<String> whitelist = Arrays.asList("ingest/test/lag", "ingest/test/maxLag",
-        "ingest/test/avgLag", "ingest/test/lag/time", "ingest/test/maxLag/time", "ingest/test/avgLag/time");
-    events = filterMetrics(events, whitelist);
-    Assert.assertEquals(0, events.size());
+
+    emitter.verifyNotEmitted("ingest/test/lag");
+    emitter.verifyNotEmitted("ingest/test/maxLag");
+    emitter.verifyNotEmitted("ingest/test/avgLag");
+    emitter.verifyNotEmitted("ingest/test/lag/time");
+    emitter.verifyNotEmitted("ingest/test/maxLag/time");
+    emitter.verifyNotEmitted("ingest/test/avgLag/time");
+
     verifyAll();
   }
 
@@ -1839,14 +2074,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.verify(executorService, spec);
   }
 
-  private List<Event> filterMetrics(List<Event> events, List<String> whitelist)
-  {
-    List<Event> result = events.stream()
-        .filter(e -> whitelist.contains(e.toMap().get("metric").toString()))
-        .collect(Collectors.toList());
-    return result;
-  }
-
   private void expectEmitterSupervisor(boolean suspended) throws EntryExistsException
   {
     spec = createMock(SeekableStreamSupervisorSpec.class);
@@ -1998,6 +2225,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
       public SeekableStreamIndexTaskTuningConfig convertToTaskTuningConfig()
       {
         return new SeekableStreamIndexTaskTuningConfig(
+            null,
             null,
             null,
             null,
@@ -2399,27 +2627,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
           spec.getMonitorSchedulerConfig().getEmissionDuration().getMillis(),
           TimeUnit.MILLISECONDS
       );
-    }
-  }
-
-  private static class TestEmitter extends NoopServiceEmitter
-  {
-    @GuardedBy("events")
-    private final List<Event> events = new ArrayList<>();
-
-    @Override
-    public void emit(Event event)
-    {
-      synchronized (events) {
-        events.add(event);
-      }
-    }
-
-    public List<Event> getEvents()
-    {
-      synchronized (events) {
-        return ImmutableList.copyOf(events);
-      }
     }
   }
 

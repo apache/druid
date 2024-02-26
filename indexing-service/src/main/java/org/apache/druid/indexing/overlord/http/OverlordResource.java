@@ -24,18 +24,20 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.audit.AuditEntry;
-import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.common.config.ConfigManager.SetResult;
 import org.apache.druid.common.config.JacksonConfigManager;
-import org.apache.druid.common.exception.DruidException;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.indexer.RunnerTaskState;
+import org.apache.druid.indexer.TaskIdentifier;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -92,7 +94,6 @@ import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
-import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -138,6 +139,8 @@ public class OverlordResource
 
   private AtomicReference<WorkerBehaviorConfig> workerConfigRef = null;
   private static final List<String> API_TASK_STATES = ImmutableList.of("pending", "waiting", "running", "complete");
+  private static final Set<String> AUDITED_TASK_TYPES
+      = ImmutableSet.of("index", "index_parallel", "compact", "index_hadoop", "kill");
 
   private enum TaskStateLookup
   {
@@ -192,7 +195,10 @@ public class OverlordResource
   @Path("/task")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
-  public Response taskPost(final Task task, @Context final HttpServletRequest req)
+  public Response taskPost(
+      final Task task,
+      @Context final HttpServletRequest req
+  )
   {
     final Set<ResourceAction> resourceActions;
     try {
@@ -200,13 +206,8 @@ public class OverlordResource
     }
     catch (UOE e) {
       return Response.status(Response.Status.BAD_REQUEST)
-          .entity(
-              ImmutableMap.of(
-                  "error",
-                  e.getMessage()
-              )
-          )
-          .build();
+                     .entity(ImmutableMap.of("error", e.getMessage()))
+                     .build();
     }
 
     Access authResult = AuthorizationUtils.authorizeAllResourceActions(
@@ -224,9 +225,28 @@ public class OverlordResource
         taskQueue -> {
           try {
             taskQueue.add(task);
+
+            if (AUDITED_TASK_TYPES.contains(task.getType())) {
+              auditManager.doAudit(
+                  AuditEntry.builder()
+                            .key(task.getDataSource())
+                            .type("task")
+                            .request(AuthorizationUtils.buildRequestInfo("overlord", req))
+                            .payload(new TaskIdentifier(task.getId(), task.getGroupId(), task.getType()))
+                            .auditInfo(AuthorizationUtils.buildAuditInfo(req))
+                            .build()
+              );
+            }
+
             return Response.ok(ImmutableMap.of("task", task.getId())).build();
           }
           catch (DruidException e) {
+            return Response
+                .status(e.getStatusCode())
+                .entity(new ErrorResponse(e))
+                .build();
+          }
+          catch (org.apache.druid.common.exception.DruidException e) {
             return Response.status(e.getResponseCode())
                            .entity(ImmutableMap.of("error", e.getMessage()))
                            .build();
@@ -449,9 +469,15 @@ public class OverlordResource
       return Response.status(Response.Status.BAD_REQUEST).entity("No TaskIds provided.").build();
     }
 
+    final Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
     Map<String, TaskStatus> result = Maps.newHashMapWithExpectedSize(taskIds.size());
     for (String taskId : taskIds) {
-      Optional<TaskStatus> optional = taskStorageQueryAdapter.getStatus(taskId);
+      final Optional<TaskStatus> optional;
+      if (taskQueue.isPresent()) {
+        optional = taskQueue.get().getTaskStatus(taskId);
+      } else {
+        optional = taskStorageQueryAdapter.getStatus(taskId);
+      }
       if (optional.isPresent()) {
         result.put(taskId, optional.get());
       }
@@ -534,15 +560,13 @@ public class OverlordResource
   @ResourceFilters(ConfigResourceFilter.class)
   public Response setWorkerConfig(
       final WorkerBehaviorConfig workerBehaviorConfig,
-      @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
-      @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
       @Context final HttpServletRequest req
   )
   {
     final SetResult setResult = configManager.set(
         WorkerBehaviorConfig.CONFIG_KEY,
         workerBehaviorConfig,
-        new AuditInfo(author, comment, req.getRemoteAddr())
+        AuthorizationUtils.buildAuditInfo(req)
     );
     if (setResult.isOk()) {
       log.info("Updating Worker configs: %s", workerBehaviorConfig);
@@ -921,10 +945,25 @@ public class OverlordResource
     }
 
     if (taskMaster.isLeader()) {
-      final int numDeleted = indexerMetadataStorageAdapter.deletePendingSegments(dataSource, deleteInterval);
-      return Response.ok().entity(ImmutableMap.of("numDeleted", numDeleted)).build();
+      try {
+        final int numDeleted = indexerMetadataStorageAdapter.deletePendingSegments(dataSource, deleteInterval);
+        return Response.ok().entity(ImmutableMap.of("numDeleted", numDeleted)).build();
+      }
+      catch (DruidException e) {
+        return Response.status(e.getStatusCode())
+                       .entity(ImmutableMap.<String, Object>of("error", e.getMessage()))
+                       .build();
+      }
+      catch (Exception e) {
+        log.warn(e, "Failed to delete pending segments for datasource[%s] and interval[%s].", dataSource, deleteInterval);
+        return Response.status(Status.INTERNAL_SERVER_ERROR)
+                       .entity(ImmutableMap.<String, Object>of("error", e.getMessage()))
+                       .build();
+      }
     } else {
-      return Response.status(Status.SERVICE_UNAVAILABLE).build();
+      return Response.status(Status.SERVICE_UNAVAILABLE)
+                     .entity(ImmutableMap.of("error", "overlord is not the leader or not initialized yet"))
+                     .build();
     }
   }
 
@@ -1082,9 +1121,9 @@ public class OverlordResource
   @VisibleForTesting
   Set<ResourceAction> getNeededResourceActionsForTask(Task task) throws UOE
   {
-    final String dataSource = task.getDataSource();
     final Set<ResourceAction> resourceActions = new HashSet<>();
-    resourceActions.add(new ResourceAction(new Resource(dataSource, ResourceType.DATASOURCE), Action.WRITE));
+    java.util.Optional<Resource> destinationResource = task.getDestinationResource();
+    destinationResource.ifPresent(resource -> resourceActions.add(new ResourceAction(resource, Action.WRITE)));
     if (authConfig.isEnableInputSourceSecurity()) {
       resourceActions.addAll(task.getInputSourceResources());
     }

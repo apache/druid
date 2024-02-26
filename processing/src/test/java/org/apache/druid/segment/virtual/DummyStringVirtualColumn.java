@@ -22,6 +22,7 @@ package org.apache.druid.segment.virtual;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -169,7 +170,7 @@ public class DummyStringVirtualColumn implements VirtualColumn
   @Override
   public ColumnIndexSupplier getIndexSupplier(
       String columnName,
-      ColumnSelector columnSelector
+      ColumnIndexSelector indexSelector
   )
   {
     return new ColumnIndexSupplier()
@@ -180,12 +181,11 @@ public class DummyStringVirtualColumn implements VirtualColumn
       public <T> T as(Class<T> clazz)
       {
         if (enableBitmaps) {
-          ColumnHolder holder = columnSelector.getColumnHolder(baseColumnName);
-          if (holder == null) {
+          ColumnIndexSupplier supplier = indexSelector.getIndexSupplier(baseColumnName);
+          if (supplier == null) {
             return null;
           }
-
-          return holder.getIndexSupplier().as(clazz);
+          return supplier.as(clazz);
         } else {
           return null;
         }

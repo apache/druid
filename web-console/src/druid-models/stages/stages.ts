@@ -17,7 +17,6 @@
  */
 
 import { max, sum } from 'd3-array';
-import hasOwnProp from 'has-own-prop';
 
 import { deleteKeys, filterMap, oneOf, zeroDivide } from '../../utils';
 import type { InputFormat } from '../input-format/input-format';
@@ -34,6 +33,9 @@ export type StageInput =
   | {
       type: 'table';
       dataSource: string;
+      intervals: string[];
+      filter?: any;
+      filterFields?: string[];
     }
   | {
       type: 'external';
@@ -121,7 +123,7 @@ function sumByKey(objs: Record<string, number>[]): Record<string, number> {
   const res: Record<string, number> = {};
   for (const obj of objs) {
     for (const k in obj) {
-      if (hasOwnProp(obj, k)) {
+      if (Object.hasOwn(obj, k)) {
         res[k] = (res[k] || 0) + obj[k];
       }
     }
@@ -381,7 +383,7 @@ export class Stages {
     if (!counters) return {};
     return sumByKey(
       filterMap(this.getCountersForStage(stage), c => {
-        const warningCounter = c.warnings;
+        const warningCounter = c.warnings as Record<string, number> | undefined;
         if (!warningCounter) return;
         return deleteKeys(warningCounter, ['type']);
       }),

@@ -15,351 +15,368 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
   <div
     className="content"
   >
-    <AutoForm
-      fields={
-        Array [
-          Object {
-            "defaultValue": "P1D",
-            "info": <p>
-              The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources.
-            </p>,
-            "name": "skipOffsetFromLatest",
-            "suggestions": Array [
-              "PT0H",
-              "PT1H",
-              "P1D",
-              "P3D",
-            ],
-            "type": "string",
-          },
-          Object {
-            "info": <p>
-              For perfect rollup, you should use either 
-              <Unknown>
-                hashed
-              </Unknown>
-               (partitioning based on the hash of dimensions in each row) or 
-              <Unknown>
-                range
-              </Unknown>
-               (based on several dimensions). For best-effort rollup, you should use 
-              <Unknown>
-                dynamic
-              </Unknown>
-              .
-            </p>,
-            "label": "Partitioning type",
-            "name": "tuningConfig.partitionsSpec.type",
-            "suggestions": Array [
-              "dynamic",
-              "hashed",
-              "range",
-            ],
-            "type": "string",
-          },
-          Object {
-            "defaultValue": 5000000,
-            "defined": [Function],
-            "info": <React.Fragment>
-              Determines how many rows are in each segment.
-            </React.Fragment>,
-            "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
-            "type": "number",
-          },
-          Object {
-            "defaultValue": 20000000,
-            "defined": [Function],
-            "info": <React.Fragment>
-              Total number of rows in segments waiting for being pushed.
-            </React.Fragment>,
-            "name": "tuningConfig.partitionsSpec.maxTotalRows",
-            "type": "number",
-          },
-          Object {
-            "defined": [Function],
-            "info": <React.Fragment>
-              <p>
-                If the segments generated are a sub-optimal size for the requested partition dimensions, consider setting this field.
-              </p>
-              <p>
-                A target row count for each partition. Each partition will have a row count close to the target assuming evenly distributed keys. Defaults to 5 million if numShards is null.
-              </p>
-              <p>
-                If 
-                <Unknown>
-                  numShards
-                </Unknown>
-                 is left unspecified, the Parallel task will determine
-                 
-                <Unknown>
-                  numShards
-                </Unknown>
-                 automatically by 
-                <Unknown>
-                  targetRowsPerSegment
-                </Unknown>
-                .
-              </p>
-              <p>
-                Note that either 
-                <Unknown>
-                  targetRowsPerSegment
-                </Unknown>
-                 or 
-                <Unknown>
-                  numShards
-                </Unknown>
-                 will be used to evenly distribute rows and find the best partitioning. Leave blank to show all properties.
-              </p>
-            </React.Fragment>,
-            "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
-            "placeholder": "(defaults to 500000)",
-            "type": "number",
-            "zeroMeansUndefined": true,
-          },
-          Object {
-            "defined": [Function],
-            "info": <React.Fragment>
-              <p>
-                Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
-              </p>
-              <p>
-                <Unknown>
-                  maxRowsPerSegment
-                </Unknown>
-                 renamed to 
-                <Unknown>
-                  targetRowsPerSegment
-                </Unknown>
-              </p>
-              <p>
-                If 
-                <Unknown>
-                  numShards
-                </Unknown>
-                 is left unspecified, the Parallel task will determine
-                 
-                <Unknown>
-                  numShards
-                </Unknown>
-                 automatically by 
-                <Unknown>
-                  targetRowsPerSegment
-                </Unknown>
-                .
-              </p>
-              <p>
-                Note that either 
-                <Unknown>
-                  targetRowsPerSegment
-                </Unknown>
-                 or 
-                <Unknown>
-                  numShards
-                </Unknown>
-                 will be used to evenly distribute rows and find the best partitioning. Leave blank to show all properties.
-              </p>
-            </React.Fragment>,
-            "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
-            "type": "number",
-            "zeroMeansUndefined": true,
-          },
-          Object {
-            "defined": [Function],
-            "info": <React.Fragment>
-              <p>
-                If you know the optimal number of shards and want to speed up the time it takes for compaction to run, set this field.
-              </p>
-              <p>
-                Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
-              </p>
-              <p>
-                Note that either 
-                <Unknown>
-                  targetRowsPerSegment
-                </Unknown>
-                 or 
-                <Unknown>
-                  numShards
-                </Unknown>
-                 will be used to evenly distribute rows across partitions and find the best partitioning. Leave blank to show all properties.
-              </p>
-            </React.Fragment>,
-            "name": "tuningConfig.partitionsSpec.numShards",
-            "type": "number",
-            "zeroMeansUndefined": true,
-          },
-          Object {
-            "defined": [Function],
-            "info": <p>
-              The dimensions to partition on. Leave blank to select all dimensions.
-            </p>,
-            "name": "tuningConfig.partitionsSpec.partitionDimensions",
-            "placeholder": "(all dimensions)",
-            "type": "string-array",
-          },
-          Object {
-            "defined": [Function],
-            "info": <p>
-              The dimension to partition on.
-            </p>,
-            "name": "tuningConfig.partitionsSpec.partitionDimension",
-            "required": true,
-            "type": "string",
-          },
-          Object {
-            "defined": [Function],
-            "info": <p>
-              The dimensions to partition on.
-            </p>,
-            "name": "tuningConfig.partitionsSpec.partitionDimensions",
-            "required": true,
-            "type": "string-array",
-          },
-          Object {
-            "defined": [Function],
-            "info": <React.Fragment>
-              <p>
-                Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
-              </p>
-              <p>
-                Note that either 
-                <Unknown>
-                  targetRowsPerSegment
-                </Unknown>
-                 or 
-                <Unknown>
-                  maxRowsPerSegment
-                </Unknown>
-                 will be used to find the best partitioning. Leave blank to show all properties.
-              </p>
-            </React.Fragment>,
-            "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
-            "required": [Function],
-            "type": "number",
-            "zeroMeansUndefined": true,
-          },
-          Object {
-            "defined": [Function],
-            "info": <React.Fragment>
-              <p>
-                Maximum number of rows to include in a partition.
-              </p>
-              <p>
-                Note that either 
-                <Unknown>
-                  targetRowsPerSegment
-                </Unknown>
-                 or 
-                <Unknown>
-                  maxRowsPerSegment
-                </Unknown>
-                 will be used to find the best partitioning. Leave blank to show all properties.
-              </p>
-            </React.Fragment>,
-            "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
-            "required": [Function],
-            "type": "number",
-            "zeroMeansUndefined": true,
-          },
-          Object {
-            "defaultValue": false,
-            "defined": [Function],
-            "info": <p>
-              Assume that input data has already been grouped on time and dimensions. Ingestion will run faster, but may choose sub-optimal partitions if this assumption is violated.
-            </p>,
-            "name": "tuningConfig.partitionsSpec.assumeGrouped",
-            "type": "boolean",
-          },
-          Object {
-            "defaultValue": 1,
-            "info": <React.Fragment>
-              Maximum number of tasks which can be run at the same time. The supervisor task would spawn worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion.
-            </React.Fragment>,
-            "min": 1,
-            "name": "tuningConfig.maxNumConcurrentSubTasks",
-            "type": "number",
-          },
-          Object {
-            "defaultValue": -1,
-            "info": <React.Fragment>
-              <p>
-                Limit of the number of segments to merge in a single phase when merging segments for publishing. This limit affects the total number of columns present in a set of segments to merge. If the limit is exceeded, segment merging occurs in multiple phases. Druid merges at least 2 segments per phase, regardless of this setting.
-              </p>
-              <p>
-                Default: -1 (unlimited)
-              </p>
-            </React.Fragment>,
-            "min": -1,
-            "name": "tuningConfig.maxColumnsToMerge",
-            "type": "number",
-          },
-          Object {
-            "defaultValue": 10,
-            "defined": [Function],
-            "info": <React.Fragment>
-              Maximum number of merge tasks which can be run at the same time.
-            </React.Fragment>,
-            "min": 1,
-            "name": "tuningConfig.totalNumMergeTasks",
-            "type": "number",
-          },
-          Object {
-            "adjustment": [Function],
-            "defaultValue": 1073741824,
-            "hideInMore": true,
-            "info": <React.Fragment>
-              Maximum number of bytes of input segments to process in a single task. If a single segment is larger than this number, it will be processed by itself in a single task (input segments are never split across tasks).
-            </React.Fragment>,
-            "min": 1000000,
-            "name": "tuningConfig.splitHintSpec.maxSplitSize",
-            "type": "number",
-          },
-          Object {
-            "adjustment": [Function],
-            "defaultValue": 1000,
-            "hideInMore": true,
-            "info": <React.Fragment>
-              Maximum number of input segments to process in a single subtask. This limit is to avoid task failures when the ingestion spec is too long. There are two known limits on the max size of serialized ingestion spec, i.e., the max ZNode size in ZooKeeper (
-              <Unknown>
-                jute.maxbuffer
-              </Unknown>
-              ) and the max packet size in MySQL (
-              <Unknown>
-                max_allowed_packet
-              </Unknown>
-              ). These can make ingestion tasks fail if the serialized ingestion spec size hits one of them.
-            </React.Fragment>,
-            "label": "Max num files (segments)",
-            "min": 1,
-            "name": "tuningConfig.splitHintSpec.maxNumFiles",
-            "type": "number",
-          },
-          Object {
-            "adjustValue": [Function],
-            "defaultValue": undefined,
-            "info": <p>
-              Allows or forbids concurrent compactions.
-            </p>,
-            "label": "Allow concurrent compactions (experimental)",
-            "name": "taskContext.taskLockType",
-            "type": "boolean",
-            "valueAdjustment": [Function],
-          },
-        ]
-      }
-      model={
-        Object {
-          "dataSource": "test1",
-          "tuningConfig": Object {
-            "partitionsSpec": Object {
-              "type": "dynamic",
+    <React.Fragment>
+      <AutoForm
+        fields={
+          Array [
+            Object {
+              "defaultValue": "P1D",
+              "info": <p>
+                The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources.
+              </p>,
+              "name": "skipOffsetFromLatest",
+              "suggestions": Array [
+                "PT0H",
+                "PT1H",
+                "P1D",
+                "P3D",
+              ],
+              "type": "string",
             },
-          },
+            Object {
+              "info": <p>
+                For perfect rollup, you should use either 
+                <Unknown>
+                  hashed
+                </Unknown>
+                 (partitioning based on the hash of dimensions in each row) or 
+                <Unknown>
+                  range
+                </Unknown>
+                 (based on several dimensions). For best-effort rollup, you should use 
+                <Unknown>
+                  dynamic
+                </Unknown>
+                .
+              </p>,
+              "label": "Partitioning type",
+              "name": "tuningConfig.partitionsSpec.type",
+              "suggestions": Array [
+                "dynamic",
+                "hashed",
+                "range",
+              ],
+              "type": "string",
+            },
+            Object {
+              "defaultValue": 5000000,
+              "defined": [Function],
+              "info": <React.Fragment>
+                Determines how many rows are in each segment.
+              </React.Fragment>,
+              "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
+              "type": "number",
+            },
+            Object {
+              "defaultValue": 20000000,
+              "defined": [Function],
+              "info": <React.Fragment>
+                Total number of rows in segments waiting for being pushed.
+              </React.Fragment>,
+              "name": "tuningConfig.partitionsSpec.maxTotalRows",
+              "type": "number",
+            },
+            Object {
+              "defined": [Function],
+              "info": <React.Fragment>
+                <p>
+                  If the segments generated are a sub-optimal size for the requested partition dimensions, consider setting this field.
+                </p>
+                <p>
+                  A target row count for each partition. Each partition will have a row count close to the target assuming evenly distributed keys. Defaults to 5 million if numShards is null.
+                </p>
+                <p>
+                  If 
+                  <Unknown>
+                    numShards
+                  </Unknown>
+                   is left unspecified, the Parallel task will determine
+                   
+                  <Unknown>
+                    numShards
+                  </Unknown>
+                   automatically by 
+                  <Unknown>
+                    targetRowsPerSegment
+                  </Unknown>
+                  .
+                </p>
+                <p>
+                  Note that either 
+                  <Unknown>
+                    targetRowsPerSegment
+                  </Unknown>
+                   or 
+                  <Unknown>
+                    numShards
+                  </Unknown>
+                   will be used to evenly distribute rows and find the best partitioning. Leave blank to show all properties.
+                </p>
+              </React.Fragment>,
+              "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
+              "placeholder": "(defaults to 500000)",
+              "type": "number",
+              "zeroMeansUndefined": true,
+            },
+            Object {
+              "defined": [Function],
+              "info": <React.Fragment>
+                <p>
+                  Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
+                </p>
+                <p>
+                  <Unknown>
+                    maxRowsPerSegment
+                  </Unknown>
+                   renamed to 
+                  <Unknown>
+                    targetRowsPerSegment
+                  </Unknown>
+                </p>
+                <p>
+                  If 
+                  <Unknown>
+                    numShards
+                  </Unknown>
+                   is left unspecified, the Parallel task will determine
+                   
+                  <Unknown>
+                    numShards
+                  </Unknown>
+                   automatically by 
+                  <Unknown>
+                    targetRowsPerSegment
+                  </Unknown>
+                  .
+                </p>
+                <p>
+                  Note that either 
+                  <Unknown>
+                    targetRowsPerSegment
+                  </Unknown>
+                   or 
+                  <Unknown>
+                    numShards
+                  </Unknown>
+                   will be used to evenly distribute rows and find the best partitioning. Leave blank to show all properties.
+                </p>
+              </React.Fragment>,
+              "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
+              "type": "number",
+              "zeroMeansUndefined": true,
+            },
+            Object {
+              "defined": [Function],
+              "info": <React.Fragment>
+                <p>
+                  If you know the optimal number of shards and want to speed up the time it takes for compaction to run, set this field.
+                </p>
+                <p>
+                  Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
+                </p>
+                <p>
+                  Note that either 
+                  <Unknown>
+                    targetRowsPerSegment
+                  </Unknown>
+                   or 
+                  <Unknown>
+                    numShards
+                  </Unknown>
+                   will be used to evenly distribute rows across partitions and find the best partitioning. Leave blank to show all properties.
+                </p>
+              </React.Fragment>,
+              "name": "tuningConfig.partitionsSpec.numShards",
+              "type": "number",
+              "zeroMeansUndefined": true,
+            },
+            Object {
+              "defined": [Function],
+              "info": <p>
+                The dimensions to partition on. Leave blank to select all dimensions.
+              </p>,
+              "name": "tuningConfig.partitionsSpec.partitionDimensions",
+              "placeholder": "(all dimensions)",
+              "type": "string-array",
+            },
+            Object {
+              "defined": [Function],
+              "info": <p>
+                The dimension to partition on.
+              </p>,
+              "name": "tuningConfig.partitionsSpec.partitionDimension",
+              "required": true,
+              "type": "string",
+            },
+            Object {
+              "defined": [Function],
+              "info": <p>
+                The dimensions to partition on.
+              </p>,
+              "name": "tuningConfig.partitionsSpec.partitionDimensions",
+              "required": true,
+              "type": "string-array",
+            },
+            Object {
+              "defined": [Function],
+              "info": <React.Fragment>
+                <p>
+                  Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
+                </p>
+                <p>
+                  Note that either 
+                  <Unknown>
+                    targetRowsPerSegment
+                  </Unknown>
+                   or 
+                  <Unknown>
+                    maxRowsPerSegment
+                  </Unknown>
+                   will be used to find the best partitioning. Leave blank to show all properties.
+                </p>
+              </React.Fragment>,
+              "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
+              "required": [Function],
+              "type": "number",
+              "zeroMeansUndefined": true,
+            },
+            Object {
+              "defined": [Function],
+              "info": <React.Fragment>
+                <p>
+                  Maximum number of rows to include in a partition.
+                </p>
+                <p>
+                  Note that either 
+                  <Unknown>
+                    targetRowsPerSegment
+                  </Unknown>
+                   or 
+                  <Unknown>
+                    maxRowsPerSegment
+                  </Unknown>
+                   will be used to find the best partitioning. Leave blank to show all properties.
+                </p>
+              </React.Fragment>,
+              "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
+              "required": [Function],
+              "type": "number",
+              "zeroMeansUndefined": true,
+            },
+            Object {
+              "defaultValue": false,
+              "defined": [Function],
+              "info": <p>
+                Assume that input data has already been grouped on time and dimensions. Ingestion will run faster, but may choose sub-optimal partitions if this assumption is violated.
+              </p>,
+              "name": "tuningConfig.partitionsSpec.assumeGrouped",
+              "type": "boolean",
+            },
+            Object {
+              "defaultValue": 1,
+              "info": <React.Fragment>
+                Maximum number of tasks which can be run at the same time. The supervisor task would spawn worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion.
+              </React.Fragment>,
+              "min": 1,
+              "name": "tuningConfig.maxNumConcurrentSubTasks",
+              "type": "number",
+            },
+            Object {
+              "defaultValue": -1,
+              "info": <React.Fragment>
+                <p>
+                  Limit of the number of segments to merge in a single phase when merging segments for publishing. This limit affects the total number of columns present in a set of segments to merge. If the limit is exceeded, segment merging occurs in multiple phases. Druid merges at least 2 segments per phase, regardless of this setting.
+                </p>
+                <p>
+                  Default: -1 (unlimited)
+                </p>
+              </React.Fragment>,
+              "min": -1,
+              "name": "tuningConfig.maxColumnsToMerge",
+              "type": "number",
+            },
+            Object {
+              "defaultValue": 10,
+              "defined": [Function],
+              "info": <React.Fragment>
+                Maximum number of merge tasks which can be run at the same time.
+              </React.Fragment>,
+              "min": 1,
+              "name": "tuningConfig.totalNumMergeTasks",
+              "type": "number",
+            },
+            Object {
+              "adjustment": [Function],
+              "defaultValue": 1073741824,
+              "hideInMore": true,
+              "info": <React.Fragment>
+                Maximum number of bytes of input segments to process in a single task. If a single segment is larger than this number, it will be processed by itself in a single task (input segments are never split across tasks).
+              </React.Fragment>,
+              "min": 1000000,
+              "name": "tuningConfig.splitHintSpec.maxSplitSize",
+              "type": "number",
+            },
+            Object {
+              "adjustment": [Function],
+              "defaultValue": 1000,
+              "hideInMore": true,
+              "info": <React.Fragment>
+                Maximum number of input segments to process in a single subtask. This limit is to avoid task failures when the ingestion spec is too long. There are two known limits on the max size of serialized ingestion spec, i.e., the max ZNode size in ZooKeeper (
+                <Unknown>
+                  jute.maxbuffer
+                </Unknown>
+                ) and the max packet size in MySQL (
+                <Unknown>
+                  max_allowed_packet
+                </Unknown>
+                ). These can make ingestion tasks fail if the serialized ingestion spec size hits one of them.
+              </React.Fragment>,
+              "label": "Max num files (segments)",
+              "min": 1,
+              "name": "tuningConfig.splitHintSpec.maxNumFiles",
+              "type": "number",
+            },
+          ]
         }
-      }
-      onChange={[Function]}
-    />
+        model={
+          Object {
+            "dataSource": "test1",
+            "tuningConfig": Object {
+              "partitionsSpec": Object {
+                "type": "dynamic",
+              },
+            },
+          }
+        }
+        onChange={[Function]}
+      />
+      <Memo(FormGroupWithInfo)
+        info={
+          <Memo(PopoverText)>
+            <p>
+              If you want to append data to a datasource while compaction is running, you need to enable concurrent append and replace for the datasource by updating the compaction settings.
+            </p>
+            <p>
+              For more information refer to the
+               
+              <Memo(ExternalLink)
+                href="https://druid.apache.org/docs/latest/ingestion/concurrent-append-replace.html"
+              >
+                documentation
+              </Memo(ExternalLink)>
+              .
+            </p>
+          </Memo(PopoverText)>
+        }
+        inlineInfo={true}
+      >
+        <Blueprint4.Switch
+          checked={false}
+          label="Use concurrent locks (experimental)"
+          onChange={[Function]}
+        />
+      </Memo(FormGroupWithInfo)>
+    </React.Fragment>
   </div>
   <div
     className="bp4-dialog-footer"
@@ -408,351 +425,368 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
   <div
     className="content"
   >
-    <AutoForm
-      fields={
-        Array [
-          Object {
-            "defaultValue": "P1D",
-            "info": <p>
-              The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources.
-            </p>,
-            "name": "skipOffsetFromLatest",
-            "suggestions": Array [
-              "PT0H",
-              "PT1H",
-              "P1D",
-              "P3D",
-            ],
-            "type": "string",
-          },
-          Object {
-            "info": <p>
-              For perfect rollup, you should use either 
-              <Unknown>
-                hashed
-              </Unknown>
-               (partitioning based on the hash of dimensions in each row) or 
-              <Unknown>
-                range
-              </Unknown>
-               (based on several dimensions). For best-effort rollup, you should use 
-              <Unknown>
-                dynamic
-              </Unknown>
-              .
-            </p>,
-            "label": "Partitioning type",
-            "name": "tuningConfig.partitionsSpec.type",
-            "suggestions": Array [
-              "dynamic",
-              "hashed",
-              "range",
-            ],
-            "type": "string",
-          },
-          Object {
-            "defaultValue": 5000000,
-            "defined": [Function],
-            "info": <React.Fragment>
-              Determines how many rows are in each segment.
-            </React.Fragment>,
-            "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
-            "type": "number",
-          },
-          Object {
-            "defaultValue": 20000000,
-            "defined": [Function],
-            "info": <React.Fragment>
-              Total number of rows in segments waiting for being pushed.
-            </React.Fragment>,
-            "name": "tuningConfig.partitionsSpec.maxTotalRows",
-            "type": "number",
-          },
-          Object {
-            "defined": [Function],
-            "info": <React.Fragment>
-              <p>
-                If the segments generated are a sub-optimal size for the requested partition dimensions, consider setting this field.
-              </p>
-              <p>
-                A target row count for each partition. Each partition will have a row count close to the target assuming evenly distributed keys. Defaults to 5 million if numShards is null.
-              </p>
-              <p>
-                If 
-                <Unknown>
-                  numShards
-                </Unknown>
-                 is left unspecified, the Parallel task will determine
-                 
-                <Unknown>
-                  numShards
-                </Unknown>
-                 automatically by 
-                <Unknown>
-                  targetRowsPerSegment
-                </Unknown>
-                .
-              </p>
-              <p>
-                Note that either 
-                <Unknown>
-                  targetRowsPerSegment
-                </Unknown>
-                 or 
-                <Unknown>
-                  numShards
-                </Unknown>
-                 will be used to evenly distribute rows and find the best partitioning. Leave blank to show all properties.
-              </p>
-            </React.Fragment>,
-            "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
-            "placeholder": "(defaults to 500000)",
-            "type": "number",
-            "zeroMeansUndefined": true,
-          },
-          Object {
-            "defined": [Function],
-            "info": <React.Fragment>
-              <p>
-                Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
-              </p>
-              <p>
-                <Unknown>
-                  maxRowsPerSegment
-                </Unknown>
-                 renamed to 
-                <Unknown>
-                  targetRowsPerSegment
-                </Unknown>
-              </p>
-              <p>
-                If 
-                <Unknown>
-                  numShards
-                </Unknown>
-                 is left unspecified, the Parallel task will determine
-                 
-                <Unknown>
-                  numShards
-                </Unknown>
-                 automatically by 
-                <Unknown>
-                  targetRowsPerSegment
-                </Unknown>
-                .
-              </p>
-              <p>
-                Note that either 
-                <Unknown>
-                  targetRowsPerSegment
-                </Unknown>
-                 or 
-                <Unknown>
-                  numShards
-                </Unknown>
-                 will be used to evenly distribute rows and find the best partitioning. Leave blank to show all properties.
-              </p>
-            </React.Fragment>,
-            "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
-            "type": "number",
-            "zeroMeansUndefined": true,
-          },
-          Object {
-            "defined": [Function],
-            "info": <React.Fragment>
-              <p>
-                If you know the optimal number of shards and want to speed up the time it takes for compaction to run, set this field.
-              </p>
-              <p>
-                Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
-              </p>
-              <p>
-                Note that either 
-                <Unknown>
-                  targetRowsPerSegment
-                </Unknown>
-                 or 
-                <Unknown>
-                  numShards
-                </Unknown>
-                 will be used to evenly distribute rows across partitions and find the best partitioning. Leave blank to show all properties.
-              </p>
-            </React.Fragment>,
-            "name": "tuningConfig.partitionsSpec.numShards",
-            "type": "number",
-            "zeroMeansUndefined": true,
-          },
-          Object {
-            "defined": [Function],
-            "info": <p>
-              The dimensions to partition on. Leave blank to select all dimensions.
-            </p>,
-            "name": "tuningConfig.partitionsSpec.partitionDimensions",
-            "placeholder": "(all dimensions)",
-            "type": "string-array",
-          },
-          Object {
-            "defined": [Function],
-            "info": <p>
-              The dimension to partition on.
-            </p>,
-            "name": "tuningConfig.partitionsSpec.partitionDimension",
-            "required": true,
-            "type": "string",
-          },
-          Object {
-            "defined": [Function],
-            "info": <p>
-              The dimensions to partition on.
-            </p>,
-            "name": "tuningConfig.partitionsSpec.partitionDimensions",
-            "required": true,
-            "type": "string-array",
-          },
-          Object {
-            "defined": [Function],
-            "info": <React.Fragment>
-              <p>
-                Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
-              </p>
-              <p>
-                Note that either 
-                <Unknown>
-                  targetRowsPerSegment
-                </Unknown>
-                 or 
-                <Unknown>
-                  maxRowsPerSegment
-                </Unknown>
-                 will be used to find the best partitioning. Leave blank to show all properties.
-              </p>
-            </React.Fragment>,
-            "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
-            "required": [Function],
-            "type": "number",
-            "zeroMeansUndefined": true,
-          },
-          Object {
-            "defined": [Function],
-            "info": <React.Fragment>
-              <p>
-                Maximum number of rows to include in a partition.
-              </p>
-              <p>
-                Note that either 
-                <Unknown>
-                  targetRowsPerSegment
-                </Unknown>
-                 or 
-                <Unknown>
-                  maxRowsPerSegment
-                </Unknown>
-                 will be used to find the best partitioning. Leave blank to show all properties.
-              </p>
-            </React.Fragment>,
-            "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
-            "required": [Function],
-            "type": "number",
-            "zeroMeansUndefined": true,
-          },
-          Object {
-            "defaultValue": false,
-            "defined": [Function],
-            "info": <p>
-              Assume that input data has already been grouped on time and dimensions. Ingestion will run faster, but may choose sub-optimal partitions if this assumption is violated.
-            </p>,
-            "name": "tuningConfig.partitionsSpec.assumeGrouped",
-            "type": "boolean",
-          },
-          Object {
-            "defaultValue": 1,
-            "info": <React.Fragment>
-              Maximum number of tasks which can be run at the same time. The supervisor task would spawn worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion.
-            </React.Fragment>,
-            "min": 1,
-            "name": "tuningConfig.maxNumConcurrentSubTasks",
-            "type": "number",
-          },
-          Object {
-            "defaultValue": -1,
-            "info": <React.Fragment>
-              <p>
-                Limit of the number of segments to merge in a single phase when merging segments for publishing. This limit affects the total number of columns present in a set of segments to merge. If the limit is exceeded, segment merging occurs in multiple phases. Druid merges at least 2 segments per phase, regardless of this setting.
-              </p>
-              <p>
-                Default: -1 (unlimited)
-              </p>
-            </React.Fragment>,
-            "min": -1,
-            "name": "tuningConfig.maxColumnsToMerge",
-            "type": "number",
-          },
-          Object {
-            "defaultValue": 10,
-            "defined": [Function],
-            "info": <React.Fragment>
-              Maximum number of merge tasks which can be run at the same time.
-            </React.Fragment>,
-            "min": 1,
-            "name": "tuningConfig.totalNumMergeTasks",
-            "type": "number",
-          },
-          Object {
-            "adjustment": [Function],
-            "defaultValue": 1073741824,
-            "hideInMore": true,
-            "info": <React.Fragment>
-              Maximum number of bytes of input segments to process in a single task. If a single segment is larger than this number, it will be processed by itself in a single task (input segments are never split across tasks).
-            </React.Fragment>,
-            "min": 1000000,
-            "name": "tuningConfig.splitHintSpec.maxSplitSize",
-            "type": "number",
-          },
-          Object {
-            "adjustment": [Function],
-            "defaultValue": 1000,
-            "hideInMore": true,
-            "info": <React.Fragment>
-              Maximum number of input segments to process in a single subtask. This limit is to avoid task failures when the ingestion spec is too long. There are two known limits on the max size of serialized ingestion spec, i.e., the max ZNode size in ZooKeeper (
-              <Unknown>
-                jute.maxbuffer
-              </Unknown>
-              ) and the max packet size in MySQL (
-              <Unknown>
-                max_allowed_packet
-              </Unknown>
-              ). These can make ingestion tasks fail if the serialized ingestion spec size hits one of them.
-            </React.Fragment>,
-            "label": "Max num files (segments)",
-            "min": 1,
-            "name": "tuningConfig.splitHintSpec.maxNumFiles",
-            "type": "number",
-          },
-          Object {
-            "adjustValue": [Function],
-            "defaultValue": undefined,
-            "info": <p>
-              Allows or forbids concurrent compactions.
-            </p>,
-            "label": "Allow concurrent compactions (experimental)",
-            "name": "taskContext.taskLockType",
-            "type": "boolean",
-            "valueAdjustment": [Function],
-          },
-        ]
-      }
-      model={
-        Object {
-          "dataSource": "test1",
-          "tuningConfig": Object {
-            "partitionsSpec": Object {
-              "type": "hashed",
+    <React.Fragment>
+      <AutoForm
+        fields={
+          Array [
+            Object {
+              "defaultValue": "P1D",
+              "info": <p>
+                The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources.
+              </p>,
+              "name": "skipOffsetFromLatest",
+              "suggestions": Array [
+                "PT0H",
+                "PT1H",
+                "P1D",
+                "P3D",
+              ],
+              "type": "string",
             },
-          },
+            Object {
+              "info": <p>
+                For perfect rollup, you should use either 
+                <Unknown>
+                  hashed
+                </Unknown>
+                 (partitioning based on the hash of dimensions in each row) or 
+                <Unknown>
+                  range
+                </Unknown>
+                 (based on several dimensions). For best-effort rollup, you should use 
+                <Unknown>
+                  dynamic
+                </Unknown>
+                .
+              </p>,
+              "label": "Partitioning type",
+              "name": "tuningConfig.partitionsSpec.type",
+              "suggestions": Array [
+                "dynamic",
+                "hashed",
+                "range",
+              ],
+              "type": "string",
+            },
+            Object {
+              "defaultValue": 5000000,
+              "defined": [Function],
+              "info": <React.Fragment>
+                Determines how many rows are in each segment.
+              </React.Fragment>,
+              "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
+              "type": "number",
+            },
+            Object {
+              "defaultValue": 20000000,
+              "defined": [Function],
+              "info": <React.Fragment>
+                Total number of rows in segments waiting for being pushed.
+              </React.Fragment>,
+              "name": "tuningConfig.partitionsSpec.maxTotalRows",
+              "type": "number",
+            },
+            Object {
+              "defined": [Function],
+              "info": <React.Fragment>
+                <p>
+                  If the segments generated are a sub-optimal size for the requested partition dimensions, consider setting this field.
+                </p>
+                <p>
+                  A target row count for each partition. Each partition will have a row count close to the target assuming evenly distributed keys. Defaults to 5 million if numShards is null.
+                </p>
+                <p>
+                  If 
+                  <Unknown>
+                    numShards
+                  </Unknown>
+                   is left unspecified, the Parallel task will determine
+                   
+                  <Unknown>
+                    numShards
+                  </Unknown>
+                   automatically by 
+                  <Unknown>
+                    targetRowsPerSegment
+                  </Unknown>
+                  .
+                </p>
+                <p>
+                  Note that either 
+                  <Unknown>
+                    targetRowsPerSegment
+                  </Unknown>
+                   or 
+                  <Unknown>
+                    numShards
+                  </Unknown>
+                   will be used to evenly distribute rows and find the best partitioning. Leave blank to show all properties.
+                </p>
+              </React.Fragment>,
+              "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
+              "placeholder": "(defaults to 500000)",
+              "type": "number",
+              "zeroMeansUndefined": true,
+            },
+            Object {
+              "defined": [Function],
+              "info": <React.Fragment>
+                <p>
+                  Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
+                </p>
+                <p>
+                  <Unknown>
+                    maxRowsPerSegment
+                  </Unknown>
+                   renamed to 
+                  <Unknown>
+                    targetRowsPerSegment
+                  </Unknown>
+                </p>
+                <p>
+                  If 
+                  <Unknown>
+                    numShards
+                  </Unknown>
+                   is left unspecified, the Parallel task will determine
+                   
+                  <Unknown>
+                    numShards
+                  </Unknown>
+                   automatically by 
+                  <Unknown>
+                    targetRowsPerSegment
+                  </Unknown>
+                  .
+                </p>
+                <p>
+                  Note that either 
+                  <Unknown>
+                    targetRowsPerSegment
+                  </Unknown>
+                   or 
+                  <Unknown>
+                    numShards
+                  </Unknown>
+                   will be used to evenly distribute rows and find the best partitioning. Leave blank to show all properties.
+                </p>
+              </React.Fragment>,
+              "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
+              "type": "number",
+              "zeroMeansUndefined": true,
+            },
+            Object {
+              "defined": [Function],
+              "info": <React.Fragment>
+                <p>
+                  If you know the optimal number of shards and want to speed up the time it takes for compaction to run, set this field.
+                </p>
+                <p>
+                  Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
+                </p>
+                <p>
+                  Note that either 
+                  <Unknown>
+                    targetRowsPerSegment
+                  </Unknown>
+                   or 
+                  <Unknown>
+                    numShards
+                  </Unknown>
+                   will be used to evenly distribute rows across partitions and find the best partitioning. Leave blank to show all properties.
+                </p>
+              </React.Fragment>,
+              "name": "tuningConfig.partitionsSpec.numShards",
+              "type": "number",
+              "zeroMeansUndefined": true,
+            },
+            Object {
+              "defined": [Function],
+              "info": <p>
+                The dimensions to partition on. Leave blank to select all dimensions.
+              </p>,
+              "name": "tuningConfig.partitionsSpec.partitionDimensions",
+              "placeholder": "(all dimensions)",
+              "type": "string-array",
+            },
+            Object {
+              "defined": [Function],
+              "info": <p>
+                The dimension to partition on.
+              </p>,
+              "name": "tuningConfig.partitionsSpec.partitionDimension",
+              "required": true,
+              "type": "string",
+            },
+            Object {
+              "defined": [Function],
+              "info": <p>
+                The dimensions to partition on.
+              </p>,
+              "name": "tuningConfig.partitionsSpec.partitionDimensions",
+              "required": true,
+              "type": "string-array",
+            },
+            Object {
+              "defined": [Function],
+              "info": <React.Fragment>
+                <p>
+                  Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
+                </p>
+                <p>
+                  Note that either 
+                  <Unknown>
+                    targetRowsPerSegment
+                  </Unknown>
+                   or 
+                  <Unknown>
+                    maxRowsPerSegment
+                  </Unknown>
+                   will be used to find the best partitioning. Leave blank to show all properties.
+                </p>
+              </React.Fragment>,
+              "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
+              "required": [Function],
+              "type": "number",
+              "zeroMeansUndefined": true,
+            },
+            Object {
+              "defined": [Function],
+              "info": <React.Fragment>
+                <p>
+                  Maximum number of rows to include in a partition.
+                </p>
+                <p>
+                  Note that either 
+                  <Unknown>
+                    targetRowsPerSegment
+                  </Unknown>
+                   or 
+                  <Unknown>
+                    maxRowsPerSegment
+                  </Unknown>
+                   will be used to find the best partitioning. Leave blank to show all properties.
+                </p>
+              </React.Fragment>,
+              "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
+              "required": [Function],
+              "type": "number",
+              "zeroMeansUndefined": true,
+            },
+            Object {
+              "defaultValue": false,
+              "defined": [Function],
+              "info": <p>
+                Assume that input data has already been grouped on time and dimensions. Ingestion will run faster, but may choose sub-optimal partitions if this assumption is violated.
+              </p>,
+              "name": "tuningConfig.partitionsSpec.assumeGrouped",
+              "type": "boolean",
+            },
+            Object {
+              "defaultValue": 1,
+              "info": <React.Fragment>
+                Maximum number of tasks which can be run at the same time. The supervisor task would spawn worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion.
+              </React.Fragment>,
+              "min": 1,
+              "name": "tuningConfig.maxNumConcurrentSubTasks",
+              "type": "number",
+            },
+            Object {
+              "defaultValue": -1,
+              "info": <React.Fragment>
+                <p>
+                  Limit of the number of segments to merge in a single phase when merging segments for publishing. This limit affects the total number of columns present in a set of segments to merge. If the limit is exceeded, segment merging occurs in multiple phases. Druid merges at least 2 segments per phase, regardless of this setting.
+                </p>
+                <p>
+                  Default: -1 (unlimited)
+                </p>
+              </React.Fragment>,
+              "min": -1,
+              "name": "tuningConfig.maxColumnsToMerge",
+              "type": "number",
+            },
+            Object {
+              "defaultValue": 10,
+              "defined": [Function],
+              "info": <React.Fragment>
+                Maximum number of merge tasks which can be run at the same time.
+              </React.Fragment>,
+              "min": 1,
+              "name": "tuningConfig.totalNumMergeTasks",
+              "type": "number",
+            },
+            Object {
+              "adjustment": [Function],
+              "defaultValue": 1073741824,
+              "hideInMore": true,
+              "info": <React.Fragment>
+                Maximum number of bytes of input segments to process in a single task. If a single segment is larger than this number, it will be processed by itself in a single task (input segments are never split across tasks).
+              </React.Fragment>,
+              "min": 1000000,
+              "name": "tuningConfig.splitHintSpec.maxSplitSize",
+              "type": "number",
+            },
+            Object {
+              "adjustment": [Function],
+              "defaultValue": 1000,
+              "hideInMore": true,
+              "info": <React.Fragment>
+                Maximum number of input segments to process in a single subtask. This limit is to avoid task failures when the ingestion spec is too long. There are two known limits on the max size of serialized ingestion spec, i.e., the max ZNode size in ZooKeeper (
+                <Unknown>
+                  jute.maxbuffer
+                </Unknown>
+                ) and the max packet size in MySQL (
+                <Unknown>
+                  max_allowed_packet
+                </Unknown>
+                ). These can make ingestion tasks fail if the serialized ingestion spec size hits one of them.
+              </React.Fragment>,
+              "label": "Max num files (segments)",
+              "min": 1,
+              "name": "tuningConfig.splitHintSpec.maxNumFiles",
+              "type": "number",
+            },
+          ]
         }
-      }
-      onChange={[Function]}
-    />
+        model={
+          Object {
+            "dataSource": "test1",
+            "tuningConfig": Object {
+              "partitionsSpec": Object {
+                "type": "hashed",
+              },
+            },
+          }
+        }
+        onChange={[Function]}
+      />
+      <Memo(FormGroupWithInfo)
+        info={
+          <Memo(PopoverText)>
+            <p>
+              If you want to append data to a datasource while compaction is running, you need to enable concurrent append and replace for the datasource by updating the compaction settings.
+            </p>
+            <p>
+              For more information refer to the
+               
+              <Memo(ExternalLink)
+                href="https://druid.apache.org/docs/latest/ingestion/concurrent-append-replace.html"
+              >
+                documentation
+              </Memo(ExternalLink)>
+              .
+            </p>
+          </Memo(PopoverText)>
+        }
+        inlineInfo={true}
+      >
+        <Blueprint4.Switch
+          checked={false}
+          label="Use concurrent locks (experimental)"
+          onChange={[Function]}
+        />
+      </Memo(FormGroupWithInfo)>
+    </React.Fragment>
   </div>
   <div
     className="bp4-dialog-footer"
@@ -801,351 +835,368 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
   <div
     className="content"
   >
-    <AutoForm
-      fields={
-        Array [
-          Object {
-            "defaultValue": "P1D",
-            "info": <p>
-              The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources.
-            </p>,
-            "name": "skipOffsetFromLatest",
-            "suggestions": Array [
-              "PT0H",
-              "PT1H",
-              "P1D",
-              "P3D",
-            ],
-            "type": "string",
-          },
-          Object {
-            "info": <p>
-              For perfect rollup, you should use either 
-              <Unknown>
-                hashed
-              </Unknown>
-               (partitioning based on the hash of dimensions in each row) or 
-              <Unknown>
-                range
-              </Unknown>
-               (based on several dimensions). For best-effort rollup, you should use 
-              <Unknown>
-                dynamic
-              </Unknown>
-              .
-            </p>,
-            "label": "Partitioning type",
-            "name": "tuningConfig.partitionsSpec.type",
-            "suggestions": Array [
-              "dynamic",
-              "hashed",
-              "range",
-            ],
-            "type": "string",
-          },
-          Object {
-            "defaultValue": 5000000,
-            "defined": [Function],
-            "info": <React.Fragment>
-              Determines how many rows are in each segment.
-            </React.Fragment>,
-            "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
-            "type": "number",
-          },
-          Object {
-            "defaultValue": 20000000,
-            "defined": [Function],
-            "info": <React.Fragment>
-              Total number of rows in segments waiting for being pushed.
-            </React.Fragment>,
-            "name": "tuningConfig.partitionsSpec.maxTotalRows",
-            "type": "number",
-          },
-          Object {
-            "defined": [Function],
-            "info": <React.Fragment>
-              <p>
-                If the segments generated are a sub-optimal size for the requested partition dimensions, consider setting this field.
-              </p>
-              <p>
-                A target row count for each partition. Each partition will have a row count close to the target assuming evenly distributed keys. Defaults to 5 million if numShards is null.
-              </p>
-              <p>
-                If 
-                <Unknown>
-                  numShards
-                </Unknown>
-                 is left unspecified, the Parallel task will determine
-                 
-                <Unknown>
-                  numShards
-                </Unknown>
-                 automatically by 
-                <Unknown>
-                  targetRowsPerSegment
-                </Unknown>
-                .
-              </p>
-              <p>
-                Note that either 
-                <Unknown>
-                  targetRowsPerSegment
-                </Unknown>
-                 or 
-                <Unknown>
-                  numShards
-                </Unknown>
-                 will be used to evenly distribute rows and find the best partitioning. Leave blank to show all properties.
-              </p>
-            </React.Fragment>,
-            "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
-            "placeholder": "(defaults to 500000)",
-            "type": "number",
-            "zeroMeansUndefined": true,
-          },
-          Object {
-            "defined": [Function],
-            "info": <React.Fragment>
-              <p>
-                Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
-              </p>
-              <p>
-                <Unknown>
-                  maxRowsPerSegment
-                </Unknown>
-                 renamed to 
-                <Unknown>
-                  targetRowsPerSegment
-                </Unknown>
-              </p>
-              <p>
-                If 
-                <Unknown>
-                  numShards
-                </Unknown>
-                 is left unspecified, the Parallel task will determine
-                 
-                <Unknown>
-                  numShards
-                </Unknown>
-                 automatically by 
-                <Unknown>
-                  targetRowsPerSegment
-                </Unknown>
-                .
-              </p>
-              <p>
-                Note that either 
-                <Unknown>
-                  targetRowsPerSegment
-                </Unknown>
-                 or 
-                <Unknown>
-                  numShards
-                </Unknown>
-                 will be used to evenly distribute rows and find the best partitioning. Leave blank to show all properties.
-              </p>
-            </React.Fragment>,
-            "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
-            "type": "number",
-            "zeroMeansUndefined": true,
-          },
-          Object {
-            "defined": [Function],
-            "info": <React.Fragment>
-              <p>
-                If you know the optimal number of shards and want to speed up the time it takes for compaction to run, set this field.
-              </p>
-              <p>
-                Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
-              </p>
-              <p>
-                Note that either 
-                <Unknown>
-                  targetRowsPerSegment
-                </Unknown>
-                 or 
-                <Unknown>
-                  numShards
-                </Unknown>
-                 will be used to evenly distribute rows across partitions and find the best partitioning. Leave blank to show all properties.
-              </p>
-            </React.Fragment>,
-            "name": "tuningConfig.partitionsSpec.numShards",
-            "type": "number",
-            "zeroMeansUndefined": true,
-          },
-          Object {
-            "defined": [Function],
-            "info": <p>
-              The dimensions to partition on. Leave blank to select all dimensions.
-            </p>,
-            "name": "tuningConfig.partitionsSpec.partitionDimensions",
-            "placeholder": "(all dimensions)",
-            "type": "string-array",
-          },
-          Object {
-            "defined": [Function],
-            "info": <p>
-              The dimension to partition on.
-            </p>,
-            "name": "tuningConfig.partitionsSpec.partitionDimension",
-            "required": true,
-            "type": "string",
-          },
-          Object {
-            "defined": [Function],
-            "info": <p>
-              The dimensions to partition on.
-            </p>,
-            "name": "tuningConfig.partitionsSpec.partitionDimensions",
-            "required": true,
-            "type": "string-array",
-          },
-          Object {
-            "defined": [Function],
-            "info": <React.Fragment>
-              <p>
-                Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
-              </p>
-              <p>
-                Note that either 
-                <Unknown>
-                  targetRowsPerSegment
-                </Unknown>
-                 or 
-                <Unknown>
-                  maxRowsPerSegment
-                </Unknown>
-                 will be used to find the best partitioning. Leave blank to show all properties.
-              </p>
-            </React.Fragment>,
-            "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
-            "required": [Function],
-            "type": "number",
-            "zeroMeansUndefined": true,
-          },
-          Object {
-            "defined": [Function],
-            "info": <React.Fragment>
-              <p>
-                Maximum number of rows to include in a partition.
-              </p>
-              <p>
-                Note that either 
-                <Unknown>
-                  targetRowsPerSegment
-                </Unknown>
-                 or 
-                <Unknown>
-                  maxRowsPerSegment
-                </Unknown>
-                 will be used to find the best partitioning. Leave blank to show all properties.
-              </p>
-            </React.Fragment>,
-            "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
-            "required": [Function],
-            "type": "number",
-            "zeroMeansUndefined": true,
-          },
-          Object {
-            "defaultValue": false,
-            "defined": [Function],
-            "info": <p>
-              Assume that input data has already been grouped on time and dimensions. Ingestion will run faster, but may choose sub-optimal partitions if this assumption is violated.
-            </p>,
-            "name": "tuningConfig.partitionsSpec.assumeGrouped",
-            "type": "boolean",
-          },
-          Object {
-            "defaultValue": 1,
-            "info": <React.Fragment>
-              Maximum number of tasks which can be run at the same time. The supervisor task would spawn worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion.
-            </React.Fragment>,
-            "min": 1,
-            "name": "tuningConfig.maxNumConcurrentSubTasks",
-            "type": "number",
-          },
-          Object {
-            "defaultValue": -1,
-            "info": <React.Fragment>
-              <p>
-                Limit of the number of segments to merge in a single phase when merging segments for publishing. This limit affects the total number of columns present in a set of segments to merge. If the limit is exceeded, segment merging occurs in multiple phases. Druid merges at least 2 segments per phase, regardless of this setting.
-              </p>
-              <p>
-                Default: -1 (unlimited)
-              </p>
-            </React.Fragment>,
-            "min": -1,
-            "name": "tuningConfig.maxColumnsToMerge",
-            "type": "number",
-          },
-          Object {
-            "defaultValue": 10,
-            "defined": [Function],
-            "info": <React.Fragment>
-              Maximum number of merge tasks which can be run at the same time.
-            </React.Fragment>,
-            "min": 1,
-            "name": "tuningConfig.totalNumMergeTasks",
-            "type": "number",
-          },
-          Object {
-            "adjustment": [Function],
-            "defaultValue": 1073741824,
-            "hideInMore": true,
-            "info": <React.Fragment>
-              Maximum number of bytes of input segments to process in a single task. If a single segment is larger than this number, it will be processed by itself in a single task (input segments are never split across tasks).
-            </React.Fragment>,
-            "min": 1000000,
-            "name": "tuningConfig.splitHintSpec.maxSplitSize",
-            "type": "number",
-          },
-          Object {
-            "adjustment": [Function],
-            "defaultValue": 1000,
-            "hideInMore": true,
-            "info": <React.Fragment>
-              Maximum number of input segments to process in a single subtask. This limit is to avoid task failures when the ingestion spec is too long. There are two known limits on the max size of serialized ingestion spec, i.e., the max ZNode size in ZooKeeper (
-              <Unknown>
-                jute.maxbuffer
-              </Unknown>
-              ) and the max packet size in MySQL (
-              <Unknown>
-                max_allowed_packet
-              </Unknown>
-              ). These can make ingestion tasks fail if the serialized ingestion spec size hits one of them.
-            </React.Fragment>,
-            "label": "Max num files (segments)",
-            "min": 1,
-            "name": "tuningConfig.splitHintSpec.maxNumFiles",
-            "type": "number",
-          },
-          Object {
-            "adjustValue": [Function],
-            "defaultValue": undefined,
-            "info": <p>
-              Allows or forbids concurrent compactions.
-            </p>,
-            "label": "Allow concurrent compactions (experimental)",
-            "name": "taskContext.taskLockType",
-            "type": "boolean",
-            "valueAdjustment": [Function],
-          },
-        ]
-      }
-      model={
-        Object {
-          "dataSource": "test1",
-          "tuningConfig": Object {
-            "partitionsSpec": Object {
-              "type": "range",
+    <React.Fragment>
+      <AutoForm
+        fields={
+          Array [
+            Object {
+              "defaultValue": "P1D",
+              "info": <p>
+                The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources.
+              </p>,
+              "name": "skipOffsetFromLatest",
+              "suggestions": Array [
+                "PT0H",
+                "PT1H",
+                "P1D",
+                "P3D",
+              ],
+              "type": "string",
             },
-          },
+            Object {
+              "info": <p>
+                For perfect rollup, you should use either 
+                <Unknown>
+                  hashed
+                </Unknown>
+                 (partitioning based on the hash of dimensions in each row) or 
+                <Unknown>
+                  range
+                </Unknown>
+                 (based on several dimensions). For best-effort rollup, you should use 
+                <Unknown>
+                  dynamic
+                </Unknown>
+                .
+              </p>,
+              "label": "Partitioning type",
+              "name": "tuningConfig.partitionsSpec.type",
+              "suggestions": Array [
+                "dynamic",
+                "hashed",
+                "range",
+              ],
+              "type": "string",
+            },
+            Object {
+              "defaultValue": 5000000,
+              "defined": [Function],
+              "info": <React.Fragment>
+                Determines how many rows are in each segment.
+              </React.Fragment>,
+              "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
+              "type": "number",
+            },
+            Object {
+              "defaultValue": 20000000,
+              "defined": [Function],
+              "info": <React.Fragment>
+                Total number of rows in segments waiting for being pushed.
+              </React.Fragment>,
+              "name": "tuningConfig.partitionsSpec.maxTotalRows",
+              "type": "number",
+            },
+            Object {
+              "defined": [Function],
+              "info": <React.Fragment>
+                <p>
+                  If the segments generated are a sub-optimal size for the requested partition dimensions, consider setting this field.
+                </p>
+                <p>
+                  A target row count for each partition. Each partition will have a row count close to the target assuming evenly distributed keys. Defaults to 5 million if numShards is null.
+                </p>
+                <p>
+                  If 
+                  <Unknown>
+                    numShards
+                  </Unknown>
+                   is left unspecified, the Parallel task will determine
+                   
+                  <Unknown>
+                    numShards
+                  </Unknown>
+                   automatically by 
+                  <Unknown>
+                    targetRowsPerSegment
+                  </Unknown>
+                  .
+                </p>
+                <p>
+                  Note that either 
+                  <Unknown>
+                    targetRowsPerSegment
+                  </Unknown>
+                   or 
+                  <Unknown>
+                    numShards
+                  </Unknown>
+                   will be used to evenly distribute rows and find the best partitioning. Leave blank to show all properties.
+                </p>
+              </React.Fragment>,
+              "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
+              "placeholder": "(defaults to 500000)",
+              "type": "number",
+              "zeroMeansUndefined": true,
+            },
+            Object {
+              "defined": [Function],
+              "info": <React.Fragment>
+                <p>
+                  Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
+                </p>
+                <p>
+                  <Unknown>
+                    maxRowsPerSegment
+                  </Unknown>
+                   renamed to 
+                  <Unknown>
+                    targetRowsPerSegment
+                  </Unknown>
+                </p>
+                <p>
+                  If 
+                  <Unknown>
+                    numShards
+                  </Unknown>
+                   is left unspecified, the Parallel task will determine
+                   
+                  <Unknown>
+                    numShards
+                  </Unknown>
+                   automatically by 
+                  <Unknown>
+                    targetRowsPerSegment
+                  </Unknown>
+                  .
+                </p>
+                <p>
+                  Note that either 
+                  <Unknown>
+                    targetRowsPerSegment
+                  </Unknown>
+                   or 
+                  <Unknown>
+                    numShards
+                  </Unknown>
+                   will be used to evenly distribute rows and find the best partitioning. Leave blank to show all properties.
+                </p>
+              </React.Fragment>,
+              "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
+              "type": "number",
+              "zeroMeansUndefined": true,
+            },
+            Object {
+              "defined": [Function],
+              "info": <React.Fragment>
+                <p>
+                  If you know the optimal number of shards and want to speed up the time it takes for compaction to run, set this field.
+                </p>
+                <p>
+                  Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
+                </p>
+                <p>
+                  Note that either 
+                  <Unknown>
+                    targetRowsPerSegment
+                  </Unknown>
+                   or 
+                  <Unknown>
+                    numShards
+                  </Unknown>
+                   will be used to evenly distribute rows across partitions and find the best partitioning. Leave blank to show all properties.
+                </p>
+              </React.Fragment>,
+              "name": "tuningConfig.partitionsSpec.numShards",
+              "type": "number",
+              "zeroMeansUndefined": true,
+            },
+            Object {
+              "defined": [Function],
+              "info": <p>
+                The dimensions to partition on. Leave blank to select all dimensions.
+              </p>,
+              "name": "tuningConfig.partitionsSpec.partitionDimensions",
+              "placeholder": "(all dimensions)",
+              "type": "string-array",
+            },
+            Object {
+              "defined": [Function],
+              "info": <p>
+                The dimension to partition on.
+              </p>,
+              "name": "tuningConfig.partitionsSpec.partitionDimension",
+              "required": true,
+              "type": "string",
+            },
+            Object {
+              "defined": [Function],
+              "info": <p>
+                The dimensions to partition on.
+              </p>,
+              "name": "tuningConfig.partitionsSpec.partitionDimensions",
+              "required": true,
+              "type": "string-array",
+            },
+            Object {
+              "defined": [Function],
+              "info": <React.Fragment>
+                <p>
+                  Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
+                </p>
+                <p>
+                  Note that either 
+                  <Unknown>
+                    targetRowsPerSegment
+                  </Unknown>
+                   or 
+                  <Unknown>
+                    maxRowsPerSegment
+                  </Unknown>
+                   will be used to find the best partitioning. Leave blank to show all properties.
+                </p>
+              </React.Fragment>,
+              "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
+              "required": [Function],
+              "type": "number",
+              "zeroMeansUndefined": true,
+            },
+            Object {
+              "defined": [Function],
+              "info": <React.Fragment>
+                <p>
+                  Maximum number of rows to include in a partition.
+                </p>
+                <p>
+                  Note that either 
+                  <Unknown>
+                    targetRowsPerSegment
+                  </Unknown>
+                   or 
+                  <Unknown>
+                    maxRowsPerSegment
+                  </Unknown>
+                   will be used to find the best partitioning. Leave blank to show all properties.
+                </p>
+              </React.Fragment>,
+              "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
+              "required": [Function],
+              "type": "number",
+              "zeroMeansUndefined": true,
+            },
+            Object {
+              "defaultValue": false,
+              "defined": [Function],
+              "info": <p>
+                Assume that input data has already been grouped on time and dimensions. Ingestion will run faster, but may choose sub-optimal partitions if this assumption is violated.
+              </p>,
+              "name": "tuningConfig.partitionsSpec.assumeGrouped",
+              "type": "boolean",
+            },
+            Object {
+              "defaultValue": 1,
+              "info": <React.Fragment>
+                Maximum number of tasks which can be run at the same time. The supervisor task would spawn worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion.
+              </React.Fragment>,
+              "min": 1,
+              "name": "tuningConfig.maxNumConcurrentSubTasks",
+              "type": "number",
+            },
+            Object {
+              "defaultValue": -1,
+              "info": <React.Fragment>
+                <p>
+                  Limit of the number of segments to merge in a single phase when merging segments for publishing. This limit affects the total number of columns present in a set of segments to merge. If the limit is exceeded, segment merging occurs in multiple phases. Druid merges at least 2 segments per phase, regardless of this setting.
+                </p>
+                <p>
+                  Default: -1 (unlimited)
+                </p>
+              </React.Fragment>,
+              "min": -1,
+              "name": "tuningConfig.maxColumnsToMerge",
+              "type": "number",
+            },
+            Object {
+              "defaultValue": 10,
+              "defined": [Function],
+              "info": <React.Fragment>
+                Maximum number of merge tasks which can be run at the same time.
+              </React.Fragment>,
+              "min": 1,
+              "name": "tuningConfig.totalNumMergeTasks",
+              "type": "number",
+            },
+            Object {
+              "adjustment": [Function],
+              "defaultValue": 1073741824,
+              "hideInMore": true,
+              "info": <React.Fragment>
+                Maximum number of bytes of input segments to process in a single task. If a single segment is larger than this number, it will be processed by itself in a single task (input segments are never split across tasks).
+              </React.Fragment>,
+              "min": 1000000,
+              "name": "tuningConfig.splitHintSpec.maxSplitSize",
+              "type": "number",
+            },
+            Object {
+              "adjustment": [Function],
+              "defaultValue": 1000,
+              "hideInMore": true,
+              "info": <React.Fragment>
+                Maximum number of input segments to process in a single subtask. This limit is to avoid task failures when the ingestion spec is too long. There are two known limits on the max size of serialized ingestion spec, i.e., the max ZNode size in ZooKeeper (
+                <Unknown>
+                  jute.maxbuffer
+                </Unknown>
+                ) and the max packet size in MySQL (
+                <Unknown>
+                  max_allowed_packet
+                </Unknown>
+                ). These can make ingestion tasks fail if the serialized ingestion spec size hits one of them.
+              </React.Fragment>,
+              "label": "Max num files (segments)",
+              "min": 1,
+              "name": "tuningConfig.splitHintSpec.maxNumFiles",
+              "type": "number",
+            },
+          ]
         }
-      }
-      onChange={[Function]}
-    />
+        model={
+          Object {
+            "dataSource": "test1",
+            "tuningConfig": Object {
+              "partitionsSpec": Object {
+                "type": "range",
+              },
+            },
+          }
+        }
+        onChange={[Function]}
+      />
+      <Memo(FormGroupWithInfo)
+        info={
+          <Memo(PopoverText)>
+            <p>
+              If you want to append data to a datasource while compaction is running, you need to enable concurrent append and replace for the datasource by updating the compaction settings.
+            </p>
+            <p>
+              For more information refer to the
+               
+              <Memo(ExternalLink)
+                href="https://druid.apache.org/docs/latest/ingestion/concurrent-append-replace.html"
+              >
+                documentation
+              </Memo(ExternalLink)>
+              .
+            </p>
+          </Memo(PopoverText)>
+        }
+        inlineInfo={true}
+      >
+        <Blueprint4.Switch
+          checked={false}
+          label="Use concurrent locks (experimental)"
+          onChange={[Function]}
+        />
+      </Memo(FormGroupWithInfo)>
+    </React.Fragment>
   </div>
   <div
     className="bp4-dialog-footer"
@@ -1194,351 +1245,368 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
   <div
     className="content"
   >
-    <AutoForm
-      fields={
-        Array [
-          Object {
-            "defaultValue": "P1D",
-            "info": <p>
-              The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources.
-            </p>,
-            "name": "skipOffsetFromLatest",
-            "suggestions": Array [
-              "PT0H",
-              "PT1H",
-              "P1D",
-              "P3D",
-            ],
-            "type": "string",
-          },
-          Object {
-            "info": <p>
-              For perfect rollup, you should use either 
-              <Unknown>
-                hashed
-              </Unknown>
-               (partitioning based on the hash of dimensions in each row) or 
-              <Unknown>
-                range
-              </Unknown>
-               (based on several dimensions). For best-effort rollup, you should use 
-              <Unknown>
-                dynamic
-              </Unknown>
-              .
-            </p>,
-            "label": "Partitioning type",
-            "name": "tuningConfig.partitionsSpec.type",
-            "suggestions": Array [
-              "dynamic",
-              "hashed",
-              "range",
-            ],
-            "type": "string",
-          },
-          Object {
-            "defaultValue": 5000000,
-            "defined": [Function],
-            "info": <React.Fragment>
-              Determines how many rows are in each segment.
-            </React.Fragment>,
-            "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
-            "type": "number",
-          },
-          Object {
-            "defaultValue": 20000000,
-            "defined": [Function],
-            "info": <React.Fragment>
-              Total number of rows in segments waiting for being pushed.
-            </React.Fragment>,
-            "name": "tuningConfig.partitionsSpec.maxTotalRows",
-            "type": "number",
-          },
-          Object {
-            "defined": [Function],
-            "info": <React.Fragment>
-              <p>
-                If the segments generated are a sub-optimal size for the requested partition dimensions, consider setting this field.
-              </p>
-              <p>
-                A target row count for each partition. Each partition will have a row count close to the target assuming evenly distributed keys. Defaults to 5 million if numShards is null.
-              </p>
-              <p>
-                If 
-                <Unknown>
-                  numShards
-                </Unknown>
-                 is left unspecified, the Parallel task will determine
-                 
-                <Unknown>
-                  numShards
-                </Unknown>
-                 automatically by 
-                <Unknown>
-                  targetRowsPerSegment
-                </Unknown>
-                .
-              </p>
-              <p>
-                Note that either 
-                <Unknown>
-                  targetRowsPerSegment
-                </Unknown>
-                 or 
-                <Unknown>
-                  numShards
-                </Unknown>
-                 will be used to evenly distribute rows and find the best partitioning. Leave blank to show all properties.
-              </p>
-            </React.Fragment>,
-            "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
-            "placeholder": "(defaults to 500000)",
-            "type": "number",
-            "zeroMeansUndefined": true,
-          },
-          Object {
-            "defined": [Function],
-            "info": <React.Fragment>
-              <p>
-                Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
-              </p>
-              <p>
-                <Unknown>
-                  maxRowsPerSegment
-                </Unknown>
-                 renamed to 
-                <Unknown>
-                  targetRowsPerSegment
-                </Unknown>
-              </p>
-              <p>
-                If 
-                <Unknown>
-                  numShards
-                </Unknown>
-                 is left unspecified, the Parallel task will determine
-                 
-                <Unknown>
-                  numShards
-                </Unknown>
-                 automatically by 
-                <Unknown>
-                  targetRowsPerSegment
-                </Unknown>
-                .
-              </p>
-              <p>
-                Note that either 
-                <Unknown>
-                  targetRowsPerSegment
-                </Unknown>
-                 or 
-                <Unknown>
-                  numShards
-                </Unknown>
-                 will be used to evenly distribute rows and find the best partitioning. Leave blank to show all properties.
-              </p>
-            </React.Fragment>,
-            "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
-            "type": "number",
-            "zeroMeansUndefined": true,
-          },
-          Object {
-            "defined": [Function],
-            "info": <React.Fragment>
-              <p>
-                If you know the optimal number of shards and want to speed up the time it takes for compaction to run, set this field.
-              </p>
-              <p>
-                Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
-              </p>
-              <p>
-                Note that either 
-                <Unknown>
-                  targetRowsPerSegment
-                </Unknown>
-                 or 
-                <Unknown>
-                  numShards
-                </Unknown>
-                 will be used to evenly distribute rows across partitions and find the best partitioning. Leave blank to show all properties.
-              </p>
-            </React.Fragment>,
-            "name": "tuningConfig.partitionsSpec.numShards",
-            "type": "number",
-            "zeroMeansUndefined": true,
-          },
-          Object {
-            "defined": [Function],
-            "info": <p>
-              The dimensions to partition on. Leave blank to select all dimensions.
-            </p>,
-            "name": "tuningConfig.partitionsSpec.partitionDimensions",
-            "placeholder": "(all dimensions)",
-            "type": "string-array",
-          },
-          Object {
-            "defined": [Function],
-            "info": <p>
-              The dimension to partition on.
-            </p>,
-            "name": "tuningConfig.partitionsSpec.partitionDimension",
-            "required": true,
-            "type": "string",
-          },
-          Object {
-            "defined": [Function],
-            "info": <p>
-              The dimensions to partition on.
-            </p>,
-            "name": "tuningConfig.partitionsSpec.partitionDimensions",
-            "required": true,
-            "type": "string-array",
-          },
-          Object {
-            "defined": [Function],
-            "info": <React.Fragment>
-              <p>
-                Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
-              </p>
-              <p>
-                Note that either 
-                <Unknown>
-                  targetRowsPerSegment
-                </Unknown>
-                 or 
-                <Unknown>
-                  maxRowsPerSegment
-                </Unknown>
-                 will be used to find the best partitioning. Leave blank to show all properties.
-              </p>
-            </React.Fragment>,
-            "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
-            "required": [Function],
-            "type": "number",
-            "zeroMeansUndefined": true,
-          },
-          Object {
-            "defined": [Function],
-            "info": <React.Fragment>
-              <p>
-                Maximum number of rows to include in a partition.
-              </p>
-              <p>
-                Note that either 
-                <Unknown>
-                  targetRowsPerSegment
-                </Unknown>
-                 or 
-                <Unknown>
-                  maxRowsPerSegment
-                </Unknown>
-                 will be used to find the best partitioning. Leave blank to show all properties.
-              </p>
-            </React.Fragment>,
-            "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
-            "required": [Function],
-            "type": "number",
-            "zeroMeansUndefined": true,
-          },
-          Object {
-            "defaultValue": false,
-            "defined": [Function],
-            "info": <p>
-              Assume that input data has already been grouped on time and dimensions. Ingestion will run faster, but may choose sub-optimal partitions if this assumption is violated.
-            </p>,
-            "name": "tuningConfig.partitionsSpec.assumeGrouped",
-            "type": "boolean",
-          },
-          Object {
-            "defaultValue": 1,
-            "info": <React.Fragment>
-              Maximum number of tasks which can be run at the same time. The supervisor task would spawn worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion.
-            </React.Fragment>,
-            "min": 1,
-            "name": "tuningConfig.maxNumConcurrentSubTasks",
-            "type": "number",
-          },
-          Object {
-            "defaultValue": -1,
-            "info": <React.Fragment>
-              <p>
-                Limit of the number of segments to merge in a single phase when merging segments for publishing. This limit affects the total number of columns present in a set of segments to merge. If the limit is exceeded, segment merging occurs in multiple phases. Druid merges at least 2 segments per phase, regardless of this setting.
-              </p>
-              <p>
-                Default: -1 (unlimited)
-              </p>
-            </React.Fragment>,
-            "min": -1,
-            "name": "tuningConfig.maxColumnsToMerge",
-            "type": "number",
-          },
-          Object {
-            "defaultValue": 10,
-            "defined": [Function],
-            "info": <React.Fragment>
-              Maximum number of merge tasks which can be run at the same time.
-            </React.Fragment>,
-            "min": 1,
-            "name": "tuningConfig.totalNumMergeTasks",
-            "type": "number",
-          },
-          Object {
-            "adjustment": [Function],
-            "defaultValue": 1073741824,
-            "hideInMore": true,
-            "info": <React.Fragment>
-              Maximum number of bytes of input segments to process in a single task. If a single segment is larger than this number, it will be processed by itself in a single task (input segments are never split across tasks).
-            </React.Fragment>,
-            "min": 1000000,
-            "name": "tuningConfig.splitHintSpec.maxSplitSize",
-            "type": "number",
-          },
-          Object {
-            "adjustment": [Function],
-            "defaultValue": 1000,
-            "hideInMore": true,
-            "info": <React.Fragment>
-              Maximum number of input segments to process in a single subtask. This limit is to avoid task failures when the ingestion spec is too long. There are two known limits on the max size of serialized ingestion spec, i.e., the max ZNode size in ZooKeeper (
-              <Unknown>
-                jute.maxbuffer
-              </Unknown>
-              ) and the max packet size in MySQL (
-              <Unknown>
-                max_allowed_packet
-              </Unknown>
-              ). These can make ingestion tasks fail if the serialized ingestion spec size hits one of them.
-            </React.Fragment>,
-            "label": "Max num files (segments)",
-            "min": 1,
-            "name": "tuningConfig.splitHintSpec.maxNumFiles",
-            "type": "number",
-          },
-          Object {
-            "adjustValue": [Function],
-            "defaultValue": undefined,
-            "info": <p>
-              Allows or forbids concurrent compactions.
-            </p>,
-            "label": "Allow concurrent compactions (experimental)",
-            "name": "taskContext.taskLockType",
-            "type": "boolean",
-            "valueAdjustment": [Function],
-          },
-        ]
-      }
-      model={
-        Object {
-          "dataSource": "test1",
-          "tuningConfig": Object {
-            "partitionsSpec": Object {
-              "type": "dynamic",
+    <React.Fragment>
+      <AutoForm
+        fields={
+          Array [
+            Object {
+              "defaultValue": "P1D",
+              "info": <p>
+                The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources.
+              </p>,
+              "name": "skipOffsetFromLatest",
+              "suggestions": Array [
+                "PT0H",
+                "PT1H",
+                "P1D",
+                "P3D",
+              ],
+              "type": "string",
             },
-          },
+            Object {
+              "info": <p>
+                For perfect rollup, you should use either 
+                <Unknown>
+                  hashed
+                </Unknown>
+                 (partitioning based on the hash of dimensions in each row) or 
+                <Unknown>
+                  range
+                </Unknown>
+                 (based on several dimensions). For best-effort rollup, you should use 
+                <Unknown>
+                  dynamic
+                </Unknown>
+                .
+              </p>,
+              "label": "Partitioning type",
+              "name": "tuningConfig.partitionsSpec.type",
+              "suggestions": Array [
+                "dynamic",
+                "hashed",
+                "range",
+              ],
+              "type": "string",
+            },
+            Object {
+              "defaultValue": 5000000,
+              "defined": [Function],
+              "info": <React.Fragment>
+                Determines how many rows are in each segment.
+              </React.Fragment>,
+              "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
+              "type": "number",
+            },
+            Object {
+              "defaultValue": 20000000,
+              "defined": [Function],
+              "info": <React.Fragment>
+                Total number of rows in segments waiting for being pushed.
+              </React.Fragment>,
+              "name": "tuningConfig.partitionsSpec.maxTotalRows",
+              "type": "number",
+            },
+            Object {
+              "defined": [Function],
+              "info": <React.Fragment>
+                <p>
+                  If the segments generated are a sub-optimal size for the requested partition dimensions, consider setting this field.
+                </p>
+                <p>
+                  A target row count for each partition. Each partition will have a row count close to the target assuming evenly distributed keys. Defaults to 5 million if numShards is null.
+                </p>
+                <p>
+                  If 
+                  <Unknown>
+                    numShards
+                  </Unknown>
+                   is left unspecified, the Parallel task will determine
+                   
+                  <Unknown>
+                    numShards
+                  </Unknown>
+                   automatically by 
+                  <Unknown>
+                    targetRowsPerSegment
+                  </Unknown>
+                  .
+                </p>
+                <p>
+                  Note that either 
+                  <Unknown>
+                    targetRowsPerSegment
+                  </Unknown>
+                   or 
+                  <Unknown>
+                    numShards
+                  </Unknown>
+                   will be used to evenly distribute rows and find the best partitioning. Leave blank to show all properties.
+                </p>
+              </React.Fragment>,
+              "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
+              "placeholder": "(defaults to 500000)",
+              "type": "number",
+              "zeroMeansUndefined": true,
+            },
+            Object {
+              "defined": [Function],
+              "info": <React.Fragment>
+                <p>
+                  Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
+                </p>
+                <p>
+                  <Unknown>
+                    maxRowsPerSegment
+                  </Unknown>
+                   renamed to 
+                  <Unknown>
+                    targetRowsPerSegment
+                  </Unknown>
+                </p>
+                <p>
+                  If 
+                  <Unknown>
+                    numShards
+                  </Unknown>
+                   is left unspecified, the Parallel task will determine
+                   
+                  <Unknown>
+                    numShards
+                  </Unknown>
+                   automatically by 
+                  <Unknown>
+                    targetRowsPerSegment
+                  </Unknown>
+                  .
+                </p>
+                <p>
+                  Note that either 
+                  <Unknown>
+                    targetRowsPerSegment
+                  </Unknown>
+                   or 
+                  <Unknown>
+                    numShards
+                  </Unknown>
+                   will be used to evenly distribute rows and find the best partitioning. Leave blank to show all properties.
+                </p>
+              </React.Fragment>,
+              "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
+              "type": "number",
+              "zeroMeansUndefined": true,
+            },
+            Object {
+              "defined": [Function],
+              "info": <React.Fragment>
+                <p>
+                  If you know the optimal number of shards and want to speed up the time it takes for compaction to run, set this field.
+                </p>
+                <p>
+                  Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data.
+                </p>
+                <p>
+                  Note that either 
+                  <Unknown>
+                    targetRowsPerSegment
+                  </Unknown>
+                   or 
+                  <Unknown>
+                    numShards
+                  </Unknown>
+                   will be used to evenly distribute rows across partitions and find the best partitioning. Leave blank to show all properties.
+                </p>
+              </React.Fragment>,
+              "name": "tuningConfig.partitionsSpec.numShards",
+              "type": "number",
+              "zeroMeansUndefined": true,
+            },
+            Object {
+              "defined": [Function],
+              "info": <p>
+                The dimensions to partition on. Leave blank to select all dimensions.
+              </p>,
+              "name": "tuningConfig.partitionsSpec.partitionDimensions",
+              "placeholder": "(all dimensions)",
+              "type": "string-array",
+            },
+            Object {
+              "defined": [Function],
+              "info": <p>
+                The dimension to partition on.
+              </p>,
+              "name": "tuningConfig.partitionsSpec.partitionDimension",
+              "required": true,
+              "type": "string",
+            },
+            Object {
+              "defined": [Function],
+              "info": <p>
+                The dimensions to partition on.
+              </p>,
+              "name": "tuningConfig.partitionsSpec.partitionDimensions",
+              "required": true,
+              "type": "string-array",
+            },
+            Object {
+              "defined": [Function],
+              "info": <React.Fragment>
+                <p>
+                  Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
+                </p>
+                <p>
+                  Note that either 
+                  <Unknown>
+                    targetRowsPerSegment
+                  </Unknown>
+                   or 
+                  <Unknown>
+                    maxRowsPerSegment
+                  </Unknown>
+                   will be used to find the best partitioning. Leave blank to show all properties.
+                </p>
+              </React.Fragment>,
+              "name": "tuningConfig.partitionsSpec.targetRowsPerSegment",
+              "required": [Function],
+              "type": "number",
+              "zeroMeansUndefined": true,
+            },
+            Object {
+              "defined": [Function],
+              "info": <React.Fragment>
+                <p>
+                  Maximum number of rows to include in a partition.
+                </p>
+                <p>
+                  Note that either 
+                  <Unknown>
+                    targetRowsPerSegment
+                  </Unknown>
+                   or 
+                  <Unknown>
+                    maxRowsPerSegment
+                  </Unknown>
+                   will be used to find the best partitioning. Leave blank to show all properties.
+                </p>
+              </React.Fragment>,
+              "name": "tuningConfig.partitionsSpec.maxRowsPerSegment",
+              "required": [Function],
+              "type": "number",
+              "zeroMeansUndefined": true,
+            },
+            Object {
+              "defaultValue": false,
+              "defined": [Function],
+              "info": <p>
+                Assume that input data has already been grouped on time and dimensions. Ingestion will run faster, but may choose sub-optimal partitions if this assumption is violated.
+              </p>,
+              "name": "tuningConfig.partitionsSpec.assumeGrouped",
+              "type": "boolean",
+            },
+            Object {
+              "defaultValue": 1,
+              "info": <React.Fragment>
+                Maximum number of tasks which can be run at the same time. The supervisor task would spawn worker tasks up to maxNumConcurrentSubTasks regardless of the available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion.
+              </React.Fragment>,
+              "min": 1,
+              "name": "tuningConfig.maxNumConcurrentSubTasks",
+              "type": "number",
+            },
+            Object {
+              "defaultValue": -1,
+              "info": <React.Fragment>
+                <p>
+                  Limit of the number of segments to merge in a single phase when merging segments for publishing. This limit affects the total number of columns present in a set of segments to merge. If the limit is exceeded, segment merging occurs in multiple phases. Druid merges at least 2 segments per phase, regardless of this setting.
+                </p>
+                <p>
+                  Default: -1 (unlimited)
+                </p>
+              </React.Fragment>,
+              "min": -1,
+              "name": "tuningConfig.maxColumnsToMerge",
+              "type": "number",
+            },
+            Object {
+              "defaultValue": 10,
+              "defined": [Function],
+              "info": <React.Fragment>
+                Maximum number of merge tasks which can be run at the same time.
+              </React.Fragment>,
+              "min": 1,
+              "name": "tuningConfig.totalNumMergeTasks",
+              "type": "number",
+            },
+            Object {
+              "adjustment": [Function],
+              "defaultValue": 1073741824,
+              "hideInMore": true,
+              "info": <React.Fragment>
+                Maximum number of bytes of input segments to process in a single task. If a single segment is larger than this number, it will be processed by itself in a single task (input segments are never split across tasks).
+              </React.Fragment>,
+              "min": 1000000,
+              "name": "tuningConfig.splitHintSpec.maxSplitSize",
+              "type": "number",
+            },
+            Object {
+              "adjustment": [Function],
+              "defaultValue": 1000,
+              "hideInMore": true,
+              "info": <React.Fragment>
+                Maximum number of input segments to process in a single subtask. This limit is to avoid task failures when the ingestion spec is too long. There are two known limits on the max size of serialized ingestion spec, i.e., the max ZNode size in ZooKeeper (
+                <Unknown>
+                  jute.maxbuffer
+                </Unknown>
+                ) and the max packet size in MySQL (
+                <Unknown>
+                  max_allowed_packet
+                </Unknown>
+                ). These can make ingestion tasks fail if the serialized ingestion spec size hits one of them.
+              </React.Fragment>,
+              "label": "Max num files (segments)",
+              "min": 1,
+              "name": "tuningConfig.splitHintSpec.maxNumFiles",
+              "type": "number",
+            },
+          ]
         }
-      }
-      onChange={[Function]}
-    />
+        model={
+          Object {
+            "dataSource": "test1",
+            "tuningConfig": Object {
+              "partitionsSpec": Object {
+                "type": "dynamic",
+              },
+            },
+          }
+        }
+        onChange={[Function]}
+      />
+      <Memo(FormGroupWithInfo)
+        info={
+          <Memo(PopoverText)>
+            <p>
+              If you want to append data to a datasource while compaction is running, you need to enable concurrent append and replace for the datasource by updating the compaction settings.
+            </p>
+            <p>
+              For more information refer to the
+               
+              <Memo(ExternalLink)
+                href="https://druid.apache.org/docs/latest/ingestion/concurrent-append-replace.html"
+              >
+                documentation
+              </Memo(ExternalLink)>
+              .
+            </p>
+          </Memo(PopoverText)>
+        }
+        inlineInfo={true}
+      >
+        <Blueprint4.Switch
+          checked={false}
+          label="Use concurrent locks (experimental)"
+          onChange={[Function]}
+        />
+      </Memo(FormGroupWithInfo)>
+    </React.Fragment>
   </div>
   <div
     className="bp4-dialog-footer"

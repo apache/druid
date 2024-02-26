@@ -91,8 +91,11 @@ public class VarianceAggregatorCollector
     this.sum += other.sum;
   }
 
-  static Object combineValues(Object lhs, @Nullable Object rhs)
+  static Object combineValues(@Nullable Object lhs, @Nullable Object rhs)
   {
+    if (lhs == null) {
+      return rhs;
+    }
     ((VarianceAggregatorCollector) lhs).fold((VarianceAggregatorCollector) rhs);
     return lhs;
   }

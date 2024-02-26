@@ -28,6 +28,7 @@ import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Comparator;
 import java.util.Map;
 
 public class SeekableStreamStartSequenceNumbersTest
@@ -73,5 +74,45 @@ public class SeekableStreamStartSequenceNumbersTest
         offsetMap,
         OBJECT_MAPPER.convertValue(asMap.get("partitionOffsetMap"), new TypeReference<Map<Integer, Long>>() {})
     );
+  }
+
+  @Test
+  public void testCompareToWithTrueResult()
+  {
+    final String stream = "theStream";
+    final Map<Integer, Long> offsetMap1 = ImmutableMap.of(1, 5L, 2, 6L);
+    final SeekableStreamStartSequenceNumbers<Integer, Long> partitions1 = new SeekableStreamStartSequenceNumbers<>(
+        stream,
+        offsetMap1,
+        ImmutableSet.of(6)
+    );
+
+    final Map<Integer, Long> offsetMap2 = ImmutableMap.of(1, 4L, 2, 4L);
+    final SeekableStreamStartSequenceNumbers<Integer, Long> partitions2 = new SeekableStreamStartSequenceNumbers<>(
+        stream,
+        offsetMap2,
+        ImmutableSet.of(6)
+    );
+    Assert.assertEquals(1, partitions1.compareTo(partitions2, Comparator.naturalOrder()));
+  }
+
+  @Test
+  public void testCompareToWithFalseResult()
+  {
+    final String stream = "theStream";
+    final Map<Integer, Long> offsetMap1 = ImmutableMap.of(1, 3L, 2, 2L);
+    final SeekableStreamStartSequenceNumbers<Integer, Long> partitions1 = new SeekableStreamStartSequenceNumbers<>(
+        stream,
+        offsetMap1,
+        ImmutableSet.of(6)
+    );
+
+    final Map<Integer, Long> offsetMap2 = ImmutableMap.of(1, 4L, 2, 4L);
+    final SeekableStreamStartSequenceNumbers<Integer, Long> partitions2 = new SeekableStreamStartSequenceNumbers<>(
+        stream,
+        offsetMap2,
+        ImmutableSet.of(6)
+    );
+    Assert.assertEquals(0, partitions1.compareTo(partitions2, Comparator.naturalOrder()));
   }
 }

@@ -116,7 +116,7 @@ public class BrokerClient
     catch (MalformedURLException e) {
       // Not an IOException; this is our own fault.
       throw DruidException.defensive(
-          "Failed to build url with path[%] and query string [%s].",
+          "Failed to build url with path[%s] and query string [%s].",
           oldRequest.getUrl().getPath(),
           oldRequest.getUrl().getQuery()
       );

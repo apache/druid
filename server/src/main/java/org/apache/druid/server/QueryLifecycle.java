@@ -242,6 +242,37 @@ public class QueryLifecycle
     );
   }
 
+  /**
+   * Authorize the query using the authentication result.
+   * Will return an Access object denoting whether the query is authorized or not.
+   * This method is to be used by the grpc-query-extension.
+   *
+   * @param authenticationResult authentication result indicating identity of the requester
+   * @return authorization result of requester
+   */
+  public Access authorize(AuthenticationResult authenticationResult)
+  {
+    transition(State.INITIALIZED, State.AUTHORIZING);
+    final Iterable<ResourceAction> resourcesToAuthorize = Iterables.concat(
+        Iterables.transform(
+            baseQuery.getDataSource().getTableNames(),
+            AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
+        ),
+        Iterables.transform(
+            authConfig.contextKeysToAuthorize(userContextKeys),
+            contextParam -> new ResourceAction(new Resource(contextParam, ResourceType.QUERY_CONTEXT), Action.WRITE)
+        )
+    );
+    return doAuthorize(
+        authenticationResult,
+        AuthorizationUtils.authorizeAllResourceActions(
+            authenticationResult,
+            resourcesToAuthorize,
+            authorizerMapper
+        )
+    );
+  }
+
   private void preAuthorized(final AuthenticationResult authenticationResult, final Access access)
   {
     // gotta transition those states, even if we are already authorized
@@ -347,7 +378,7 @@ public class QueryLifecycle
 
       if (e != null) {
         statsMap.put("exception", e.toString());
-        if (baseQuery.context().isDebug()) {
+        if (baseQuery.context().isDebug() || e.getMessage() == null) {
           log.warn(e, "Exception while processing queryId [%s]", baseQuery.getId());
         } else {
           log.noStackTrace().warn(e, "Exception while processing queryId [%s]", baseQuery.getId());

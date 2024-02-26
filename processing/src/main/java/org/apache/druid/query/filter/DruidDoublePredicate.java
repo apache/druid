@@ -28,29 +28,29 @@ package org.apache.druid.query.filter;
 @SuppressWarnings("unused")
 public interface DruidDoublePredicate
 {
-  DruidDoublePredicate ALWAYS_FALSE = input -> false;
+  DruidDoublePredicate ALWAYS_FALSE_WITH_NULL_UNKNOWN = input -> DruidPredicateMatch.FALSE;
 
-  DruidDoublePredicate ALWAYS_TRUE = input -> true;
+  DruidDoublePredicate ALWAYS_TRUE = input -> DruidPredicateMatch.TRUE;
 
   DruidDoublePredicate MATCH_NULL_ONLY = new DruidDoublePredicate()
   {
     @Override
-    public boolean applyDouble(double input)
+    public DruidPredicateMatch applyDouble(double input)
     {
-      return false;
+      return DruidPredicateMatch.FALSE;
     }
 
     @Override
-    public boolean applyNull()
+    public DruidPredicateMatch applyNull()
     {
-      return true;
+      return DruidPredicateMatch.TRUE;
     }
   };
 
-  boolean applyDouble(double input);
+  DruidPredicateMatch applyDouble(double input);
 
-  default boolean applyNull()
+  default DruidPredicateMatch applyNull()
   {
-    return false;
+    return DruidPredicateMatch.UNKNOWN;
   }
 }

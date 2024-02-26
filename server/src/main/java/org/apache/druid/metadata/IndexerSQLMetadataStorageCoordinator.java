@@ -174,22 +174,20 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public List<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource, Interval interval)
+  public List<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource, List<Interval> intervals)
   {
     StringBuilder queryBuilder = new StringBuilder(
         "SELECT created_date, payload FROM %1$s WHERE dataSource = :dataSource AND used = true"
     );
 
-    final List<Interval> intervals = new ArrayList<>();
-    // Do not need an interval condition if the interval is ETERNITY
-    if (!Intervals.isEternity(interval)) {
-      intervals.add(interval);
-    }
+    final boolean compareIntervalEndpointsAsString = intervals.stream()
+                                                              .allMatch(Intervals::canCompareEndpointsAsStrings);
+    final SqlSegmentsMetadataQuery.IntervalMode intervalMode = SqlSegmentsMetadataQuery.IntervalMode.OVERLAPS;
 
     SqlSegmentsMetadataQuery.appendConditionForIntervalsAndMatchMode(
         queryBuilder,
-        intervals,
-        SqlSegmentsMetadataQuery.IntervalMode.OVERLAPS,
+        compareIntervalEndpointsAsString ? intervals : Collections.emptyList(),
+        intervalMode,
         connector
     );
 
@@ -200,9 +198,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               .createQuery(queryString)
               .bind("dataSource", dataSource);
 
-          SqlSegmentsMetadataQuery.bindQueryIntervals(query, intervals);
+          if (compareIntervalEndpointsAsString) {
+            SqlSegmentsMetadataQuery.bindQueryIntervals(query, intervals);
+          }
 
-          return query
+          final List<Pair<DataSegment, String>> segmentsWithCreatedDates = query
               .map((int index, ResultSet r, StatementContext ctx) ->
                        new Pair<>(
                            JacksonUtils.readValue(jsonMapper, r.getBytes("payload"), DataSegment.class),
@@ -210,34 +210,53 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                        )
               )
               .list();
+
+          if (intervals.isEmpty() || compareIntervalEndpointsAsString) {
+            return segmentsWithCreatedDates;
+          } else {
+            return segmentsWithCreatedDates
+                .stream()
+                .filter(pair -> {
+                  for (Interval interval : intervals) {
+                    if (intervalMode.apply(interval, pair.lhs.getInterval())) {
+                      return true;
+                    }
+                  }
+                  return false;
+                }).collect(Collectors.toList());
+          }
         }
     );
-  }
-
-  @Override
-  public List<DataSegment> retrieveUnusedSegmentsForInterval(final String dataSource, final Interval interval)
-  {
-    return retrieveUnusedSegmentsForInterval(dataSource, interval, null);
   }
 
   @Override
   public List<DataSegment> retrieveUnusedSegmentsForInterval(
       String dataSource,
       Interval interval,
-      @Nullable Integer limit
+      @Nullable Integer limit,
+      @Nullable DateTime maxUsedStatusLastUpdatedTime
   )
   {
     final List<DataSegment> matchingSegments = connector.inReadOnlyTransaction(
         (handle, status) -> {
           try (final CloseableIterator<DataSegment> iterator =
                    SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
-                                           .retrieveUnusedSegments(dataSource, Collections.singletonList(interval), limit)) {
+                                           .retrieveUnusedSegments(
+                                               dataSource,
+                                               Collections.singletonList(interval),
+                                               limit,
+                                               null,
+                                               null,
+                                               maxUsedStatusLastUpdatedTime
+                                           )
+          ) {
             return ImmutableList.copyOf(iterator);
           }
         }
     );
 
-    log.info("Found %,d unused segments for %s for interval %s.", matchingSegments.size(), dataSource, interval);
+    log.info("Found [%,d] unused segments for datasource[%s] in interval[%s] with maxUsedStatusLastUpdatedTime[%s].",
+             matchingSegments.size(), dataSource, interval, maxUsedStatusLastUpdatedTime);
     return matchingSegments;
   }
 
@@ -643,10 +662,23 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     Preconditions.checkNotNull(sequenceName, "sequenceName");
     Preconditions.checkNotNull(interval, "interval");
     Preconditions.checkNotNull(maxVersion, "version");
-    Interval allocateInterval = interval.withChronology(ISOChronology.getInstanceUTC());
+    final Interval allocateInterval = interval.withChronology(ISOChronology.getInstanceUTC());
 
     return connector.retryWithHandle(
         handle -> {
+          // Get the time chunk and associated data segments for the given interval, if any
+          final List<TimelineObjectHolder<String, DataSegment>> existingChunks =
+              getTimelineForIntervalsWithHandle(handle, dataSource, ImmutableList.of(interval))
+                  .lookup(interval);
+          if (existingChunks.size() > 1) {
+            // Not possible to expand more than one chunk with a single segment.
+            log.warn(
+                "Cannot allocate new segment for dataSource[%s], interval[%s] as it already has [%,d] versions.",
+                dataSource, interval, existingChunks.size()
+            );
+            return null;
+          }
+
           if (skipSegmentLineageCheck) {
             return allocatePendingSegment(
                 handle,
@@ -654,7 +686,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 sequenceName,
                 allocateInterval,
                 partialShardSpec,
-                maxVersion
+                maxVersion,
+                existingChunks
             );
           } else {
             return allocatePendingSegmentWithSegmentLineageCheck(
@@ -664,7 +697,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 previousSegmentId,
                 allocateInterval,
                 partialShardSpec,
-                maxVersion
+                maxVersion,
+                existingChunks
             );
           }
         }
@@ -801,26 +835,32 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       @Nullable final String previousSegmentId,
       final Interval interval,
       final PartialShardSpec partialShardSpec,
-      final String maxVersion
+      final String maxVersion,
+      final List<TimelineObjectHolder<String, DataSegment>> existingChunks
   ) throws IOException
   {
     final String previousSegmentIdNotNull = previousSegmentId == null ? "" : previousSegmentId;
-    final CheckExistingSegmentIdResult result = checkAndGetExistingSegmentId(
-        handle.createQuery(
-            StringUtils.format(
-                "SELECT payload FROM %s WHERE "
-                + "dataSource = :dataSource AND "
-                + "sequence_name = :sequence_name AND "
-                + "sequence_prev_id = :sequence_prev_id",
-                dbTables.getPendingSegmentsTable()
-            )
-        ),
+
+    final String sql = StringUtils.format(
+        "SELECT payload FROM %s WHERE "
+        + "dataSource = :dataSource AND "
+        + "sequence_name = :sequence_name AND "
+        + "sequence_prev_id = :sequence_prev_id",
+        dbTables.getPendingSegmentsTable()
+    );
+    final Query<Map<String, Object>> query
+        = handle.createQuery(sql)
+                .bind("dataSource", dataSource)
+                .bind("sequence_name", sequenceName)
+                .bind("sequence_prev_id", previousSegmentIdNotNull);
+
+    final String usedSegmentVersion = existingChunks.isEmpty() ? null : existingChunks.get(0).getVersion();
+    final CheckExistingSegmentIdResult result = findExistingPendingSegment(
+        query,
         interval,
         sequenceName,
         previousSegmentIdNotNull,
-        Pair.of("dataSource", dataSource),
-        Pair.of("sequence_name", sequenceName),
-        Pair.of("sequence_prev_id", previousSegmentIdNotNull)
+        usedSegmentVersion
     );
 
     if (result.found) {
@@ -833,7 +873,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         dataSource,
         interval,
         partialShardSpec,
-        maxVersion
+        maxVersion,
+        existingChunks
     );
     if (newIdentifier == null) {
       return null;
@@ -852,6 +893,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                .putBytes(StringUtils.toUtf8(sequenceName))
                .putByte((byte) 0xff)
                .putBytes(StringUtils.toUtf8(previousSegmentIdNotNull))
+               .putByte((byte) 0xff)
+               .putBytes(StringUtils.toUtf8(newIdentifier.getVersion()))
                .hash()
                .asBytes()
     );
@@ -876,11 +919,26 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final List<SegmentCreateRequest> requests
   ) throws IOException
   {
+    // Get the time chunk and associated data segments for the given interval, if any
+    final List<TimelineObjectHolder<String, DataSegment>> existingChunks =
+        getTimelineForIntervalsWithHandle(handle, dataSource, Collections.singletonList(interval))
+            .lookup(interval);
+    if (existingChunks.size() > 1) {
+      log.warn(
+          "Cannot allocate new segments for dataSource[%s], interval[%s] as interval already has [%,d] chunks.",
+          dataSource, interval, existingChunks.size()
+      );
+      return Collections.emptyMap();
+    }
+
+    final String existingVersion = existingChunks.isEmpty() ? null : existingChunks.get(0).getVersion();
     final Map<SegmentCreateRequest, CheckExistingSegmentIdResult> existingSegmentIds;
     if (skipSegmentLineageCheck) {
-      existingSegmentIds = getExistingSegmentIdsSkipLineageCheck(handle, dataSource, interval, requests);
+      existingSegmentIds =
+          getExistingSegmentIdsSkipLineageCheck(handle, dataSource, interval, existingVersion, requests);
     } else {
-      existingSegmentIds = getExistingSegmentIdsWithLineageCheck(handle, dataSource, interval, requests);
+      existingSegmentIds =
+          getExistingSegmentIdsWithLineageCheck(handle, dataSource, interval, existingVersion, requests);
     }
 
     // For every request see if a segment id already exists
@@ -899,8 +957,14 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     // For each of the remaining requests, create a new segment
-    final Map<SegmentCreateRequest, SegmentIdWithShardSpec> createdSegments =
-        createNewSegments(handle, dataSource, interval, skipSegmentLineageCheck, requestsForNewSegments);
+    final Map<SegmentCreateRequest, SegmentIdWithShardSpec> createdSegments = createNewSegments(
+        handle,
+        dataSource,
+        interval,
+        skipSegmentLineageCheck,
+        existingChunks,
+        requestsForNewSegments
+    );
 
     // SELECT -> INSERT can fail due to races; callers must be prepared to retry.
     // Avoiding ON DUPLICATE KEY since it's not portable.
@@ -923,14 +987,16 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @SuppressWarnings("UnstableApiUsage")
   private String getSequenceNameAndPrevIdSha(
       SegmentCreateRequest request,
-      Interval interval,
+      SegmentIdWithShardSpec pendingSegmentId,
       boolean skipSegmentLineageCheck
   )
   {
     final Hasher hasher = Hashing.sha1().newHasher()
                                  .putBytes(StringUtils.toUtf8(request.getSequenceName()))
                                  .putByte((byte) 0xff);
+
     if (skipSegmentLineageCheck) {
+      final Interval interval = pendingSegmentId.getInterval();
       hasher
           .putLong(interval.getStartMillis())
           .putLong(interval.getEndMillis());
@@ -938,6 +1004,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       hasher
           .putBytes(StringUtils.toUtf8(request.getPreviousSegmentId()));
     }
+
+    hasher.putByte((byte) 0xff);
+    hasher.putBytes(StringUtils.toUtf8(pendingSegmentId.getVersion()));
 
     return BaseEncoding.base16().encode(hasher.hash().asBytes());
   }
@@ -949,28 +1018,32 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final String sequenceName,
       final Interval interval,
       final PartialShardSpec partialShardSpec,
-      final String maxVersion
+      final String maxVersion,
+      final List<TimelineObjectHolder<String, DataSegment>> existingChunks
   ) throws IOException
   {
-    final CheckExistingSegmentIdResult result = checkAndGetExistingSegmentId(
-        handle.createQuery(
-            StringUtils.format(
-                "SELECT payload FROM %s WHERE "
-                + "dataSource = :dataSource AND "
-                + "sequence_name = :sequence_name AND "
-                + "start = :start AND "
-                + "%2$send%2$s = :end",
-                dbTables.getPendingSegmentsTable(),
-                connector.getQuoteString()
-            )
-        ),
+    final String sql = StringUtils.format(
+        "SELECT payload FROM %s WHERE "
+        + "dataSource = :dataSource AND "
+        + "sequence_name = :sequence_name AND "
+        + "start = :start AND "
+        + "%2$send%2$s = :end",
+        dbTables.getPendingSegmentsTable(),
+        connector.getQuoteString()
+    );
+    final Query<Map<String, Object>> query
+        = handle.createQuery(sql)
+                .bind("dataSource", dataSource)
+                .bind("sequence_name", sequenceName)
+                .bind("start", interval.getStart().toString())
+                .bind("end", interval.getEnd().toString());
+
+    final CheckExistingSegmentIdResult result = findExistingPendingSegment(
+        query,
         interval,
         sequenceName,
         null,
-        Pair.of("dataSource", dataSource),
-        Pair.of("sequence_name", sequenceName),
-        Pair.of("start", interval.getStart().toString()),
-        Pair.of("end", interval.getEnd().toString())
+        existingChunks.isEmpty() ? null : existingChunks.get(0).getVersion()
     );
 
     if (result.found) {
@@ -982,7 +1055,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         dataSource,
         interval,
         partialShardSpec,
-        maxVersion
+        maxVersion,
+        existingChunks
     );
     if (newIdentifier == null) {
       return null;
@@ -1002,6 +1076,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                .putByte((byte) 0xff)
                .putLong(interval.getStartMillis())
                .putLong(interval.getEndMillis())
+               .putByte((byte) 0xff)
+               .putBytes(StringUtils.toUtf8(newIdentifier.getVersion()))
                .hash()
                .asBytes()
     );
@@ -1009,7 +1085,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     // always insert empty previous sequence id
     insertPendingSegmentIntoMetastore(handle, newIdentifier, dataSource, interval, "", sequenceName, sequenceNamePrevIdSha1);
 
-    log.info("Allocated pending segment [%s] for sequence[%s] in DB", newIdentifier, sequenceName);
+    log.info(
+        "Created new pending segment[%s] for datasource[%s], sequence[%s], interval[%s].",
+        newIdentifier, dataSource, sequenceName, interval
+    );
 
     return newIdentifier;
   }
@@ -1021,6 +1100,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       Handle handle,
       String dataSource,
       Interval interval,
+      String usedSegmentVersion,
       List<SegmentCreateRequest> requests
   ) throws IOException
   {
@@ -1050,7 +1130,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final PendingSegmentsRecord record = dbSegments.next();
       final SegmentIdWithShardSpec segmentId =
           jsonMapper.readValue(record.getPayload(), SegmentIdWithShardSpec.class);
-      sequenceToSegmentId.put(record.getSequenceName(), segmentId);
+
+      // Consider only the pending segments allocated for the latest used segment version
+      if (usedSegmentVersion == null || segmentId.getVersion().equals(usedSegmentVersion)) {
+        sequenceToSegmentId.put(record.getSequenceName(), segmentId);
+      }
     }
 
     final Map<SegmentCreateRequest, CheckExistingSegmentIdResult> requestToResult = new HashMap<>();
@@ -1069,6 +1153,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       Handle handle,
       String dataSource,
       Interval interval,
+      String usedSegmentVersion,
       List<SegmentCreateRequest> requests
   ) throws IOException
   {
@@ -1088,14 +1173,15 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     final Map<SegmentCreateRequest, CheckExistingSegmentIdResult> requestToResult = new HashMap<>();
     for (SegmentCreateRequest request : requests) {
-      CheckExistingSegmentIdResult result = checkAndGetExistingSegmentId(
+      CheckExistingSegmentIdResult result = findExistingPendingSegment(
           handle.createQuery(sql)
                 .bind("dataSource", dataSource)
                 .bind("sequence_name", request.getSequenceName())
                 .bind("sequence_prev_id", request.getPreviousSegmentId()),
           interval,
           request.getSequenceName(),
-          request.getPreviousSegmentId()
+          request.getPreviousSegmentId(),
+          usedSegmentVersion
       );
       requestToResult.put(request, result);
     }
@@ -1103,50 +1189,43 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return requestToResult;
   }
 
-  private CheckExistingSegmentIdResult checkAndGetExistingSegmentId(
+  private CheckExistingSegmentIdResult findExistingPendingSegment(
       final Query<Map<String, Object>> query,
       final Interval interval,
       final String sequenceName,
       final @Nullable String previousSegmentId,
-      final Pair<String, String>... queryVars
+      final @Nullable String usedSegmentVersion
   ) throws IOException
   {
-    Query<Map<String, Object>> boundQuery = query;
-    for (Pair<String, String> var : queryVars) {
-      boundQuery = boundQuery.bind(var.lhs, var.rhs);
-    }
-    final List<byte[]> existingBytes = boundQuery.map(ByteArrayMapper.FIRST).list();
-
-    if (existingBytes.isEmpty()) {
+    final List<byte[]> records = query.map(ByteArrayMapper.FIRST).list();
+    if (records.isEmpty()) {
       return new CheckExistingSegmentIdResult(false, null);
-    } else {
-      final SegmentIdWithShardSpec existingIdentifier = jsonMapper.readValue(
-          Iterables.getOnlyElement(existingBytes),
-          SegmentIdWithShardSpec.class
-      );
+    }
 
-      if (existingIdentifier.getInterval().isEqual(interval)) {
-        log.info(
-            "Found existing pending segment [%s] for sequence[%s] (previous = [%s]) in DB",
-            existingIdentifier,
-            sequenceName,
-            previousSegmentId
-        );
+    for (byte[] record : records) {
+      final SegmentIdWithShardSpec pendingSegment
+          = jsonMapper.readValue(record, SegmentIdWithShardSpec.class);
 
-        return new CheckExistingSegmentIdResult(true, existingIdentifier);
-      } else {
-        log.warn(
-            "Cannot use existing pending segment [%s] for sequence[%s] (previous = [%s]) in DB, "
-            + "does not match requested interval[%s]",
-            existingIdentifier,
-            sequenceName,
-            previousSegmentId,
-            interval
-        );
-
-        return new CheckExistingSegmentIdResult(true, null);
+      // Consider only pending segments matching the expected version
+      if (usedSegmentVersion == null || pendingSegment.getVersion().equals(usedSegmentVersion)) {
+        if (pendingSegment.getInterval().isEqual(interval)) {
+          log.info(
+              "Found existing pending segment[%s] for sequence[%s], previous segment[%s], version[%s] in DB",
+              pendingSegment, sequenceName, previousSegmentId, usedSegmentVersion
+          );
+          return new CheckExistingSegmentIdResult(true, pendingSegment);
+        } else {
+          log.warn(
+              "Cannot use existing pending segment [%s] for sequence[%s], previous segment[%s] in DB"
+              + " as it does not match requested interval[%s], version[%s].",
+              pendingSegment, sequenceName, previousSegmentId, interval, usedSegmentVersion
+          );
+          return new CheckExistingSegmentIdResult(true, null);
+        }
       }
     }
+
+    return new CheckExistingSegmentIdResult(false, null);
   }
 
   private static class CheckExistingSegmentIdResult
@@ -1159,6 +1238,52 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     {
       this.found = found;
       this.segmentIdentifier = segmentIdentifier;
+    }
+  }
+
+  private static class UniqueAllocateRequest
+  {
+    private final Interval interval;
+    private final String previousSegmentId;
+    private final String sequenceName;
+    private final boolean skipSegmentLineageCheck;
+
+    private final int hashCode;
+
+    public UniqueAllocateRequest(
+        Interval interval,
+        SegmentCreateRequest request,
+        boolean skipSegmentLineageCheck
+    )
+    {
+      this.interval = interval;
+      this.sequenceName = request.getSequenceName();
+      this.previousSegmentId = request.getPreviousSegmentId();
+      this.skipSegmentLineageCheck = skipSegmentLineageCheck;
+
+      this.hashCode = Objects.hash(interval, sequenceName, previousSegmentId, skipSegmentLineageCheck);
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      UniqueAllocateRequest that = (UniqueAllocateRequest) o;
+      return skipSegmentLineageCheck == that.skipSegmentLineageCheck
+             && Objects.equals(interval, that.interval)
+             && Objects.equals(sequenceName, that.sequenceName)
+             && Objects.equals(previousSegmentId, that.previousSegmentId);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return hashCode;
     }
   }
 
@@ -1262,7 +1387,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                  .bind("sequence_prev_id", request.getPreviousSegmentId())
                  .bind(
                      "sequence_name_prev_id_sha1",
-                     getSequenceNameAndPrevIdSha(request, interval, skipSegmentLineageCheck)
+                     getSequenceNameAndPrevIdSha(request, segmentId, skipSegmentLineageCheck)
                  )
                  .bind("payload", jsonMapper.writeValueAsBytes(segmentId));
     }
@@ -1478,26 +1603,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       String dataSource,
       Interval interval,
       boolean skipSegmentLineageCheck,
+      List<TimelineObjectHolder<String, DataSegment>> existingChunks,
       List<SegmentCreateRequest> requests
   ) throws IOException
   {
     if (requests.isEmpty()) {
-      return Collections.emptyMap();
-    }
-
-    // Get the time chunk and associated data segments for the given interval, if any
-    final List<TimelineObjectHolder<String, DataSegment>> existingChunks =
-        getTimelineForIntervalsWithHandle(handle, dataSource, Collections.singletonList(interval))
-            .lookup(interval);
-
-    if (existingChunks.size() > 1) {
-      // Not possible to expand more than one chunk with a single segment.
-      log.warn(
-          "Cannot allocate new segments for dataSource[%s], interval[%s]: already have [%,d] chunks.",
-          dataSource,
-          interval,
-          existingChunks.size()
-      );
       return Collections.emptyMap();
     }
 
@@ -1540,15 +1650,16 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         new HashSet<>(getPendingSegmentsForIntervalWithHandle(handle, dataSource, interval).keySet());
 
     final Map<SegmentCreateRequest, SegmentIdWithShardSpec> createdSegments = new HashMap<>();
-    final Map<String, SegmentIdWithShardSpec> sequenceHashToSegment = new HashMap<>();
+    final Map<UniqueAllocateRequest, SegmentIdWithShardSpec> uniqueRequestToSegment = new HashMap<>();
 
     for (SegmentCreateRequest request : requests) {
       // Check if the required segment has already been created in this batch
-      final String sequenceHash = getSequenceNameAndPrevIdSha(request, interval, skipSegmentLineageCheck);
+      final UniqueAllocateRequest uniqueRequest =
+          new UniqueAllocateRequest(interval, request, skipSegmentLineageCheck);
 
       final SegmentIdWithShardSpec createdSegment;
-      if (sequenceHashToSegment.containsKey(sequenceHash)) {
-        createdSegment = sequenceHashToSegment.get(sequenceHash);
+      if (uniqueRequestToSegment.containsKey(uniqueRequest)) {
+        createdSegment = uniqueRequestToSegment.get(uniqueRequest);
       } else {
         createdSegment = createNewSegment(
             request,
@@ -1562,8 +1673,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         // Add to pendingSegments to consider for partitionId
         if (createdSegment != null) {
           pendingSegments.add(createdSegment);
-          sequenceHashToSegment.put(sequenceHash, createdSegment);
-          log.info("Created new segment [%s]", createdSegment);
+          uniqueRequestToSegment.put(uniqueRequest, createdSegment);
+          log.info("Created new segment[%s]", createdSegment);
         }
       }
 
@@ -1572,7 +1683,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       }
     }
 
-    log.info("Created [%d] new segments for [%d] allocate requests.", sequenceHashToSegment.size(), requests.size());
+    log.info("Created [%d] new segments for [%d] allocate requests.", uniqueRequestToSegment.size(), requests.size());
     return createdSegments;
   }
 
@@ -1692,140 +1803,122 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final String dataSource,
       final Interval interval,
       final PartialShardSpec partialShardSpec,
-      final String existingVersion
+      final String existingVersion,
+      final List<TimelineObjectHolder<String, DataSegment>> existingChunks
   ) throws IOException
   {
-    // Get the time chunk and associated data segments for the given interval, if any
-    final List<TimelineObjectHolder<String, DataSegment>> existingChunks = getTimelineForIntervalsWithHandle(
-        handle,
-        dataSource,
-        ImmutableList.of(interval)
-    ).lookup(interval);
+    // max partitionId of published data segments which share the same partition space.
+    SegmentIdWithShardSpec committedMaxId = null;
 
-    if (existingChunks.size() > 1) {
-      // Not possible to expand more than one chunk with a single segment.
-      log.warn(
-          "Cannot allocate new segment for dataSource[%s], interval[%s]: already have [%,d] chunks.",
-          dataSource,
-          interval,
-          existingChunks.size()
-      );
-      return null;
-
+    @Nullable
+    final String versionOfExistingChunk;
+    if (existingChunks.isEmpty()) {
+      versionOfExistingChunk = null;
     } else {
-      // max partitionId of published data segments which share the same partition space.
-      SegmentIdWithShardSpec committedMaxId = null;
+      TimelineObjectHolder<String, DataSegment> existingHolder = Iterables.getOnlyElement(existingChunks);
+      versionOfExistingChunk = existingHolder.getVersion();
 
-      @Nullable
-      final String versionOfExistingChunk;
-      if (existingChunks.isEmpty()) {
-        versionOfExistingChunk = null;
-      } else {
-        TimelineObjectHolder<String, DataSegment> existingHolder = Iterables.getOnlyElement(existingChunks);
-        versionOfExistingChunk = existingHolder.getVersion();
-
-        // Don't use the stream API for performance.
-        for (DataSegment segment : FluentIterable
-            .from(existingHolder.getObject())
-            .transform(PartitionChunk::getObject)
-            // Here we check only the segments of the shardSpec which shares the same partition space with the given
-            // partialShardSpec. Note that OverwriteShardSpec doesn't share the partition space with others.
-            // See PartitionIds.
-            .filter(segment -> segment.getShardSpec().sharePartitionSpace(partialShardSpec))) {
-          if (committedMaxId == null
-              || committedMaxId.getShardSpec().getPartitionNum() < segment.getShardSpec().getPartitionNum()) {
-            committedMaxId = SegmentIdWithShardSpec.fromDataSegment(segment);
-          }
+      // Don't use the stream API for performance.
+      for (DataSegment segment : FluentIterable
+          .from(existingHolder.getObject())
+          .transform(PartitionChunk::getObject)
+          // Here we check only the segments of the shardSpec which shares the same partition space with the given
+          // partialShardSpec. Note that OverwriteShardSpec doesn't share the partition space with others.
+          // See PartitionIds.
+          .filter(segment -> segment.getShardSpec().sharePartitionSpace(partialShardSpec))) {
+        if (committedMaxId == null
+            || committedMaxId.getShardSpec().getPartitionNum() < segment.getShardSpec().getPartitionNum()) {
+          committedMaxId = SegmentIdWithShardSpec.fromDataSegment(segment);
         }
       }
+    }
 
 
-      // Fetch the pending segments for this interval to determine max partitionId
-      // across all shard specs (published + pending).
-      // A pending segment having a higher partitionId must also be considered
-      // to avoid clashes when inserting the pending segment created here.
-      final Set<SegmentIdWithShardSpec> pendings = new HashSet<>(
-          getPendingSegmentsForIntervalWithHandle(handle, dataSource, interval).keySet()
+    // Fetch the pending segments for this interval to determine max partitionId
+    // across all shard specs (published + pending).
+    // A pending segment having a higher partitionId must also be considered
+    // to avoid clashes when inserting the pending segment created here.
+    final Set<SegmentIdWithShardSpec> pendings = new HashSet<>(
+        getPendingSegmentsForIntervalWithHandle(handle, dataSource, interval).keySet()
+    );
+    if (committedMaxId != null) {
+      pendings.add(committedMaxId);
+    }
+
+    // If there is an existing chunk, find the max id with the same version as the existing chunk.
+    // There may still be a pending segment with a higher version (but no corresponding used segments)
+    // which may generate a clash with an existing segment once the new id is generated
+    final SegmentIdWithShardSpec overallMaxId;
+    overallMaxId = pendings.stream()
+                           .filter(id -> id.getShardSpec().sharePartitionSpace(partialShardSpec))
+                           .filter(id -> versionOfExistingChunk == null
+                                         || id.getVersion().equals(versionOfExistingChunk))
+                           .max(Comparator.comparing(SegmentIdWithShardSpec::getVersion)
+                                          .thenComparing(id -> id.getShardSpec().getPartitionNum()))
+                           .orElse(null);
+
+
+    // Determine the version of the new segment
+    final String newSegmentVersion;
+    if (versionOfExistingChunk != null) {
+      newSegmentVersion = versionOfExistingChunk;
+    } else if (overallMaxId != null) {
+      newSegmentVersion = overallMaxId.getVersion();
+    } else {
+      // this is the first segment for this interval
+      newSegmentVersion = null;
+    }
+
+    if (overallMaxId == null) {
+      // When appending segments, null overallMaxId means that we are allocating the very initial
+      // segment for this time chunk.
+      // This code is executed when the Overlord coordinates segment allocation, which is either you append segments
+      // or you use segment lock. Since the core partitions set is not determined for appended segments, we set
+      // it 0. When you use segment lock, the core partitions set doesn't work with it. We simply set it 0 so that the
+      // OvershadowableManager handles the atomic segment update.
+      final int newPartitionId = partialShardSpec.useNonRootGenerationPartitionSpace()
+                                 ? PartitionIds.NON_ROOT_GEN_START_PARTITION_ID
+                                 : PartitionIds.ROOT_GEN_START_PARTITION_ID;
+      String version = newSegmentVersion == null ? existingVersion : newSegmentVersion;
+      return new SegmentIdWithShardSpec(
+          dataSource,
+          interval,
+          version,
+          partialShardSpec.complete(jsonMapper, newPartitionId, 0)
       );
-      if (committedMaxId != null) {
-        pendings.add(committedMaxId);
-      }
+    } else if (!overallMaxId.getInterval().equals(interval)) {
+      log.warn(
+          "Cannot allocate new segment for dataSource[%s], interval[%s], existingVersion[%s]: conflicting segment[%s].",
+          dataSource,
+          interval,
+          existingVersion,
+          overallMaxId
+      );
+      return null;
+    } else if (committedMaxId != null
+               && committedMaxId.getShardSpec().getNumCorePartitions()
+                  == SingleDimensionShardSpec.UNKNOWN_NUM_CORE_PARTITIONS) {
+      log.warn(
+          "Cannot allocate new segment because of unknown core partition size of segment[%s], shardSpec[%s]",
+          committedMaxId,
+          committedMaxId.getShardSpec()
+      );
+      return null;
+    } else {
+      // The number of core partitions must always be chosen from the set of used segments in the SegmentTimeline.
+      // When the core partitions have been dropped, using pending segments may lead to an incorrect state
+      // where the chunk is believed to have core partitions and queries results are incorrect.
 
-      // If there is an existing chunk, find the max id with the same version as the existing chunk.
-      // There may still be a pending segment with a higher version (but no corresponding used segments)
-      // which may generate a clash with an existing segment once the new id is generated
-      final SegmentIdWithShardSpec overallMaxId;
-      overallMaxId = pendings.stream()
-                             .filter(id -> id.getShardSpec().sharePartitionSpace(partialShardSpec))
-                             .filter(id -> versionOfExistingChunk == null
-                                           || id.getVersion().equals(versionOfExistingChunk))
-                             .max(Comparator.comparing(SegmentIdWithShardSpec::getVersion)
-                                            .thenComparing(id -> id.getShardSpec().getPartitionNum()))
-                             .orElse(null);
-
-
-      // Determine the version of the new segment
-      final String newSegmentVersion;
-      if (versionOfExistingChunk != null) {
-        newSegmentVersion = versionOfExistingChunk;
-      } else if (overallMaxId != null) {
-        newSegmentVersion = overallMaxId.getVersion();
-      } else {
-        // this is the first segment for this interval
-        newSegmentVersion = null;
-      }
-
-      if (overallMaxId == null) {
-        // When appending segments, null overallMaxId means that we are allocating the very initial
-        // segment for this time chunk.
-        // This code is executed when the Overlord coordinates segment allocation, which is either you append segments
-        // or you use segment lock. Since the core partitions set is not determined for appended segments, we set
-        // it 0. When you use segment lock, the core partitions set doesn't work with it. We simply set it 0 so that the
-        // OvershadowableManager handles the atomic segment update.
-        final int newPartitionId = partialShardSpec.useNonRootGenerationPartitionSpace()
-                                   ? PartitionIds.NON_ROOT_GEN_START_PARTITION_ID
-                                   : PartitionIds.ROOT_GEN_START_PARTITION_ID;
-        String version = newSegmentVersion == null ? existingVersion : newSegmentVersion;
-        return new SegmentIdWithShardSpec(
-            dataSource,
-            interval,
-            version,
-            partialShardSpec.complete(jsonMapper, newPartitionId, 0)
-        );
-      } else if (!overallMaxId.getInterval().equals(interval)) {
-        log.warn(
-            "Cannot allocate new segment for dataSource[%s], interval[%s], existingVersion[%s]: conflicting segment[%s].",
-            dataSource,
-            interval,
-            existingVersion,
-            overallMaxId
-        );
-        return null;
-      } else if (committedMaxId != null
-                 && committedMaxId.getShardSpec().getNumCorePartitions()
-                    == SingleDimensionShardSpec.UNKNOWN_NUM_CORE_PARTITIONS) {
-        log.warn(
-            "Cannot allocate new segment because of unknown core partition size of segment[%s], shardSpec[%s]",
-            committedMaxId,
-            committedMaxId.getShardSpec()
-        );
-        return null;
-      } else {
-        // The number of core partitions must always be chosen from the set of used segments in the SegmentTimeline.
-        // When the core partitions have been dropped, using pending segments may lead to an incorrect state
-        // where the chunk is believed to have core partitions and queries results are incorrect.
-
-        return new SegmentIdWithShardSpec(
-            dataSource,
-            interval,
-            Preconditions.checkNotNull(newSegmentVersion, "newSegmentVersion"),
-            partialShardSpec.complete(
-                jsonMapper,
-                overallMaxId.getShardSpec().getPartitionNum() + 1,
-                committedMaxId == null ? 0 : committedMaxId.getShardSpec().getNumCorePartitions()
-            )
-        );
-      }
+      return new SegmentIdWithShardSpec(
+          dataSource,
+          interval,
+          Preconditions.checkNotNull(newSegmentVersion, "newSegmentVersion"),
+          partialShardSpec.complete(
+              jsonMapper,
+              overallMaxId.getShardSpec().getPartitionNum() + 1,
+              committedMaxId == null ? 0 : committedMaxId.getShardSpec().getNumCorePartitions()
+          )
+      );
     }
   }
 
@@ -2315,16 +2408,35 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     final boolean startMetadataMatchesExisting;
+    int startMetadataGreaterThanExisting = 0;
 
     if (oldCommitMetadataFromDb == null) {
       startMetadataMatchesExisting = startMetadata.isValidStart();
+      startMetadataGreaterThanExisting = 1;
     } else {
       // Checking against the last committed metadata.
+      // If the new start sequence number is greater than the end sequence number of last commit compareTo() function will return 1,
+      // 0 in all other cases. It might be because multiple tasks are publishing the sequence at around same time.
+      if (startMetadata instanceof Comparable) {
+        startMetadataGreaterThanExisting = ((Comparable) startMetadata.asStartMetadata()).compareTo(oldCommitMetadataFromDb.asStartMetadata());
+      }
+
       // Converting the last one into start metadata for checking since only the same type of metadata can be matched.
       // Even though kafka/kinesis indexing services use different sequenceNumber types for representing
       // start and end sequenceNumbers, the below conversion is fine because the new start sequenceNumbers are supposed
       // to be same with end sequenceNumbers of the last commit.
       startMetadataMatchesExisting = startMetadata.asStartMetadata().matches(oldCommitMetadataFromDb.asStartMetadata());
+    }
+
+    if (startMetadataGreaterThanExisting == 1 && !startMetadataMatchesExisting) {
+      // Offset stored in StartMetadata is Greater than the last commited metadata,
+      // Then retry multiple task might be trying to publish the segment for same partitions.
+      log.info("Failed to update the metadata Store. The new start metadata: [%s] is ahead of last commited end state: [%s].",
+          startMetadata,
+          oldCommitMetadataFromDb);
+      return new DataStoreMetadataUpdateResult(true, false,
+          "Failed to update the metadata Store. The new start metadata is ahead of last commited end state."
+      );
     }
 
     if (!startMetadataMatchesExisting) {
@@ -2596,6 +2708,22 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         },
         3,
         SQLMetadataConnector.DEFAULT_MAX_TRIES
+    );
+  }
+
+  @Override
+  public int deleteUpgradeSegmentsForTask(final String taskId)
+  {
+    return connector.getDBI().inTransaction(
+        (handle, status) -> handle
+            .createStatement(
+                StringUtils.format(
+                    "DELETE FROM %s WHERE task_id = :task_id",
+                    dbTables.getUpgradeSegmentsTable()
+                )
+            )
+            .bind("task_id", taskId)
+            .execute()
     );
   }
 

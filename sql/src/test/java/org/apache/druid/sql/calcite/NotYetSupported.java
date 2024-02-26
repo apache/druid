@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.base.Throwables;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.UOE;
 import org.junit.AssumptionViolatedException;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
@@ -65,32 +64,30 @@ import static org.junit.Assert.assertThrows;
 @Target({ElementType.METHOD})
 public @interface NotYetSupported
 {
-  Modes value() default Modes.NOT_ENOUGH_RULES;
+  Modes value();
 
   enum Modes
   {
     PLAN_MISMATCH(AssertionError.class, "AssertionError: query #"),
     NOT_ENOUGH_RULES(DruidException.class, "not enough rules"),
-    CANNOT_CONVERT(DruidException.class, "Cannot convert query parts"),
-    ERROR_HANDLING(AssertionError.class, "(is <ADMIN> was <OPERATOR>|is <INVALID_INPUT> was <UNCATEGORIZED>|with message a string containing)"),
+    ERROR_HANDLING(AssertionError.class, "(is <ADMIN> was <(OPERATOR|DEVELOPER)>|is <INVALID_INPUT> was <UNCATEGORIZED>|with message a string containing)"),
     EXPRESSION_NOT_GROUPED(DruidException.class, "Expression '[a-z]+' is not being grouped"),
     COLUMN_NOT_FOUND(DruidException.class, "CalciteContextException.*Column.*not found in any table"),
     NULLS_FIRST_LAST(DruidException.class, "NULLS (FIRST|LAST)"),
     BIGINT_TO_DATE(DruidException.class, "BIGINT to type (DATE|TIME)"),
-    NPE_PLAIN(NullPointerException.class, "java.lang.NullPointerException"),
     NPE(DruidException.class, "java.lang.NullPointerException"),
     AGGREGATION_NOT_SUPPORT_TYPE(DruidException.class, "Aggregation \\[(MIN|MAX)\\] does not support type \\[STRING\\]"),
-    CANNOT_APPLY_VIRTUAL_COL(UOE.class, "apply virtual columns"),
-    MISSING_DESC(DruidException.class, "function signature DESC"),
     RESULT_COUNT_MISMATCH(AssertionError.class, "result count:"),
     ALLDATA_CSV(DruidException.class, "allData.csv"),
     BIGINT_TIME_COMPARE(DruidException.class, "Cannot apply '.' to arguments of type"),
     INCORRECT_SYNTAX(DruidException.class, "Incorrect syntax near the keyword"),
     // at least c7 is represented oddly in the parquet file
     T_ALLTYPES_ISSUES(AssertionError.class, "(t_alltype|allTypsUniq|fewRowsAllData).parquet.*Verifier.verify"),
-    RESULT_MISMATCH(AssertionError.class, "assertResultsEquals"),
+    RESULT_MISMATCH(AssertionError.class, "(assertResultsEquals|AssertionError: column content mismatch)"),
     UNSUPPORTED_NULL_ORDERING(DruidException.class, "(A|DE)SCENDING ordering with NULLS (LAST|FIRST)"),
-    CANNOT_TRANSLATE(DruidException.class, "Cannot translate reference");
+    MISSING_JOIN_CONVERSION(DruidException.class, "Missing conversions? is (Logical)?Join"),
+    UNION_WITH_COMPLEX_OPERAND(DruidException.class, "Only Table and Values are supported as inputs for Union"),
+    UNION_MORE_STRICT_ROWTYPE_CHECK(DruidException.class, "Row signature mismatch in Union inputs");
 
     public Class<? extends Throwable> throwableClass;
     public String regex;
@@ -129,11 +126,27 @@ public @interface NotYetSupported
         public void evaluate()
         {
           Modes ignoreMode = annotation.value();
-          Throwable e = assertThrows(
+          Throwable e = null;
+          try {
+            base.evaluate();
+          }
+          catch (Throwable t) {
+            e = t;
+          }
+          // If the base test case is supposed to be ignored already, just skip the further evaluation
+          if (e instanceof AssumptionViolatedException) {
+            throw (AssumptionViolatedException) e;
+          }
+          Throwable finalE = e;
+          assertThrows(
               "Expected that this testcase will fail - it might got fixed; or failure have changed?",
               ignoreMode.throwableClass,
-              base::evaluate
-              );
+              () -> {
+                if (finalE != null) {
+                  throw finalE;
+                }
+              }
+          );
 
           String trace = Throwables.getStackTraceAsString(e);
           Matcher m = annotation.value().getPattern().matcher(trace);

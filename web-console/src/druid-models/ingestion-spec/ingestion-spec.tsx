@@ -44,12 +44,13 @@ import {
   typeIsKnown,
 } from '../../utils';
 import type { SampleResponse } from '../../utils/sampler';
-import type { DimensionsSpec } from '../dimension-spec/dimension-spec';
+import type { DimensionSpec, DimensionsSpec } from '../dimension-spec/dimension-spec';
 import {
+  getDimensionSpecColumnType,
   getDimensionSpecName,
   getDimensionSpecs,
-  getDimensionSpecType,
 } from '../dimension-spec/dimension-spec';
+import type { FlattenSpec } from '../flatten-spec/flatten-spec';
 import type { IndexSpec } from '../index-spec/index-spec';
 import { summarizeIndexSpec } from '../index-spec/index-spec';
 import type { InputFormat } from '../input-format/input-format';
@@ -72,7 +73,8 @@ const CURRENT_YEAR = new Date().getUTCFullYear();
 export interface IngestionSpec {
   readonly type: IngestionType;
   readonly spec: IngestionSpecInner;
-  readonly context?: { taskLockType?: 'APPEND' | 'REPLACE' };
+  readonly context?: { useConcurrentLocks?: boolean };
+  readonly suspended?: boolean;
 }
 
 export interface IngestionSpecInner {
@@ -97,7 +99,8 @@ export type IngestionComboType =
   | 'index_parallel:druid'
   | 'index_parallel:inline'
   | 'index_parallel:s3'
-  | 'index_parallel:azure'
+  | 'index_parallel:azureStorage'
+  | 'index_parallel:delta'
   | 'index_parallel:google'
   | 'index_parallel:hdfs';
 
@@ -136,10 +139,11 @@ export function getIngestionComboType(
       switch (inputSource.type) {
         case 'local':
         case 'http':
+        case 'delta':
         case 'druid':
         case 'inline':
         case 's3':
-        case 'azure':
+        case 'azureStorage':
         case 'google':
         case 'hdfs':
           return `${ioConfig.type}:${inputSource.type}` as IngestionComboType;
@@ -167,8 +171,11 @@ export function getIngestionTitle(ingestionType: IngestionComboTypeWithExtra): s
     case 'index_parallel:s3':
       return 'Amazon S3';
 
-    case 'index_parallel:azure':
+    case 'index_parallel:azureStorage':
       return 'Azure Data Lake';
+
+    case 'index_parallel:delta':
+      return 'Delta Lake';
 
     case 'index_parallel:google':
       return 'Google Cloud Storage';
@@ -225,8 +232,11 @@ export function getRequiredModule(ingestionType: IngestionComboTypeWithExtra): s
     case 'index_parallel:s3':
       return 'druid-s3-extensions';
 
-    case 'index_parallel:azure':
+    case 'index_parallel:azureStorage':
       return 'druid-azure-extensions';
+
+    case 'index_parallel:delta':
+      return 'druid-deltalake-extensions';
 
     case 'index_parallel:google':
       return 'druid-google-extensions';
@@ -274,6 +284,8 @@ export interface DataSchema {
 
 export type SchemaMode = 'fixed' | 'string-only-discovery' | 'type-aware-discovery';
 
+export type ArrayMode = 'arrays' | 'multi-values';
+
 export function getSchemaMode(spec: Partial<IngestionSpec>): SchemaMode {
   if (deepGet(spec, 'spec.dataSchema.dimensionsSpec.useSchemaDiscovery') === true) {
     return 'type-aware-discovery';
@@ -285,9 +297,66 @@ export function getSchemaMode(spec: Partial<IngestionSpec>): SchemaMode {
   return Array.isArray(dimensions) && dimensions.length === 0 ? 'string-only-discovery' : 'fixed';
 }
 
-export function getRollup(spec: Partial<IngestionSpec>): boolean {
+export function getArrayMode(spec: Partial<IngestionSpec>): ArrayMode {
+  const schemaMode = getSchemaMode(spec);
+  switch (schemaMode) {
+    case 'type-aware-discovery':
+      return 'arrays';
+
+    case 'string-only-discovery':
+      return 'multi-values';
+
+    default: {
+      const dimensions: (DimensionSpec | string)[] = deepGet(
+        spec,
+        'spec.dataSchema.dimensionsSpec.dimensions',
+      );
+
+      if (
+        dimensions.some(
+          d =>
+            typeof d === 'object' && d.type === 'auto' && String(d.castToType).startsWith('ARRAY'),
+        )
+      ) {
+        return 'arrays';
+      }
+
+      if (
+        dimensions.some(
+          d =>
+            typeof d === 'object' &&
+            d.type === 'string' &&
+            typeof d.multiValueHandling === 'string',
+        )
+      ) {
+        return 'multi-values';
+      }
+
+      return 'arrays';
+    }
+  }
+}
+
+export function showArrayModeToggle(spec: Partial<IngestionSpec>): boolean {
+  const schemaMode = getSchemaMode(spec);
+  if (schemaMode !== 'fixed') return false;
+
+  const dimensions: (DimensionSpec | string)[] = deepGet(
+    spec,
+    'spec.dataSchema.dimensionsSpec.dimensions',
+  );
+
+  return dimensions.some(
+    d =>
+      typeof d === 'object' &&
+      ((d.type === 'auto' && String(d.castToType).startsWith('ARRAY')) ||
+        (d.type === 'string' && typeof d.multiValueHandling === 'string')),
+  );
+}
+
+export function getRollup(spec: Partial<IngestionSpec>, valueIfUnset = true): boolean {
   const specRollup = deepGet(spec, 'spec.dataSchema.granularitySpec.rollup');
-  return typeof specRollup === 'boolean' ? specRollup : true;
+  return typeof specRollup === 'boolean' ? specRollup : valueIfUnset;
 }
 
 export function getSpecType(spec: Partial<IngestionSpec>): IngestionType {
@@ -306,6 +375,51 @@ export function isStreamingSpec(spec: Partial<IngestionSpec>): boolean {
 export function isDruidSource(spec: Partial<IngestionSpec>): boolean {
   return deepGet(spec, 'spec.ioConfig.inputSource.type') === 'druid';
 }
+
+export function getPossibleSystemFieldsForSpec(spec: Partial<IngestionSpec>): string[] {
+  const inputSource = deepGet(spec, 'spec.ioConfig.inputSource');
+  if (!inputSource) return [];
+  return getPossibleSystemFieldsForInputSource(inputSource);
+}
+
+export function getFlattenSpec(spec: Partial<IngestionSpec>): FlattenSpec | undefined {
+  const inputFormat: InputFormat | undefined = deepGet(spec, 'spec.ioConfig.inputFormat');
+  if (!inputFormat) return;
+  return (
+    (inputFormat.type === 'kafka'
+      ? inputFormat.valueFormat?.flattenSpec
+      : inputFormat.flattenSpec) || undefined
+  );
+}
+
+export function changeFlattenSpec(
+  spec: Partial<IngestionSpec>,
+  flattenSpec: FlattenSpec | undefined,
+): Partial<IngestionSpec> {
+  if (deepGet(spec, 'spec.ioConfig.inputFormat.type') === 'kafka') {
+    return deepSet(spec, 'spec.ioConfig.inputFormat.valueFormat.flattenSpec', flattenSpec);
+  } else {
+    return deepSet(spec, 'spec.ioConfig.inputFormat.flattenSpec', flattenSpec);
+  }
+}
+
+export function getPossibleSystemFieldsForInputSource(inputSource: InputSource): string[] {
+  switch (inputSource.type) {
+    case 's3':
+    case 'google':
+    case 'azureStorage':
+      return ['__file_uri', '__file_bucket', '__file_path'];
+
+    case 'hdfs':
+    case 'local':
+      return ['__file_uri', '__file_path'];
+
+    default:
+      return [];
+  }
+}
+
+export const ALL_POSSIBLE_SYSTEM_FIELDS: string[] = ['__file_uri', '__file_bucket', '__file_path'];
 
 // ---------------------------------
 // Spec cleanup and normalization
@@ -346,10 +460,6 @@ export function normalizeSpec(spec: Partial<IngestionSpec>): IngestionSpec {
   spec = deepSetIfUnset(spec, 'spec.ioConfig.type', specType);
   spec = deepSetIfUnset(spec, 'spec.tuningConfig.type', specType);
 
-  if (spec.context?.taskLockType !== undefined) {
-    spec.context.taskLockType = spec.spec?.ioConfig.appendToExisting ? 'APPEND' : 'REPLACE';
-  }
-
   return spec as IngestionSpec;
 }
 
@@ -364,7 +474,7 @@ export function cleanSpec(
 ): Partial<IngestionSpec> {
   return allowKeys(
     spec,
-    ['type', 'spec', 'context'].concat(allowSuspended ? ['suspended'] : []),
+    ['type', 'spec', 'context'].concat(allowSuspended ? ['suspended'] : []) as any,
   ) as IngestionSpec;
 }
 
@@ -459,7 +569,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     name: 'inputSource.type',
     label: 'Source type',
     type: 'string',
-    suggestions: ['local', 'http', 'inline', 's3', 'azure', 'google', 'hdfs'],
+    suggestions: ['local', 'http', 'inline', 'delta', 's3', 'azureStorage', 'google', 'hdfs'],
     info: (
       <p>
         Druid connects to raw data through{' '}
@@ -773,7 +883,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
         },
       ];
 
-    case 'index_parallel:azure':
+    case 'index_parallel:azureStorage':
       return [
         inputSourceType,
         {
@@ -781,7 +891,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'Azure URIs',
           type: 'string-array',
           placeholder:
-            'azure://your-container/some-file1.ext, azure://your-container/some-file2.ext',
+            'azureStorage://your-storage-account/your-container/some-file1.ext, azureStorage://your-storage-account/your-container/some-file2.ext',
           required: true,
           defined: ioConfig =>
             !deepGet(ioConfig, 'inputSource.prefixes') && !deepGet(ioConfig, 'inputSource.objects'),
@@ -799,7 +909,8 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'inputSource.prefixes',
           label: 'Azure prefixes',
           type: 'string-array',
-          placeholder: 'azure://your-container/some-path1, azure://your-container/some-path2',
+          placeholder:
+            'azureStorage://your-storage-account/your-container/some-path1, azureStorage://your-storage-account/your-container/some-path2',
           required: true,
           defined: ioConfig =>
             !deepGet(ioConfig, 'inputSource.uris') && !deepGet(ioConfig, 'inputSource.objects'),
@@ -814,7 +925,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'inputSource.objects',
           label: 'Azure objects',
           type: 'json',
-          placeholder: '{"bucket":"your-container", "path":"some-file.ext"}',
+          placeholder: '{"bucket":"your-storage-account", "path":"your-container/some-file.ext"}',
           required: true,
           defined: ioConfig => deepGet(ioConfig, 'inputSource.objects'),
           info: (
@@ -831,6 +942,21 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           ),
         },
         inputSourceFilter,
+        {
+          name: 'inputSource.properties.sharedAccessStorageToken',
+          label: 'Shared Access Storage Token',
+          type: 'string',
+          placeholder: '(sas token)',
+          info: (
+            <>
+              <p>Shared Access Storage Token for this storage account.</p>
+              <p>
+                Note: Inlining the sas token into the ingestion spec can be dangerous as it might
+                appear in server log files and can be seen by anyone accessing this console.
+              </p>
+            </>
+          ),
+        },
       ];
 
     case 'index_parallel:google':
@@ -890,6 +1016,18 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           ),
         },
         inputSourceFilter,
+      ];
+
+    case 'index_parallel:delta':
+      return [
+        inputSourceType,
+        {
+          name: 'inputSource.tablePath',
+          label: 'Delta table path',
+          type: 'string',
+          placeholder: '/path/to/deltaTable',
+          required: true,
+        },
       ];
 
     case 'index_parallel:hdfs':
@@ -1080,8 +1218,9 @@ export function getIoConfigTuningFormFields(
   switch (ingestionComboType) {
     case 'index_parallel:http':
     case 'index_parallel:s3':
-    case 'index_parallel:azure':
+    case 'index_parallel:azureStorage':
     case 'index_parallel:google':
+    case 'index_parallel:delta':
     case 'index_parallel:hdfs':
       return [
         {
@@ -1220,13 +1359,6 @@ export function getIoConfigTuningFormFields(
           ),
         },
         {
-          name: 'recordsPerFetch',
-          type: 'number',
-          defaultValue: 4000,
-          defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
-          info: <>The number of records to request per GetRecords call to Kinesis.</>,
-        },
-        {
           name: 'pollTimeout',
           type: 'number',
           defaultValue: 100,
@@ -1245,13 +1377,6 @@ export function getIoConfigTuningFormFields(
           defaultValue: 0,
           defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
           info: <>Time in milliseconds to wait between subsequent GetRecords calls to Kinesis.</>,
-        },
-        {
-          name: 'deaggregate',
-          type: 'boolean',
-          defaultValue: false,
-          defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
-          info: <>Whether to use the de-aggregate function of the KCL.</>,
         },
         {
           name: 'startDelay',
@@ -1370,7 +1495,7 @@ export function guessDataSourceNameFromInputSource(inputSource: InputSource): st
       }
 
     case 's3':
-    case 'azure':
+    case 'azureStorage':
     case 'google': {
       const actualPath = (inputSource.objects || EMPTY_ARRAY)[0];
       const uriPath =
@@ -1440,7 +1565,7 @@ export interface TuningConfig {
   offsetFetchPeriod?: string;
   maxParseExceptions?: number;
   maxSavedParseExceptions?: number;
-  recordBufferSize?: number;
+  recordBufferSizeBytes?: number;
   recordBufferOfferTimeout?: number;
   recordBufferFullWait?: number;
   fetchThreads?: number;
@@ -2052,13 +2177,13 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     ),
   },
   {
-    name: 'spec.tuningConfig.recordBufferSize',
+    name: 'spec.tuningConfig.recordBufferSizeBytes',
     type: 'number',
-    defaultValue: 10000,
+    defaultValue: 100000000,
     defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
     info: (
       <>
-        Size of the buffer (number of events) used between the Kinesis fetch threads and the main
+        Size of the buffer (heap memory bytes) used between the Kinesis fetch threads and the main
         ingestion thread.
       </>
     ),
@@ -2103,15 +2228,15 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     ),
   },
   {
-    name: 'spec.tuningConfig.maxRecordsPerPoll',
+    name: 'spec.tuningConfig.maxBytesPerPoll',
     type: 'number',
-    defaultValue: 100,
+    defaultValue: 1000000,
     defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
     hideInMore: true,
     info: (
       <>
-        The maximum number of records/events to be fetched from buffer per poll. The actual maximum
-        will be <Code>max(maxRecordsPerPoll, max(bufferSize, 1))</Code>.
+        The maximum number of bytes to be fetched from buffer per poll. At least one record will be
+        fetched regardless of config.
       </>
     ),
   },
@@ -2393,11 +2518,26 @@ function inputFormatFromType(options: InputFormatFromTypeOptions): InputFormat {
 
 // ------------------------
 
-export function guessIsArrayFromSampleResponse(
-  sampleResponse: SampleResponse,
-  column: string,
-): boolean {
-  return sampleResponse.data.some(r => isSimpleArray(r.input?.[column]));
+function checkArray(array: any[], checkFn: (x: any) => boolean): boolean {
+  return array.every(as => checkFn(as) || (Array.isArray(as) && as.every(checkFn)));
+}
+
+function isIntegerOrNull(x: any): boolean {
+  return x == null || (typeof x === 'number' && Number.isInteger(x));
+}
+
+function isIntegerOrNullAcceptString(x: any): boolean {
+  return (
+    x == null || ((typeof x === 'number' || typeof x === 'string') && Number.isInteger(Number(x)))
+  );
+}
+
+function isNumberOrNull(x: any): boolean {
+  return x == null || (typeof x === 'number' && !isNaN(x));
+}
+
+function isNumberOrNullAcceptString(x: any): boolean {
+  return x == null || ((typeof x === 'number' || typeof x === 'string') && !isNaN(Number(x)));
 }
 
 export function guessColumnTypeFromInput(
@@ -2410,23 +2550,50 @@ export function guessColumnTypeFromInput(
   if (!definedValues.length) return 'string';
 
   // If we see any arrays in the input this is a multi-value dimension that must be a string
-  if (definedValues.some(v => isSimpleArray(v))) return 'string';
+  if (definedValues.some(v => isSimpleArray(v))) {
+    if (guessNumericStringsAsNumbers) {
+      if (checkArray(definedValues, isIntegerOrNullAcceptString)) {
+        return 'ARRAY<long>';
+      }
+
+      if (checkArray(definedValues, isNumberOrNullAcceptString)) {
+        return 'ARRAY<double>';
+      }
+    } else {
+      if (checkArray(definedValues, isIntegerOrNull)) {
+        return 'ARRAY<long>';
+      }
+
+      if (checkArray(definedValues, isNumberOrNull)) {
+        return 'ARRAY<double>';
+      }
+    }
+
+    return 'ARRAY<string>';
+  }
 
   // If we see any JSON objects in the input assume COMPLEX<json>
   if (definedValues.some(v => v && typeof v === 'object')) return 'COMPLEX<json>';
 
-  if (
-    definedValues.every(v => {
-      return (
-        (typeof v === 'number' || (guessNumericStringsAsNumbers && typeof v === 'string')) &&
-        !isNaN(Number(v))
-      );
-    })
-  ) {
-    return definedValues.every(v => v % 1 === 0) ? 'long' : 'double';
+  if (guessNumericStringsAsNumbers) {
+    if (definedValues.every(isIntegerOrNullAcceptString)) {
+      return 'long';
+    }
+
+    if (definedValues.every(isNumberOrNullAcceptString)) {
+      return 'double';
+    }
   } else {
-    return 'string';
+    if (definedValues.every(isIntegerOrNull)) {
+      return 'long';
+    }
+
+    if (definedValues.every(isNumberOrNull)) {
+      return 'double';
+    }
   }
+
+  return 'string';
 }
 
 export function guessColumnTypeFromSampleResponse(
@@ -2444,11 +2611,12 @@ export function inputFormatOutputsNumericStrings(inputFormat: InputFormat | unde
   return oneOf(inputFormat?.type, 'csv', 'tsv', 'regex');
 }
 
-function getTypeHintsFromSpec(spec: Partial<IngestionSpec>): Record<string, string> {
-  const typeHints: Record<string, string> = {};
+function getColumnTypeHintsFromSpec(spec: Partial<IngestionSpec>): Record<string, string> {
+  const columnTypeHints: Record<string, string> = {};
   const currentDimensions = deepGet(spec, 'spec.dataSchema.dimensionsSpec.dimensions') || [];
   for (const currentDimension of currentDimensions) {
-    typeHints[getDimensionSpecName(currentDimension)] = getDimensionSpecType(currentDimension);
+    columnTypeHints[getDimensionSpecName(currentDimension)] =
+      getDimensionSpecColumnType(currentDimension);
   }
 
   const currentMetrics = deepGet(spec, 'spec.dataSchema.metricsSpec') || [];
@@ -2456,21 +2624,22 @@ function getTypeHintsFromSpec(spec: Partial<IngestionSpec>): Record<string, stri
     const singleFieldName = getMetricSpecSingleFieldName(currentMetric);
     const metricOutputType = getMetricSpecOutputType(currentMetric);
     if (singleFieldName && metricOutputType) {
-      typeHints[singleFieldName] = metricOutputType;
+      columnTypeHints[singleFieldName] = metricOutputType;
     }
   }
 
-  return typeHints;
+  return columnTypeHints;
 }
 
 export function updateSchemaWithSample(
   spec: Partial<IngestionSpec>,
   sampleResponse: SampleResponse,
   schemaMode: SchemaMode,
+  arrayMode: ArrayMode,
   rollup: boolean,
   forcePartitionInitialization = false,
 ): Partial<IngestionSpec> {
-  const typeHints = getTypeHintsFromSpec(spec);
+  const columnTypeHints = getColumnTypeHintsFromSpec(spec);
   const guessNumericStringsAsNumbers = inputFormatOutputsNumericStrings(
     deepGet(spec, 'spec.ioConfig.inputFormat'),
   );
@@ -2499,7 +2668,13 @@ export function updateSchemaWithSample(
       newSpec = deepSet(
         newSpec,
         'spec.dataSchema.dimensionsSpec.dimensions',
-        getDimensionSpecs(sampleResponse, typeHints, guessNumericStringsAsNumbers, rollup),
+        getDimensionSpecs(
+          sampleResponse,
+          columnTypeHints,
+          guessNumericStringsAsNumbers,
+          arrayMode === 'multi-values',
+          rollup,
+        ),
       );
       break;
   }
@@ -2507,7 +2682,7 @@ export function updateSchemaWithSample(
   if (rollup) {
     newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec.queryGranularity', 'hour');
 
-    const metrics = getMetricSpecs(sampleResponse, typeHints, guessNumericStringsAsNumbers);
+    const metrics = getMetricSpecs(sampleResponse, columnTypeHints, guessNumericStringsAsNumbers);
     if (metrics) {
       newSpec = deepSet(newSpec, 'spec.dataSchema.metricsSpec', metrics);
     }

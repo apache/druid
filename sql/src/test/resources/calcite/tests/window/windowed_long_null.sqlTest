@@ -2,10 +2,11 @@ type: "operatorValidation"
 
 sql: |
    SELECT
-     l2,
-     MIN(l2) OVER(partition by l2)
+     l2,l1,
+     MIN(l2) OVER(partition by l2),
+     MIN(l2) OVER(partition by l2 order by l1)
    FROM druid.numfoo
-   WHERE l2 is null or l2 = -1111 or l2 = 0
+   WHERE (l2 is null or l2 = -1111 or l2 = 0) and (l1 is null or l1 != 7)
 
 
 expectedOperators:
@@ -21,10 +22,21 @@ expectedOperators:
       frame: { peerType: "ROWS", lowUnbounded: true, lowOffset: 0, uppUnbounded: true, uppOffset: 0 }
       aggregations:
         - { type: "longMin", name: "w0", fieldName: "l2" }
+  - type: "naiveSort"
+    columns:
+      - { column: l2, direction: ASC }
+      - { column: l1, direction: ASC }
+  - type: "naivePartition"
+    partitionColumns: [ "l2" ]
+  - type: "window"
+    processor:
+      type: "framedAgg"
+      frame: { peerType: "RANGE", lowUnbounded: true, lowOffset: 0, uppUnbounded: false, uppOffset: 0, orderBy: [{ column: l1, direction: ASC }] }
+      aggregations:
+        - { type: "longMin", name: "w1", fieldName: "l2" }
 
 expectedResults:
-  - [null,null]
-  - [null,null]
-  - [null,null]
-  - [null,null]
-  - [0,0]
+  - [null,null,null,null]
+  - [null,null,null,null]
+  - [null,null,null,null]
+  - [0,0,0,0]

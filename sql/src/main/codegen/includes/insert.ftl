@@ -17,17 +17,74 @@
  * under the License.
  */
 
+/**
+ * Parses an INSERT statement. This function is copied from SqlInsert in core/src/main/codegen/templates/Parser.jj,
+ * with some changes to allow a custom error message if an OVERWRITE clause is present.
+ */
 // Using fully qualified name for Pair class, since Calcite also has a same class name being used in the Parser.jj
 SqlNode DruidSqlInsertEof() :
 {
   SqlNode insertNode;
-  org.apache.druid.java.util.common.Pair<Granularity, String> partitionedBy = new org.apache.druid.java.util.common.Pair(null, null);
+  final List<SqlLiteral> keywords = new ArrayList<SqlLiteral>();
+  final SqlNodeList keywordList;
+  final SqlIdentifier destination;
+  SqlNode tableRef = null;
+  SqlNode source;
+  final SqlNodeList columnList;
+  final Span s;
+  final Pair<SqlNodeList, SqlNodeList> p;
+  SqlGranularityLiteral partitionedBy = null;
   SqlNodeList clusteredBy = null;
+  SqlIdentifier exportFileFormat = null;
 }
 {
-  insertNode = SqlInsert()
+  (
+    <INSERT>
+    |
+    <UPSERT> { keywords.add(SqlInsertKeyword.UPSERT.symbol(getPos())); }
+  )
+  { s = span(); }
+  SqlInsertKeywords(keywords) {
+    keywordList = new SqlNodeList(keywords, s.addAll(keywords).pos());
+  }
+  <INTO>
+  (
+    LOOKAHEAD(2)
+    <EXTERN> <LPAREN> destination = ExternalDestination() <RPAREN>
+    |
+    destination = CompoundTableIdentifier()
+    ( tableRef = TableHints(destination) | { tableRef = destination; } )
+    [ LOOKAHEAD(5) tableRef = ExtendTable(tableRef) ]
+  )
+  (
+    LOOKAHEAD(2)
+    p = ParenthesizedCompoundIdentifierList() {
+      if (p.right.size() > 0) {
+        tableRef = extend(tableRef, p.right);
+      }
+      if (p.left.size() > 0) {
+        columnList = p.left;
+      } else {
+        columnList = null;
+      }
+    }
+    | { columnList = null; }
+  )
+  [
+    <AS> exportFileFormat = FileFormat()
+  ]
+  (
+    <OVERWRITE>
+    {
+      throw org.apache.druid.sql.calcite.parser.DruidSqlParserUtils.problemParsing(
+          "An OVERWRITE clause is not allowed with INSERT statements. Use REPLACE statements if overwriting existing segments is required or remove the OVERWRITE clause."
+      );
+    }
+    |
+    source = OrderedQueryOrExpr(ExprContext.ACCEPT_QUERY)
+  )
   // PARTITIONED BY is necessary, but is kept optional in the grammar. It is asserted that it is not missing in the
-  // DruidSqlInsert constructor so that we can return a custom error message.
+  // IngestHandler#validate() so that we can return a custom error message.
   [
     <PARTITIONED> <BY>
     partitionedBy = PartitionGranularity()
@@ -36,7 +93,7 @@ SqlNode DruidSqlInsertEof() :
     clusteredBy = ClusteredBy()
   ]
   {
-      if (clusteredBy != null && partitionedBy.lhs == null) {
+      if (clusteredBy != null && partitionedBy == null) {
         throw org.apache.druid.sql.calcite.parser.DruidSqlParserUtils.problemParsing(
           "CLUSTERED BY found before PARTITIONED BY, CLUSTERED BY must come after the PARTITIONED BY clause"
         );
@@ -48,12 +105,13 @@ SqlNode DruidSqlInsertEof() :
   // actual error message.
   <EOF>
   {
+    insertNode = new SqlInsert(s.end(source), keywordList, destination, source, columnList);
     if (!(insertNode instanceof SqlInsert)) {
       // This shouldn't be encountered, but done as a defensive practice. SqlInsert() always returns a node of type
       // SqlInsert
       return insertNode;
     }
     SqlInsert sqlInsert = (SqlInsert) insertNode;
-    return new DruidSqlInsert(sqlInsert, partitionedBy.lhs, partitionedBy.rhs, clusteredBy);
+    return DruidSqlInsert.create(sqlInsert, partitionedBy, clusteredBy, exportFileFormat);
   }
 }

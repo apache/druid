@@ -25,13 +25,18 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.audit.AuditEntry;
+import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.JacksonConfigManager;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexing.common.task.KillUnusedSegmentsTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
@@ -67,6 +72,7 @@ import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
+import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTime;
@@ -104,7 +110,9 @@ public class OverlordResourceTest
   private IndexerMetadataStorageAdapter indexerMetadataStorageAdapter;
   private HttpServletRequest req;
   private TaskRunner taskRunner;
+  private TaskQueue taskQueue;
   private WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter;
+  private AuditManager auditManager;
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -113,6 +121,7 @@ public class OverlordResourceTest
   public void setUp()
   {
     taskRunner = EasyMock.createMock(TaskRunner.class);
+    taskQueue = EasyMock.createMock(TaskQueue.class);
     configManager = EasyMock.createMock(JacksonConfigManager.class);
     provisioningStrategy = EasyMock.createMock(ProvisioningStrategy.class);
     authConfig = EasyMock.createMock(AuthConfig.class);
@@ -121,6 +130,7 @@ public class OverlordResourceTest
     indexerMetadataStorageAdapter = EasyMock.createStrictMock(IndexerMetadataStorageAdapter.class);
     req = EasyMock.createStrictMock(HttpServletRequest.class);
     workerTaskRunnerQueryAdapter = EasyMock.createStrictMock(WorkerTaskRunnerQueryAdapter.class);
+    auditManager = EasyMock.createMock(AuditManager.class);
 
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(
         Optional.of(taskRunner)
@@ -165,7 +175,7 @@ public class OverlordResourceTest
         indexerMetadataStorageAdapter,
         null,
         configManager,
-        null,
+        auditManager,
         authMapper,
         workerTaskRunnerQueryAdapter,
         provisioningStrategy,
@@ -881,6 +891,53 @@ public class OverlordResourceTest
   }
 
   @Test
+  public void testKillTaskIsAudited()
+  {
+    EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(false);
+
+    final String username = Users.DRUID;
+    expectAuthorizationTokenCheck(username);
+    EasyMock.expect(req.getMethod()).andReturn("POST").once();
+    EasyMock.expect(req.getRequestURI()).andReturn("/indexer/v2/task").once();
+    EasyMock.expect(req.getQueryString()).andReturn("").once();
+    EasyMock.expect(req.getHeader(AuditManager.X_DRUID_AUTHOR)).andReturn(username).once();
+    EasyMock.expect(req.getHeader(AuditManager.X_DRUID_COMMENT)).andReturn("killing segments").once();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(new AuthenticationResult(username, "druid", null, null))
+            .once();
+    EasyMock.expect(req.getRemoteAddr()).andReturn("127.0.0.1").once();
+
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).once();
+
+    final Capture<AuditEntry> auditEntryCapture = EasyMock.newCapture();
+    auditManager.doAudit(EasyMock.capture(auditEntryCapture));
+    EasyMock.expectLastCall().once();
+
+    EasyMock.replay(
+        taskRunner,
+        taskMaster,
+        taskQueue,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter,
+        authConfig,
+        auditManager
+    );
+
+    Task task = new KillUnusedSegmentsTask("kill_all", "allow", Intervals.ETERNITY, null, false, 10, null, null);
+    overlordResource.taskPost(task, req);
+
+    Assert.assertTrue(auditEntryCapture.hasCaptured());
+    AuditEntry auditEntry = auditEntryCapture.getValue();
+    Assert.assertEquals(username, auditEntry.getAuditInfo().getAuthor());
+    Assert.assertEquals("killing segments", auditEntry.getAuditInfo().getComment());
+    Assert.assertEquals("druid", auditEntry.getAuditInfo().getIdentity());
+    Assert.assertEquals("127.0.0.1", auditEntry.getAuditInfo().getIp());
+  }
+
+  @Test
   public void testTaskPostDeniesDatasourceReadUser()
   {
     expectAuthorizationTokenCheck(Users.WIKI_READER);
@@ -928,10 +985,136 @@ public class OverlordResourceTest
         authConfig
     );
 
-    final Map<String, Integer> response = (Map<String, Integer>) overlordResource
-        .killPendingSegments("allow", new Interval(DateTimes.MIN, DateTimes.nowUtc()).toString(), req)
-        .getEntity();
-    Assert.assertEquals(2, response.get("numDeleted").intValue());
+    Response response = overlordResource
+        .killPendingSegments("allow", new Interval(DateTimes.MIN, DateTimes.nowUtc()).toString(), req);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("numDeleted", 2), response.getEntity());
+  }
+
+  @Test
+  public void testKillPendingSegmentsThrowsInvalidInputDruidException()
+  {
+    expectAuthorizationTokenCheck();
+
+    EasyMock.expect(taskMaster.isLeader()).andReturn(true);
+    final String exceptionMsg = "Some exception msg";
+    EasyMock
+        .expect(
+            indexerMetadataStorageAdapter.deletePendingSegments(
+                EasyMock.eq("allow"),
+                EasyMock.anyObject(Interval.class)
+            )
+        )
+        .andThrow(InvalidInput.exception(exceptionMsg))
+        .once();
+
+    EasyMock.replay(
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter,
+        authConfig
+    );
+
+    Response response = overlordResource
+        .killPendingSegments("allow", new Interval(DateTimes.MIN, DateTimes.nowUtc()).toString(), req);
+
+    Assert.assertEquals(400, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("error", exceptionMsg), response.getEntity());
+  }
+
+  @Test
+  public void testKillPendingSegmentsThrowsDefensiveDruidException()
+  {
+    expectAuthorizationTokenCheck();
+
+    EasyMock.expect(taskMaster.isLeader()).andReturn(true);
+    final String exceptionMsg = "An internal defensive exception";
+    EasyMock
+        .expect(
+            indexerMetadataStorageAdapter.deletePendingSegments(
+                EasyMock.eq("allow"),
+                EasyMock.anyObject(Interval.class)
+            )
+        )
+        .andThrow(DruidException.defensive(exceptionMsg))
+        .once();
+
+    EasyMock.replay(
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter,
+        authConfig
+    );
+
+    Response response = overlordResource
+        .killPendingSegments("allow", new Interval(DateTimes.MIN, DateTimes.nowUtc()).toString(), req);
+
+    Assert.assertEquals(500, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("error", exceptionMsg), response.getEntity());
+  }
+
+  @Test
+  public void testKillPendingSegmentsThrowsArbitraryException()
+  {
+    expectAuthorizationTokenCheck();
+
+    EasyMock.expect(taskMaster.isLeader()).andReturn(true);
+    final String exceptionMsg = "An unexpected illegal state exception";
+    EasyMock
+        .expect(
+            indexerMetadataStorageAdapter.deletePendingSegments(
+                EasyMock.eq("allow"),
+                EasyMock.anyObject(Interval.class)
+            )
+        )
+        .andThrow(new IllegalStateException(exceptionMsg))
+        .once();
+
+    EasyMock.replay(
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter,
+        authConfig
+    );
+
+    Response response = overlordResource
+        .killPendingSegments("allow", new Interval(DateTimes.MIN, DateTimes.nowUtc()).toString(), req);
+
+    Assert.assertEquals(500, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("error", exceptionMsg), response.getEntity());
+  }
+
+  @Test
+  public void testKillPendingSegmentsToNonLeader()
+  {
+    expectAuthorizationTokenCheck();
+
+    EasyMock.expect(taskMaster.isLeader()).andReturn(false);
+
+    EasyMock.replay(
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter,
+        authConfig
+    );
+
+    Response response = overlordResource
+        .killPendingSegments("allow", new Interval(DateTimes.MIN, DateTimes.nowUtc()).toString(), req);
+
+    Assert.assertEquals(503, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("error", "overlord is not the leader or not initialized yet"), response.getEntity());
   }
 
   @Test
@@ -1516,6 +1699,7 @@ public class OverlordResourceTest
 
     EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true);
     EasyMock.expect(task.getDataSource()).andReturn(dataSource);
+    EasyMock.expect(task.getDestinationResource()).andReturn(java.util.Optional.of(new Resource(dataSource, ResourceType.DATASOURCE)));
     EasyMock.expect(task.getInputSourceResources())
             .andReturn(ImmutableSet.of(new ResourceAction(
                 new Resource(inputSourceType, ResourceType.EXTERNAL),
@@ -1552,6 +1736,7 @@ public class OverlordResourceTest
     EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true);
     EasyMock.expect(task.getId()).andReturn("taskId");
     EasyMock.expect(task.getDataSource()).andReturn(dataSource);
+    EasyMock.expect(task.getDestinationResource()).andReturn(java.util.Optional.of(new Resource(dataSource, ResourceType.DATASOURCE)));
     EasyMock.expect(task.getInputSourceResources()).andThrow(expectedException);
 
     EasyMock.replay(
@@ -1584,6 +1769,7 @@ public class OverlordResourceTest
 
     EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(false);
     EasyMock.expect(task.getDataSource()).andReturn(dataSource);
+    EasyMock.expect(task.getDestinationResource()).andReturn(java.util.Optional.of(new Resource(dataSource, ResourceType.DATASOURCE)));
     EasyMock.expect(task.getInputSourceResources())
             .andReturn(ImmutableSet.of(new ResourceAction(
                 new Resource(inputSourceType, ResourceType.EXTERNAL),
@@ -1606,6 +1792,82 @@ public class OverlordResourceTest
     );
     Set<ResourceAction> resourceActions = overlordResource.getNeededResourceActionsForTask(task);
     Assert.assertEquals(expectedResourceActions, resourceActions);
+  }
+
+  @Test
+  public void testGetMultipleTaskStatuses_presentTaskQueue()
+  {
+    // Needed for teardown
+    EasyMock.replay(
+        authConfig,
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter
+    );
+
+    TaskQueue taskQueue = EasyMock.createMock(TaskQueue.class);
+    EasyMock.expect(taskQueue.getTaskStatus("task"))
+            .andReturn(Optional.of(TaskStatus.running("task")));
+    EasyMock.replay(taskQueue);
+    TaskMaster taskMaster = EasyMock.createMock(TaskMaster.class);
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue));
+    EasyMock.replay(taskMaster);
+    OverlordResource overlordResource = new OverlordResource(
+        taskMaster,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+    final Object response = overlordResource.getMultipleTaskStatuses(ImmutableSet.of("task"))
+                                            .getEntity();
+    Assert.assertEquals(ImmutableMap.of("task", TaskStatus.running("task")), response);
+  }
+
+  @Test
+  public void testGetMultipleTaskStatuses_absentTaskQueue()
+  {
+    // Needed for teardown
+    EasyMock.replay(
+        authConfig,
+        taskRunner,
+        taskMaster,
+        taskStorageQueryAdapter,
+        indexerMetadataStorageAdapter,
+        req,
+        workerTaskRunnerQueryAdapter
+    );
+
+    TaskStorageQueryAdapter taskStorageQueryAdapter = EasyMock.createMock(TaskStorageQueryAdapter.class);
+    EasyMock.expect(taskStorageQueryAdapter.getStatus("task"))
+            .andReturn(Optional.of(TaskStatus.running("task")));
+    EasyMock.replay(taskStorageQueryAdapter);
+    TaskMaster taskMaster = EasyMock.createMock(TaskMaster.class);
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.absent());
+    EasyMock.replay(taskMaster);
+    OverlordResource overlordResource = new OverlordResource(
+        taskMaster,
+        taskStorageQueryAdapter,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+    final Object response = overlordResource.getMultipleTaskStatuses(ImmutableSet.of("task"))
+                                            .getEntity();
+    Assert.assertEquals(ImmutableMap.of("task", TaskStatus.running("task")), response);
   }
 
   private void expectAuthorizationTokenCheck()

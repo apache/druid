@@ -36,6 +36,7 @@ import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
+import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -44,15 +45,22 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.metadata.metadata.AllColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
+import org.apache.druid.segment.IndexBuilder;
+import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.metadata.AbstractSegmentMetadataCache;
 import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
 import org.apache.druid.segment.metadata.DataSourceInformation;
+import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryResponse;
@@ -67,6 +75,7 @@ import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.junit.After;
@@ -76,12 +85,14 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -576,6 +587,136 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
   }
 
   @Test
+  public void testAllDatasourcesRebuiltOnDatasourceRemoval() throws IOException, InterruptedException
+  {
+    CountDownLatch addSegmentLatch = new CountDownLatch(7);
+    BrokerSegmentMetadataCache schema = new BrokerSegmentMetadataCache(
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        serverView,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
+        new NoopEscalator(),
+        new InternalQueryConfig(),
+        new NoopServiceEmitter(),
+        new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
+        new NoopCoordinatorClient()
+    )
+    {
+      @Override
+      public void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      {
+        super.addSegment(server, segment);
+        addSegmentLatch.countDown();
+      }
+
+      @Override
+      public void removeSegment(final DataSegment segment)
+      {
+        super.removeSegment(segment);
+      }
+
+      @Override
+      public void markDataSourceAsNeedRebuild(String datasource)
+      {
+        super.markDataSourceAsNeedRebuild(datasource);
+      }
+
+      @Override
+      @VisibleForTesting
+      public void refresh(
+          final Set<SegmentId> segmentsToRefresh,
+          final Set<String> dataSourcesToRebuild) throws IOException
+      {
+        super.refresh(segmentsToRefresh, dataSourcesToRebuild);
+      }
+    };
+
+    schema.start();
+    schema.awaitInitialization();
+
+    final Map<SegmentId, AvailableSegmentMetadata> segmentMetadatas = schema.getSegmentMetadataSnapshot();
+    List<DataSegment> segments = segmentMetadatas.values()
+                                                       .stream()
+                                                       .map(AvailableSegmentMetadata::getSegment)
+                                                       .collect(Collectors.toList());
+    Assert.assertEquals(6, segments.size());
+
+    // verify that dim3 column isn't present in the schema for foo
+    DatasourceTable.PhysicalDatasourceMetadata fooDs = schema.getDatasource("foo");
+    Assert.assertTrue(fooDs.getRowSignature().getColumnNames().stream().noneMatch("dim3"::equals));
+
+    // segments contains two segments with datasource "foo" and one with datasource "foo2"
+    // let's remove the only segment with datasource "foo2"
+    final DataSegment segmentToRemove = segments.stream()
+                                                .filter(segment -> segment.getDataSource().equals("foo2"))
+                                                .findFirst()
+                                                .orElse(null);
+    Assert.assertNotNull(segmentToRemove);
+    schema.removeSegment(segmentToRemove);
+
+    // we will add a segment to another datasource and
+    // check if columns in this segment is reflected in the datasource schema
+    DataSegment newSegment =
+        DataSegment.builder()
+                   .dataSource("foo")
+                   .interval(Intervals.of("2002/P1Y"))
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(0))
+                   .size(0)
+                   .build();
+
+    final File tmpDir = temporaryFolder.newFolder();
+
+    List<InputRow> rows = ImmutableList.of(
+        createRow(ImmutableMap.of("t", "2002-01-01", "m1", "1.0", "dim1", "", "dim3", "c1")),
+        createRow(ImmutableMap.of("t", "2002-01-02", "m1", "2.0", "dim1", "10.1", "dim3", "c2")),
+        createRow(ImmutableMap.of("t", "2002-01-03", "m1", "3.0", "dim1", "2", "dim3", "c3"))
+    );
+
+    QueryableIndex index = IndexBuilder.create()
+                                        .tmpDir(new File(tmpDir, "1"))
+                                        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                                        .schema(
+                                            new IncrementalIndexSchema.Builder()
+                                                .withMetrics(
+                                                    new CountAggregatorFactory("cnt"),
+                                                    new DoubleSumAggregatorFactory("m1", "m1"),
+                                                    new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
+                                                )
+                                                .withRollup(false)
+                                                .build()
+                                        )
+                                        .rows(rows)
+                                        .buildMMappedIndex();
+
+    walker.add(newSegment, index);
+    serverView.addSegment(newSegment, ServerType.HISTORICAL);
+
+    Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
+
+    Set<String> dataSources = segments.stream().map(DataSegment::getDataSource).collect(Collectors.toSet());
+    dataSources.remove("foo2");
+
+    // LinkedHashSet to ensure that the datasource with no segments is encountered first
+    Set<String> dataSourcesToRefresh = new LinkedHashSet<>();
+    dataSourcesToRefresh.add("foo2");
+    dataSourcesToRefresh.addAll(dataSources);
+
+    segments = schema.getSegmentMetadataSnapshot().values()
+                     .stream()
+                     .map(AvailableSegmentMetadata::getSegment)
+                     .collect(Collectors.toList());
+
+    schema.refresh(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()), dataSourcesToRefresh);
+    Assert.assertEquals(6, schema.getSegmentMetadataSnapshot().size());
+
+    fooDs = schema.getDatasource("foo");
+
+    // check if the new column present in the added segment is present in the datasource schema
+    // ensuring that the schema is rebuilt
+    Assert.assertTrue(fooDs.getRowSignature().getColumnNames().stream().anyMatch("dim3"::equals));
+  }
+
+  @Test
   public void testNullAvailableSegmentMetadata() throws IOException, InterruptedException
   {
     BrokerSegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
@@ -866,5 +1007,13 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
 
     emitter.verifyEmitted("metadatacache/refresh/time", ImmutableMap.of(DruidMetrics.DATASOURCE, dataSource), 1);
     emitter.verifyEmitted("metadatacache/refresh/count", ImmutableMap.of(DruidMetrics.DATASOURCE, dataSource), 1);
+  }
+
+  // This test is present to achieve coverage for BrokerSegmentMetadataCache#initServerViewTimelineCallback
+  @Test
+  public void testInvokeSegmentSchemaAnnounced() throws InterruptedException
+  {
+    buildSchemaMarkAndTableLatch();
+    serverView.invokeSegmentSchemasAnnouncedDummy();
   }
 }

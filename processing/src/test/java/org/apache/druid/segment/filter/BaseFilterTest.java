@@ -41,6 +41,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.segment.FrameSegment;
 import org.apache.druid.frame.segment.FrameStorageAdapter;
+import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -67,7 +68,6 @@ import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.ColumnInspector;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
@@ -79,6 +79,7 @@ import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.RowBasedStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -100,6 +101,7 @@ import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
+import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
@@ -141,10 +143,26 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           new ExpressionVirtualColumn("vd0", "d0", ColumnType.DOUBLE, TestExprMacroTable.INSTANCE),
           new ExpressionVirtualColumn("vf0", "f0", ColumnType.FLOAT, TestExprMacroTable.INSTANCE),
           new ExpressionVirtualColumn("vl0", "l0", ColumnType.LONG, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("vd0-add-sub", "d0 + (d0 - d0)", ColumnType.DOUBLE, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("vf0-add-sub", "f0 + (f0 - f0)", ColumnType.FLOAT, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("vl0-add-sub", "l0 + (l0 - l0)", ColumnType.LONG, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("double-vd0-add-sub", "vd0 + (vd0 - vd0)", ColumnType.DOUBLE, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("double-vf0-add-sub", "vf0 + (vf0 - vf0)", ColumnType.FLOAT, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("double-vl0-add-sub", "vl0 + (vl0 - vl0)", ColumnType.LONG, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("vdim3-concat", "dim3 + dim3", ColumnType.LONG, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("vdim2-offset", "array_offset(dim2, 1)", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("nestedArrayLong", "array(arrayLong)", ColumnType.ofArray(ColumnType.LONG_ARRAY), TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("fake-nvl", "nvl(fake, 'hello')", ColumnType.STRING, TestExprMacroTable.INSTANCE),
           new ListFilteredVirtualColumn("allow-dim0", DefaultDimensionSpec.of("dim0"), ImmutableSet.of("3", "4"), true),
           new ListFilteredVirtualColumn("deny-dim0", DefaultDimensionSpec.of("dim0"), ImmutableSet.of("3", "4"), false),
           new ListFilteredVirtualColumn("allow-dim2", DefaultDimensionSpec.of("dim2"), ImmutableSet.of("a"), true),
-          new ListFilteredVirtualColumn("deny-dim2", DefaultDimensionSpec.of("dim2"), ImmutableSet.of("a"), false)
+          new ListFilteredVirtualColumn("deny-dim2", DefaultDimensionSpec.of("dim2"), ImmutableSet.of("a"), false),
+          new NestedFieldVirtualColumn("nested", "$.s0", "nested.s0", ColumnType.STRING),
+          new NestedFieldVirtualColumn("nested", "$.d0", "nested.d0", ColumnType.DOUBLE),
+          new NestedFieldVirtualColumn("nested", "$.l0", "nested.l0", ColumnType.LONG),
+          new NestedFieldVirtualColumn("nested", "$.arrayLong", "nested.arrayLong", ColumnType.LONG_ARRAY),
+          new NestedFieldVirtualColumn("nested", "$.arrayDouble", "nested.arrayDouble", ColumnType.DOUBLE_ARRAY),
+          new NestedFieldVirtualColumn("nested", "$.arrayString", "nested.arrayString", ColumnType.STRING_ARRAY)
       )
   );
 
@@ -166,10 +184,11 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                    .add(new DoubleDimensionSchema("d0"))
                    .add(new FloatDimensionSchema("f0"))
                    .add(new LongDimensionSchema("l0"))
-                   .add(new AutoTypeColumnSchema("arrayString"))
-                   .add(new AutoTypeColumnSchema("arrayLong"))
-                   .add(new AutoTypeColumnSchema("arrayDouble"))
-                   .add(new AutoTypeColumnSchema("variant"))
+                   .add(new AutoTypeColumnSchema("arrayString", ColumnType.STRING_ARRAY))
+                   .add(new AutoTypeColumnSchema("arrayLong", ColumnType.LONG_ARRAY))
+                   .add(new AutoTypeColumnSchema("arrayDouble", ColumnType.DOUBLE_ARRAY))
+                   .add(new AutoTypeColumnSchema("variant", null))
+                   .add(new AutoTypeColumnSchema("nested", null))
                    .build()
   );
 
@@ -195,6 +214,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                   .add("arrayLong", ColumnType.LONG_ARRAY)
                   .add("arrayDouble", ColumnType.DOUBLE_ARRAY)
                   .add("variant", ColumnType.STRING_ARRAY)
+                  .add("nested", ColumnType.NESTED_DATA)
                   .build();
 
   static final List<InputRow> DEFAULT_ROWS = ImmutableList.of(
@@ -210,7 +230,17 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           ImmutableList.of("a", "b", "c"),
           ImmutableList.of(1L, 2L, 3L),
           ImmutableList.of(1.1, 2.2, 3.3),
-          "abc"
+          "abc",
+          TestHelper.makeMapWithExplicitNull(
+              "s0", "",
+              "d0", 0.0,
+              "f0", 0.0f,
+              "l0", 0L,
+              "arrayString", ImmutableList.of("a", "b", "c"),
+              "arrayLong", ImmutableList.of(1L, 2L, 3L),
+              "arrayDouble", ImmutableList.of(1.1, 2.2, 3.3),
+              "variant", "abc"
+          )
       ),
       makeDefaultSchemaRow(
           "1",
@@ -224,7 +254,17 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           ImmutableList.of(),
           ImmutableList.of(),
           new Object[]{1.1, 2.2, 3.3},
-          100L
+          100L,
+          TestHelper.makeMapWithExplicitNull(
+              "s0", "a",
+              "d0", 10.1,
+              "f0", 10.1f,
+              "l0", 100L,
+              "arrayString", ImmutableList.of(),
+              "arrayLong", ImmutableList.of(),
+              "arrayDouble", new Object[]{1.1, 2.2, 3.3},
+              "variant", 100L
+          )
       ),
       makeDefaultSchemaRow(
           "2",
@@ -238,7 +278,17 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           null,
           new Object[]{1L, 2L, 3L},
           Collections.singletonList(null),
-          "100"
+          "100",
+          TestHelper.makeMapWithExplicitNull(
+              "s0", "b",
+              "d0", null,
+              "f0", 5.5f,
+              "l0", 40L,
+              "arrayString", null,
+              "arrayLong", new Object[]{1L, 2L, 3L},
+              "arrayDouble", Collections.singletonList(null),
+              "variant", "100"
+          )
       ),
       makeDefaultSchemaRow(
           "3",
@@ -252,7 +302,17 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           new Object[]{"a", "b", "c"},
           null,
           ImmutableList.of(),
-          Arrays.asList(1.1, 2.2, 3.3)
+          Arrays.asList(1.1, 2.2, 3.3),
+          TestHelper.makeMapWithExplicitNull(
+              "s0", null,
+              "d0", 120.0245,
+              "f0", 110.0f,
+              "l0", null,
+              "arrayString", new Object[]{"a", "b", "c"},
+              "arrayLong", null,
+              "arrayDouble", ImmutableList.of(),
+              "variant", Arrays.asList(1.1, 2.2, 3.3)
+          )
       ),
       makeDefaultSchemaRow(
           "4",
@@ -266,7 +326,17 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           ImmutableList.of("c", "d"),
           Collections.singletonList(null),
           new Object[]{-1.1, -333.3},
-          12.34
+          12.34,
+          TestHelper.makeMapWithExplicitNull(
+              "s0", "c",
+              "d0", 60.0,
+              "f0", null,
+              "l0", 9001L,
+              "arrayString", ImmutableList.of("c", "d"),
+              "arrayLong", Collections.singletonList(null),
+              "arrayDouble", new Object[]{-1.1, -333.3},
+              "variant", 12.34
+          )
       ),
       makeDefaultSchemaRow(
           "5",
@@ -280,7 +350,17 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           Collections.singletonList(null),
           new Object[]{123L, 345L},
           null,
-          Arrays.asList(100, 200, 300)
+          Arrays.asList(100, 200, 300),
+          TestHelper.makeMapWithExplicitNull(
+              "s0", "a",
+              "d0", 765.432,
+              "f0", 123.45f,
+              "l0", 12345L,
+              "arrayString", Collections.singletonList(null),
+              "arrayLong", new Object[]{123L, 345L},
+              "arrayDouble", null,
+              "variant", Arrays.asList(100, 200, 300)
+          )
       )
   );
 
@@ -364,6 +444,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   @Before
   public void setUp() throws Exception
   {
+    NestedDataModule.registerHandlersAndSerde();
     String className = getClass().getName();
     Map<String, Pair<StorageAdapter, Closeable>> adaptersForClass = adapterCache.get().get(className);
     if (adaptersForClass == null) {
@@ -441,7 +522,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                                 .getDimensions()
                                                 .stream()
                                                 .map(
-                                                    dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName())
+                                                    dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName(), null)
                                                 )
                                                 .collect(Collectors.toList())
                                       ),
@@ -469,7 +550,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                                 .getDimensions()
                                                 .stream()
                                                 .map(
-                                                    dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName())
+                                                    dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName(), null)
                                                 )
                                                 .collect(Collectors.toList())
                                       ),
@@ -498,7 +579,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                                         .getDimensions()
                                                         .stream()
                                                         .map(
-                                                            dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName())
+                                                            dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName(), null)
                                                         )
                                                         .collect(Collectors.toList())
                                               ),
@@ -564,7 +645,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                         input -> Pair.of(input.buildRowBasedSegmentWithTypeSignature().asStorageAdapter(), () -> {})
                     )
                     .put("frame (row-based)", input -> {
-                      // remove array type columns from frames since they aren't currently supported other than string
+                      // remove variant type columns from row frames since they aren't currently supported
                       input.mapSchema(
                           schema ->
                               new IncrementalIndexSchema(
@@ -576,7 +657,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                       schema.getDimensionsSpec()
                                             .getDimensions()
                                             .stream()
-                                            .filter(dimensionSchema -> !(dimensionSchema instanceof AutoTypeColumnSchema))
+                                            .filter(dimensionSchema -> !dimensionSchema.getName().equals("variant"))
                                             .collect(Collectors.toList())
                                   ),
                                   schema.getMetrics(),
@@ -587,7 +668,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                       return Pair.of(segment.asStorageAdapter(), segment);
                     })
                     .put("frame (columnar)", input -> {
-                      // remove array type columns from frames since they aren't currently supported other than string
+                      // remove array type columns from columnar frames since they aren't currently supported
                       input.mapSchema(
                           schema ->
                               new IncrementalIndexSchema(
@@ -623,27 +704,31 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
             finishers.entrySet()) {
           for (boolean cnf : ImmutableList.of(false, true)) {
             for (boolean optimize : ImmutableList.of(false, true)) {
-              for (StringEncodingStrategy encodingStrategy : stringEncoding) {
-                final String testName = StringUtils.format(
-                    "bitmaps[%s], indexMerger[%s], finisher[%s], cnf[%s], optimize[%s], stringDictionaryEncoding[%s]",
-                    bitmapSerdeFactoryEntry.getKey(),
-                    segmentWriteOutMediumFactoryEntry.getKey(),
-                    finisherEntry.getKey(),
-                    cnf,
-                    optimize,
-                    encodingStrategy.getType()
-                );
-                final IndexBuilder indexBuilder = IndexBuilder
-                    .create()
-                    .schema(DEFAULT_INDEX_SCHEMA)
-                    .indexSpec(
-                        IndexSpec.builder()
-                                 .withBitmapSerdeFactory(bitmapSerdeFactoryEntry.getValue())
-                                 .withStringDictionaryEncoding(encodingStrategy)
-                                 .build()
-                    )
-                    .segmentWriteOutMediumFactory(segmentWriteOutMediumFactoryEntry.getValue());
-                constructors.add(new Object[]{testName, indexBuilder, finisherEntry.getValue(), cnf, optimize});
+              for (boolean storeNullColumns : ImmutableList.of(false, true)) {
+                for (StringEncodingStrategy encodingStrategy : stringEncoding) {
+                  final String testName = StringUtils.format(
+                      "bitmaps[%s], indexMerger[%s], finisher[%s], cnf[%s], optimize[%s], stringDictionaryEncoding[%s], storeNullColumns[%s]",
+                      bitmapSerdeFactoryEntry.getKey(),
+                      segmentWriteOutMediumFactoryEntry.getKey(),
+                      finisherEntry.getKey(),
+                      cnf,
+                      optimize,
+                      encodingStrategy.getType(),
+                      storeNullColumns
+                  );
+                  final IndexBuilder indexBuilder = IndexBuilder
+                      .create()
+                      .schema(DEFAULT_INDEX_SCHEMA)
+                      .writeNullColumns(storeNullColumns)
+                      .indexSpec(
+                          IndexSpec.builder()
+                                   .withBitmapSerdeFactory(bitmapSerdeFactoryEntry.getValue())
+                                   .withStringDictionaryEncoding(encodingStrategy)
+                                   .build()
+                      )
+                      .segmentWriteOutMediumFactory(segmentWriteOutMediumFactoryEntry.getValue());
+                  constructors.add(new Object[]{testName, indexBuilder, finisherEntry.getValue(), cnf, optimize});
+                }
               }
             }
           }
@@ -662,13 +747,21 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     return false;
   }
 
+  protected boolean canTestArrayColumns()
+  {
+    if (testName.contains("frame (columnar)") || testName.contains("rowBasedWithoutTypeSignature")) {
+      return false;
+    }
+    return true;
+  }
+
   private Filter makeFilter(final DimFilter dimFilter)
   {
     if (dimFilter == null) {
       return null;
     }
 
-    final DimFilter maybeOptimized = optimize ? dimFilter.optimize() : dimFilter;
+    final DimFilter maybeOptimized = optimize ? dimFilter.optimize(false) : dimFilter;
     final Filter filter = maybeOptimized.toFilter();
     try {
       return cnf ? Filters.toCnf(filter) : filter;
@@ -683,7 +776,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     if (dimFilter == null) {
       return null;
     }
-    return optimize ? dimFilter.optimize() : dimFilter;
+    return optimize ? dimFilter.optimize(false) : dimFilter;
   }
 
   private Sequence<Cursor> makeCursorSequence(final Filter filter)
@@ -821,21 +914,9 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
-      {
-        return false;
-      }
-
-      @Override
       public Set<String> getRequiredColumns()
       {
         return Collections.emptySet();
-      }
-
-      @Override
-      public double estimateSelectivity(ColumnIndexSelector indexSelector)
-      {
-        return 1.0;
       }
 
       @Nullable
@@ -900,18 +981,6 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       public Set<String> getRequiredColumns()
       {
         return null;
-      }
-
-      @Override
-      public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
-      {
-        return false;
-      }
-
-      @Override
-      public double estimateSelectivity(ColumnIndexSelector indexSelector)
-      {
-        return 1.0;
       }
 
       @Nullable
@@ -1127,6 +1196,24 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
         selectColumnValuesMatchingFilter(filter, "dim0")
     );
 
+    Assert.assertEquals(
+        "Cursor with postFiltering: " + filter,
+        expectedRows,
+        selectColumnValuesMatchingFilterUsingPostFiltering(filter, "dim0")
+    );
+
+    Assert.assertEquals(
+        "Filtered aggregator: " + filter,
+        expectedRows.size(),
+        selectCountUsingFilteredAggregator(filter)
+    );
+
+    Assert.assertEquals(
+        "RowBasedColumnSelectorFactory: " + filter,
+        expectedRows,
+        selectColumnValuesMatchingFilterUsingRowBasedColumnSelectorFactory(filter, "dim0")
+    );
+
     if (testVectorized) {
       Assert.assertEquals(
           "Cursor (vectorized): " + filter,
@@ -1139,40 +1226,17 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           expectedRows,
           selectColumnValuesMatchingFilterUsingVectorVirtualColumnCursor(filter, "vdim0", "dim0")
       );
-    }
 
-    Assert.assertEquals(
-        "Cursor with postFiltering: " + filter,
-        expectedRows,
-        selectColumnValuesMatchingFilterUsingPostFiltering(filter, "dim0")
-    );
-
-    if (testVectorized) {
       Assert.assertEquals(
           "Cursor with postFiltering (vectorized): " + filter,
           expectedRows,
           selectColumnValuesMatchingFilterUsingVectorizedPostFiltering(filter, "dim0")
       );
-    }
-
-    Assert.assertEquals(
-        "Filtered aggregator: " + filter,
-        expectedRows.size(),
-        selectCountUsingFilteredAggregator(filter)
-    );
-
-    if (testVectorized) {
       Assert.assertEquals(
           "Filtered aggregator (vectorized): " + filter,
           expectedRows.size(),
           selectCountUsingVectorizedFilteredAggregator(filter)
       );
     }
-
-    Assert.assertEquals(
-        "RowBasedColumnSelectorFactory: " + filter,
-        expectedRows,
-        selectColumnValuesMatchingFilterUsingRowBasedColumnSelectorFactory(filter, "dim0")
-    );
   }
 }

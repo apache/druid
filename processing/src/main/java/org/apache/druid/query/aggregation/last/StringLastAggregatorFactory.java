@@ -32,8 +32,8 @@ import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.query.aggregation.VectorAggregator;
+import org.apache.druid.query.aggregation.first.FirstLastUtils;
 import org.apache.druid.query.aggregation.first.StringFirstAggregatorFactory;
-import org.apache.druid.query.aggregation.first.StringFirstLastUtils;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
@@ -130,7 +130,7 @@ public class StringLastAggregatorFactory extends AggregatorFactory
           metricFactory.makeColumnValueSelector(timeColumn),
           valueSelector,
           maxStringBytes,
-          StringFirstLastUtils.selectorNeedsFoldCheck(valueSelector, metricFactory.getColumnCapabilities(fieldName))
+          FirstLastUtils.selectorNeedsFoldCheck(valueSelector, metricFactory.getColumnCapabilities(fieldName), SerializablePairLongString.class)
       );
     }
   }
@@ -146,7 +146,7 @@ public class StringLastAggregatorFactory extends AggregatorFactory
           metricFactory.makeColumnValueSelector(timeColumn),
           valueSelector,
           maxStringBytes,
-          StringFirstLastUtils.selectorNeedsFoldCheck(valueSelector, metricFactory.getColumnCapabilities(fieldName))
+          FirstLastUtils.selectorNeedsFoldCheck(valueSelector, metricFactory.getColumnCapabilities(fieldName), SerializablePairLongString.class)
       );
     }
   }
@@ -210,7 +210,7 @@ public class StringLastAggregatorFactory extends AggregatorFactory
   @Override
   public AggregateCombiner makeAggregateCombiner()
   {
-    return new StringLastAggregateCombiner();
+    return new GenericLastAggregateCombiner(SerializablePairLongString.class);
   }
 
   @Override

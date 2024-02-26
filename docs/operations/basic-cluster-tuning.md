@@ -123,7 +123,7 @@ Be sure to check out [segment size optimization](./segment-optimization.md) to h
 
 The biggest contributions to heap usage on Brokers are:
 - Partial unmerged query results from Historicals and Tasks
-- The segment timeline: this consists of location information (which Historical/Task is serving a segment) for all currently [available](../design/architecture.md#segment-lifecycle) segments.
+- The segment timeline: this consists of location information (which Historical/Task is serving a segment) for all currently [available](../design/storage.md#segment-lifecycle) segments.
 - Cached segment metadata: this consists of metadata, such as per-segment schemas, for all currently available segments.
 
 The Broker heap requirements scale based on the number of segments in the cluster, and the total data size of the segments.
@@ -256,7 +256,7 @@ The total memory usage of the MiddleManager + Tasks:
 
 ###### Kafka/Kinesis ingestion
 
-If you use the [Kafka Indexing Service](../development/extensions-core/kafka-ingestion.md) or [Kinesis Indexing Service](../development/extensions-core/kinesis-ingestion.md), the number of tasks required will depend on the number of partitions and your taskCount/replica settings.
+If you use the [Kafka Indexing Service](../ingestion/kafka-ingestion.md) or [Kinesis Indexing Service](../ingestion/kinesis-ingestion.md), the number of tasks required will depend on the number of partitions and your taskCount/replica settings.
 
 On top of those requirements, allocating more task slots in your cluster is a good idea, so that you have free task
 slots available for other tasks, such as [compaction tasks](../data-management/compaction.md).

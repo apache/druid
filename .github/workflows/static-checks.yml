@@ -76,7 +76,7 @@ jobs:
         if: ${{ matrix.java == '8' }}
         run: |
           echo 'Running Maven install...' &&
-          ${MVN} clean install -q -ff -pl '!distribution,!:druid-it-image,!:druid-it-cases' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C &&
+          ${MVN} clean install -q -ff -pl '!distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C &&
           ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
       - name: checkstyle
@@ -129,7 +129,7 @@ jobs:
       - name: maven install
         run: |
           echo 'Running Maven install...' &&
-          ${MVN} clean install -q -ff -pl '!distribution,!:druid-it-image,!:druid-it-cases' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C &&
+          ${MVN} clean install -q -ff -pl '!distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C &&
           ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
       - name: intellij inspections
@@ -168,6 +168,7 @@ jobs:
           (cd website && npm install)
           cd website
           npm run build
+          npm run link-lint
           npm run spellcheck
 
       - name: web console
@@ -177,9 +178,21 @@ jobs:
           { for i in 1 2 3; do npm run codecov && break || sleep 15; done }
 
       - name: web console end-to-end test
+        id: web-console-test
         run: |
           ./.github/scripts/setup_generate_license.sh
           web-console/script/druid build
           web-console/script/druid start
           (cd web-console && npm run test-e2e)
           web-console/script/druid stop
+
+      - name: Tar druid logs
+        if: ${{ failure() && steps.web-console-test.conclusion == 'failure' }}
+        run: tar cvzf ./druid-logs.tgz -C ./distribution/target/apache-druid-*-SNAPSHOT/ log
+
+      - name: Upload druid logs to GitHub
+        if: ${{ failure() && steps.web-console-test.conclusion == 'failure' }}
+        uses: actions/upload-artifact@master
+        with:
+          name: Druid logs web-checks
+          path: druid-logs.tgz

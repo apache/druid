@@ -19,15 +19,21 @@
 
 package org.apache.druid.catalog.model.facade;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.catalog.model.CatalogUtils;
+import org.apache.druid.catalog.model.ColumnSpec;
+import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.table.ClusterKeySpec;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Convenience wrapper on top of a resolved table (a table spec and its corresponding
@@ -38,10 +44,77 @@ public class DatasourceFacade extends TableFacade
 {
   private static final Logger LOG = new Logger(DatasourceFacade.class);
 
+  public static class ColumnFacade
+  {
+    public enum Kind
+    {
+      ANY,
+      TIME,
+      DIMENSION,
+      MEASURE
+    }
+
+    private final ColumnSpec spec;
+    private final String sqlType;
+
+    public ColumnFacade(ColumnSpec spec)
+    {
+      this.spec = spec;
+      if (Columns.isTimeColumn(spec.name()) && spec.dataType() == null) {
+        // For __time only, force a type if type is null.
+        this.sqlType = Columns.LONG;
+      } else {
+        this.sqlType = Columns.sqlType(spec);
+      }
+    }
+
+    public ColumnSpec spec()
+    {
+      return spec;
+    }
+
+    public boolean hasType()
+    {
+      return sqlType != null;
+    }
+
+    public boolean isTime()
+    {
+      return Columns.isTimeColumn(spec.name());
+    }
+
+    public ColumnType druidType()
+    {
+      return Columns.druidType(spec);
+    }
+
+    public String sqlStorageType()
+    {
+      return sqlType;
+    }
+
+    @Override
+    public String toString()
+    {
+      return "{spec=" + spec + ", sqlTtype=" + sqlType + "}";
+    }
+  }
+
+  private final List<ColumnFacade> columns;
+  private final Map<String, ColumnFacade> columnIndex;
 
   public DatasourceFacade(ResolvedTable resolved)
   {
     super(resolved);
+    this.columns = resolved.spec().columns()
+        .stream()
+        .map(col -> new ColumnFacade(col))
+        .collect(Collectors.toList());
+    ImmutableMap.Builder<String, ColumnFacade> builder = ImmutableMap.builder();
+    for (ColumnFacade col : columns) {
+      builder.put(col.spec.name(), col);
+    }
+    columnIndex = builder.build();
   }
 
   public String segmentGranularityString()
@@ -88,5 +161,15 @@ public class DatasourceFacade extends TableFacade
   public boolean isSealed()
   {
     return booleanProperty(DatasourceDefn.SEALED_PROPERTY);
+  }
+
+  public List<ColumnFacade> columnFacades()
+  {
+    return columns;
+  }
+
+  public ColumnFacade column(String name)
+  {
+    return columnIndex.get(name);
   }
 }

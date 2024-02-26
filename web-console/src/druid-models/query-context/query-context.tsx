@@ -32,6 +32,7 @@ export interface QueryContext {
   durableShuffleStorage?: boolean;
   maxParseExceptions?: number;
   groupByEnableMultiValueUnnesting?: boolean;
+  arrayIngestMode?: 'array' | 'mvd';
 
   [key: string]: any;
 }
@@ -144,6 +145,22 @@ export function changeTaskAssigment(
   return typeof taskAssignment === 'string'
     ? deepSet(context, 'taskAssignment', taskAssignment)
     : deepDelete(context, 'taskAssignment');
+}
+
+// failOnEmptyInsert
+
+export function getFailOnEmptyInsert(context: QueryContext): boolean | undefined {
+  const { failOnEmptyInsert } = context;
+  return typeof failOnEmptyInsert === 'boolean' ? failOnEmptyInsert : undefined;
+}
+
+export function changeFailOnEmptyInsert(
+  context: QueryContext,
+  failOnEmptyInsert: boolean | undefined,
+): QueryContext {
+  return typeof failOnEmptyInsert === 'boolean'
+    ? deepSet(context, 'failOnEmptyInsert', failOnEmptyInsert)
+    : deepDelete(context, 'failOnEmptyInsert');
 }
 
 // finalizeAggregations

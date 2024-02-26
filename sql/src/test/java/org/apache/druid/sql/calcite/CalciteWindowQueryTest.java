@@ -130,16 +130,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
       maybeDumpActualResults(results.results);
       if (input.expectedOperators != null) {
         final WindowOperatorQuery query = getWindowOperatorQuery(results.recordedQueries);
-        for (int i = 0; i < input.expectedOperators.size(); ++i) {
-          final OperatorFactory expectedOperator = input.expectedOperators.get(i);
-          final OperatorFactory actualOperator = query.getOperators().get(i);
-          if (!expectedOperator.validateEquivalent(actualOperator)) {
-            assertEquals("Operator Mismatch, index[" + i + "]",
-                queryJackson.writeValueAsString(expectedOperator),
-                queryJackson.writeValueAsString(actualOperator));
-            fail("validateEquivalent failed; but textual comparision of operators didn't reported the mismatch!");
-          }
-        }
+        validateOperators(input.expectedOperators, query.getOperators());
       }
 
       final RowSignature outputSignature = results.signature;
@@ -179,6 +170,22 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
       assertResultsValid(ResultMatchMode.RELAX_NULLS, input.expectedResults, results);
     }
 
+    private void validateOperators(List<OperatorFactory> expectedOperators, List<OperatorFactory> currentOperators)
+        throws Exception
+    {
+      for (int i = 0; i < expectedOperators.size(); ++i) {
+        final OperatorFactory expectedOperator = expectedOperators.get(i);
+        final OperatorFactory actualOperator = currentOperators.get(i);
+        if (!expectedOperator.validateEquivalent(actualOperator)) {
+          assertEquals("Operator Mismatch, index[" + i + "]",
+              queryJackson.writeValueAsString(expectedOperator),
+              queryJackson.writeValueAsString(actualOperator));
+          fail("validateEquivalent failed; but textual comparision of operators didn't reported the mismatch!");
+        }
+      }
+      assertEquals("Operator count mismatch!", expectedOperators.size(), currentOperators.size());
+    }
+
     private void maybeDumpActualResults(List<Object[]> results) throws Exception
     {
       if (DUMP_ACTUAL_RESULTS) {
@@ -205,8 +212,34 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
       testBuilder()
           .skipVectorize(true)
           .sql(testCase.getSql())
+          .queryContext(ImmutableMap.of(
+              PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
+              QueryContexts.ENABLE_DEBUG, true,
+              QueryContexts.WINDOWING_STRICT_VALIDATION, false
+              ))
+          .addCustomVerification(QueryVerification.ofResults(testCase))
+          .run();
+    }
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void windowQueryTestWithCustomContextMaxSubqueryBytes() throws Exception
+  {
+    TestCase testCase = new TestCase(filename);
+
+    assumeThat(testCase.getType(), Matchers.not(TestType.failingTest));
+
+    if (testCase.getType() == TestType.operatorValidation) {
+      testBuilder()
+          .skipVectorize(true)
+          .sql(testCase.getSql())
           .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
-              QueryContexts.ENABLE_DEBUG, true))
+                                        QueryContexts.ENABLE_DEBUG, true,
+                                        QueryContexts.MAX_SUBQUERY_BYTES_KEY, "100000",
+                                        QueryContexts.WINDOWING_STRICT_VALIDATION, false
+                        )
+          )
           .addCustomVerification(QueryVerification.ofResults(testCase))
           .run();
     }

@@ -76,10 +76,9 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.EntryExistsException;
-import org.apache.druid.query.CachingEmitter;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
@@ -194,6 +193,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
           5,
           null,
           null,
+          null,
           null
       );
 
@@ -302,6 +302,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         null,
         null,
         5,
+        null,
         null,
         null,
         null
@@ -711,7 +712,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         .shuffleClient(new LocalShuffleClient(intermediaryDataManager))
         .taskLogPusher(null)
         .attemptId("1")
-        .emitter(new ServiceEmitter("service", "host", new CachingEmitter()))
+        .emitter(new StubServiceEmitter())
         .build();
   }
 

@@ -19,6 +19,7 @@
 
 package org.apache.druid.storage.azure;
 
+import com.azure.storage.blob.BlobServiceClient;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
@@ -28,18 +29,15 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.ProvisionException;
 import com.google.inject.TypeLiteral;
-import com.microsoft.azure.storage.StorageCredentials;
-import com.microsoft.azure.storage.blob.CloudBlobClient;
-import com.microsoft.azure.storage.blob.ListBlobItem;
 import org.apache.druid.data.input.azure.AzureEntityFactory;
+import org.apache.druid.data.input.azure.AzureInputSource;
+import org.apache.druid.data.input.azure.AzureStorageAccountInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.segment.loading.OmniDataSegmentKiller;
-import org.apache.druid.storage.azure.blob.ListBlobItemHolder;
-import org.apache.druid.storage.azure.blob.ListBlobItemHolderFactory;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.junit.Assert;
@@ -63,17 +61,17 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   private static final String AZURE_ACCOUNT_NAME;
   private static final String AZURE_ACCOUNT_KEY;
   private static final String AZURE_SHARED_ACCESS_TOKEN;
+  private static final String AZURE_MANAGED_CREDENTIAL_CLIENT_ID;
   private static final String AZURE_CONTAINER;
   private static final String AZURE_PREFIX;
   private static final int AZURE_MAX_LISTING_LENGTH;
-  private static final String PATH = "path";
+  private static final String PATH = "path/subpath";
   private static final Iterable<URI> EMPTY_PREFIXES_ITERABLE = ImmutableList.of();
   private static final Properties PROPERTIES;
 
   private CloudObjectLocation cloudObjectLocation1;
   private CloudObjectLocation cloudObjectLocation2;
-  private ListBlobItem blobItem1;
-  private ListBlobItem blobItem2;
+  private AzureStorage azureStorage;
   private Injector injector;
 
   static {
@@ -82,6 +80,7 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
       AZURE_ACCOUNT_KEY = Base64.getUrlEncoder()
                                 .encodeToString("azureKey1".getBytes(StandardCharsets.UTF_8));
       AZURE_SHARED_ACCESS_TOKEN = "dummyToken";
+      AZURE_MANAGED_CREDENTIAL_CLIENT_ID = "clientId";
       AZURE_CONTAINER = "azureContainer1";
       AZURE_PREFIX = "azurePrefix1";
       AZURE_MAX_LISTING_LENGTH = 10;
@@ -97,8 +96,7 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   {
     cloudObjectLocation1 = createMock(CloudObjectLocation.class);
     cloudObjectLocation2 = createMock(CloudObjectLocation.class);
-    blobItem1 = createMock(ListBlobItem.class);
-    blobItem2 = createMock(ListBlobItem.class);
+    azureStorage = createMock(AzureStorage.class);
   }
 
   @Test
@@ -145,61 +143,12 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   }
 
   @Test
-  public void testGetBlobClientExpectedClient()
-  {
-    injector = makeInjectorWithProperties(PROPERTIES);
-
-    Supplier<CloudBlobClient> cloudBlobClient = injector.getInstance(
-        Key.get(new TypeLiteral<Supplier<CloudBlobClient>>(){})
-    );
-    StorageCredentials storageCredentials = cloudBlobClient.get().getCredentials();
-
-    Assert.assertEquals(AZURE_ACCOUNT_NAME, storageCredentials.getAccountName());
-  }
-
-  @Test
-  public void testGetAzureStorageContainerExpectedClient()
-  {
-    injector = makeInjectorWithProperties(PROPERTIES);
-
-    Supplier<CloudBlobClient> cloudBlobClient = injector.getInstance(
-        Key.get(new TypeLiteral<Supplier<CloudBlobClient>>(){})
-    );
-    StorageCredentials storageCredentials = cloudBlobClient.get().getCredentials();
-
-    Assert.assertEquals(AZURE_ACCOUNT_NAME, storageCredentials.getAccountName());
-
-    AzureStorage azureStorage = injector.getInstance(AzureStorage.class);
-    Assert.assertSame(cloudBlobClient.get(), azureStorage.getCloudBlobClient());
-  }
-
-  @Test
-  public void testGetAzureStorageContainerWithSASExpectedClient()
-  {
-    Properties properties = initializePropertes();
-    properties.setProperty("druid.azure.sharedAccessStorageToken", AZURE_SHARED_ACCESS_TOKEN);
-    properties.remove("druid.azure.key");
-
-    injector = makeInjectorWithProperties(properties);
-
-    Supplier<CloudBlobClient> cloudBlobClient = injector.getInstance(
-        Key.get(new TypeLiteral<Supplier<CloudBlobClient>>(){})
-    );
-
-    AzureAccountConfig azureAccountConfig = injector.getInstance(AzureAccountConfig.class);
-    Assert.assertEquals(AZURE_SHARED_ACCESS_TOKEN, azureAccountConfig.getSharedAccessStorageToken());
-
-    AzureStorage azureStorage = injector.getInstance(AzureStorage.class);
-    Assert.assertSame(cloudBlobClient.get(), azureStorage.getCloudBlobClient());
-  }
-
-  @Test
   public void testGetAzureByteSourceFactoryCanCreateAzureByteSource()
   {
     injector = makeInjectorWithProperties(PROPERTIES);
     AzureByteSourceFactory factory = injector.getInstance(AzureByteSourceFactory.class);
-    Object object1 = factory.create("container1", "blob1");
-    Object object2 = factory.create("container2", "blob2");
+    Object object1 = factory.create("container1", "blob1", azureStorage);
+    Object object2 = factory.create("container2", "blob2", azureStorage);
     Assert.assertNotNull(object1);
     Assert.assertNotNull(object2);
     Assert.assertNotSame(object1, object2);
@@ -210,17 +159,20 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   {
     EasyMock.expect(cloudObjectLocation1.getBucket()).andReturn(AZURE_CONTAINER);
     EasyMock.expect(cloudObjectLocation2.getBucket()).andReturn(AZURE_CONTAINER);
-    EasyMock.expect(cloudObjectLocation1.getPath()).andReturn(PATH);
+    EasyMock.expect(cloudObjectLocation1.getPath()).andReturn(PATH).times(2);
     EasyMock.expect(cloudObjectLocation2.getPath()).andReturn(PATH);
     replayAll();
 
     injector = makeInjectorWithProperties(PROPERTIES);
     AzureEntityFactory factory = injector.getInstance(AzureEntityFactory.class);
-    Object object1 = factory.create(cloudObjectLocation1);
-    Object object2 = factory.create(cloudObjectLocation2);
+    Object object1 = factory.create(cloudObjectLocation1, azureStorage, AzureInputSource.SCHEME);
+    Object object2 = factory.create(cloudObjectLocation2, azureStorage, AzureInputSource.SCHEME);
+    Object object3 = factory.create(cloudObjectLocation1, azureStorage, AzureStorageAccountInputSource.SCHEME);
     Assert.assertNotNull(object1);
     Assert.assertNotNull(object2);
+    Assert.assertNotNull(object3);
     Assert.assertNotSame(object1, object2);
+    Assert.assertNotSame(object1, object3);
   }
 
   @Test
@@ -228,8 +180,8 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   {
     injector = makeInjectorWithProperties(PROPERTIES);
     AzureCloudBlobIteratorFactory factory = injector.getInstance(AzureCloudBlobIteratorFactory.class);
-    Object object1 = factory.create(EMPTY_PREFIXES_ITERABLE, 10);
-    Object object2 = factory.create(EMPTY_PREFIXES_ITERABLE, 10);
+    Object object1 = factory.create(EMPTY_PREFIXES_ITERABLE, 10, azureStorage);
+    Object object2 = factory.create(EMPTY_PREFIXES_ITERABLE, 10, azureStorage);
     Assert.assertNotNull(object1);
     Assert.assertNotNull(object2);
     Assert.assertNotSame(object1, object2);
@@ -240,20 +192,8 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   {
     injector = makeInjectorWithProperties(PROPERTIES);
     AzureCloudBlobIterableFactory factory = injector.getInstance(AzureCloudBlobIterableFactory.class);
-    AzureCloudBlobIterable object1 = factory.create(EMPTY_PREFIXES_ITERABLE, 10);
-    AzureCloudBlobIterable object2 = factory.create(EMPTY_PREFIXES_ITERABLE, 10);
-    Assert.assertNotNull(object1);
-    Assert.assertNotNull(object2);
-    Assert.assertNotSame(object1, object2);
-  }
-
-  @Test
-  public void testGetListBlobItemDruidFactoryCanCreateListBlobItemDruid()
-  {
-    injector = makeInjectorWithProperties(PROPERTIES);
-    ListBlobItemHolderFactory factory = injector.getInstance(ListBlobItemHolderFactory.class);
-    ListBlobItemHolder object1 = factory.create(blobItem1);
-    ListBlobItemHolder object2 = factory.create(blobItem2);
+    AzureCloudBlobIterable object1 = factory.create(EMPTY_PREFIXES_ITERABLE, 10, azureStorage);
+    AzureCloudBlobIterable object2 = factory.create(EMPTY_PREFIXES_ITERABLE, 10, azureStorage);
     Assert.assertNotNull(object1);
     Assert.assertNotNull(object2);
     Assert.assertNotSame(object1, object2);
@@ -276,31 +216,88 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   }
 
   @Test
-  public void testBothAccountKeyAndSAStokenSet()
+  public void testMultipleCredentialsSet()
   {
+    String message = "Set only one of 'key' or 'sharedAccessStorageToken' or 'useAzureCredentialsChain' in the azure config.";
     Properties properties = initializePropertes();
     properties.setProperty("druid.azure.sharedAccessStorageToken", AZURE_SHARED_ACCESS_TOKEN);
     expectedException.expect(ProvisionException.class);
-    expectedException.expectMessage("Either set 'key' or 'sharedAccessStorageToken' in the azure config but not both");
+    expectedException.expectMessage(message);
     makeInjectorWithProperties(properties).getInstance(
-        Key.get(new TypeLiteral<Supplier<CloudBlobClient>>()
+        Key.get(new TypeLiteral<AzureClientFactory>()
+        {
+        })
+    );
+
+    properties = initializePropertes();
+    properties.setProperty("druid.azure.managedIdentityClientId", AZURE_MANAGED_CREDENTIAL_CLIENT_ID);
+    expectedException.expect(ProvisionException.class);
+    expectedException.expectMessage(message);
+    makeInjectorWithProperties(properties).getInstance(
+        Key.get(new TypeLiteral<Supplier<BlobServiceClient>>()
+        {
+        })
+    );
+
+    properties = initializePropertes();
+    properties.remove("druid.azure.key");
+    properties.setProperty("druid.azure.managedIdentityClientId", AZURE_MANAGED_CREDENTIAL_CLIENT_ID);
+    properties.setProperty("druid.azure.sharedAccessStorageToken", AZURE_SHARED_ACCESS_TOKEN);
+    expectedException.expect(ProvisionException.class);
+    expectedException.expectMessage(message);
+    makeInjectorWithProperties(properties).getInstance(
+        Key.get(new TypeLiteral<AzureClientFactory>()
         {
         })
     );
   }
 
   @Test
-  public void testBothAccountKeyAndSAStokenUnset()
+  public void testAllCredentialsUnset()
   {
     Properties properties = initializePropertes();
     properties.remove("druid.azure.key");
     expectedException.expect(ProvisionException.class);
-    expectedException.expectMessage("Either set 'key' or 'sharedAccessStorageToken' in the azure config but not both");
+    expectedException.expectMessage("Either set 'key' or 'sharedAccessStorageToken' or 'useAzureCredentialsChain' in the azure config.");
     makeInjectorWithProperties(properties).getInstance(
-        Key.get(new TypeLiteral<Supplier<CloudBlobClient>>()
+        Key.get(new TypeLiteral<AzureClientFactory>()
         {
         })
     );
+  }
+
+  @Test
+  public void testAccountUnset()
+  {
+    Properties properties = initializePropertes();
+    properties.remove("druid.azure.account");
+    expectedException.expect(ProvisionException.class);
+    expectedException.expectMessage("Set 'account' to the storage account that needs to be configured in the azure config. Please refer to azure documentation.");
+    makeInjectorWithProperties(properties).getInstance(
+        Key.get(new TypeLiteral<AzureClientFactory>()
+        {
+        })
+    );
+  }
+
+  @Test
+  public void testGetBlobStorageEndpointWithDefaultProperties()
+  {
+    Properties properties = initializePropertes();
+    AzureAccountConfig config = makeInjectorWithProperties(properties).getInstance(AzureAccountConfig.class);
+    Assert.assertEquals(config.getEndpointSuffix(), AzureUtils.DEFAULT_AZURE_ENDPOINT_SUFFIX);
+    Assert.assertEquals(config.getBlobStorageEndpoint(), AzureUtils.AZURE_STORAGE_HOST_ADDRESS);
+  }
+
+  @Test
+  public void testGetBlobStorageEndpointWithCustomBlobPath()
+  {
+    Properties properties = initializePropertes();
+    final String customSuffix = "core.usgovcloudapi.net";
+    properties.setProperty("druid.azure.endpointSuffix", customSuffix);
+    AzureAccountConfig config = makeInjectorWithProperties(properties).getInstance(AzureAccountConfig.class);
+    Assert.assertEquals(config.getEndpointSuffix(), customSuffix);
+    Assert.assertEquals(config.getBlobStorageEndpoint(), "blob." + customSuffix);
   }
 
   private Injector makeInjectorWithProperties(final Properties props)

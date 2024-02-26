@@ -77,7 +77,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        testing_group: [query, query-retry, query-error, security, high-availability, centralized-table-schema]
+        testing_group: [query, query-retry, query-error, security, high-availability, centralized-datasource-schema]
     uses: ./.github/workflows/reusable-standard-its.yml
     if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     with:
@@ -183,7 +183,8 @@ jobs:
         run: |
           for v in broker middlemanager router coordinator historical ; do
           echo "------------------------druid-tiny-cluster-"$v"s-0-------------------------";
-          sudo /usr/local/bin/kubectl logs --tail 1000 druid-tiny-cluster-"$v"s-0 ||:;
+          /usr/local/bin/kubectl logs --tail 1000 druid-tiny-cluster-"$v"s-0 ||:;
+          /usr/local/bin/kubectl get events | grep druid-tiny-cluster-"$v"s-0 ||:;
           done
 
   integration-other-tests:
@@ -195,6 +196,6 @@ jobs:
     with:
       build_jdk: 8
       runtime_jdk: 8
-      testing_groups: -DexcludedGroups=batch-index,input-format,input-source,perfect-rollup-parallel-batch-index,kafka-index,query,query-retry,query-error,realtime-index,security,ldap-security,s3-deep-storage,gcs-deep-storage,azure-deep-storage,hdfs-deep-storage,s3-ingestion,kinesis-index,kinesis-data-format,kafka-transactional-index,kafka-index-slow,kafka-transactional-index-slow,kafka-data-format,hadoop-s3-to-s3-deep-storage,hadoop-s3-to-hdfs-deep-storage,hadoop-azure-to-azure-deep-storage,hadoop-azure-to-hdfs-deep-storage,hadoop-gcs-to-gcs-deep-storage,hadoop-gcs-to-hdfs-deep-storage,aliyun-oss-deep-storage,append-ingestion,compaction,high-availability,upgrade,shuffle-deep-store,custom-coordinator-duties,centralized-table-schema
+      testing_groups: -DexcludedGroups=batch-index,input-format,input-source,perfect-rollup-parallel-batch-index,kafka-index,query,query-retry,query-error,realtime-index,security,ldap-security,s3-deep-storage,gcs-deep-storage,azure-deep-storage,hdfs-deep-storage,s3-ingestion,kinesis-index,kinesis-data-format,kafka-transactional-index,kafka-index-slow,kafka-transactional-index-slow,kafka-data-format,hadoop-s3-to-s3-deep-storage,hadoop-s3-to-hdfs-deep-storage,hadoop-azure-to-azure-deep-storage,hadoop-azure-to-hdfs-deep-storage,hadoop-gcs-to-gcs-deep-storage,hadoop-gcs-to-hdfs-deep-storage,aliyun-oss-deep-storage,append-ingestion,compaction,high-availability,upgrade,shuffle-deep-store,custom-coordinator-duties,centralized-datasource-schema
       use_indexer: ${{ matrix.indexer }}
       group: other

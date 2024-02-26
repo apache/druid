@@ -76,6 +76,8 @@ public class KinesisIndexTaskSerdeTest
       null,
       null,
       null,
+      null,
+      null,
       null
   );
   private static final KinesisIndexTaskIOConfig IO_CONFIG = new KinesisIndexTaskIOConfig(
@@ -90,9 +92,7 @@ public class KinesisIndexTaskSerdeTest
       "endpoint",
       null,
       null,
-      null,
-      null,
-      false
+      null
   );
   private static final String ACCESS_KEY = "test-access-key";
   private static final String SECRET_KEY = "test-secret-key";

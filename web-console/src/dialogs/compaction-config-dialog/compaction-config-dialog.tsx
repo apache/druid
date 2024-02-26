@@ -16,17 +16,25 @@
  * limitations under the License.
  */
 
-import { Button, Callout, Classes, Code, Dialog, Intent } from '@blueprintjs/core';
+import { Button, Callout, Classes, Code, Dialog, Intent, Switch } from '@blueprintjs/core';
 import React, { useState } from 'react';
 
 import type { FormJsonTabs } from '../../components';
-import { AutoForm, FormJsonSelector, JsonInput } from '../../components';
+import {
+  AutoForm,
+  ExternalLink,
+  FormGroupWithInfo,
+  FormJsonSelector,
+  JsonInput,
+  PopoverText,
+} from '../../components';
 import type { CompactionConfig } from '../../druid-models';
 import {
   COMPACTION_CONFIG_FIELDS,
   compactionConfigHasLegacyInputSegmentSizeBytesSet,
 } from '../../druid-models';
-import { deepDelete, formatBytesCompact } from '../../utils';
+import { getLink } from '../../links';
+import { deepDelete, deepGet, deepSet, formatBytesCompact } from '../../utils';
 import { CompactionHistoryDialog } from '../compaction-history-dialog/compaction-history-dialog';
 
 import './compaction-config-dialog.scss';
@@ -96,11 +104,46 @@ export const CompactionConfigDialog = React.memo(function CompactionConfigDialog
       />
       <div className="content">
         {currentTab === 'form' ? (
-          <AutoForm
-            fields={COMPACTION_CONFIG_FIELDS}
-            model={currentConfig}
-            onChange={m => setCurrentConfig(m as CompactionConfig)}
-          />
+          <>
+            <AutoForm
+              fields={COMPACTION_CONFIG_FIELDS}
+              model={currentConfig}
+              onChange={m => setCurrentConfig(m as CompactionConfig)}
+            />
+            <FormGroupWithInfo
+              inlineInfo
+              info={
+                <PopoverText>
+                  <p>
+                    If you want to append data to a datasource while compaction is running, you need
+                    to enable concurrent append and replace for the datasource by updating the
+                    compaction settings.
+                  </p>
+                  <p>
+                    For more information refer to the{' '}
+                    <ExternalLink
+                      href={`${getLink('DOCS')}/ingestion/concurrent-append-replace.html`}
+                    >
+                      documentation
+                    </ExternalLink>
+                    .
+                  </p>
+                </PopoverText>
+              }
+            >
+              <Switch
+                label="Use concurrent locks (experimental)"
+                checked={Boolean(deepGet(currentConfig, 'taskContext.useConcurrentLocks'))}
+                onChange={() => {
+                  setCurrentConfig(
+                    (deepGet(currentConfig, 'taskContext.useConcurrentLocks')
+                      ? deepDelete(currentConfig, 'taskContext.useConcurrentLocks')
+                      : deepSet(currentConfig, 'taskContext.useConcurrentLocks', true)) as any,
+                  );
+                }}
+              />
+            </FormGroupWithInfo>
+          </>
         ) : (
           <JsonInput
             value={currentConfig}

@@ -28,6 +28,7 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.common.guava.DSuppliers;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.WorkerNodeService;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
@@ -180,6 +181,31 @@ public class TaskQueueTest extends IngestionTestBase
     Assert.assertEquals(TaskState.FAILED, statusOptional.get().getStatusCode());
     Assert.assertNotNull(statusOptional.get().getErrorMsg());
     Assert.assertEquals("Shutdown Task test", statusOptional.get().getErrorMsg());
+  }
+
+  @Test(expected = DruidException.class)
+  public void testTaskErrorWhenExceptionIsThrownDueToQueueSize()
+  {
+    final TaskActionClientFactory actionClientFactory = createActionClientFactory();
+    final TaskQueue taskQueue = new TaskQueue(
+            new TaskLockConfig(),
+            new TaskQueueConfig(1, null, null, null, null),
+            new DefaultTaskConfig(),
+            getTaskStorage(),
+            new SimpleTaskRunner(actionClientFactory),
+            actionClientFactory,
+            getLockbox(),
+            new NoopServiceEmitter()
+    );
+    taskQueue.setActive(true);
+
+    // Create a Task and add it to the TaskQueue
+    final TestTask task1 = new TestTask("t1", Intervals.of("2021-01/P1M"));
+    final TestTask task2 = new TestTask("t2", Intervals.of("2021-01/P1M"));
+    taskQueue.add(task1);
+
+    // we will get exception here as taskQueue size is 1 druid.indexer.queue.maxSize is already 1
+    taskQueue.add(task2);
   }
 
   @Test
@@ -432,6 +458,66 @@ public class TaskQueueTest extends IngestionTestBase
     CoordinatorRunStats stats = taskQueue.getQueueStats();
     Assert.assertEquals(0L, stats.get(Stats.TaskQueue.STATUS_UPDATES_IN_QUEUE));
     Assert.assertEquals(1L, stats.get(Stats.TaskQueue.HANDLED_STATUS_UPDATES));
+  }
+
+  @Test
+  public void testGetTaskStatus()
+  {
+    final String newTask = "newTask";
+    final String waitingTask = "waitingTask";
+    final String pendingTask = "pendingTask";
+    final String runningTask = "runningTask";
+    final String successfulTask = "successfulTask";
+    final String failedTask = "failedTask";
+
+    TaskStorage taskStorage = EasyMock.createMock(TaskStorage.class);
+    EasyMock.expect(taskStorage.getStatus(newTask))
+            .andReturn(Optional.of(TaskStatus.running(newTask)));
+    EasyMock.expect(taskStorage.getStatus(successfulTask))
+            .andReturn(Optional.of(TaskStatus.success(successfulTask)));
+    EasyMock.expect(taskStorage.getStatus(failedTask))
+            .andReturn(Optional.of(TaskStatus.failure(failedTask, failedTask)));
+    EasyMock.replay(taskStorage);
+
+    TaskRunner taskRunner = EasyMock.createMock(HttpRemoteTaskRunner.class);
+    EasyMock.expect(taskRunner.getRunnerTaskState(newTask))
+            .andReturn(null);
+    EasyMock.expect(taskRunner.getRunnerTaskState(waitingTask))
+            .andReturn(RunnerTaskState.WAITING);
+    EasyMock.expect(taskRunner.getRunnerTaskState(pendingTask))
+            .andReturn(RunnerTaskState.PENDING);
+    EasyMock.expect(taskRunner.getRunnerTaskState(runningTask))
+            .andReturn(RunnerTaskState.RUNNING);
+    EasyMock.expect(taskRunner.getRunnerTaskState(successfulTask))
+            .andReturn(RunnerTaskState.NONE);
+    EasyMock.expect(taskRunner.getRunnerTaskState(failedTask))
+            .andReturn(RunnerTaskState.NONE);
+    EasyMock.expect(taskRunner.getTaskLocation(waitingTask))
+            .andReturn(TaskLocation.unknown());
+    EasyMock.expect(taskRunner.getTaskLocation(pendingTask))
+            .andReturn(TaskLocation.unknown());
+    EasyMock.expect(taskRunner.getTaskLocation(runningTask))
+            .andReturn(TaskLocation.create("host", 8100, 8100));
+    EasyMock.replay(taskRunner);
+
+    final TaskQueue taskQueue = new TaskQueue(
+        new TaskLockConfig(),
+        new TaskQueueConfig(null, null, null, null, null),
+        new DefaultTaskConfig(),
+        taskStorage,
+        taskRunner,
+        createActionClientFactory(),
+        getLockbox(),
+        new StubServiceEmitter("druid/overlord", "testHost")
+    );
+    taskQueue.setActive(true);
+
+    Assert.assertEquals(TaskStatus.running(newTask), taskQueue.getTaskStatus(newTask).get());
+    Assert.assertEquals(TaskStatus.running(waitingTask), taskQueue.getTaskStatus(waitingTask).get());
+    Assert.assertEquals(TaskStatus.running(pendingTask), taskQueue.getTaskStatus(pendingTask).get());
+    Assert.assertEquals(TaskStatus.running(runningTask), taskQueue.getTaskStatus(runningTask).get());
+    Assert.assertEquals(TaskStatus.success(successfulTask), taskQueue.getTaskStatus(successfulTask).get());
+    Assert.assertEquals(TaskStatus.failure(failedTask, failedTask), taskQueue.getTaskStatus(failedTask).get());
   }
 
   private HttpRemoteTaskRunner createHttpRemoteTaskRunner(List<String> runningTasks)

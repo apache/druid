@@ -21,7 +21,7 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
-  <groupId>org.apache.druid.extensions</groupId>
+  <groupId>org.apache.druid.extensions.contrib</groupId>
   <artifactId>druid-iceberg-extensions</artifactId>
   <name>druid-iceberg-extensions</name>
   <description>druid-iceberg-extensions</description>
@@ -29,13 +29,13 @@
   <parent>
     <artifactId>druid</artifactId>
     <groupId>org.apache.druid</groupId>
-    <version>29.0.0-SNAPSHOT</version>
+    <version>30.0.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
   <properties>
-    <iceberg.core.version>1.4.0</iceberg.core.version>
+    <iceberg.core.version>1.4.1</iceberg.core.version>
     <hive.version>3.1.3</hive.version>
   </properties>
   <dependencies>
@@ -205,10 +205,6 @@
         <exclusion>
           <groupId>org.slf4j</groupId>
           <artifactId>slf4j-reload4j</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.google.re2j</groupId>
-          <artifactId>re2j</artifactId>
         </exclusion>
         <exclusion>
           <groupId>com.google.code.gson</groupId>

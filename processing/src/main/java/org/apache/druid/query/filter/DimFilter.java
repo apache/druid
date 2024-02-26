@@ -22,6 +22,7 @@ package org.apache.druid.query.filter;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.RangeSet;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.query.extraction.ExtractionFn;
 
@@ -53,15 +54,18 @@ import java.util.Set;
     @JsonSubTypes.Type(name = "equals", value = EqualityFilter.class),
     @JsonSubTypes.Type(name = "range", value = RangeFilter.class),
     @JsonSubTypes.Type(name = "isfalse", value = IsFalseDimFilter.class),
-    @JsonSubTypes.Type(name = "istrue", value = IsTrueDimFilter.class)
+    @JsonSubTypes.Type(name = "istrue", value = IsTrueDimFilter.class),
+    @JsonSubTypes.Type(name = "arrayContainsElement", value = ArrayContainsElementFilter.class)
 })
 public interface DimFilter extends Cacheable
 {
   /**
-   * @return Returns an optimized filter.
-   * returning the same filter can be a straightforward default implementation.
+   * Returns an optimized version of this filter.
+   *
+   * @param mayIncludeUnknown whether the optimized filter may need to operate in "includeUnknown" mode.
+   *                          See {@link NullHandling#useThreeValueLogic()}.
    */
-  DimFilter optimize();
+  DimFilter optimize(boolean mayIncludeUnknown);
 
   /**
    * @return Return a Filter that implements this DimFilter, after applying optimizations to this DimFilter.
@@ -72,8 +76,11 @@ public interface DimFilter extends Cacheable
    * The Filter returned by this method across multiple calls must be the same object: parts of the query stack
    * compare Filters, and returning the same object allows these checks to avoid deep comparisons.
    * (see {@link org.apache.druid.segment.join.HashJoinSegmentStorageAdapter#makeCursors for an example}
+   *
+   * @param mayIncludeUnknown whether the optimized filter may need to operate in "includeUnknown" mode.
+   *                          See {@link NullHandling#useThreeValueLogic()}.
    */
-  Filter toOptimizedFilter();
+  Filter toOptimizedFilter(boolean mayIncludeUnknown);
 
   /**
    * Returns a Filter that implements this DimFilter. This does not generally involve optimizing the DimFilter,

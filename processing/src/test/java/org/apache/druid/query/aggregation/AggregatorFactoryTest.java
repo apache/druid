@@ -148,7 +148,7 @@ public class AggregatorFactoryTest extends InitializedNullHandlingTest
                   // string aggregators
                   new StringFirstAggregatorFactory("stringFirst", "col", null, 1024),
                   new StringLastAggregatorFactory("stringLast", "col", null, 1024),
-                  new StringAnyAggregatorFactory("stringAny", "col", 1024),
+                  new StringAnyAggregatorFactory("stringAny", "col", 1024, true),
                   // sketch aggs
                   new CardinalityAggregatorFactory("cardinality", ImmutableList.of(DefaultDimensionSpec.of("some-col")), false),
                   new HyperUniquesAggregatorFactory("hyperUnique", "hyperunique"),
@@ -210,21 +210,21 @@ public class AggregatorFactoryTest extends InitializedNullHandlingTest
                     .add("longSum", ColumnType.LONG)
                     .add("longMin", ColumnType.LONG)
                     .add("longMax", ColumnType.LONG)
-                    .add("longFirst", ColumnType.LONG)
-                    .add("longLast", ColumnType.LONG)
+                    .add("longFirst", null)
+                    .add("longLast", null)
                     .add("longAny", ColumnType.LONG)
                     .add("doubleSum", ColumnType.DOUBLE)
                     .add("doubleMin", ColumnType.DOUBLE)
                     .add("doubleMax", ColumnType.DOUBLE)
-                    .add("doubleFirst", ColumnType.DOUBLE)
-                    .add("doubleLast", ColumnType.DOUBLE)
+                    .add("doubleFirst", null)
+                    .add("doubleLast", null)
                     .add("doubleAny", ColumnType.DOUBLE)
                     .add("doubleMean", null)
                     .add("floatSum", ColumnType.FLOAT)
                     .add("floatMin", ColumnType.FLOAT)
                     .add("floatMax", ColumnType.FLOAT)
-                    .add("floatFirst", ColumnType.FLOAT)
-                    .add("floatLast", ColumnType.FLOAT)
+                    .add("floatFirst", null)
+                    .add("floatLast", null)
                     .add("floatAny", ColumnType.FLOAT)
                     .add("stringFirst", null)
                     .add("stringLast", null)
@@ -307,7 +307,8 @@ public class AggregatorFactoryTest extends InitializedNullHandlingTest
         // string aggregators
         new StringFirstAggregatorFactory("col", "col", null, 1024),
         new StringLastAggregatorFactory("col", "col", null, 1024),
-        new StringAnyAggregatorFactory("col", "col", 1024),
+        new StringAnyAggregatorFactory("col", "col", 1024, true),
+        new StringAnyAggregatorFactory("col", "col", 1024, false),
         // sketch aggs
         new CardinalityAggregatorFactory("col", ImmutableList.of(DefaultDimensionSpec.of("some-col")), false),
         new HyperUniquesAggregatorFactory("col", "hyperunique"),

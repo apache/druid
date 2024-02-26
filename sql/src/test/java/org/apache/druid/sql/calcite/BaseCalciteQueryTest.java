@@ -35,7 +35,6 @@ import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.hll.VersionOneHyperLogLogCollector;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.io.Closer;
@@ -74,7 +73,6 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
-import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -91,11 +89,13 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
+import org.apache.druid.sql.calcite.expression.ExpressionTestHelper;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
+import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaManager;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
@@ -115,15 +115,14 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
-import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -138,6 +137,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assume.assumeTrue;
 
 /**
  * A base class for SQL query testing. It sets up query execution environment, provides useful helper methods,
@@ -284,11 +284,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public static final Map<String, Object> OUTER_LIMIT_CONTEXT = new HashMap<>(QUERY_CONTEXT_DEFAULT);
 
-  public static int minTopNThreshold = TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD;
-
   @Nullable
   public final SqlEngine engine0;
-  private static SqlTestFramework queryFramework;
   final boolean useDefault = NullHandling.replaceWithDefault();
 
   @Rule(order = 1)
@@ -303,7 +300,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public QueryLogHook queryLogHook;
 
-  public QueryComponentSupplier baseComponentSupplier;
+  private QueryComponentSupplier baseComponentSupplier;
   public PlannerComponentSupplier basePlannerComponentSupplier = new StandardPlannerComponentSupplier();
 
   public BaseCalciteQueryTest()
@@ -613,26 +610,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
                                         .legacy(false);
   }
 
-  @BeforeClass
-  public static void setUpClass()
-  {
-    resetFramework();
-  }
-
-  @AfterClass
-  public static void tearDownClass()
-  {
-    resetFramework();
-  }
-
-  protected static void resetFramework()
-  {
-    if (queryFramework != null) {
-      queryFramework.close();
-    }
-    queryFramework = null;
-  }
-
   protected static DruidExceptionMatcher invalidSqlIs(String s)
   {
     return DruidExceptionMatcher.invalidSqlInput().expectMessageIs(s);
@@ -654,42 +631,15 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return queryLogHook = new QueryLogHook(() -> queryFramework().queryJsonMapper());
   }
 
+  @ClassRule
+  public static SqlTestFrameworkConfig.ClassRule queryFrameworkClassRule = new SqlTestFrameworkConfig.ClassRule();
+
+  @Rule(order = 3)
+  public SqlTestFrameworkConfig.MethodRule queryFrameworkRule = queryFrameworkClassRule.methodRule(this);
+
   public SqlTestFramework queryFramework()
   {
-    if (queryFramework == null) {
-      createFramework(0);
-    }
-    return queryFramework;
-  }
-
-  /**
-   * Creates the query planning/execution framework. The logic is somewhat
-   * round-about: the builder creates the structure, but delegates back to
-   * this class for the parts that the Calcite tests customize. This class,
-   * in turn, delegates back to a standard class to create components. However,
-   * subclasses do override each method to customize components for specific
-   * tests.
-   */
-  private void createFramework(int mergeBufferCount)
-  {
-    resetFramework();
-    try {
-      baseComponentSupplier = new StandardComponentSupplier(
-          temporaryFolder.newFolder()
-      );
-    }
-    catch (IOException e) {
-      throw new RE(e);
-    }
-    SqlTestFramework.Builder builder = new SqlTestFramework.Builder(this)
-        .minTopNThreshold(minTopNThreshold)
-        .mergeBufferCount(mergeBufferCount);
-    configureBuilder(builder);
-    queryFramework = builder.build();
-  }
-
-  protected void configureBuilder(Builder builder)
-  {
+    return queryFrameworkRule.get();
   }
 
   @Override
@@ -719,6 +669,14 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   @Override
   public void gatherProperties(Properties properties)
   {
+    try {
+      baseComponentSupplier = new StandardComponentSupplier(
+          temporaryFolder.newFolder()
+      );
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
     baseComponentSupplier.gatherProperties(properties);
   }
 
@@ -780,6 +738,13 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public void finalizePlanner(PlannerFixture plannerFixture)
   {
     basePlannerComponentSupplier.finalizePlanner(plannerFixture);
+  }
+
+  public void assumeFeatureAvailable(EngineFeature feature)
+  {
+    boolean featureAvailable = queryFramework().engine()
+        .featureAvailable(feature, ExpressionTestHelper.PLANNER_CONTEXT);
+    assumeTrue(StringUtils.format("test disabled; feature [%s] is not available!", feature), featureAvailable);
   }
 
   public void assertQueryIsUnplannable(final String sql, String expectedError)
@@ -1128,6 +1093,36 @@ public class BaseCalciteQueryTest extends CalciteTestBase
           EQUALS.validate(row, column, type, expectedCell, resultCell);
         }
       }
+    },
+    /**
+     * Comparision which accepts 1000 units of least precision.
+     */
+    EQUALS_RELATIVE_1000_ULPS {
+      static final int ASSERTION_ERROR_ULPS = 1000;
+
+      @Override
+      void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell)
+      {
+        if (expectedCell instanceof Float) {
+          float eps = ASSERTION_ERROR_ULPS * Math.ulp((Float) expectedCell);
+          assertEquals(
+              mismatchMessage(row, column),
+              (Float) expectedCell,
+              (Float) resultCell,
+              eps
+          );
+        } else if (expectedCell instanceof Double) {
+          double eps = ASSERTION_ERROR_ULPS * Math.ulp((Double) expectedCell);
+          assertEquals(
+              mismatchMessage(row, column),
+              (Double) expectedCell,
+              (Double) resultCell,
+              eps
+          );
+        } else {
+          EQUALS.validate(row, column, type, expectedCell, resultCell);
+        }
+      }
     };
 
     abstract void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell);
@@ -1424,14 +1419,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     HashMap<String, Object> newContext = new HashMap<>(context);
     newContext.put(QueryContexts.SQL_JOIN_LEFT_SCAN_DIRECT, true);
     return newContext;
-  }
-
-  /**
-   * Reset the conglomerate, walker, and engine with required number of merge buffers. Default value is 2.
-   */
-  protected void requireMergeBuffers(int numMergeBuffers)
-  {
-    createFramework(numMergeBuffers);
   }
 
   protected Map<String, Object> withTimestampResultContext(

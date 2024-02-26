@@ -188,15 +188,15 @@ public class QueryLifecycleTest
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
     EasyMock.expect(authorizer.authorize(authenticationResult, new Resource(DATASOURCE, ResourceType.DATASOURCE), Action.READ))
-            .andReturn(Access.OK);
+            .andReturn(Access.OK).times(2);
     EasyMock.expect(authorizer.authorize(authenticationResult, new Resource("foo", ResourceType.QUERY_CONTEXT), Action.WRITE))
-            .andReturn(Access.OK);
+            .andReturn(Access.OK).times(2);
     EasyMock.expect(authorizer.authorize(authenticationResult, new Resource("baz", ResourceType.QUERY_CONTEXT), Action.WRITE))
-            .andReturn(Access.OK);
+            .andReturn(Access.OK).times(2);
 
     EasyMock.expect(toolChestWarehouse.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest)
-            .once();
+            .times(2);
 
     replayAll();
 
@@ -223,6 +223,10 @@ public class QueryLifecycleTest
     );
 
     Assert.assertTrue(lifecycle.authorize(mockRequest()).isAllowed());
+
+    lifecycle = createLifecycle(authConfig);
+    lifecycle.initialize(query);
+    Assert.assertTrue(lifecycle.authorize(authenticationResult).isAllowed());
   }
 
   @Test
@@ -232,13 +236,15 @@ public class QueryLifecycleTest
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
     EasyMock.expect(authorizer.authorize(authenticationResult, new Resource(DATASOURCE, ResourceType.DATASOURCE), Action.READ))
-            .andReturn(Access.OK);
+            .andReturn(Access.OK)
+            .times(2);
     EasyMock.expect(authorizer.authorize(authenticationResult, new Resource("foo", ResourceType.QUERY_CONTEXT), Action.WRITE))
-            .andReturn(Access.DENIED);
+            .andReturn(Access.DENIED)
+            .times(2);
 
     EasyMock.expect(toolChestWarehouse.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest)
-            .once();
+            .times(2);
 
     replayAll();
 
@@ -255,6 +261,10 @@ public class QueryLifecycleTest
     QueryLifecycle lifecycle = createLifecycle(authConfig);
     lifecycle.initialize(query);
     Assert.assertFalse(lifecycle.authorize(mockRequest()).isAllowed());
+
+    lifecycle = createLifecycle(authConfig);
+    lifecycle.initialize(query);
+    Assert.assertFalse(lifecycle.authorize(authenticationResult).isAllowed());
   }
 
   @Test
@@ -264,11 +274,12 @@ public class QueryLifecycleTest
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
     EasyMock.expect(authorizer.authorize(authenticationResult, new Resource(DATASOURCE, ResourceType.DATASOURCE), Action.READ))
-            .andReturn(Access.OK);
+            .andReturn(Access.OK)
+            .times(2);
 
     EasyMock.expect(toolChestWarehouse.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest)
-            .once();
+            .times(2);
 
     replayAll();
 
@@ -296,6 +307,10 @@ public class QueryLifecycleTest
     );
 
     Assert.assertTrue(lifecycle.authorize(mockRequest()).isAllowed());
+
+    lifecycle = createLifecycle(authConfig);
+    lifecycle.initialize(query);
+    Assert.assertTrue(lifecycle.authorize(authenticationResult).isAllowed());
   }
 
   @Test
@@ -305,11 +320,12 @@ public class QueryLifecycleTest
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
     EasyMock.expect(authorizer.authorize(authenticationResult, new Resource(DATASOURCE, ResourceType.DATASOURCE), Action.READ))
-            .andReturn(Access.OK);
+            .andReturn(Access.OK)
+            .times(2);
 
     EasyMock.expect(toolChestWarehouse.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest)
-            .once();
+            .times(2);
 
     replayAll();
 
@@ -338,6 +354,10 @@ public class QueryLifecycleTest
     );
 
     Assert.assertTrue(lifecycle.authorize(mockRequest()).isAllowed());
+
+    lifecycle = createLifecycle(authConfig);
+    lifecycle.initialize(query);
+    Assert.assertTrue(lifecycle.authorize(authenticationResult).isAllowed());
   }
 
   @Test
@@ -347,13 +367,15 @@ public class QueryLifecycleTest
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
     EasyMock.expect(authorizer.authorize(authenticationResult, new Resource(DATASOURCE, ResourceType.DATASOURCE), Action.READ))
-            .andReturn(Access.OK);
+            .andReturn(Access.OK)
+            .times(2);
     EasyMock.expect(authorizer.authorize(authenticationResult, new Resource("foo", ResourceType.QUERY_CONTEXT), Action.WRITE))
-            .andReturn(Access.DENIED);
+            .andReturn(Access.DENIED)
+            .times(2);
 
     EasyMock.expect(toolChestWarehouse.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest)
-            .once();
+            .times(2);
 
     replayAll();
 
@@ -373,6 +395,10 @@ public class QueryLifecycleTest
     QueryLifecycle lifecycle = createLifecycle(authConfig);
     lifecycle.initialize(query);
     Assert.assertFalse(lifecycle.authorize(mockRequest()).isAllowed());
+
+    lifecycle = createLifecycle(authConfig);
+    lifecycle.initialize(query);
+    Assert.assertFalse(lifecycle.authorize(authenticationResult).isAllowed());
   }
 
   @Test
@@ -382,22 +408,26 @@ public class QueryLifecycleTest
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
     EasyMock.expect(authorizer.authorize(authenticationResult, new Resource("fake", ResourceType.DATASOURCE), Action.READ))
-            .andReturn(Access.OK);
+            .andReturn(Access.OK)
+            .times(2);
     EasyMock.expect(authorizer.authorize(authenticationResult, new Resource("foo", ResourceType.QUERY_CONTEXT), Action.WRITE))
-            .andReturn(Access.OK);
-    EasyMock.expect(authorizer.authorize(authenticationResult, new Resource("baz", ResourceType.QUERY_CONTEXT), Action.WRITE)).andReturn(Access.OK);
+            .andReturn(Access.OK)
+            .times(2);
+    EasyMock.expect(authorizer.authorize(authenticationResult, new Resource("baz", ResourceType.QUERY_CONTEXT), Action.WRITE))
+            .andReturn(Access.OK)
+            .times(2);
 
     EasyMock.expect(toolChestWarehouse.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest)
-            .once();
+            .times(2);
 
     replayAll();
 
     final QueryContextTest.LegacyContextQuery query = new QueryContextTest.LegacyContextQuery(ImmutableMap.of("foo", "bar", "baz", "qux"));
 
     AuthConfig authConfig = AuthConfig.newBuilder()
-        .setAuthorizeQueryContextParams(true)
-        .build();
+                                      .setAuthorizeQueryContextParams(true)
+                                      .build();
     QueryLifecycle lifecycle = createLifecycle(authConfig);
     lifecycle.initialize(query);
 
@@ -407,6 +437,10 @@ public class QueryLifecycleTest
     Assert.assertTrue(revisedContext.containsKey("baz"));
     Assert.assertTrue(revisedContext.containsKey("queryId"));
 
+    Assert.assertTrue(lifecycle.authorize(mockRequest()).isAllowed());
+
+    lifecycle = createLifecycle(authConfig);
+    lifecycle.initialize(query);
     Assert.assertTrue(lifecycle.authorize(mockRequest()).isAllowed());
   }
 

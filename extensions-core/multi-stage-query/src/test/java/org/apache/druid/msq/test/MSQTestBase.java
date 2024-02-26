@@ -158,8 +158,13 @@ import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.export.TestExportStorageConnector;
+import org.apache.druid.sql.calcite.export.TestExportStorageConnectorProvider;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
+import org.apache.druid.sql.calcite.external.HttpOperatorConversion;
+import org.apache.druid.sql.calcite.external.InlineOperatorConversion;
+import org.apache.druid.sql.calcite.external.LocalOperatorConversion;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -174,7 +179,9 @@ import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.sql.guice.SqlBindings;
+import org.apache.druid.storage.StorageConfig;
 import org.apache.druid.storage.StorageConnector;
+import org.apache.druid.storage.StorageConnectorModule;
 import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.storage.local.LocalFileStorageConnector;
 import org.apache.druid.timeline.DataSegment;
@@ -275,6 +282,15 @@ public class MSQTestBase extends BaseCalciteQueryTest
                   )
                   .build();
 
+  public static final Map<String, Object> FAIL_EMPTY_INSERT_ENABLED_MSQ_CONTEXT =
+      ImmutableMap.<String, Object>builder()
+                  .putAll(DEFAULT_MSQ_CONTEXT)
+                  .put(
+                      MultiStageQueryContext.CTX_FAIL_ON_EMPTY_INSERT,
+                      true
+                  )
+                  .build();
+
   public static final Map<String, Object>
       ROLLUP_CONTEXT_PARAMS = ImmutableMap.<String, Object>builder()
                                           .put(MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS, false)
@@ -297,7 +313,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   protected SqlStatementFactory sqlStatementFactory;
   protected AuthorizerMapper authorizerMapper;
   private IndexIO indexIO;
-
+  protected TestExportStorageConnectorProvider exportStorageConnectorProvider = new TestExportStorageConnectorProvider();
   // Contains the metadata of loaded segments
   protected List<ImmutableSegmentLoadInfo> loadedSegmentsMetadata = new ArrayList<>();
   // Mocks the return of data from data servers
@@ -338,6 +354,9 @@ public class MSQTestBase extends BaseCalciteQueryTest
             binder.install(new NestedDataModule());
             NestedDataModule.registerHandlersAndSerde();
             SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
+            SqlBindings.addOperatorConversion(binder, HttpOperatorConversion.class);
+            SqlBindings.addOperatorConversion(binder, InlineOperatorConversion.class);
+            SqlBindings.addOperatorConversion(binder, LocalOperatorConversion.class);
           }
 
           @Override
@@ -461,6 +480,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
             );
             binder.bind(Key.get(StorageConnector.class, MultiStageQuery.class))
                   .toProvider(() -> localFileStorageConnector);
+            binder.bind(StorageConfig.class).toInstance(new StorageConfig("/"));
           }
           catch (IOException e) {
             throw new ISE(e, "Unable to create setup storage connector");
@@ -499,11 +519,18 @@ public class MSQTestBase extends BaseCalciteQueryTest
         .build();
 
     objectMapper = setupObjectMapper(injector);
+    objectMapper.registerModule(
+        new SimpleModule(StorageConnector.class.getSimpleName())
+            .registerSubtypes(
+                new NamedType(TestExportStorageConnectorProvider.class, TestExportStorageConnector.TYPE_NAME)
+            )
+    );
+    objectMapper.registerModules(new StorageConnectorModule().getJacksonModules());
     objectMapper.registerModules(sqlModule.getJacksonModules());
 
     doReturn(mock(Request.class)).when(brokerClient).makeRequest(any(), anyString());
 
-    testTaskActionClient = Mockito.spy(new MSQTestTaskActionClient(objectMapper));
+    testTaskActionClient = Mockito.spy(new MSQTestTaskActionClient(objectMapper, injector));
     indexingServiceClient = new MSQTestOverlordServiceClient(
         objectMapper,
         injector,
@@ -520,7 +547,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
         new PlannerConfig(),
         viewManager,
         new NoopDruidSchemaManager(),
-        CalciteTests.TEST_AUTHORIZER_MAPPER
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
+        CatalogResolver.NULL_RESOLVER
     );
 
     final SqlEngine engine = new MSQTaskSqlEngine(
@@ -885,7 +913,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     public Builder setExpectedSegment(Set<SegmentId> expectedSegments)
     {
-      Preconditions.checkArgument(!expectedSegments.isEmpty(), "Segments cannot be empty");
+      Preconditions.checkArgument(expectedSegments != null, "Segments cannot be null");
       this.expectedSegments = expectedSegments;
       return asBuilder();
     }
@@ -1105,8 +1133,14 @@ public class MSQTestBase extends BaseCalciteQueryTest
     {
       Preconditions.checkArgument(sql != null, "sql cannot be null");
       Preconditions.checkArgument(queryContext != null, "queryContext cannot be null");
-      Preconditions.checkArgument(expectedDataSource != null, "dataSource cannot be null");
-      Preconditions.checkArgument(expectedRowSignature != null, "expectedRowSignature cannot be null");
+      Preconditions.checkArgument(
+          (expectedResultRows != null && expectedResultRows.isEmpty()) || expectedDataSource != null,
+          "dataSource cannot be null when expectedResultRows is non-empty"
+      );
+      Preconditions.checkArgument(
+          (expectedResultRows != null && expectedResultRows.isEmpty()) || expectedRowSignature != null,
+          "expectedRowSignature cannot be null when expectedResultRows is non-empty"
+      );
       Preconditions.checkArgument(
           expectedResultRows != null || expectedMSQFault != null || expectedMSQFaultClass != null,
           "at least one of expectedResultRows, expectedMSQFault or expectedMSQFaultClass should be set to non null"
@@ -1145,9 +1179,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
             segmentManager.getAllDataSegments().stream().map(s -> s.toString()).collect(
                 Collectors.joining("\n"))
         );
-        //check if segments are created
-        Assert.assertNotEquals(0, segmentManager.getAllDataSegments().size());
-
+        // check if segments are created
+        if (!expectedResultRows.isEmpty()) {
+          Assert.assertNotEquals(0, segmentManager.getAllDataSegments().size());
+        }
 
         String foundDataSource = null;
         SortedMap<SegmentId, List<List<Object>>> segmentIdVsOutputRowsMap = new TreeMap<>();
@@ -1212,8 +1247,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
         );
 
 
-        // assert data source name
-        Assert.assertEquals(expectedDataSource, foundDataSource);
+        // assert data source name when result rows is non-empty
+        if (!expectedResultRows.isEmpty()) {
+          Assert.assertEquals(expectedDataSource, foundDataSource);
+        }
         // assert spec
         if (expectedMSQSpec != null) {
           assertMSQSpec(expectedMSQSpec, foundSpec);
@@ -1244,7 +1281,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         }
 
         // Assert on the tombstone intervals
-        // Tombstone segments are only published, but since they donot have any data, they are not pushed by the
+        // Tombstone segments are only published, but since they do not have any data, they are not pushed by the
         // SegmentGeneratorFrameProcessorFactory. We can get the tombstone segment ids published by taking a set
         // difference of all the segments published with the segments that are created by the SegmentGeneratorFrameProcessorFactory
         if (!testTaskActionClient.getPublishedSegments().isEmpty()) {
@@ -1385,8 +1422,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
               );
               rows.addAll(new FrameChannelSequence(inputChannelFactory.openChannel(
                   finalStage.getId(),
-                  pageInformation.getWorker(),
-                  pageInformation.getPartition()
+                  pageInformation.getWorker() == null ? 0 : pageInformation.getWorker(),
+                  pageInformation.getPartition() == null ? 0 : pageInformation.getPartition()
               )).flatMap(frame -> SqlStatementResourceHelper.getResultSequence(
                   msqControllerTask,
                   finalStage,

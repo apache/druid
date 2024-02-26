@@ -151,6 +151,9 @@ public class RowSignatures
               case DOUBLE:
                 type = Calcites.createSqlArrayTypeWithNullability(typeFactory, SqlTypeName.DOUBLE, nullNumeric);
                 break;
+              case FLOAT:
+                type = Calcites.createSqlArrayTypeWithNullability(typeFactory, SqlTypeName.FLOAT, nullNumeric);
+                break;
               default:
                 throw new ISE("valueType[%s] not translatable", columnType);
             }

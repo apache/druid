@@ -29,13 +29,12 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>29.0.0-SNAPSHOT</version>
+    <version>30.0.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
   <properties>
     <schemarepo.version>0.1.3</schemarepo.version>
-    <confluent.version>5.5.12</confluent.version>
   </properties>
 
   <repositories>

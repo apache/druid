@@ -66,20 +66,23 @@ The following table describes how Druid maps SQL types onto native types when ru
 |ARRAY|ARRAY|`NULL`|Druid native array types work as SQL arrays, and multi-value strings can be converted to arrays. See [Arrays](#arrays) for more information.|
 |OTHER|COMPLEX|none|May represent various Druid column types such as hyperUnique, approxHistogram, etc.|
 
-<sup>*</sup> The default value is `NULL` for all types, except in legacy mode (`druid.generic.useDefaultValueForNull = true`) which initialize a default value. 
+<sup>*</sup> 
+The default value is <code>NULL</code> for all types, except in the deprecated legacy mode (<code>druid.generic.useDefaultValueForNull = true</code>) which initialize a default value. 
+<br /><br />
+For casts between two SQL types, the behavior depends on the runtime type:
 
-Casts between two SQL types with the same Druid runtime type have no effect other than the exceptions noted in the table.
+* Casts between two SQL types with the same Druid runtime type have no effect other than the exceptions noted in the table.
 
-Casts between two SQL types that have different Druid runtime types generate a runtime cast in Druid.
+* Casts between two SQL types that have different Druid runtime types generate a runtime cast in Druid.
 
 If a value cannot be cast to the target type, as in `CAST('foo' AS BIGINT)`, Druid a substitutes [NULL](#null-values).
-When `druid.generic.useDefaultValueForNull = true` (legacy mode), Druid instead substitutes a default value, including when NULL values cast to non-nullable types. For example, if `druid.generic.useDefaultValueForNull = true`, a null VARCHAR cast to BIGINT is converted to a zero.
+When `druid.generic.useDefaultValueForNull = true` (deprecated legacy mode), Druid instead substitutes a default value, including when NULL values cast to non-nullable types. For example, if `druid.generic.useDefaultValueForNull = true`, a null VARCHAR cast to BIGINT is converted to a zero.
 
 ## Arrays
 
-Druid supports [`ARRAY` types](arrays.md), which behave as standard SQL arrays, where results are grouped by matching entire arrays. The [`UNNEST` operator](./sql-array-functions.md#unn) can be used to perform operations on individual array elements, translating each element into a separate row. 
+Druid supports [`ARRAY` types](arrays.md), which behave as standard SQL arrays, where results are grouped by matching entire arrays. The [`UNNEST` operator](./sql.md#unnest) can be used to perform operations on individual array elements, translating each element into a separate row. 
 
-`ARRAY` typed columns can be stored in segments with class JSON based ingestion using the 'auto' typed dimension schema shared with [schema auto-discovery](../ingestion/schema-design.md#schema-auto-discovery-for-dimensions) to detect and ingest arrays as ARRAY typed columns. For [SQL based ingestion](../multi-stage-query/index.md), the query context parameter `arrayIngestMode` must be specified as `"array"` to ingest ARRAY types. In Druid 28, the default mode for this parameter is `"mvd"` for backwards compatibility, which instead can only handle `ARRAY<STRING>` which it stores in [multi-value string columns](#multi-value-strings). 
+`ARRAY` typed columns can be stored in segments with JSON-based ingestion using the 'auto' typed dimension schema shared with [schema auto-discovery](../ingestion/schema-design.md#schema-auto-discovery-for-dimensions) to detect and ingest arrays as ARRAY typed columns. For [SQL based ingestion](../multi-stage-query/index.md), the query context parameter `arrayIngestMode` must be specified as `"array"` to ingest ARRAY types. In Druid 28, the default mode for this parameter is `"mvd"` for backwards compatibility, which instead can only handle `ARRAY<STRING>` which it stores in [multi-value string columns](#multi-value-strings). 
 
 You can convert multi-value dimensions to standard SQL arrays explicitly with `MV_TO_ARRAY` or implicitly using [array functions](./sql-array-functions.md). You can also use the array functions to construct arrays from multiple columns.
 
@@ -146,13 +149,14 @@ affects both storage and querying, and must be set on all Druid service types to
 and query time. There is some overhead associated with the ability to handle NULLs; see
 the [segment internals](../design/segments.md#handling-null-values) documentation for more details.
 
-When `druid.generic.useDefaultValueForNull = true` (legacy mode), Druid treats NULLs and empty strings
+When `druid.generic.useDefaultValueForNull = true` (deprecated legacy mode), Druid treats NULLs and empty strings
 interchangeably, rather than according to the SQL standard. In this mode Druid SQL only has partial support for NULLs.
-For example, the expressions `col IS NULL` and `col = ''` are equivalent, and both evaluate to true if `col`
-contains an empty string. Similarly, the expression `COALESCE(col1, col2)` returns `col2` if `col1` is an empty
-string. While the `COUNT(*)` aggregator counts all rows, the `COUNT(expr)` aggregator counts the number of rows
-where `expr` is neither null nor the empty string. Numeric columns in this mode are not nullable; any null or missing
-values are treated as zeroes. This was the default prior to Druid 28.0.0.
+For example, the expressions `col IS NULL` and `col = ''` are equivalent, and both evaluate to true if `col` contains
+an empty string. Similarly, the expression `COALESCE(col1, col2)` returns `col2` if `col1` is an empty string. While
+the `COUNT(*)` aggregator counts all rows, the `COUNT(expr)` aggregator counts the number of rows where `expr` is
+neither null nor the empty string. Numeric columns in this mode are not nullable; any null or missing values are
+treated as zeroes. This was the default prior to Druid 28.0.0, but will be removed in a future release so that Druid
+always behaves in an SQL compatible manner.
 
 ## Boolean logic
 
@@ -164,6 +168,8 @@ and boolean expression evaluation. This behavior relies on three settings:
 *  [`druid.generic.useThreeValueLogicForNativeFilters`](../configuration/index.md#sql-compatible-null-handling) must be set to true (default), a runtime property which decouples three-value logic handling from `druid.generic.useDefaultValueForNull` and `druid.expressions.useStrictBooleans` for backwards compatibility with older versions of Druid that did not fully support SQL compatible null value logic handling
 
 If any of these settings is configured with a non-default value, Druid will use two-valued logic for non-expression based filters. Expression based filters are controlled independently with `druid.expressions.useStrictBooleans`, which if set to false Druid will use two-valued logic for expressions.
+
+These configurations have been deprecated and will be removed in a future release so that Druid always has SQL compliant behavior.
 
 ## Nested columns
 

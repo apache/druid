@@ -47,7 +47,12 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import org.apache.druid.query.aggregation.last.DoubleLastAggregatorFactory;
+import org.apache.druid.query.aggregation.last.FloatLastAggregatorFactory;
+import org.apache.druid.query.aggregation.last.LongLastAggregatorFactory;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
@@ -639,6 +644,57 @@ public class TestDataBuilder
         .buildMMappedIndex();
   }
 
+  public static QueryableIndex makeWikipediaIndexWithAggregation(File tmpDir)
+  {
+    final List<DimensionSchema> dimensions = Arrays.asList(
+        new StringDimensionSchema("channel"),
+        new StringDimensionSchema("cityName"),
+        new StringDimensionSchema("comment"),
+        new StringDimensionSchema("countryIsoCode"),
+        new StringDimensionSchema("countryName"),
+        new StringDimensionSchema("isAnonymous"),
+        new StringDimensionSchema("isMinor"),
+        new StringDimensionSchema("isNew"),
+        new StringDimensionSchema("isRobot"),
+        new StringDimensionSchema("isUnpatrolled"),
+        new StringDimensionSchema("metroCode"),
+        new StringDimensionSchema("namespace"),
+        new StringDimensionSchema("page"),
+        new StringDimensionSchema("regionIsoCode"),
+        new StringDimensionSchema("regionName"),
+        new StringDimensionSchema("user")
+    );
+
+    return IndexBuilder
+        .create()
+        .tmpDir(new File(tmpDir, "wikipedia1"))
+        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+        .schema(new IncrementalIndexSchema.Builder()
+                    .withRollup(true)
+                    .withTimestampSpec(new TimestampSpec("time", null, null))
+                    .withDimensionsSpec(new DimensionsSpec(dimensions))
+                    .withMetrics(
+                        new LongLastAggregatorFactory("long_last_added", "added", "__time"),
+                        new LongFirstAggregatorFactory("long_first_added", "added", "__time"),
+                        new FloatLastAggregatorFactory("float_last_added", "added", "__time"),
+                        new FloatLastAggregatorFactory("float_first_added", "added", "__time"),
+                        new DoubleLastAggregatorFactory("double_last_added", "added", "__time"),
+                        new DoubleFirstAggregatorFactory("double_first_added", "added", "__time")
+
+                    )
+                    .build()
+        )
+        .inputSource(
+            ResourceInputSource.of(
+                TestDataBuilder.class.getClassLoader(),
+                "calcite/tests/wikiticker-2015-09-12-sampled.json.gz"
+            )
+        )
+        .inputFormat(DEFAULT_JSON_INPUT_FORMAT)
+        .inputTmpDir(new File(tmpDir, "tmpWikipedia1"))
+        .buildMMappedIndex();
+  }
+
   public static SpecificSegmentsQuerySegmentWalker createMockWalker(
       final Injector injector,
       final QueryRunnerFactoryConglomerate conglomerate,
@@ -776,7 +832,8 @@ public class TestDataBuilder
         .rows(USER_VISIT_ROWS)
         .buildMMappedIndex();
 
-    return new SpecificSegmentsQuerySegmentWalker(
+    return SpecificSegmentsQuerySegmentWalker.createWalker(
+        injector,
         conglomerate,
         injector.getInstance(SegmentWrangler.class),
         joinableFactoryWrapper,
@@ -873,13 +930,22 @@ public class TestDataBuilder
         userVisitIndex
     ).add(
         DataSegment.builder()
-                   .dataSource("wikipedia")
+                   .dataSource(CalciteTests.WIKIPEDIA)
                    .interval(Intervals.of("2015-09-12/2015-09-13"))
                    .version("1")
                    .shardSpec(new NumberedShardSpec(0, 0))
                    .size(0)
                    .build(),
         makeWikipediaIndex(tmpDir)
+    ).add(
+      DataSegment.builder()
+                 .dataSource(CalciteTests.WIKIPEDIA_FIRST_LAST)
+                 .interval(Intervals.of("2015-09-12/2015-09-13"))
+                 .version("1")
+                 .shardSpec(new NumberedShardSpec(0, 0))
+                 .size(0)
+                 .build(),
+      makeWikipediaIndexWithAggregation(tmpDir)
     );
   }
 

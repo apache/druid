@@ -59,9 +59,11 @@ import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;
+import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -73,6 +75,7 @@ import org.apache.druid.server.security.Escalator;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.SqlStatementFactory;
+import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
@@ -83,6 +86,7 @@ import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.MetadataSegmentView;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
+import org.apache.druid.sql.calcite.util.testoperator.CalciteTestOperatorModule;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Duration;
 
@@ -112,11 +116,14 @@ public class CalciteTests
   public static final String DATASOURCE5 = "lotsocolumns";
   public static final String BROADCAST_DATASOURCE = "broadcast";
   public static final String FORBIDDEN_DATASOURCE = "forbiddenDatasource";
+  public static final String FORBIDDEN_DESTINATION = "forbiddenDestination";
   public static final String SOME_DATASOURCE = "some_datasource";
   public static final String SOME_DATSOURCE_ESCAPED = "some\\_datasource";
   public static final String SOMEXDATASOURCE = "somexdatasource";
   public static final String USERVISITDATASOURCE = "visits";
   public static final String DRUID_SCHEMA_NAME = "druid";
+  public static final String WIKIPEDIA = "wikipedia";
+  public static final String WIKIPEDIA_FIRST_LAST = "wikipedia_first_last";
 
   public static final String TEST_SUPERUSER_NAME = "testSuperuser";
   public static final AuthorizerMapper TEST_AUTHORIZER_MAPPER = new AuthorizerMapper(null)
@@ -144,6 +151,15 @@ public class CalciteTests
             }
           case ResourceType.QUERY_CONTEXT:
             return Access.OK;
+          case ResourceType.EXTERNAL:
+            if (Action.WRITE.equals(action)) {
+              if (FORBIDDEN_DESTINATION.equals(resource.getName())) {
+                return new Access(false);
+              } else {
+                return Access.OK;
+              }
+            }
+            return new Access(false);
           default:
             return new Access(false);
         }
@@ -230,7 +246,11 @@ public class CalciteTests
       null
   );
 
-  public static final Injector INJECTOR = new CalciteTestInjectorBuilder().build();
+  public static final Injector INJECTOR = QueryStackTests.defaultInjectorBuilder()
+      .addModule(new LookylooModule())
+      .addModule(new SqlAggregationModule())
+      .addModule(new CalciteTestOperatorModule())
+      .build();
 
   private CalciteTests()
   {

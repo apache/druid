@@ -25,13 +25,26 @@
       "tutorials/tutorial-sql-query-view",
       "tutorials/tutorial-unnest-arrays",
       "tutorials/tutorial-query-deep-storage",
-      "tutorials/tutorial-jupyter-index",
       "tutorials/tutorial-jdbc"
     ],
     "Design": [
       "design/architecture",
+      {
+        "type": "category",
+        "label": "Services",
+        "items": [
+          "design/coordinator",
+          "design/overlord",
+          "design/broker",
+          "design/router",
+          "design/historical",
+          "design/middlemanager",
+          "design/peons",
+          "design/indexer"
+        ]
+      },
+      "design/storage",
       "design/segments",
-      "design/processes",
       "design/deep-storage",
       "design/metadata-storage",
       "design/zookeeper"
@@ -66,10 +79,10 @@
         "type": "category",
         "label": "Streaming",
         "items": [
-          "development/extensions-core/kafka-ingestion",
-          "development/extensions-core/kafka-supervisor-reference",
-          "development/extensions-core/kafka-supervisor-operations",
-          "development/extensions-core/kinesis-ingestion"
+          "ingestion/streaming",
+          "ingestion/supervisor",
+          "ingestion/kafka-ingestion",
+          "ingestion/kinesis-ingestion"
         ]
       },
       {
@@ -82,6 +95,7 @@
       },
       "ingestion/ingestion-spec",
       "ingestion/schema-design",
+      "ingestion/concurrent-append-replace",
       "ingestion/faq"
     ],
     "Data management": [
@@ -125,6 +139,7 @@
         ]
       },
       "querying/querying",
+      "querying/query-processing",
       "querying/query-execution",
       "querying/troubleshooting",
       {
@@ -278,6 +293,10 @@
     ],
     "Misc": [
       "misc/papers-and-talks"
+    ],
+    "Release info": [
+      "release-info/release-notes",
+      "release-info/upgrade-notes"
     ]
-      }
+  }
 }

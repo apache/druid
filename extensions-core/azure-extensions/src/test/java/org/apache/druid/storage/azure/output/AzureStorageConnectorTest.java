@@ -19,9 +19,10 @@
 
 package org.apache.druid.storage.azure.output;
 
+import com.azure.core.http.HttpResponse;
+import com.azure.storage.blob.models.BlobStorageException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.microsoft.azure.storage.StorageException;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.azure.AzureStorage;
@@ -35,7 +36,6 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
@@ -64,7 +64,7 @@ public class AzureStorageConnectorTest
 
 
   @Test
-  public void testPathExistsSuccess() throws URISyntaxException, StorageException, IOException
+  public void testPathExistsSuccess() throws BlobStorageException, IOException
   {
     final Capture<String> bucket = Capture.newInstance();
     final Capture<String> path = Capture.newInstance();
@@ -79,7 +79,7 @@ public class AzureStorageConnectorTest
   }
 
   @Test
-  public void testPathExistsNotFound() throws URISyntaxException, StorageException, IOException
+  public void testPathExistsNotFound() throws BlobStorageException, IOException
   {
     final Capture<String> bucket = Capture.newInstance();
     final Capture<String> path = Capture.newInstance();
@@ -94,7 +94,7 @@ public class AzureStorageConnectorTest
   }
 
   @Test
-  public void testRead() throws URISyntaxException, StorageException, IOException
+  public void testRead() throws BlobStorageException, IOException
   {
     EasyMock.reset(azureStorage);
 
@@ -122,7 +122,7 @@ public class AzureStorageConnectorTest
   }
 
   @Test
-  public void testReadRange() throws URISyntaxException, StorageException, IOException
+  public void testReadRange() throws BlobStorageException, IOException
   {
     String data = "test";
 
@@ -151,16 +151,16 @@ public class AzureStorageConnectorTest
   }
 
   @Test
-  public void testDeleteSinglePath() throws URISyntaxException, StorageException, IOException
+  public void testDeleteSinglePath() throws BlobStorageException, IOException
   {
     EasyMock.reset(azureStorage);
     Capture<String> containerCapture = EasyMock.newCapture();
     Capture<Iterable<String>> pathsCapture = EasyMock.newCapture();
-    azureStorage.batchDeleteFiles(
+    EasyMock.expect(azureStorage.batchDeleteFiles(
         EasyMock.capture(containerCapture),
         EasyMock.capture(pathsCapture),
         EasyMock.anyInt()
-    );
+    )).andReturn(true);
     EasyMock.replay(azureStorage);
     storageConnector.deleteFile(TEST_FILE);
     Assert.assertEquals(CONTAINER, containerCapture.getValue());
@@ -169,12 +169,16 @@ public class AzureStorageConnectorTest
   }
 
   @Test
-  public void testDeleteMultiplePaths() throws URISyntaxException, StorageException, IOException
+  public void testDeleteMultiplePaths() throws BlobStorageException, IOException
   {
     EasyMock.reset(azureStorage);
     Capture<String> containerCapture = EasyMock.newCapture();
     Capture<Iterable<String>> pathsCapture = EasyMock.newCapture();
-    azureStorage.batchDeleteFiles(EasyMock.capture(containerCapture), EasyMock.capture(pathsCapture), EasyMock.anyInt());
+    EasyMock.expect(azureStorage.batchDeleteFiles(
+            EasyMock.capture(containerCapture),
+            EasyMock.capture(pathsCapture),
+            EasyMock.anyInt()
+    )).andReturn(true);
     EasyMock.replay(azureStorage);
     storageConnector.deleteFiles(ImmutableList.of(TEST_FILE + "_1.part", TEST_FILE + "_2.part"));
     Assert.assertEquals(CONTAINER, containerCapture.getValue());
@@ -189,7 +193,7 @@ public class AzureStorageConnectorTest
   }
 
   @Test
-  public void testListDir() throws URISyntaxException, StorageException, IOException
+  public void testListDir() throws BlobStorageException, IOException
   {
     EasyMock.reset(azureStorage);
     EasyMock.expect(azureStorage.listDir(EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyInt()))
@@ -197,6 +201,32 @@ public class AzureStorageConnectorTest
     EasyMock.replay(azureStorage);
     List<String> ret = Lists.newArrayList(storageConnector.listDir(""));
     Assert.assertEquals(ImmutableList.of("x/y/z/" + TEST_FILE, "p/q/r/" + TEST_FILE), ret);
+    EasyMock.reset(azureStorage);
+  }
+
+  @Test
+  public void test_deleteFile_blobStorageException()
+  {
+    EasyMock.reset(azureStorage);
+    HttpResponse mockHttpResponse = EasyMock.createMock(HttpResponse.class);
+    azureStorage.batchDeleteFiles(EasyMock.anyString(), EasyMock.anyObject(), EasyMock.anyInt());
+    EasyMock.expectLastCall().andThrow(new BlobStorageException("error", mockHttpResponse, null));
+    EasyMock.replay(azureStorage);
+    Assert.assertThrows(IOException.class, () -> storageConnector.deleteFile("file"));
+    EasyMock.verify(azureStorage);
+    EasyMock.reset(azureStorage);
+  }
+
+  @Test
+  public void test_deleteFiles_blobStorageException()
+  {
+    EasyMock.reset(azureStorage);
+    HttpResponse mockHttpResponse = EasyMock.createMock(HttpResponse.class);
+    azureStorage.batchDeleteFiles(EasyMock.anyString(), EasyMock.anyObject(), EasyMock.anyInt());
+    EasyMock.expectLastCall().andThrow(new BlobStorageException("error", mockHttpResponse, null));
+    EasyMock.replay(azureStorage);
+    Assert.assertThrows(IOException.class, () -> storageConnector.deleteFiles(ImmutableList.of()));
+    EasyMock.verify(azureStorage);
     EasyMock.reset(azureStorage);
   }
 }

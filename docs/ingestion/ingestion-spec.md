@@ -96,8 +96,8 @@ For more examples, refer to the documentation for each ingestion method.
 
 You can also load data visually, without the need to write an ingestion spec, using the "Load data" functionality
 available in Druid's [web console](../operations/web-console.md). Druid's visual data loader supports
-[Kafka](../development/extensions-core/kafka-ingestion.md),
-[Kinesis](../development/extensions-core/kinesis-ingestion.md), and
+[Kafka](../ingestion/kafka-ingestion.md),
+[Kinesis](../ingestion/kinesis-ingestion.md), and
 [native batch](native-batch.md) mode.
 
 ## `dataSchema`
@@ -149,7 +149,7 @@ An example `dataSchema` is:
 ### `dataSource`
 
 The `dataSource` is located in `dataSchema` → `dataSource` and is simply the name of the
-[datasource](../design/architecture.md#datasources-and-segments) that data will be written to. An example
+[datasource](../design/storage.md) that data will be written to. An example
 `dataSource` is:
 
 ```
@@ -304,7 +304,7 @@ An example `metricsSpec` is:
 The `granularitySpec` is located in `dataSchema` → `granularitySpec` and is responsible for configuring
 the following operations:
 
-1. Partitioning a datasource into [time chunks](../design/architecture.md#datasources-and-segments) (via `segmentGranularity`).
+1. Partitioning a datasource into [time chunks](../design/storage.md) (via `segmentGranularity`).
 2. Truncating the timestamp, if desired (via `queryGranularity`).
 3. Specifying which time chunks of segments should be created, for batch ingestion (via `intervals`).
 4. Specifying whether ingestion-time [rollup](./rollup.md) should be used or not (via `rollup`).
@@ -329,7 +329,7 @@ A `granularitySpec` can have the following components:
 | Field | Description | Default |
 |-------|-------------|---------|
 | type |`uniform`| `uniform` |
-| segmentGranularity | [Time chunking](../design/architecture.md#datasources-and-segments) granularity for this datasource. Multiple segments can be created per time chunk. For example, when set to `day`, the events of the same day fall into the same time chunk which can be optionally further partitioned into multiple segments based on other configurations and input size. Any [granularity](../querying/granularities.md) can be provided here. Note that all segments in the same time chunk should have the same segment granularity.<br /><br />Avoid `WEEK` granularity for data partitioning because weeks don't align neatly with months and years, making it difficult to change partitioning by coarser granularity. Instead, opt for other partitioning options such as `DAY` or `MONTH`, which offer more flexibility.| `day` |
+| segmentGranularity | [Time chunking](../design/storage.md) granularity for this datasource. Multiple segments can be created per time chunk. For example, when set to `day`, the events of the same day fall into the same time chunk which can be optionally further partitioned into multiple segments based on other configurations and input size. Any [granularity](../querying/granularities.md) can be provided here. Note that all segments in the same time chunk should have the same segment granularity.<br /><br />Avoid `WEEK` granularity for data partitioning because weeks don't align neatly with months and years, making it difficult to change partitioning by coarser granularity. Instead, opt for other partitioning options such as `DAY` or `MONTH`, which offer more flexibility.| `day` |
 | queryGranularity | The resolution of timestamp storage within each segment. This must be equal to, or finer, than `segmentGranularity`. This will be the finest granularity that you can query at and still receive sensible results, but note that you can still query at anything coarser than this granularity. E.g., a value of `minute` will mean that records will be stored at minutely granularity, and can be sensibly queried at any multiple of minutes (including minutely, 5-minutely, hourly, etc).<br /><br />Any [granularity](../querying/granularities.md) can be provided here. Use `none` to store timestamps as-is, without any truncation. Note that `rollup` will be applied if it is set even when the `queryGranularity` is set to `none`. | `none` |
 | rollup | Whether to use ingestion-time [rollup](./rollup.md) or not. Note that rollup is still effective even when `queryGranularity` is set to `none`. Your data will be rolled up if they have the exactly same timestamp. | `true` |
 | intervals | A list of intervals defining time chunks for segments. Specify interval values using ISO8601 format. For example, `["2021-12-06T21:27:10+00:00/2021-12-07T00:00:00+00:00"]`. If you omit the time, the time defaults to "00:00:00".<br /><br />Druid breaks the list up and rounds off the list values based on the `segmentGranularity`.<br /><br />If `null` or not provided, batch ingestion tasks generally determine which time chunks to output based on the timestamps found in the input data.<br /><br />If specified, batch ingestion tasks may be able to skip a determining-partitions phase, which can result in faster ingestion. Batch ingestion tasks may also be able to request all their locks up-front instead of one by one. Batch ingestion tasks throw away any records with timestamps outside of the specified intervals.<br /><br />Ignored for any form of streaming ingestion. | `null` |
@@ -503,7 +503,7 @@ is:
 |skipBytesInMemoryOverheadCheck|The calculation of maxBytesInMemory takes into account overhead objects created during ingestion and each intermediate persist. Setting this to true can exclude the bytes of these overhead objects from maxBytesInMemory check.|false|
 |indexSpec|Defines segment storage format options to use at indexing time.|See [`indexSpec`](#indexspec) for more information.|
 |indexSpecForIntermediatePersists|Defines segment storage format options to use at indexing time for intermediate persisted temporary segments.|See [`indexSpec`](#indexspec) for more information.|
-|Other properties|Each ingestion method has its own list of additional tuning properties. See the documentation for each method for a full list: [Kafka indexing service](../development/extensions-core/kafka-supervisor-reference.md#supervisor-tuning-configuration), [Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md#supervisor-tuning-configuration), [Native batch](native-batch.md#tuningconfig), and [Hadoop-based](hadoop.md#tuningconfig).||
+|Other properties|Each ingestion method has its own list of additional tuning properties. See the documentation for each method for a full list: [Kafka indexing service](../ingestion/kafka-ingestion.md#tuning-configuration), [Kinesis indexing service](../ingestion/kinesis-ingestion.md#tuning-configuration), [Native batch](native-batch.md#tuningconfig), and [Hadoop-based](hadoop.md#tuningconfig).||
 
 ### `indexSpec`
 

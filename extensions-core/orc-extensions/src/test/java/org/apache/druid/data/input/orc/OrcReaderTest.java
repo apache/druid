@@ -314,8 +314,11 @@ public class OrcReaderTest extends InitializedNullHandlingTest
         //deviation of [7,8,9] is 1/3, stddev is sqrt(1/3), approximately 0.8165
         Assert.assertEquals(0.8165, Double.parseDouble(Iterables.getOnlyElement(row.getDimension("stddev"))), 0.0001);
 
-        //append is not supported
-        Assert.assertEquals(Collections.emptyList(), row.getDimension("append"));
+        // we do not support json-path append function for ORC format (see https://github.com/apache/druid/pull/11722)
+        Exception exception = Assert.assertThrows(UnsupportedOperationException.class, () -> {
+          row.getDimension("append");
+        });
+        Assert.assertEquals("Unused", exception.getMessage());
       }
       Assert.assertEquals(1, actualRowCount);
     }
@@ -333,9 +336,9 @@ public class OrcReaderTest extends InitializedNullHandlingTest
         new TimestampSpec("ts", "millis", null),
         new DimensionsSpec(
             ImmutableList.of(
-                new AutoTypeColumnSchema("middle"),
-                new AutoTypeColumnSchema("list"),
-                new AutoTypeColumnSchema("map")
+                new AutoTypeColumnSchema("middle", null),
+                new AutoTypeColumnSchema("list", null),
+                new AutoTypeColumnSchema("map", null)
             )
         ),
         inputFormat,
@@ -542,8 +545,8 @@ public class OrcReaderTest extends InitializedNullHandlingTest
         new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(
             ImmutableList.of(
-                new AutoTypeColumnSchema("a"),
-                new AutoTypeColumnSchema("b")
+                new AutoTypeColumnSchema("a", null),
+                new AutoTypeColumnSchema("b", null)
             )
         ),
         inputFormat,
@@ -608,11 +611,11 @@ public class OrcReaderTest extends InitializedNullHandlingTest
         new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(
             ImmutableList.of(
-                new AutoTypeColumnSchema("a"),
-                new AutoTypeColumnSchema("b"),
-                new AutoTypeColumnSchema("c"),
-                new AutoTypeColumnSchema("d"),
-                new AutoTypeColumnSchema("t_d_0")
+                new AutoTypeColumnSchema("a", null),
+                new AutoTypeColumnSchema("b", null),
+                new AutoTypeColumnSchema("c", null),
+                new AutoTypeColumnSchema("d", null),
+                new AutoTypeColumnSchema("t_d_0", null)
             )
         ),
         inputFormat,

@@ -1204,7 +1204,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
             convertToIndexTuningConfig(getIngestionSchema().getTuningConfig())
         ),
         getContext(),
-        getIngestionSchema().getTuningConfig().getMaxAllowedLockCount()
+        getIngestionSchema().getTuningConfig().getMaxAllowedLockCount(),
+        // Don't run cleanup in the IndexTask since we are wrapping it in the ParallelIndexSupervisorTask
+        false
     );
 
     if (currentSubTaskHolder.setTask(sequentialIndexTask)
@@ -1238,7 +1240,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
                 rowStatsAndUnparseableEvents.lhs,
                 taskStatus.getErrorMsg(),
                 segmentAvailabilityConfirmed,
-                segmentAvailabilityWaitTimeMs
+                segmentAvailabilityWaitTimeMs,
+                Collections.emptyMap()
             )
         )
     );
@@ -1270,7 +1273,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         tuningConfig.getMaxParseExceptions(),
         tuningConfig.getMaxSavedParseExceptions(),
         tuningConfig.getMaxColumnsToMerge(),
-        tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis()
+        tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis(),
+        tuningConfig.getNumPersistThreads()
     );
   }
 

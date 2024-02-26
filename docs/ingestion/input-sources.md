@@ -309,6 +309,112 @@ Google Cloud Storage object:
 The Azure input source reads objects directly from Azure Blob store or Azure Data Lake sources. You can
 specify objects as a list of file URI strings or prefixes. You can split the Azure input source for use with [Parallel task](./native-batch.md) indexing and each worker task reads one chunk of the split data.
 
+
+:::info
+The  old `azure` schema is deprecated. Update your specs to use the `azureStorage` schema described below instead.
+:::
+
+Sample specs:
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "azureStorage",
+        "objectGlob": "**.json",
+        "uris": ["azureStorage://storageAccount/container/prefix1/file.json", "azureStorage://storageAccount/container/prefix2/file2.json"]
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      ...
+    },
+...
+```
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "azureStorage",
+        "objectGlob": "**.parquet",
+        "prefixes": ["azureStorage://storageAccount/container/prefix1/", "azureStorage://storageAccount/container/prefix2/"]
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      ...
+    },
+...
+```
+
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "azureStorage",
+        "objectGlob": "**.json",
+        "objects": [
+          { "bucket": "storageAccount", "path": "container/prefix1/file1.json"},
+          { "bucket": "storageAccount", "path": "container/prefix2/file2.json"}
+        ],
+        "properties": {
+          "sharedAccessStorageToken": "?sv=...<storage token secret>...",
+        }
+      },
+      "inputFormat": {
+        "type": "json"
+      },
+      ...
+    },
+...
+```
+
+|Property|Description|Default|Required|
+|--------|-----------|-------|---------|
+|type|Set the value to `azureStorage`.|None|yes|
+|uris|JSON array of URIs where the Azure objects to be ingested are located. Use this format: `azureStorage://STORAGE_ACCOUNT/CONTAINER/PATH_TO_FILE`|None|One of the following must be set:`uris`, `prefixes`, or `objects`.|
+|prefixes|JSON array of URI prefixes for the locations of Azure objects to ingest. Use this format`azureStorage://STORAGE_ACCOUNT/CONTAINER/PREFIX`. Empty objects starting with any of the given prefixes are skipped.|None|One of the following must be set:`uris`, `prefixes`, or `objects`.|
+|objects|JSON array of Azure objects to ingest.|None|One of the following must be set:`uris`, `prefixes`, or `objects`.|
+|objectGlob|A glob for the object part of the Azure URI. In the URI `azureStorage://foo/bar/file.json`, the glob is applied to `bar/file.json`.<br /><br />The glob must match the entire object part, not just the filename. For example, the glob `*.json` does not match `azureStorage://foo/bar/file.json` because the object part is `bar/file.json`, and the`*` does not match the slash. To match all objects ending in `.json`, use `**.json` instead.<br /><br />For more information, refer to the documentation for [`FileSystem#getPathMatcher`](https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem.html#getPathMatcher-java.lang.String-).|None|no|
+|systemFields|JSON array of system fields to return as part of input rows. Possible values: `__file_uri` (Azure blob URI starting with `azureStorage://`), `__file_bucket` (Azure bucket), and `__file_path` (Azure object path).|None|no|
+|properties|Properties object for overriding the default Azure configuration. See below for more information.|None|No (defaults will be used if not given)
+
+Note that the Azure input source skips all empty objects only when `prefixes` is specified.
+
+The `objects` property can one of the following:
+
+|Property|Description|Default|Required|
+|--------|-----------|-------|---------|
+|bucket|Name of the Azure Blob Storage or Azure Data Lake storage account|None|yes|
+|path|The container and path where data is located.|None|yes|
+
+
+The `properties` property can be one of the following:
+
+- `sharedAccessStorageToken`
+- `key` 
+- `appRegistrationClientId`, `appRegistrationClientSecret`, and `tenantId` 
+- empty
+
+
+|Property|Description|Default|Required|
+|--------|-----------|-------|---------|
+|sharedAccessStorageToken|The plain text string of this Azure Blob Storage Shared Access Token|None|No|
+|key|The root key of Azure Blob Storage Account|None|no|
+|appRegistrationClientId|The client ID of the Azure App registration to authenticate as|None|No|
+|appRegistrationClientSecret|The client secret of the Azure App registration to authenticate as|None|Yes if `appRegistrationClientId` is provided|
+|tenantId|The tenant ID of the Azure App registration to authenticate as|None|Yes if `appRegistrationClientId` is provided|
+
+<details closed>
+  <summary>Show the deprecated 'azure' input source</summary>
+
+Note that the deprecated `azure` input source doesn't support specifying which storage account to ingest from. We recommend using the `azureStorage` instead.
+
 Sample specs:
 
 ```json
@@ -372,7 +478,7 @@ Sample specs:
 |uris|JSON array of URIs where the Azure objects to be ingested are located, in the form `azure://<container>/<path-to-file>`|None|`uris` or `prefixes` or `objects` must be set|
 |prefixes|JSON array of URI prefixes for the locations of Azure objects to ingest, in the form `azure://<container>/<prefix>`. Empty objects starting with one of the given prefixes are skipped.|None|`uris` or `prefixes` or `objects` must be set|
 |objects|JSON array of Azure objects to ingest.|None|`uris` or `prefixes` or `objects` must be set|
-|objectGlob|A glob for the object part of the S3 URI. In the URI `s3://foo/bar/file.json`, the glob is applied to `bar/file.json`.<br /><br />The glob must match the entire object part, not just the filename. For example, the glob `*.json` does not match `s3://foo/bar/file.json`, because the object part is `bar/file.json`, and the`*` does not match the slash. To match all objects ending in `.json`, use `**.json` instead.<br /><br />For more information, refer to the documentation for [`FileSystem#getPathMatcher`](https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem.html#getPathMatcher-java.lang.String-).|None|no|
+|objectGlob|A glob for the object part of the Azure URI. In the URI `azure://foo/bar/file.json`, the glob is applied to `bar/file.json`.<br /><br />The glob must match the entire object part, not just the filename. For example, the glob `*.json` does not match `azure://foo/bar/file.json`, because the object part is `bar/file.json`, and the`*` does not match the slash. To match all objects ending in `.json`, use `**.json` instead.<br /><br />For more information, refer to the documentation for [`FileSystem#getPathMatcher`](https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem.html#getPathMatcher-java.lang.String-).|None|no|
 |systemFields|JSON array of system fields to return as part of input rows. Possible values: `__file_uri` (Azure blob URI starting with `azure://`), `__file_bucket` (Azure bucket), and `__file_path` (Azure object path).|None|no|
 
 Note that the Azure input source skips all empty objects only when `prefixes` is specified.
@@ -383,6 +489,8 @@ The `objects` property is:
 |--------|-----------|-------|---------|
 |bucket|Name of the Azure Blob Storage or Azure Data Lake container|None|yes|
 |path|The path where data is located.|None|yes|
+
+</details>
 
 ## HDFS input source
 
@@ -715,6 +823,13 @@ rolled-up datasource `wikipedia_rollup` by grouping on hour, "countryName", and 
  to `true` to enable a compatibility mode where the timestampSpec is ignored.
 :::
 
+The [secondary partitioning method](native-batch.md#partitionsspec) determines the requisite number of concurrent worker tasks that run in parallel to complete ingestion with the Combining input source.
+Set this value in `maxNumConcurrentSubTasks` in `tuningConfig` based on the secondary partitioning method:
+- `range` or `single_dim` partitioning: greater than or equal to 1
+- `hashed` or `dynamic` partitioning: greater than or equal to 2
+
+For more information on the `maxNumConcurrentSubTasks` field, see [Implementation considerations](native-batch.md#implementation-considerations).
+
 ## SQL input source
 
 The SQL input source is used to read data directly from RDBMS.
@@ -817,7 +932,7 @@ The following is an example of a Combining input source spec:
 ## Iceberg input source
 
 :::info
- To use the Iceberg input source, add the `druid-iceberg-extensions` extension.
+To use the Iceberg input source, load the extension [`druid-iceberg-extensions`](../development/extensions-contrib/iceberg.md).
 :::
 
 You use the Iceberg input source to read data stored in the Iceberg table format. For a given table, the input source scans up to the latest Iceberg snapshot from the configured Hive catalog. Druid ingests the underlying live data files using the existing input source formats.
@@ -858,7 +973,8 @@ The following is a sample spec for a HDFS warehouse source:
         },
         "warehouseSource": {
             "type": "hdfs"
-        }
+        },
+        "snapshotTime": "2023-06-01T00:00:00.000Z",
       },
       "inputFormat": {
         "type": "parquet"
@@ -881,7 +997,7 @@ The following is a sample spec for a S3 warehouse source:
             "namespace": "iceberg_namespace",
             "icebergCatalog": {
               "type": "hive",
-              "warehousePath": "hdfs://warehouse/path",
+              "warehousePath": "s3://warehouse/path",
               "catalogUri": "thrift://hive-metastore.x.com:8970",
               "catalogProperties": {
                 "hive.metastore.connect.retries": "1",
@@ -937,12 +1053,13 @@ The following is a sample spec for a S3 warehouse source:
 |--------|-----------|---------|
 |type|Set the value to `iceberg`.|yes|
 |tableName|The Iceberg table name configured in the catalog.|yes|
-|namespace|The Iceberg namespace associated with the table|yes|
-|icebergFilter|The JSON Object that filters data files within a snapshot|no|
-|icebergCatalog|The JSON Object used to define the catalog that manages the configured Iceberg table|yes|
-|warehouseSource|The JSON Object that defines the native input source for reading the data files from the warehouse|yes|
+|namespace|The Iceberg namespace associated with the table.|yes|
+|icebergFilter|The JSON Object that filters data files within a snapshot.|no|
+|icebergCatalog|The JSON Object used to define the catalog that manages the configured Iceberg table.|yes|
+|warehouseSource|The JSON Object that defines the native input source for reading the data files from the warehouse.|yes|
+|snapshotTime|Timestamp in ISO8601 DateTime format that will be used to fetch the most recent snapshot as of this time.|no|
 
-###Catalog Object
+### Catalog Object
 
 The catalog object supports `local` and `hive` catalog types.
 
@@ -1004,11 +1121,42 @@ This input source provides the following filters: `and`, `equals`, `interval`, a
 |type|Set this value to `not`.|yes|
 |filter|The iceberg filter on which logical NOT is applied|yes|
 
+`range` Filter:
 
+|Property|Description|Default|Required|
+|--------|-----------|-------|--------|
+|type|Set this value to `range`.|None|yes|
+|filterColumn|The column name from the iceberg table schema based on which range filtering needs to happen.|None|yes|
+|lower|Lower bound value to match.|None|no. At least one of `lower` or `upper` must not be null.|
+|upper|Upper bound value to match. |None|no. At least one of `lower` or `upper` must not be null.|
+|lowerOpen|Boolean indicating if lower bound is open in the interval of values defined by the range (">" instead of ">="). |false|no|
+|upperOpen|Boolean indicating if upper bound is open on the interval of values defined by range ("<" instead of "<="). |false|no|
 
-The [secondary partitioning method](native-batch.md#partitionsspec) determines the requisite number of concurrent worker tasks that run in parallel to complete ingestion with the Combining input source.
-Set this value in `maxNumConcurrentSubTasks` in `tuningConfig` based on the secondary partitioning method:
-- `range` or `single_dim` partitioning: greater than or equal to 1
-- `hashed` or `dynamic` partitioning: greater than or equal to 2
+## Delta Lake input source
 
-For more information on the `maxNumConcurrentSubTasks` field, see [Implementation considerations](native-batch.md#implementation-considerations).
+:::info
+To use the Delta Lake input source, load the extension [`druid-deltalake-extensions`](../development/extensions-contrib/delta-lake.md).
+:::
+
+You can use the Delta input source to read data stored in a Delta Lake table. For a given table, the input source scans
+the latest snapshot from the configured table. Druid ingests the underlying delta files from the table.
+
+The following is a sample spec:
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "delta",
+        "tablePath": "/delta-table/directory"
+      },
+    }
+}
+```
+
+| Property|Description|Required|
+|---------|-----------|--------|
+| type|Set this value to `delta`.|yes|
+| tablePath|The location of the Delta table.|yes|
+

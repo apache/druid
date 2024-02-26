@@ -125,10 +125,11 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     this.sortBasedJoin = sortBasedJoin;
   }
 
+  @SqlTestFrameworkConfig(minTopNThreshold = 1)
   @Test
   public void testInnerJoinWithLimitAndAlias()
   {
-    minTopNThreshold = 1;
+
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, false);
     testQuery(
@@ -183,12 +184,12 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   }
 
 
+  // Adjust topN threshold, so that the topN engine keeps only 1 slot for aggregates, which should be enough
+  // to compute the query with limit 1.
+  @SqlTestFrameworkConfig(minTopNThreshold = 1)
   @Test
   public void testExactTopNOnInnerJoinWithLimit()
   {
-    // Adjust topN threshold, so that the topN engine keeps only 1 slot for aggregates, which should be enough
-    // to compute the query with limit 1.
-    minTopNThreshold = 1;
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, false);
     testQuery(
@@ -497,7 +498,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
 
     testQuery(
-        "SELECT CAST(__time AS BIGINT), m1, ANY_VALUE(dim3, 100) FROM foo WHERE (TIME_FLOOR(__time, 'PT1H'), m1) IN\n"
+        "SELECT CAST(__time AS BIGINT), m1, ANY_VALUE(dim3, 100, true) FROM foo WHERE (TIME_FLOOR(__time, 'PT1H'), m1) IN\n"
         + "   (\n"
         + "     SELECT TIME_FLOOR(__time, 'PT1H') AS t1, MIN(m1) AS t2 FROM foo WHERE dim3 = 'b'\n"
         + "         AND __time BETWEEN '1994-04-29 00:00:00' AND '2020-01-11 00:00:00' GROUP BY 1\n"
@@ -532,7 +533,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         )
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(aggregators(
-                            new StringAnyAggregatorFactory("a0", "dim3", 100)
+                            new StringAnyAggregatorFactory("a0", "dim3", 100, true)
                         ))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -598,7 +599,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         )
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(aggregators(
-                            new StringAnyAggregatorFactory("a0", "dim3", 100)
+                            new StringAnyAggregatorFactory("a0", "dim3", 100, true)
                         ))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -606,6 +607,72 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{946684800000L, 1.0f, "[a, b]"},
             new Object[]{946771200000L, 2.0f, "[b, c]"}
+        )
+    );
+  }
+
+  @Test
+  public void testJoinOnGroupByInsteadOfTimeseriesWithFloorOnTimeWithNoAggregateMultipleValues()
+  {
+    // Cannot vectorize JOIN operator.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT CAST(__time AS BIGINT), m1, ANY_VALUE(dim3, 100, false) FROM foo WHERE (CAST(TIME_FLOOR(__time, 'PT1H') AS BIGINT) + 1, m1) IN\n"
+        + "   (\n"
+        + "     SELECT CAST(TIME_FLOOR(__time, 'PT1H') AS BIGINT) + 1 AS t1, MIN(m1) AS t2 FROM foo WHERE dim3 = 'b'\n"
+        + "         AND __time BETWEEN '1994-04-29 00:00:00' AND '2020-01-11 00:00:00' GROUP BY 1\n"
+        + "    )\n"
+        + "GROUP BY 1, 2\n",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            join(
+                                new TableDataSource(CalciteTests.DATASOURCE1),
+                                new QueryDataSource(
+                                    GroupByQuery.builder()
+                                                .setDataSource(CalciteTests.DATASOURCE1)
+                                                .setInterval(querySegmentSpec(Intervals.of(
+                                                    "1994-04-29/2020-01-11T00:00:00.001Z")))
+                                                .setVirtualColumns(
+                                                    expressionVirtualColumn(
+                                                        "v0",
+                                                        "(timestamp_floor(\"__time\",'PT1H',null,'UTC') + 1)",
+                                                        ColumnType.LONG
+                                                    )
+                                                )
+                                                .setDimFilter(equality("dim3", "b", ColumnType.STRING))
+                                                .setGranularity(Granularities.ALL)
+                                                .setDimensions(dimensions(new DefaultDimensionSpec(
+                                                    "v0",
+                                                    "d0",
+                                                    ColumnType.LONG
+                                                )))
+                                                .setAggregatorSpecs(aggregators(
+                                                    new FloatMinAggregatorFactory("a0", "m1")
+                                                ))
+                                                .setContext(QUERY_CONTEXT_DEFAULT)
+                                                .build()),
+                                "j0.",
+                                "(((timestamp_floor(\"__time\",'PT1H',null,'UTC') + 1) == \"j0.d0\") && (\"m1\" == \"j0.a0\"))",
+                                JoinType.INNER
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setDimensions(
+                            new DefaultDimensionSpec("__time", "d0", ColumnType.LONG),
+                            new DefaultDimensionSpec("m1", "d1", ColumnType.FLOAT)
+                        )
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(aggregators(
+                            new StringAnyAggregatorFactory("a0", "dim3", 100, false)
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{946684800000L, 1.0f, "a"}, // picks up first from [a, b]
+            new Object[]{946771200000L, 2.0f, "b"} // picks up first from [b, c]
         )
     );
   }
@@ -690,6 +757,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
   public void testFilterAndGroupByLookupUsingJoinOperatorBackwards(Map<String, Object> queryContext)
@@ -723,7 +791,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 ),
                                 "j0.",
                                 equalsCondition(makeColumnExpression("k"), makeColumnExpression("j0.dim2")),
-                                JoinType.RIGHT
+                                NullHandling.sqlCompatible() ? JoinType.INNER : JoinType.RIGHT
                             )
                         )
                         .setInterval(querySegmentSpec(Filtration.eternity()))
@@ -740,7 +808,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
             new Object[]{"xabc", 1L}
         )
         : ImmutableList.of(
-            new Object[]{null, 5L},
             new Object[]{"xabc", 1L}
         )
     );
@@ -768,7 +835,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 new LookupDataSource("lookyloo"),
                                 "j0.",
                                 equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("j0.k")),
-                                JoinType.LEFT
+                                NullHandling.sqlCompatible() ? JoinType.INNER : JoinType.LEFT
                             )
                         )
                         .setInterval(querySegmentSpec(Filtration.eternity()))
@@ -784,8 +851,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
             new Object[]{NULL_STRING, 3L},
             new Object[]{"xabc", 1L}
         )
-        :
-        ImmutableList.of(
+        : ImmutableList.of(
             new Object[]{"xabc", 1L}
         )
     );
@@ -821,7 +887,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 new LookupDataSource("lookyloo"),
                                 "j0.",
                                 equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("j0.k")),
-                                JoinType.LEFT
+                                NullHandling.sqlCompatible() ? JoinType.INNER : JoinType.LEFT
                             )
                         )
                         .setInterval(querySegmentSpec(Filtration.eternity()))
@@ -1482,7 +1548,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                         new SubstringDimExtractionFn(0, 1)
                                     )
                                 )
-                                .setAggregatorSpecs(new StringAnyAggregatorFactory("a0", "v", 10))
+                                .setAggregatorSpecs(new StringAnyAggregatorFactory("a0", "v", 10, true))
                                 .build()
                         ),
                         "j0.",
@@ -1496,8 +1562,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{"", "a", "xa", "xa"},
-            new Object[]{"1", "a", "xa", "xa"}
+            new Object[]{"", "a", "xabc", "xabc"},
+            new Object[]{"1", "a", "xabc", "xabc"}
         )
     );
   }
@@ -1965,17 +2031,25 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                   .build()
                           ),
                           "_j0.",
-                          "1",
+                          NullHandling.sqlCompatible() ?
+                          equalsCondition(
+                              DruidExpression.fromExpression("CAST(\"j0.k\", 'LONG')"),
+                              DruidExpression.ofColumn(ColumnType.LONG, "_j0.cnt")
+                          )
+                                                       : "1",
                           JoinType.INNER
                       )
                   )
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(new CountAggregatorFactory("a0"))
-                  .filters(and(
-                      expressionFilter("(\"cnt\" == CAST(\"j0.k\", 'LONG'))"),
-                      expressionFilter("(CAST(\"j0.k\", 'LONG') == \"_j0.cnt\")")
-                  ))
+                  .filters(
+                      NullHandling.sqlCompatible() ?
+                      expressionFilter("(\"cnt\" == CAST(\"j0.k\", 'LONG'))")
+                                                   : and(
+                                                       expressionFilter("(\"cnt\" == CAST(\"j0.k\", 'LONG'))"),
+                                                       expressionFilter("(CAST(\"j0.k\", 'LONG') == \"_j0.cnt\")")
+                                                   ))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
@@ -2443,12 +2517,13 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"abc", "abc", "xabc"},
+            new Object[]{NULL_STRING, "6", "x6"},
             new Object[]{NULL_STRING, "a", "xa"},
-            new Object[]{NULL_STRING, "nosuchkey", "mysteryvalue"},
-            new Object[]{NULL_STRING, "6", "x6"}
+            new Object[]{NULL_STRING, "nosuchkey", "mysteryvalue"}
         )
     );
   }
+
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
   public void testSelectOnLookupUsingFullJoinOperator(Map<String, Object> queryContext)
@@ -2490,9 +2565,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
             new Object[]{"1", 4f, 1L, NULL_STRING, NULL_STRING},
             new Object[]{"def", 5f, 1L, NULL_STRING, NULL_STRING},
             new Object[]{"abc", 6f, 1L, "abc", "xabc"},
+            new Object[]{NULL_STRING, NULL_FLOAT, NULL_LONG, "6", "x6"},
             new Object[]{NULL_STRING, NULL_FLOAT, NULL_LONG, "a", "xa"},
-            new Object[]{NULL_STRING, NULL_FLOAT, NULL_LONG, "nosuchkey", "mysteryvalue"},
-            new Object[]{NULL_STRING, NULL_FLOAT, NULL_LONG, "6", "x6"}
+            new Object[]{NULL_STRING, NULL_FLOAT, NULL_LONG, "nosuchkey", "mysteryvalue"}
         )
     );
   }
@@ -2835,6 +2910,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
   public void testLeftJoinOnTwoInlineDataSourcesWithTimeFilter_withLeftDirectAccess(Map<String, Object> queryContext)
@@ -4560,6 +4636,113 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
+  public void testJoinWithNonEquiCondition(Map<String, Object> queryContext)
+  {
+    // Native JOIN operator cannot handle the condition, so a SQL JOIN with greater-than is translated into a
+    // cross join with a filter.
+    cannotVectorize();
+
+    // We don't handle non-equi join conditions for non-sql compatible mode.
+    Assume.assumeFalse(NullHandling.replaceWithDefault());
+
+    testQuery(
+        "SELECT x.m1, y.m1 FROM foo x INNER JOIN foo y ON x.m1 > y.m1",
+        queryContext,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        new TableDataSource(CalciteTests.DATASOURCE1),
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .dataSource(CalciteTests.DATASOURCE1)
+                                .intervals(querySegmentSpec(Filtration.eternity()))
+                                .columns("m1")
+                                .context(queryContext)
+                                .build()
+                        ),
+                        "j0.",
+                        "1",
+                        JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .filters(expressionFilter("(\"m1\" > \"j0.m1\")"))
+                .columns("j0.m1", "m1")
+                .context(queryContext)
+                .build()
+        ),
+        sortIfSortBased(
+            ImmutableList.of(
+                new Object[]{2.0f, 1.0f},
+                new Object[]{3.0f, 1.0f},
+                new Object[]{3.0f, 2.0f},
+                new Object[]{4.0f, 1.0f},
+                new Object[]{4.0f, 2.0f},
+                new Object[]{4.0f, 3.0f},
+                new Object[]{5.0f, 1.0f},
+                new Object[]{5.0f, 2.0f},
+                new Object[]{5.0f, 3.0f},
+                new Object[]{5.0f, 4.0f},
+                new Object[]{6.0f, 1.0f},
+                new Object[]{6.0f, 2.0f},
+                new Object[]{6.0f, 3.0f},
+                new Object[]{6.0f, 4.0f},
+                new Object[]{6.0f, 5.0f}
+            ),
+            1,
+            0
+        )
+    );
+  }
+
+  @Test
+  @Parameters(source = QueryContextForJoinProvider.class)
+  public void testJoinWithEquiAndNonEquiCondition(Map<String, Object> queryContext)
+  {
+    // Native JOIN operator cannot handle the condition, so a SQL JOIN with greater-than is translated into a
+    // cross join with a filter.
+    cannotVectorize();
+
+    // We don't handle non-equi join conditions for non-sql compatible mode.
+    Assume.assumeFalse(NullHandling.replaceWithDefault());
+
+    testQuery(
+        "SELECT x.m1, y.m1 FROM foo x INNER JOIN foo y ON x.m1 = y.m1 AND x.m1 + y.m1 = 6.0",
+        queryContext,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        new TableDataSource(CalciteTests.DATASOURCE1),
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .dataSource(CalciteTests.DATASOURCE1)
+                                .intervals(querySegmentSpec(Filtration.eternity()))
+                                .columns("m1")
+                                .context(queryContext)
+                                .build()
+                        ),
+                        "j0.",
+                        equalsCondition(makeColumnExpression("m1"), makeColumnExpression("j0.m1")),
+                        JoinType.INNER
+                    )
+                )
+                .virtualColumns(expressionVirtualColumn("v0", "(\"m1\" + \"j0.m1\")", ColumnType.DOUBLE))
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .filters(
+                    equality("v0", 6.0, ColumnType.DOUBLE)
+                )
+                .columns("j0.m1", "m1")
+                .context(queryContext)
+                .build()
+        ),
+        ImmutableList.of(new Object[]{3.0f, 3.0f})
+    );
+  }
+
+  @Test
+  @Parameters(source = QueryContextForJoinProvider.class)
   public void testUsingSubqueryAsPartOfAndFilter(Map<String, Object> queryContext)
   {
     // Fully removing the join allows this query to vectorize.
@@ -5154,36 +5337,28 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         .columns("j0.m1", "m1")
         .filters(or(
             and(
+                equality("dim2", "D", ColumnType.STRING),
+                in("dim1", ImmutableList.of("A", "C"), null)
+            ),
+            and(
+                equality("dim2", "C", ColumnType.STRING),
+                in("dim1", ImmutableList.of("A", "B"), null)
+            ),
+            and(
+                equality("dim2", "E", ColumnType.STRING),
+                in("dim1", ImmutableList.of("C", "H"), null)
+            ),
+            and(
+                equality("dim2", "Q", ColumnType.STRING),
+                in("dim1", ImmutableList.of("P", "S"), null)
+            ),
+            and(
                 equality("dim1", "A", ColumnType.STRING),
                 equality("dim2", "B", ColumnType.STRING)
             ),
             and(
-                equality("dim1", "C", ColumnType.STRING),
-                equality("dim2", "D", ColumnType.STRING)
-            ),
-            and(
-                equality("dim1", "A", ColumnType.STRING),
-                equality("dim2", "C", ColumnType.STRING)
-            ),
-            and(
-                equality("dim1", "C", ColumnType.STRING),
-                equality("dim2", "E", ColumnType.STRING)
-            ),
-            and(
                 equality("dim1", "D", ColumnType.STRING),
                 equality("dim2", "H", ColumnType.STRING)
-            ),
-            and(
-                equality("dim1", "A", ColumnType.STRING),
-                equality("dim2", "D", ColumnType.STRING)
-            ),
-            and(
-                equality("dim1", "B", ColumnType.STRING),
-                equality("dim2", "C", ColumnType.STRING)
-            ),
-            and(
-                equality("dim1", "H", ColumnType.STRING),
-                equality("dim2", "E", ColumnType.STRING)
             ),
             and(
                 equality("dim1", "I", ColumnType.STRING),
@@ -5206,10 +5381,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 equality("dim2", "S", ColumnType.STRING)
             ),
             and(
-                equality("dim1", "S", ColumnType.STRING),
-                equality("dim2", "Q", ColumnType.STRING)
-            ),
-            and(
                 equality("dim1", "X", ColumnType.STRING),
                 equality("dim2", "Y", ColumnType.STRING)
             ),
@@ -5220,10 +5391,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
             and(
                 equality("dim1", "U", ColumnType.STRING),
                 equality("dim2", "Z", ColumnType.STRING)
-            ),
-            and(
-                equality("dim1", "P", ColumnType.STRING),
-                equality("dim2", "Q", ColumnType.STRING)
             ),
             and(
                 equality("dim1", "X", ColumnType.STRING),
@@ -5277,36 +5444,28 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         .columns("j0.m1", "m1")
         .filters(or(
             and(
+                equality("dim2", "D", ColumnType.STRING),
+                in("dim1", ImmutableList.of("A", "C"), null)
+            ),
+            and(
+                equality("dim2", "C", ColumnType.STRING),
+                in("dim1", ImmutableList.of("A", "B"), null)
+            ),
+            and(
+                equality("dim2", "E", ColumnType.STRING),
+                in("dim1", ImmutableList.of("C", "H"), null)
+            ),
+            and(
+                equality("dim2", "Q", ColumnType.STRING),
+                in("dim1", ImmutableList.of("P", "S"), null)
+            ),
+            and(
                 equality("dim1", "1", ColumnType.STRING),
                 equality("dim2", "a", ColumnType.STRING)
             ),
             and(
-                equality("dim1", "C", ColumnType.STRING),
-                equality("dim2", "D", ColumnType.STRING)
-            ),
-            and(
-                equality("dim1", "A", ColumnType.STRING),
-                equality("dim2", "C", ColumnType.STRING)
-            ),
-            and(
-                equality("dim1", "C", ColumnType.STRING),
-                equality("dim2", "E", ColumnType.STRING)
-            ),
-            and(
                 equality("dim1", "D", ColumnType.STRING),
                 equality("dim2", "H", ColumnType.STRING)
-            ),
-            and(
-                equality("dim1", "A", ColumnType.STRING),
-                equality("dim2", "D", ColumnType.STRING)
-            ),
-            and(
-                equality("dim1", "B", ColumnType.STRING),
-                equality("dim2", "C", ColumnType.STRING)
-            ),
-            and(
-                equality("dim1", "H", ColumnType.STRING),
-                equality("dim2", "E", ColumnType.STRING)
             ),
             and(
                 equality("dim1", "I", ColumnType.STRING),
@@ -5329,10 +5488,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 equality("dim2", "S", ColumnType.STRING)
             ),
             and(
-                equality("dim1", "S", ColumnType.STRING),
-                equality("dim2", "Q", ColumnType.STRING)
-            ),
-            and(
                 equality("dim1", "X", ColumnType.STRING),
                 equality("dim2", "Y", ColumnType.STRING)
             ),
@@ -5343,10 +5498,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
             and(
                 equality("dim1", "U", ColumnType.STRING),
                 equality("dim2", "Z", ColumnType.STRING)
-            ),
-            and(
-                equality("dim1", "P", ColumnType.STRING),
-                equality("dim2", "Q", ColumnType.STRING)
             ),
             and(
                 equality("dim1", "X", ColumnType.STRING),
@@ -5625,10 +5776,10 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @SqlTestFrameworkConfig(minTopNThreshold = 1)
   @Test
   public void testJoinWithAliasAndOrderByNoGroupBy()
   {
-    minTopNThreshold = 1;
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, false);
     testQuery(
@@ -6284,6 +6435,87 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
             new Object[]{"[\"a\",\"b\"]", "a", "a", 1.0f},
             new Object[]{"[\"a\",\"b\"]", "a", "a", 1.0f},
             new Object[]{"[\"a\",\"b\"]", "a", "a", 1.0f}
+        )
+    );
+  }
+
+  @Test
+  public void testLeftJoinsOnTwoWithTables()
+  {
+    Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    testQuery(
+        "with raw1 as (\n"
+        + "  select\n"
+        + "  dim1,\n"
+        + "  count(*)/2 as c\n"
+        + "  from foo\n"
+        + "  GROUP BY 1\n"
+        + "),\n"
+        + " raw2 as (\n"
+        + "  select \n"
+        + "  dim1,\n"
+        + "  count(*)/2 as c\n"
+        + "  from foo\n"
+        + "  GROUP BY 1\n"
+        + ")\n"
+        + "select\n"
+        + "  r1.c-r2.c\n"
+        + "from raw1 r1\n"
+        + "left join raw2 r2\n"
+        + "on r1.dim1 = r2.dim1",
+        context,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDataSource(new TableDataSource(CalciteTests.DATASOURCE1))
+                                        .setDimensions(new DefaultDimensionSpec("dim1", "d0", ColumnType.STRING))
+                                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                                        .setPostAggregatorSpecs(expressionPostAgg(
+                                            "p0",
+                                            "(\"a0\" / 2)",
+                                            ColumnType.LONG
+                                        ))
+                                        .setContext(context)
+                                        .build()
+                        ),
+                        new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDataSource(new TableDataSource(CalciteTests.DATASOURCE1))
+                                        .setDimensions(new DefaultDimensionSpec("dim1", "d0", ColumnType.STRING))
+                                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                                        .setPostAggregatorSpecs(expressionPostAgg(
+                                            "p0",
+                                            "(\"a0\" / 2)",
+                                            ColumnType.LONG
+                                        ))
+                                        .setContext(context)
+                                        .build()
+                        ),
+                        "j0.",
+                        "(\"d0\" == \"j0.d0\")",
+                        JoinType.LEFT
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("v0")
+                .virtualColumns(expressionVirtualColumn("v0", "(\"p0\" - \"j0.p0\")", ColumnType.LONG))
+                .context(context)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L}
         )
     );
   }

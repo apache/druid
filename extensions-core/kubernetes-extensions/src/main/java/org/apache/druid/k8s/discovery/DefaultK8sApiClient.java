@@ -65,7 +65,7 @@ public class DefaultK8sApiClient implements K8sApiClient
   public void patchPod(String podName, String podNamespace, String jsonPatchStr)
   {
     try {
-      coreV1Api.patchNamespacedPod(podName, podNamespace, new V1Patch(jsonPatchStr), "true", null, null, null);
+      coreV1Api.patchNamespacedPod(podName, podNamespace, new V1Patch(jsonPatchStr), "true", null, null, null, null);
     }
     catch (ApiException ex) {
       throw new RE(ex, "Failed to patch pod[%s/%s], code[%d], error[%s].", podNamespace, podName, ex.getCode(), ex.getResponseBody());
@@ -80,7 +80,7 @@ public class DefaultK8sApiClient implements K8sApiClient
   )
   {
     try {
-      V1PodList podList = coreV1Api.listNamespacedPod(podNamespace, null, null, null, null, labelSelector, 0, null, null, null, null);
+      V1PodList podList = coreV1Api.listNamespacedPod(podNamespace, null, null, null, null, labelSelector, 0, null, null, null, null, null);
       Preconditions.checkState(podList != null, "WTH: NULL podList");
 
       Map<String, DiscoveryDruidNode> allNodes = new HashMap();
@@ -114,7 +114,7 @@ public class DefaultK8sApiClient implements K8sApiClient
           Watch.createWatch(
               realK8sClient,
               coreV1Api.listNamespacedPodCall(namespace, null, true, null, null,
-                                              labelSelector, null, lastKnownResourceVersion, null, 0, true, null
+                                              labelSelector, null, lastKnownResourceVersion, null, null, 0, true, null
               ),
               new TypeReference<Watch.Response<V1Pod>>()
               {
@@ -131,7 +131,7 @@ public class DefaultK8sApiClient implements K8sApiClient
           try {
             while (watch.hasNext()) {
               Watch.Response<V1Pod> item = watch.next();
-              if (item != null && item.type != null) {
+              if (item != null && item.type != null && !item.type.equals(WatchResult.BOOKMARK)) {
                 DiscoveryDruidNodeAndResourceVersion result = null;
                 if (item.object != null) {
                   result = new DiscoveryDruidNodeAndResourceVersion(
@@ -149,6 +149,11 @@ public class DefaultK8sApiClient implements K8sApiClient
                     item.type,
                     result
                 );
+                return true;
+              } else if (item != null && item.type != null && item.type.equals(WatchResult.BOOKMARK)) {
+                // Events with type BOOKMARK will only contain resourceVersion and no metadata. See
+                // Kubernetes API documentation for details.
+                LOGGER.debug("BOOKMARK event fired, no nothing, only update resourceVersion");
                 return true;
               } else {
                 LOGGER.error("WTH! item or item.type is NULL");
