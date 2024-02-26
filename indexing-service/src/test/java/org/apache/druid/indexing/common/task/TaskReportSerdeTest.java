@@ -19,9 +19,12 @@
 
 package org.apache.druid.indexing.common.task;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.io.Files;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
@@ -34,6 +37,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 public class TaskReportSerdeTest
@@ -47,6 +51,7 @@ public class TaskReportSerdeTest
   {
     TestUtils testUtils = new TestUtils();
     jsonMapper = testUtils.getTestObjectMapper();
+    jsonMapper.registerSubtypes(ExceptionalTaskReport.class);
   }
 
   @Test
@@ -64,7 +69,8 @@ public class TaskReportSerdeTest
             ),
             "an error message",
             true,
-            1000L
+            1000L,
+            ImmutableMap.of("PartitionA", 5000L)
         )
     );
     String report1serialized = jsonMapper.writeValueAsString(report1);
@@ -86,5 +92,48 @@ public class TaskReportSerdeTest
         new TypeReference<Map<String, TaskReport>>() {}
     );
     Assert.assertEquals(reportMap1, reportMap2);
+  }
+
+  @Test
+  public void testExceptionWhileWritingReport() throws Exception
+  {
+    final File reportFile = temporaryFolder.newFile();
+    final SingleFileTaskReportFileWriter writer = new SingleFileTaskReportFileWriter(reportFile);
+    writer.setObjectMapper(jsonMapper);
+    writer.write("theTask", ImmutableMap.of("report", new ExceptionalTaskReport()));
+
+    // Read the file, ensure it's incomplete and not valid JSON. This allows callers to determine the report was
+    // not complete when written.
+    Assert.assertEquals(
+        "{\"report\":{\"type\":\"exceptional\"",
+        Files.asCharSource(reportFile, StandardCharsets.UTF_8).read()
+    );
+  }
+
+  /**
+   * Task report that throws an exception while being serialized.
+   */
+  @JsonTypeName("exceptional")
+  private static class ExceptionalTaskReport implements TaskReport
+  {
+    @Override
+    @JsonProperty
+    public String getTaskId()
+    {
+      throw new UnsupportedOperationException("cannot serialize task ID");
+    }
+
+    @Override
+    public String getReportKey()
+    {
+      return "report";
+    }
+
+    @Override
+    @JsonProperty
+    public Object getPayload()
+    {
+      throw new UnsupportedOperationException("cannot serialize payload");
+    }
   }
 }
