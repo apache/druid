@@ -202,6 +202,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   private volatile Pair<Map<String, Object>, Map<String, Object>> indexGenerateRowStats;
 
   private IngestionState ingestionState;
+  private Map<String, TaskReport> completionReports;
 
 
   @JsonCreator
@@ -290,6 +291,20 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
                                .map(i -> new ResourceAction(new Resource(i, ResourceType.EXTERNAL), Action.READ))
                                .collect(Collectors.toSet()) :
            ImmutableSet.of();
+  }
+
+  @Nullable
+  @JsonIgnore
+  public Map<String, TaskReport> getCompletionReports()
+  {
+    return completionReports;
+  }
+
+  @Nullable
+  @JsonIgnore
+  public String getBaseSubtaskSpecName()
+  {
+    return baseSubtaskSpecName;
   }
 
   @JsonProperty("spec")
@@ -651,10 +666,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       }
       taskStatus = TaskStatus.failure(getId(), errorMessage);
     }
-    toolbox.getTaskReportFileWriter().write(
-        getId(),
-        getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted)
-    );
+    completionReports = getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted);
     return taskStatus;
   }
 
@@ -821,10 +833,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       taskStatus = TaskStatus.failure(getId(), errMsg);
     }
 
-    toolbox.getTaskReportFileWriter().write(
-        getId(),
-        getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted)
-    );
+    completionReports = getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted);
     return taskStatus;
   }
 
@@ -921,10 +930,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       taskStatus = TaskStatus.failure(getId(), errMsg);
     }
 
-    toolbox.getTaskReportFileWriter().write(
-        getId(),
-        getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted)
-    );
+    completionReports = getTaskCompletionReports(taskStatus, segmentAvailabilityConfirmationCompleted);
     return taskStatus;
   }
 
