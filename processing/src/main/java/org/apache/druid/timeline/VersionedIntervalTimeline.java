@@ -458,11 +458,13 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
       if (entry != null) {
         final int majorVersionCompare = versionComparator.compare(version, entry.getVersion());
         if (majorVersionCompare == 0) {
-          for (PartitionChunk<ObjectType> chunk : entry.partitionHolder) {
-            if (chunk.getObject().overshadows(object)) {
-              return true;
+          //if (entry.getMaxMinorVersion() > object.getMinorVersion()) {
+            for (PartitionChunk<ObjectType> chunk : entry.partitionHolder) {
+              if (chunk.getObject().overshadows(object)) {
+                return true;
+              }
             }
-          }
+          //}
           return false;
         } else {
           return majorVersionCompare < 0;
@@ -792,12 +794,19 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
     private final Interval trueInterval;
     private final VersionType version;
     private final PartitionHolder<ObjectType> partitionHolder;
+    private short maxMinorVersion = -1;
+
 
     TimelineEntry(Interval trueInterval, VersionType version, PartitionHolder<ObjectType> partitionHolder)
     {
       this.trueInterval = Preconditions.checkNotNull(trueInterval);
       this.version = Preconditions.checkNotNull(version);
       this.partitionHolder = Preconditions.checkNotNull(partitionHolder);
+      partitionHolder.payloads().forEach(payload -> {
+        if (payload.getMinorVersion() > maxMinorVersion) {
+          maxMinorVersion = payload.getMinorVersion();
+        }
+      });
     }
 
     Interval getTrueInterval()
@@ -813,6 +822,11 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
     public PartitionHolder<ObjectType> getPartitionHolder()
     {
       return partitionHolder;
+    }
+
+    public short getMaxMinorVersion()
+    {
+      return maxMinorVersion;
     }
 
     @Override

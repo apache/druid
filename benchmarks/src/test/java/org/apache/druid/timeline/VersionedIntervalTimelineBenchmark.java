@@ -54,8 +54,8 @@ import java.util.concurrent.ThreadLocalRandom;
 
 @State(Scope.Benchmark)
 @Fork(value = 1, jvmArgsAppend = {"-XX:+UseG1GC"})
-@Warmup(iterations = 10)
-@Measurement(iterations = 10)
+@Warmup(iterations = 2)
+@Measurement(iterations = 3)
 @BenchmarkMode({Mode.Throughput})
 public class VersionedIntervalTimelineBenchmark
 {
@@ -64,7 +64,7 @@ public class VersionedIntervalTimelineBenchmark
   private static final double NEW_ROOT_GEN_SEGMENTS_RATIO_AFTER_COMPACTION = 0.1;
   private static final double COMPACTED_SEGMENTS_RATIO_TO_INITIAL_SEGMENTS = 0.5;
 
-  @Param({"10", "100", "1000"})
+  @Param({"1000", "10000"})
   private int numInitialRootGenSegmentsPerInterval;
 
   @Param({"1", "2"})
@@ -73,7 +73,7 @@ public class VersionedIntervalTimelineBenchmark
   @Param({"false", "true"})
   private boolean useSegmentLock;
 
-  @Param({"MONTH", "DAY"})
+  @Param({"MONTH"})
   private GranularityType segmentGranularity;
 
   private List<Interval> intervals;
@@ -203,7 +203,6 @@ public class VersionedIntervalTimelineBenchmark
     }
   }
 
-  @Benchmark
   public void benchAdd(Blackhole blackhole)
   {
     final SegmentTimeline timeline = SegmentTimeline.forSegments(segments);
@@ -216,7 +215,6 @@ public class VersionedIntervalTimelineBenchmark
     }
   }
 
-  @Benchmark
   public void benchRemove(Blackhole blackhole)
   {
     final List<DataSegment> segmentsCopy = new ArrayList<>(segments);
@@ -234,7 +232,6 @@ public class VersionedIntervalTimelineBenchmark
     }
   }
 
-  @Benchmark
   public void benchLookup(Blackhole blackhole)
   {
     final int intervalIndex = ThreadLocalRandom.current().nextInt(intervals.size() - 2);
@@ -245,7 +242,6 @@ public class VersionedIntervalTimelineBenchmark
     blackhole.consume(timeline.lookup(queryInterval));
   }
 
-  @Benchmark
   public void benchIsOvershadowed(Blackhole blackhole)
   {
     final DataSegment segment = segments.get(ThreadLocalRandom.current().nextInt(segments.size()));
@@ -253,6 +249,19 @@ public class VersionedIntervalTimelineBenchmark
   }
 
   @Benchmark
+  public void benchIsOvershadowedTotal(Blackhole blackhole)
+  {
+    blackhole.consume(isOvershadowedTotal());
+  }
+
+  private boolean isOvershadowedTotal()
+  {
+    for (DataSegment segment : segments) {
+      timeline.isOvershadowed(segment.getInterval(), segment.getVersion(), segment);
+    }
+    return true;
+  }
+
   public void benchFindFullyOvershadowed(Blackhole blackhole)
   {
     blackhole.consume(timeline.findFullyOvershadowed());
