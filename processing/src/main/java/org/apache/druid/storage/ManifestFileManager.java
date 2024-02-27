@@ -17,12 +17,10 @@
  * under the License.
  */
 
-package org.apache.druid.msq.exec;
+package org.apache.druid.storage;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.storage.ExportStorageProvider;
-import org.apache.druid.storage.StorageConnector;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -35,8 +33,8 @@ import java.util.Set;
  */
 public class ManifestFileManager
 {
+  public static final String MANIFEST_FILE = "_symlink_format_manifest/manifest";
   private static final Logger log = new Logger(ManifestFileManager.class);
-  private static final String MANIFEST_FILE = "_symlink_format_manifest/manifest";
   private final ExportStorageProvider exportStorageProvider;
 
   public ManifestFileManager(final ExportStorageProvider exportStorageProvider)

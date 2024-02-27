@@ -34,7 +34,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.calcite.export.TestExportModule;
-import org.apache.druid.sql.calcite.export.TestExportStorageConnector;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.destination.ExportDestination;
@@ -84,10 +83,10 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   public void testReplaceIntoExtern()
   {
     testIngestionQuery()
-        .sql(StringUtils.format("REPLACE INTO EXTERN(%s(basePath => 'export')) "
+        .sql(StringUtils.format("REPLACE INTO EXTERN(%s(exportPath => 'export')) "
                                 + "AS CSV "
                                 + "OVERWRITE ALL "
-                                + "SELECT dim2 FROM foo", TestExportStorageConnector.TYPE_NAME))
+                                + "SELECT dim2 FROM foo", LocalFileExportStorageProvider.TYPE_NAME))
         .expectQuery(
             Druids.newScanQueryBuilder()
                   .dataSource(
@@ -99,7 +98,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
                   .legacy(false)
                   .build()
         )
-        .expectResources(dataSourceRead("foo"), externalWrite(TestExportStorageConnector.TYPE_NAME))
+        .expectResources(dataSourceRead("foo"), externalWrite(LocalFileExportStorageProvider.TYPE_NAME))
         .expectTarget(ExportDestination.TYPE_KEY, RowSignature.builder().add("dim2", ColumnType.STRING).build())
         .verify();
   }
@@ -108,10 +107,10 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   public void testReplaceIntoExternShouldThrowUnsupportedException()
   {
     testIngestionQuery()
-        .sql(StringUtils.format("REPLACE INTO EXTERN(%s(basePath => 'export')) "
+        .sql(StringUtils.format("REPLACE INTO EXTERN(%s(exportPath => 'export')) "
                                 + "AS CSV "
                                 + "OVERWRITE ALL "
-                                + "SELECT dim2 FROM foo", TestExportStorageConnector.TYPE_NAME))
+                                + "SELECT dim2 FROM foo", LocalFileExportStorageProvider.TYPE_NAME))
         .expectValidationError(
             CoreMatchers.allOf(
                 CoreMatchers.instanceOf(DruidException.class),
@@ -145,10 +144,10 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   public void testExportWithPartitionedBy()
   {
     testIngestionQuery()
-        .sql(StringUtils.format("INSERT INTO EXTERN(%s()) "
+        .sql(StringUtils.format("INSERT INTO EXTERN(%s(exportPath=>'/tmp/export')) "
                                 + "AS CSV "
                                 + "SELECT dim2 FROM foo "
-                                + "PARTITIONED BY ALL", TestExportStorageConnector.TYPE_NAME))
+                                + "PARTITIONED BY ALL", LocalFileStorageConnectorProvider.TYPE_NAME))
         .expectValidationError(
             DruidException.class,
             "Export statements do not support a PARTITIONED BY or CLUSTERED BY clause."
@@ -160,9 +159,9 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   public void testInsertIntoExtern()
   {
     testIngestionQuery()
-        .sql(StringUtils.format("INSERT INTO EXTERN(%s()) "
+        .sql(StringUtils.format("INSERT INTO EXTERN(%s(exportPath=>'/tmp/export')) "
                                 + "AS CSV "
-                                + "SELECT dim2 FROM foo", TestExportStorageConnector.TYPE_NAME))
+                                + "SELECT dim2 FROM foo", LocalFileStorageConnectorProvider.TYPE_NAME))
         .expectQuery(
             Druids.newScanQueryBuilder()
                   .dataSource(
@@ -174,7 +173,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
                   .legacy(false)
                   .build()
         )
-        .expectResources(dataSourceRead("foo"), externalWrite(TestExportStorageConnector.TYPE_NAME))
+        .expectResources(dataSourceRead("foo"), externalWrite(LocalFileStorageConnectorProvider.TYPE_NAME))
         .expectTarget(ExportDestination.TYPE_KEY, RowSignature.builder().add("dim2", ColumnType.STRING).build())
         .verify();
   }
@@ -184,9 +183,9 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   public void testInsertIntoExternParameterized()
   {
     testIngestionQuery()
-        .sql(StringUtils.format("INSERT INTO EXTERN(%s()) "
+        .sql(StringUtils.format("INSERT INTO EXTERN(%s(exportPath=>'/tmp/export')) "
                                 + "AS CSV "
-                                + "SELECT dim2 FROM foo WHERE dim2=?", TestExportStorageConnector.TYPE_NAME))
+                                + "SELECT dim2 FROM foo WHERE dim2=?", LocalFileStorageConnectorProvider.TYPE_NAME))
         .parameters(Collections.singletonList(new SqlParameter(SqlType.VARCHAR, "val")))
         .expectQuery(
             Druids.newScanQueryBuilder()
@@ -200,7 +199,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
                 .legacy(false)
                 .build()
         )
-        .expectResources(dataSourceRead("foo"), externalWrite(TestExportStorageConnector.TYPE_NAME))
+        .expectResources(dataSourceRead("foo"), externalWrite(LocalFileStorageConnectorProvider.TYPE_NAME))
         .expectTarget(ExportDestination.TYPE_KEY, RowSignature.builder().add("dim2", ColumnType.STRING).build())
         .verify();
   }
@@ -211,9 +210,9 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   public void testReplaceIntoExternParameterized()
   {
     testIngestionQuery()
-        .sql(StringUtils.format("REPLACE INTO EXTERN(%s()) "
+        .sql(StringUtils.format("REPLACE INTO EXTERN(%s(exportPath=>'/tmp/export')) "
                                 + "AS CSV "
-                                + "SELECT dim2 FROM foo WHERE dim2=?", TestExportStorageConnector.TYPE_NAME))
+                                + "SELECT dim2 FROM foo WHERE dim2=?", LocalFileStorageConnectorProvider.TYPE_NAME))
         .parameters(Collections.singletonList(new SqlParameter(SqlType.VARCHAR, "val")))
         .expectQuery(
             Druids.newScanQueryBuilder()
@@ -227,7 +226,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
                 .legacy(false)
                 .build()
         )
-        .expectResources(dataSourceRead("foo"), externalWrite(TestExportStorageConnector.TYPE_NAME))
+        .expectResources(dataSourceRead("foo"), externalWrite(LocalFileStorageConnectorProvider.TYPE_NAME))
         .expectTarget(ExportDestination.TYPE_KEY, RowSignature.builder().add("dim2", ColumnType.STRING).build())
         .verify();
   }
@@ -263,7 +262,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   public void testWithForbiddenDestination()
   {
     testIngestionQuery()
-        .sql(StringUtils.format("insert into extern(%s()) as csv select  __time, dim1 from foo", CalciteTests.FORBIDDEN_DESTINATION))
+        .sql(StringUtils.format("insert into extern(%s(exportPath=>'/tmp/export')) as csv select  __time, dim1 from foo", CalciteTests.FORBIDDEN_DESTINATION))
         .expectValidationError(ForbiddenException.class)
         .verify();
   }

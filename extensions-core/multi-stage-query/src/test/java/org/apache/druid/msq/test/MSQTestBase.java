@@ -158,8 +158,6 @@ import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
-import org.apache.druid.sql.calcite.export.TestExportStorageConnector;
-import org.apache.druid.sql.calcite.export.TestExportStorageConnectorProvider;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
 import org.apache.druid.sql.calcite.external.HttpOperatorConversion;
@@ -313,7 +311,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
   protected SqlStatementFactory sqlStatementFactory;
   protected AuthorizerMapper authorizerMapper;
   private IndexIO indexIO;
-  protected TestExportStorageConnectorProvider exportStorageConnectorProvider = new TestExportStorageConnectorProvider();
   // Contains the metadata of loaded segments
   protected List<ImmutableSegmentLoadInfo> loadedSegmentsMetadata = new ArrayList<>();
   // Mocks the return of data from data servers
@@ -519,12 +516,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
         .build();
 
     objectMapper = setupObjectMapper(injector);
-    objectMapper.registerModule(
-        new SimpleModule(StorageConnector.class.getSimpleName())
-            .registerSubtypes(
-                new NamedType(TestExportStorageConnectorProvider.class, TestExportStorageConnector.TYPE_NAME)
-            )
-    );
     objectMapper.registerModules(new StorageConnectorModule().getJacksonModules());
     objectMapper.registerModules(sqlModule.getJacksonModules());
 

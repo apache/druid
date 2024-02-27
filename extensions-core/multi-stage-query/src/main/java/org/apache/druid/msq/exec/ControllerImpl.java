@@ -204,6 +204,7 @@ import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.storage.ExportStorageProvider;
+import org.apache.druid.storage.ManifestFileManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;

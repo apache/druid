@@ -98,6 +98,8 @@ For more information, see [Read external data with EXTERN](concepts.md#read-exte
 `EXTERN` can be used to specify a destination where you want to export data to.
 This variation of EXTERN requires one argument, the details of the destination as specified below.
 This variation additionally requires an `AS` clause to specify the format of the exported rows.
+While exporting data, a manifest file is also created at the destination listing the files which were created as
+part of the export.
 
 Keep the following in mind when using EXTERN to export rows:
 - Only INSERT statements are supported.
