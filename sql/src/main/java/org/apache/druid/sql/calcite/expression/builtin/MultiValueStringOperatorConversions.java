@@ -156,7 +156,7 @@ public class MultiValueStringOperatorConversions
                 )
             )
         )
-        .returnTypeInference(ReturnTypes.BOOLEAN)
+        .returnTypeInference(ReturnTypes.BOOLEAN_NULLABLE)
         .build();
 
     @Override

@@ -21,6 +21,7 @@ package org.apache.druid.math.expr;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
+import it.unimi.dsi.fastutil.objects.ObjectRBTreeSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
@@ -44,6 +45,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -3757,7 +3759,7 @@ public interface Function extends NamedFunction
     }
   }
 
-  class ArrayContainsFunction extends ArraysFunction
+  class ArrayContainsFunction implements Function
   {
     @Override
     public String name()
@@ -3779,15 +3781,55 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    ExprEval doApply(ExprEval lhsExpr, ExprEval rhsExpr)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      final Object[] array1 = lhsExpr.asArray();
-      final Object[] array2 = rhsExpr.asArray();
-      return ExprEval.ofLongBoolean(Arrays.asList(array1).containsAll(Arrays.asList(array2)));
+      final ExprEval arrayExpr1 = args.get(0).eval(bindings);
+      final ExprEval arrayExpr2 = args.get(1).eval(bindings);
+
+      final Object[] array1 = arrayExpr1.asArray();
+      final Object[] array2 = arrayExpr2.asArray();
+      if (array1 == null) {
+        return ExprEval.ofLong(null);
+      }
+      if (array2 == null) {
+        return ExprEval.ofLongBoolean(Arrays.stream(array1).anyMatch(Objects::isNull));
+      }
+      ExpressionType array1Type = arrayExpr1.asArrayType();
+      final Set<Object> set = array1Type.isPrimitiveArray()
+                              ? new HashSet<>()
+                              // use sorted set so we can use type comparator for complex array types
+                              : new ObjectRBTreeSet<>(array1Type.getNullableStrategy());
+      set.addAll(Arrays.asList(array1));
+      return ExprEval.ofLongBoolean(set.containsAll(Arrays.asList(array2)));
     }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      validationHelperCheckArgumentCount(args, 2);
+    }
+
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      return Collections.emptySet();
+    }
+
+    @Override
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      return ImmutableSet.copyOf(args);
+    }
+
+    @Override
+    public boolean hasArrayInputs()
+    {
+      return true;
+    }
+
   }
 
-  class ArrayOverlapFunction extends ArraysFunction
+  class ArrayOverlapFunction implements Function
   {
     @Override
     public String name()
@@ -3803,16 +3845,56 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    ExprEval doApply(ExprEval lhsExpr, ExprEval rhsExpr)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      final Object[] array1 = lhsExpr.asArray();
-      final List<Object> array2 = Arrays.asList(rhsExpr.asArray());
+      final ExprEval arrayExpr1 = args.get(0).eval(bindings);
+      final ExprEval arrayExpr2 = args.get(1).eval(bindings);
+
+      final Object[] array1 = arrayExpr1.asArray();
+      final Object[] array2 = arrayExpr2.asArray();
+      if (array1 == null) {
+        return ExprEval.ofLong(null);
+      }
+      if (array2 == null) {
+        return ExprEval.ofLong(null);
+      }
       boolean any = false;
-      for (Object check : array1) {
-        any |= array2.contains(check);
+      ExpressionType array1Type = arrayExpr1.asArrayType();
+      final Set<Object> set = array1Type.isPrimitiveArray()
+                              ? new HashSet<>()
+                              // use sorted set so we can use type comparator for complex array types
+                              : new ObjectRBTreeSet<>(array1Type.getNullableStrategy());
+      set.addAll(Arrays.asList(array1));
+      for (Object check : array2) {
+        any = any || set.contains(check);
       }
       return ExprEval.ofLongBoolean(any);
     }
+
+    @Override
+    public void validateArguments(List<Expr> args)
+    {
+      validationHelperCheckArgumentCount(args, 2);
+    }
+
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      return Collections.emptySet();
+    }
+
+    @Override
+    public Set<Expr> getArrayInputs(List<Expr> args)
+    {
+      return ImmutableSet.copyOf(args);
+    }
+
+    @Override
+    public boolean hasArrayInputs()
+    {
+      return true;
+    }
+
   }
 
   class ArraySliceFunction implements Function

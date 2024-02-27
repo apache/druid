@@ -83,7 +83,11 @@ public class DruidRexExecutor implements RexExecutor
         final RexNode literal;
 
         if (sqlTypeName == SqlTypeName.BOOLEAN) {
-          literal = rexBuilder.makeLiteral(exprResult.asBoolean(), constExp.getType(), true);
+          if (exprResult.valueOrDefault() == null) {
+            literal = rexBuilder.makeNullLiteral(constExp.getType());
+          } else {
+            literal = rexBuilder.makeLiteral(exprResult.asBoolean(), constExp.getType(), true);
+          }
         } else if (sqlTypeName == SqlTypeName.DATE) {
           // It is possible for an expression to have a non-null String value but it can return null when parsed
           // as a primitive long/float/double.

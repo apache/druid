@@ -1341,6 +1341,31 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testArrayContainsConstantNull()
+  {
+    testQuery(
+        "SELECT ARRAY_CONTAINS(null, ARRAY['a','b'])",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    InlineDataSource.fromIterable(
+                        ImmutableList.of(new Object[]{NullHandling.defaultLongValue()}),
+                        RowSignature.builder().add("EXPR$0", ColumnType.LONG).build()
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("EXPR$0")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NullHandling.defaultLongValue()}
+        )
+    );
+  }
+
+  @Test
   public void testArraySlice()
   {
     testQuery(
