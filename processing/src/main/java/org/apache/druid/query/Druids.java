@@ -64,6 +64,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  *
@@ -1057,5 +1059,11 @@ public class Druids
   public static DataSourceMetadataQueryBuilder newDataSourceMetadataQueryBuilder()
   {
     return new DataSourceMetadataQueryBuilder();
+  }
+
+  public static UnionDataSource unionDataSource(String... datasources)
+  {
+    List<DataSource> sources = Stream.of(datasources).map(TableDataSource::new).collect(Collectors.toList());
+    return new UnionDataSource(sources);
   }
 }

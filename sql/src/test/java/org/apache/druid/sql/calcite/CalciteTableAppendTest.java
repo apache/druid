@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.scan.ScanQuery.ResultFormat;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -88,6 +89,18 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
   {
     testBuilder()
         .sql("select dim1,dim4,d1,f1 from TABLE(APPEND('foo','numfoo')) u")
+        .expectedQuery(
+            Druids.newScanQueryBuilder()
+                .dataSource(
+                    Druids.unionDataSource(CalciteTests.DATASOURCE1, CalciteTests.DATASOURCE3)
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("d1", "dim1", "dim4", "f1")
+                .context(QUERY_CONTEXT_DEFAULT)
+                .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .legacy(false)
+                .build()
+        )
         .expectedResults(
             ResultMatchMode.RELAX_NULLS,
             ImmutableList.of(
@@ -118,6 +131,19 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
   {
     testBuilder()
         .sql("select dim1,dim4,d1,f1 from TABLE(APPEND('foo','numfoo','foo')) u where dim1='2'")
+        .expectedQuery(
+            Druids.newScanQueryBuilder()
+                .dataSource(
+                    Druids.unionDataSource(CalciteTests.DATASOURCE1, CalciteTests.DATASOURCE3, CalciteTests.DATASOURCE1)
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("d1", "dim1", "dim4", "f1")
+                .context(QUERY_CONTEXT_DEFAULT)
+                .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .filters(equality("dim1", "2", ColumnType.STRING))
+                .legacy(false)
+                .build()
+        )
         .expectedResults(
             ResultMatchMode.RELAX_NULLS,
             ImmutableList.of(
@@ -134,6 +160,18 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
   {
     testBuilder()
         .sql("select dim1 from TABLE(APPEND('foo')) u")
+        .expectedQuery(
+            Druids.newScanQueryBuilder()
+                .dataSource(
+                    Druids.unionDataSource(CalciteTests.DATASOURCE1)
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("dim1")
+                .context(QUERY_CONTEXT_DEFAULT)
+                .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .legacy(false)
+                .build()
+        )
         .expectedResults(
             ImmutableList.of(
                 new Object[] {""},
