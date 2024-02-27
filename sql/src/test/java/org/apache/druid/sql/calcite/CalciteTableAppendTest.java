@@ -186,6 +186,41 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testAppendCompatibleColumns()
+  {
+    // dim3 has different type (string/long) in foo/foo2
+    testBuilder()
+        .sql("select dim3 from TABLE(APPEND('foo','foo2')) u")
+        .expectedQuery(
+            Druids.newScanQueryBuilder()
+                .dataSource(
+                    Druids.unionDataSource(CalciteTests.DATASOURCE1, CalciteTests.DATASOURCE2)
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("dim3")
+                .context(QUERY_CONTEXT_DEFAULT)
+                .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .legacy(false)
+                .build()
+        )
+        .expectedResults(
+            ResultMatchMode.RELAX_NULLS,
+            ImmutableList.of(
+                new Object[] {"11"},
+                new Object[] {"12"},
+                new Object[] {"10"},
+                new Object[] {"[\"a\",\"b\"]"},
+                new Object[] {"[\"b\",\"c\"]"},
+                new Object[] {"d"},
+                new Object[] {""},
+                new Object[] {null},
+                new Object[] {null}
+            )
+        )
+        .run();
+  }
+
+  @Test
   public void testAppendNoTableIsInvalid()
   {
     try {
@@ -255,28 +290,6 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
           invalidSqlIs("Table [nonexistent] not found (line [1], column [37])")
       );
     }
-  }
-
-  @Test
-  public void testAppendCompatibleColumns()
-  {
-    testBuilder()
-        .sql("select dim3 from TABLE(APPEND('foo','foo2')) u")
-        .expectedResults(
-            ResultMatchMode.RELAX_NULLS,
-            ImmutableList.of(
-                new Object[] {"11"},
-                new Object[] {"12"},
-                new Object[] {"10"},
-                new Object[] {"[\"a\",\"b\"]"},
-                new Object[] {"[\"b\",\"c\"]"},
-                new Object[] {"d"},
-                new Object[] {""},
-                new Object[] {null},
-                new Object[] {null}
-            )
-        )
-        .run();
   }
 
   @Test
