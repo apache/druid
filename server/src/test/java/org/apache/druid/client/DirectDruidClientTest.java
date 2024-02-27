@@ -19,6 +19,8 @@
 
 package org.apache.druid.client;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -428,5 +430,46 @@ public class DirectDruidClientTest
     Assert.assertEquals(StringUtils.format("Query [%s] timed out!", queryId), actualException.getMessage());
     Assert.assertEquals(hostName, actualException.getHost());
     EasyMock.verify(httpClient);
+  }
+
+  @Test
+  public void testIOException() throws JsonProcessingException
+  {
+    ObjectMapper mockObjectMapper = EasyMock.createMock(ObjectMapper.class);
+    EasyMock.expect(mockObjectMapper.writeValueAsBytes(EasyMock.anyObject()))
+            .andThrow(new JsonProcessingException("Error"){});
+
+    DirectDruidClient client2 = new DirectDruidClient(
+        new ReflectionQueryToolChestWarehouse(),
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER,
+        mockObjectMapper,
+        httpClient,
+        "http",
+        hostName,
+        new NoopServiceEmitter(),
+        queryCancellationExecutor
+    );
+
+    QueryableDruidServer queryableDruidServer2 = new QueryableDruidServer(
+        new DruidServer(
+            "test1",
+            "localhost",
+            null,
+            0,
+            ServerType.HISTORICAL,
+            DruidServer.DEFAULT_TIER,
+            0
+        ),
+        client2
+    );
+
+    serverSelector.addServerAndUpdateSegment(queryableDruidServer2, serverSelector.getSegment());
+
+    TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder().dataSource("test").build();
+    query = query.withOverriddenContext(ImmutableMap.of(DirectDruidClient.QUERY_FAIL_TIME, Long.MAX_VALUE));
+
+    TimeBoundaryQuery finalQuery = query;
+    Assert.assertThrows(RuntimeException.class, () -> client2.run(QueryPlus.wrap(finalQuery)));
+    Assert.assertEquals(0, client2.getNumOpenConnections());
   }
 }

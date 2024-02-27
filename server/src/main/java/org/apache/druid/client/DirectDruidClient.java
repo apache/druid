@@ -504,10 +504,13 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           Execs.directExecutor()
       );
     }
-    catch (IOException e) {
+    catch (RuntimeException e) {
       if (openConnections.get() > 0) {
         openConnections.getAndDecrement();
       }
+      throw e;
+    }
+    catch (IOException e) {
       throw new RuntimeException(e);
     }
 
