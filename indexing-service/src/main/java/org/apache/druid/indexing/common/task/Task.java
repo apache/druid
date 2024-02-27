@@ -134,6 +134,11 @@ public interface Task
    */
   String getType();
 
+  default String getLabel()
+  {
+    return getType();
+  }
+
   /**
    * Get the nodeType for if/when this task publishes on zookeeper.
    *

@@ -43,7 +43,8 @@ public class MSQWorkerTaskLauncherTest
         Mockito.mock(ControllerContext.class),
         (task, fault) -> {},
         ImmutableMap.of(),
-        TimeUnit.SECONDS.toMillis(5)
+        TimeUnit.SECONDS.toMillis(5),
+        ""
     );
   }
 

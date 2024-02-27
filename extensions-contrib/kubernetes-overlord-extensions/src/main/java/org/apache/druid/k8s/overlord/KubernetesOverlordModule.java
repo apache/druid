@@ -49,13 +49,23 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
+import org.apache.druid.k8s.overlord.common.TaskLane;
+import org.apache.druid.k8s.overlord.common.TaskLaneCapacityPolicy;
+import org.apache.druid.k8s.overlord.common.TaskLaneConfig;
+import org.apache.druid.k8s.overlord.common.TaskLaneRegistry;
 import org.apache.druid.k8s.overlord.runnerstrategy.RunnerStrategy;
 import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.apache.druid.tasklogs.TaskLogKiller;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.tasklogs.TaskLogs;
 
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 
 @LoadScope(roles = NodeRole.OVERLORD_JSON_NAME)
@@ -153,6 +163,27 @@ public class KubernetesOverlordModule implements DruidModule
     return HttpRemoteTaskRunnerFactory.TYPE_NAME.equals(workerType)
            ? injector.getInstance(HttpRemoteTaskRunnerFactory.class)
            : injector.getInstance(RemoteTaskRunnerFactory.class);
+  }
+
+  @Provides
+  @LazySingleton
+  TaskLaneRegistry provideTaskLaneRegistry(
+      KubernetesTaskRunnerConfig runnerConfig
+  )
+  {
+    List<TaskLaneConfig> taskLanes = runnerConfig.getTaskLanes();
+    Map<String, TaskLane> labelToTaskLanes = new HashMap<>();
+    for (TaskLaneConfig taskLaneConfig : taskLanes) {
+      TaskLaneCapacityPolicy policy = TaskLaneCapacityPolicy.valueOf(taskLaneConfig.getPolicy());
+      Set<String> labelSet = Arrays.stream(taskLaneConfig.getLabel().split(",\\s*"))
+                                   .map(String::trim)
+                                   .filter(label -> !label.isEmpty())
+                                   .collect(Collectors.toSet());
+      TaskLane taskLane = new TaskLane(labelSet, taskLaneConfig.getCapacityRatio(), policy);
+      labelSet.forEach(label -> labelToTaskLanes.put(label, taskLane));
+    }
+
+    return new TaskLaneRegistry(labelToTaskLanes, runnerConfig.getCapacity());
   }
 
   private static class RunnerStrategyProvider implements Provider<RunnerStrategy>

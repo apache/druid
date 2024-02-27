@@ -52,6 +52,7 @@ public class MSQWorkerTask extends AbstractTask
   private final String controllerTaskId;
   private final int workerNumber;
   private final int retryCount;
+  private final String label;
 
   // Using an Injector directly because tasks do not have a way to provide their own Guice modules.
   // Not part of equals and hashcode implementation
@@ -67,7 +68,8 @@ public class MSQWorkerTask extends AbstractTask
       @JsonProperty("dataSource") final String dataSource,
       @JsonProperty("workerNumber") final int workerNumber,
       @JsonProperty("context") final Map<String, Object> context,
-      @JsonProperty(value = "retry", defaultValue = "0") final int retryCount
+      @JsonProperty(value = "retry", defaultValue = "0") final int retryCount,
+      @JsonProperty("label") final String label
   )
   {
     super(
@@ -81,6 +83,7 @@ public class MSQWorkerTask extends AbstractTask
     this.controllerTaskId = controllerTaskId;
     this.workerNumber = workerNumber;
     this.retryCount = retryCount;
+    this.label = label;
   }
 
   @JsonProperty
@@ -107,13 +110,18 @@ public class MSQWorkerTask extends AbstractTask
    */
   public MSQWorkerTask getRetryTask()
   {
-    return new MSQWorkerTask(controllerTaskId, getDataSource(), workerNumber, getContext(), retryCount + 1);
+    return new MSQWorkerTask(controllerTaskId, getDataSource(), workerNumber, getContext(), retryCount + 1, label);
   }
 
   @Override
   public String getType()
   {
     return TYPE;
+  }
+
+  @Override
+  public String getLabel() {
+    return label;
   }
 
   @Nonnull
@@ -124,7 +132,6 @@ public class MSQWorkerTask extends AbstractTask
     // the input sources are properly computed in the SQL / calcite layer, but not in the native MSQ task here.
     return ImmutableSet.of();
   }
-
 
   @Override
   public boolean isReady(final TaskActionClient taskActionClient)
