@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.commons.lang3.ObjectUtils;
+import org.apache.druid.k8s.overlord.common.TaskLaneConfig;
 import org.joda.time.Period;
 
 import javax.annotation.Nonnull;
@@ -119,6 +120,9 @@ public class KubernetesTaskRunnerConfig
   @NotNull
   private Integer capacity = Integer.MAX_VALUE;
 
+  @JsonProperty
+  private List<TaskLaneConfig> taskLanes = ImmutableList.of();
+
   public KubernetesTaskRunnerConfig()
   {
   }
@@ -140,7 +144,8 @@ public class KubernetesTaskRunnerConfig
       int cpuCoreInMicro,
       Map<String, String> labels,
       Map<String, String> annotations,
-      Integer capacity
+      Integer capacity,
+      List<TaskLaneConfig> taskLanes
   )
   {
     this.namespace = namespace;
@@ -204,6 +209,10 @@ public class KubernetesTaskRunnerConfig
     this.capacity = ObjectUtils.defaultIfNull(
         capacity,
         this.capacity
+    );
+    this.taskLanes = ObjectUtils.defaultIfNull(
+        taskLanes,
+        this.taskLanes
     );
   }
 
@@ -293,6 +302,11 @@ public class KubernetesTaskRunnerConfig
     return capacity;
   }
 
+  public List<TaskLaneConfig> getTaskLanes()
+  {
+    return taskLanes;
+  }
+
   public static Builder builder()
   {
     return new Builder();
@@ -317,6 +331,7 @@ public class KubernetesTaskRunnerConfig
     private Map<String, String> labels;
     private Map<String, String> annotations;
     private Integer capacity;
+    private List<TaskLaneConfig> taskLanes;
 
     public Builder()
     {
@@ -425,6 +440,12 @@ public class KubernetesTaskRunnerConfig
       return this;
     }
 
+    public Builder withTaskLanes(List<TaskLaneConfig> taskLanes)
+    {
+      this.taskLanes = taskLanes;
+      return this;
+    }
+
     public KubernetesTaskRunnerConfig build()
     {
       return new KubernetesTaskRunnerConfig(
@@ -444,7 +465,8 @@ public class KubernetesTaskRunnerConfig
           this.cpuCoreInMicro,
           this.labels,
           this.annotations,
-          this.capacity
+          this.capacity,
+          this.taskLanes
       );
     }
   }

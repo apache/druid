@@ -222,7 +222,8 @@ public class MSQTasksTest
         controllerContext,
         (task, fault) -> {},
         ImmutableMap.of(),
-        TimeUnit.SECONDS.toMillis(5)
+        TimeUnit.SECONDS.toMillis(5),
+        ""
     );
 
     try {

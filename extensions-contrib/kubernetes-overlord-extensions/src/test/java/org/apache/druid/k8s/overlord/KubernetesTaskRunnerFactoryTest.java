@@ -26,6 +26,7 @@ import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
+import org.apache.druid.k8s.overlord.common.TaskLaneRegistry;
 import org.apache.druid.k8s.overlord.taskadapter.MultiContainerTaskAdapter;
 import org.apache.druid.k8s.overlord.taskadapter.PodTemplateTaskAdapter;
 import org.apache.druid.k8s.overlord.taskadapter.SingleContainerTaskAdapter;
@@ -53,6 +54,7 @@ public class KubernetesTaskRunnerFactoryTest
 
   private DruidKubernetesClient druidKubernetesClient;
   @Mock private ServiceEmitter emitter;
+  @Mock private TaskLaneRegistry taskLaneRegistry;
 
   @Before
   public void setup()
@@ -90,7 +92,8 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         properties,
         druidKubernetesClient,
-        emitter
+        emitter,
+        taskLaneRegistry
     );
 
     KubernetesTaskRunner expectedRunner = factory.build();
@@ -112,7 +115,8 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         properties,
         druidKubernetesClient,
-        emitter
+        emitter,
+        taskLaneRegistry
     );
 
     KubernetesTaskRunner runner = factory.build();
@@ -139,7 +143,8 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         properties,
         druidKubernetesClient,
-        emitter
+        emitter,
+        taskLaneRegistry
     );
 
     KubernetesTaskRunner runner = factory.build();
@@ -164,7 +169,8 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         props,
         druidKubernetesClient,
-        emitter
+        emitter,
+        taskLaneRegistry
     );
 
     KubernetesTaskRunner runner = factory.build();
@@ -194,7 +200,8 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         props,
         druidKubernetesClient,
-        emitter
+        emitter,
+        taskLaneRegistry
     );
 
     Assert.assertThrows(
@@ -225,7 +232,8 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         props,
         druidKubernetesClient,
-        emitter
+        emitter,
+        taskLaneRegistry
     );
 
     KubernetesTaskRunner runner = factory.build();
@@ -250,7 +258,8 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         props,
         druidKubernetesClient,
-        emitter
+        emitter,
+        taskLaneRegistry
     );
 
     KubernetesTaskRunner runner = factory.build();
@@ -278,7 +287,8 @@ public class KubernetesTaskRunnerFactoryTest
         taskConfig,
         props,
         druidKubernetesClient,
-        emitter
+        emitter,
+        taskLaneRegistry
     );
 
     KubernetesTaskRunner runner = factory.build();
