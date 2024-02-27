@@ -466,19 +466,24 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       // increment is moved up so that if future initialization is queued by some other process,
       // we can increment the count earlier so that we can route the request to a different server
       openConnections.getAndIncrement();
-
-      future = httpClient.go(
-          new Request(
-              HttpMethod.POST,
-              new URL(url)
-          ).setContent(objectMapper.writeValueAsBytes(Queries.withTimeout(query, timeLeft)))
-           .setHeader(
-               HttpHeaders.Names.CONTENT_TYPE,
-               isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
-           ),
-          responseHandler,
-          Duration.millis(timeLeft)
-      );
+      try {
+        future = httpClient.go(
+            new Request(
+                HttpMethod.POST,
+                new URL(url)
+            ).setContent(objectMapper.writeValueAsBytes(Queries.withTimeout(query, timeLeft)))
+             .setHeader(
+                 HttpHeaders.Names.CONTENT_TYPE,
+                 isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
+             ),
+            responseHandler,
+            Duration.millis(timeLeft)
+        );
+      }
+      catch (RuntimeException e) {
+        openConnections.getAndDecrement();
+        throw e;
+      }
 
       queryWatcher.registerQueryFuture(query, future);
       Futures.addCallback(
@@ -503,12 +508,6 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           // The callback is non-blocking and quick, so it's OK to schedule it using directExecutor()
           Execs.directExecutor()
       );
-    }
-    catch (RuntimeException e) {
-      if (openConnections.get() > 0) {
-        openConnections.getAndDecrement();
-      }
-      throw e;
     }
     catch (IOException e) {
       throw new RuntimeException(e);

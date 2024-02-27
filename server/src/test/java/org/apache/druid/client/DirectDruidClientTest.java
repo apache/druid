@@ -433,7 +433,7 @@ public class DirectDruidClientTest
   }
 
   @Test
-  public void testIOException() throws JsonProcessingException
+  public void testRuntimeException() throws JsonProcessingException
   {
     ObjectMapper mockObjectMapper = EasyMock.createMock(ObjectMapper.class);
     EasyMock.expect(mockObjectMapper.writeValueAsBytes(EasyMock.anyObject()))
