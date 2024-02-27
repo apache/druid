@@ -125,10 +125,11 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
   }
 
   /**
-   * If the segment grain is given in the catalog then use this value is used.
+   * If the segment grain is given in the catalog and absent in the PARTITIONED BY clause in the query, then use the
+   * value from the catalog.
    */
   @Test
-  public void testInsertHourGrain()
+  public void testInsertHourGrainPartitonedByFromCatalog()
   {
     testIngestionQuery()
         .sql("INSERT INTO hourDs\n" +
@@ -152,10 +153,59 @@ public class CatalogIngestionTest extends CalciteIngestionDmlTest
    * the query value is used.
    */
   @Test
-  public void testInsertHourGrainWithDay()
+  public void testInsertHourGrainWithDayPartitonedByFromQuery()
   {
     testIngestionQuery()
         .sql("INSERT INTO hourDs\n" +
+             "SELECT * FROM foo\n" +
+             "PARTITIONED BY day")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectTarget("hourDs", FOO_SIGNATURE)
+        .expectResources(dataSourceWrite("hourDs"), dataSourceRead("foo"))
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource("foo")
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("__time", "cnt", "dim1", "dim2", "extra1", "extra2", "extra3", "m1", "m2")
+                .context(queryContextWithGranularity(Granularities.DAY))
+                .build()
+        )
+        .verify();
+  }
+
+  /**
+   * If the segment grain is given in the catalog and absent in the PARTITIONED BY clause in the query, then use the
+   * value from the catalog.
+   */
+  @Test
+  public void testReplaceHourGrainPartitonedByFromCatalog()
+  {
+    testIngestionQuery()
+        .sql("REPLACE INTO hourDs OVERWRITE ALL\n" +
+             "SELECT * FROM foo")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectTarget("hourDs", FOO_SIGNATURE)
+        .expectResources(dataSourceWrite("hourDs"), dataSourceRead("foo"))
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource("foo")
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("__time", "cnt", "dim1", "dim2", "extra1", "extra2", "extra3", "m1", "m2")
+                .context(queryContextWithGranularity(Granularities.HOUR))
+                .build()
+        )
+        .verify();
+  }
+
+  /**
+   * If the segment grain is given in the catalog, and also by PARTITIONED BY, then
+   * the query value is used.
+   */
+  @Test
+  public void testReplaceHourGrainWithDayPartitonedByFromQuery()
+  {
+    testIngestionQuery()
+        .sql("REPLACE INTO hourDs OVERWRITE ALL\n" +
              "SELECT * FROM foo\n" +
              "PARTITIONED BY day")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)

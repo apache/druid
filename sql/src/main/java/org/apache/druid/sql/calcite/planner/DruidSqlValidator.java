@@ -20,7 +20,6 @@
 package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.prepare.BaseDruidSqlValidator;
 import org.apache.calcite.prepare.CalciteCatalogReader;
@@ -34,6 +33,7 @@ import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlInsert;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlUtil;
@@ -64,6 +64,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 /**
@@ -76,14 +77,6 @@ class DruidSqlValidator extends BaseDruidSqlValidator
 
   // Copied here from MSQE since that extension is not visible here.
   public static final String CTX_ROWS_PER_SEGMENT = "msqRowsPerSegment";
-
-  public interface ValidatorContext
-  {
-    Map<String, Object> queryContextMap();
-    CatalogResolver catalog();
-    String druidSchemaName();
-    ObjectMapper jsonMapper();
-  }
 
   private final PlannerContext plannerContext;
 
@@ -153,6 +146,12 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     super.validateWindow(windowOrId, scope, call);
   }
 
+  /**
+   * Most of the implementation here is copied over from {@link org.apache.calcite.sql.validate.SqlValidator#validateInsert(SqlInsert)}
+   * we've extended, refactored, and extracted methods, to fit out needs, and added comments where appropriate.
+   *
+   * @param insert INSERT statement
+   */
   @Override
   public void validateInsert(final SqlInsert insert)
   {
@@ -173,7 +172,10 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     }
 
     // The target namespace is both the target table ID and the row type for that table.
-    final SqlValidatorNamespace targetNamespace = getNamespace(insert);
+    final SqlValidatorNamespace targetNamespace = Objects.requireNonNull(
+        getNamespace(insert),
+        () -> "namespace for " + insert
+    );
     final IdentifierNamespace insertNs = (IdentifierNamespace) targetNamespace;
     // The target is a new or existing datasource.
     final DatasourceTable table = validateInsertTarget(targetNamespace, insertNs, operationName);
@@ -379,10 +381,11 @@ class DruidSqlValidator extends BaseDruidSqlValidator
     for (final RelDataTypeField sourceField : sourceFields) {
       // Check that there are no unnamed columns in the insert.
       if (UNNAMED_COLUMN_PATTERN.matcher(sourceField.getName()).matches()) {
-        throw InvalidSqlInput.exception(
+        throw buildCalciteContextException(
             "Insertion requires columns to be named, but at least one of the columns was unnamed.  This is usually "
             + "the result of applying a function without having an AS clause, please ensure that all function calls"
-            + "are named with an AS clause as in \"func(X) as myColumn\"."
+            + "are named with an AS clause as in \"func(X) as myColumn\".",
+            getSqlNodeFor(insert, sourceFields.indexOf(sourceField))
         );
       }
     }
@@ -522,5 +525,18 @@ class DruidSqlValidator extends BaseDruidSqlValidator
         pos.getColumnNum(),
         pos.getEndLineNum(),
         pos.getEndColumnNum());
+  }
+
+  private SqlNode getSqlNodeFor(SqlInsert insert, int idx)
+  {
+    SqlNode src = insert.getSource();
+    if (src instanceof SqlSelect) {
+      SqlSelect sqlSelect = (SqlSelect) src;
+      SqlNodeList selectList = sqlSelect.getSelectList();
+      if (idx < selectList.size()) {
+        return selectList.get(idx);
+      }
+    }
+    return src;
   }
 }
