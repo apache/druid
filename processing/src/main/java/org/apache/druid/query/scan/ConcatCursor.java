@@ -36,15 +36,18 @@ import org.apache.druid.segment.data.IndexedInts;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.NotThreadSafe;
 import java.util.List;
 
 /**
  * Combines multiple cursors and iterates over them. It skips over the empty cursors
  * The {@link DimensionSelector} and {@link ColumnValueSelector} it generates hold the reference to the original object
  * because the cursor might be advanced independently after extracting out the {@link ColumnSelectorFactory} like in
- * {@link org.apache.druid.frame.segment.FrameCursorUtils#cursorToFrames}. This ensures that the selectors always return
+ * {@link org.apache.druid.frame.segment.FrameCursorUtils#cursorToFramesSequence}. This ensures that the selectors always return
  * the value pointed by the {@link #currentCursor}.
+ * TODO(laksh): This can reuse SettableCursorColumnSelectorFactory
  */
+@NotThreadSafe
 public class ConcatCursor implements Cursor
 {
 
@@ -79,19 +82,55 @@ public class ConcatCursor implements Cursor
           @Override
           public ValueMatcher makeValueMatcher(@Nullable String value)
           {
-            return cursors.get(currentCursor)
-                          .getColumnSelectorFactory()
-                          .makeDimensionSelector(dimensionSpec)
-                          .makeValueMatcher(value);
+            return new ValueMatcher()
+            {
+              @Override
+              public boolean matches(boolean includeUnknown)
+              {
+                return cursors.get(currentCursor)
+                              .getColumnSelectorFactory()
+                              .makeDimensionSelector(dimensionSpec)
+                              .makeValueMatcher(value)
+                              .matches(includeUnknown);
+              }
+
+              @Override
+              public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+              {
+                cursors.get(currentCursor)
+                       .getColumnSelectorFactory()
+                       .makeDimensionSelector(dimensionSpec)
+                       .makeValueMatcher(value)
+                       .inspectRuntimeShape(inspector);
+              }
+            };
           }
 
           @Override
           public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
           {
-            return cursors.get(currentCursor)
-                          .getColumnSelectorFactory()
-                          .makeDimensionSelector(dimensionSpec)
-                          .makeValueMatcher(predicateFactory);
+            return new ValueMatcher()
+            {
+              @Override
+              public boolean matches(boolean includeUnknown)
+              {
+                return cursors.get(currentCursor)
+                              .getColumnSelectorFactory()
+                              .makeDimensionSelector(dimensionSpec)
+                              .makeValueMatcher(predicateFactory)
+                              .matches(includeUnknown);
+              }
+
+              @Override
+              public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+              {
+                cursors.get(currentCursor)
+                       .getColumnSelectorFactory()
+                       .makeDimensionSelector(dimensionSpec)
+                       .makeValueMatcher(predicateFactory)
+                       .inspectRuntimeShape(inspector);
+              }
+            };
           }
 
           @Override
@@ -125,10 +164,7 @@ public class ConcatCursor implements Cursor
           @Override
           public int getValueCardinality()
           {
-            return cursors.get(currentCursor)
-                          .getColumnSelectorFactory()
-                          .makeDimensionSelector(dimensionSpec)
-                          .getValueCardinality();
+            return CARDINALITY_UNKNOWN;
           }
 
           @Nullable
@@ -144,20 +180,14 @@ public class ConcatCursor implements Cursor
           @Override
           public boolean nameLookupPossibleInAdvance()
           {
-            return cursors.get(currentCursor)
-                          .getColumnSelectorFactory()
-                          .makeDimensionSelector(dimensionSpec)
-                          .nameLookupPossibleInAdvance();
+            return false;
           }
 
           @Nullable
           @Override
           public IdLookup idLookup()
           {
-            return cursors.get(currentCursor)
-                          .getColumnSelectorFactory()
-                          .makeDimensionSelector(dimensionSpec)
-                          .idLookup();
+            return null;
           }
         };
       }
@@ -246,11 +276,12 @@ public class ConcatCursor implements Cursor
         return cursors.get(currentCursor).getColumnSelectorFactory().getColumnCapabilities(column);
       }
 
+      // Row Id cannot be unique
       @Nullable
       @Override
       public RowIdSupplier getRowIdSupplier()
       {
-        return cursors.get(currentCursor).getColumnSelectorFactory().getRowIdSupplier();
+        return null;
       }
     };
   }

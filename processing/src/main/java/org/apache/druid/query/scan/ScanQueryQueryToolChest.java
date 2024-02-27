@@ -24,9 +24,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import com.google.common.collect.PeekingIterator;
 import com.google.inject.Inject;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
@@ -56,7 +54,6 @@ import org.apache.druid.utils.CloseableUtils;
 
 import java.io.Closeable;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -189,50 +186,13 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   )
   {
     final RowSignature defaultRowSignature = resultArraySignature(query);
-    ScanResultValueIterator resultSequenceIterator = new ScanResultValueIterator(resultSequence);
-
-    Iterable<Sequence<FrameSignaturePair>> retVal = () -> new Iterator<Sequence<FrameSignaturePair>>()
-    {
-      PeekingIterator<ScanResultValue> scanResultValuePeekingIterator = Iterators.peekingIterator(resultSequenceIterator);
-
-      @Override
-      public boolean hasNext()
-      {
-        return scanResultValuePeekingIterator.hasNext();
-      }
-
-      @Override
-      public Sequence<FrameSignaturePair> next()
-      {
-        final List<ScanResultValue> batch = new ArrayList<>();
-        final ScanResultValue scanResultValue = scanResultValuePeekingIterator.next();
-        batch.add(scanResultValue);
-        // If the rowSignature is not provided, assume that the scanResultValue can contain any number of the columns
-        // that appear in the original scan query
-        final RowSignature rowSignature = scanResultValue.getRowSignature() != null
-                                          ? scanResultValue.getRowSignature()
-                                          : defaultRowSignature;
-        while (scanResultValuePeekingIterator.hasNext()) {
-          RowSignature nextRowSignature = scanResultValuePeekingIterator.peek().getRowSignature();
-          if (nextRowSignature == null) {
-            nextRowSignature = defaultRowSignature;
-          }
-          if (nextRowSignature != null && nextRowSignature.equals(rowSignature)) {
-            batch.add(scanResultValuePeekingIterator.next());
-          } else {
-            break;
-          }
-        }
-        return convertScanResultValuesToFrame(
-            batch,
-            rowSignature,
-            query,
-            memoryAllocatorFactory,
-            useNestedForUnknownTypes
-        );
-      }
-    };
-    return Optional.of(Sequences.concat(retVal).withBaggage(resultSequenceIterator));
+    return Optional.of(ScanResultValueFramesBatcher.getBatchedSequence(
+        resultSequence,
+        memoryAllocatorFactory,
+        useNestedForUnknownTypes,
+        defaultRowSignature,
+        rowSignature -> getResultFormatMapper(query.getResultFormat(), rowSignature.getColumnNames())
+    ));
   }
 
   private Sequence<FrameSignaturePair> convertScanResultValuesToFrame(
@@ -276,7 +236,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
 
 
     Cursor concatCursor = new ConcatCursor(cursors);
-    Sequence<Frame> frames = FrameCursorUtils.cursorToFrames(
+    Sequence<Frame> frames = FrameCursorUtils.cursorToFramesSequence(
         concatCursor,
         frameWriterFactory
     );

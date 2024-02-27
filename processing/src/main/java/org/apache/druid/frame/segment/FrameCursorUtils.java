@@ -77,6 +77,54 @@ public class FrameCursorUtils
     }
   }
 
+  public static Iterable<Frame> cursorToFramesIterable(
+      final Cursor cursor,
+      final FrameWriterFactory frameWriterFactory
+  )
+  {
+    return () -> new Iterator<Frame>()
+    {
+      @Override
+      public boolean hasNext()
+      {
+        return !cursor.isDone();
+      }
+
+      @Override
+      public Frame next()
+      {
+        // Makes sure that cursor contains some elements prior. This ensures if no row is written, then the row size
+        // is larger than the MemoryAllocators returned by the provided factory
+        if (!hasNext()) {
+          throw new NoSuchElementException();
+        }
+        boolean firstRowWritten = false;
+        Frame frame;
+        try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(cursor.getColumnSelectorFactory())) {
+          while (!cursor.isDone()) {
+            if (!frameWriter.addSelection()) {
+              break;
+            }
+            firstRowWritten = true;
+            cursor.advance();
+          }
+
+          if (!firstRowWritten) {
+            throw DruidException
+                .forPersona(DruidException.Persona.DEVELOPER)
+                .ofCategory(DruidException.Category.CAPACITY_EXCEEDED)
+                .build("Subquery's row size exceeds the frame size and therefore cannot write the subquery's "
+                       + "row to the frame. This is a non-configurable static limit that can only be modified by the "
+                       + "developer.");
+          }
+
+          frame = Frame.wrap(frameWriter.toByteArray());
+        }
+        return frame;
+      }
+    };
+  }
+
   /**
    * Writes a {@link Cursor} to a sequence of {@link Frame}. This method iterates over the rows of the cursor,
    * and writes the columns to the frames
@@ -85,54 +133,12 @@ public class FrameCursorUtils
    * @param frameWriterFactory     Frame writer factory to write to the frame.
    *                               Determines the signature of the rows that are written to the frames
    */
-  public static Sequence<Frame> cursorToFrames(
-      Cursor cursor,
-      FrameWriterFactory frameWriterFactory
+  public static Sequence<Frame> cursorToFramesSequence(
+      final Cursor cursor,
+      final FrameWriterFactory frameWriterFactory
   )
   {
 
-    return Sequences.simple(
-        () -> new Iterator<Frame>()
-        {
-          @Override
-          public boolean hasNext()
-          {
-            return !cursor.isDone();
-          }
-
-          @Override
-          public Frame next()
-          {
-            // Makes sure that cursor contains some elements prior. This ensures if no row is written, then the row size
-            // is larger than the MemoryAllocators returned by the provided factory
-            if (!hasNext()) {
-              throw new NoSuchElementException();
-            }
-            boolean firstRowWritten = false;
-            Frame frame;
-            try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(cursor.getColumnSelectorFactory())) {
-              while (!cursor.isDone()) {
-                if (!frameWriter.addSelection()) {
-                  break;
-                }
-                firstRowWritten = true;
-                cursor.advance();
-              }
-
-              if (!firstRowWritten) {
-                throw DruidException
-                    .forPersona(DruidException.Persona.DEVELOPER)
-                    .ofCategory(DruidException.Category.CAPACITY_EXCEEDED)
-                    .build("Subquery's row size exceeds the frame size and therefore cannot write the subquery's "
-                           + "row to the frame. This is a non-configurable static limit that can only be modified by the "
-                           + "developer.");
-              }
-
-              frame = Frame.wrap(frameWriter.toByteArray());
-            }
-            return frame;
-          }
-        }
-    );
+    return Sequences.simple(cursorToFramesIterable(cursor, frameWriterFactory));
   }
 }
