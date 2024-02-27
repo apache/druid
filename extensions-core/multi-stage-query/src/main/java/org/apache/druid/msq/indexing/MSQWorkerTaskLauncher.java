@@ -352,53 +352,6 @@ public class MSQWorkerTaskLauncher
     }
   }
 
-  public static class WorkerStats
-  {
-    String workerId;
-    TaskState state;
-    long duration;
-    long pendingTimeInMS;
-
-    /**
-     * For JSON deserialization only
-     */
-    public WorkerStats()
-    {
-    }
-
-    public WorkerStats(String workerId, TaskState state, long duration, long pendingTimeInMS)
-    {
-      this.workerId = workerId;
-      this.state = state;
-      this.duration = duration;
-      this.pendingTimeInMS = pendingTimeInMS;
-    }
-
-    @JsonProperty
-    public String getWorkerId()
-    {
-      return workerId;
-    }
-
-    @JsonProperty
-    public TaskState getState()
-    {
-      return state;
-    }
-
-    @JsonProperty("durationMs")
-    public long getDuration()
-    {
-      return duration;
-    }
-
-    @JsonProperty("pendingMs")
-    public long getPendingTimeInMS()
-    {
-      return pendingTimeInMS;
-    }
-  }
-
   public Map<Integer, List<WorkerStats>> getWorkerStats()
   {
     final Map<Integer, List<WorkerStats>> workerStats = new TreeMap<>();
@@ -417,7 +370,7 @@ public class MSQWorkerTaskLauncher
                      // taskTracker.startTimeMillis marks task
                      // submission time rather than the actual start.
                      taskStatus.getDuration(),
-                     taskTracker.taskPendingTimeInMS()
+                     taskTracker.taskPendingTimeInMs()
                  ));
     }
 
@@ -592,7 +545,7 @@ public class MSQWorkerTaskLauncher
         if (!status.getStatusCode().isComplete() && tracker.unknownLocation()) {
           // Look up location if not known. Note: this location is not used to actually contact the task. For that,
           // we have SpecificTaskServiceLocator. This location is only used to determine if a task has started up.
-          tracker.updateLocation(workerManager.location(taskId));
+          tracker.setLocation(workerManager.location(taskId));
         }
 
         if (status.getStatusCode() == TaskState.RUNNING && !tracker.unknownLocation()) {
@@ -910,7 +863,7 @@ public class MSQWorkerTaskLauncher
       return isRetryingRef.get();
     }
 
-    public void updateLocation(TaskLocation taskLocation)
+    public void setLocation(TaskLocation taskLocation)
     {
       initialLocationRef.set(taskLocation);
     }
@@ -925,7 +878,7 @@ public class MSQWorkerTaskLauncher
       taskFullyStartedTimeRef.set(currentTimeMillis);
     }
 
-    public long taskPendingTimeInMS()
+    public long taskPendingTimeInMs()
     {
       long currentFullyStartingTime = taskFullyStartedTimeRef.get();
       if (currentFullyStartingTime == 0) {
@@ -933,6 +886,53 @@ public class MSQWorkerTaskLauncher
       } else {
         return Math.max(0, currentFullyStartingTime - startTimeMillis);
       }
+    }
+  }
+
+  public static class WorkerStats
+  {
+    String workerId;
+    TaskState state;
+    long duration;
+    long pendingTimeInMs;
+
+    /**
+     * For JSON deserialization only
+     */
+    public WorkerStats()
+    {
+    }
+
+    public WorkerStats(String workerId, TaskState state, long duration, long pendingTimeInMs)
+    {
+      this.workerId = workerId;
+      this.state = state;
+      this.duration = duration;
+      this.pendingTimeInMs = pendingTimeInMs;
+    }
+
+    @JsonProperty
+    public String getWorkerId()
+    {
+      return workerId;
+    }
+
+    @JsonProperty
+    public TaskState getState()
+    {
+      return state;
+    }
+
+    @JsonProperty("durationMs")
+    public long getDuration()
+    {
+      return duration;
+    }
+
+    @JsonProperty("pendingMs")
+    public long getPendingTimeInMs()
+    {
+      return pendingTimeInMs;
     }
   }
 }
