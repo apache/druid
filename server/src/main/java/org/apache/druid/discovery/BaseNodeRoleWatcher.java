@@ -32,7 +32,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -59,7 +59,7 @@ public class BaseNodeRoleWatcher
   private final ConcurrentMap<String, DiscoveryDruidNode> nodes = new ConcurrentHashMap<>();
   private final Collection<DiscoveryDruidNode> unmodifiableNodes = Collections.unmodifiableCollection(nodes.values());
 
-  private final ExecutorService listenerExecutor;
+  private final ScheduledExecutorService listenerExecutor;
 
   private final List<DruidNodeDiscovery.Listener> nodeListeners = new ArrayList<>();
 
@@ -71,12 +71,19 @@ public class BaseNodeRoleWatcher
   private volatile boolean cacheInitializationTimedOut = false;
 
   public BaseNodeRoleWatcher(
-      ExecutorService listenerExecutor,
+      ScheduledExecutorService listenerExecutor,
       NodeRole nodeRole
   )
   {
-    this.listenerExecutor = listenerExecutor;
     this.nodeRole = nodeRole;
+    this.listenerExecutor = listenerExecutor;
+    this.listenerExecutor.schedule(
+        () -> {
+          checkCacheInitialization(1L);
+        },
+        30,
+        TimeUnit.SECONDS
+    );
   }
 
   public Collection<DiscoveryDruidNode> getAllNodes()
@@ -84,9 +91,15 @@ public class BaseNodeRoleWatcher
     if (cacheInitializationTimedOut) {
       return unmodifiableNodes;
     }
+    checkCacheInitialization(30L);
+    return unmodifiableNodes;
+  }
+
+  private void checkCacheInitialization(long timeoutSeconds)
+  {
     boolean nodeViewInitialized;
     try {
-      nodeViewInitialized = cacheInitialized.await((long) 30, TimeUnit.SECONDS);
+      nodeViewInitialized = cacheInitialized.await(timeoutSeconds, TimeUnit.SECONDS);
     }
     catch (InterruptedException ex) {
       Thread.currentThread().interrupt();
@@ -96,7 +109,6 @@ public class BaseNodeRoleWatcher
       LOGGER.warn("Cache for node role [%s] could not be initialized before timeout.", nodeRole.getJsonName());
       cacheInitializedTimedOut();
     }
-    return unmodifiableNodes;
   }
 
   public void registerListener(DruidNodeDiscovery.Listener listener)
@@ -223,7 +235,7 @@ public class BaseNodeRoleWatcher
       // No need to wait on CountDownLatch, because we are holding the lock under which it could only be
       // counted down.
       if (cacheInitialized.getCount() == 0) {
-        LOGGER.warn("cache is already initialized. ignoring timeout.");
+        LOGGER.warn("Cache for node watcher of role[%s] is already initialized. ignoring timeout.", nodeRole.getJsonName());
         return;
       }
 
@@ -247,8 +259,8 @@ public class BaseNodeRoleWatcher
         );
       }
 
-      cacheInitialized.countDown();
       cacheInitializationTimedOut = true;
+      cacheInitialized.countDown();
     }
   }
 
@@ -259,9 +271,15 @@ public class BaseNodeRoleWatcher
       // counted down.
       if (cacheInitialized.getCount() == 0) {
         if (cacheInitializationTimedOut) {
-          LOGGER.warn("Cache initialization has already timed out. Ignoring cacheInitialized event.");
+          LOGGER.warn(
+              "Cache initialization for node role[%s] has already timed out. Ignoring cacheInitialized event.",
+              nodeRole.getJsonName()
+          );
         } else {
-          LOGGER.error("cache is already initialized. ignoring cache initialization event.");
+          LOGGER.error(
+              "Cache for node role[%s] is already initialized. ignoring cache initialization event.",
+              nodeRole.getJsonName()
+          );
         }
         return;
       }

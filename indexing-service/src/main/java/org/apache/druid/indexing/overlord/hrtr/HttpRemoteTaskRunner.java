@@ -546,8 +546,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       @Override
       public void nodeViewInitializedTimedOut()
       {
-        //CountDownLatch.countDown() does nothing when count has already reached 0.
-        workerViewInitialized.countDown();
+        nodeViewInitialized();
       }
     };
     druidNodeDiscovery.registerListener(nodeDiscoveryListener);

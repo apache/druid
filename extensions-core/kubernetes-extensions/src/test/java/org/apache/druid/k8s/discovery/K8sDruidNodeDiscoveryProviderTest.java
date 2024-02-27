@@ -317,7 +317,7 @@ public class K8sDruidNodeDiscoveryProviderTest
     @Override
     public void nodeViewInitializedTimedOut()
     {
-      assertNextEvent(Event.inited());
+      nodeViewInitialized();
     }
 
     @Override

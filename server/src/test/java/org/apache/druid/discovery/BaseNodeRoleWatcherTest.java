@@ -40,7 +40,7 @@ public class BaseNodeRoleWatcherTest
   public void testGeneralUseSimulation()
   {
     BaseNodeRoleWatcher nodeRoleWatcher = new BaseNodeRoleWatcher(
-        Execs.directExecutor(),
+        Execs.scheduledSingleThreaded("BaseNodeRoleWatcher"),
         NodeRole.BROKER
     );
 
@@ -116,6 +116,19 @@ public class BaseNodeRoleWatcherTest
     assertListener(listener3, true, nodesAdded, nodesRemoved);
   }
 
+  @Test(timeout = 60_000L)
+  public void testTimeOutAfterInitialization() throws InterruptedException
+  {
+    BaseNodeRoleWatcher nodeRoleWatcher = new BaseNodeRoleWatcher(
+        Execs.scheduledSingleThreaded("BaseNodeRoleWatcher"),
+        NodeRole.BROKER
+    );
+    TestListener listener = new TestListener();
+    nodeRoleWatcher.registerListener(listener);
+    Thread.sleep(32_000);
+    Assert.assertTrue(listener.timedOut.get());
+  }
+
   private DiscoveryDruidNode buildDiscoveryDruidNode(NodeRole role, String host)
   {
     return new DiscoveryDruidNode(
@@ -134,6 +147,7 @@ public class BaseNodeRoleWatcherTest
 
   public static class TestListener implements DruidNodeDiscovery.Listener
   {
+    private final AtomicBoolean timedOut = new AtomicBoolean(false);
     private final AtomicBoolean nodeViewInitialized = new AtomicBoolean(false);
     private final List<DiscoveryDruidNode> nodesAddedList = new ArrayList<>();
     private final List<DiscoveryDruidNode> nodesRemovedList = new ArrayList<>();
@@ -161,8 +175,8 @@ public class BaseNodeRoleWatcherTest
     @Override
     public void nodeViewInitializedTimedOut()
     {
-      if (!nodeViewInitialized.compareAndSet(false, true)) {
-        throw new RuntimeException("NodeViewInitialized called again!");
+      if (!timedOut.compareAndSet(false, true)) {
+        throw new RuntimeException("NodeViewInitializedTimedOut called again!");
       }
     }
   }

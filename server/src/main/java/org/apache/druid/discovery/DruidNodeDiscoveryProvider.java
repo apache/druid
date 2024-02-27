@@ -241,17 +241,17 @@ public abstract class DruidNodeDiscoveryProvider
       {
         synchronized (lock) {
           if (uninitializedNodeRoles == 0) {
-            log.error("Unexpected call of nodeViewInitialized()");
+            log.error("Unexpected call of nodeViewInitializedTimedOut()");
             return;
           }
           uninitializedNodeRoles--;
           if (uninitializedNodeRoles == 0) {
             for (Listener listener : listeners) {
               try {
-                listener.nodeViewInitialized();
+                listener.nodeViewInitializedTimedOut();
               }
               catch (Exception ex) {
-                log.error(ex, "Listener[%s].nodeViewInitialized() threw exception. Ignored.", listener);
+                log.error(ex, "Listener[%s].nodeViewInitializedTimedOut() threw exception. Ignored.", listener);
               }
             }
           }

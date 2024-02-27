@@ -105,7 +105,7 @@ public class K8sAnnouncerAndDiscoveryIntTest
           @Override
           public void nodeViewInitializedTimedOut()
           {
-            nodeViewInitialized.countDown();
+            nodeViewInitialized();
           }
         }
     );
