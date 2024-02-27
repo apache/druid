@@ -37,9 +37,11 @@ java -classpath "/my/druid/lib/*" -Ddruid.extensions.loadList="[]" org.apache.dr
 ```
 
 If you use JDK11 and above, you need to add the following additional parameters
-+ --add-opens java.base/java.lang=ALL-UNNAMED
-+ --add-opens java.base/sun.nio.ch=ALL-UNNAMED
-  The following is a example
+```
+--add-opens java.base/java.lang=ALL-UNNAMED
+--add-opens java.base/sun.nio.ch=ALL-UNNAMED
+```
+The following is an example
 
 ```
 java --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/sun.nio.ch=ALL-UNNAMED \
