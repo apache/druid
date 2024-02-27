@@ -165,7 +165,7 @@ Authorizer that requests should be directed to.<br />
 
 ##### Credential iterations and API performance
 
-As noted above, `credentialIterations` determines the number of iterations used to hash a password. A higher number increases security. The default setting of 10000 is intentionally high to prevent attackers from using brute force to guess passwords. We recommend that you don't lower this setting. Druid caches up to the last 1000 iterations for an hour to ensure that having a large number of iterations does not meaningfully impact query performance. 
+As noted above, the value of `credentialIterations` determines the number of iterations used to hash a password. A higher number of iterations increases security. The default value of 10,000 is intentionally high to prevent attackers from using brute force to guess passwords. We recommend that you don't lower this value. Druid caches the hash of up to 1000 passwords used in the last hour to ensure that having a large number of iterations does not meaningfully impact query performance. 
 
 If Druid uses the default credentials validator (i.e., `credentialsValidator.type=metadata`), changing the `credentialIterations` value affects the number of hashing iterations only for users created after the change or for users who subsequently update their passwords via the `/druid-ext/basic-security/authentication/db/basic/users/{userName}/credentials` endpoint. If Druid uses the `ldap` validator, the change applies to any user at next log in (as well as to new users or users who update their passwords).
 
