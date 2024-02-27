@@ -581,8 +581,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
                 segmentAvailabilityConfirmationCompleted,
                 segmentAvailabilityWaitTimeMs,
                 Collections.emptyMap(),
-                0,
-                0
+                null,
+                null
             )
         )
     );

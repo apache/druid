@@ -39,7 +39,7 @@ class GeneratedPartitionsMetadataReport extends GeneratedPartitionsReport
       @JsonProperty("taskId") String taskId,
       @JsonProperty("partitionStats") List<PartitionStat> partitionStats,
       @JsonProperty("taskReport") Map<String, TaskReport> taskReport,
-      @JsonProperty("segmentsRead") Integer segmentsRead
+      @JsonProperty("segmentsRead") Long segmentsRead
   )
   {
     super(taskId, partitionStats, taskReport, segmentsRead);

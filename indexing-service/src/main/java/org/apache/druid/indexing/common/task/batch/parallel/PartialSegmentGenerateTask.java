@@ -153,16 +153,16 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
       TaskToolbox toolbox,
       List<DataSegment> segments,
       Map<String, TaskReport> taskReport,
-      Integer segmentsRead
+      Long segmentsRead
   );
 
-  private int getSegementsSize(InputSource inputSource)
+  private Long getSegementsSize(InputSource inputSource)
   {
     if (inputSource instanceof DruidInputSource) {
-      return ((DruidInputSource) inputSource).getSegmentIds().size();
+      return (long) ((DruidInputSource) inputSource).getSegmentIds().size();
     }
 
-    return 0;
+    return null;
   }
 
   private List<DataSegment> generateSegments(
@@ -265,8 +265,8 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
                 false, // not applicable for parallel subtask
                 segmentAvailabilityWaitTimeMs,
                 Collections.emptyMap(),
-                0,
-                0
+                null,
+                null
             )
         )
     );

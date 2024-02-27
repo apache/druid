@@ -1131,8 +1131,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 errorMsg == null,
                 handoffWaitMs,
                 getPartitionStats(),
-                0,
-                0
+                null,
+                null
             )
         )
     );

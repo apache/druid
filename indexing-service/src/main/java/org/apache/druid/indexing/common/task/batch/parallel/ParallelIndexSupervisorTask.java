@@ -202,8 +202,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   private volatile Pair<Map<String, Object>, Map<String, Object>> indexGenerateRowStats;
 
   private IngestionState ingestionState;
-  private int segmentsRead = 0;
-  private int segmentsPublished = 0;
+  private Long segmentsRead = 0L;
+  private Long segmentsPublished = 0L;
 
 
   @JsonCreator
@@ -638,11 +638,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       segmentsRead = parallelSinglePhaseRunner.getReports()
                                               .values()
                                               .stream()
-                                              .mapToInt(report -> report.getOldSegments().size()).sum();
-      segmentsRead = parallelSinglePhaseRunner.getReports()
+                                              .mapToLong(report -> report.getOldSegments().size()).sum();
+      segmentsPublished = parallelSinglePhaseRunner.getReports()
                                               .values()
                                               .stream()
-                                              .mapToInt(report -> report.getNewSegments().size()).sum();
+                                                   .mapToLong(report -> report.getNewSegments().size()).sum();
       if (awaitSegmentAvailabilityTimeoutMillis > 0) {
         waitForSegmentAvailability(parallelSinglePhaseRunner.getReports());
       }
@@ -1130,7 +1130,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     return Pair.of(start, stop);
   }
 
-  private int publishSegments(
+  private long publishSegments(
       TaskToolbox toolbox,
       Map<String, PushedSegmentsReport> reportsMap
   )

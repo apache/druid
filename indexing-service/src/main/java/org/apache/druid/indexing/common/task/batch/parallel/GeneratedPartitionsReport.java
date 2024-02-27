@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.common.TaskReport;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -37,13 +38,13 @@ public class GeneratedPartitionsReport implements SubTaskReport
   private final List<PartitionStat> partitionStats;
   private final Map<String, TaskReport> taskReport;
 
-  private final Integer segmentsRead;
+  private final Long segmentsRead;
 
   GeneratedPartitionsReport(
       String taskId,
       List<PartitionStat> partitionStats,
       Map<String, TaskReport> taskReport,
-      Integer segmentsRead
+      Long segmentsRead
   )
   {
     this.taskId = taskId;
@@ -72,7 +73,8 @@ public class GeneratedPartitionsReport implements SubTaskReport
   }
 
   @JsonProperty
-  public Integer getSegmentsRead()
+  @Nullable
+  public Long getSegmentsRead()
   {
     return segmentsRead;
   }

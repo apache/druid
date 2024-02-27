@@ -695,8 +695,8 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
                 segmentAvailabilityConfirmationCompleted,
                 segmentAvailabilityWaitTimeMs,
                 Collections.emptyMap(),
-                0,
-                0
+                null,
+                null
             )
         )
     );

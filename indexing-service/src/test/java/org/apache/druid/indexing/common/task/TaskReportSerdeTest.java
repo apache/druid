@@ -71,8 +71,8 @@ public class TaskReportSerdeTest
             true,
             1000L,
             ImmutableMap.of("PartitionA", 5000L),
-            5,
-            10
+            5L,
+            10L
         )
     );
     String report1serialized = jsonMapper.writeValueAsString(report1);
@@ -113,24 +113,24 @@ public class TaskReportSerdeTest
   }
 
   @Test
-  public void testEquals()
+  public void testNegativeEquals()
   {
-    IngestionStatsAndErrorsTaskReport report = generateReport(ImmutableMap.of("PartitionA", 5000L), 5, 10);
+    IngestionStatsAndErrorsTaskReport report = generateReport(ImmutableMap.of("PartitionA", 5000L), 5L, 10L);
 
     // changed partition stats
-    Assert.assertNotEquals(generateReport(ImmutableMap.of("PartitionB", 5000L), 5, 10), report);
+    Assert.assertNotEquals(generateReport(ImmutableMap.of("PartitionB", 5000L), 5L, 10L), report);
 
     // changed segements read
-    Assert.assertNotEquals(generateReport(ImmutableMap.of("PartitionA", 5000L), 1, 10), report);
+    Assert.assertNotEquals(generateReport(ImmutableMap.of("PartitionA", 5000L), 1L, 10L), report);
 
     // changed segements published
-    Assert.assertNotEquals(generateReport(ImmutableMap.of("PartitionA", 5000L), 5, 5), report);
+    Assert.assertNotEquals(generateReport(ImmutableMap.of("PartitionA", 5000L), 5L, 5L), report);
   }
 
   private IngestionStatsAndErrorsTaskReport generateReport(
       Map<String, Long> partitionStats,
-      int segmentsRead,
-      int segmentsPublished
+      Long segmentsRead,
+      Long segmentsPublished
   )
   {
     return new IngestionStatsAndErrorsTaskReport(

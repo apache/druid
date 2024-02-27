@@ -181,7 +181,7 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
       TaskToolbox toolbox,
       List<DataSegment> segments,
       Map<String, TaskReport> taskReport,
-      Integer segmentsRead
+      Long segmentsRead
   )
   {
     List<PartitionStat> partitionStats = segments.stream()

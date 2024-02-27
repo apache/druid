@@ -48,9 +48,9 @@ public class IngestionStatsAndErrorsTaskReportData
   private long segmentAvailabilityWaitTimeMs;
 
   @JsonProperty
-  private int segmentsRead;
+  private Long segmentsRead;
   @JsonProperty
-  private int segmentsPublished;
+  private Long segmentsPublished;
 
   @JsonProperty
   private Map<String, Long> recordsProcessed;
@@ -63,8 +63,8 @@ public class IngestionStatsAndErrorsTaskReportData
       @JsonProperty("segmentAvailabilityConfirmed") boolean segmentAvailabilityConfirmed,
       @JsonProperty("segmentAvailabilityWaitTimeMs") long segmentAvailabilityWaitTimeMs,
       @JsonProperty("recordsProcessed") Map<String, Long> recordsProcessed,
-      @JsonProperty("segmentsRead") int segmentsRead,
-      @JsonProperty("segmentsPublished") int segmentsPublished
+      @JsonProperty("segmentsRead") Long segmentsRead,
+      @JsonProperty("segmentsPublished") Long segmentsPublished
   )
   {
     this.ingestionState = ingestionState;
@@ -123,13 +123,15 @@ public class IngestionStatsAndErrorsTaskReportData
   }
 
   @JsonProperty
-  public int getSegmentsRead()
+  @Nullable
+  public Long getSegmentsRead()
   {
     return segmentsRead;
   }
 
   @JsonProperty
-  public int getSegmentsPublished()
+  @Nullable
+  public Long getSegmentsPublished()
   {
     return segmentsPublished;
   }
