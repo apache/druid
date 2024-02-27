@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.external;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.plan.RelOptTable;
+import org.apache.calcite.prepare.Prepare.CatalogReader;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexNode;
@@ -42,7 +43,10 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlUserDefinedTableMacro;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
+import org.apache.calcite.sql.validate.SqlValidatorNamespace;
+import org.apache.calcite.sql.validate.SqlValidatorScope;
 import org.apache.calcite.sql.validate.SqlValidatorTable;
+import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.UnionDataSource;
@@ -61,6 +65,8 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.DatasourceMetadata;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.DatasourceTable.EffectiveMetadata;
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -234,6 +240,20 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
       String tableName = callBinding.getOperandLiteralValue(i, String.class);
       ImmutableList<String> tableNameList = ImmutableList.<String>builder().add(tableName).build();
       SqlValidatorTable table = catalogReader.getTable(tableNameList);
+
+
+      @Nullable
+      SqlValidatorNamespace callNs = callBinding.getValidator().getNamespace(callBinding.getCall());
+      SqlValidatorScope scope = callBinding.getScope();
+      SqlValidatorNamespace callNs2 = callBinding.getValidator().getNamespace(scope.getNode());
+//      @Nullable
+//      SqlValidatorNamespace callNs = callBinding.getValidator().getNamespace(callBinding.getCall());
+
+      boolean @Nullable [] usedDataset=new boolean[] {false};
+      RelOptTable table2 =
+          SqlValidatorUtil.getRelOptTable(callNs2, (@Nullable CatalogReader) catalogReader,
+              tableName, usedDataset);
+
       if (table == null) {
         throw DruidSqlValidator.buildCalciteContextException(
             StringUtils.format("Table [%s] not found", tableName),
