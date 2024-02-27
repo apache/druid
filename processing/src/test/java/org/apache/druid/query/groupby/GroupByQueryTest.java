@@ -42,8 +42,8 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -51,7 +51,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
-public class GroupByQueryTest
+public class GroupByQueryTest extends InitializedNullHandlingTest
 {
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
 
@@ -132,8 +132,8 @@ public class GroupByQueryTest
 
     final Ordering<ResultRow> rowOrdering = query.getRowOrdering(false);
     final int compare = rowOrdering.compare(
-        ResultRow.of(1, 1f, "a", ComparableStringArray.of("1", "2")),
-        ResultRow.of(1L, 1d, "b", ComparableStringArray.of("3"))
+        ResultRow.of(1, 1f, "a", new Object[]{"1", "2"}),
+        ResultRow.of(1L, 1d, "b", new Object[]{"3"})
     );
     Assert.assertEquals(-1, compare);
   }
