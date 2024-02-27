@@ -21,28 +21,32 @@ package org.apache.druid.sql.calcite.external;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.plan.RelOptTable;
-import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.schema.TableMacro;
 import org.apache.calcite.schema.TranslatableTable;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlCallBinding;
+import org.apache.calcite.sql.SqlFunction;
+import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperandCountRange;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOperatorBinding;
+import org.apache.calcite.sql.SqlTableFunction;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlOperandCountRanges;
-import org.apache.calcite.sql.type.SqlOperandMetadata;
+import org.apache.calcite.sql.type.SqlOperandTypeChecker;
+import org.apache.calcite.sql.type.SqlOperandTypeInference;
+import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.sql.validate.SqlUserDefinedTableMacro;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorCatalogReader;
 import org.apache.calcite.sql.validate.SqlValidatorTable;
+import org.apache.calcite.util.Util;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.UnionDataSource;
@@ -76,7 +80,8 @@ import java.util.Set;
  *
  * Enables to use: TABLE(APPEND('t1','t2')); which will provide a union view of the operand tables.
  */
-public class TableAppendMacro extends SqlUserDefinedTableMacro implements AuthorizableOperator
+public class TableAppendMacro extends SqlFunction
+implements SqlTableFunction,AuthorizableOperator
 {
 
   public static final OperatorConversion OPERATOR_CONVERSION = new OperatorConversion();
@@ -103,9 +108,20 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
     }
   }
 
+
+  private TableAppendMacro(SqlIdentifier opName, SqlKind kind,
+      SqlReturnTypeInference returnTypeInference,
+      SqlOperandTypeInference operandTypeInference,
+      OperandMetadata operandMetadata,
+      TableMacro tableMacro) {
+    super(Util.last(opName.names), opName, kind,
+        returnTypeInference, operandTypeInference, operandMetadata,
+        SqlFunctionCategory.USER_DEFINED_TABLE_FUNCTION);
+  }
+
   private TableAppendMacro()
   {
-    super(
+    this(
         new SqlIdentifier(OperatorConversion.FUNCTION_NAME, SqlParserPos.ZERO),
         SqlKind.OTHER_FUNCTION,
         ReturnTypes.CURSOR,
@@ -115,7 +131,7 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
     );
   }
 
-  private static class OperandMetadata implements SqlOperandMetadata
+  private static class OperandMetadata implements SqlOperandTypeChecker
   {
     @Override
     public boolean checkOperandTypes(SqlCallBinding callBinding, boolean throwOnFailure)
@@ -161,19 +177,6 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
     {
       return "APPEND( <TABLE_NAME>[, <TABLE_NAME> ...] )";
     }
-
-    @Override
-    public List<RelDataType> paramTypes(RelDataTypeFactory typeFactory)
-    {
-      RelDataType t = typeFactory.createSqlType(SqlTypeName.VARCHAR);
-      return ImmutableList.<RelDataType>builder().add(t, t).build();
-    }
-
-    @Override
-    public List<String> paramNames()
-    {
-      return ImmutableList.<String>builder().add("tableName", "tableName").build();
-    }
   }
 
   @Override
@@ -182,7 +185,6 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
     return ImmutableList.<String>builder().add("tableName", "tableName").build();
   }
 
-  @Override
   public TranslatableTable getTable(SqlOperatorBinding operatorBinding)
   {
     SqlCallBinding callBinding = (SqlCallBinding) operatorBinding;
@@ -340,5 +342,16 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
       ret.add(new ResourceAction(resource, Action.READ));
     }
     return ret;
+  }
+
+  @Override
+  public SqlReturnTypeInference getRowTypeInference()
+  {
+    if(true)
+    {
+      throw new RuntimeException("FIXME: Unimplemented!");
+    }
+    return null;
+
   }
 }
