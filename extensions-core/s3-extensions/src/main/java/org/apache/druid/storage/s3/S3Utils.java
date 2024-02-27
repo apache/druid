@@ -197,7 +197,9 @@ public class S3Utils
   static AccessControlList grantFullControlToBucketOwner(ServerSideEncryptingAmazonS3 s3Client, String bucket)
   {
     final AccessControlList acl = s3Client.getBucketAcl(bucket);
-    acl.grantAllPermissions(new Grant(new CanonicalGrantee(acl.getOwner().getId()), Permission.FullControl));
+    final String bucketOwnerId = acl.getOwner().getId();
+    log.debug("Granting Full Control to ID: [%s]", bucketOwnerId);
+    acl.grantAllPermissions(new Grant(new CanonicalGrantee(bucketOwnerId), Permission.FullControl));
     return acl;
   }
 
