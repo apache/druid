@@ -102,11 +102,17 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
    */
   @Nullable private final DateTime maxUsedStatusLastUpdatedTime;
 
+  /**
+   * The version of segments to delete in this {@link #getInterval()}.
+   */
+  @Nullable private final String version;
+
   @JsonCreator
   public KillUnusedSegmentsTask(
       @JsonProperty("id") String id,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
+      @JsonProperty("version") @Nullable String version,
       @JsonProperty("context") Map<String, Object> context,
       @JsonProperty("markAsUnused") @Deprecated Boolean markAsUnused,
       @JsonProperty("batchSize") Integer batchSize,
@@ -131,6 +137,10 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
     if (limit != null && Boolean.TRUE.equals(markAsUnused)) {
       throw InvalidInput.exception("limit[%d] cannot be provided when markAsUnused is enabled.", limit);
     }
+    if (version != null && Boolean.TRUE.equals(markAsUnused)) {
+      throw InvalidInput.exception("version[%s] cannot be provided when markAsUnused is enabled.", version);
+    }
+    this.version = version;
     this.limit = limit;
     this.maxUsedStatusLastUpdatedTime = maxUsedStatusLastUpdatedTime;
   }
@@ -155,6 +165,13 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
   public int getBatchSize()
   {
     return batchSize;
+  }
+
+  @Nullable
+  @JsonProperty
+  public String getVersion()
+  {
+    return version;
   }
 
   @Nullable
@@ -207,13 +224,9 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
     @Nullable Integer numTotalBatches = getNumTotalBatches();
     List<DataSegment> unusedSegments;
     LOG.info(
-        "Starting kill for datasource[%s] in interval[%s] with batchSize[%d], up to limit[%d] segments "
-        + "before maxUsedStatusLastUpdatedTime[%s] will be deleted%s",
-        getDataSource(),
-        getInterval(),
-        batchSize,
-        limit,
-        maxUsedStatusLastUpdatedTime,
+        "Starting kill for datasource[%s] in interval[%s] and version[%s] with batchSize[%d], up to limit[%d]"
+        + " segments before maxUsedStatusLastUpdatedTime[%s] will be deleted%s",
+        getDataSource(), getInterval(), getVersion(), batchSize, limit, maxUsedStatusLastUpdatedTime,
         numTotalBatches != null ? StringUtils.format(" in [%d] batches.", numTotalBatches) : "."
     );
 
@@ -221,6 +234,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
             getDataSource(),
             null,
             ImmutableList.of(getInterval()),
+            getVersion(),
             Segments.INCLUDING_OVERSHADOWED
     );
     // Fetch the load specs of all segments overlapping with the unused segment intervals
@@ -239,8 +253,8 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
       unusedSegments = toolbox
               .getTaskActionClient()
               .submit(
-                  new RetrieveUnusedSegmentsAction(getDataSource(), getInterval(), nextBatchSize, maxUsedStatusLastUpdatedTime
-              ));
+                  new RetrieveUnusedSegmentsAction(getDataSource(), getInterval(), getVersion(), nextBatchSize, maxUsedStatusLastUpdatedTime
+                  ));
 
       // Fetch locks each time as a revokal could have occurred in between batches
       final NavigableMap<DateTime, List<TaskLock>> taskLockMap
@@ -262,7 +276,6 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
       // abandoned.
 
       toolbox.getTaskActionClient().submit(new SegmentNukeAction(new HashSet<>(unusedSegments)));
-
 
       // Kill segments from the deep storage only if their load specs are not being used by any used segments
       final List<DataSegment> segmentsToBeKilled = unusedSegments

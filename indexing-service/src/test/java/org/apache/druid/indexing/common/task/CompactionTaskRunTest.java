@@ -196,7 +196,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
       {
         return Futures.immediateFuture(
             ImmutableList.copyOf(
-                getStorageCoordinator().retrieveUsedSegmentsForIntervals(dataSource, intervals, Segments.ONLY_VISIBLE)
+                getStorageCoordinator().retrieveUsedSegmentsForIntervals(dataSource, intervals, null, Segments.ONLY_VISIBLE)
             )
         );
       }
@@ -1119,7 +1119,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         getStorageCoordinator().retrieveUsedSegmentsForIntervals(
             DATA_SOURCE,
             Collections.singletonList(Intervals.of("2014-01-01/2014-01-02")),
-            Segments.ONLY_VISIBLE
+            null, Segments.ONLY_VISIBLE
         )
     );
 
@@ -1185,7 +1185,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         getStorageCoordinator().retrieveUsedSegmentsForIntervals(
             DATA_SOURCE,
             Collections.singletonList(Intervals.of("2014-01-01T00:00:00/2014-01-01T01:00:00")),
-            Segments.ONLY_VISIBLE
+            null, Segments.ONLY_VISIBLE
         )
     );
     // add 2 unchanged segments for hour 02:
@@ -1193,7 +1193,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         getStorageCoordinator().retrieveUsedSegmentsForIntervals(
             DATA_SOURCE,
             Collections.singletonList(Intervals.of("2014-01-01T02:00:00/2014-01-01T03:00:00")),
-            Segments.ONLY_VISIBLE
+            null, Segments.ONLY_VISIBLE
         )
     );
     expectedSegments.addAll(partialCompactionResult.rhs);
@@ -1205,7 +1205,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         getStorageCoordinator().retrieveUsedSegmentsForIntervals(
             DATA_SOURCE,
             Collections.singletonList(Intervals.of("2014-01-01/2014-01-02")),
-            Segments.ONLY_VISIBLE
+            null, Segments.ONLY_VISIBLE
         )
     );
     Assert.assertEquals(expectedSegments, segmentsAfterPartialCompaction);
@@ -1246,7 +1246,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         getStorageCoordinator().retrieveUsedSegmentsForIntervals(
             DATA_SOURCE,
             Collections.singletonList(Intervals.of("2014-01-01/2014-01-02")),
-            Segments.ONLY_VISIBLE
+            null, Segments.ONLY_VISIBLE
         )
     );
     segmentsAfterFullCompaction.sort(
@@ -1341,7 +1341,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         getStorageCoordinator().retrieveUsedSegmentsForIntervals(
             DATA_SOURCE,
             Collections.singletonList(Intervals.of("2014-01-01T00:00:00/2014-01-01T01:00:00")),
-            Segments.ONLY_VISIBLE
+            null, Segments.ONLY_VISIBLE
         )
     );
     // add 2 unchanged segments for hour 02:
@@ -1349,7 +1349,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         getStorageCoordinator().retrieveUsedSegmentsForIntervals(
             DATA_SOURCE,
             Collections.singletonList(Intervals.of("2014-01-01T02:00:00/2014-01-01T03:00:00")),
-            Segments.ONLY_VISIBLE
+            null, Segments.ONLY_VISIBLE
         )
     );
     expectedSegments.addAll(partialCompactionResult.rhs);
@@ -1361,7 +1361,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         getStorageCoordinator().retrieveUsedSegmentsForIntervals(
             DATA_SOURCE,
             Collections.singletonList(Intervals.of("2014-01-01/2014-01-02")),
-            Segments.ONLY_VISIBLE
+            null, Segments.ONLY_VISIBLE
         )
     );
     Assert.assertEquals(expectedSegments, segmentsAfterPartialCompaction);
@@ -1410,7 +1410,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         getStorageCoordinator().retrieveUsedSegmentsForIntervals(
             DATA_SOURCE,
             Collections.singletonList(Intervals.of("2014-01-01/2014-01-02")),
-            Segments.ONLY_VISIBLE
+            null, Segments.ONLY_VISIBLE
         )
     );
 
@@ -1436,7 +1436,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         getStorageCoordinator().retrieveUsedSegmentsForIntervals(
             DATA_SOURCE,
             Collections.singletonList(Intervals.of("2014-01-01/2014-01-02")),
-            Segments.ONLY_VISIBLE
+            null, Segments.ONLY_VISIBLE
         )
     );
 
@@ -1455,7 +1455,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         getStorageCoordinator().retrieveUsedSegmentsForIntervals(
             DATA_SOURCE,
             Collections.singletonList(Intervals.of("2014-01-01/2014-01-02")),
-            Segments.ONLY_VISIBLE
+            null, Segments.ONLY_VISIBLE
         )
     );
     segmentsAfterFullCompaction.sort(

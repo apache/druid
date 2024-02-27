@@ -41,6 +41,9 @@ public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment
   private final Interval interval;
 
   @JsonIgnore
+  private final String version;
+
+  @JsonIgnore
   private final Integer limit;
 
   @JsonIgnore
@@ -50,12 +53,14 @@ public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment
   public RetrieveUnusedSegmentsAction(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
+      @JsonProperty("version") @Nullable String version,
       @JsonProperty("limit") @Nullable Integer limit,
       @JsonProperty("maxUsedStatusLastUpdatedTime") @Nullable DateTime maxUsedStatusLastUpdatedTime
   )
   {
     this.dataSource = dataSource;
     this.interval = interval;
+    this.version = version;
     this.limit = limit;
     this.maxUsedStatusLastUpdatedTime = maxUsedStatusLastUpdatedTime;
   }
@@ -70,6 +75,13 @@ public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment
   public Interval getInterval()
   {
     return interval;
+  }
+
+  @Nullable
+  @JsonProperty
+  public String getVersion()
+  {
+    return version;
   }
 
   @Nullable
@@ -96,7 +108,7 @@ public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment
   public List<DataSegment> perform(Task task, TaskActionToolbox toolbox)
   {
     return toolbox.getIndexerMetadataStorageCoordinator()
-        .retrieveUnusedSegmentsForInterval(dataSource, interval, limit, maxUsedStatusLastUpdatedTime);
+        .retrieveUnusedSegmentsForInterval(dataSource, interval, version, limit, maxUsedStatusLastUpdatedTime);
   }
 
   @Override
@@ -111,6 +123,7 @@ public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment
     return getClass().getSimpleName() + "{" +
            "dataSource='" + dataSource + '\'' +
            ", interval=" + interval +
+           ", version=" + version +
            ", limit=" + limit +
            ", maxUsedStatusLastUpdatedTime=" + maxUsedStatusLastUpdatedTime +
            '}';

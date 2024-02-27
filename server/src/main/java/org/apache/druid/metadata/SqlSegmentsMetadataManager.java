@@ -683,12 +683,12 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
               interval == null ? Intervals.ONLY_ETERNITY : Collections.singletonList(interval);
 
           try (final CloseableIterator<DataSegment> iterator =
-                   queryTool.retrieveUsedSegments(dataSourceName, intervals)) {
+                   queryTool.retrieveUsedSegments(dataSourceName, intervals, null)) {
             timeline.addSegments(iterator);
           }
 
           try (final CloseableIterator<DataSegment> iterator =
-                   queryTool.retrieveUnusedSegments(dataSourceName, intervals, null, null, null, null)) {
+                   queryTool.retrieveUnusedSegments(dataSourceName, intervals, null, null, null, null, null)) {
             while (iterator.hasNext()) {
               final DataSegment dataSegment = iterator.next();
               timeline.addSegments(Iterators.singletonIterator(dataSegment));
@@ -820,7 +820,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   )
   {
     return SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables.get(), jsonMapper)
-                                   .retrieveUsedSegments(dataSource, intervals);
+                                   .retrieveUsedSegments(dataSource, intervals, null);
   }
 
   private int markSegmentsAsUsed(final List<SegmentId> segmentIds)
@@ -996,7 +996,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                   ? Intervals.ONLY_ETERNITY
                   : Collections.singletonList(interval);
           try (final CloseableIterator<DataSegmentPlus> iterator =
-                   queryTool.retrieveUnusedSegmentsPlus(datasource, intervals, limit, lastSegmentId, sortOrder, null)) {
+                   queryTool.retrieveUnusedSegmentsPlus(datasource, intervals, null, limit, lastSegmentId, sortOrder, null)) {
             return ImmutableList.copyOf(iterator);
           }
         }

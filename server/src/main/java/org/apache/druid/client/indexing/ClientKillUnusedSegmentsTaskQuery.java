@@ -40,6 +40,7 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
   private final String id;
   private final String dataSource;
   private final Interval interval;
+  @Nullable private final String version;
   private final Boolean markAsUnused;
   private final Integer batchSize;
   @Nullable private final Integer limit;
@@ -50,6 +51,7 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
       @JsonProperty("id") String id,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
+      @JsonProperty("version") String version,
       @JsonProperty("markAsUnused") @Deprecated Boolean markAsUnused,
       @JsonProperty("batchSize") Integer batchSize,
       @JsonProperty("limit") @Nullable Integer limit,
@@ -65,6 +67,7 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
     this.id = id;
     this.dataSource = dataSource;
     this.interval = interval;
+    this.version = version;
     this.markAsUnused = markAsUnused;
     this.batchSize = batchSize;
     this.limit = limit;
@@ -96,6 +99,13 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
   public Interval getInterval()
   {
     return interval;
+  }
+
+  @JsonProperty
+  @Nullable
+  public String getVersion()
+  {
+    return version;
   }
 
   /**
@@ -146,6 +156,7 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
     return Objects.equals(id, that.id)
            && Objects.equals(dataSource, that.dataSource)
            && Objects.equals(interval, that.interval)
+           && Objects.equals(version, that.version)
            && Objects.equals(markAsUnused, that.markAsUnused)
            && Objects.equals(batchSize, that.batchSize)
            && Objects.equals(limit, that.limit)
@@ -155,6 +166,6 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
   @Override
   public int hashCode()
   {
-    return Objects.hash(id, dataSource, interval, markAsUnused, batchSize, limit, maxUsedStatusLastUpdatedTime);
+    return Objects.hash(id, dataSource, interval, version, markAsUnused, batchSize, limit, maxUsedStatusLastUpdatedTime);
   }
 }

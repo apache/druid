@@ -908,7 +908,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     final List<DataSegment> unusedSegments = mdc.retrieveUnusedSegmentsForInterval(
         "test_kill_task",
         Intervals.of("2011-04-01/P4D"),
-        null,
+        null, null,
         null
     );
     for (DataSegment segment : unusedSegments) {
@@ -923,7 +923,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             null,
             "test_kill_task",
             Intervals.of("2011-04-01/P4D"),
-            null,
+            null, null,
             false,
             null,
             null,
@@ -1005,7 +1005,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     final List<DataSegment> unusedSegments = mdc.retrieveUnusedSegmentsForInterval(
         "test_kill_task",
         Intervals.of("2011-04-01/P4D"),
-        null,
+        null, null,
         null
     );
     for (DataSegment segment : unusedSegments) {
@@ -1021,7 +1021,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             null,
             "test_kill_task",
             Intervals.of("2011-04-01/P4D"),
-            null,
+            null, null,
             false,
             null,
             maxSegmentsToKill,

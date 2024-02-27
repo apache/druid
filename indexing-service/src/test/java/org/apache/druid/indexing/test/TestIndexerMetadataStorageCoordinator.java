@@ -98,7 +98,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   public List<DataSegment> retrieveUsedSegmentsForIntervals(
       String dataSource,
       List<Interval> intervals,
-      Segments visibility
+      String version, Segments visibility
   )
   {
     return ImmutableList.of();
@@ -108,7 +108,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   public List<DataSegment> retrieveUnusedSegmentsForInterval(
       String dataSource,
       Interval interval,
-      @Nullable Integer limit,
+      String version, @Nullable Integer limit,
       @Nullable DateTime maxUsedStatusLastUpdatedTime
   )
   {

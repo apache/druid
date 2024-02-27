@@ -95,6 +95,7 @@ public interface OverlordClient
       String idPrefix,
       String dataSource,
       Interval interval,
+      @Nullable String version,
       @Nullable Integer maxSegmentsToKill,
       @Nullable DateTime maxUsedStatusLastUpdatedTime
   )
@@ -104,6 +105,7 @@ public interface OverlordClient
         taskId,
         dataSource,
         interval,
+        version,
         false,
         null,
         maxSegmentsToKill,

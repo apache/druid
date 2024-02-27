@@ -591,7 +591,7 @@ public class DataSourcesResourceTest
     Interval theInterval = Intervals.of(interval.replace('_', '/'));
 
     OverlordClient overlordClient = EasyMock.createStrictMock(OverlordClient.class);
-    EasyMock.expect(overlordClient.runKillTask("api-issued", "datasource1", theInterval, null, null))
+    EasyMock.expect(overlordClient.runKillTask("api-issued", "datasource1", theInterval, null, null, null))
             .andReturn(Futures.immediateFuture("kill_task_1"));
     EasyMock.replay(overlordClient, server);
 

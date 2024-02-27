@@ -977,6 +977,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
               WIKI,
               null,
               ImmutableList.of(interval),
+              null,
               visibility
           )
       );

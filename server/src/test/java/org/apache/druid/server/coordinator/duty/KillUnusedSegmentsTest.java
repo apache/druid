@@ -843,6 +843,7 @@ public class KillUnusedSegmentsTest
         String idPrefix,
         String dataSource,
         Interval interval,
+        @Nullable String version,
         @Nullable Integer maxSegmentsToKill,
         @Nullable DateTime maxUsedStatusLastUpdatedTime
     )

@@ -1034,7 +1034,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     {
       return exec.submit(
           () -> ImmutableList.copyOf(
-              getStorageCoordinator().retrieveUsedSegmentsForIntervals(dataSource, intervals, Segments.ONLY_VISIBLE)
+              getStorageCoordinator().retrieveUsedSegmentsForIntervals(dataSource, intervals, null, Segments.ONLY_VISIBLE)
           )
       );
     }
