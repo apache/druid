@@ -61,8 +61,6 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.DatasourceMetadata;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.DatasourceTable.EffectiveMetadata;
-import org.checkerframework.checker.nullness.qual.Nullable;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -233,15 +231,6 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
   {
     List<TableOperand> tables = new ArrayList<>();
     for (int i = 0; i < callBinding.getOperandCount(); i++) {
-      if (!callBinding.isOperandLiteral(i, false)) {
-        throw DruidSqlValidator.buildCalciteContextException(
-            "All arguments of call to macro "
-                + "APPEND should be literal. Actual argument #"
-                + i + " is not literal",
-                callBinding.operand(i)
-        );
-      }
-      @Nullable
       String tableName = callBinding.getOperandLiteralValue(i, String.class);
       ImmutableList<String> tableNameList = ImmutableList.<String>builder().add(tableName).build();
       SqlValidatorTable table = catalogReader.getTable(tableNameList);
