@@ -157,7 +157,6 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
 
   private final ObjectMapper jsonMapper;
   private final Duration periodicPollDelay;
-  private final boolean isUseFindFullyOvershadowed;
   private final Supplier<MetadataStorageTablesConfig> dbTables;
   private final SQLMetadataConnector connector;
 
@@ -249,7 +248,6 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   {
     this.jsonMapper = jsonMapper;
     this.periodicPollDelay = config.get().getPollDuration().toStandardDuration();
-    this.isUseFindFullyOvershadowed = config.get().isUseFindFullyOvershadowed();
     this.dbTables = dbTables;
     this.connector = connector;
   }
@@ -1099,8 +1097,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     }
     dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
         Iterables.filter(segments, Objects::nonNull), // Filter corrupted entries (see above in this method).
-        dataSourceProperties,
-        isUseFindFullyOvershadowed
+        dataSourceProperties
     );
   }
 
