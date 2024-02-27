@@ -230,4 +230,21 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
         )
         .run();
   }
+
+  @Test
+  public void testAppendCTE()
+  {
+    try {
+      testBuilder()
+          .sql("with t0 as (select * from foo) select dim3 from TABLE(APPEND('t0','foo')) u")
+          .run();
+      Assert.fail("query execution should fail");
+    }
+    catch (DruidException e) {
+      MatcherAssert.assertThat(
+          e,
+          invalidSqlIs("Table [t0] not found (line [1], column [62])")
+      );
+    }
+  }
 }
