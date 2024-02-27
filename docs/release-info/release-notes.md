@@ -34,7 +34,7 @@ Apache Druid 29.0.1 is a patch release that fixes some issues in the Druid 29.0.
 * Added type verification for INSERT and REPLACE to validate that strings and string arrays aren't mixed [#15920](https://github.com/apache/druid/pull/15920)
 * Fixed an issue where the Druid web console generates a Kafka supervisor spec where `flattenSpec` is in the wrong place, causing it to be ignored [#15946](https://github.com/apache/druid/pull/15946)
 * Fixed an issue with filters on expression virtual column indexes incorrectly considering values null in some cases for expressions which translate null values into not null values [#15959](https://github.com/apache/druid/pull/15959)
-* Fixed an issue where the `arrayIngestMode` value can persist across the SQL tab in the **Query** console, even if you execute unrelated DML operations within the same tab [#15927](https://github.com/apache/druid/pull/15927)
+* Web console-generated queries now only set the context parameter `arrayIngestMode` to `array` when you explicitly opt in to use arrays [#15927](https://github.com/apache/druid/pull/15927)
 
 ## Druid 29.0.0
 
