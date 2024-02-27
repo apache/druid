@@ -33,7 +33,7 @@ Apache Druid 29.0.1 is a patch release that fixes some issues in the Druid 29.0.
 * The Druid web console now displays the results of an MSQ query that writes to an external destination through the [`EXTERN`](https://druid.apache.org/docs/latest/multi-stage-query/reference#extern-function) function [#15969](https://github.com/apache/druid/pull/15969)
 * Added type verification for INSERT and REPLACE to validate that strings and string arrays aren't mixed [#15920](https://github.com/apache/druid/pull/15920)
 * Fixed an issue where the Druid web console generates a Kafka supervisor spec where `flattenSpec` is in the wrong place, causing it to be ignored [#15946](https://github.com/apache/druid/pull/15946)
-* Fixed an issue with expression virtual column indexes when handling missing columns for expressions that transform null values into non-null values [#15959](https://github.com/apache/druid/pull/15959)
+* Fixed an issue with filters on expression virtual column indexes incorrectly considering values null in some cases for expressions which translate null values into not null values [#15959](https://github.com/apache/druid/pull/15959)
 * Fixed an issue where the `arrayIngestMode` value can persist across the SQL tab in the **Query** console, even if you execute unrelated DML operations within the same tab [#15927](https://github.com/apache/druid/pull/15927)
 
 ## Druid 29.0.0
