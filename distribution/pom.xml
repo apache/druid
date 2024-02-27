@@ -457,6 +457,8 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-spectator-histogram</argument>
                                         <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-rabbit-indexing-service</argument>
+                                        <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:grpc-query</argument>
                                     </arguments>
                                 </configuration>

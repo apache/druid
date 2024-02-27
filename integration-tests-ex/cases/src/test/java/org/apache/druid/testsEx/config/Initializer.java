@@ -77,6 +77,7 @@ import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.IntegrationTestingConfigProvider;
+import org.apache.druid.testing.clients.AdminClient;
 import org.apache.druid.testing.guice.TestClient;
 import org.apache.druid.testsEx.cluster.DruidClusterClient;
 import org.apache.druid.testsEx.cluster.MetastoreClient;
@@ -192,6 +193,14 @@ public class Initializer
       } else {
         return new CredentialedHttpClient(new BasicCredentials("admin", "priest"), delegate);
       }
+    }
+
+    @Provides
+    @AdminClient
+    public HttpClient getAdminClient(@Client HttpClient delegate)
+    {
+      BasicCredentials basicCredentials = new BasicCredentials("admin", "priest");
+      return new CredentialedHttpClient(basicCredentials, delegate);
     }
 
     @Provides
