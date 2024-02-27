@@ -48,6 +48,7 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.RowSignature.Builder;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
@@ -124,7 +125,7 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
           if (throwOnFailure) {
             throw DruidSqlValidator.buildCalciteContextException(
                 "All arguments to APPEND should be literal strings. "
-                    + "Argument #" + i + " is not literal",
+                    + "Argument #" + (i+1) + " is not literal",
                 operand
             );
           } else {
@@ -137,7 +138,7 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
           if (throwOnFailure) {
             throw DruidSqlValidator.buildCalciteContextException(
                 "All arguments to APPEND should be literal strings. "
-                    + "Argument #" + i + " is not string",
+                    + "Argument #" + (i+1) + " is not string",
                 operand
             );
           } else {
@@ -170,14 +171,14 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
     @Override
     public List<String> paramNames()
     {
-      return ImmutableList.<String>builder().add("tableName", "tableName").build();
+      return ImmutableList.<String>builder().add("tableName1", "tableName2").build();
     }
   }
 
   @Override
   public List<String> getParamNames()
   {
-    return ImmutableList.<String>builder().add("tableName", "tableName").build();
+    return ImmutableList.<String>builder().add("tableName1", "tableName2").build();
   }
 
   @Override
@@ -279,7 +280,6 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
   {
     List<DataSource> dataSources = new ArrayList<>();
     Map<String, ColumnType> fields = new LinkedHashMap<>();
-    Builder rowSignatureBuilder = RowSignature.builder();
     for (TableOperand table : tables) {
       RowSignature rowSignature = table.getRowSignature();
       for (String columnName : rowSignature.getColumnNames()) {
@@ -293,7 +293,7 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
             ColumnType commonType = ColumnType.leastRestrictiveType(currentType, existingType);
             fields.put(columnName, commonType);
           }
-          catch (Exception e) {
+          catch (Types.IncompatibleTypeException e) {
             throw DruidSqlValidator.buildCalciteContextException(
                 e,
                 StringUtils.format(
@@ -314,10 +314,17 @@ public class TableAppendMacro extends SqlUserDefinedTableMacro implements Author
       dataSources.add(table.getDataSource());
     }
 
+    return new AppendDatasourceMetadata(buildRowSignatureFromMap(fields), dataSources);
+  }
+
+  private RowSignature buildRowSignatureFromMap(Map<String, ColumnType> fields)
+  {
+    Builder rowSignatureBuilder = RowSignature.builder();
     for (Entry<String, ColumnType> col : fields.entrySet()) {
       rowSignatureBuilder.add(col.getKey(), col.getValue());
     }
-    return new AppendDatasourceMetadata(rowSignatureBuilder.build(), dataSources);
+    RowSignature rowSignature = rowSignatureBuilder.build();
+    return rowSignature;
   }
 
   @Override

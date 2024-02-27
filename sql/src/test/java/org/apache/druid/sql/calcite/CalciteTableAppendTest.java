@@ -21,7 +21,11 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.query.Druids;
+import org.apache.druid.query.scan.ScanQuery.ResultFormat;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
+import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -37,6 +41,29 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
   {
     testBuilder()
         .sql("select dim1,null as dim4 from foo union all select dim1,dim4 from numfoo")
+        .expectedQueries(
+            ImmutableList.of(
+                Druids.newScanQueryBuilder()
+                    .dataSource(CalciteTests.DATASOURCE1)
+                    .intervals(querySegmentSpec(Filtration.eternity()))
+                    .columns("dim1", "v0")
+                    .context(QUERY_CONTEXT_DEFAULT)
+                    .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                    .virtualColumns(
+                        expressionVirtualColumn("v0", "null", null)
+                    )
+                    .legacy(false)
+                    .build(),
+                Druids.newScanQueryBuilder()
+                    .dataSource(CalciteTests.DATASOURCE3)
+                    .intervals(querySegmentSpec(Filtration.eternity()))
+                    .columns("dim1", "dim4")
+                    .context(QUERY_CONTEXT_DEFAULT)
+                    .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                    .legacy(false)
+                    .build()
+            )
+        )
         .expectedResults(
             ImmutableList.of(
                 new Object[] {"", null},
@@ -121,23 +148,6 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testAppendtNoTableIsInvalid()
-  {
-    try {
-      testBuilder()
-          .sql("select dim1 from TABLE(APPEND()) u")
-          .run();
-      Assert.fail("query execution should fail");
-    }
-    catch (DruidException e) {
-      MatcherAssert.assertThat(
-          e,
-          invalidSqlIs("No match found for function signature APPEND() (line [1], column [24])")
-      );
-    }
-  }
-
-  @Test
   public void testAppendNoTableIsInvalid()
   {
     try {
@@ -167,7 +177,7 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
       MatcherAssert.assertThat(
           e,
           invalidSqlIs(
-              "All arguments to APPEND should be literal strings. Argument #1 is not string (line [1], column [37])"
+              "All arguments to APPEND should be literal strings. Argument #2 is not string (line [1], column [37])"
           )
       );
     }
@@ -186,7 +196,7 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
       MatcherAssert.assertThat(
           e,
           invalidSqlIs(
-              "All arguments to APPEND should be literal strings. Argument #1 is not string (line [1], column [37])"
+              "All arguments to APPEND should be literal strings. Argument #2 is not string (line [1], column [37])"
           )
       );
     }
@@ -234,6 +244,7 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
   @Test
   public void testAppendCTE()
   {
+    // not supported right now - test is here that it doesn't hit any serious issues
     try {
       testBuilder()
           .sql("with t0 as (select * from foo) select dim3 from TABLE(APPEND('t0','foo')) u")
