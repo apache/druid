@@ -145,33 +145,33 @@ public class DirectDruidClientTest
     SettableFuture<InputStream> futureResult = SettableFuture.create();
     Capture<Request> capturedRequest = EasyMock.newCapture();
     EasyMock.expect(
-        httpClient.go(
-            EasyMock.capture(capturedRequest),
-            EasyMock.<HttpResponseHandler>anyObject(),
-            EasyMock.anyObject(Duration.class)
-        )
-    )
+                httpClient.go(
+                    EasyMock.capture(capturedRequest),
+                    EasyMock.<HttpResponseHandler>anyObject(),
+                    EasyMock.anyObject(Duration.class)
+                )
+            )
             .andReturn(futureResult)
             .times(1);
 
     SettableFuture futureException = SettableFuture.create();
     EasyMock.expect(
-        httpClient.go(
-            EasyMock.capture(capturedRequest),
-            EasyMock.<HttpResponseHandler>anyObject(),
-            EasyMock.anyObject(Duration.class)
-        )
-    )
+                httpClient.go(
+                    EasyMock.capture(capturedRequest),
+                    EasyMock.<HttpResponseHandler>anyObject(),
+                    EasyMock.anyObject(Duration.class)
+                )
+            )
             .andReturn(futureException)
             .times(1);
 
     EasyMock.expect(
-        httpClient.go(
-            EasyMock.capture(capturedRequest),
-            EasyMock.<HttpResponseHandler>anyObject(),
-            EasyMock.anyObject(Duration.class)
-        )
-    )
+                httpClient.go(
+                    EasyMock.capture(capturedRequest),
+                    EasyMock.<HttpResponseHandler>anyObject(),
+                    EasyMock.anyObject(Duration.class)
+                )
+            )
             .andReturn(SettableFuture.create())
             .atLeastOnce();
 
@@ -252,22 +252,22 @@ public class DirectDruidClientTest
     SettableFuture<Object> cancellationFuture = SettableFuture.create();
 
     EasyMock.expect(
-        httpClient.go(
-            EasyMock.capture(capturedRequest),
-            EasyMock.<HttpResponseHandler>anyObject(),
-            EasyMock.anyObject(Duration.class)
-        )
-    )
+                httpClient.go(
+                    EasyMock.capture(capturedRequest),
+                    EasyMock.<HttpResponseHandler>anyObject(),
+                    EasyMock.anyObject(Duration.class)
+                )
+            )
             .andReturn(cancelledFuture)
             .once();
 
     EasyMock.expect(
-        httpClient.go(
-            EasyMock.capture(capturedRequest),
-            EasyMock.<HttpResponseHandler>anyObject(),
-            EasyMock.anyObject(Duration.class)
-        )
-    )
+                httpClient.go(
+                    EasyMock.capture(capturedRequest),
+                    EasyMock.<HttpResponseHandler>anyObject(),
+                    EasyMock.anyObject(Duration.class)
+                )
+            )
             .andReturn(cancellationFuture)
             .anyTimes();
 

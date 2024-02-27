@@ -85,7 +85,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- *
  */
 public class DirectDruidClient<T> implements QueryRunner<T>
 {
@@ -464,7 +463,10 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         ));
       }
 
+      // increment is moved up so that if future initialization is queued by some other process,
+      // we can increment the count earlier so that we can route the request to a different server
       openConnections.getAndIncrement();
+
       future = httpClient.go(
           new Request(
               HttpMethod.POST,
