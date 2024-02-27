@@ -51,8 +51,11 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -128,8 +131,13 @@ public class KafkaEmitterTest
       new TestEvent()
   );
 
+  /**
+   * Unit test to validate the handling of {@link ServiceMetricEvent}s.
+   * Only {@link KafkaEmitterConfig.EventType}s is subscribed in the config, so the expectation is that the
+   * events are emitted without any drops.
+   */
   @Test(timeout = 10_000)
-  public void testServiceMetricEvents() throws JsonProcessingException, InterruptedException
+  public void testServiceMetricEvents() throws InterruptedException, JsonProcessingException
   {
     final KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig(
         "",
@@ -149,12 +157,12 @@ public class KafkaEmitterTest
     final List<Event> inputEvents = flattenEvents(SERVICE_METRIC_EVENTS);
     final CountDownLatch eventLatch = new CountDownLatch(inputEvents.size());
 
-    final Map<String, List<String>> feedToExpectedEvents = trackExpectedEventsPerFeed(
+    final Map<String, List<EventMap>> feedToExpectedEvents = trackExpectedEventsPerFeed(
         inputEvents,
         kafkaEmitterConfig.getClusterName(),
         kafkaEmitterConfig.getExtraDimensions()
     );
-    final Map<String, List<String>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
+    final Map<String, List<EventMap>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
 
     emitEvents(kafkaEmitter, inputEvents, eventLatch);
 
@@ -167,8 +175,14 @@ public class KafkaEmitterTest
     Assert.assertEquals(0, kafkaEmitter.getInvalidLostCount());
   }
 
+  /**
+   * Unit test to validate the handling of all event types, including {@link ServiceMetricEvent},
+   * {@link AlertEvent}, {@link org.apache.druid.server.log.RequestLogEvent}, and {@link SegmentMetadataEvent}.
+   * All {@link KafkaEmitterConfig.EventType}s are subscribed in the config, so the expectation is that all the
+   * events are emitted without any drops.
+   */
   @Test(timeout = 10_000)
-  public void testAllEvents() throws JsonProcessingException, InterruptedException
+  public void testAllEvents() throws InterruptedException, JsonProcessingException
   {
     final KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig(
         "",
@@ -193,12 +207,12 @@ public class KafkaEmitterTest
     );
     final CountDownLatch eventLatch = new CountDownLatch(inputEvents.size());
 
-    final Map<String, List<String>> feedToExpectedEvents = trackExpectedEventsPerFeed(
+    final Map<String, List<EventMap>> feedToExpectedEvents = trackExpectedEventsPerFeed(
         inputEvents,
         kafkaEmitterConfig.getClusterName(),
         kafkaEmitterConfig.getExtraDimensions()
     );
-    final Map<String, List<String>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
+    final Map<String, List<EventMap>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
 
     emitEvents(kafkaEmitter, inputEvents, eventLatch);
 
@@ -212,8 +226,13 @@ public class KafkaEmitterTest
 
   }
 
+  /**
+   * Unit test to validate the handling of the default event types - {@link ServiceMetricEvent} and {@link AlertEvent}.
+   * The default event types (alerts and metrics) are subscribed in the config, so the expectation is that both input
+   * event types should be emitted without any drops.
+   */
   @Test(timeout = 10_000)
-  public void testDefaultEvents() throws JsonProcessingException, InterruptedException
+  public void testDefaultEvents() throws InterruptedException, JsonProcessingException
   {
     final KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig(
         "",
@@ -236,12 +255,12 @@ public class KafkaEmitterTest
     );
     final CountDownLatch eventLatch = new CountDownLatch(inputEvents.size());
 
-    final Map<String, List<String>> feedToExpectedEvents = trackExpectedEventsPerFeed(
+    final Map<String, List<EventMap>> feedToExpectedEvents = trackExpectedEventsPerFeed(
         inputEvents,
         kafkaEmitterConfig.getClusterName(),
         kafkaEmitterConfig.getExtraDimensions()
     );
-    final Map<String, List<String>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
+    final Map<String, List<EventMap>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
 
     emitEvents(kafkaEmitter, inputEvents, eventLatch);
 
@@ -254,8 +273,14 @@ public class KafkaEmitterTest
     Assert.assertEquals(0, kafkaEmitter.getInvalidLostCount());
   }
 
+  /**
+   * Unit test to validate the handling of all valid event types, including {@link ServiceMetricEvent},
+   * {@link AlertEvent}, {@link org.apache.druid.server.log.RequestLogEvent}, and {@link SegmentMetadataEvent}.
+   * Only alerts are subscribed in the config, so the expectation is that only alert events
+   * should be emitted, and everything else should be dropped.
+   */
   @Test(timeout = 10_000)
-  public void testAlertsPlusUnsubscribedEvents() throws JsonProcessingException, InterruptedException
+  public void testAlertsPlusUnsubscribedEvents() throws InterruptedException, JsonProcessingException
   {
     final KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig(
         "",
@@ -282,12 +307,12 @@ public class KafkaEmitterTest
 
     final CountDownLatch eventLatch = new CountDownLatch(ALERT_EVENTS.size());
 
-    final Map<String, List<String>> feedToExpectedEvents = trackExpectedEventsPerFeed(
+    final Map<String, List<EventMap>> feedToExpectedEvents = trackExpectedEventsPerFeed(
         ALERT_EVENTS,
         kafkaEmitterConfig.getClusterName(),
         kafkaEmitterConfig.getExtraDimensions()
     );
-    final Map<String, List<String>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
+    final Map<String, List<EventMap>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
 
     emitEvents(kafkaEmitter, inputEvents, eventLatch);
 
@@ -302,8 +327,17 @@ public class KafkaEmitterTest
     Assert.assertEquals(REQUEST_LOG_EVENTS.size(), kafkaEmitter.getRequestLostCount());
   }
 
+  /**
+   * Similar to {@link #testAllEvents()}, this test configures all event feeds to emit to the same topic.
+   * <p>
+   * Unit test to validate the handling of all valid event types, including {@link ServiceMetricEvent},
+   * {@link AlertEvent}, {@link org.apache.druid.server.log.RequestLogEvent}, and {@link SegmentMetadataEvent}.
+   * All {@link KafkaEmitterConfig.EventType}s are subscribed to the same topic in the config, so the expectation
+   * is that all input events are emitted without any drops.
+   * </p>
+   */
   @Test(timeout = 10_000)
-  public void testAllEventsWithCommonTopic() throws JsonProcessingException, InterruptedException
+  public void testAllEventsWithCommonTopic() throws InterruptedException, JsonProcessingException
   {
     final KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig(
         "",
@@ -329,12 +363,12 @@ public class KafkaEmitterTest
 
     final CountDownLatch eventLatch = new CountDownLatch(inputEvents.size());
 
-    final Map<String, List<String>> feedToExpectedEvents = trackExpectedEventsPerFeed(
+    final Map<String, List<EventMap>> feedToExpectedEvents = trackExpectedEventsPerFeed(
         inputEvents,
         kafkaEmitterConfig.getClusterName(),
         kafkaEmitterConfig.getExtraDimensions()
     );
-    final Map<String, List<String>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
+    final Map<String, List<EventMap>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
 
     emitEvents(kafkaEmitter, inputEvents, eventLatch);
 
@@ -347,8 +381,14 @@ public class KafkaEmitterTest
     Assert.assertEquals(0, kafkaEmitter.getInvalidLostCount());
   }
 
+  /**
+   * Unit test to validate the handling of {@link ServiceMetricEvent}s and {@link TestEvent}s.
+   * The default event types (alerts and metrics) are subscribed in the config, so the expectation is that only
+   * {@link ServiceMetricEvent} is expected to be emitted, while dropping all unknown {@link TestEvent}s.
+   * </p>
+   */
   @Test(timeout = 10_000)
-  public void testUnknownEvents() throws JsonProcessingException, InterruptedException
+  public void testUnknownEvents() throws InterruptedException, JsonProcessingException
   {
     final KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig(
         "",
@@ -372,12 +412,12 @@ public class KafkaEmitterTest
 
     final CountDownLatch eventLatch = new CountDownLatch(SERVICE_METRIC_EVENTS.size());
 
-    final Map<String, List<String>> feedToExpectedEvents = trackExpectedEventsPerFeed(
+    final Map<String, List<EventMap>> feedToExpectedEvents = trackExpectedEventsPerFeed(
         SERVICE_METRIC_EVENTS,
         kafkaEmitterConfig.getClusterName(),
         kafkaEmitterConfig.getExtraDimensions()
     );
-    final Map<String, List<String>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
+    final Map<String, List<EventMap>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
 
     emitEvents(kafkaEmitter, inputEvents, eventLatch);
 
@@ -390,6 +430,13 @@ public class KafkaEmitterTest
     Assert.assertEquals(UNKNOWN_EVENTS.size(), kafkaEmitter.getInvalidLostCount());
   }
 
+  /**
+   * Unit test to validate the handling of {@link ServiceMetricEvent}s when the Kafka emitter queue, which buffers up events
+   * becomes full. The queue size in the config is set via {@code buffer.memory} and is computed from
+   * the input events using {@code bufferEventsDrop}. The default event types (alerts and metrics) are subscribed in
+   * the config, so the expectation is that all {@link ServiceMetricEvent}s up to {@code n - bufferEventsDrop} will be
+   * emitted, {@code n} being the total number of input events, while dropping the last {@code bufferEventsDrop} events.
+   */
   @Test(timeout = 10_000)
   public void testDropEventsWhenQueueFull() throws JsonProcessingException, InterruptedException
   {
@@ -398,7 +445,7 @@ public class KafkaEmitterTest
     );
 
     final ImmutableMap<String, String> extraDimensions = ImmutableMap.of("clusterId", "cluster-101");
-    final Map<String, List<String>> feedToAllEventsBeforeDrop = trackExpectedEventsPerFeed(
+    final Map<String, List<EventMap>> feedToAllEventsBeforeDrop = trackExpectedEventsPerFeed(
         inputEvents,
         null,
         extraDimensions
@@ -424,15 +471,15 @@ public class KafkaEmitterTest
     // we should track the minimum buffer size per feed, compute the global maximum across all the feeds and prune the
     // expected set of events accordingly. For the sake of testing simplicity, we skip that for now.
     int totalBufferSize = 0;
-    for (final List<String> feedEvents : feedToAllEventsBeforeDrop.values()) {
+    for (final List<EventMap> feedEvents : feedToAllEventsBeforeDrop.values()) {
       for (int idx = 0; idx < feedEvents.size() - bufferEventsDrop; idx++) {
-        totalBufferSize += feedEvents.get(idx).getBytes(StandardCharsets.UTF_8).length;
+        totalBufferSize += MAPPER.writeValueAsString(feedEvents.get(idx)).getBytes(StandardCharsets.UTF_8).length;
       }
     }
 
-    final Map<String, List<String>> feedToExpectedEvents = new HashMap<>();
-    for (final Map.Entry<String, List<String>> expectedEvent : feedToAllEventsBeforeDrop.entrySet()) {
-      List<String> expectedEvents = expectedEvent.getValue();
+    final Map<String, List<EventMap>> feedToExpectedEvents = new HashMap<>();
+    for (final Map.Entry<String, List<EventMap>> expectedEvent : feedToAllEventsBeforeDrop.entrySet()) {
+      List<EventMap> expectedEvents = expectedEvent.getValue();
       feedToExpectedEvents.put(expectedEvent.getKey(), expectedEvents.subList(0, expectedEvents.size() - bufferEventsDrop));
     }
 
@@ -452,7 +499,7 @@ public class KafkaEmitterTest
     final KafkaEmitter kafkaEmitter = initKafkaEmitter(kafkaEmitterConfig);
 
     final CountDownLatch eventLatch = new CountDownLatch(inputEvents.size() - bufferEventsDrop);
-    final Map<String, List<String>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
+    final Map<String, List<EventMap>> feedToActualEvents = trackActualEventsPerFeed(eventLatch);
 
     emitEvents(kafkaEmitter, inputEvents, eventLatch);
 
@@ -509,18 +556,20 @@ public class KafkaEmitterTest
     return flattenedList;
   }
 
-  private Map<String, List<String>> trackActualEventsPerFeed(
+  private Map<String, List<EventMap>> trackActualEventsPerFeed(
       final CountDownLatch eventLatch
   )
   {
-    final Map<String, List<String>> feedToActualEvents = new HashMap<>();
+
+    // A concurrent hashmap because the producer callback can trigger concurrently and can override the map initialization
+    final ConcurrentHashMap<String, List<EventMap>> feedToActualEvents = new ConcurrentHashMap<>();
     when(producer.send(any(), any())).then((invocation) -> {
       final ProducerRecord<?, ?> producerRecord = invocation.getArgument(0);
       final String value = String.valueOf(producerRecord.value());
       final EventMap eventMap = MAPPER.readValue(value, EventMap.class);
       feedToActualEvents.computeIfAbsent(
           (String) eventMap.get("feed"), k -> new ArrayList<>()
-      ).add(value);
+      ).add(eventMap);
 
       eventLatch.countDown();
       return null;
@@ -528,38 +577,37 @@ public class KafkaEmitterTest
     return feedToActualEvents;
   }
 
-  private Map<String, List<String>> trackExpectedEventsPerFeed(
+  private Map<String, List<EventMap>> trackExpectedEventsPerFeed(
       final List<Event> events,
       final String clusterName,
       final Map<String, String> extraDimensions
   ) throws JsonProcessingException
   {
-    final Map<String, List<String>> feedToExpectedEvents = new HashMap<>();
+    final Map<String, List<EventMap>> feedToExpectedEvents = new HashMap<>();
     for (final Event event : events) {
-      final EventMap eventMap = event.toMap();
+      final EventMap eventMap = MAPPER.readValue(MAPPER.writeValueAsString(event.toMap()), EventMap.class);
       eventMap.computeIfAbsent("clusterName", k -> clusterName);
       if (extraDimensions != null) {
         eventMap.putAll(extraDimensions);
       }
       feedToExpectedEvents.computeIfAbsent(
-          event.getFeed(), k -> new ArrayList<>()).add(MAPPER.writeValueAsString(eventMap)
-      );
+          event.getFeed(), k -> new ArrayList<>()).add(eventMap);
     }
     return feedToExpectedEvents;
   }
 
   private void validateEvents(
-      final Map<String, List<String>> feedToExpectedEvents,
-      final Map<String, List<String>> feedToActualEvents
+      final Map<String, List<EventMap>> feedToExpectedEvents,
+      final Map<String, List<EventMap>> feedToActualEvents
   )
   {
     Assert.assertEquals(feedToExpectedEvents.size(), feedToActualEvents.size());
 
-    for (final Map.Entry<String, List<String>> actualEntry : feedToActualEvents.entrySet()) {
+    for (final Map.Entry<String, List<EventMap>> actualEntry : feedToActualEvents.entrySet()) {
       final String feed = actualEntry.getKey();
-      final List<String> actualEvents = actualEntry.getValue();
-      final List<String> expectedEvents = feedToExpectedEvents.get(feed);
-      Assert.assertEquals(expectedEvents, actualEvents);
+      final List<EventMap> actualEvents = actualEntry.getValue();
+      final List<EventMap> expectedEvents = feedToExpectedEvents.get(feed);
+      assertThat(actualEvents, containsInAnyOrder(expectedEvents.toArray(new Map[0])));
     }
   }
 
