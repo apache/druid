@@ -236,7 +236,7 @@ public class CoordinatorResourceTestClient
   public boolean areSegmentsLoaded(String dataSource)
   {
     final Map<String, Integer> status = getLoadStatus(dataSource);
-    return (status != null && status.containsKey(dataSource) && status.get(dataSource) == 100);
+    return (status != null && status.containsKey(dataSource) && status.get(dataSource) == 100.0);
   }
 
   public void unloadSegmentsForDataSource(String dataSource)

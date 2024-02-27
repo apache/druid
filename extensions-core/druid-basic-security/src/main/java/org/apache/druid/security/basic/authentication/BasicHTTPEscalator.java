@@ -54,7 +54,7 @@ public class BasicHTTPEscalator implements Escalator
   @Override
   public HttpClient createEscalatedClient(HttpClient baseClient)
   {
-    LOG.info("Creating escalated client. Username: [%s]", internalClientUsername);
+    LOG.debug("----------- Creating escalated client");
     return new CredentialedHttpClient(
         new BasicCredentials(internalClientUsername, internalClientPassword.getPassword()),
         baseClient
@@ -64,8 +64,8 @@ public class BasicHTTPEscalator implements Escalator
   @Override
   public AuthenticationResult createEscalatedAuthenticationResult()
   {
-    LOG.debug("Creating escalated authentication result. username: [%s]", internalClientUsername);
-    // if you found yourself asking why the authenticatedBy field is set to null please read this:
+    LOG.debug("----------- Creating escalated authentication result. username: %s", this.internalClientUsername);
+    // if you found your self asking why the authenticatedBy field is set to null please read this:
     // https://github.com/apache/druid/pull/5706#discussion_r185940889
     return new AuthenticationResult(internalClientUsername, authorizerName, null, null);
   }

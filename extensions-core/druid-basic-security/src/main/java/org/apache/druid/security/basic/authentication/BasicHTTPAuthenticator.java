@@ -121,6 +121,7 @@ public class BasicHTTPAuthenticator implements Authenticator
     return credentialsValidator.validateCredentials(name, authorizerName, user, password.toCharArray());
   }
 
+
   @Override
   public Class<? extends Filter> getFilterClass()
   {
@@ -155,7 +156,9 @@ public class BasicHTTPAuthenticator implements Authenticator
     @Override
     public void init(FilterConfig filterConfig)
     {
+
     }
+
 
     @Override
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)
@@ -204,7 +207,7 @@ public class BasicHTTPAuthenticator implements Authenticator
       // If any authentication error occurs we send a 401 response immediately and do not proceed further down the filter chain.
       // If the authentication result is null and skipOnFailure property is false, we send a 401 response and do not proceed
       // further down the filter chain. If the authentication result is null and skipOnFailure is true then move on to the next filter.
-      // Authentication results, for instance, can be null if a user doesn't exist within a user store.
+      // Authentication results, for instance, can be null if a user doesn't exists within a user store
       try {
         AuthenticationResult authenticationResult = credentialsValidator.validateCredentials(
             name,
@@ -217,7 +220,7 @@ public class BasicHTTPAuthenticator implements Authenticator
           filterChain.doFilter(servletRequest, servletResponse);
         } else {
           if (skipOnFailure) {
-            LOG.info("Skipping failed authenticator [%s]", name);
+            LOG.info("Skipping failed authenticator %s ", name);
             filterChain.doFilter(servletRequest, servletResponse);
           } else {
             httpResp.sendError(HttpServletResponse.SC_UNAUTHORIZED);
@@ -225,7 +228,7 @@ public class BasicHTTPAuthenticator implements Authenticator
         }
       }
       catch (BasicSecurityAuthenticationException ex) {
-        LOG.info("Exception authenticating user [%s] - [%s]", user, ex.getMessage());
+        LOG.info("Exception authenticating user %s - %s", user, ex.getMessage());
         httpResp.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User authentication failed.");
       }
     }
@@ -233,6 +236,7 @@ public class BasicHTTPAuthenticator implements Authenticator
     @Override
     public void destroy()
     {
+
     }
   }
 }
