@@ -62,6 +62,7 @@ import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.ClientQuerySegmentWalker;
+import org.apache.druid.server.QuerySwappingQueryRunner;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.SetAndVerifyContextQueryRunner;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -167,14 +168,14 @@ public class ServerManager implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> theQuery, Iterable<SegmentDescriptor> specs)
   {
-    final Query<T> query = ClientQuerySegmentWalker.populateResourceId(theQuery);
-    final DataSource dataSourceFromQuery = query.getDataSource();
-    final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
+    final Query<T> newQuery = ClientQuerySegmentWalker.populateResourceId(theQuery);
+    final DataSource dataSourceFromQuery = newQuery.getDataSource();
+    final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(newQuery);
     if (factory == null) {
       final QueryUnsupportedException e = new QueryUnsupportedException(
-          StringUtils.format("Unknown query type, [%s]", query.getClass())
+          StringUtils.format("Unknown query type, [%s]", newQuery.getClass())
       );
-      log.makeAlert(e, "Error while executing a query[%s]", query.getId())
+      log.makeAlert(e, "Error while executing a query[%s]", newQuery.getId())
          .addData("dataSource", dataSourceFromQuery)
          .emit();
       throw e;
@@ -201,7 +202,7 @@ public class ServerManager implements QuerySegmentWalker
     }
     final Function<SegmentReference, SegmentReference> segmentMapFn =
         dataSourceFromQuery
-             .createSegmentMapFunction(query, cpuTimeAccumulator);
+             .createSegmentMapFunction(newQuery, cpuTimeAccumulator);
 
     // We compute the datasource's cache key here itself so it doesn't need to be re-computed for every segment
     final Optional<byte[]> cacheKeyPrefix = Optional.ofNullable(dataSourceFromQuery.getCacheKey());
@@ -211,7 +212,7 @@ public class ServerManager implements QuerySegmentWalker
         .transformCat(
             descriptor -> Collections.singletonList(
                 buildQueryRunnerForSegment(
-                    query,
+                    newQuery,
                     descriptor,
                     factory,
                     toolChest,
@@ -223,15 +224,19 @@ public class ServerManager implements QuerySegmentWalker
             )
         );
 
-    return CPUTimeMetricQueryRunner.safeBuild(
-        new FinalizeResultsQueryRunner<>(
-            toolChest.mergeResults(factory.mergeRunners(queryProcessingPool, queryRunners), true),
-            toolChest
+    return new QuerySwappingQueryRunner<T>(
+        CPUTimeMetricQueryRunner.safeBuild(
+            new FinalizeResultsQueryRunner<>(
+                toolChest.mergeResults(factory.mergeRunners(queryProcessingPool, queryRunners), true),
+                toolChest
+            ),
+            toolChest,
+            emitter,
+            cpuTimeAccumulator,
+            true
         ),
-        toolChest,
-        emitter,
-        cpuTimeAccumulator,
-        true
+        theQuery,
+        newQuery
     );
   }
 

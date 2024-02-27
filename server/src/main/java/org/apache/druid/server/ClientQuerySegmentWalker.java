@@ -58,7 +58,6 @@ import org.apache.druid.query.RetryQueryRunner;
 import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinableFactory;
@@ -846,33 +845,4 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     ));
   }
 
-  /**
-   * A {@link QueryRunner} which validates that a *specific* query is passed in, and then swaps it with another one.
-   * Useful since the inlining we do relies on passing the modified query to the underlying {@link QuerySegmentWalker},
-   * and callers of {@link #getQueryRunnerForIntervals} aren't able to do this themselves.
-   */
-  private static class QuerySwappingQueryRunner<T> implements QueryRunner<T>
-  {
-    private final QueryRunner<T> baseRunner;
-    private final Query<T> query;
-    private final Query<T> newQuery;
-
-    public QuerySwappingQueryRunner(QueryRunner<T> baseRunner, Query<T> query, Query<T> newQuery)
-    {
-      this.baseRunner = baseRunner;
-      this.query = query;
-      this.newQuery = newQuery;
-    }
-
-    @Override
-    public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
-    {
-      //noinspection ObjectEquality
-      if (queryPlus.getQuery() != query) {
-        throw new ISE("Unexpected query received");
-      }
-
-      return baseRunner.run(queryPlus.withQuery(newQuery), responseContext);
-    }
-  }
 }
