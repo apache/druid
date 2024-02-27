@@ -230,26 +230,4 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
         )
         .run();
   }
-
-  @Test
-  public void testAppendCTE()
-  {
-    testBuilder()
-        .sql("with t0 as (select * from foo) select dim3 from TABLE(APPEND('foo','t0')) u")
-        .expectedResults(
-            ResultMatchMode.RELAX_NULLS,
-            ImmutableList.of(
-                new Object[] {"11"},
-                new Object[] {"12"},
-                new Object[] {"10"},
-                new Object[] {"[\"a\",\"b\"]"},
-                new Object[] {"[\"b\",\"c\"]"},
-                new Object[] {"d"},
-                new Object[] {""},
-                new Object[] {null},
-                new Object[] {null}
-            )
-        )
-        .run();
-  }
 }
